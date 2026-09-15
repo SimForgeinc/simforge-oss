@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listWorkspaceRenderArtifacts } from "@/app/lib/scenario/render/artifact-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   requireScenarioContext,
   SCENARIO_PRIVATE_CACHE_HEADERS,
@@ -45,5 +46,8 @@ export async function GET(request: Request) {
     artifactKind: artifactKind && artifactKind.trim() ? artifactKind.trim() : null,
   });
 
-  return NextResponse.json({ items }, { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  return NextResponse.json(
+    { items } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.maps.artifactIndex>,
+    { headers: SCENARIO_PRIVATE_CACHE_HEADERS },
+  );
 }

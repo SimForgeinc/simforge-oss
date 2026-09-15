@@ -5,6 +5,7 @@ import {
   getScenarioRatingAggregate,
   upsertScenarioDocumentRating,
 } from "@/app/lib/scenario/rating-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -39,7 +40,7 @@ export async function PUT(request: Request, route: Context) {
   return NextResponse.json({
     rating,
     aggregate: await getScenarioRatingAggregate(auth.context, documentId),
-  });
+  } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.setRating>);
 }
 
 export async function DELETE(request: Request, route: Context) {
@@ -53,6 +54,6 @@ export async function DELETE(request: Request, route: Context) {
     ? NextResponse.json({
         ok: true,
         aggregate: await getScenarioRatingAggregate(auth.context, documentId),
-      })
+      } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.clearRating>)
     : NextResponse.json({ error: "document_rating_not_found" }, { status: 404 });
 }

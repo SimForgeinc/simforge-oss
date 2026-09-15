@@ -469,11 +469,8 @@ export type ScenarioValidationRunDto = {
   completed_at: string | null;
 };
 
-/** One row of the product-facing operational job ledger (`/api/simforge/jobs`). */
-export type ScenarioOperationalJobDto = {
+export type ScenarioOperationalJobBase = {
   id: string;
-  family: ScenarioJobFamily;
-  revisionId: string;
   type: string;
   status: string;
   priority: number;
@@ -488,6 +485,46 @@ export type ScenarioOperationalJobDto = {
   startedAt: string | null;
   completedAt: string | null;
 };
+
+/**
+ * One row of the product-facing operational job ledger (`/api/simforge/jobs`).
+ *
+ * Discriminated on `family` because `revisionId` is not optional data — it is
+ * present or absent according to what a family is *about*, and the ledger is a
+ * view (`simforge.operational_jobs`) assembled from four different relations.
+ *
+ * Three families are each one relation whose `revision_id` is `NOT NULL`, so
+ * they always carry a revision: `openscenario_compile` from `exports`,
+ * `openscenario_validate` from `validation_runs`, `openscenario_render` from
+ * `render_jobs`. A job in those families is *produced from* one immutable
+ * revision; that is what makes it that kind of job.
+ *
+ * `artifact_postprocess` is the one family the view assembles from two
+ * relations, and the only one that can answer `null`:
+ *   - `render_jobs` rows whose `job_mode` is `cosmos_augment`/`vlm_annotate` —
+ *     a pass *over an existing render*, so still revision-bound (`NOT NULL`);
+ *   - `artifact_postprocess_jobs`, whose `revision_id` has no `NOT NULL`,
+ *     because the family also covers work whose subject is not a revision at
+ *     all. An `editor_asset_release` job publishes an editor asset catalogue
+ *     identified by a release-manifest digest (`simforge.editor-assets-release/v1`);
+ *     it is not produced from a revision, so its insert omits the column
+ *     entirely rather than leaving it to be filled in later. `dataset_export`
+ *     is scoped to a dataset and `openscenario_import` runs *before* any
+ *     revision exists, for the same structural reason.
+ *
+ * Not discriminated any deeper. `type` (the view's alias for
+ * `postprocess_kind`) does decide whether a postprocess job has a revision,
+ * but it is `TEXT` with no `CHECK` — an open vocabulary, nine values across the
+ * family today. Closing it into a second union would make a host that adds a
+ * postprocess kind fail decoding, and the protocol's rule is that adding is
+ * compatible (see `protocol/schema`). So within this family `revisionId` is
+ * genuinely unknown to the client, and `null` is the honest answer rather than
+ * a nullable field standing in for a union.
+ */
+export type RevisionBoundJobFamily = Exclude<ScenarioJobFamily, "artifact_postprocess">;
+export type ScenarioOperationalJobDto =
+  | { [F in RevisionBoundJobFamily]: ScenarioOperationalJobBase & { family: F; revisionId: string } }[RevisionBoundJobFamily]
+  | (ScenarioOperationalJobBase & { family: "artifact_postprocess"; revisionId: string | null });
 
 /**
  * The body of `POST /api/simforge/render-jobs`. Each host validates the full
@@ -557,8 +594,22 @@ export type ScenarioRenderProgressDto =
 /** Job states the worker control plane advances. Mirrors `render_jobs.job_state`. */
 export type ScenarioRenderJobState = ScenarioRenderJobStatus;
 
-/** `render_jobs.job_mode`. The last two are postprocess modes. */
-export type ScenarioRenderJobMode = ScenarioJobMode | "cosmos_augment" | "vlm_annotate";
+/**
+ * Every value `render_jobs.job_mode` may hold. The last two are postprocess
+ * modes, which is why the view files them under `artifact_postprocess`.
+ *
+ * A runtime array rather than a bare union, because callers need to *test* a
+ * string against this vocabulary — a query filter, a decoder — and every site
+ * that re-spelled the list instead drifted from it. One such copy silently
+ * dropped `browser_render`, turning `?jobMode=browser_render` into an
+ * unfiltered gallery.
+ */
+export const SCENARIO_RENDER_JOB_MODES = [
+  ...SCENARIO_JOB_MODES,
+  "cosmos_augment",
+  "vlm_annotate",
+] as const;
+export type ScenarioRenderJobMode = (typeof SCENARIO_RENDER_JOB_MODES)[number];
 
 /** A gallery tile. Deliberately narrow: the list must not carry render specs or telemetry blobs. */
 export type ScenarioGalleryItemDto = {

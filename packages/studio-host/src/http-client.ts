@@ -1,25 +1,20 @@
-import type { StudioHostCapabilities } from "./capabilities";
 import type {
   CreateScenarioRevisionResultDto,
-  PresignedArtifact,
-  ScenarioArtifactDto,
   ScenarioConflictDto,
-  ScenarioDatasetDto,
   ScenarioDocumentDto,
-  ScenarioExportDto,
-  ScenarioGalleryItemDto,
   ScenarioMapDescriptorDto,
-  ScenarioMapCoverageDto,
-  ScenarioMaterializedTrafficReferenceDto,
-  ScenarioOperationalJobDto,
-  ScenarioRatingAggregateDto,
-  ScenarioRevisionDto,
-  ScenarioSimulationPreviewDto,
-  ScenarioTagDto,
-  ScenarioValidationRunDto,
-  IndexedArtifact,
 } from "./contracts";
 import { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError } from "./errors";
+import {
+  STUDIO_HOST_PROTOCOL,
+  type AnyEndpoint,
+  type EndpointBody,
+  type EndpointParams,
+  type EndpointQuery,
+  type EndpointResponse,
+  type QueryValue,
+  type UploadReservationDto,
+} from "./protocol";
 import type {
   StudioArtifactService,
   StudioHostServices,
@@ -48,12 +43,15 @@ type ErrorBody = {
   current?: ScenarioDocumentDto;
 };
 
-type UploadReservation = {
-  artifactId: string;
-  uploadRequired: boolean;
-  uploadUrl: string | null;
-  headers: Record<string, string>;
-};
+/** Per-call inputs; each slot exists only when the endpoint declares it. */
+type CallOptions<E extends AnyEndpoint> = (EndpointParams<E> extends void
+  ? { params?: undefined }
+  : { params: EndpointParams<E> }) &
+  (EndpointQuery<E> extends void ? { query?: undefined } : { query: EndpointQuery<E> }) &
+  (EndpointBody<E> extends void ? { body?: undefined } : { body: EndpointBody<E> }) & {
+    signal?: AbortSignal;
+    keepalive?: boolean;
+  };
 
 const DATASET_READ_KEY = "datasets";
 const TAG_READ_KEY = "tags";
@@ -61,7 +59,8 @@ const MAP_READ_KEY = "maps";
 const MAP_FOOTPRINT_READ_KEY = "map-footprints";
 const CAPABILITIES_READ_KEY = "capabilities";
 const MAP_SHARE_MS = 5 * 60_000;
-const RENDER_JOBS = "/api/simforge/render-jobs";
+
+const { datasets, documents, maps, jobs: jobEndpoints, runtime: runtimeEndpoints } = STUDIO_HOST_PROTOCOL;
 
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -106,8 +105,21 @@ function mapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {
   };
 }
 
+/** `null`/`undefined` omit the key; everything else is stringified. */
+function searchString(query: Record<string, QueryValue> | undefined): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null && value !== undefined) params.set(key, String(value));
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
+
 /**
- * The one HTTP implementation of the Studio host boundary.
+ * The one HTTP implementation of the Studio host boundary: a transport over
+ * `STUDIO_HOST_PROTOCOL`. Paths, methods and response shapes come from the
+ * endpoint declarations; nothing here spells a route string.
  *
  * Both hosts serve the same `/api/simforge/*` wire contract; identity travels
  * as same-origin cookies (fixed local owner, or the cloud account session), so
@@ -115,39 +127,57 @@ function mapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {
  * `private, no-store` and each call takes an `AbortSignal` so a panel that
  * closes cancels its own in-flight request instead of resolving into an
  * unmounted tree.
+ *
+ * Every JSON response is decoded against the endpoint's schema before it is
+ * returned; a host that answers with the wrong shape fails here, naming the
+ * field, instead of somewhere in the UI.
  */
 export function createHttpStudioHost(options: HttpStudioHostOptions = {}): StudioHostServices {
   const fetchImpl = options.fetch ?? fetch;
   const baseUrl = options.baseUrl?.replace(/\/+$/, "") ?? "";
   const shared = new SharedReads();
 
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const response = await fetchImpl(`${baseUrl}${path}`, {
-      ...init,
+  async function call<E extends AnyEndpoint>(endpoint: E, opts: CallOptions<E>): Promise<EndpointResponse<E>> {
+    const path = typeof endpoint.path === "function" ? endpoint.path(opts.params) : endpoint.path;
+    const body = opts.body === undefined ? undefined : JSON.stringify(opts.body);
+    const response = await fetchImpl(`${baseUrl}${path}${searchString(opts.query)}`, {
+      method: endpoint.method,
+      body,
       cache: "no-store",
       headers: {
-        ...(init.body ? { "content-type": "application/json" } : {}),
+        ...(body ? { "content-type": "application/json" } : {}),
         ...options.headers,
-        ...(init.headers as Record<string, string> | undefined),
       },
+      ...(opts.signal ? { signal: opts.signal } : {}),
+      ...(opts.keepalive ? { keepalive: true } : {}),
     });
     if (response.ok) {
-      return (response.status === 204 ? undefined : await response.json()) as T;
+      return endpoint.response.parse(response.status === 204 ? undefined : await response.json(), "response");
     }
-    const body = (await response.json().catch(() => null)) as ErrorBody | null;
-    if (response.status === 409 && body?.error === "draft_version_conflict") {
-      const conflict = body as Partial<ScenarioConflictDto>;
+    const errorBody = (await response.json().catch(() => null)) as ErrorBody | null;
+    if (response.status === 409 && errorBody?.error === "draft_version_conflict") {
+      const conflict = errorBody as Partial<ScenarioConflictDto>;
       throw new ScenarioVersionConflict(conflict.currentDraftVersion ?? null, conflict.current ?? null);
     }
-    if (response.status === 409 && (body?.error === "dataset_name_taken" || body?.error === "tag_label_taken")) {
-      throw new ScenarioNameConflict(body.error, body.field ?? "name");
+    if (response.status === 409 && (errorBody?.error === "dataset_name_taken" || errorBody?.error === "tag_label_taken")) {
+      throw new ScenarioNameConflict(errorBody.error, errorBody.field ?? "name");
     }
-    const code = body?.error ?? `request_failed_${response.status}`;
+    const code = errorBody?.error ?? `request_failed_${response.status}`;
     throw new StudioHostRequestError(
       code,
       response.status,
-      body?.message ?? (body?.error ? undefined : `Request failed (${response.status}).`),
+      errorBody?.message ?? (errorBody?.error ? undefined : `Request failed (${response.status}).`),
     );
+  }
+
+  /** For reads where the host's 404 is a state ("nothing saved yet"), not a failure. */
+  async function callOrNull<E extends AnyEndpoint>(endpoint: E, opts: CallOptions<E>): Promise<EndpointResponse<E> | null> {
+    try {
+      return await call(endpoint, opts);
+    } catch (error) {
+      if (error instanceof StudioHostRequestError && error.status === 404) return null;
+      throw error;
+    }
   }
 
   /**
@@ -156,19 +186,13 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
    * browser reached is the host that serves the object store and no absolute
    * authority the server could invent would match every way of reaching it.
    * A browser resolves that against the page; a non-browser caller has to be
-   * given the base it is already talking to, exactly like `request()`.
+   * given the base it is already talking to, exactly like `call()`.
    */
   function uploadTarget(uploadUrl: string): string {
     return uploadUrl.startsWith("/") ? `${baseUrl}${uploadUrl}` : uploadUrl;
   }
-  async function getArtifact(artifactId: string, opts: { download?: boolean; signal?: AbortSignal } = {}) {
-    return request<ScenarioArtifactDto>(
-      `/api/simforge/artifacts/${encodeURIComponent(artifactId)}${opts.download ? "?download=1" : ""}`,
-      { signal: opts.signal },
-    );
-  }
 
-  async function uploadReserved(reservation: UploadReservation, bytes: Uint8Array, label: string, signal?: AbortSignal) {
+  async function uploadReserved(reservation: UploadReservationDto, bytes: Uint8Array, label: string, signal?: AbortSignal) {
     if (!reservation.uploadRequired) return;
     if (!reservation.uploadUrl) throw new Error(`${label} reservation has no upload URL`);
     const uploaded = await fetchImpl(uploadTarget(reservation.uploadUrl), {
@@ -182,173 +206,100 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
 
   const projects: StudioProjectService = {
     async listDatasets(signal) {
-      const body = await shared.read(
-        DATASET_READ_KEY,
-        0,
-        () => request<{ datasets: ScenarioDatasetDto[] }>("/api/simforge/datasets"),
-        signal,
-      );
+      const body = await shared.read(DATASET_READ_KEY, 0, () => call(datasets.list, {}), signal);
       return body.datasets;
     },
     createDataset(input) {
-      return shared.invalidateAfter(
-        DATASET_READ_KEY,
-        request<ScenarioDatasetDto>("/api/simforge/datasets", { method: "POST", body: JSON.stringify(input) }),
-      );
+      return shared.invalidateAfter(DATASET_READ_KEY, call(datasets.create, { body: input }));
     },
     updateDataset(datasetId, input) {
-      return shared.invalidateAfter(
-        DATASET_READ_KEY,
-        request<ScenarioDatasetDto>(`/api/simforge/datasets/${encodeURIComponent(datasetId)}`, {
-          method: "PATCH",
-          body: JSON.stringify(input),
-        }),
-      );
+      return shared.invalidateAfter(DATASET_READ_KEY, call(datasets.update, { params: { datasetId }, body: input }));
     },
     deleteDataset(datasetId) {
-      return shared.invalidateAfter(
-        DATASET_READ_KEY,
-        request<{ ok: true; deletedDocumentCount: number }>(`/api/simforge/datasets/${encodeURIComponent(datasetId)}`, {
-          method: "DELETE",
-        }),
-      );
+      return shared.invalidateAfter(DATASET_READ_KEY, call(datasets.delete, { params: { datasetId } }));
     },
     getDatasetReadiness(datasetId, signal) {
-      return request(`/api/simforge/datasets/${encodeURIComponent(datasetId)}/readiness`, { signal });
+      return call(datasets.readiness, { params: { datasetId }, signal });
     },
 
     listDocumentSummaries(input, signal) {
-      const query = new URLSearchParams({ datasetId: input.datasetId, limit: String(input.limit ?? 50) });
-      if (input.cursor) query.set("cursor", input.cursor);
-      return request(`/api/simforge/documents/summaries?${query}`, { signal });
-    },
-    async listDocuments(datasetId, signal) {
-      const body = await request<{ documents: ScenarioDocumentDto[] }>(
-        `/api/simforge/documents?datasetId=${encodeURIComponent(datasetId)}`,
-        { signal },
-      );
-      return body.documents;
-    },
-    getDocument(documentId, signal) {
-      return request(`/api/simforge/documents/${encodeURIComponent(documentId)}`, { signal });
-    },
-    createDocument(input, opts = {}) {
-      return request("/api/simforge/documents", {
-        method: "POST",
-        body: JSON.stringify(input),
-        keepalive: opts.keepalive,
-        signal: opts.signal,
+      return call(documents.listSummaries, {
+        query: { datasetId: input.datasetId, limit: input.limit ?? 50, ...(input.cursor ? { cursor: input.cursor } : {}) },
+        signal,
       });
     },
+    async listDocuments(datasetId, signal) {
+      return (await call(documents.list, { query: { datasetId }, signal })).documents;
+    },
+    getDocument(documentId, signal) {
+      return call(documents.get, { params: { documentId }, signal });
+    },
+    createDocument(input, opts = {}) {
+      return call(documents.create, { body: input, keepalive: opts.keepalive, signal: opts.signal });
+    },
     saveDocument(document, content, opts = {}) {
-      return request(`/api/simforge/documents/${encodeURIComponent(document.id)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
+      return call(documents.update, {
+        params: { documentId: document.id },
+        body: {
           expectedVersion: document.draftVersion,
           title: opts.title ?? document.title,
           content,
           authoringQualityId: opts.authoringQualityId ?? document.authoringQualityId,
-        }),
+        },
         keepalive: opts.keepalive,
       });
     },
     updateDocument(documentId, input) {
-      return request(`/api/simforge/documents/${encodeURIComponent(documentId)}`, {
-        method: "PATCH",
-        body: JSON.stringify(input),
-      });
+      return call(documents.update, { params: { documentId }, body: input });
     },
     duplicateDocument(documentId, input = {}) {
-      return request(`/api/simforge/documents/${encodeURIComponent(documentId)}/duplicate`, {
-        method: "POST",
-        body: JSON.stringify(input),
-      });
+      return call(documents.duplicate, { params: { documentId }, body: input });
     },
     startDriverInTheLoop(documentId, input = {}) {
-      return request(
-        `/api/simforge/documents/${encodeURIComponent(documentId)}/driver-in-the-loop`,
-        { method: "POST", body: JSON.stringify(input) },
-      );
+      return call(documents.startDriverInTheLoop, { params: { documentId }, body: input });
     },
     deleteDocument(documentId) {
-      return request(`/api/simforge/documents/${encodeURIComponent(documentId)}`, { method: "DELETE" });
+      return call(documents.delete, { params: { documentId } });
     },
 
     async listTags(signal) {
-      const body = await shared.read(TAG_READ_KEY, 0, () => request<{ tags: ScenarioTagDto[] }>("/api/simforge/tags"), signal);
+      const body = await shared.read(TAG_READ_KEY, 0, () => call(documents.listTags, {}), signal);
       return body.tags;
     },
     createTag(input) {
-      return shared.invalidateAfter(
-        TAG_READ_KEY,
-        request<ScenarioTagDto>("/api/simforge/tags", { method: "POST", body: JSON.stringify(input) }),
-      );
+      return shared.invalidateAfter(TAG_READ_KEY, call(documents.createTag, { body: input }));
     },
     updateTag(tagId, input) {
-      return shared.invalidateAfter(
-        TAG_READ_KEY,
-        request<ScenarioTagDto>(`/api/simforge/tags/${encodeURIComponent(tagId)}`, {
-          method: "PATCH",
-          body: JSON.stringify(input),
-        }),
-      );
+      return shared.invalidateAfter(TAG_READ_KEY, call(documents.updateTag, { params: { tagId }, body: input }));
     },
     deleteTag(tagId) {
-      return shared.invalidateAfter(
-        TAG_READ_KEY,
-        request<{ ok: true }>(`/api/simforge/tags/${encodeURIComponent(tagId)}`, { method: "DELETE" }),
-      );
+      return shared.invalidateAfter(TAG_READ_KEY, call(documents.deleteTag, { params: { tagId } }));
     },
     async setDocumentTags(documentId, tagIds) {
-      const body = await request<{ tags: ScenarioTagDto[] }>(`/api/simforge/documents/${encodeURIComponent(documentId)}/tags`, {
-        method: "PUT",
-        body: JSON.stringify({ tagIds }),
-      });
-      return body.tags;
+      return (await call(documents.setTags, { params: { documentId }, body: { tagIds } })).tags;
     },
 
     async listRatingAggregates(documentIds, signal) {
-      const body = await request<{ aggregates: ScenarioRatingAggregateDto[] }>("/api/simforge/documents/ratings/batch", {
-        method: "POST",
-        body: JSON.stringify({ documentIds }),
-        signal,
-      });
-      return body.aggregates;
+      return (await call(documents.listRatingAggregates, { body: { documentIds }, signal })).aggregates;
     },
     async setDocumentRating(documentId, input) {
-      const body = await request<{ aggregate: ScenarioRatingAggregateDto | null }>(
-        `/api/simforge/documents/${encodeURIComponent(documentId)}/rating`,
-        { method: "PUT", body: JSON.stringify({ reviewedVia: "browser", ...input }) },
-      );
-      return body.aggregate;
+      return (await call(documents.setRating, { params: { documentId }, body: { reviewedVia: "browser", ...input } })).aggregate;
     },
     async clearDocumentRating(documentId) {
-      const body = await request<{ aggregate: ScenarioRatingAggregateDto | null }>(
-        `/api/simforge/documents/${encodeURIComponent(documentId)}/rating`,
-        { method: "DELETE" },
-      );
-      return body.aggregate;
+      return (await call(documents.clearRating, { params: { documentId } })).aggregate;
     },
 
     async listRevisions(documentId, signal) {
-      const body = await request<{ revisions: ScenarioRevisionDto[] }>(
-        `/api/simforge/documents/${encodeURIComponent(documentId)}/revisions`,
-        { signal },
-      );
-      return body.revisions;
+      return (await call(documents.listRevisions, { params: { documentId }, signal })).revisions;
     },
     createRevision(document, evidence, opts = {}) {
-      return request(`/api/simforge/documents/${encodeURIComponent(document.id)}/revisions`, {
-        method: "POST",
-        body: JSON.stringify({
-          expectedVersion: document.draftVersion,
-          idempotencyKey: opts.idempotencyKey ?? crypto.randomUUID(),
-          ...evidence,
-        }),
+      return call(documents.createRevision, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, idempotencyKey: opts.idempotencyKey ?? crypto.randomUUID(), ...evidence },
         signal: opts.signal,
       });
     },
-    async ensureRevision(input) {
+    async ensureRevision(input): Promise<CreateScenarioRevisionResultDto> {
       const expectedDraftVersion = input.expectedDraftVersion
         ?? (await projects.getDocument(input.documentId, input.signal)).draftVersion;
       const revisions = await projects.listRevisions(input.documentId, input.signal);
@@ -367,38 +318,29 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
         );
       }
       const retrySuffix = existing ? `:retry:${existing.export.id}` : "";
-      return request<CreateScenarioRevisionResultDto>(`/api/simforge/documents/${encodeURIComponent(input.documentId)}/revisions`, {
-        method: "POST",
-        body: JSON.stringify({
+      return call(documents.createRevision, {
+        params: { documentId: input.documentId },
+        body: {
           expectedVersion: expectedDraftVersion,
           idempotencyKey: `ensure-revision:${input.documentId}:${expectedDraftVersion}${retrySuffix}`,
           ...input.evidence,
-        }),
+        },
         signal: input.signal,
       });
     },
 
-    async getSimulationPreview(documentId, signal) {
-      const response = await fetchImpl(
-        `${baseUrl}/api/simforge/documents/${encodeURIComponent(documentId)}/simulation-preview`,
-        { cache: "no-store", headers: options.headers, signal },
-      );
-      if (response.status === 404) return null;
-      if (!response.ok) throw new StudioHostRequestError("simulation_preview_lookup_failed", response.status, `Saved simulation lookup failed (${response.status}).`);
-      return response.json() as Promise<ScenarioSimulationPreviewDto>;
+    getSimulationPreview(documentId, signal) {
+      return callOrNull(documents.getSimulationPreview, { params: { documentId }, signal });
     },
     async saveSimulationPreview(document, bytes, sha256, signal) {
+      const params = { documentId: document.id };
       const identity = { expectedVersion: document.draftVersion, sha256, sizeBytes: bytes.byteLength };
-      const base = `/api/simforge/documents/${encodeURIComponent(document.id)}/simulation-preview`;
-      const reservation = await request<UploadReservation>(base, { method: "POST", body: JSON.stringify(identity), signal });
+      const reservation = await call(documents.reserveSimulationPreview, { params, body: identity, signal });
       await uploadReserved(reservation, bytes, "Saved simulation", signal);
-      await request<{ ok: true }>(`${base}/complete`, {
-        method: "POST",
-        body: JSON.stringify({ ...identity, artifactId: reservation.artifactId }),
-        signal,
-      });
+      await call(documents.completeSimulationPreview, { params, body: { ...identity, artifactId: reservation.artifactId }, signal });
     },
     async uploadMaterializedTraffic(document, upload, sourceInputDigest, signal) {
+      const params = { documentId: document.id };
       const identity = {
         sha256: upload.sha256,
         sizeBytes: upload.sizeBytes,
@@ -406,42 +348,29 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
         mapAssetId: upload.mapAssetId,
         mapVersionId: upload.mapVersionId,
       };
-      const base = `/api/simforge/documents/${encodeURIComponent(document.id)}/materialized-traffic`;
-      const reservation = await request<UploadReservation>(`${base}/reserve`, {
-        method: "POST",
-        body: JSON.stringify({ expectedVersion: document.draftVersion, ...identity }),
+      const reservation = await call(documents.reserveMaterializedTraffic, {
+        params,
+        body: { expectedVersion: document.draftVersion, ...identity },
         signal,
       });
       await uploadReserved(reservation, upload.bytes, "Materialized traffic", signal);
-      return request<ScenarioMaterializedTrafficReferenceDto>(`${base}/complete`, {
-        method: "POST",
-        body: JSON.stringify({ artifactId: reservation.artifactId, ...identity }),
-        signal,
-      });
+      return call(documents.completeMaterializedTraffic, { params, body: { artifactId: reservation.artifactId, ...identity }, signal });
     },
   };
 
   const artifacts: StudioArtifactService = {
-    listMaps(signal, options) {
-      if (options?.fresh) shared.invalidate(MAP_READ_KEY);
-      return shared.read(
-        MAP_READ_KEY,
-        MAP_SHARE_MS,
-        async () => (await request<{ maps: ScenarioMapDescriptorDto[] }>("/api/simforge/maps")).maps.map(mapEntry),
-        signal,
-      );
+    listMaps(signal, opts) {
+      if (opts?.fresh) shared.invalidate(MAP_READ_KEY);
+      return shared.read(MAP_READ_KEY, MAP_SHARE_MS, async () => (await call(maps.list, {})).maps.map(mapEntry), signal);
     },
     listMapFootprints(signal) {
-      return shared.read(
-        MAP_FOOTPRINT_READ_KEY,
-        MAP_SHARE_MS,
-        () => request<ScenarioMapCoverageDto>("/api/simforge/maps/footprints"),
-        signal,
-      );
+      return shared.read(MAP_FOOTPRINT_READ_KEY, MAP_SHARE_MS, () => call(maps.footprints, {}), signal);
     },
-    getArtifact,
+    getArtifact(artifactId, opts = {}) {
+      return call(maps.getArtifact, { params: { artifactId }, query: opts.download ? { download: 1 } : {}, signal: opts.signal });
+    },
     async openArtifact(artifactId) {
-      const artifact = await getArtifact(artifactId);
+      const artifact = await artifacts.getArtifact(artifactId);
       const anchor = window.document.createElement("a");
       anchor.href = artifact.downloadUrl;
       anchor.target = "_blank";
@@ -449,19 +378,14 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
       anchor.click();
     },
     async downloadArtifact(artifactId) {
-      const artifact = await getArtifact(artifactId, { download: true });
+      const artifact = await artifacts.getArtifact(artifactId, { download: true });
       const anchor = window.document.createElement("a");
       anchor.href = artifact.downloadUrl;
       anchor.download = artifact.kind === "compiled-xosc" ? "scenario.xosc" : artifact.id;
       anchor.click();
     },
     async listArtifactIndex(opts, signal) {
-      const params = new URLSearchParams();
-      if (opts.artifactKind) params.set("artifactKind", opts.artifactKind);
-      if (opts.limit != null) params.set("limit", String(opts.limit));
-      const query = params.toString();
-      const body = await request<{ items: IndexedArtifact[] }>(`${RENDER_JOBS}/artifact-index${query ? `?${query}` : ""}`, { signal });
-      return body.items;
+      return (await call(maps.artifactIndex, { query: { artifactKind: opts.artifactKind, limit: opts.limit }, signal })).items;
     },
     async resolveRenderArtifactUrl(renderJobId, artifactId, signal) {
       const items = await jobs.listDownloads(renderJobId, signal);
@@ -471,66 +395,51 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
 
   const jobs: StudioJobService = {
     submitRenderIntent(input, signal) {
-      return request(RENDER_JOBS, { method: "POST", body: JSON.stringify(input), signal });
+      return call(jobEndpoints.submitRenderIntent, { body: input, signal });
     },
     getRenderJob(jobId, signal) {
-      return request(`${RENDER_JOBS}/${encodeURIComponent(jobId)}`, { signal });
+      return call(jobEndpoints.getRenderJob, { params: { jobId }, signal });
     },
     cancelRenderJob(jobId) {
-      return request(`${RENDER_JOBS}/${encodeURIComponent(jobId)}`, { method: "DELETE" });
+      return call(jobEndpoints.cancelRenderJob, { params: { jobId } });
     },
     getRenderJobProvenance(jobId, signal) {
-      return request(`${RENDER_JOBS}/${encodeURIComponent(jobId)}/provenance`, { signal });
+      return call(jobEndpoints.renderJobProvenance, { params: { jobId }, signal });
     },
     getRenderJobDetail(jobId, signal) {
-      return request(`${RENDER_JOBS}/${encodeURIComponent(jobId)}/detail`, { signal });
+      return call(jobEndpoints.renderJobDetail, { params: { jobId }, signal });
     },
     async listDownloads(jobId, signal) {
-      const body = await request<{ items: PresignedArtifact[] }>(`${RENDER_JOBS}/${encodeURIComponent(jobId)}/downloads`, { signal });
-      return body.items;
+      return (await call(jobEndpoints.renderJobDownloads, { params: { jobId }, signal })).items;
     },
     listGallery(opts, signal) {
-      const params = new URLSearchParams();
-      if (opts.revisionId) params.set("revisionId", opts.revisionId);
-      if (opts.documentId) params.set("documentId", opts.documentId);
-      if (opts.jobMode) params.set("jobMode", opts.jobMode);
-      if (opts.limit != null) params.set("limit", String(opts.limit));
-      const query = params.toString();
-      return request(`${RENDER_JOBS}/gallery${query ? `?${query}` : ""}`, { signal });
+      return call(jobEndpoints.gallery, {
+        query: { revisionId: opts.revisionId, documentId: opts.documentId, jobMode: opts.jobMode, limit: opts.limit },
+        signal,
+      });
     },
     async listPostprocessChildren(parentRenderJobId, signal) {
-      const body = await request<{ items: ScenarioGalleryItemDto[] }>(
-        `${RENDER_JOBS}/${encodeURIComponent(parentRenderJobId)}/postprocess`,
-        { signal },
-      );
-      return body.items;
+      return (await call(jobEndpoints.postprocessChildren, { params: { jobId: parentRenderJobId }, signal })).items;
     },
     createPostprocessJob(input) {
       const { parentRenderJobId, ...body } = input;
-      return request(`${RENDER_JOBS}/${encodeURIComponent(parentRenderJobId)}/postprocess`, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      return call(jobEndpoints.createPostprocess, { params: { jobId: parentRenderJobId }, body });
     },
     setRenderJobHidden(jobId, hidden) {
-      return request(`${RENDER_JOBS}/${encodeURIComponent(jobId)}/hidden`, {
-        method: "PATCH",
-        body: JSON.stringify({ hidden }),
-      });
+      return call(jobEndpoints.setRenderJobHidden, { params: { jobId }, body: { hidden } });
     },
 
     prepareExport(revisionId, idempotencyKey, signal) {
-      return request("/api/simforge/exports", { method: "POST", body: JSON.stringify({ revisionId, idempotencyKey }), signal });
+      return call(jobEndpoints.prepareExport, { body: { revisionId, idempotencyKey }, signal });
     },
     async listExports(revisionId, signal) {
-      const body = await request<{ exports: ScenarioExportDto[] }>(`/api/simforge/exports?revisionId=${encodeURIComponent(revisionId)}`, { signal });
-      return body.exports;
+      return (await call(jobEndpoints.listExports, { query: { revisionId }, signal })).exports;
     },
     getExport(exportId, signal) {
-      return request(`/api/simforge/exports/${encodeURIComponent(exportId)}`, { signal });
+      return call(jobEndpoints.getExport, { params: { exportId }, signal });
     },
     inspectExport(exportId, signal) {
-      return request(`/api/simforge/exports/${encodeURIComponent(exportId)}/inspection`, { signal });
+      return call(jobEndpoints.inspectExport, { params: { exportId }, signal });
     },
     async waitForExport(revisionId, exportId, opts = {}) {
       const attempts = opts.attempts ?? 120;
@@ -547,42 +456,30 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     },
 
     async listValidationRuns(revisionId, signal) {
-      const body = await request<{ validationRuns: ScenarioValidationRunDto[] }>(
-        `/api/simforge/validation-runs?revisionId=${encodeURIComponent(revisionId)}`,
-        { signal },
-      );
-      return body.validationRuns;
+      return (await call(jobEndpoints.listValidationRuns, { query: { revisionId }, signal })).validationRuns;
     },
     createValidationRun(input, signal) {
-      return request("/api/simforge/validation-runs", { method: "POST", body: JSON.stringify(input), signal });
+      return call(jobEndpoints.createValidationRun, { body: input, signal });
     },
 
     async listOperationalJobs(input = {}, signal) {
-      const params = new URLSearchParams();
-      if (input.family) params.set("family", input.family);
-      if (input.revisionId) params.set("revisionId", input.revisionId);
-      if (input.limit != null) params.set("limit", String(input.limit));
-      const query = params.toString();
-      const body = await request<{ jobs: ScenarioOperationalJobDto[] }>(`/api/simforge/jobs${query ? `?${query}` : ""}`, { signal });
-      return body.jobs;
+      return (await call(jobEndpoints.listOperationalJobs, {
+        query: { family: input.family, revisionId: input.revisionId, limit: input.limit },
+        signal,
+      })).jobs;
     },
     getOperationalJob(jobId, signal) {
-      return request(`/api/simforge/jobs/${encodeURIComponent(jobId)}`, { signal });
+      return call(jobEndpoints.getOperationalJob, { params: { jobId }, signal });
     },
     cancelOperationalJob(jobId) {
-      return request(`/api/simforge/jobs/${encodeURIComponent(jobId)}`, { method: "DELETE" });
+      return call(jobEndpoints.cancelOperationalJob, { params: { jobId } });
     },
   };
 
   const runtime: StudioRuntimeService = {
     capabilities(opts = {}) {
       if (opts.fresh) shared.invalidate(CAPABILITIES_READ_KEY);
-      return shared.read(
-        CAPABILITIES_READ_KEY,
-        60_000,
-        () => request<StudioHostCapabilities>("/api/simforge/host/capabilities"),
-        opts.signal,
-      );
+      return shared.read(CAPABILITIES_READ_KEY, 60_000, () => call(runtimeEndpoints.capabilities, {}), opts.signal);
     },
   };
 

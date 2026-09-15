@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 import { SCENARIO_JOB_FAMILIES } from "@/app/lib/scenario/jobs/contracts";
 import { listOperationalJobs } from "@/app/lib/scenario/jobs/store";
@@ -21,5 +22,8 @@ export async function GET(request: Request) {
   });
   if (!parsed.success) return NextResponse.json({ error: "invalid_job_query", details: parsed.error.flatten() }, { status: 400 });
   const jobs = await listOperationalJobs(auth.context, parsed.data);
-  return NextResponse.json({ jobs }, { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  return NextResponse.json(
+    { jobs } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.jobs.listOperationalJobs>,
+    { headers: SCENARIO_PRIVATE_CACHE_HEADERS },
+  );
 }

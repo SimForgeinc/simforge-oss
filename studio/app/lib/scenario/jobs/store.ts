@@ -1,5 +1,6 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows } from "@/app/lib/db/data-api";
+import type { ScenarioOperationalJobDto } from "@simforge-oss/studio-host";
 import type { ScenarioJobFamily } from "./contracts";
 import { settlePipelineJob, withScenarioJobTransaction } from "./lifecycle-lock";
 import { releaseLocalNativeMap } from "./local-native-render-store";
@@ -7,7 +8,8 @@ import { releaseLocalNativeMap } from "./local-native-render-store";
 type JobRow = {
   id: string;
   job_family: ScenarioJobFamily;
-  revision_id: string;
+  /** NOT NULL for compile/validate/render sources; nullable for workspace-level `artifact_postprocess` work. */
+  revision_id: string | null;
   job_type: string;
   state: string;
   priority: number;
@@ -23,11 +25,9 @@ type JobRow = {
   completed_at: string | null;
 };
 
-function dto(row: JobRow) {
-  return {
+function dto(row: JobRow): ScenarioOperationalJobDto {
+  const base = {
     id: row.id,
-    family: row.job_family,
-    revisionId: row.revision_id,
     type: row.job_type,
     status: row.state,
     priority: Number(row.priority),
@@ -42,6 +42,11 @@ function dto(row: JobRow) {
     startedAt: row.started_at,
     completedAt: row.completed_at,
   };
+  if (row.job_family === "artifact_postprocess") return { ...base, family: row.job_family, revisionId: row.revision_id };
+  if (row.revision_id === null) {
+    throw new Error(`operational job ${row.id} (${row.job_family}) has no revision; the source table forbids that`);
+  }
+  return { ...base, family: row.job_family, revisionId: row.revision_id };
 }
 
 const COLUMNS = `id, job_family, revision_id, job_type, state, priority, progress,

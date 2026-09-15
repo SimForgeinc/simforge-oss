@@ -5,6 +5,7 @@ import {
   softDeleteScenarioDataset,
   updateScenarioDataset,
 } from "@/app/lib/scenario/dataset-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -63,6 +64,6 @@ export async function DELETE(request: Request, route: Context) {
   if (access.response) return access.response;
   const result = await softDeleteScenarioDataset(auth.context, datasetId);
   return result.kind === "deleted"
-    ? NextResponse.json({ ok: true, deletedDocumentCount: result.deletedDocumentCount })
+    ? NextResponse.json({ ok: true, deletedDocumentCount: result.deletedDocumentCount } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.datasets.delete>)
     : NextResponse.json({ error: "dataset_not_found" }, { status: 404 });
 }

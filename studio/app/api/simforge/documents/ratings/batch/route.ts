@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ScenarioRatingBatchSchema } from "@/app/lib/scenario/contracts";
 import { listScenarioRatingAggregates } from "@/app/lib/scenario/rating-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -26,5 +27,8 @@ export async function POST(request: Request) {
     );
   }
   const aggregates = await listScenarioRatingAggregates(auth.context, parsed.data.documentIds);
-  return NextResponse.json({ aggregates }, { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  return NextResponse.json(
+    { aggregates } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.listRatingAggregates>,
+    { headers: SCENARIO_PRIVATE_CACHE_HEADERS },
+  );
 }

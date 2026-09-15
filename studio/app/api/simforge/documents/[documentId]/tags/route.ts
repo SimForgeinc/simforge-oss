@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { SetScenarioDocumentTagsSchema } from "@/app/lib/scenario/contracts";
 import { setScenarioDocumentTags } from "@/app/lib/scenario/tag-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -35,6 +36,6 @@ export async function PUT(request: Request, route: Context) {
   }
   const result = await setScenarioDocumentTags(auth.context, documentId, parsed.data.tagIds);
   return result.kind === "ok"
-    ? NextResponse.json({ tags: result.tags })
+    ? NextResponse.json({ tags: result.tags } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.setTags>)
     : NextResponse.json({ error: "document_not_found" }, { status: 404 });
 }

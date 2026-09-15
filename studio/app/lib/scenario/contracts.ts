@@ -18,6 +18,7 @@ import {
   SCENARIO_RATING_REVIEWED_VIA,
   type ScenarioAuthoringQuality,
 } from "@simforge-oss/studio-host";
+import type * as protocol from "@simforge-oss/studio-host";
 
 /**
  * Wire DTOs and enumerations are owned by `@simforge-oss/studio-host`, the
@@ -557,3 +558,47 @@ export const FailRenderJobSchema = z.object({
     details: z.record(z.string(), z.unknown()).optional(),
   }),
 });
+
+// ── Protocol conformance ─────────────────────────────────────────────────────
+
+type Accepts<Request, Schema extends z.ZodTypeAny> = Request extends z.input<Schema> ? true : false;
+type Assert<Condition extends true> = Condition;
+
+/**
+ * Every request body the typed client (`STUDIO_HOST_PROTOCOL`, protocol v1)
+ * can send is accepted by the route schema that parses it. A route schema
+ * that narrows below what the client may send fails to compile here, before
+ * a runtime 400 could reach a user.
+ */
+export type ProtocolRequestConformance = [
+  Assert<Accepts<protocol.CreateDatasetRequest, typeof CreateScenarioDatasetSchema>>,
+  Assert<Accepts<protocol.UpdateDatasetRequest, typeof UpdateScenarioDatasetSchema>>,
+  Assert<Accepts<protocol.ListDocumentSummariesQuery, typeof ListScenarioDocumentSummariesSchema>>,
+  Assert<Accepts<protocol.CreateDocumentRequest, typeof CreateScenarioDocumentSchema>>,
+  Assert<Accepts<protocol.UpdateDocumentRequest, typeof UpdateScenarioDocumentSchema>>,
+  Assert<Accepts<protocol.DuplicateDocumentRequest, typeof DuplicateScenarioDocumentSchema>>,
+  Assert<Accepts<protocol.DriverInTheLoopRequest, typeof DriverInTheLoopSchema>>,
+  Assert<Accepts<protocol.CreateTagRequest, typeof CreateScenarioTagSchema>>,
+  Assert<Accepts<protocol.UpdateTagRequest, typeof UpdateScenarioTagSchema>>,
+  Assert<Accepts<protocol.SetDocumentTagsRequest, typeof SetScenarioDocumentTagsSchema>>,
+  Assert<Accepts<protocol.UpsertDocumentRatingRequest, typeof UpsertScenarioDocumentRatingSchema>>,
+  Assert<Accepts<protocol.ListRatingAggregatesRequest, typeof ScenarioRatingBatchSchema>>,
+  /**
+   * `ambient` is asserted through `ScenarioAmbientProvenance` (this file's
+   * parsed type) rather than the shared DTO: for `mode: "disabled"` the route
+   * accepts only `configSha256 === EMPTY_AMBIENT_CONFIG_SHA256`, while
+   * `ScenarioAmbientProvenanceDto` types the digest as `string` because the
+   * constant lives in `@simforge-oss/studio-ui`, which `studio-host` cannot
+   * import. Narrowing the DTO is a `studio-ui` change, tracked as a finding.
+   */
+  Assert<Accepts<
+    Omit<protocol.CreateRevisionRequest, "ambient"> & { ambient: ScenarioAmbientProvenance },
+    typeof CreateScenarioRevisionSchema
+  >>,
+  Assert<Accepts<protocol.ReserveSimulationPreviewRequest, typeof ReserveScenarioSimulationPreviewSchema>>,
+  Assert<Accepts<protocol.CompleteSimulationPreviewRequest, typeof CompleteScenarioSimulationPreviewSchema>>,
+  Assert<Accepts<protocol.ReserveMaterializedTrafficRequest, typeof ReserveScenarioMaterializedTrafficSchema>>,
+  Assert<Accepts<protocol.CompleteMaterializedTrafficRequest, typeof CompleteScenarioMaterializedTrafficSchema>>,
+  Assert<Accepts<protocol.PrepareExportRequest, typeof CreateExportSchema>>,
+  Assert<Accepts<protocol.CreateValidationRunRequest, typeof CreateValidationRunSchema>>,
+];

@@ -8,6 +8,7 @@ import {
   createScenarioRevision,
   listScenarioRevisions,
 } from "@/app/lib/scenario/document-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -23,7 +24,7 @@ export async function GET(request: Request, route: Context) {
   const { documentId } = await route.params;
   return await scenarioJsonWithEtag(request, {
     revisions: await listScenarioRevisions(auth.context, documentId),
-  });
+  } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.listRevisions>);
 }
 
 export async function POST(request: Request, route: Context) {
@@ -47,6 +48,15 @@ export async function POST(request: Request, route: Context) {
   const result = await createScenarioRevision(auth.context, documentId, parsed.data);
   if (result.kind === "not_found") {
     return NextResponse.json({ error: "document_not_found" }, { status: 404 });
+  }
+  if (result.kind === "traffic_binding_invalid") {
+    return NextResponse.json(
+      {
+        error: "materialized_traffic_binding_invalid",
+        message: "The materialized traffic evidence does not bind to this document at its pinned map version.",
+      },
+      { status: 409 },
+    );
   }
   if (result.kind === "conflict") {
     const body: ScenarioConflictDto = {
