@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { connect } from 'node:net';
 import { readLocalHostState } from '@simforge-oss/studio-host/node';
 import { boolFlag, optionalString, parseArgs } from '../args.js';
 import { CliError, EXIT } from '../errors.js';
@@ -15,6 +16,28 @@ function alive(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Is anything still accepting connections on the host's port? A supervisor
+ * killed without running its shutdown path used to leave the Next server
+ * behind, so "the supervisor pid is gone" is not the same as "the host is
+ * stopped": the orphan kept the port and the data-root lock. Loopback is the
+ * right probe for a local CLI - a server bound to every interface accepts
+ * there too.
+ */
+function portBound(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect({ port, host: '127.0.0.1' });
+    const settle = (bound: boolean) => {
+      socket.destroy();
+      resolve(bound);
+    };
+    socket.setTimeout(2_000);
+    socket.once('connect', () => settle(true));
+    socket.once('timeout', () => settle(false));
+    socket.once('error', () => settle(false));
+  });
 }
 
 /**
@@ -47,13 +70,24 @@ export async function hostCommand(argv: readonly string[]): Promise<number> {
     }
     case 'stop': {
       if (!running) {
+        // The supervisor is gone; an orphaned server may still hold its port.
+        if (state && await portBound(state.port)) {
+          emit({ stopped: false, reason: 'orphaned_server', pid: state.pid, port: state.port, baseUrl: state.baseUrl }, { pretty });
+          return EXIT.ok;
+        }
         emit({ stopped: false, reason: 'not_running' }, { pretty });
         return EXIT.ok;
       }
       const result = await hostRequest<{ ok: true; pid: number }>('/api/simforge/host/shutdown', { dataRoot }, { method: 'POST' });
       const deadline = Date.now() + 15_000;
       while (alive(result.pid) && Date.now() < deadline) await new Promise<void>((resolve) => setTimeout(resolve, 250));
-      emit({ stopped: !alive(result.pid), pid: result.pid }, { pretty });
+      // `stopped` means the whole group is down, not just the supervisor.
+      const bound = await portBound(state.port);
+      emit({
+        stopped: !alive(result.pid) && !bound,
+        pid: result.pid,
+        ...(bound ? { reason: 'port_still_bound', port: state.port } : {}),
+      }, { pretty });
       return EXIT.ok;
     }
     case 'open': {

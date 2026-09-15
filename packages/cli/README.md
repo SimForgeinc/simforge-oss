@@ -531,6 +531,17 @@ simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] 
 render worker, one supervisor, `host.json` in the data root. The desktop shell
 execs the same command and only adds a window.
 
+The group lives and dies together. Every child the supervisor starts - the
+Next server, its own forked server process, the CPU worker - carries a
+parent-death watch, so killing or losing the supervisor cannot leave a server
+behind holding the port, the data-root lock and (under `--dev`) gigabytes of
+memory. A start refused because another host already owns the data root names
+that host - `pid`, `port`, `baseUrl`, `startedAt` - instead of failing on a
+bare `EADDRINUSE` or a PGlite lock error. `host stop` reports
+`stopped: true` only once the port is free as well as the supervisor gone; a
+supervisor that died leaving a server behind reports
+`{"stopped": false, "reason": "orphaned_server", "port": ...}`.
+
 ### Serving the GUI from another machine
 
 The daemon binds where `HOSTNAME` says (default `127.0.0.1`), and the access
