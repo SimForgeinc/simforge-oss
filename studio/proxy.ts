@@ -3,6 +3,7 @@ import {
   LOCAL_HOST_SESSION_COOKIE,
   LOCAL_HOST_TOKEN_ENV,
   localHostSessionToken,
+  receivedUrl,
   secretsEqual,
 } from "@simforge-oss/studio-host/node";
 
@@ -64,11 +65,10 @@ export function proxy(request: NextRequest) {
   if (!READ_METHODS.has(request.method)) {
     const origin = request.headers.get("origin");
     const site = request.headers.get("sec-fetch-site");
-    // NextURL normalizes loopback names to localhost. Browser Origin retains
-    // the actual authority, so compare against the received Host header.
-    const expected = new URL(request.nextUrl.href);
-    expected.host = request.headers.get("host") ?? expected.host;
-    const sameOrigin = origin !== null ? origin === expected.origin : site === "same-origin";
+    // NextURL normalizes the bound interface (and loopback names) to
+    // localhost. The browser Origin retains the authority it actually used,
+    // so compare against the authority the request arrived on.
+    const sameOrigin = origin !== null ? origin === receivedUrl(request).origin : site === "same-origin";
     if (!sameOrigin) return json(403, "local_origin_rejected", "Local mutations must come from the Studio origin.");
   }
   return NextResponse.next();

@@ -9,6 +9,7 @@ import {
   readLocalHostState,
   removeLocalHostState,
   writeLocalHostState,
+  type LocalHostState,
 } from "./local-host-state";
 
 /**
@@ -81,14 +82,43 @@ const HOLD_PROCESS_TITLE = `data:text/javascript,${encodeURIComponent(
   'Object.defineProperty(process, "title", { configurable: true, enumerable: true, get: () => "simforge-host", set() {} });',
 )}`;
 
+/**
+ * Makes a host child die with the supervisor.
+ *
+ * Shutdown is one signal to the supervisor, and its `finally` stops the
+ * children - but only if it runs. A SIGKILLed supervisor, or one whose own
+ * launcher was killed, left the Next server behind: an orphan holding the
+ * port, the data-root lock and (for `next dev`) gigabytes of resident memory,
+ * with nothing left to stop it and no record pointing at it. The next start
+ * then failed on `EADDRINUSE` or the PGlite lock instead of naming the
+ * process still alive.
+ *
+ * `process.ppid` is read from the OS on every access, so a reparented child
+ * sees a different parent than the one it was spawned under and exits. Node
+ * has no `PR_SET_PDEATHSIG` binding and the watch must work on every
+ * platform, so this is a poll; the timer is unref'd, so it never keeps an
+ * otherwise-finished process alive. Children forked by a child inherit it
+ * through `execArgv`, which is what reaches `next dev`'s own server process.
+ */
+const PARENT_DEATH_WATCH = `data:text/javascript,${encodeURIComponent(
+  'const parent = process.ppid;'
+  + 'setInterval(() => { if (process.ppid !== parent) process.exit(1); }, 1000).unref();',
+)}`;
+
 function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>): ChildProcess {
   const args = command.args.map((arg) =>
     arg === "${SIMFORGE_RENDER_WORKER_TOKEN}"
       ? extraEnv.SIMFORGE_RENDER_WORKER_TOKEN ?? arg
       : arg,
   );
-  const finalArgs = process.platform === "darwin" && command.command === process.execPath
-    ? ["--import", HOLD_PROCESS_TITLE, ...args]
+  // Every host child runs this interpreter, so both concerns ride in as
+  // loaders rather than as wrappers the plans would have to carry.
+  const finalArgs = command.command === process.execPath
+    ? [
+      "--import", PARENT_DEATH_WATCH,
+      ...(process.platform === "darwin" ? ["--import", HOLD_PROCESS_TITLE] : []),
+      ...args,
+    ]
     : args;
   return spawn(command.command, finalArgs, {
     cwd: command.cwd,
@@ -113,6 +143,25 @@ function processAlive(pid: number): boolean {
 
 /** Exit status when another live host already owns the data root. */
 const LOCAL_HOST_BUSY_EXIT = 3;
+
+/**
+ * A start refused because another host already owns this data root. The
+ * caller is told which process to deal with - pid, port, base URL, start time
+ * - instead of receiving a bare exit code, an `EADDRINUSE` from the server
+ * child, or a PGlite lock error with nothing actionable in it.
+ */
+function reportBusy(event: string, stateDir: string, current: LocalHostState | null): number {
+  process.stderr.write(`${JSON.stringify({
+    component: "simforge-local-host",
+    event,
+    dataRoot: stateDir,
+    ...(current ? { pid: current.pid, port: current.port, baseUrl: current.baseUrl, startedAt: current.startedAt } : {}),
+    message: current
+      ? `A Studio host already owns ${stateDir}: pid ${current.pid} on port ${current.port} (${current.baseUrl}), started ${current.startedAt}. Stop it with \`simforge host stop --data-root ${stateDir}\`.`
+      : `Another process owns the Studio data root ${stateDir} but published no host record. Find it with \`ss -ltnp\` / \`pgrep -f next-server\` and stop it before starting a host here.`,
+  })}\n`);
+  return LOCAL_HOST_BUSY_EXIT;
+}
 
 export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig = localHostConfig()): Promise<number> {
   const { port, hostname, withWorker } = config;
@@ -145,19 +194,16 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ELOCKED") throw error;
-    process.stderr.write(`${JSON.stringify({
-      component: "simforge-local-host",
-      event: "host.ownership_busy",
-      dataRoot: stateDir,
-    })}\n`);
-    return LOCAL_HOST_BUSY_EXIT;
+    return reportBusy("host.ownership_busy", stateDir, await readLocalHostState());
   }
 
   let published = false;
   const signalHandlers = new Map<NodeJS.Signals, () => void>();
   try {
     const current = await readLocalHostState();
-    if (current && current.pid !== process.pid && processAlive(current.pid)) return LOCAL_HOST_BUSY_EXIT;
+    if (current && current.pid !== process.pid && processAlive(current.pid)) {
+      return reportBusy("host.record_busy", stateDir, current);
+    }
     // Claim ownership before PGlite is opened, including migration and seeding.
     const controlToken = randomBytes(24).toString("base64url");
     await writeLocalHostState({

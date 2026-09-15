@@ -27,8 +27,7 @@ import {
   waitForLocalHostReady,
 } from "@simforge-oss/studio-host/node";
 import { assertStagePlatform, readStageManifest } from "./stage-manifest.mjs";
-
-const CAPABILITIES_SCHEMA = "simforge.studio-host-capabilities/v1";
+import { checkContract } from "./host-contract.mjs";
 
 function processAlive(pid) {
   try {
@@ -79,27 +78,6 @@ async function supervisorCommand() {
   // Repository layout: the unpackaged shell only ever runs from the workspace.
   const cliMain = join(studioRoot, "..", "packages", "cli", "src", "main.ts");
   return { args: ["--import", tsxLoader, cliMain, "daemon"], cwd: studioRoot };
-}
-
-/**
- * Attach only to a host that is this application's: same capability schema
- * and Studio version. Another version's host (an older install still running)
- * is reported, never adopted, so UI and service never disagree on contracts.
- * @param {string} baseUrl
- * @param {string} controlToken
- * @returns {Promise<{ ok: true } | { ok: false; reason: string }>}
- */
-async function checkContract(baseUrl, controlToken) {
-  const response = await fetch(`${baseUrl}/api/simforge/host/capabilities`, {
-    headers: { authorization: `Bearer ${controlToken}` },
-    signal: AbortSignal.timeout(10_000),
-  }).catch((error) => ({ ok: false, status: 0, statusText: String(error?.message ?? error), json: async () => null }));
-  if (!response.ok) return { ok: false, reason: `capabilities answered ${response.status} ${response.statusText}` };
-  const capabilities = await response.json().catch(() => null);
-  if (!capabilities || capabilities.schema !== CAPABILITIES_SCHEMA) return { ok: false, reason: `unexpected capabilities schema ${capabilities?.schema}` };
-  const version = capabilities.host?.version;
-  if (version !== app.getVersion()) return { ok: false, reason: `host is Studio ${version ?? "unknown"}, this application is ${app.getVersion()}` };
-  return { ok: true };
 }
 
 /**

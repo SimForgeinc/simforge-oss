@@ -514,14 +514,14 @@ simforge render submit --scenario <documentId> --engine native|browser|carla --s
 simforge render list [--scenario <documentId>] | status <jobId> | wait <jobId> [--timeout 3600] \
   | cancel <jobId> | artifacts <jobId> [--out <dir>]
 
-simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | workspaces
+simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | organizations
 simforge cloud sign-in --email <address> [--password-stdin]
 simforge cloud sign-up --email <address> --name <full name> [--password-stdin]
 simforge cloud verify-email --code <6 digits> | resend-code
 simforge cloud forgot-password --email <address>
 simforge cloud reset-password --email <address> --code <6 digits> [--password-stdin]
-simforge cloud datasets|artifacts --workspace <id>
-simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --workspace <id> --dataset|--artifact <id>
+simforge cloud datasets|artifacts --org <id>
+simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --org <id> --dataset|--artifact <id>
 simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
 simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] [--seed 1] [--samples 4] \
   [--ego-speed 0] [--camera-height 1.5] [--fov 90] [--prediction-hz 1] [--dry-run]
@@ -530,6 +530,50 @@ simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] 
 `simforge daemon` is the local host: migrations and seed, the API server, the
 render worker, one supervisor, `host.json` in the data root. The desktop shell
 execs the same command and only adds a window.
+
+The group lives and dies together. Every child the supervisor starts - the
+Next server, its own forked server process, the CPU worker - carries a
+parent-death watch, so killing or losing the supervisor cannot leave a server
+behind holding the port, the data-root lock and (under `--dev`) gigabytes of
+memory. A start refused because another host already owns the data root names
+that host - `pid`, `port`, `baseUrl`, `startedAt` - instead of failing on a
+bare `EADDRINUSE` or a PGlite lock error. `host stop` reports
+`stopped: true` only once the port is free as well as the supervisor gone; a
+supervisor that died leaving a server behind reports
+`{"stopped": false, "reason": "orphaned_server", "port": ...}`.
+
+### Serving the GUI from another machine
+
+The daemon binds where `HOSTNAME` says (default `127.0.0.1`), and the access
+gate never treated loopback as authorization, so one host can serve a GUI
+running elsewhere - daemon, database, map cache, render worker and GPU on one
+box, the window on a laptop:
+
+```bash
+# On the host machine:
+HOSTNAME=0.0.0.0 simforge daemon --port 5421
+jq -r .controlToken ~/.simforge/cloud/host.json   # the per-start control token
+
+# On the GUI machine. The desktop shell becomes a guest: it starts,
+# supervises and stops nothing, and quitting leaves the host running.
+SIMFORGE_REMOTE_HOST=http://100.72.252.40:5421 \
+SIMFORGE_REMOTE_HOST_TOKEN=<that control token> \
+SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 simforge-studio
+```
+
+The control token, and the session cookie derived from it, are full access to
+the host and cross the network in cleartext over plain HTTP, so the link must
+be private: a WireGuard/Tailscale tailnet (the `100.x` address above is a
+Tailscale one) or a TLS terminator in front of the daemon. The shell refuses a
+non-loopback `http://` target unless `SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1`
+acknowledges the tailnet. `simforge host open` still refuses a non-loopback
+bootstrap URL, because it opens a browser on the host machine itself.
+
+Features that assumed the host's filesystem is the GUI machine's - the map
+cache folder picker and "Move cache", "Open Cache Folder", "Open data folder" -
+are refused in this mode with a message naming the host, instead of pointing
+the host at a path that exists only on the GUI machine. The full inventory and
+the deployment requirements are in `docs/engineering/remote-studio-host.md`.
 
 `render submit` freezes the draft the way the Studio wizard does (reuse a
 succeeded export of the current draft, else build revision evidence from the
