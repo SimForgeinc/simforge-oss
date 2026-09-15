@@ -53,13 +53,19 @@ export const styles = stylex.create({
    * Errors float over the stage rather than sitting in the rail, for the same
    * reason the datasets index floats them: a failed action belongs next to
    * nothing in particular, and the rail is too narrow for a message and a retry.
+   *
+   * At the bottom edge, not the top. The datasets index floats its banner over
+   * an idle 3D scene, which has nothing to click; every evaluation stage opens
+   * with a header that does — the campaign board's "Compare models" button
+   * lands exactly where a top banner would — and a banner over a control is an
+   * invisible click shield rather than a message.
    */
   overlay: {
     pointerEvents: "auto",
     position: "absolute",
     left: space.xl,
     right: space.xl,
-    top: space.xl,
+    bottom: space.xl,
     display: "flex",
     alignItems: "center",
     gap: space.md,

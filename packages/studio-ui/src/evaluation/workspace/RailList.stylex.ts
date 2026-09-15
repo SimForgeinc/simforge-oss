@@ -150,4 +150,12 @@ export const styles = stylex.create({
     paddingInline: space.lg,
     paddingBlock: space.xl,
   },
+  /** The section-level statement: quieter than a row, louder than nothing. */
+  status: {
+    paddingInline: space.lg,
+    paddingBlock: space.md,
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: colors.line,
+  },
 });

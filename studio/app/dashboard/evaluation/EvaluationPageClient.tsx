@@ -71,9 +71,20 @@ export function EvaluationPageClient() {
     const controller = new AbortController();
     void fetch("/api/simforge/cloud/organizations", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | { organizations?: StudioCloudOrganization[]; error?: string }
+          | null;
+        // No SimCloud session is the ordinary state of a desktop that has not
+        // connected one, not a failure. There is simply no organization to
+        // pick, and the launcher already says how to connect an account.
+        // Reporting it as an error pinned a permanent banner over the stage on
+        // every such machine.
+        if (response.status === 401 || payload?.error === "cloud_disconnected") {
+          setOrganizations([]);
+          return;
+        }
         if (!response.ok) throw new Error(`organizations request failed (${response.status})`);
-        const payload = (await response.json()) as { organizations?: StudioCloudOrganization[] };
-        setOrganizations(payload.organizations ?? []);
+        setOrganizations(payload?.organizations ?? []);
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
@@ -200,7 +211,9 @@ export function EvaluationPageClient() {
       />
     );
 
-  const overlayMessage = error ?? jobsError;
+  // The overlay carries what an action did, not what a source is: a failed
+  // list belongs in the rail that shows the list, and a banner that never
+  // clears is a click shield rather than a message.
 
   function renderStage() {
     if (selection.section === "models") {
@@ -338,9 +351,9 @@ export function EvaluationPageClient() {
       rail={rail}
       stage={stage}
       overlay={
-        overlayMessage ? (
+        error ? (
           <>
-            <span {...stylex.props(styles.overlayMessage)}>{overlayMessage}</span>
+            <span {...stylex.props(styles.overlayMessage)}>{error}</span>
             <Button
               type="button"
               size="sm"

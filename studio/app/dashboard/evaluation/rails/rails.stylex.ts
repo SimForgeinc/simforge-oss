@@ -51,6 +51,25 @@ export const styles = stylex.create({
     borderRadius: radii.full,
     backgroundColor: colors.signalGreen,
   },
+  /** The runs rail's cloud-unavailable statement, above the list. */
+  status: {
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: space.xxs,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineMeta,
+    color: colors.textMuted,
+  },
+  /**
+   * Set as written, not upper-cased like a group heading: this is a sentence
+   * about the section, and the empty state says the same words the same way.
+   */
+  statusTitle: {
+    fontSize: text.sizeXs,
+    fontWeight: text.weightMedium,
+    color: colors.text,
+  },
   promoted: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
