@@ -154,7 +154,10 @@ export function offNetworkMessage(departures: readonly OffNetworkDeparture[]): s
       + `y=${departure.worstPosition.y.toFixed(1)} (${departure.sampleCount} of ${departure.totalSamples} samples off network).`),
     `Positions more than ${OFF_NETWORK_BOUND_M} m from a lane have no road surface to stand on, so a render would have to`
     + ' invent the ground height under the sensors.',
-    `Shorten the clip to ${longestRenderableClipSeconds(departures)} s, or move the route onto lanes that carry the drive`
-    + ' for the whole clip, or author it on a map with a larger network.',
+    longestRenderableClipSeconds(departures) < 1
+      ? 'No clip length renders this drive: it leaves the road almost immediately. Move the route onto lanes that carry'
+        + ' the drive, or author it on a map with a larger network.'
+      : `Shorten the clip to ${longestRenderableClipSeconds(departures)} s, or move the route onto lanes that carry the`
+        + ' drive for the whole clip, or author it on a map with a larger network.',
   ].join('\n');
 }
