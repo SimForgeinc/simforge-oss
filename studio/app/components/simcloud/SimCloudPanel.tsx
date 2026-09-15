@@ -246,7 +246,7 @@ function ProfileCard({
 
   return (
     <section
-      {...stylex.props(plate.root, connected && plate.accented, styles.card)}
+      {...stylex.props(plate.root, styles.card)}
       data-testid="simcloud-profile"
       data-cloud-state={status?.state ?? "loading"}
     >

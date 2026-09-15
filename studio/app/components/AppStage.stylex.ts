@@ -155,11 +155,6 @@ export const plate = stylex.create({
     overflowY: "auto",
     overscrollBehavior: "contain",
   },
-  accented: {
-    borderColor: "rgb(232 224 68 / 0.25)",
-    backgroundColor: "rgb(232 224 68 / 0.07)",
-  },
-
   /** Two columns from LG, stacked below it — the switcher's tab row rule. */
   columns: {
     display: "grid",
