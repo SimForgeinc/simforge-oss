@@ -18,92 +18,79 @@ export type NavItem = {
   description: string;
   icon: LucideIcon;
   match: (pathname: string) => boolean;
+  /** What the page is for, in three phrases; shown on the switcher's tabs. */
+  highlights?: readonly string[];
   disabled?: boolean;
 };
 
-export type NavGroup = {
-  id: string;
-  label: string;
-  description: string;
-  apps: NavItem[];
-  /** Shown as small buttons in the switcher footer rather than as cards. */
-  compact?: boolean;
-};
-
-/** Product apps, as the app switcher presents them: three areas of work. */
-export const DASHBOARD_APP_GROUPS: NavGroup[] = [
+/**
+ * The product is three pages, and the app switcher is those three tabs. Every
+ * other surface — assets, model weights, exports, storage, account, settings —
+ * is a utility reached from the switcher's footer, not a page of its own with
+ * a card and artwork.
+ */
+export const DASHBOARD_APPS: NavItem[] = [
   {
-    id: "exploration",
-    label: "Exploration",
-    description: "Install maps and drive them",
-    apps: [
-      {
-        href: "/dashboard/map-assets",
-        label: "Maps",
-        description: "CARLA map library, bridges and driving",
-        icon: Map,
-        match: (p) => p.startsWith("/dashboard/map-assets"),
-      },
+    href: "/dashboard/map-assets",
+    label: "Maps",
+    description: "Maps and exploration",
+    icon: Map,
+    highlights: [
+      "GeoJSON layers",
+      "Map semantics",
+      "Drive on the map",
     ],
+    match: (p) => p.startsWith("/dashboard/map-assets"),
   },
   {
-    id: "scenarios",
-    label: "Scenarios",
-    description: "Author datasets, evaluate them, ship them",
-    apps: [
-      {
-        href: "/dashboard/scenario",
-        label: "Datasets",
-        description: "Scenario datasets and authoring",
-        icon: Database,
-        match: (p) => p.startsWith("/dashboard/scenario"),
-      },
-      {
-        href: "/dashboard/evaluation",
-        label: "Evaluation",
-        description: "Eval campaigns, playback, and promotion",
-        icon: FlaskConical,
-        match: (p) => p.startsWith("/dashboard/evaluation"),
-      },
-      {
-        href: "/dashboard/dataset-export",
-        label: "Exports",
-        description: "Package datasets for download",
-        icon: PackageCheck,
-        match: (p) => p.startsWith("/dashboard/dataset-export"),
-      },
+    href: "/dashboard/scenario",
+    label: "Datasets",
+    description: "Datasets and scenarios",
+    icon: Database,
+    highlights: [
+      "Training-ready scenarios",
+      "Simulation-ready scenarios",
+      "Render camera, LiDAR and radar",
     ],
+    match: (p) => p.startsWith("/dashboard/scenario"),
   },
   {
-    id: "assets",
-    label: "Assets",
-    description: "3D assets and model weights",
-    compact: true,
-    apps: [
-      {
-        href: "/dashboard/assets",
-        label: "Assets",
-        description: "3D models and maps for scenarios",
-        icon: Boxes,
-        match: (p) => p.startsWith("/dashboard/assets"),
-      },
-      {
-        href: "/dashboard/models",
-        label: "Models",
-        description: "Download, verify and remove model weights",
-        icon: Brain,
-        match: (p) => p.startsWith("/dashboard/models"),
-      },
+    href: "/dashboard/evaluation",
+    label: "Evaluation",
+    description: "Evaluation",
+    icon: FlaskConical,
+    highlights: [
+      "AlpaMayo evaluation",
+      "Closed-loop model-in-the-loop",
+      "Open-loop metrics",
     ],
+    match: (p) => p.startsWith("/dashboard/evaluation"),
   },
 ];
 
-export const DASHBOARD_APPS: NavItem[] = DASHBOARD_APP_GROUPS.flatMap(
-  (group) => group.apps,
-);
-
 /** Utility surfaces reachable from the app switcher footer; not product apps. */
 export const DASHBOARD_UTILITIES: NavItem[] = [
+  {
+    href: "/dashboard/assets",
+    label: "Assets",
+    description: "3D models and maps for scenarios",
+    icon: Boxes,
+    match: (p) => p.startsWith("/dashboard/assets"),
+  },
+  {
+    href: "/dashboard/models",
+    label: "Models",
+    description: "Download, verify and remove model weights",
+    icon: Brain,
+    match: (p) => p.startsWith("/dashboard/models"),
+  },
+  {
+    href: "/dashboard/dataset-export",
+    label: "Exports",
+    description: "Package datasets for download",
+    icon: PackageCheck,
+    match: (p) => p.startsWith("/dashboard/dataset-export"),
+  },
   {
     href: "/dashboard/cloud-storage",
     label: "Cloud Storage",
