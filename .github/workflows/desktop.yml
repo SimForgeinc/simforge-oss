@@ -175,48 +175,19 @@ jobs:
         run: node studio/desktop/build-encoders.mjs --jobs=${{ runner.os == 'macOS' && 3 || 4 }}
         working-directory: .
       - name: "Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)"
+        # The sky plates are gitignored derivatives and the render service
+        # cannot build a scene without them; scripts/native-runtime/prepare-sky.mjs
+        # fetches the pinned NASA originals, converts them and verifies every
+        # product against SOURCES.json. The same script runs in
+        # .github/workflows/native-runtime.yml, so a desktop payload and a
+        # published runtime archive carry identical plates.
         run: |
-          python - <<'PY'
-          import hashlib, json, os, platform, subprocess, sys, urllib.request
-          from pathlib import Path
-          root = Path.cwd()
-          manifest = root / "renderer/render-core/assets/sky/SOURCES.json"
-          pinned = manifest.read_bytes()
-          sources = json.loads(pinned)["sources"]
-          inputs = root / "renderer/assets-src"
-          inputs.mkdir(parents=True, exist_ok=True)
-          def digest(path):
-              with path.open("rb") as stream:
-                  return hashlib.file_digest(stream, "sha256").hexdigest()
-          for source in sources:
-              target = inputs / source["download"]
-              if target.exists() and target.stat().st_size == source["download_bytes"] and digest(target) == source["download_sha256"]:
-                  continue
-              temporary = target.with_suffix(target.suffix + ".partial")
-              size = 0
-              with urllib.request.urlopen(source["file_url"], timeout=120) as response, temporary.open("wb") as output:
-                  while chunk := response.read(1024 * 1024):
-                      size += len(chunk)
-                      if size > source["download_bytes"]:
-                          raise RuntimeError("NASA source exceeds its pinned length")
-                      output.write(chunk)
-              if size != source["download_bytes"] or digest(temporary) != source["download_sha256"]:
-                  raise RuntimeError("NASA source differs from SOURCES.json")
-              temporary.replace(target)
-          system = {"Windows": "win32", "Darwin": "darwin", "Linux": "linux"}[platform.system()]
-          arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
-          tools = root / "studio/dist/desktop-tools" / f"{system}-{arch}"
-          environment = {**os.environ, "PATH": str(tools) + os.pathsep + os.environ["PATH"]}
-          subprocess.run([sys.executable, "renderer/tools/prepare_sky_assets.py"], env=environment, check=True)
-          for source in sources:
-              product = manifest.parent / source["product"]
-              if product.stat().st_size != source["product_bytes"] or digest(product) != source["product_sha256"]:
-                  raise RuntimeError("Generated sky product differs from its canonical pin")
-          # Builds verify the canonical pins; they do not author replacement metadata.
-          manifest.write_bytes(pinned)
-          PY
+          node scripts/native-runtime/prepare-sky.mjs \
+            --python python \
+            --tools-dir "studio/dist/desktop-tools/$(node -p 'process.platform + "-" + process.arch')"
           node scripts/native-runtime/package-runtime.mjs --target ${{ matrix.triple }} --no-gpu-interop
         working-directory: .
+
       - name: Stage the desktop artifact
         env:
           SIMFORGE_DESKTOP_CLOUD_ORIGIN: ${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}

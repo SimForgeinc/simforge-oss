@@ -1,0 +1,156 @@
+name: SimForge native runtime
+
+# Builds the prebuilt native runtime archive on native runners — Linux x64,
+# Windows x64, macOS arm64 and macOS x64 — and records what each leg produced
+# so `scripts/native-runtime/runtime-release.json` can pin it. Nothing is
+# cross-built: `package-runtime.mjs` runs on the target host, and
+# `install-runtime.mjs` refuses a foreign target rather than "staging" it.
+#
+# Why this workflow exists: the runtime used to be compiled from source on the
+# user's machine at install time (studio/app/lib/host/native-render-install.ts),
+# which made the renderer uninstallable for anyone without a Rust toolchain.
+# The installer now fetches a pinned, digest-verified archive; these are the
+# bytes it fetches.
+#
+# Publication follows the desktop convention exactly (.github/workflows/
+# desktop.yml + scripts/release/publish-desktop-release.mjs): this workflow can
+# create a maintainers-only DRAFT release, and making it publicly downloadable
+# is a deliberate act by the release owner, never a CI side effect. The draft
+# job also emits the composed pin for the maintainer to commit, because a pin
+# that names a release nobody published would 404 at install time.
+#
+# The tag namespace is `native-runtime-<version>-<revision12>`: `v*` triggers
+# the stack's npm/PyPI publish and `studio-*` is the desktop installer set, so
+# neither may be entered from here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create a maintainers-only draft release from this run's archives; publishing it is a separate, deliberate step"
+        type: choice
+        options: ["none", "draft"]
+        default: "none"
+  push:
+    branches: ["ci/native-runtime/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-24.04
+            triple: x86_64-unknown-linux-gnu
+          - name: windows-x64
+            os: windows-2022
+            triple: x86_64-pc-windows-msvc
+          - name: macos-arm64
+            os: macos-14
+            triple: aarch64-apple-darwin
+          - name: macos-x64
+            # macos-13 was retired on 2025-12-04; macos-15-intel is the remaining x86_64 image.
+            os: macos-15-intel
+            triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the sky conversion build dependencies
+        run: python -m pip install --disable-pip-version-check numpy==2.3.3 pillow==11.3.0
+      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
+
+      - name: Prepare the pinned NASA sky plates
+        # Gitignored derivatives the render service cannot build a scene
+        # without; build-runner.mjs refuses to build without them and
+        # publish-runtime.mjs refuses to publish an archive that lacks them.
+        run: node scripts/native-runtime/prepare-sky.mjs --python python
+
+      - name: Build, package and describe the runtime for ${{ matrix.triple }}
+        # Baseline bundle: no Python providers, and no gpu-interop — the
+        # published Linux runtime must run on a machine with no CUDA.
+        run: |
+          mkdir -p dist/native-runtime
+          node scripts/native-runtime/publish-runtime.mjs \
+            --target ${{ matrix.triple }} \
+            --gpu-interop false \
+            --provenance "github.com/${{ github.repository }} run ${{ github.run_id }} on ${{ matrix.os }}" \
+            > "dist/native-runtime/${{ matrix.triple }}.entry.json"
+          cat "dist/native-runtime/${{ matrix.triple }}.entry.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simforge-native-runtime-${{ matrix.name }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/native-runtime/simforge-native-runtime-*-${{ matrix.triple }}.tar.gz
+            dist/native-runtime/simforge-native-runtime-*-${{ matrix.triple }}.tar.gz.sha256
+            dist/native-runtime/${{ matrix.triple }}.entry.json
+
+  draft:
+    name: Draft release and pin
+    needs: build
+    if: inputs.publish == 'draft'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: simforge-native-runtime-*
+          merge-multiple: true
+          path: dist/native-runtime
+      - name: Upload every archive into the draft release and compose the pin
+        # Each archive is re-extracted and its manifest closure re-verified
+        # here, from the bytes that travelled, before it is uploaded or
+        # pinned: a truncated download cannot become a release asset.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for archive in dist/native-runtime/simforge-native-runtime-*.tar.gz; do
+            node scripts/native-runtime/publish-runtime.mjs \
+              --archive "$archive" \
+              --gpu-interop false \
+              --provenance "github.com/${{ github.repository }} run ${{ github.run_id }}" \
+              --publish draft --confirm --write-pin
+          done
+          cat scripts/native-runtime/runtime-release.json
+      - name: Say what the release owner still has to do
+        run: |
+          echo "The draft release holds the archives. To make the runtime installable:" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Commit scripts/native-runtime/runtime-release.json from this run's artifact." >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Publish the draft release deliberately: gh release edit <tag> --draft=false --repo ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Until both are done the pinned download URL answers 404 and the installer falls back to the source build." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simforge-native-runtime-pin
+          if-no-files-found: error
+          retention-days: 90
+          path: scripts/native-runtime/runtime-release.json
