@@ -514,14 +514,14 @@ simforge render submit --scenario <documentId> --engine native|browser|carla --s
 simforge render list [--scenario <documentId>] | status <jobId> | wait <jobId> [--timeout 3600] \
   | cancel <jobId> | artifacts <jobId> [--out <dir>]
 
-simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | workspaces
+simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | organizations
 simforge cloud sign-in --email <address> [--password-stdin]
 simforge cloud sign-up --email <address> --name <full name> [--password-stdin]
 simforge cloud verify-email --code <6 digits> | resend-code
 simforge cloud forgot-password --email <address>
 simforge cloud reset-password --email <address> --code <6 digits> [--password-stdin]
-simforge cloud datasets|artifacts --workspace <id>
-simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --workspace <id> --dataset|--artifact <id>
+simforge cloud datasets|artifacts --org <id>
+simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --org <id> --dataset|--artifact <id>
 simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
 simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] [--seed 1] [--samples 4] \
   [--ego-speed 0] [--camera-height 1.5] [--fov 90] [--prediction-hz 1] [--dry-run]
