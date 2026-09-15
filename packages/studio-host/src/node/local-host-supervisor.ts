@@ -206,13 +206,14 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     }
     // Claim ownership before PGlite is opened, including migration and seeding.
     const controlToken = randomBytes(24).toString("base64url");
+    const startedAt = new Date().toISOString();
     await writeLocalHostState({
       schema: "simforge.local-host-state/v1",
       pid: process.pid,
       port,
       baseUrl,
       controlToken,
-      startedAt: new Date().toISOString(),
+      startedAt,
       withWorker,
     });
     published = true;
@@ -229,11 +230,34 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     const server = spawnHostCommand(plan.server, { ...runtimeEnv, ...accessEnv, PORT: String(port), HOSTNAME: hostname });
     children.push(server);
     if (withWorker) {
-      children.push(spawnHostCommand(plan.worker, {
+      const worker = spawnHostCommand(plan.worker, {
         ...runtimeEnv,
         ...accessEnv,
         SIMFORGE_API_BASE_URL: process.env.SIMFORGE_API_BASE_URL ?? `http://127.0.0.1:${port}`,
-      }));
+      });
+      children.push(worker);
+      // A host that claims a worker and has none turns every queued export and
+      // render into a silent timeout, so say the worker died and record that
+      // this host no longer has one.
+      worker.once("exit", (code, signal) => {
+        if (stopping) return;
+        process.stderr.write(`${JSON.stringify({
+          component: "simforge-local-host",
+          event: "host.worker_exited",
+          code,
+          signal,
+          command: [plan.worker.command, ...plan.worker.args].join(" "),
+        })}\n`);
+        void writeLocalHostState({
+          schema: "simforge.local-host-state/v1",
+          pid: process.pid,
+          port,
+          baseUrl,
+          controlToken,
+          startedAt: startedAt,
+          withWorker: false,
+        });
+      });
     }
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
       const handler = () => stop(signal === "SIGHUP" ? "SIGTERM" : signal);
