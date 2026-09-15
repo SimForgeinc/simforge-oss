@@ -20,12 +20,44 @@
  */
 
 import { createE2eContext, type E2eContext } from "../support/context";
+import { E2E_ENV } from "../support/env";
 import { launchBrowserStudio, type StudioSession } from "../support/session";
 import { forcePreserveDrawingBuffer, hitTestCentre, readCanvasFrame } from "../support/surfaces";
 import { expect, test } from "../support/fixtures";
 
 const COVERAGE_MAP = '[data-testid="scenario-coverage-map"]';
 const WORLD_HOST = '[data-testid="scenario-world-host"]';
+
+/**
+ * The map version these tests author against, or a refusal that says what is
+ * missing and how to supply it.
+ *
+ * Worth its own failure rather than a bare `toBeVisible` timeout on a surface
+ * the product was never asked to draw: without an installed map there is no
+ * coverage map to click and no world to paint, and the cause is never in this
+ * file. A host ignores an installed map *in full* when either profile is
+ * absent — it drops out of `/api/simforge/maps` entirely and logs `ignored
+ * incomplete installed map <name>: semantic profile is not installed` — so
+ * the observable is an empty list and the real problem is a half-installed
+ * corpus elsewhere on the machine. Same refusal as
+ * `defects-live/simulation-preview-chain.spec.ts`.
+ */
+async function requireAuthorableMap(session: StudioSession): Promise<string> {
+  const maps = await session.api<{ maps?: { mapVersionId?: string }[] }>("/api/simforge/maps");
+  const mapVersionId = maps.maps?.[0]?.mapVersionId;
+  if (mapVersionId === undefined) {
+    const catalog = await session.api<{ maps?: unknown[] }>("/api/simforge/maps/catalog");
+    throw new Error(
+      "No installed map to author against, so this project cannot run.\n"
+      + `The catalog lists ${catalog.maps?.length ?? 0} entitled map(s), but none is installed with BOTH the browser and `
+      + "semantic profiles, and a map missing either profile is ignored in full rather than partially.\n"
+      + `Point ${E2E_ENV.seedDataRoot} at a data root whose maps are completely installed, or install one with `
+      + "`simforge maps install <mapVersionId>` against that root first.\n"
+      + "Check the host log for `ignored incomplete installed map` to see which profile is missing.",
+    );
+  }
+  return mapVersionId;
+}
 
 test.describe("interactive surfaces actually receive input", () => {
   let studio: StudioSession;
@@ -49,6 +81,9 @@ test.describe("interactive surfaces actually receive input", () => {
         await forcePreserveDrawingBuffer(page);
       },
     });
+    // Refused here rather than inside a test: every assertion below needs a
+    // map, and a missing one is a machine problem, not a product defect.
+    await requireAuthorableMap(studio);
   });
 
   test.afterAll(async () => {
@@ -141,9 +176,7 @@ test.describe("the 3D world paints when a scenario is open", () => {
       // addressable (`?dataset=…&document=…`), so driving it directly makes
       // the test independent of the list's markup, and the fixture is
       // created through the product's own first-run endpoint.
-      const maps = await session.api<{ maps?: { mapVersionId?: string }[] }>("/api/simforge/maps");
-      const mapVersionId = maps.maps?.[0]?.mapVersionId;
-      expect(mapVersionId, "an installed map to author against").toBeTruthy();
+      const mapVersionId = await requireAuthorableMap(session);
       const created = await session.api<{ document?: { id?: string; datasetId?: string } }>(
         `/api/simforge/maps/${mapVersionId}/documents/default`,
         { method: "POST" },
