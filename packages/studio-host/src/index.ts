@@ -2,6 +2,17 @@ export * from "./contracts";
 export * from "./capabilities";
 export * from "./desktop-map-cache";
 export * from "./cloud";
+export {
+  CloudOrigin,
+  HostOrigin,
+  InvalidOriginError,
+  cloudPath,
+  hostPath,
+  type CloudPath,
+  type HostPath,
+  type InvalidOriginCode,
+  type OriginMode,
+} from "./origins";
 export { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError, STUDIO_HOST_ERROR_MESSAGES } from "./errors";
 export type {
   MaterializedTrafficUpload,

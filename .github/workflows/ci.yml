@@ -38,6 +38,7 @@ jobs:
           MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
         run: pnpm meshy:smoke:live
       - run: pnpm verify:naming
+      - run: pnpm verify:origins
       - run: pnpm typecheck
       - run: pnpm test:release
       - name: Test the repository scripts
