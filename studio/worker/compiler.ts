@@ -90,7 +90,10 @@ class CompilerClient {
 
   async fail(claim: CompilerClaim, error: unknown): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
-    const code = /^[a-z0-9_:-]+$/i.test(message) ? message.slice(0, 100) : "compiler_failed";
+    // A compiler error names its cause in the first token and may carry the
+    // measurements after a colon or space; keep the code and the detail both.
+    const head = message.split(/[:\s]/, 1)[0] ?? "";
+    const code = /^[a-z0-9_-]+$/i.test(head) ? head.slice(0, 100) : "compiler_failed";
     await this.post(`/api/simforge/internal/exports/${encodeURIComponent(claim.exportId)}/fail`, fence(claim, {
       code,
       detail: { category: error instanceof Error ? error.name : "UnknownError", message: message.slice(0, 2_000) },

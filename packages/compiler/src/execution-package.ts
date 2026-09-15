@@ -358,7 +358,12 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
   }
   const sourceInputDigest = executionSourceInputDigest(resolved.resolvedInput);
   if (ambient.materializedTraffic.sourceInputDigest !== sourceInputDigest) {
-    throw new Error('materialized_traffic_source_input_digest_mismatch');
+    // The claimed digest comes from the producer's own resolution (the editor's
+    // saved simulation, or the CLI's upload of it); this one comes from the map
+    // closure the compiler resolves against. Nothing binds those two closures,
+    // so name both digests and the ambient mode that produced them - a bare
+    // code sends the reader looking for a stuck job instead of a disagreement.
+    throw new Error(`materialized_traffic_source_input_digest_mismatch: claimed ${ambient.materializedTraffic.sourceInputDigest}, resolved ${sourceInputDigest} (ambient ${ambient.mode}, map ${runtimeMapName})`);
   }
 
   const canonical = await exportExecutionDocument(resolved.resolvedInput, resolved, request, sourceInputDigest);
