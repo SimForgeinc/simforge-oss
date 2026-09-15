@@ -3396,3 +3396,48 @@ export async function getFinalizedArtifact(
     createdAt: row.created_at,
   };
 }
+
+/**
+ * One available artifact of a scenario, addressed by its storage key.
+ *
+ * `/api/scenarios/[scenarioId]/media` receives a key from the browser, so the
+ * key alone must not authorize anything: the row is required to be an
+ * available artifact of this workspace whose owning revision belongs to this
+ * very scenario document. `revision_id` is the ownership column of the
+ * artifact itself - the one {@link getFinalizedArtifact} returns as
+ * `revisionId` - so this holds for every producer that registers an artifact,
+ * not only for render jobs. That is the workspace predicate
+ * {@link getFinalizedArtifact} applies, plus the scenario binding the path
+ * asserts; never less.
+ */
+export async function resolveScenarioMediaArtifact(
+  context: AppContext,
+  scenarioId: string,
+  storageKey: string,
+): Promise<{ bucket: string; key: string; mediaType: string } | null> {
+  const rows = await queryRows<{
+    storage_bucket: string;
+    storage_key: string;
+    media_type: string;
+  }>(
+    `SELECT a.storage_bucket, a.storage_key, a.media_type
+     FROM simforge.artifacts a
+     JOIN simforge.revisions rev
+       ON rev.id = a.revision_id AND rev.workspace_id = a.workspace_id
+     JOIN simforge.documents doc
+       ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
+     WHERE a.workspace_id = :workspace_id AND doc.id = :scenario_id
+       AND doc.deleted_at IS NULL AND a.storage_key = :storage_key
+       AND a.artifact_state = 'available' AND a.deleted_at IS NULL
+     LIMIT 1`,
+    {
+      workspace_id: context.workspaceId,
+      scenario_id: scenarioId,
+      storage_key: storageKey,
+    },
+  );
+  const row = rows[0];
+  return row
+    ? { bucket: row.storage_bucket, key: row.storage_key, mediaType: row.media_type }
+    : null;
+}
