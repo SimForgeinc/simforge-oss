@@ -1,5 +1,7 @@
 node_modules/
-dist/
+# No trailing slash: a trailing-slash pattern matches directories only, so a
+# symlink named `dist` would not be ignored (one was committed by accident).
+dist
 /dev-assets
 /studio/public/map-bundles/
 

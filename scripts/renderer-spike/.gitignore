@@ -1,5 +1,5 @@
 corpus/
 out/
-target/
+target
 node_modules/
 package*.json
