@@ -92,6 +92,8 @@ export function collectSimulationIssues(input: {
   clipSeconds?: number;
   preparationMessage?: string | null;
   preparationFailed?: boolean;
+  /** Why the trace could not be persisted as the document's saved simulation. */
+  savedSimulationError?: string | null;
   playbackError?: string | null;
   bundle?: { readonly startTime: number; readonly endTime: number } | null;
   materializationNotes?: unknown;
@@ -123,6 +125,19 @@ export function collectSimulationIssues(input: {
         "The scenario preview failed before a playback controller was created.",
       ),
       solution: "Retry the preview. If it fails again, copy the debug information and send it to support.",
+    });
+  }
+  if (input.savedSimulationError) {
+    issues.push({
+      id: "saved-simulation",
+      severity: "error",
+      readinessSection: "export",
+      title: "Simulation could not be saved for rendering",
+      detail: userSafeErrorDetail(
+        input.savedSimulationError,
+        "The preview plays here, but this scenario's saved simulation could not be written, so a render has nothing to read.",
+      ),
+      solution: "Reopen the scenario to retry the save. If it fails again, copy the debug information and send it to support.",
     });
   }
   if (input.playbackError) {

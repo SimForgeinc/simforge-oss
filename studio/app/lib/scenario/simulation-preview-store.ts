@@ -12,6 +12,7 @@ import {
   createLocalArtifactProducer,
   finalizeLocalArtifactProducer,
 } from "./jobs/local-artifact-producer-store";
+import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import { simforgeEnv } from "@/lib/simforge-env";
 /** Stored media type of saved browser simulations; artifact metadata binds to it. */
 const COMPRESSED_PLAYBACK_MEDIA_TYPE = "application/vnd.simforge.uniscenario-playback+json+gzip";
@@ -132,10 +133,18 @@ export async function reserveSimulationPreview(context: AppContext, documentId: 
   return {
     artifactId: row.id,
     uploadRequired: row.artifact_state !== "available",
+    // Same-origin, like every other reservation this host hands a browser: an
+    // absolute presigned URL carries whichever loopback authority the server
+    // guessed, and a page served under any other name (`localhost`, a LAN
+    // address, a tunnel) cannot PUT to it — the preflight has no CORS grant,
+    // so the bytes never left the page, completion never ran, and the saved
+    // simulation stayed missing while every render refused for want of it.
     uploadUrl:
       row.artifact_state === "available"
         ? null
-        : await getPresignedPutUrl(row.storage_key, COMPRESSED_PLAYBACK_MEDIA_TYPE, row.storage_bucket, 900, input.sha256),
+        : sameOriginWhenLocal(
+            await getPresignedPutUrl(row.storage_key, COMPRESSED_PLAYBACK_MEDIA_TYPE, row.storage_bucket, 900, input.sha256),
+          ),
     headers: checksumBoundPutRequiredHeaders(COMPRESSED_PLAYBACK_MEDIA_TYPE, input.sha256),
   };
 }
@@ -275,7 +284,7 @@ export async function getCurrentSimulationPreview(
         sha256: row.sha256,
         sizeBytes: Number(row.byte_length),
         mediaType: row.media_type,
-        downloadUrl: await getPresignedGetUrl(row.storage_key, row.storage_bucket),
+        downloadUrl: sameOriginWhenLocal(await getPresignedGetUrl(row.storage_key, row.storage_bucket)),
         createdAt: row.created_at,
       }
     : null;

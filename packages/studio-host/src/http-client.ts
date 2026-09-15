@@ -150,6 +150,17 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     );
   }
 
+  /**
+   * Resolve a reserved upload target. Local-object reservations are handed
+   * out same-origin relative (`sameOriginWhenLocal`), because the host the
+   * browser reached is the host that serves the object store and no absolute
+   * authority the server could invent would match every way of reaching it.
+   * A browser resolves that against the page; a non-browser caller has to be
+   * given the base it is already talking to, exactly like `request()`.
+   */
+  function uploadTarget(uploadUrl: string): string {
+    return uploadUrl.startsWith("/") ? `${baseUrl}${uploadUrl}` : uploadUrl;
+  }
   async function getArtifact(artifactId: string, opts: { download?: boolean; signal?: AbortSignal } = {}) {
     return request<ScenarioArtifactDto>(
       `/api/simforge/artifacts/${encodeURIComponent(artifactId)}${opts.download ? "?download=1" : ""}`,
@@ -160,7 +171,7 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
   async function uploadReserved(reservation: UploadReservation, bytes: Uint8Array, label: string, signal?: AbortSignal) {
     if (!reservation.uploadRequired) return;
     if (!reservation.uploadUrl) throw new Error(`${label} reservation has no upload URL`);
-    const uploaded = await fetchImpl(reservation.uploadUrl, {
+    const uploaded = await fetchImpl(uploadTarget(reservation.uploadUrl), {
       method: "PUT",
       headers: reservation.headers,
       body: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,

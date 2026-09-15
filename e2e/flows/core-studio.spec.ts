@@ -476,6 +476,42 @@ test.describe("core studio flow", () => {
       });
     });
 
+    await test.step("the simulated trace is persisted as the document's saved simulation", async () => {
+      // The whole reserve -> upload -> complete -> read chain, driven by the
+      // editor that just simulated. It belongs here because a render reads only
+      // the saved copy: with the reservation route missing its POST handler the
+      // editor kept playing an in-memory trace while this route stayed 404
+      // forever and every render refused with `simulation_preview_missing`.
+      const readSavedSimulation = () =>
+        studio
+          .api<{
+            draftVersion: number;
+            sha256: string;
+            sizeBytes: number;
+            downloadUrl: string;
+          }>(`/api/simforge/documents/${documentId}/simulation-preview`)
+          .catch(() => null);
+
+      await expect
+        .poll(async () => (await readSavedSimulation()) !== null, {
+          timeout: 120_000,
+          message: "the editor must save the simulation it just ran",
+        })
+        .toBe(true);
+
+      const preview = await readSavedSimulation();
+      const saved = await studio.api<ScenarioDocument>(`/api/simforge/documents/${documentId}`);
+      // The read is version-bound, so a returned preview is this draft's.
+      expect(preview?.draftVersion).toBe(saved.draftVersion);
+      expect(preview?.sha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(preview?.sizeBytes ?? 0).toBeGreaterThan(0);
+      evidence.savedSimulation = {
+        draftVersion: preview?.draftVersion,
+        sha256: preview?.sha256,
+        sizeBytes: preview?.sizeBytes,
+      };
+    });
+
     await test.step("reopening the saved scenario restores it deterministically", async () => {
       const datasetId = new URL(page.url()).searchParams.get("dataset");
       expect(datasetId).toBeTruthy();
