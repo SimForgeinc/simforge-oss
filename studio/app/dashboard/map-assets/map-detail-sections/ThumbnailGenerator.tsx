@@ -8,6 +8,10 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { toast } from "sonner";
 import type { MapAsset } from "@simforge-oss/studio-shared";
 import type { FeatureCollection } from "geojson";
+import {
+  DEFAULT_BASEMAP,
+  fetchMonochromeBasemapStyle,
+} from "@simforge-oss/studio-ui/lib/maps/basemaps";
 
 type Props = {
   asset: MapAsset;
@@ -195,11 +199,13 @@ async function renderThumbnailOffscreen(
   const { ROAD_NETWORK_FEATURE_TYPES, DEFAULT_ENABLED_FEATURE_TYPE_IDS } = await import(
     "@/app/lib/maps/frontend/road-network-feature-types"
   );
+  // A thumbnail is the same ground as every other 2D map in the product.
+  const basemapStyle = await fetchMonochromeBasemapStyle(DEFAULT_BASEMAP);
 
   return new Promise<Blob>((resolve, reject) => {
     const map = new maplibregl.Map({
       container,
-      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+      style: basemapStyle as never,
       bounds: [
         [bbox.min_lng, bbox.min_lat],
         [bbox.max_lng, bbox.max_lat],

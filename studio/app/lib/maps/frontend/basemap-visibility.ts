@@ -1,6 +1,11 @@
 "use client";
 
-import { BASEMAPS, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
+import {
+  fetchMonochromeBasemapStyle,
+  type BasemapId,
+  type BasemapStyle,
+  type BasemapStyleLayer,
+} from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   SATELLITE_MAX_ZOOM,
   SATELLITE_MIN_ZOOM,
@@ -24,25 +29,6 @@ export const BASEMAP_LAYER_GROUPS = [
 export type BasemapLayerGroupId = (typeof BASEMAP_LAYER_GROUPS)[number]["id"];
 
 export type BasemapLayerVisibility = Record<BasemapLayerGroupId, boolean>;
-
-type BasemapStyleLayer = {
-  id?: string;
-  source?: string;
-  type?: string;
-  "source-layer"?: string;
-};
-
-type BasemapStyle = {
-  version: number;
-  name?: string;
-  sources: Record<string, unknown>;
-  layers: BasemapStyleLayer[];
-  glyphs?: string;
-  sprite?: string;
-  metadata?: Record<string, unknown>;
-};
-
-const BASEMAP_STYLE_CACHE = new Map<BasemapId, Promise<BasemapStyle>>();
 
 export const DEFAULT_BASEMAP_LAYER_VISIBILITY: BasemapLayerVisibility = {
   background: true,
@@ -72,10 +58,6 @@ export const BUILDINGS_ONLY_BASEMAP_LAYER_VISIBILITY: BasemapLayerVisibility = {
   buildings: true,
 };
 
-function sourceLayerFor(layer: BasemapStyleLayer) {
-  return layer["source-layer"] ?? "";
-}
-
 function classifyTransportationLayer(layer: BasemapStyleLayer): BasemapLayerGroupId {
   const id = (layer.id ?? "").toLowerCase();
   if (id.includes("rail")) return "transit";
@@ -84,7 +66,7 @@ function classifyTransportationLayer(layer: BasemapStyleLayer): BasemapLayerGrou
 
 function classifyBasemapLayer(layer: BasemapStyleLayer): BasemapLayerGroupId | null {
   const id = (layer.id ?? "").toLowerCase();
-  const sourceLayer = sourceLayerFor(layer).toLowerCase();
+  const sourceLayer = (layer["source-layer"] ?? "").toLowerCase();
 
   if (!sourceLayer) return id === "background" ? "background" : null;
   if (sourceLayer === "landcover" || sourceLayer === "landuse" || sourceLayer === "park") return "landuse";
@@ -101,12 +83,6 @@ function classifyBasemapLayer(layer: BasemapStyleLayer): BasemapLayerGroupId | n
   return null;
 }
 
-export function isDefaultBasemapLayerVisibility(visibility: BasemapLayerVisibility) {
-  return BASEMAP_LAYER_GROUPS.every(
-    ({ id }) => visibility[id] === DEFAULT_BASEMAP_LAYER_VISIBILITY[id],
-  );
-}
-
 export function filterBasemapStyle(
   style: BasemapStyle,
   visibility: BasemapLayerVisibility,
@@ -121,41 +97,17 @@ export function filterBasemapStyle(
   };
 }
 
-async function fetchBasemapStyle(basemapId: BasemapId) {
-  const existing = BASEMAP_STYLE_CACHE.get(basemapId);
-  if (existing) return existing;
-
-  const basemap = BASEMAPS.find((entry) => entry.id === basemapId);
-  if (!basemap) {
-    throw new Error(`Unknown basemap: ${basemapId}`);
-  }
-
-  const promise = fetch(basemap.url, { cache: "force-cache" }).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`Failed to fetch basemap style: ${response.status} ${response.statusText}`);
-    }
-    return response.json() as Promise<BasemapStyle>;
-  });
-
-  BASEMAP_STYLE_CACHE.set(basemapId, promise);
-  return promise;
-}
-
+/**
+ * Resolve the monochrome basemap style with the hidden layer groups dropped.
+ *
+ * Always a style document, never the CARTO URL it came from: the ground is the
+ * app's own grey ramp, and only the fetched style can be recoloured.
+ */
 export async function resolveBasemapStyle(
   basemapId: BasemapId,
   visibility: BasemapLayerVisibility,
-) {
-  const basemap = BASEMAPS.find((entry) => entry.id === basemapId);
-  if (!basemap) {
-    throw new Error(`Unknown basemap: ${basemapId}`);
-  }
-
-  if (isDefaultBasemapLayerVisibility(visibility)) {
-    return basemap.url;
-  }
-
-  const style = await fetchBasemapStyle(basemapId);
-  return filterBasemapStyle(style, visibility);
+): Promise<BasemapStyle> {
+  return filterBasemapStyle(await fetchMonochromeBasemapStyle(basemapId), visibility);
 }
 
 /**
@@ -166,17 +118,20 @@ export async function resolveBasemapStyle(
  * imagery) and stacked in list order — one tileset often covers only part of a
  * map, so several are composited to cover the whole extent. Outside every
  * tileset's bounds/zoom range the vector basemap shows through.
+ *
+ * Imagery is never recoloured: it is photography, and the monochrome recolour
+ * only ever touches the vector ground underneath it.
  */
 export async function resolveBasemapStyleWithImagery(
   basemapId: BasemapId,
   visibility: BasemapLayerVisibility,
   imageryLayers: SatelliteImageryLayer[] | null,
-): Promise<object | string> {
+): Promise<BasemapStyle> {
+  const style = await resolveBasemapStyle(basemapId, visibility);
   if (!imageryLayers || imageryLayers.length === 0) {
-    return resolveBasemapStyle(basemapId, visibility);
+    return style;
   }
 
-  const style = filterBasemapStyle(await fetchBasemapStyle(basemapId), visibility);
   const rasterSources = Object.fromEntries(
     imageryLayers.map((layer) => [
       layer.id,

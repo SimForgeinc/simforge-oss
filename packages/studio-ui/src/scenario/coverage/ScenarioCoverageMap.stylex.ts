@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+
 import { colors, layers, space, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
@@ -13,7 +14,13 @@ export const styles = stylex.create({
     position: "absolute",
     inset: 0,
   },
-  /** Map name plus scenario count, anchored on the footprint's centre. */
+  /**
+   * Map name plus scenario count, anchored on the footprint's centre.
+   *
+   * A scrim over the map, solidifying to the plate under the pointer: the
+   * basemap is monochrome, so the only colour this plate carries is the accent
+   * it takes on its edge when hovered or selected.
+   */
   label: {
     display: "flex",
     flexDirection: "column",
@@ -22,8 +29,8 @@ export const styles = stylex.create({
     paddingInline: space.md,
     paddingBlock: space.xs,
     backgroundColor: {
-      default: "rgba(10, 10, 10, 0.82)",
-      ":hover": "rgba(10, 10, 10, 0.92)",
+      default: colors.overlayScrim,
+      ":hover": colors.panelSolid,
     },
     borderWidth: "1px",
     borderStyle: "solid",
@@ -31,14 +38,14 @@ export const styles = stylex.create({
       default: colors.lineStrong,
       ":hover": colors.accent,
     },
-    color: "#ffffff",
+    color: colors.textOnPlate,
     cursor: "pointer",
     whiteSpace: "nowrap",
     backdropFilter: "blur(6px)",
   },
   labelSelected: {
     borderColor: colors.accent,
-    backgroundColor: "rgba(10, 10, 10, 0.94)",
+    backgroundColor: colors.panelSolid,
   },
   labelName: {
     fontSize: text.sizeXs,
@@ -65,7 +72,7 @@ export const styles = stylex.create({
     maxWidth: "18rem",
     paddingInline: space.lg,
     paddingBlock: space.md,
-    backgroundColor: "rgba(10, 10, 10, 0.78)",
+    backgroundColor: colors.overlayScrim,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.line,
@@ -91,7 +98,7 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     paddingInline: space.lg,
     paddingBlock: space.md,
-    backgroundColor: "rgba(10, 10, 10, 0.78)",
+    backgroundColor: colors.overlayScrim,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.line,
