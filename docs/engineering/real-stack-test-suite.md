@@ -49,6 +49,33 @@ corepack pnpm exec playwright test --project=<project>
 `defects` is the one to run on every change: it needs no server, no network
 and no credentials, and it catches three of the seven classes above.
 
+The host-backed projects need a seeded data root, and **will refuse to run
+without one**:
+
+```bash
+SIMFORGE_E2E_SEED_DATA_ROOT=~/simforge-dev-data \
+  corepack pnpm exec playwright test --project=defects-live
+```
+
+Two things make this sharper than an ordinary missing-fixture error, and both
+cost real debugging time before they were understood:
+
+- **Installation is a database fact, not a disk fact.** Symlinking a corpus
+  into an isolated cache leaves `/api/simforge/maps` at `{"maps":[]}` while
+  `/api/simforge/maps/catalog` cheerfully lists every entitled map with
+  `installed:{browser:false,semantic:false}`. Installing even the smallest
+  costs a browser closure of roughly 1.8 GB, so cloning a root that already
+  has one is the only affordable fixture.
+- **Installation is also a per-profile fact, and a half-installed map is
+  ignored *in full*.** A host does not degrade to a browser-only map: the map
+  disappears from `/api/simforge/maps` entirely and the host logs `ignored
+  incomplete installed map <name>: semantic profile is not installed`. So the
+  observable — an empty list — looks nothing like the cause.
+
+Because that cause is never in the spec that fails, the projects check for an
+authorable map up front and refuse with a message naming the variable, the
+number of entitled maps, and the log line to grep for.
+
 The long projects are separate so the fast ones stay fast. Nothing in
 `defects` or `real-cloud` boots a Studio host.
 
@@ -62,7 +89,8 @@ Explicit process environment always wins.
 | --- | --- | --- |
 | `SIMFORGE_E2E_CLOUD_ORIGIN` | `real-cloud` | The environment under test; defaults to staging |
 | `SIMFORGE_E2E_STAGING_ORIGIN` | `real-cloud` | Fallback when the above is unset |
-| `SIMFORGE_E2E_MAPS_FIXTURE_ROOT` | `real-world`, `real-corpus` | A real installed map corpus (the directory holding `dev-assets/`) |
+| `SIMFORGE_E2E_SEED_DATA_ROOT` | **required** by `defects-live`, `real-world` | A data root to clone per test, holding at least one *completely* installed map |
+| `SIMFORGE_E2E_MAPS_FIXTURE_ROOT` | `real-corpus` | A real installed map corpus (the directory holding `dev-assets/`) |
 | `SIMFORGE_E2E_DATA_ROOT` | all host projects | Parent directory for per-test isolated data roots |
 
 **Production is refused, not merely avoided.** `cloudOrigin()` throws on
