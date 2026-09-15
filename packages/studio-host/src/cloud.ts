@@ -64,6 +64,25 @@ export type StudioCloudAccount = {
   sessions: StudioCloudSession[];
 };
 
+/**
+ * What a completed account deletion destroyed, as the Cloud reports it.
+ *
+ * Shown after the fact, so the user learns exactly which cloud homes closed
+ * with the account. `message` is the platform's own sentence and is displayed
+ * verbatim rather than recomposed here — it already names the closed
+ * organizations and states that local data was untouched.
+ */
+export type StudioCloudAccountDeletion = {
+  email: string | null;
+  /** Organizations closed with the account, because it was their only member. */
+  organizationsClosed: { id: string; name: string }[];
+  /** Organizations the account merely left; their content and other members stay. */
+  organizationsLeft: string[];
+  /** Sessions the Cloud revoked, this installation's among them. */
+  sessionsRevoked: number;
+  message: string;
+};
+
 export type StudioCloudInvitation = {
   id: string;
   organizationId: string;
@@ -108,6 +127,14 @@ export interface StudioCloudService {
   account(signal?: AbortSignal): Promise<StudioCloudAccount>;
   updateAccount(input: { name: string }, signal?: AbortSignal): Promise<StudioCloudAccount>;
   revokeSession(id: string, signal?: AbortSignal): Promise<{ ok: true }>;
+  /**
+   * Irreversibly delete the signed-in account. Re-authenticates with
+   * `password` at the Cloud; a wrong one is refused with nothing deleted.
+   * Succeeding signs this installation out — the Cloud revokes every session
+   * and the local credential is cleared — and destroys nothing on this
+   * computer.
+   */
+  deleteAccount(input: { password: string }, signal?: AbortSignal): Promise<StudioCloudAccountDeletion>;
   listInvitations(signal?: AbortSignal): Promise<StudioCloudInvitation[]>;
   acceptInvitation(id: string, signal?: AbortSignal): Promise<{ organizationId: string }>;
   declineInvitation(id: string, signal?: AbortSignal): Promise<{ ok: true }>;

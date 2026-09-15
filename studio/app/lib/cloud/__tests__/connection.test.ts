@@ -5,8 +5,9 @@ import { after, before, beforeEach, test } from "node:test";
 /**
  * The native sign-in path against a stubbed SimCloud: what the vault holds
  * after a sign-in, how a rejected bearer token is refreshed once, what an
- * unrefreshable session reports, and that pre-native (v1) vault entries are
- * not sessions any more.
+ * unrefreshable session reports, that pre-native (v1) vault entries are
+ * not sessions any more, and how account deletion treats the two 401s it can
+ * receive - a lapsed token and a rejected password - differently.
  */
 
 type Vault = {
@@ -95,6 +96,26 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         user: { id: "user_1", email: "ada@example.test", name: "Ada Lovelace", email_verified: true },
         active_organization_id: "org_1",
         sessions: [{ id: "sess_1", label: "this-mac", user_agent: null, created_at: "2026-09-13T00:00:00Z", last_used_at: null, active: true, current: true }],
+      });
+    case "DELETE /api/desktop/account":
+      if (call.authorization !== "Bearer sfd_at_first") return json(401, { error: "invalid_token", error_description: "Expired." });
+      // Re-authentication: the Cloud answers 401 for a wrong password too.
+      if (call.body?.password !== "correct horse") {
+        return json(401, { error: "invalid_credentials", error_description: "That password is wrong. Nothing has been deleted." });
+      }
+      return json(200, {
+        deleted: true,
+        account: { id: "user_1", email: "ada@example.test" },
+        destroyed: {
+          workspaces: [{ id: "ws_1", name: "Ada" }],
+          desktop_sessions: 2,
+          browser_sessions: 1,
+          scenario_ratings: 4,
+          render_annotations: 0,
+        },
+        organizations_left: ["org_9"],
+        local_data_untouched: true,
+        message: "Your account and the organization Ada were deleted. Nothing on this computer was removed.",
       });
     default:
       return json(404, { error: "not_found" });
@@ -209,6 +230,46 @@ test("a refresh the Cloud refuses marks the session expired", async () => {
   assert.equal(status.user?.email, "ada@example.test");
   // The bearer route itself was never reached with a dead token.
   assert.equal(calls.filter((call) => call.path === "/api/desktop/account").length, 0);
+});
+
+test("a rejected deletion password is reported as such and leaves the session signed in", async () => {
+  seedCredential();
+  const { deleteCloudAccount, CloudConnectionError, getCloudStatus } = connection;
+  await assert.rejects(
+    deleteCloudAccount({ password: "nope" }),
+    (error: unknown) => error instanceof CloudConnectionError && error.code === "invalid_credentials" && error.status === 401,
+  );
+  // The 401 must not be mistaken for a lapsed token: no refresh, and above all
+  // no second attempt, which would spend the password against the Cloud's
+  // per-account throttle and finally report the session expired.
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${call.path}`).filter((line) => !line.endsWith("/api/desktop/auth/providers")),
+    ["DELETE /api/desktop/account"],
+  );
+  const status = await getCloudStatus();
+  assert.equal(status.state, "connected");
+  assert.equal(status.user?.email, "ada@example.test");
+  assert.equal(vault.entries.has(`cloud:${origin}`), true);
+});
+
+test("a completed deletion reports what was destroyed and clears the local credential", async () => {
+  seedCredential();
+  const { deleteCloudAccount, getCloudStatus, cloudSessionScope } = connection;
+  const deletion = await deleteCloudAccount({ password: "correct horse" });
+  assert.equal(deletion.email, "ada@example.test");
+  assert.deepEqual(deletion.organizationsClosed, [{ id: "ws_1", name: "Ada" }]);
+  assert.deepEqual(deletion.organizationsLeft, ["org_9"]);
+  assert.equal(deletion.sessionsRevoked, 3);
+  assert.match(deletion.message, /Nothing on this computer was removed/);
+
+  // The account is gone upstream, so the app must present itself as signed
+  // out, not as a session that expired: nothing is left to sign back into.
+  const status = await getCloudStatus();
+  assert.equal(status.state, "disconnected");
+  assert.equal(status.user, null);
+  assert.equal(status.message, null);
+  assert.equal(vault.entries.has(`cloud:${origin}`), false);
+  assert.equal(cloudSessionScope().active, false);
 });
 
 test("a v1 vault entry from the retired consent flow is dropped, not treated as a session", async () => {

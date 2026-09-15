@@ -30,6 +30,10 @@ import {
   CloudVerifyEmailBanner,
 } from "@/app/components/cloud/CloudAccountPanel";
 import { form } from "@/app/components/cloud/cloud-account.stylex";
+import {
+  CloudAccountDeletedNotice,
+  CloudDeleteAccountAction,
+} from "@/app/components/simcloud/CloudDeleteAccountAction";
 import { SimCloudStorage } from "@/app/components/simcloud/SimCloudStorage";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 
@@ -219,6 +223,7 @@ export function SimCloudPanel() {
           )
         ) : (
           <section {...stylex.props(plate.root)} data-testid="simcloud-sign-in">
+            <CloudAccountDeletedNotice />
             <CloudSignInForm status={cloud.status!} />
           </section>
         )}
@@ -494,6 +499,8 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
         </p>
         <CloudSignOutAction />
       </section>
+
+      <CloudDeleteAccountAction />
     </div>
   );
 }

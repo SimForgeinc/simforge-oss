@@ -522,6 +522,7 @@ simforge cloud sign-up --email <address> --name <full name> [--password-stdin]
 simforge cloud verify-email --code <6 digits> | resend-code
 simforge cloud forgot-password --email <address>
 simforge cloud reset-password --email <address> --code <6 digits> [--password-stdin]
+simforge cloud delete-account --yes [--password-stdin]
 simforge cloud datasets|artifacts --org <id>
 simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --org <id> --dataset|--artifact <id>
 simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
@@ -635,6 +636,10 @@ simforge cloud verify-email --code 123456
 # reset-password revokes every session of the account, this one included.
 simforge cloud forgot-password --email me@example.com
 simforge cloud reset-password --email me@example.com --code 123456 --password-stdin < newpw.txt
+
+# Irreversible. Deletes the cloud account and closes any organization it is the only
+# member of; nothing on this computer is removed. Needs --yes as well as the password.
+SIMFORGE_CLOUD_PASSWORD=... simforge cloud delete-account --yes
 
 simforge cloud sign-out                   # revokes upstream, clears the local vault entry
 ```

@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { hostname } from "node:os";
 import type {
   StudioCloudAccount,
+  StudioCloudAccountDeletion,
   StudioCloudInvitation,
   StudioCloudOrganization,
   StudioCloudProvider,
@@ -139,6 +140,27 @@ const InvitationsResponseSchema = z.object({
     inviter_email: z.string().nullable().default(null),
     expires_at: z.string(),
   })),
+});
+
+/**
+ * The Cloud's answer to a completed deletion. Non-strict on purpose: the
+ * platform reports more destroyed-row counts than the app has any business
+ * showing (ratings, annotations), and `message` is the one sentence it has
+ * already composed for the user.
+ */
+const AccountDeletionResponseSchema = z.object({
+  deleted: z.literal(true),
+  account: z.object({
+    id: z.string().min(1),
+    email: z.string().nullable().optional(),
+  }),
+  destroyed: z.object({
+    workspaces: z.array(z.object({ id: z.string().min(1), name: z.string() })).default([]),
+    desktop_sessions: z.number().int().nonnegative().default(0),
+    browser_sessions: z.number().int().nonnegative().default(0),
+  }),
+  organizations_left: z.array(z.string()).default([]),
+  message: z.string().min(1),
 });
 
 const OrganizationResponseSchema = z.object({ organization_id: z.string().min(1) });
@@ -436,12 +458,23 @@ export async function cloudAuthRequest(path: string, options: AuthRequestOptions
     let credential = await validAccessToken(options.signal);
     response = await sendAuthRequest(url, options, credential.accessToken);
     if (response.status === 401) {
-      await discardResponseBody(response);
+      // A 401 normally means the access token lapsed. But a re-authenticating
+      // request — deleting the account sends the current password — also
+      // answers 401 when the *password* is wrong. Refreshing and replaying
+      // that would burn a token rotation, send the wrong password a second
+      // time, and finally report the session expired: a mistyped password
+      // would look like a lapsed sign-in and push the app out of the account
+      // it is still signed in to. Let the Cloud's own code separate the two.
+      // Every other 401, including one carrying no code at all, keeps the
+      // refresh-once behaviour.
+      const rejection = await authResponseError(response);
+      if (rejection.code === "invalid_credentials") throw rejection;
       credential = await validAccessToken(options.signal, true);
       response = await sendAuthRequest(url, options, credential.accessToken);
       if (response.status === 401) {
+        const refreshed = await authResponseError(response);
+        if (refreshed.code === "invalid_credentials") throw refreshed;
         state.expiredMessage = "SimCloud rejected the current session. Sign in again.";
-        await discardResponseBody(response);
         throw new CloudConnectionError("cloud_session_expired", state.expiredMessage, 401);
       }
     }
@@ -605,6 +638,49 @@ export async function revokeCloudSession(sessionId: string, signal?: AbortSignal
     bearer: true,
     signal,
   });
+}
+
+/**
+ * Delete the account this installation is signed in to. Irreversible.
+ *
+ * Re-authenticated at the Cloud: `password` is re-checked there, and a wrong
+ * one comes back as `invalid_credentials` with nothing deleted, so a failed
+ * attempt leaves the account and this sign-in exactly as they were. The Cloud
+ * refuses outright (`organization_owner`) while the account still owns an
+ * organization that has other members.
+ *
+ * On success the Cloud has already destroyed every desktop and browser session
+ * of the account inside the same transaction, so the credential in the local
+ * vault is dead the moment it answers. It is cleared here for the same reason
+ * sign-out clears it: a retained credential would leave Studio presenting a
+ * signed-in account that no longer exists, and every later call would fail as
+ * an expired session rather than as a signed-out app. Nothing local is touched
+ * - scenarios, datasets, renders and installed maps live on this computer and
+ * outlive the account.
+ */
+export async function deleteCloudAccount(
+  input: { password: string },
+  signal?: AbortSignal,
+): Promise<StudioCloudAccountDeletion> {
+  const payload = await cloudAuthRequest("/api/desktop/account", {
+    method: "DELETE",
+    bearer: true,
+    body: { password: input.password },
+    signal,
+  });
+  const result = parseOrInvalid(AccountDeletionResponseSchema, payload, "account deletion");
+  const credential = state.credential;
+  state.pending = null;
+  state.message = null;
+  state.expiredMessage = null;
+  if (credential) await storeCredential(null, credential.origin);
+  return {
+    email: result.account.email ?? null,
+    organizationsClosed: result.destroyed.workspaces,
+    organizationsLeft: result.organizations_left,
+    sessionsRevoked: result.destroyed.desktop_sessions + result.destroyed.browser_sessions,
+    message: result.message,
+  };
 }
 
 export async function listCloudInvitations(signal?: AbortSignal): Promise<StudioCloudInvitation[]> {

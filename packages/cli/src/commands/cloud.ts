@@ -9,7 +9,7 @@ const CLOUD_ROOT = '/api/simforge/cloud';
 
 export const CLOUD_COMMANDS = [
   'status', 'connect', 'sign-in', 'sign-up', 'verify-email', 'resend-code',
-  'forgot-password', 'reset-password', 'sign-out', 'organizations', 'datasets',
+  'forgot-password', 'reset-password', 'sign-out', 'delete-account', 'organizations', 'datasets',
   'artifacts', 'dataset-import', 'dataset-publish', 'artifact-import',
   'artifact-upload', 'dataset-links', 'artifact-links',
 ] as const;
@@ -43,7 +43,7 @@ function requireValue(args: ParsedArgs, name: string, operation: string): string
  * owns the credentials; the CLI never sees a token. The host origin always
  * comes from host.json - there is nothing to override.
  *
- * The account verbs (`sign-in` … `sign-out`) make the whole email+password
+ * The account verbs (`sign-in` … `delete-account`) make the whole email+password
  * flow reachable without a browser or the desktop app. They post the secret
  * to the host and print the host's connection status; the password itself
  * comes from the environment, stdin or a no-echo prompt, never from argv
@@ -66,7 +66,7 @@ export async function cloudCommand(argv: readonly string[]): Promise<number> {
     'artifact-import': ['org', 'artifact'],
     'artifact-upload': ['org', 'artifact'],
   }[sub as string] ?? [];
-  const args = parseArgs(argv.slice(1), { booleans: ['pretty', 'password-stdin'], values: [...COMMON, ...values] });
+  const args = parseArgs(argv.slice(1), { booleans: ['pretty', 'password-stdin', 'yes'], values: [...COMMON, ...values] });
   const request = <T>(path: string, init: RequestInit = {}) => hostRequest<T>(`${CLOUD_ROOT}${path}`, { dataRoot: optionalString(args, 'data-root') }, init);
   const post = (path: string, body?: Record<string, unknown>) => request(path, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}) });
   const organizationQuery = () => `?organizationId=${encodeURIComponent(requireValue(args, 'org', sub))}`;
@@ -103,6 +103,24 @@ export async function cloudCommand(argv: readonly string[]): Promise<number> {
       });
       break;
     case 'sign-out': result = await post('/disconnect'); break;
+    case 'delete-account': {
+      // Irreversible, and the one verb where a mistyped command line costs an
+      // account: the password alone is not consent, because CI and unattended
+      // agents already supply it from the environment. `--yes` is the
+      // acknowledgement that cannot be supplied by accident.
+      if (!boolFlag(args, 'yes')) {
+        throw new CliError(
+          'confirmation_required',
+          'cloud delete-account permanently deletes the signed-in SimCloud account and closes any organization it is the only member of. Nothing on this computer is removed: scenarios, datasets, renders and installed maps are kept. Re-run with --yes to confirm.',
+          { path: '--yes' },
+        );
+      }
+      result = await request('/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: await password('password') }),
+      });
+      break;
+    }
     case 'organizations': result = await request('/organizations'); break;
     case 'datasets': result = await request(`/datasets${organizationQuery()}`); break;
     case 'artifacts': result = await request(`/artifacts${organizationQuery()}`); break;
