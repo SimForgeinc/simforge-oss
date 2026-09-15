@@ -503,9 +503,37 @@ running daemon, not only a typecheck.
   because the desktop tenant list carries no organization id. Consequence:
   anything reading `StudioCloudStatus.activeOrganizationId` gets null after a
   CLI or host sign-in, and every tenant-scoped verb must be given `--org`
-  explicitly. Whether that is fixed in the grant (the platform setting an active
-  organization the way the browser callback does) or by an OSS selector is part
-  of this step's platform half.
+  explicitly.
+
+  This is structural on the platform side, not an asymmetry between grants.
+  Both the password grant and the browser hop go through the same
+  `createDesktopSession` (`apps/web/app/lib/auth/desktop-auth.ts:369-404`),
+  whose INSERT into `desktop_sessions` never writes `active_organization_id`
+  even though the column exists
+  (`migrations/20260906150000_desktop_native_auth.sql:57`);
+  `exchangeDesktopAuthorizationCode` calls the same function.
+  `provisionDefaultAppContextForUser` cannot fill it either, because
+  `sessionForUserId` carries neither a native session id nor a session id, so
+  `setSessionActiveOrganization` returns without writing, and the
+  `session.create.before` hook only ever touches the cookie session
+  (`ba_session`). `DesktopTokenResponse` has no organization field at all, so
+  no grant could carry one without a shape change. Confirmed on staging: after
+  a password sign-in, `GET /api/desktop/account` reports
+  `active_organization_id: null` and stays null across repeated authenticated
+  desktop calls. The only writers are the explicit setter
+  `POST /api/desktop/workspaces/active` and `provisionAppContext` driven by a
+  real desktop access session.
+
+  The platform half of this step is therefore three concrete changes: stamp
+  `active_organization_id` in `createDesktopSession` when the account resolves
+  to exactly one tenant (so both grants inherit it, and several tenants
+  deliberately leave it null for the client to choose); return the real
+  organization id (`workspaces.auth_organization_id`) as its own field on the
+  desktop tenant list beside the workspace key it already returns; and carry
+  the active tenant on the token response so a host needs no second round trip.
+  The tenant-scoped routes must keep authorising by the workspace key while
+  that lands -- `resolveWorkspaceContext` is what the verified `--org` calls
+  rely on.
 
 * **Step 3, first cut — hosted billing and tenant identity out of the local
   database. DONE.**
