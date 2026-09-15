@@ -38,6 +38,24 @@ export function sceneLoadProgressFromSnapshot(label: string, snapshot: MapModelL
   const activity = snapshot.downloads ? snapshot.downloads.transferredBytes + snapshot.downloads.cachedBytes : undefined;
   return { tracker: { peakOutstanding, percent: trackerPercent }, progress: { phase: "assets", percent, percentExact: hasExactByteProgress, message: `Loading ${label}`, detail, activity, download } };
 }
+/**
+ * The window between the renderer being ready and the map's own load
+ * resolving: manifest, static semantics, variant manifest, shadow atlas and
+ * vegetation sidecars. On a multi-gigabyte closure that is minutes long, and
+ * one byte-identical source across it reads as a dead load to the overlay's
+ * stall watchdog, so this reports the same byte telemetry and activity token
+ * the asset phase does.
+ */
+export function mapMetadataLoadProgress(label: string, downloads: MapModelLoadSnapshot["downloads"]): SceneLoadProgress {
+  const read = downloads ? downloads.transferredBytes + downloads.cachedBytes : 0;
+  const download = downloads && (downloads.active > 0 || read > 0) ? downloadProgress(downloads) : undefined;
+  const detail = download
+    ? download.stalled
+      ? `No map data has arrived for ${download.stalledFor}. The local host may be busy; the load resumes on its own when it answers.`
+      : `Reading the map definition \u2014 ${download.transferred} so far\u2026`
+    : "Starting the renderer and loading map metadata\u2026";
+  return { phase: "resolving", percent: 20, message: `Preparing ${label}`, detail, activity: read, download };
+}
 function downloadProgress(downloads: NonNullable<MapModelLoadSnapshot["downloads"]>) {
   // Bytes the browser already held count as read: the cover reports how much
   // of the map the view has, not how much crossed the loopback this time.
