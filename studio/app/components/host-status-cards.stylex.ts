@@ -388,12 +388,14 @@ export const local = stylex.create({
     width: "8rem",
     lineHeight: "1.25rem",
   },
-  // min-w-0 truncate text-xs text-white/75
+  // min-w-0 text-xs text-white/75, wrapping mid-token where it must.
   rowValue: {
     minWidth: 0,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgba(255, 255, 255, 0.75)",
+    // Paths, digests and target triples have no spaces to break at.
+    overflowWrap: "anywhere",
   },
   // flex min-w-0 flex-wrap items-center gap-2 text-xs text-white/75
   rowValueWrap: {

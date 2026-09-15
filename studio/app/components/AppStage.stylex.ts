@@ -112,9 +112,18 @@ export const styles = stylex.create({
   /**
    * The one scroller on the stage. `overscrollBehavior: contain` keeps a
    * flicked pane from handing the gesture to whatever is behind the stage.
+   *
+   * The `minmax(0, 1fr)` track is what keeps a pane inside the frame. A grid
+   * item defaults to `min-width: auto` and so refuses to shrink below its own
+   * min-content, so a single row that cannot wrap - a flex card header, a
+   * filesystem path, a target triple - widens the track past the frame, and
+   * the frame hides overflow rather than scrolling it, so the excess is
+   * silently clipped. An explicit `minmax(0, ...)` lets the pane shrink and
+   * leaves the wrapping rules inside it to decide what happens next.
    */
   body: {
     display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr)",
     alignContent: "start",
     gap: "0.75rem",
     height: "100%",
@@ -155,11 +164,6 @@ export const plate = stylex.create({
     overflowY: "auto",
     overscrollBehavior: "contain",
   },
-  accented: {
-    borderColor: "rgb(232 224 68 / 0.25)",
-    backgroundColor: "rgb(232 224 68 / 0.07)",
-  },
-
   /** Two columns from LG, stacked below it — the switcher's tab row rule. */
   columns: {
     display: "grid",
