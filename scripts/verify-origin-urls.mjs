@@ -52,7 +52,6 @@ const ALLOWED = {
   "packages/cli/src/commands/cloud-eval.ts": 1,
   "packages/cli/src/commands/render-jobs.ts": 1,
   "packages/cli/src/commands/scenario.ts": 2,
-  "packages/cli/src/host-client.ts": 1,
   "studio/app/lib/cloud/access.ts": 1,
   "studio/app/lib/cloud/connection.ts": 5,
   "studio/app/lib/cloud/storage.ts": 1,
@@ -64,7 +63,7 @@ const ALLOWED = {
   "studio/desktop/update-check.mjs": 1,
   "studio/scripts/bootstrap-public-maps.ts": 1,
   "studio/worker/compiler.ts": 2,
-  "studio/worker/http-client.ts": 2,
+  "studio/worker/http-client.ts": 1,
 };
 
 function* files(path) {

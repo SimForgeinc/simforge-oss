@@ -7,6 +7,7 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { fileURLToPath } from "node:url";
 import { simforgeEnv } from "../lib/simforge-env";
+import { HostOrigin, checkHostProtocolVersion, hostPath } from "@simforge-oss/studio-host";
 
 import type { RenderInputFile } from "@simforge-oss/render";
 
@@ -40,8 +41,26 @@ type ReservedRecording = {
 
 type JsonObject = Record<string, unknown>;
 
+class HostProtocolMismatch extends Error {
+  override readonly name = "HostProtocolMismatch";
+}
+
 export class CpuJobsClient {
   readonly workerId: string;
+  /**
+   * The host protocol handshake, once per client: the first call probes the
+   * capability document and refuses a host that speaks another protocol
+   * version (or none) before any job is claimed. A transport failure of the
+   * probe is retried on the next call; an incompatibility is final for this
+   * client, because the host has to change, not the worker's luck.
+   */
+  private protocolHandshake: Promise<void> | null = null;
+  /**
+   * The supervisor chose where the host binds and handed this worker that
+   * address; when it is plain HTTP on a network address, that choice is the
+   * operator's acknowledgement, so it is not re-litigated here.
+   */
+  private readonly host: HostOrigin;
 
   constructor(
     private readonly baseUrl: URL,
@@ -55,6 +74,7 @@ export class CpuJobsClient {
   ) {
     if (!token) throw new Error("SIMFORGE_RENDER_WORKER_TOKEN is required.");
     this.workerId = workerId;
+    this.host = HostOrigin.fromConfigured(baseUrl.origin, "packaged", { plaintextNetworkAcknowledged: true });
   }
 
   offeredEngines(): readonly LocalRenderEngine[] {
@@ -298,6 +318,27 @@ export class CpuJobsClient {
     );
   }
 
+  private verifyHostProtocol(signal: AbortSignal): Promise<void> {
+    if (!this.protocolHandshake) {
+      const handshake = (async () => {
+        const response = await fetch(this.host.toURL(hostPath("/api/simforge/host/capabilities")), {
+          headers: { authorization: `Bearer ${this.token}` },
+          signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),
+        });
+        if (!response.ok) {
+          throw new Error(`worker API capabilities probe returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
+        }
+        const protocol = checkHostProtocolVersion(await response.json().catch(() => null));
+        if (!protocol.ok) throw new HostProtocolMismatch(`the Studio host at ${this.baseUrl.origin} is incompatible with this worker: ${protocol.reason}`);
+      })();
+      this.protocolHandshake = handshake;
+      handshake.catch((error: unknown) => {
+        if (!(error instanceof HostProtocolMismatch)) this.protocolHandshake = null;
+      });
+    }
+    return this.protocolHandshake;
+  }
+
   private async request(
     path: string,
     payload: unknown,
@@ -305,7 +346,8 @@ export class CpuJobsClient {
     allowNoContent = false,
     method: "POST" | "PATCH" = "POST",
   ): Promise<JsonObject | null> {
-    const response = await fetch(new URL(path, this.baseUrl), {
+    await this.verifyHostProtocol(signal);
+    const response = await fetch(this.host.toURL(hostPath(path)), {
       method,
       headers: {
         authorization: `Bearer ${this.token}`,

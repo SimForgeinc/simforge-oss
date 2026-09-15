@@ -5,6 +5,8 @@ import {
   SCENARIO_JOB_FAMILIES,
   SCENARIO_RENDERER_ENGINES,
   STUDIO_HOST_CAPABILITIES_SCHEMA,
+  STUDIO_HOST_PROTOCOL_VERSION,
+  STUDIO_HOST_TRANSPORTS,
   type RenderWorkerCapability,
   type ScenarioRendererEngine,
   type StudioHostCapabilities,
@@ -110,6 +112,8 @@ export async function getLocalHostCapabilities(context: AppContext): Promise<Stu
   const localRender = localRenderCapability();
   return {
     schema: STUDIO_HOST_CAPABILITIES_SCHEMA,
+    protocolVersion: STUDIO_HOST_PROTOCOL_VERSION,
+    transports: STUDIO_HOST_TRANSPORTS,
     host: { kind: "local", label: "SimForge Studio (local)", version },
     identity: {
       mode: "fixed-local",
