@@ -545,8 +545,8 @@ camera name (`camera_front_wide_120fov`, ...) as a `video` input at its
 Alpamayo slot and runs an exploratory, unscored open-loop prediction.
 `--family` accepts only families whose camera contract takes uploaded views; a
 render missing a required slot is refused (`rig_incompatible`) rather than
-scored partially. The workspace comes from the session's active organisation;
-`--workspace <id>` overrides it.
+scored partially. The tenant comes from `--org <id>`; see "Which organization a
+scoped verb acts in" below, because a password sign-in leaves no active one.
 
 ### Signing in to SimCloud without a browser
 
@@ -596,6 +596,28 @@ Errors are the Cloud's own: `invalid_credentials`, `email_unverified`,
 each as a structured error on stderr with exit code 1. `forgot-password`
 always answers `{"ok":true}` - the Cloud does not reveal whether an address has
 an account.
+
+### Which organization a scoped verb acts in
+
+Signing in does **not** select a tenant: a desktop password grant returns a
+session whose active organization is null, and nothing sets it (the Cloud's
+desktop surface exposes no organization id to choose from yet). So `status`
+shows no active organization, and every tenant-scoped verb needs `--org <id>`
+explicitly:
+
+```bash
+simforge cloud organizations --pretty     # the tenants this account belongs to
+simforge cloud datasets --org <id>
+simforge cloud dataset-publish --org <id> --dataset <local> --remote-dataset <remote>
+simforge cloud eval capabilities --org <id>
+```
+
+The id from `organizations` is the value the Cloud accepts, and it is carried
+opaquely - today it is a workspace row id naming the tenant, which is why a
+refusal reads `workspace_forbidden` and why some payloads still answer with a
+`workspaceId` field. That is tracked as the platform half of
+`docs/engineering/local-cloud-boundary.md` §8 step 2; nothing in the CLI needs
+to change when it lands.
 
 ## Current execution boundaries
 
