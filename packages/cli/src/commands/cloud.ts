@@ -19,9 +19,22 @@ const PROVIDERS = ['google', 'github'] as const;
 /** Every verb reads the same two flags; the rest are named per subcommand below. */
 const COMMON = ['data-root'];
 
+/**
+ * Signing in never selects a tenant (`status.activeOrganizationId` is null
+ * after a password grant), so a missing `--org` is the one omission that would
+ * otherwise reach the platform and come back as a bare tenant code. Say what
+ * to pass instead.
+ */
+const HINTS: Record<string, string> = {
+  org: 'signing in does not select one; `simforge cloud organizations` lists the ids you are a member of',
+};
+
 function requireValue(args: ParsedArgs, name: string, operation: string): string {
   const value = optionalString(args, name);
-  if (!value) throw new CliError('missing_argument', `cloud ${operation} requires --${name}`, { path: `--${name}` });
+  if (!value) {
+    const hint = HINTS[name];
+    throw new CliError('missing_argument', `cloud ${operation} requires --${name}${hint ? ` (${hint})` : ''}`, { path: `--${name}` });
+  }
   return value;
 }
 
