@@ -11,6 +11,7 @@ import {
 import {
   RuntimeTopologyFamilySchema,
 } from "@simforge-oss/maps/topology";
+import { SCENARIO_TIMING } from "@simforge-oss/scenario/contracts";
 import type { SemanticMapGraph } from "@simforge-oss/studio-shared";
 import { getCurrentSession } from "@/app/lib/auth/session";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
@@ -46,8 +47,10 @@ const RequestSchema = z
     actor: ScenarioEditorActorDraftSchema,
     /**
      * Scenario duration, which with the baseline speed sets how far to walk.
-     * Optional: a 30 s default matches the editor's own default scenario length,
-     * and `runwayBudgetM` floors the answer at 50 m regardless.
+     * Optional: absent, it falls back to the editor's own default scenario
+     * length, taken from the constant so the two cannot drift (it is 20 s, not
+     * the 30 s this comment used to claim). `runwayBudgetM` floors the answer
+     * at 50 m regardless.
      */
     durationSeconds: z.number().positive().max(600).optional(),
   })
@@ -167,7 +170,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
     graph,
     start: { x: start.x, y: start.y },
     startHeadingDeg,
-    travelBudgetM: runwayBudgetM(parsed.data.durationSeconds ?? 30, speedKph),
+    travelBudgetM: runwayBudgetM(
+      parsed.data.durationSeconds ?? SCENARIO_TIMING.defaultDurationSeconds,
+      speedKph,
+    ),
     turnAtJunctions: resolveTurnIntents(parsed.data.actor),
   });
 

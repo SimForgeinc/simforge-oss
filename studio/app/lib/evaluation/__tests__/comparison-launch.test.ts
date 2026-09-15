@@ -345,14 +345,14 @@ test("an unknown model version is refused, not submitted", async () => {
 
 test("capabilities: a non-JSON body is unavailable, not a crash", async () => {
   const html = new Response("<!doctype html><p>not here", { status: 200 });
-  const result = await readComputeCapabilities(async () => html, "http://localhost:3025");
+  const result = await readComputeCapabilities(async () => html);
   assert.equal(result.ok, false);
   assert.match(result.ok ? "" : result.reason, /did not return JSON/);
 });
 
 test("capabilities: an absent route is unavailable with its status", async () => {
   const missing = new Response("", { status: 404 });
-  const result = await readComputeCapabilities(async () => missing, "http://localhost:3025");
+  const result = await readComputeCapabilities(async () => missing);
   assert.equal(result.ok, false);
   assert.match(result.ok ? "" : result.reason, /HTTP 404/);
 });

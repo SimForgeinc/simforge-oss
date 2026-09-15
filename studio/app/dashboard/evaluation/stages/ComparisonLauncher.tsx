@@ -182,7 +182,11 @@ export function ComparisonLauncher({
         // nothing to pick and the empty state says so.
       }
       try {
-        const response = await fetch("/api/simforge/compute/capabilities", {
+        // `/api/simforge/compute/**` is SimCloud's control plane, on the
+        // Cloud's origin. The renderer holds no cloud credentials, so the
+        // browser asks this host's authenticated proxy, which forwards to
+        // the same route under the same contract.
+        const response = await fetch("/api/simforge/cloud/compute/capabilities", {
           headers: { accept: "application/json" },
         });
         if (!response.ok) {

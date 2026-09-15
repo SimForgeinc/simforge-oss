@@ -147,15 +147,17 @@ export type ComputeCapabilities = {
  * Route-absent, non-200 and non-JSON all mean "no cloud target here" — the
  * surface is deliberately absent in some deployments, and a page that threw
  * would fail exactly where the notice matters most.
+ *
+ * The read is INJECTED because the capabilities route lives on SimCloud's
+ * origin, never on this host: `/api/simforge/compute/**` has no handler in
+ * this app, so asking this host's own origin for it could only ever 404.
+ * The caller supplies the authenticated cloud transport.
  */
 export async function readComputeCapabilities(
-  fetchImpl: typeof fetch,
-  baseUrl: string,
+  read: () => Promise<Response>,
 ): Promise<{ ok: true; capabilities: ComputeCapabilities } | { ok: false; reason: string }> {
   try {
-    const response = await fetchImpl(`${baseUrl}/api/simforge/compute/capabilities`, {
-      headers: { accept: 'application/json' },
-    });
+    const response = await read();
     if (!response.ok) {
       return { ok: false, reason: `compute capabilities unavailable (HTTP ${String(response.status)})` };
     }
