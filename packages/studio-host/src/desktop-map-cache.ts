@@ -78,6 +78,11 @@ export interface DesktopMapCacheBridge {
 
 export type SimforgeDesktopBridge = {
   version: typeof DESKTOP_BRIDGE_VERSION;
+  /**
+   * The shell hosting the page. Deliberately outside the versioned capability:
+   * it answers "which shell am I in", never "what can this window do".
+   */
+  shell: "desktop";
   mapCache: DesktopMapCacheBridge;
 };
 
@@ -88,11 +93,37 @@ declare global {
 }
 
 /**
+ * Whether the desktop shell is hosting this page.
+ *
+ * Separate from the map-cache accessor below, and free of its version check, so
+ * that it answers the same way whether or not this build can cache map bytes.
+ * A shell probe that can throw, or that is really a capability probe wearing a
+ * shell's name, is how an unrelated feature ends up gated on the map cache.
+ */
+export function isDesktopShell(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.simforgeDesktop?.shell === "desktop";
+}
+
+/**
  * The installed desktop bridge, or null in an ordinary browser.
  *
  * A bridge with an unexpected version is an installation fault, not a browser:
  * throwing here is what keeps the desktop app from silently degrading to
  * browser storage for its map bytes.
+ *
+ * ## Before you increment `DESKTOP_BRIDGE_VERSION`
+ *
+ * This throw is reached from twelve call sites in
+ * `packages/studio-ui/src/lib/maps/frontend/map-asset-cache.ts` (backend
+ * selection plus every read, write, evict and bulk-index path) and decides six
+ * further `backend === "filesystem"` branches in `profile-map-cache.ts` and
+ * `MapAssetCacheStorage.tsx`. Bumping the constant therefore converts all of
+ * them into throw sites in a window that previously degraded quietly to browser
+ * storage. That is the intended behaviour — a half-supported bridge should fail
+ * loudly — but it means a version bump is a shipping decision about the desktop
+ * app, not a local edit here: the preload in `studio/desktop/cache-preload.cjs`
+ * must publish the new version in the same release.
  */
 export function desktopMapCacheBridge(): DesktopMapCacheBridge | null {
   if (typeof window === "undefined") return null;
