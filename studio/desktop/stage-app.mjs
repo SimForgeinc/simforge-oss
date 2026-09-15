@@ -16,18 +16,27 @@ import { CHANNELS, assertLabel, assertLabelMatchesBuild, releaseTag } from "./re
 const desktopDir = dirname(fileURLToPath(import.meta.url));
 const studioRoot = resolve(desktopDir, "..");
 
-/** The preload the cache owner ships; staged verbatim, never bundled. */
+/** The preloads the shell ships; staged verbatim, never bundled. */
 export const CACHE_PRELOAD = "cache-preload.cjs";
+export const CONNECTIONS_PRELOAD = "connections-preload.cjs";
+export const PRELOADS = [CACHE_PRELOAD, CONNECTIONS_PRELOAD];
 /**
  * Static pages the shell loads from the asar, with their stylesheets, the
- * script that hydrates them and the face they render in. All but `shell.css`
- * are generated from `CloudLoadingSurface` by desktop/build-shell-pages.mjs
- * and committed; staging copies them, so packaging needs no React or StyleX
- * toolchain.
+ * script that hydrates them and the face they render in. `shell.css` and the
+ * `connections.*` chooser are hand-authored; the rest are generated from
+ * `CloudLoadingSurface` by desktop/build-shell-pages.mjs and committed.
+ * Staging copies them all, so packaging needs no React or StyleX toolchain.
+ *
+ * The chooser is loaded before any host page and must therefore be in the
+ * asar: a packaged shell that cannot open connections.html has no way to
+ * choose a host at all.
  */
 export const PAGES = [
   "starting.html",
   "host-exited.html",
+  "connections.html",
+  "connections.css",
+  "connections.js",
   "cloud-loading.css",
   "cloud-loading.js",
   "barlow-400.woff2",
@@ -36,7 +45,7 @@ export const PAGES = [
   "shell.css",
 ];
 /** Exactly what app.asar holds. */
-export const APP_FILES = ["main.mjs", CACHE_PRELOAD, ...PAGES, "icon.png", "package.json"].sort();
+export const APP_FILES = ["main.mjs", ...PRELOADS, ...PAGES, "icon.png", "package.json"].sort();
 
 /**
  * Bundle Node-side entry points into self-contained ESM.
@@ -101,16 +110,18 @@ export async function stageApp({ appDir, version, license }) {
     || cloudOrigin.pathname !== "/" || cloudOrigin.search || cloudOrigin.hash) {
     throw new Error("SIMFORGE_DESKTOP_CLOUD_ORIGIN must be an HTTPS origin");
   }
-  const preloadSource = join(desktopDir, CACHE_PRELOAD);
-  await access(preloadSource).catch(() => {
-    throw new Error(`${preloadSource} missing: the desktop map cache preload is part of the shell.`);
-  });
+  for (const preload of PRELOADS) {
+    const source = join(desktopDir, preload);
+    await access(source).catch(() => {
+      throw new Error(`${source} missing: the shell's sandboxed preloads are part of the shell.`);
+    });
+  }
 
   await rm(appDir, { recursive: true, force: true });
   await mkdir(appDir, { recursive: true });
   const bundled = await bundleNode({ main: join(desktopDir, "main.mjs") }, appDir, ["electron"]);
   const inputs = Object.values(bundled).flat();
-  await cp(preloadSource, join(appDir, CACHE_PRELOAD));
+  for (const preload of PRELOADS) await cp(join(desktopDir, preload), join(appDir, preload));
   for (const page of PAGES) await cp(join(desktopDir, page), join(appDir, page));
   await cp(join(desktopDir, "build", "icon.png"), join(appDir, "icon.png"));
   await writeFile(join(appDir, "package.json"), `${JSON.stringify({

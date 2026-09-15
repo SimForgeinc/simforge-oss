@@ -1,16 +1,19 @@
 // SimForge Studio desktop shell (Electron).
 //
 // This is packaging, not a second UI: it hosts the same Next.js Studio the
-// browser serves. By default the shell starts (or attaches to) the bundled
-// local Studio host and loads it from loopback; the host owns the database,
-// artifacts, the on-disk map cache and native job state under one per-user
-// data root. `SIMFORGE_REMOTE_HOST` is the one opt-out: the shell becomes a
-// guest of a host on another machine, starting and supervising nothing (see
-// desktop/remote-host.mjs), which puts every filesystem the host owns on that
-// machine instead of this one. SimCloud is a connection the local product makes
-// (Settings › SimCloud account: sign-in, sign-up, verification and password
-// flows are all in-app forms the local host forwards), never a remote site
-// this window navigates to.
+// browser serves. The shell attaches to one Studio host per launch, chosen
+// before any host page loads (desktop/connections-window.mjs): by default it
+// starts (or attaches to) the bundled local host and loads it from loopback,
+// and the host owns the database, artifacts, the on-disk map cache and native
+// job state under one per-user data root. A paired remote host makes the
+// shell a guest of a host on another machine, starting and supervising
+// nothing (see desktop/remote-host.mjs), which puts every filesystem the host
+// owns on that machine instead of this one. Switching hosts is a relaunch:
+// the trusted origin, the session cookie, the map-cache bridge, the menu and
+// the updater are all derived from the choice once, below. SimCloud is a
+// connection the local product makes (Settings › SimCloud account: sign-in,
+// sign-up, verification and password flows are all in-app forms the local
+// host forwards), never a remote site this window navigates to.
 //
 // Security posture: renderers are sandboxed with context isolation and no
 // Node; the only bridge is the narrow map-cache preload
@@ -26,11 +29,13 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { access, readFile } from "node:fs/promises";
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell } from "electron";
 import { installDesktopMapCache } from "./map-cache.mjs";
 import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
 import { createLocalHost } from "./local-host.mjs";
 import { createRemoteHost, REMOTE_HOST_ENV, remoteHostTarget } from "./remote-host.mjs";
+import { CHOOSE_CONNECTION_ARG, openConnectionStore, openShellVault, resolveRemoteTarget } from "./connections.mjs";
+import { chooseConnection, reportLostConnection } from "./connections-window.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
 import { readDistributionIdentity } from "./release-identity.mjs";
 import { checkForUpdates, describeUpdate } from "./update-check.mjs";
@@ -49,16 +54,18 @@ let mapCache = null;
 /** The host origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
 /**
- * Set when this shell is a guest of a Studio host on another machine
- * (`SIMFORGE_REMOTE_HOST`, see desktop/remote-host.mjs). Everything the host
- * owns then lives on the host's filesystem, not this computer's: the
- * database, the artifacts, the map cache folder and the native runtime. The
- * shell features that hand a path of *this* machine to the host, or open a
- * path of *the host* on this machine, are refused rather than silently
- * pointing at the wrong filesystem.
+ * Set when this shell is a guest of a Studio host on another machine (a
+ * paired connection, or `SIMFORGE_REMOTE_HOST`; see desktop/remote-host.mjs).
+ * Everything the host owns then lives on the host's filesystem, not this
+ * computer's: the database, the artifacts, the map cache folder and the
+ * native runtime. The shell features that hand a path of *this* machine to
+ * the host, or open a path of *the host* on this machine, are refused rather
+ * than silently pointing at the wrong filesystem.
  * @type {string | null}
  */
 let remoteHostOrigin = null;
+/** True when the environment named this launch's host: the chooser is bypassed and switching is disabled. */
+let connectionPinnedByEnv = false;
 
 /**
  * The one per-user data root of this installation: database, artifacts,
@@ -379,6 +386,54 @@ function updateMenuItem() {
   };
 }
 
+/**
+ * Switching hosts is a relaunch, never a hot swap: the trusted origin, the
+ * session cookie, the map-cache bridge, the menu and the updater were all
+ * derived from this launch's choice, and re-deriving them under a live
+ * renderer that assumed one origin would leave that renderer wrong. The new
+ * instance shows the chooser; the launcher waits for this one to exit, so
+ * the single-instance lock is free by then.
+ */
+function relaunch({ chooser }) {
+  const args = process.argv.slice(1).filter((arg) => arg !== CHOOSE_CONNECTION_ARG);
+  app.relaunch({ args: chooser ? [...args, CHOOSE_CONNECTION_ARG] : args });
+  app.quit();
+}
+
+function relaunchToChooser() {
+  relaunch({ chooser: true });
+}
+
+function connectionMenu() {
+  return {
+    label: "Connection",
+    submenu: [
+      {
+        label: remoteHostOrigin ? `Attached to ${remoteHostOrigin}` : "Attached to this computer",
+        enabled: false,
+      },
+      { type: "separator" },
+      connectionPinnedByEnv
+        ? { label: `Chosen by ${REMOTE_HOST_ENV} for this launch`, enabled: false }
+        : {
+          label: "Switch Connection…",
+          click: menuAction(async () => {
+            const { response } = await dialog.showMessageBox({
+              type: "question",
+              title: "Switch connection",
+              message: `Switch to another Studio host?`,
+              detail: "SimForge Studio relaunches and shows the connection chooser. This window, its session and its menus are built for one host at startup, so a switch restarts the app rather than swapping the host underneath it. Unsaved edits in the current host are kept by that host.",
+              buttons: ["Relaunch and choose", "Cancel"],
+              defaultId: 0,
+              cancelId: 1,
+            });
+            if (response === 0) relaunchToChooser();
+          }),
+        },
+    ],
+  };
+}
+
 /** @param {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost>} localHost */
 function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -388,6 +443,7 @@ function installMenu(localHost) {
     { role: "editMenu" },
     { role: "viewMenu" },
     cacheMenu,
+    connectionMenu(),
     { role: "windowMenu" },
     {
       role: "help",
@@ -454,17 +510,124 @@ if (!app.requestSingleInstanceLock()) {
   app.on("web-contents-created", (_event, contents) => {
     contents.on("will-attach-webview", (event) => event.preventDefault());
   });
+  /**
+   * Which host this launch attaches to, decided before any window exists.
+   * `SIMFORGE_REMOTE_HOST` names one target for this launch and remembers
+   * nothing. Otherwise the remembered choice is used, unless there is none,
+   * the launch asked to choose (`--choose-connection`, how "Switch
+   * Connection…" relaunches), or the remembered remote has lost its
+   * credentials — then the chooser decides.
+   * @returns {Promise<{ kind: "local" } | { kind: "remote"; target: { baseUrl: string; controlToken: string } } | { kind: "quit" }>}
+   */
+  async function selectConnection() {
+    const fromEnv = remoteHostTarget(process.env);
+    if (fromEnv) {
+      connectionPinnedByEnv = true;
+      return { kind: "remote", target: fromEnv };
+    }
+    const userData = app.getPath("userData");
+    const store = await openConnectionStore(userData);
+    // `safeStorage` is the OS credential store as the Electron binary exposes
+    // it; the shell cannot load the product's native keyring binding because
+    // app.asar carries no node_modules.
+    const vault = await openShellVault({ dir: userData, storage: safeStorage });
+    const selected = process.argv.includes(CHOOSE_CONNECTION_ARG) ? null : store.selected();
+    if (selected === "local") return { kind: "local" };
+    if (selected !== null) {
+      const resolved = await resolveRemoteTarget({ store, vault, id: selected });
+      if (resolved.kind === "ready") return { kind: "remote", target: resolved.target };
+    }
+    const chooser = chooseConnection({
+      pagesDir,
+      store,
+      vault,
+      local: { dataRoot: await resolveDataRoot(), detail: "Started by this app, or joined if it is already running. Data stays on this computer." },
+    });
+    const decision = await chooser.decision;
+    if (decision.kind !== "quit") createWindow();
+    chooser.close();
+    return decision;
+  }
+
+  /**
+   * A remote daemon that stops answering has no exit code to report, only
+   * an origin: the window is hidden behind the lost-connection page, which
+   * offers to try again, to relaunch into the chooser, or to quit.
+   * @param {BrowserWindow} win
+   * @param {ReturnType<typeof createRemoteHost>} host
+   */
+  function watchRemoteHost(win, host) {
+    let lost = false;
+    let failures = 0;
+    const poll = setInterval(async () => {
+      if (lost) return;
+      if (await host.probe()) failures = 0;
+      else if ((failures += 1) >= 2) void onLost(`${remoteHostOrigin} has not answered ${failures} consecutive probes.`);
+    }, 15_000);
+    poll.unref();
+    win.once("closed", () => clearInterval(poll));
+    win.webContents.on("did-fail-load", (_event, code, description, url, isMainFrame) => {
+      // -3 is ERR_ABORTED: a navigation the page itself superseded.
+      if (isMainFrame && code !== -3 && isTrusted(url)) void onLost(`${description} (${code}) loading ${url}`);
+    });
+    async function onLost(reason) {
+      if (lost) return;
+      lost = true;
+      win.hide();
+      const report = reportLostConnection({ pagesDir, origin: remoteHostOrigin, reason, probe: host.probe });
+      const decision = await report.decision;
+      if (decision.kind === "retry") {
+        failures = 0;
+        lost = false;
+        win.show();
+        report.close();
+        await win.loadURL(`${trustedOrigin}${PRODUCT.landing}`);
+      } else if (decision.kind === "switch") {
+        relaunchToChooser();
+      } else {
+        app.quit();
+      }
+    }
+  }
+
+  /**
+   * A remote host that never answered at startup is the same situation as
+   * one that stops answering later — an origin and a reason, never an exit
+   * code — so it gets the same page rather than a dead-end error dialog.
+   * Nothing has been derived from the choice yet at this point, so "try
+   * again" is a relaunch of the same selection: this launch already spent
+   * its startup on a host that was not there.
+   * @param {ReturnType<typeof createRemoteHost>} host
+   * @param {string} reason
+   */
+  async function offerAnotherConnection(host, reason) {
+    const report = reportLostConnection({ pagesDir, origin: remoteHostOrigin ?? "", reason, probe: host.probe });
+    const decision = await report.decision;
+    if (decision.kind === "retry") relaunch({ chooser: false });
+    else if (decision.kind === "switch") relaunchToChooser();
+    else app.quit();
+    report.close();
+  }
+
   app.whenReady().then(async () => {
-    const win = createWindow();
+    /** @type {BrowserWindow | null} */
+    let win = null;
+    /** @type {Awaited<ReturnType<typeof selectConnection>> | null} */
+    let selection = null;
     try {
-      // `SIMFORGE_REMOTE_HOST` points the shell at a host on another machine:
-      // it becomes a guest, starts nothing and supervises nothing. Everything
-      // else — the Cloud origin, the data root, the port — is the *host's*
-      // business in that mode, so none of it is resolved here.
-      const remote = remoteHostTarget(process.env);
-      if (remote) {
-        remoteHostOrigin = remote.baseUrl;
-        localHost = createRemoteHost(remote);
+      selection = await selectConnection();
+      if (selection.kind === "quit") {
+        app.quit();
+        return;
+      }
+      win = window ?? createWindow();
+      // A remote host makes the shell a guest: it starts nothing and
+      // supervises nothing. Everything else — the Cloud origin, the data
+      // root, the port — is the *host's* business in that mode, so none of
+      // it is resolved here.
+      if (selection.kind === "remote") {
+        remoteHostOrigin = selection.target.baseUrl;
+        localHost = createRemoteHost(selection.target);
       } else {
         const dataRoot = await resolveDataRoot();
         let cloudOrigin = process.env.SIMFORGE_CLOUD_ORIGIN?.trim();
@@ -532,8 +695,17 @@ if (!app.requestSingleInstanceLock()) {
       });
       if (win.isDestroyed()) return;
       await win.loadURL(`${trustedOrigin}${PRODUCT.landing}`);
+      if (selection.kind === "remote") watchRemoteHost(win, localHost);
     } catch (error) {
-      dialog.showErrorBox(`${PRODUCT.name} could not start`, error instanceof Error ? error.message : String(error));
+      const reason = error instanceof Error ? error.message : String(error);
+      // A launch the environment pinned has nothing to choose between, so it
+      // keeps the dialog; a chosen remote gets the lost-connection state.
+      if (selection?.kind === "remote" && !connectionPinnedByEnv && localHost) {
+        if (win && !win.isDestroyed()) win.hide();
+        await offerAnotherConnection(localHost, reason);
+        return;
+      }
+      dialog.showErrorBox(`${PRODUCT.name} could not start`, reason);
       app.quit();
     }
   });

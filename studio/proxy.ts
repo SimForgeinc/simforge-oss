@@ -32,13 +32,15 @@ import {
  * `/api/local-objects/**` validates its own expiring method/path/query
  * signature, so workers and downloads never need a general host token in URLs.
  * `/api/simforge/host/session` is exempt: it validates the token itself.
+ * `/api/simforge/host/pair` is exempt for the same reason: a shell claiming a
+ * pairing code has no credentials yet, and the minting half checks the bearer.
  *
  * Without a control token (the server was started bare, `next dev`, outside
  * the supervisor) the gate cannot verify anything and refuses application
  * traffic rather than degrading to an open loopback service.
  */
 
-const EXEMPT_PATHS = new Set(["/api/simforge/cloud/callback", "/api/simforge/host/session"]);
+const EXEMPT_PATHS = new Set(["/api/simforge/cloud/callback", "/api/simforge/host/session", "/api/simforge/host/pair"]);
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function json(status: number, error: string, detail: string) {
