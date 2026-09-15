@@ -7,7 +7,7 @@ import { z } from "zod";
 import { parseRoadwayConsistencyReport } from "@simforge-oss/maps/ingest";
 import type { MapTopologyIndex } from "@simforge-oss/maps/topology";
 import { LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
-import { execute } from "@/app/lib/db/data-api";
+import { execute, queryOne } from "@/app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { upsertMapAsset } from "@/app/lib/db/map-asset-store";
 import { extractCoordinateRefFromXodr } from "@/app/lib/maps/metadata/xodr";
@@ -411,7 +411,23 @@ export async function publishMapClosure({
       },
     ],
   });
-  await execute(
+  // One draft per source map, re-pointed at the release being installed.
+  //
+  // `source_map_id` is UNIQUE (migrations/20260819100000_map_upload_drafts.sql)
+  // while the generated id hashes the release digest, so installing a second
+  // release of a map this root already holds presents a new id against an
+  // existing source map: `ON CONFLICT (id)` can never fire, and the insert
+  // died on the source-map constraint *after* the entire closure had been
+  // downloaded. The conflict has to be resolved on the column that collides.
+  //
+  // The existing row keeps its primary key and this publication adopts it,
+  // rather than the row taking the new id. A draft id is a publication's
+  // producer identity (`producerJobId`, publication.ts:104), so artifacts
+  // recorded by an earlier release of this map still resolve against it -
+  // re-identifying the row would strand that provenance - and the
+  // artifact-producer trigger (migrations/20260819110000) still finds a draft
+  // row carrying the id being published under.
+  const adoptedDraft = await queryOne<{ id: string }>(
     `INSERT INTO simforge.map_upload_drafts (
        id, workspace_id, created_by_user_id, label, locality, carla_map_name,
        source_map_id, xodr_sha256, xodr_byte_length, thumbnail_sha256,
@@ -420,7 +436,20 @@ export async function publishMapClosure({
        :id, :workspace_id, :user_id, :label, :locality, NULL,
        :source_map_id, :xodr_sha256, :xodr_byte_length, :thumbnail_sha256,
        :thumbnail_byte_length, CAST(:layers AS jsonb), CAST(:preflight AS jsonb), 'publishing'
-     ) ON CONFLICT (id) DO NOTHING`,
+     )
+     ON CONFLICT (source_map_id) DO UPDATE SET
+       label = EXCLUDED.label,
+       locality = EXCLUDED.locality,
+       xodr_sha256 = EXCLUDED.xodr_sha256,
+       xodr_byte_length = EXCLUDED.xodr_byte_length,
+       thumbnail_sha256 = EXCLUDED.thumbnail_sha256,
+       thumbnail_byte_length = EXCLUDED.thumbnail_byte_length,
+       layers = EXCLUDED.layers,
+       preflight = EXCLUDED.preflight,
+       draft_state = 'publishing',
+       map_version_id = NULL,
+       updated_at = NOW()
+     RETURNING id`,
     {
       id: draftId,
       workspace_id: LOCAL_WORKSPACE_ID,
@@ -440,6 +469,10 @@ export async function publishMapClosure({
       },
     },
   );
+
+  if (adoptedDraft === null) throw new Error("map upload draft upsert returned no row");
+  // Every later reference is to the row that exists, not the id we proposed.
+  const publishingDraftId = adoptedDraft.id;
 
   const plan = planUploadedMapClosure({
     workspaceId: LOCAL_WORKSPACE_ID,
@@ -494,7 +527,7 @@ export async function publishMapClosure({
     },
   };
   const result = await publishUploadedMapVersion({
-    draftId,
+    draftId: publishingDraftId,
     plan,
     workspaceId: LOCAL_WORKSPACE_ID,
     sourceMapId,
@@ -530,7 +563,7 @@ export async function publishMapClosure({
     `UPDATE simforge.map_upload_drafts
      SET draft_state = 'published', map_version_id = :map_version_id, updated_at = NOW()
      WHERE id = :id`,
-    { id: draftId, map_version_id: result.mapVersionId },
+    { id: publishingDraftId, map_version_id: result.mapVersionId },
   );
   return {
     ...result,
