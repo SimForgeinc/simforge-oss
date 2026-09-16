@@ -709,6 +709,34 @@ if (!app.requestSingleInstanceLock()) {
         shellUpdater.timer = setInterval(check, 4 * 60 * 60 * 1000);
         shellUpdater.timer.unref();
       }
+      const installNativeViewport = () => {
+        const validSender = (event) => event.sender === win?.webContents;
+        ipcMain.removeHandler("simforge:map-cache:native-viewport:start");
+        ipcMain.removeHandler("simforge:map-cache:native-viewport:camera");
+        ipcMain.removeHandler("simforge:map-cache:native-viewport:stop");
+        ipcMain.handle("simforge:map-cache:native-viewport:start", async (event) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          const viewport = launchNativeViewport();
+          viewport.onEvent((payload) => {
+            if (!win?.isDestroyed()) win.webContents.send("simforge:native-viewport:event", payload);
+          });
+          await viewport.start();
+          return { ok: true };
+        });
+        ipcMain.handle("simforge:map-cache:native-viewport:camera", (event, position, target) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          if (!nativeViewport) throw new Error("native viewport is not running");
+          nativeViewport.setCamera(position, target);
+          return { ok: true };
+        });
+        ipcMain.handle("simforge:map-cache:native-viewport:stop", (event) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          nativeViewport?.stop();
+          nativeViewport = null;
+          return { ok: true };
+        });
+      };
+      installNativeViewport();
       mapCache = await installDesktopMapCache({
         ipcMain,
         window: win,

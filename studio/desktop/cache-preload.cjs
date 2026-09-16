@@ -40,6 +40,10 @@ async function call(method, ...args) {
   throw failure;
 }
 
+async function callNative(method, ...args) {
+  return call(`native-viewport:${method}`, ...args);
+}
+
 contextBridge.exposeInMainWorld("simforgeDesktop", {
   version: 1,
   // Which shell is hosting the page, as a fact rather than an inference.
@@ -62,5 +66,15 @@ contextBridge.exposeInMainWorld("simforgeDesktop", {
     writeReceipt: (key, receipt) => call("writeReceipt", key, receipt),
     clear: () => call("clear"),
     chooseDirectory: (options) => call("chooseDirectory", options),
+  },
+  nativeViewport: {
+    start: () => callNative("start"),
+    camera: (position, target) => callNative("camera", position, target),
+    stop: () => callNative("stop"),
+    onEvent: (listener) => {
+      const handler = (_event, payload) => listener(payload);
+      ipcRenderer.on("simforge:native-viewport:event", handler);
+      return () => ipcRenderer.removeListener("simforge:native-viewport:event", handler);
+    },
   },
 });
