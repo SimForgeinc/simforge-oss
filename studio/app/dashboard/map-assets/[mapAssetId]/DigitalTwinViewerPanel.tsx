@@ -6,8 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AlertTriangle, Box, Loader2 } from "lucide-react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
+import { nativeViewportProcessPort } from "@simforge-oss/studio-host";
+import { NativeProcessRenderer } from "@simforge-oss/viewer";
 import type {
   CityViewer,
+  NativeViewportPort,
   ViewerMarker,
   ViewerOverlayState,
   ViewerPath,
@@ -72,6 +75,12 @@ export function DigitalTwinViewerPanel({
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
   const quality = useRenderingPreference() ?? "high";
+  const nativeViewport = useMemo<NativeViewportPort | undefined>(() => {
+    const bridge = typeof window !== "undefined" ? window.simforgeDesktop?.nativeViewport : undefined;
+    if (!bridge) return undefined;
+    return new NativeProcessRenderer(nativeViewportProcessPort(bridge, (error) => setViewerError(String(error))));
+  }, []);
+  useEffect(() => () => { void nativeViewport?.dispose(); }, [nativeViewport]);
 
   useEffect(() => {
     setHas3D(hasArtifact ? true : null);
@@ -175,15 +184,16 @@ export function DigitalTwinViewerPanel({
         key={quality}
         manifestUrl={manifestUrl}
         rendererMode={process.env.NEXT_PUBLIC_RENDERER_MODE === "native" ? "native" : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto" ? "auto" : "web"}
+        nativeViewport={nativeViewport}
         options={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
+        onReady={onReady}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}
-        ariaLabel={`3D digital twin of ${asset.name}`}
         role="application"
         tabIndex={0}
         className={stylex.props(styles.s_778).className}
       />
-      <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={quality} viewer={viewer} />
+      {viewer ? <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={quality} viewer={viewer} /> : null}
     </div>
   );
 }

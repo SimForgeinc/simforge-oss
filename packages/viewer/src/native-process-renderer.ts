@@ -3,8 +3,8 @@ import type { NativeReadiness, NativeViewportPort } from './native-renderer-adap
 
 type NativeProcess = {
   onEvent(listener: (event: Record<string, unknown>) => void): () => void;
-  start(): Promise<Record<string, unknown>>;
-  setCamera(position: readonly number[], target: readonly number[]): void;
+  start(): Promise<unknown>;
+  send(command: Readonly<Record<string, unknown>>): void;
   stop(): void;
 };
 
@@ -32,33 +32,18 @@ export class NativeProcessRenderer implements NativeViewportPort {
   get readiness(): NativeReadiness { return this.state; }
 
   async loadMap(input: { mapRoot: string; mapVersionId: string; releaseDigest: string }): Promise<void> {
-    if (!input.mapRoot || !input.mapVersionId || !input.releaseDigest) {
-      throw new Error('native map load requires mapRoot, mapVersionId, and releaseDigest');
-    }
+    if (!input.mapRoot || !input.mapVersionId || !input.releaseDigest) throw new Error('native map load requires mapRoot, mapVersionId, and releaseDigest');
     this.state = 'starting';
     await this.process.start();
   }
 
   applyCamera(command: CameraCommand): void {
     if (command.kind !== 'set-pose') throw new Error(`native viewport does not yet support camera command ${command.kind}`);
-    this.process.setCamera(command.pose.position, command.pose.target);
+    this.process.send({ command: 'camera', position: command.pose.position, target: command.pose.target });
   }
 
   cameraState(): CameraStateReport | null { return this.camera; }
-
-  async pick(_request: PickRequest): Promise<PickResult> {
-    throw new Error('native viewport picking is not available until interactive pick IPC is connected');
-  }
-
-  onReadiness(listener: (state: NativeReadiness, detail?: string) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
-  async dispose(): Promise<void> {
-    this.unsubscribe?.();
-    this.unsubscribe = null;
-    this.process.stop();
-    this.state = 'error';
-  }
+  async pick(_request: PickRequest): Promise<PickResult> { throw new Error('native viewport picking is not available'); }
+  onReadiness(listener: (state: NativeReadiness, detail?: string) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  async dispose(): Promise<void> { this.unsubscribe?.(); this.unsubscribe = null; this.process.stop(); this.state = 'error'; }
 }
