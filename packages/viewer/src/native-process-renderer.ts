@@ -1,12 +1,7 @@
 import type { CameraCommand, CameraStateReport, PickRequest, PickResult } from './renderer-contract';
 import type { NativeReadiness, NativeViewportPort } from './native-renderer-adapter';
 
-type NativeProcess = {
-  onEvent(listener: (event: Record<string, unknown>) => void): () => void;
-  start(): Promise<unknown>;
-  send(command: Readonly<Record<string, unknown>>): void;
-  stop(): void;
-};
+type NativeProcess = { onEvent(listener: (event: Record<string, unknown>) => void): () => void; start(): Promise<unknown>; send(command: Readonly<Record<string, unknown>>): void; stop(): void };
 
 export class NativeProcessRenderer implements NativeViewportPort {
   readonly implementation = 'bevy-native' as const;
@@ -14,12 +9,18 @@ export class NativeProcessRenderer implements NativeViewportPort {
   private state: NativeReadiness = 'starting';
   private readonly listeners = new Set<(state: NativeReadiness, detail?: string) => void>();
   private readonly process: NativeProcess;
-  private camera: CameraStateReport | null = null;
+  private readonly camera: CameraStateReport | null = null;
+  private pendingPick: ((result: PickResult) => void) | null = null;
   private unsubscribe: (() => void) | null;
 
   constructor(process: NativeProcess) {
     this.process = process;
     this.unsubscribe = process.onEvent((event) => {
+      if (event.event === 'picked' && this.pendingPick) {
+        const resolve = this.pendingPick;
+        this.pendingPick = null;
+        resolve(event as unknown as PickResult);
+      }
       const kind = event.event;
       if (kind === 'manifest-ready' || kind === 'coarse-ready' || kind === 'interactive' || kind === 'device-lost' || kind === 'error' || kind === 'closed') {
         const state = kind === 'closed' ? 'error' : kind as NativeReadiness;
@@ -30,20 +31,24 @@ export class NativeProcessRenderer implements NativeViewportPort {
   }
 
   get readiness(): NativeReadiness { return this.state; }
-
   async loadMap(input: { mapRoot: string; mapVersionId: string; releaseDigest: string }): Promise<void> {
     if (!input.mapRoot || !input.mapVersionId || !input.releaseDigest) throw new Error('native map load requires mapRoot, mapVersionId, and releaseDigest');
-    this.state = 'starting';
     await this.process.start();
   }
-
   applyCamera(command: CameraCommand): void {
-    if (command.kind !== 'set-pose') throw new Error(`native viewport does not yet support camera command ${command.kind}`);
+    if (command.kind !== 'set-pose') throw new Error(`native viewport does not support ${command.kind}`);
     this.process.send({ command: 'camera', position: command.pose.position, target: command.pose.target });
   }
-
   cameraState(): CameraStateReport | null { return this.camera; }
-  async pick(_request: PickRequest): Promise<PickResult> { throw new Error('native viewport picking is not available'); }
+  async pick(request: PickRequest): Promise<PickResult> {
+    if (!Number.isFinite(request.ndc.x) || !Number.isFinite(request.ndc.y)) throw new Error('native pick coordinates must be finite');
+    if (this.pendingPick) throw new Error('native pick already pending');
+    return new Promise((resolve, reject) => {
+      this.pendingPick = resolve;
+      try { this.process.send({ command: 'pointer-ray', origin: [request.ndc.x, 0, request.ndc.y], direction: [0, -1, 0], layers: request.layers ?? ['actors', 'ground', 'map-static'], max_hits: request.maxHits ?? 8 }); }
+      catch (error) { this.pendingPick = null; reject(error); }
+    });
+  }
   onReadiness(listener: (state: NativeReadiness, detail?: string) => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  async dispose(): Promise<void> { this.unsubscribe?.(); this.unsubscribe = null; this.process.stop(); this.state = 'error'; }
+  async dispose(): Promise<void> { this.unsubscribe?.(); this.unsubscribe = null; this.pendingPick = null; this.process.stop(); this.state = 'error'; }
 }
