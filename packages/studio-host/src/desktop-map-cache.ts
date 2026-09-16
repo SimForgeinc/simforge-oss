@@ -76,6 +76,24 @@ export interface DesktopMapCacheBridge {
   chooseDirectory(options?: { move?: boolean }): Promise<DesktopMapCacheStatus>;
 }
 
+export type NativeViewportEvent = {
+  readonly event: "manifest-ready" | "coarse-ready" | "interactive" | "device-lost" | "error" | "closed" | "camera-applied";
+  readonly map_version_id?: string;
+  readonly release_digest?: string;
+  readonly renderer?: string;
+  readonly elapsed_ms?: number;
+  readonly error?: string;
+  readonly reason?: string;
+  readonly recoverable?: boolean;
+};
+
+export interface NativeViewportBridge {
+  start(): Promise<{ ok: true }>;
+  camera(position: readonly number[], target: readonly number[]): Promise<{ ok: true }>;
+  stop(): Promise<{ ok: true }>;
+  onEvent(listener: (event: NativeViewportEvent) => void): () => void;
+}
+
 export type SimforgeDesktopBridge = {
   version: typeof DESKTOP_BRIDGE_VERSION;
   /**
@@ -84,6 +102,7 @@ export type SimforgeDesktopBridge = {
    */
   shell: "desktop";
   mapCache: DesktopMapCacheBridge;
+  nativeViewport?: NativeViewportBridge;
 };
 
 declare global {
