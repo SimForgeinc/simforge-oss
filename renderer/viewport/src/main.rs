@@ -4,8 +4,11 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use bevy::window::ExitCondition;
 use clap::Parser;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::io::{self, BufRead};
 use std::path::PathBuf;
+use std::sync::{mpsc::{self, Receiver}, Mutex};
+use std::thread;
 use std::time::Instant;
 
 #[derive(Parser, Resource, Clone)]
@@ -23,6 +26,16 @@ struct Args {
     #[arg(long, default_value_t = false)]
     headless: bool,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "command", rename_all = "kebab-case")]
+enum ControlCommand {
+    Camera { position: [f32; 3], target: [f32; 3] },
+    Quit,
+}
+
+#[derive(Resource)]
+struct ControlChannel(Mutex<Receiver<ControlCommand>>);
 
 #[derive(Serialize)]
 struct RendererEvent<'a> {
@@ -114,11 +127,32 @@ fn orbit_camera(
     if direction != Vec3::ZERO { transform.translation += direction.normalize() * 20.0 * time.delta_secs(); }
 }
 
+fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transform, With<Camera3d>>) {
+    let Ok(mut camera) = cameras.single_mut() else { return; };
+    let Ok(commands) = channel.0.lock() else { return; };
+    for command in commands.try_iter() {
+        if let ControlCommand::Camera { position, target } = command {
+            camera.translation = Vec3::from_array(position);
+            camera.look_at(Vec3::from_array(target), Vec3::Y);
+            println!("{{\"event\":\"camera-applied\"}}");
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     let asset_root = args.map_root.to_string_lossy().to_string();
+    let (control_tx, control_rx) = mpsc::channel();
+    thread::spawn(move || {
+        for line in io::stdin().lock().lines().flatten() {
+            if let Ok(command) = serde_json::from_str::<ControlCommand>(&line) {
+                if control_tx.send(command).is_err() { break; }
+            }
+        }
+    });
     let mut app = App::new();
     app.insert_resource(args.clone());
+    app.insert_resource(ControlChannel(Mutex::new(control_rx)));
     if args.headless {
         app.add_plugins(DefaultPlugins
             .set(AssetPlugin { file_path: asset_root, ..default() })
@@ -129,7 +163,7 @@ fn main() -> Result<()> {
         app.add_plugins(DefaultPlugins.set(AssetPlugin { file_path: asset_root, ..default() }));
     }
     app.add_systems(Startup, setup);
-    app.add_systems(Update, (load_scene, orbit_camera));
+    app.add_systems(Update, (load_scene, orbit_camera, control_system));
     app.run();
     Ok(())
 }
