@@ -9,6 +9,9 @@ export interface CityViewProps {
   manifestUrl: string;
   rendererMode?: 'web' | 'native' | 'auto';
   nativeViewport?: NativeViewportPort;
+  nativeMapRoot?: string;
+  nativeMapVersionId?: string;
+  nativeReleaseDigest?: string;
   options?: CityViewerOptions;
   className?: string;
   style?: CSSProperties;
@@ -27,6 +30,9 @@ export function CityView({
   manifestUrl,
   rendererMode = 'web',
   nativeViewport,
+  nativeMapRoot,
+  nativeMapVersionId,
+  nativeReleaseDigest,
   options,
   className,
   style,
@@ -39,8 +45,9 @@ export function CityView({
   tabIndex,
 }: CityViewProps): ReactElement {
   const nativeRequested = rendererMode === 'native';
-  const useNative = nativeRequested || (rendererMode === 'auto' && nativeViewport !== undefined);
-  const nativeUnavailable = nativeRequested && nativeViewport === undefined;
+  const nativeConfigured = nativeViewport !== undefined && Boolean(nativeMapRoot && nativeMapVersionId && nativeReleaseDigest);
+  const useNative = nativeRequested || (rendererMode === 'auto' && nativeConfigured);
+  const nativeUnavailable = nativeRequested && !nativeConfigured;
   const [nativeReadiness, setNativeReadiness] = useState<NativeReadiness | null>(null);
   const [error, setError] = useState<unknown>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,19 +88,19 @@ export function CityView({
   }, [options, useNative]);
 
   useEffect(() => {
-    if (!useNative || !nativeViewport) return;
+    if (!useNative || !nativeConfigured || !nativeViewport || !nativeMapRoot || !nativeMapVersionId || !nativeReleaseDigest) return;
     setNativeReadiness('starting');
     const unsubscribe = nativeViewport.onReadiness((state, detail) => {
       setNativeReadiness(state);
       if (state === 'interactive') onMapLoadedRef.current?.(manifestRef.current);
       if (state === 'error' || state === 'device-lost') onErrorRef.current?.(new Error(detail ?? `Native viewport ${state}`), manifestRef.current);
     });
-    nativeViewport.loadMap({ mapRoot: '', mapVersionId: manifestUrl, releaseDigest: '' }).catch((reason: unknown) => {
+    nativeViewport.loadMap({ mapRoot: nativeMapRoot, mapVersionId: nativeMapVersionId, releaseDigest: nativeReleaseDigest }).catch((reason: unknown) => {
       setNativeReadiness('error');
       onErrorRef.current?.(reason, manifestRef.current);
     });
     return unsubscribe;
-  }, [manifestUrl, nativeViewport, useNative]);
+  }, [manifestUrl, nativeViewport, nativeConfigured, nativeMapRoot, nativeMapVersionId, nativeReleaseDigest, useNative]);
 
   useEffect(() => {
     if (useNative) return;
