@@ -35,6 +35,7 @@ import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
 import { createLocalHost } from "./local-host.mjs";
 import { createRemoteHost, REMOTE_HOST_ENV, remoteHostTarget } from "./remote-host.mjs";
 import { CHOOSE_CONNECTION_ARG, openConnectionStore, openShellVault, resolveRemoteTarget } from "./connections.mjs";
+import { NativeViewportProcess } from "./native-viewport.mjs";
 import { chooseConnection, reportLostConnection } from "./connections-window.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
 import { readDistributionIdentity } from "./release-identity.mjs";
@@ -49,7 +50,7 @@ const RENDERER_PERMISSIONS = new Set(["fullscreen", "pointerLock", "clipboard-sa
 
 /** @type {BrowserWindow | null} */
 let window = null;
-/** @type {{ dispose(): Promise<void> } | null} */
+let nativeViewport = null;
 let mapCache = null;
 /** The host origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
@@ -434,6 +435,24 @@ function connectionMenu() {
   };
 }
 
+function launchNativeViewport() {
+  if (nativeViewport) return nativeViewport;
+  const executable = process.env.SIMFORGE_NATIVE_VIEWPORT;
+  const mapRoot = process.env.SIMFORGE_NATIVE_MAP_ROOT;
+  if (!executable || !mapRoot) throw new Error("Native viewport requires SIMFORGE_NATIVE_VIEWPORT and SIMFORGE_NATIVE_MAP_ROOT.");
+  nativeViewport = new NativeViewportProcess({
+    executable,
+    mapRoot,
+    mapVersionId: process.env.SIMFORGE_NATIVE_MAP_ID ?? "native-map",
+    releaseDigest: process.env.SIMFORGE_NATIVE_RELEASE_DIGEST ?? "native-release",
+  });
+  nativeViewport.onEvent((event) => {
+    if (event.event === "error") console.error("[native-viewport]", event.error);
+  });
+  nativeViewport.start().catch((error) => console.error("[native-viewport]", error));
+  return nativeViewport;
+}
+
 /** @param {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost>} localHost */
 function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -442,7 +461,10 @@ function installMenu(localHost) {
     { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
-    cacheMenu,
+    ...(process.env.SIMFORGE_NATIVE_VIEWPORT && process.env.SIMFORGE_NATIVE_MAP_ROOT ? [{
+      label: "Native viewport",
+      submenu: [{ label: "Open native viewport", click: menuAction(() => launchNativeViewport()) }],
+    }] : []),
     connectionMenu(),
     { role: "windowMenu" },
     {
@@ -489,6 +511,8 @@ async function shutdown(localHost) {
   mapCache = null;
   await cache?.dispose();
   await localHost.stop();
+  nativeViewport?.stop();
+  nativeViewport = null;
 }
 
 // One application identity everywhere: profile directory, notifications,
