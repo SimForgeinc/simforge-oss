@@ -719,7 +719,10 @@ if (!app.requestSingleInstanceLock()) {
       });
       if (win.isDestroyed()) return;
       await win.loadURL(`${trustedOrigin}${PRODUCT.landing}`);
-      if (selection.kind === "remote") watchRemoteHost(win, localHost);
+      const rendererMode = process.env.SIMFORGE_RENDERER_MODE ?? "web";
+      if (rendererMode === "native" || (rendererMode === "auto" && process.env.SIMFORGE_NATIVE_VIEWPORT && process.env.SIMFORGE_NATIVE_MAP_ROOT)) {
+        launchNativeViewport();
+      }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       // A launch the environment pinned has nothing to choose between, so it
