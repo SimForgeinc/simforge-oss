@@ -32,6 +32,7 @@ struct Args {
 #[serde(tag = "command", rename_all = "kebab-case")]
 enum ControlCommand {
     Camera { position: [f32; 3], target: [f32; 3] },
+    PointerRay { origin: [f32; 3], direction: [f32; 3], layers: Vec<String>, max_hits: Option<usize> },
     Quit,
 }
 
@@ -132,18 +133,19 @@ fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transfor
     for command in commands.try_iter() {
         match command {
             ControlCommand::Camera { position, target } => {
+                let position = Vec3::from_array(position);
+                let target = Vec3::from_array(target);
+                if !position.is_finite() || !target.is_finite() || position.distance_squared(target) <= f32::EPSILON {
+                    println!("{{\"event\":\"error\",\"error\":\"invalid camera pose\"}}");
+                    continue;
+                }
                 if let Ok(mut camera) = cameras.single_mut() {
-                    let position = Vec3::from_array(position);
-                    let target = Vec3::from_array(target);
-                    if !position.is_finite() || !target.is_finite() || position.distance_squared(target) <= f32::EPSILON {
-                        println!("{{\"event\":\"error\",\"error\":\"invalid camera pose\"}}");
-                        continue;
-                    }
                     camera.translation = position;
                     camera.look_at(target, Vec3::Y);
                     println!("{{\"event\":\"camera-applied\"}}");
                 }
             }
+            ControlCommand::PointerRay { .. } => println!("{{\"event\":\"error\",\"code\":\"native_pick_not_implemented\",\"message\":\"native pointer picking is not implemented\"}}"),
             ControlCommand::Quit => { app_exit.write(AppExit::Success); }
         }
     }
