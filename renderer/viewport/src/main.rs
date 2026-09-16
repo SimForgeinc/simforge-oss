@@ -36,6 +36,51 @@ enum ControlCommand {
     Quit,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+struct PickHit {
+    layer: String,
+    id: Option<String>,
+    #[serde(rename = "distanceM")]
+    distance_m: f32,
+    point: [f32; 3],
+}
+
+fn ray_aabb(origin: Vec3, direction: Vec3, min: Vec3, max: Vec3) -> Option<f32> {
+    let mut near: f32 = 0.0;
+    let mut far: f32 = f32::INFINITY;
+    for axis in 0..3 {
+        let o = origin[axis];
+        let d = direction[axis];
+        if d.abs() < f32::EPSILON {
+            if o < min[axis] || o > max[axis] { return None; }
+            continue;
+        }
+        let inv = 1.0 / d;
+        let mut a = (min[axis] - o) * inv;
+        let mut b = (max[axis] - o) * inv;
+        if a > b { std::mem::swap(&mut a, &mut b); }
+        near = near.max(a);
+        far = far.min(b);
+        if near > far { return None; }
+    }
+    (far >= 0.0).then_some(near.max(0.0))
+}
+
+#[cfg(test)]
+mod pick_tests {
+    use super::*;
+
+    #[test]
+    fn ray_hit_matches_shared_pick_shape() {
+        let distance = ray_aabb(Vec3::new(0.0, 1.0, 5.0), Vec3::NEG_Z, Vec3::splat(-1.0), Vec3::splat(1.0)).unwrap();
+        let hit = PickHit { layer: "ground".into(), id: None, distance_m: distance, point: [0.0, 1.0, 1.0] };
+        assert_eq!(hit.layer, "ground");
+        assert_eq!(hit.id, None);
+        assert_eq!(hit.distance_m, 4.0);
+        assert_eq!(serde_json::to_value(hit).unwrap()["distanceM"], 4.0);
+    }
+}
+
 #[derive(Resource)]
 struct ControlChannel(Mutex<Receiver<ControlCommand>>);
 
