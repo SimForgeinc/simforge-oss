@@ -45,6 +45,10 @@ pub const RENDERER_ID: &str = "native-wgpu-bevy";
 /// resident set that leaves room for the window system on every machine the
 /// team runs. Overridable, not guessed per-machine: a budget that changes
 /// under you is a budget you cannot benchmark.
+/// A resident node must be this much less important than a candidate before
+/// it is evicted for it.
+const EVICTION_HYSTERESIS: f32 = 1.5;
+
 const DEFAULT_GPU_BUDGET_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 #[derive(Parser, Resource, Clone, Debug)]
@@ -629,7 +633,11 @@ fn free_bytes_for(
         if committed(map) + needed <= ceiling {
             return true;
         }
-        if resident_priority >= candidate_priority {
+        // Hysteresis: evict only for a candidate that is materially more
+        // important. Without the margin a saturated budget churns forever —
+        // the evicted node is immediately wanted again, so the scheduler
+        // never settles and `complete` never arrives.
+        if resident_priority * EVICTION_HYSTERESIS >= candidate_priority {
             break;
         }
         evict_node(map, commands, materials, index, Tier::Absent);
