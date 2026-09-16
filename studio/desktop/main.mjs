@@ -51,6 +51,8 @@ const RENDERER_PERMISSIONS = new Set(["fullscreen", "pointerLock", "clipboard-sa
 /** @type {BrowserWindow | null} */
 let window = null;
 let nativeViewport = null;
+/** @type {Set<(event: Record<string, unknown>) => void>} */
+const nativeViewportListeners = new Set();
 let mapCache = null;
 /** The host origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
@@ -447,6 +449,7 @@ function launchNativeViewport() {
     releaseDigest: process.env.SIMFORGE_NATIVE_RELEASE_DIGEST ?? "native-release",
   });
   nativeViewport.onEvent((event) => {
+    for (const listener of nativeViewportListeners) listener(event);
     if (event.event === "error") console.error("[native-viewport]", event.error);
   });
   nativeViewport.start().catch((error) => console.error("[native-viewport]", error));
@@ -714,12 +717,18 @@ if (!app.requestSingleInstanceLock()) {
           && event.senderFrame === win?.webContents.mainFrame;
         ipcMain.handle("simforge:map-cache:native-viewport:start", async (event) => {
           if (!validSender(event)) throw new Error("native viewport sender rejected");
-          const viewport = launchNativeViewport();
-          viewport.onEvent((payload) => {
+          const listener = (payload) => {
             if (!win?.isDestroyed()) win.webContents.send("simforge:native-viewport:event", payload);
-          });
-          await viewport.start();
-          return { ok: true };
+          };
+          nativeViewportListeners.add(listener);
+          try {
+            const viewport = launchNativeViewport();
+            await viewport.start();
+            return { ok: true };
+          } catch (error) {
+            nativeViewportListeners.delete(listener);
+            throw error;
+          }
         });
         ipcMain.handle("simforge:map-cache:native-viewport:camera", (event, position, target) => {
           if (!validSender(event)) throw new Error("native viewport sender rejected");
@@ -731,6 +740,7 @@ if (!app.requestSingleInstanceLock()) {
           if (!validSender(event)) throw new Error("native viewport sender rejected");
           nativeViewport?.stop();
           nativeViewport = null;
+          nativeViewportListeners.clear();
           return { ok: true };
         });
       };
