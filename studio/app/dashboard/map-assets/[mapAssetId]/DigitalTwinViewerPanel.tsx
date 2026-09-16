@@ -174,8 +174,8 @@ export function DigitalTwinViewerPanel({
       <CityViewDynamic
         key={quality}
         manifestUrl={manifestUrl}
+        rendererMode={process.env.NEXT_PUBLIC_RENDERER_MODE === "native" ? "native" : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto" ? "auto" : "web"}
         options={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
-        onReady={onReady}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}
         ariaLabel={`3D digital twin of ${asset.name}`}
