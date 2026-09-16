@@ -1,0 +1,15 @@
+[package]
+name = "simforge-native-viewport"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "simforge-native-viewport"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+bevy = { version = "0.19.1", default-features = true, features = ["png", "jpeg", "hdr", "ktx2", "basis-universal", "tonemapping_luts", "pbr_light_textures", "pbr_specular_textures", "pbr_anisotropy_texture", "pbr_multi_layer_material_textures", "pbr_transmission_textures"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
