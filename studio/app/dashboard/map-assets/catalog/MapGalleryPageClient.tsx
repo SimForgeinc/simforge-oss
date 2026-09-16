@@ -245,7 +245,7 @@ export function MapGalleryPageClient({
         [
           entries[(selectedIndex - 1 + entries.length) % entries.length],
           entries[(selectedIndex + 1) % entries.length],
-        ].map((candidate) => (!candidate?.map.installed.browser || candidate.map.locked || (candidate.map.access === "cloud" && cloudState !== "connected") ? null : candidate.map.browserManifestUrl)),
+        ].map((candidate) => (!candidate?.map.ready.browser || candidate.map.locked || (candidate.map.access === "cloud" && cloudState !== "connected") ? null : candidate.map.browserManifestUrl)),
       );
       for (const manifestUrl of adjacent) {
         if (!manifestUrl) continue;
@@ -288,10 +288,10 @@ export function MapGalleryPageClient({
   const sumoLoading = sumoEnabled && sumoAvailable && sumoStatus.phase === "loading";
   const sumoFailed = sumoEnabled && sumoStatus.phase === "fallback";
   const locked = entry.map.access === "cloud" ? cloudState !== "connected" : entry.map.locked;
-  const previewable = !locked && entry.map.installed.browser;
+  const previewable = !locked && entry.map.ready.browser;
 
   const createScenario = async () => {
-    if (creating || locked || !entry.map.installed.browser) return;
+    if (creating || locked || !entry.map.ready.browser) return;
     setCreating(true);
     try {
       const response = await fetch(
@@ -466,7 +466,7 @@ export function MapGalleryPageClient({
                   size="lg"
                   onClick={createScenario}
                   disabled={creating || !previewable}
-                  title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
+                  title={locked ? "Connect to SimCloud to author on this map." : !entry.map.ready.browser ? "Prepare this map on this computer first." : undefined}
                   xstyle={styles.s_253}
                 >
                   {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}

@@ -23,7 +23,7 @@ type CatalogMap = {
   label: string;
   access: "public" | "local" | "cloud";
   locked: boolean;
-  installed: { browser: boolean; semantic: boolean };
+  ready: { browser: boolean; semantic: boolean };
 };
 type InstallState = {
   state: "idle" | "materializing" | "ready" | "error";

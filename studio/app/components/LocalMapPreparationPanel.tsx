@@ -196,8 +196,8 @@ export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescrip
         </div>
       ) : (
         <div {...stylex.props(setup.rows)}>
-          <ProfileRow actionLabel="Download for preview" detail="Viewport assets for browsing and authoring on this map." icon={<Globe {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={browser} installed={map.installed.browser} label="Browser preview" locked={locked} />
-          <ProfileRow actionLabel="Prepare for local render" detail="Full semantic closure the local Bevy renderer reads directly from disk." icon={<Cpu {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={semantic} installed={map.installed.semantic} label="Local render" locked={locked} />
+          <ProfileRow actionLabel="Download for preview" detail="Viewport assets for browsing and authoring on this map." icon={<Globe {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={browser} installed={map.ready.browser} label="Browser preview" locked={locked} />
+          <ProfileRow actionLabel="Prepare for local render" detail="Full semantic closure the local Bevy renderer reads directly from disk." icon={<Cpu {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={semantic} installed={map.ready.semantic} label="Local render" locked={locked} />
         </div>
       )}
     </div>
