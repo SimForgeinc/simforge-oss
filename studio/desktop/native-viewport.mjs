@@ -1,10 +1,6 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
-/**
- * Minimal Electron-side transport for the native viewport process. The UI can
- * use this seam without knowing whether its renderer is native or Three.js.
- */
 export class NativeViewportProcess {
   #child = null;
   #events = new Set();
@@ -42,18 +38,23 @@ export class NativeViewportProcess {
       });
       this.#child.once("error", reject);
       this.#child.once("exit", (code, signal) => {
-        if (code !== 0) reject(new Error(`native viewport exited (${signal ?? code})`));
+        if (code !== 0 && code !== null) reject(new Error(`native viewport exited (${signal ?? code})`));
       });
     });
     return this.#ready;
   }
 
-  setCamera(position, target) {
+  send(command) {
     if (!this.#child?.stdin.writable) throw new Error("native viewport is not running");
-    this.#child.stdin.write(`${JSON.stringify({ command: "camera", position, target })}\n`);
+    this.#child.stdin.write(`${JSON.stringify(command)}\n`);
+  }
+
+  setCamera(position, target) {
+    this.send({ command: "camera", position, target });
   }
 
   stop() {
+    if (this.#child?.stdin.writable) this.send({ command: "quit" });
     this.#child?.stdin.end();
     this.#child?.kill();
     this.#child = null;
