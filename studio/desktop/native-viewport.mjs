@@ -20,7 +20,7 @@ export class NativeViewportProcess {
   }
 
   start() {
-    if (this.#child) throw new Error("native viewport is already running");
+    if (this.#child) return this.#ready;
     this.#child = spawn(this.executable, [
       "--map-root", this.mapRoot,
       "--map-version-id", this.mapVersionId,

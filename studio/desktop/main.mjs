@@ -710,10 +710,8 @@ if (!app.requestSingleInstanceLock()) {
         shellUpdater.timer.unref();
       }
       const installNativeViewport = () => {
-        const validSender = (event) => event.sender === win?.webContents;
-        ipcMain.removeHandler("simforge:map-cache:native-viewport:start");
-        ipcMain.removeHandler("simforge:map-cache:native-viewport:camera");
-        ipcMain.removeHandler("simforge:map-cache:native-viewport:stop");
+        const validSender = (event) => event.sender === win?.webContents
+          && event.senderFrame === win?.webContents.mainFrame;
         ipcMain.handle("simforge:map-cache:native-viewport:start", async (event) => {
           if (!validSender(event)) throw new Error("native viewport sender rejected");
           const viewport = launchNativeViewport();
