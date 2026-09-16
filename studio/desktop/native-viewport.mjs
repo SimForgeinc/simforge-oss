@@ -36,6 +36,7 @@ export class NativeViewportProcess {
         if (event.event === "interactive") resolve(event);
         if (event.event === "error") reject(new Error(event.error ?? "native viewport failed"));
       });
+      this.#child.once("error", reject);
       this.#child.once("exit", (code, signal) => {
         if (code !== 0) reject(new Error(`native viewport exited (${signal ?? code})`));
       });
