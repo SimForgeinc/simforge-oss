@@ -3,6 +3,7 @@ use bevy::app::ScheduleRunnerPlugin;
 use bevy::asset::{LoadState, UnapprovedPathMode};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use bevy::camera::primitives::Aabb;
 use bevy::window::ExitCondition;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -64,6 +65,20 @@ fn ray_aabb(origin: Vec3, direction: Vec3, min: Vec3, max: Vec3) -> Option<f32> 
         if near > far { return None; }
     }
     (far >= 0.0).then_some(near.max(0.0))
+}
+
+fn emit_pick(origin: Vec3, direction: Vec3, layers: &[String], max_hits: usize, query: &Query<(Entity, &Aabb, &GlobalTransform)>) {
+    let mut hits: Vec<PickHit> = query.iter().filter_map(|(_entity, aabb, transform)| {
+        let center = transform.transform_point(aabb.center.into());
+        let extents = aabb.half_extents;
+        let extents = Vec3::from(extents);
+        let distance = ray_aabb(origin, direction, center - extents, center + extents)?;
+        let layer = if layers.iter().any(|value| value == "map-static") { "map-static" } else { "ground" };
+        Some(PickHit { layer: layer.into(), id: None, distance_m: distance, point: (origin + direction.normalize_or_zero() * distance).to_array() })
+    }).collect();
+    hits.sort_by(|a, b| a.distance_m.total_cmp(&b.distance_m));
+    hits.truncate(max_hits.max(1));
+    println!("{}", serde_json::json!({"event":"picked","hits":hits}));
 }
 
 #[cfg(test)]
@@ -173,7 +188,7 @@ fn orbit_camera(
     if direction != Vec3::ZERO { transform.translation += direction.normalize() * 20.0 * time.delta_secs(); }
 }
 
-fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transform, With<Camera3d>>, mut app_exit: MessageWriter<AppExit>) {
+fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transform, With<Camera3d>>, bounds: Query<(Entity, &Aabb, &GlobalTransform)>, mut app_exit: MessageWriter<AppExit>) {
     let Ok(commands) = channel.0.lock() else { return; };
     for command in commands.try_iter() {
         match command {
@@ -190,7 +205,15 @@ fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transfor
                     println!("{{\"event\":\"camera-applied\"}}");
                 }
             }
-            ControlCommand::PointerRay { .. } => println!("{{\"event\":\"error\",\"code\":\"native_pick_not_implemented\",\"message\":\"native pointer picking is not implemented\"}}"),
+            ControlCommand::PointerRay { origin, direction, layers, max_hits } => {
+                let origin = Vec3::from_array(origin);
+                let direction = Vec3::from_array(direction);
+                if !origin.is_finite() || !direction.is_finite() || direction.length_squared() <= f32::EPSILON {
+                    println!("{{\"event\":\"error\",\"code\":\"invalid_pointer_ray\",\"message\":\"origin/direction must be finite and direction nonzero\"}}");
+                } else {
+                    emit_pick(origin, direction.normalize(), &layers, max_hits.unwrap_or(8), &bounds);
+                }
+            }
             ControlCommand::Quit => { app_exit.write(AppExit::Success); }
         }
     }
