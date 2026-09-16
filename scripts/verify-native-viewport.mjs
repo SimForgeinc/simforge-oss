@@ -26,10 +26,12 @@ import { access, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { register } from "tsx/esm/api";
+import { createRequire } from "node:module";
+import { chromium } from "playwright-core";
 
-register();
-const { NativeViewportProcess } = await import("../studio/desktop/native-viewport.mjs");
 const { NativeProcessRenderer } = await import("../packages/viewer/src/native-process-renderer.ts");
+const { createMapServer } = await import("../packages/viewer/dev/serve.mjs");
+const { NativeViewportProcess } = await import("../studio/desktop/native-viewport.mjs");
 
 const root = resolve(import.meta.dirname, "..");
 const args = new Map(process.argv.slice(2).map((arg) => {
@@ -42,9 +44,19 @@ const binary = process.env.SIMFORGE_NATIVE_VIEWPORT ?? join(root, "renderer/targ
 const cacheRoot =
   process.env.SIMFORGE_MAPS_CACHE_ROOT ??
   join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "simforge/maps");
+// The parity check hosts the editor surface itself: vite for the page, the
+// viewer's own static server for the map bytes. Ports are the harness's own,
+// never a running Studio's.
+const parityVitePort = Number(args.get("parity-vite-port") ?? 5178);
+const parityMapPort = Number(args.get("parity-map-port") ?? 8792);
+const viewerRequire = createRequire(join(root, "packages/viewer/package.json"));
+const chromeBinary = process.env.SIMFORGE_CHROMIUM
+  ?? join(homedir(), ".cache/ms-playwright/chromium-1243/chrome-linux64/chrome");
+// Where the parity check writes its display grabs. Absent: no capture.
+const shotDir = args.get("screenshots") ?? null;
 await access(binary);
 
-const CHECKS = ["identity", "protocol", "pick", "readiness", "progressive"];
+const CHECKS = ["identity", "protocol", "pick", "readiness", "progressive", "parity"];
 const selected = (args.get("checks") ?? CHECKS.join(",")).split(",").filter((name) => CHECKS.includes(name));
 const sourceMapId = args.get("map") ?? "richmond-field-station";
 // How long `complete` may take. Lowerable so a scheduler that never settles
@@ -349,12 +361,265 @@ async function checkProgressive() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// parity: the same editor interactions under `rendererMode=web` and
+// `rendererMode=native`, plus the guarantee that explicit `native` never
+// quietly becomes WebGL.
+//
+// The surface driven here is the shipped `CityView` component in the
+// `packages/viewer/dev/editor.html` harness page, with the shipped
+// `ThreeRendererAdapter` on the web side and the shipped
+// `NativeProcessRenderer` over a real viewport process on the native side.
+// The page reaches that process through the same forwarding shape Electron
+// uses, so "native" here means the actual out-of-process renderer.
+// ---------------------------------------------------------------------------
+async function checkParity() {
+  const identity = await hostIdentity(sourceMapId);
+  const bundle = join(cacheRoot, "map-bundles", sourceMapId);
+  await access(join(bundle, "3d/manifest.json"));
+
+  const mapServer = createMapServer(join(cacheRoot, "map-bundles"));
+  await new Promise((done) => mapServer.listen(parityMapPort, done));
+  const { createServer } = await import(viewerRequire.resolve("vite"));
+  const vite = await createServer({
+    configFile: join(root, "packages/viewer/dev/vite.config.ts"),
+    server: { port: parityVitePort, strictPort: true },
+    logLevel: "warn",
+  });
+  await vite.listen();
+  const browser = await chromium.launch({
+    executablePath: chromeBinary,
+    headless: false,
+    args: [
+      // ANGLE over Vulkan: under Xvfb the GLX path is Mesa llvmpipe and the
+      // plain EGL path is SwiftShader, and a software rasteriser cannot tell
+      // us whether the real WebGL backend works.
+      "--use-gl=angle",
+      "--use-angle=vulkan",
+      "--enable-features=Vulkan",
+      "--ignore-gpu-blocklist",
+    ],
+  });
+
+  /**
+   * One editor session in one renderer mode.
+   *
+   * `viewportBinary` is what makes the negative case real: pointing the host
+   * at a binary that cannot run is a native backend that genuinely fails,
+   * not a mocked failure.
+   */
+  async function session(mode, { viewportBinary = binary } = {}) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    // A dev server answers a missing module with index.html, which reaches the
+    // page as "Unexpected identifier 'html'". The URL is the only thing that
+    // identifies which asset went missing, so keep it.
+    page.on("response", (response) => {
+      const url = response.url();
+      if (response.status() >= 400) pageErrors.push(`http ${response.status()} ${url}`);
+      if (!/\.(js|wasm)(\?|$)/.test(url)) return;
+      const type = response.headers()["content-type"] ?? "";
+      if (type.includes("html")) pageErrors.push(`html served for script ${url}`);
+    });
+    let viewport = null;
+    let renderer = null;
+    if (mode !== "web") {
+      viewport = new NativeViewportProcess({
+        executable: viewportBinary,
+        mapRoot: identity.mapRoot,
+        args: ["--embedded"],
+      });
+      renderer = new NativeProcessRenderer(viewport);
+      // Readiness and camera reports travel page-ward, exactly as they do
+      // over Electron IPC.
+      renderer.onReadiness((state, detail) => {
+        void page.evaluate(([kind, payload]) => window.__nativeEvent?.(kind, payload),
+          ["readiness", { state, detail }]).catch(() => {});
+      });
+      viewport.onEvent((event) => {
+        if (event.event !== "camera-state") return;
+        const state = renderer.cameraState();
+        if (state) {
+          void page.evaluate(([kind, payload]) => window.__nativeEvent?.(kind, payload),
+            ["camera-state", state]).catch(() => {});
+        }
+      });
+      await page.exposeFunction("__nativeCall", async (method, payload) => {
+        if (method === "loadMap") {
+          // The map root is a host path page script must never hold, so the
+          // host resolves it and sends the command itself. `main.mjs` does
+          // exactly this in its `native-viewport:load-map` handler; the
+          // editor adapter deliberately cannot.
+          await viewport.start();
+          viewport.loadMap({
+            mapRoot: identity.mapRoot,
+            mapVersionId: payload.mapVersionId,
+            releaseDigest: payload.releaseDigest,
+          });
+          return undefined;
+        }
+        if (method === "resize") return renderer.resize(payload);
+        if (method === "setSelection") return renderer.setSelection(payload.ids);
+        if (method === "applyCamera") return renderer.applyCamera(payload);
+        if (method === "pick") return renderer.pick(payload);
+        if (method === "dispose") return renderer.dispose();
+        throw new Error(`unknown native bridge method ${method}`);
+      });
+    }
+    const query = new URLSearchParams({
+      mode,
+      manifest: `http://localhost:${parityMapPort}/${sourceMapId}/3d/manifest.json`,
+      mapVersionId: identity.mapVersionId,
+      releaseDigest: identity.releaseDigest,
+    });
+    await page.goto(`http://localhost:${parityVitePort}/editor.html?${query}`, { waitUntil: "load" });
+    await page.waitForFunction(() => Boolean(window.__editor), null, { timeout: 60_000 });
+    return { page, viewport, renderer, pageErrors };
+  }
+
+  /** The interaction script. Identical for both backends, by construction. */
+  async function exercise(session) {
+    const { page } = session;
+    // Wait for drawable OR failure: a backend that reported `error` has
+    // answered, and burning the timeout hides the message it sent.
+    await page.waitForFunction(
+      () => window.__editor.drawable() || window.__editor.nativeReadiness() === "error",
+      null,
+      { timeout: 300_000 },
+    );
+    const failed = await page.evaluate(() => window.__editor.nativeReadiness());
+    if (failed === "error") {
+      throw new Error(`renderer reported error: ${await page.evaluate(() => window.__editor.readinessLog().join(","))}`);
+    }
+    // React panels must still be around the viewport; a native window that
+    // ate the page is a compositing failure, not a renderer success.
+    const panels = await page.locator("[data-panel]").count();
+    const bounds = JSON.parse(await readFile(join(bundle, "3d/manifest.json"), "utf8")).scene.bounds;
+    const centre = [0, 1, 2].map((axis) => (bounds.min[axis] + bounds.max[axis]) / 2);
+
+    const footprint = Math.max(bounds.max[0] - bounds.min[0], bounds.max[2] - bounds.min[2]);
+    const position = [centre[0], centre[1] + footprint * 0.35, centre[2] + footprint * 0.5];
+    await page.evaluate(([eye, target]) => window.__editor.setPose(eye, target), [position, centre]);
+    // The renderer is the authority on its own camera, so parity is "the pose
+    // the editor asked for came back", not "the editor remembers asking".
+    const reported = await page.waitForFunction((expected) => {
+      const state = window.__editor.cameraState();
+      if (!state) return null;
+      const close = state.pose.position.every((value, index) => Math.abs(value - expected[index]) < 1);
+      return close ? state : null;
+    }, position, { timeout: 60_000 }).then((handle) => handle.jsonValue());
+    await page.evaluate(() => window.__editor.resizeRegion(900, 600));
+    await sleep(500);
+    return {
+      renderer: await page.evaluate(() => window.__editor.renderer()),
+      readiness: await page.evaluate(() => window.__editor.readiness()),
+      panels,
+      poseReported: reported.pose.position,
+      fovYDeg: reported.intrinsics.fovYDeg,
+      pageErrors: session.pageErrors.slice(0, 5),
+    };
+  }
+
+  /**
+   * Grab the whole X display, not the page.
+   *
+   * The native surface is an OS window positioned over the editor's viewport
+   * region (option (a) in `renderer/viewport/PROTOCOL.md`), so it is not in
+   * the page's compositor and `page.screenshot()` cannot see it. Only a
+   * server-side grab shows the actual composite: React chrome from the
+   * browser window, map pixels from the viewport process.
+   */
+  async function captureDisplay(file) {
+    await new Promise((done, fail) => {
+      const grab = spawn("ffmpeg", [
+        "-loglevel", "error", "-y",
+        "-f", "x11grab", "-video_size", "1280x800", "-i", `${process.env.DISPLAY}+0,0`,
+        "-frames:v", "1", file,
+      ], { stdio: "ignore" });
+      grab.on("exit", (code) => (code === 0 ? done() : fail(new Error(`ffmpeg x11grab exited ${code}`))));
+      grab.on("error", fail);
+    });
+    return file;
+  }
+  const sessions = [];
+  try {
+    // --- web -------------------------------------------------------------
+    const web = await session("web");
+    sessions.push(web);
+    const webResult = await exercise(web);
+    record("parity.web-editor-interactions", webResult.renderer === "web" && webResult.panels >= 2
+      && webResult.pageErrors.length === 0, webResult);
+
+    // --- native ----------------------------------------------------------
+    const native = await session("native");
+    sessions.push(native);
+    const nativeResult = await exercise(native);
+    const nativeResized = native.viewport.running;
+    // Visual evidence of the composite while the native session is live and
+    // its window is positioned over the viewport region.
+    const shot = shotDir ? await captureDisplay(join(shotDir, "native-composited-editor.png")) : null;
+    record("parity.native-editor-interactions",
+      nativeResult.renderer === "native" && nativeResult.panels >= 2 && nativeResized
+      && nativeResult.pageErrors.length === 0,
+      { ...nativeResult, viewportStillRunning: nativeResized, screenshot: shot });
+
+    // Same script, same reported pose, from two different renderers.
+    const poseMatches = webResult.poseReported
+      .every((value, index) => Math.abs(value - nativeResult.poseReported[index]) < 1);
+    record("parity.same-pose-from-both-backends", poseMatches, {
+      web: webResult.poseReported,
+      native: nativeResult.poseReported,
+    });
+
+    // --- explicit native must fail loudly, never fall back ---------------
+    const broken = await session("native", { viewportBinary: join(root, "renderer/target/release/does-not-exist") });
+    sessions.push(broken);
+    await broken.page.waitForFunction(() => window.__editor.readiness() === "error", null, { timeout: 120_000 })
+      .catch(() => {});
+    const brokenState = {
+      renderer: await broken.page.evaluate(() => window.__editor.renderer()),
+      readiness: await broken.page.evaluate(() => window.__editor.readiness()),
+      nativeFallback: await broken.page.evaluate(() => window.__editor.nativeFallback()),
+      webCanvasPresent: await broken.page.evaluate(() => window.__editor.webCanvasPresent()),
+      error: await broken.page.evaluate(() => window.__editor.error()),
+    };
+    record("parity.explicit-native-never-falls-back",
+      brokenState.renderer === "native" && brokenState.readiness === "error"
+      && brokenState.nativeFallback === "none" && brokenState.webCanvasPresent === false
+      && Boolean(brokenState.error),
+      brokenState);
+
+    // The contrast that gives the assertion above its teeth: the identical
+    // failure under `auto` DOES land on WebGL.
+    const auto = await session("auto", { viewportBinary: join(root, "renderer/target/release/does-not-exist") });
+    sessions.push(auto);
+    await auto.page.waitForFunction(() => window.__editor.webCanvasPresent(), null, { timeout: 120_000 })
+      .catch(() => {});
+    const autoState = {
+      renderer: await auto.page.evaluate(() => window.__editor.renderer()),
+      webCanvasPresent: await auto.page.evaluate(() => window.__editor.webCanvasPresent()),
+    };
+    record("parity.auto-falls-back-to-webgl",
+      autoState.webCanvasPresent && autoState.renderer === "web-after-native-fallback", autoState);
+  } finally {
+    for (const session of sessions) {
+      await session.page.close().catch(() => {});
+      session.viewport?.stop();
+    }
+    await browser.close().catch(() => {});
+    await vite.close();
+    await new Promise((done) => mapServer.close(done));
+  }
+}
+
 const runners = {
   identity: checkIdentity,
   protocol: checkProtocol,
   pick: checkPick,
   readiness: checkReadiness,
   progressive: checkProgressive,
+  parity: checkParity,
 };
 for (const check of selected) {
   try {

@@ -99,6 +99,32 @@ struct Args {
     /// Exit as soon as `complete` is announced; for benchmarks and CI.
     #[arg(long, default_value_t = false)]
     exit_on_complete: bool,
+    /// Swapchain present mode. `auto-vsync` is what a user should run; a
+    /// benchmark needs `immediate`, because a frame time paced by the display
+    /// measures the display.
+    #[arg(long, value_enum, default_value_t = PresentModeArg::AutoVsync)]
+    present_mode: PresentModeArg,
+}
+
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
+enum PresentModeArg {
+    AutoVsync,
+    AutoNoVsync,
+    Fifo,
+    Immediate,
+    Mailbox,
+}
+
+impl From<PresentModeArg> for PresentMode {
+    fn from(value: PresentModeArg) -> Self {
+        match value {
+            PresentModeArg::AutoVsync => PresentMode::AutoVsync,
+            PresentModeArg::AutoNoVsync => PresentMode::AutoNoVsync,
+            PresentModeArg::Fifo => PresentMode::Fifo,
+            PresentModeArg::Immediate => PresentMode::Immediate,
+            PresentModeArg::Mailbox => PresentMode::Mailbox,
+        }
+    }
 }
 
 /// Device loss is observed by a wgpu callback that Bevy polls from a plain
@@ -264,7 +290,7 @@ fn main() -> anyhow::Result<()> {
             decorations: !args.embedded,
             window_level: if args.embedded { WindowLevel::AlwaysOnTop } else { WindowLevel::Normal },
             skip_taskbar: args.embedded,
-            present_mode: PresentMode::AutoVsync,
+            present_mode: args.present_mode.into(),
             ..default()
         };
         app.add_plugins(DefaultPlugins.set(asset_plugin).set(WindowPlugin {

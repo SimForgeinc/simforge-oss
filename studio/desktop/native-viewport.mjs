@@ -74,6 +74,15 @@ export class NativeViewportProcess {
     return Boolean(this.#child) && !this.#exited;
   }
 
+  /**
+   * The child's pid, or null before `start`. The viewport owns its GPU
+   * context in one process, so this is what attributes driver-reported GPU
+   * memory to the renderer instead of to the machine.
+   */
+  get pid() {
+    return this.#child?.pid ?? null;
+  }
+
   /** stderr stream for log capture; null before `start`. */
   get stderr() {
     return this.#child?.stderr ?? null;
