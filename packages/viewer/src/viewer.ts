@@ -621,7 +621,9 @@ export class CityViewer {
     if (this.disposed) return;
     if (!this.roadsOnlyFidelity && this.options.vegetationMaxDistance > 0) this.createVegetationLayer(manifest);
 
-    await visualResourcesPromise;
+    void visualResourcesPromise.catch((error: unknown) => {
+      if (!this.disposed) this.recordStreamingError(error);
+    });
     this.refreshWeatherAppearance();
   }
 
