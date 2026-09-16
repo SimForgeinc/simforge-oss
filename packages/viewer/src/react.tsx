@@ -38,7 +38,9 @@ export function CityView({
   role,
   tabIndex,
 }: CityViewProps): ReactElement {
-  const useNative = rendererMode === 'native' || (rendererMode === 'auto' && nativeViewport !== undefined);
+  const nativeRequested = rendererMode === 'native';
+  const useNative = nativeRequested || (rendererMode === 'auto' && nativeViewport !== undefined);
+  const nativeUnavailable = nativeRequested && nativeViewport === undefined;
   const [nativeReadiness, setNativeReadiness] = useState<NativeReadiness | null>(null);
   const [error, setError] = useState<unknown>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -114,7 +116,8 @@ export function CityView({
   }, [manifestUrl, useNative]);
 
   if (useNative) {
-    return <div aria-label={ariaLabel} className={className} role={role} tabIndex={tabIndex} style={{ ...CANVAS_STYLE, ...style, display: 'grid', placeItems: 'center' }} data-renderer="native" data-readiness={nativeReadiness ?? 'starting'}>{nativeReadiness === 'error' ? 'Native renderer unavailable; switch to WebGL.' : `Native renderer: ${nativeReadiness ?? 'starting'}`}</div>;
+    const readiness = nativeUnavailable ? 'error' : (nativeReadiness ?? 'starting');
+    return <div aria-label={ariaLabel} className={className} role={role} tabIndex={tabIndex} style={{ ...CANVAS_STYLE, ...style, display: 'grid', placeItems: 'center' }} data-renderer="native" data-readiness={readiness}>{readiness === 'error' ? 'Native renderer unavailable; switch to WebGL.' : `Native renderer: ${readiness}`}</div>;
   }
   return <canvas ref={canvasRef} aria-label={ariaLabel} className={className} role={role} style={{ ...CANVAS_STYLE, ...style }} tabIndex={tabIndex} data-error={error ? String(error) : undefined} />;
 }
