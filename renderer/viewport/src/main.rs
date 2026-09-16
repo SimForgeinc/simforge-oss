@@ -28,7 +28,7 @@ use bevy::window::{ExitCondition, PresentMode, WindowLevel, WindowPosition, Wind
 use clap::Parser;
 use picking::MapEntity;
 use protocol::{ControlCommand, Identity, Incoming, KeyState, PointerButton};
-use readiness::{GpuPending, GpuReadinessPlugin, GpuSettle, Readiness};
+use readiness::{GpuAdapter, GpuPending, GpuReadinessPlugin, GpuSettle, Readiness};
 use scene::{LoadRequest, LoadResponse, SceneIndex, Tier};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
@@ -45,10 +45,6 @@ pub const RENDERER_ID: &str = "native-wgpu-bevy";
 /// resident set that leaves room for the window system on every machine the
 /// team runs. Overridable, not guessed per-machine: a budget that changes
 /// under you is a budget you cannot benchmark.
-/// A resident node must be this much less important than a candidate before
-/// it is evicted for it.
-const EVICTION_HYSTERESIS: f32 = 1.5;
-
 const DEFAULT_GPU_BUDGET_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 #[derive(Parser, Resource, Clone, Debug)]
@@ -165,6 +161,11 @@ struct LoadedMap {
     coarse_budget_bytes: u64,
     /// Nodes whose desired tier could not be admitted within the budget.
     budget_skipped: HashSet<usize>,
+    /// Lifetime admissions and evictions. A scheduler that never settles is
+    /// indistinguishable from a slow one unless you can see these climbing
+    /// while `residentBytes` sits still, so they are reported, not just held.
+    admissions: u64,
+    evictions: u64,
     /// `plan_member[node]` mirrors `coarse_plan` for O(1) membership: the
     /// scheduler asks this question once per node per frame.
     plan_member: Vec<bool>,
@@ -291,7 +292,28 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn setup(mut commands: Commands, args: Res<Args>, mut state: ResMut<ViewportState>) {
+fn setup(
+    mut commands: Commands,
+    args: Res<Args>,
+    mut state: ResMut<ViewportState>,
+    adapter: Option<Res<GpuAdapter>>,
+) {
+    // First thing on the wire, before any map: whoever reads the events has
+    // to know which GPU produced the numbers that follow. Absent only in a
+    // build with no render app at all.
+    if let Some(adapter) = adapter {
+        protocol::emit(
+            "adapter",
+            json!({
+                "renderer": RENDERER_ID,
+                "name": adapter.name,
+                "backend": adapter.backend,
+                "deviceType": adapter.device_type,
+                "driver": adapter.driver,
+                "driverInfo": adapter.driver_info,
+            }),
+        );
+    }
     if !args.headless {
         commands.spawn((
             Camera3d::default(),
@@ -426,6 +448,9 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
     let version = verified.release.version.clone();
     let verified_members = verified.verified.clone();
     let size_checked = verified.size_checked;
+    let scene_bounds = index.bounds().map(|(min, max)| {
+        json!({ "min": [min.x, min.y, min.z], "max": [max.x, max.y, max.z] })
+    });
     let mut plan_member = vec![false; node_count];
     for node in &coarse_plan {
         plan_member[*node] = true;
@@ -447,6 +472,8 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
         budget_bytes: args.gpu_budget_bytes,
         coarse_budget_bytes,
         budget_skipped: HashSet::new(),
+        admissions: 0,
+        evictions: 0,
         plan_member,
         started: Instant::now(),
         coarse_announced: false,
@@ -470,6 +497,10 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
             "coarseNodes": coarse_nodes,
             "budgetBytes": args.gpu_budget_bytes,
             "coarseBudgetBytes": coarse_budget_bytes,
+            // World-space bounds of the drawable set. The editor frames a map
+            // it has never opened from this, and it is the only way a caller
+            // can aim a camera without parsing `master.gltf` itself.
+            "sceneBounds": scene_bounds,
         }),
     );
 }
@@ -574,9 +605,14 @@ fn stream_system(
             continue;
         }
         let cost = node_cost(map, index, tier).saturating_sub(node_cost(map, index, current));
+        // The stage ceiling, not the whole budget: during the coarse stage an
+        // admission checked against `coarse_budget_bytes` must not be waved
+        // through by an eviction plan drawn against the larger figure.
         let ceiling = if coarse_stage { map.coarse_budget_bytes } else { map.budget_bytes };
         let committed = map.resident_bytes + map.reserved_bytes;
-        if committed + cost > ceiling && !free_bytes_for(map, &mut commands, &mut materials, cost, want_priority, camera) {
+        if committed + cost > ceiling
+            && !free_bytes_for(map, &mut commands, &mut materials, cost, want_priority, camera, ceiling)
+        {
             map.budget_skipped.insert(index);
             continue;
         }
@@ -584,6 +620,7 @@ fn stream_system(
         if map.requests.send(LoadRequest { node: index, tier }).is_ok() {
             map.in_flight.insert(index, cost);
             map.reserved_bytes += cost;
+            map.admissions += 1;
             operations += 1;
         }
     }
@@ -608,9 +645,65 @@ fn node_cost(map: &LoadedMap, index: usize, tier: Tier) -> u64 {
     bytes
 }
 
-/// Evict the least important resident nodes until `needed` bytes are free.
-/// Refuses to evict anything more important than the candidate, which is what
-/// keeps the scheduler from thrashing two nodes against each other.
+/// A resident node the scheduler is allowed to give up, and what giving it up
+/// would free.
+struct Evictable {
+    index: usize,
+    bytes: u64,
+    priority: f32,
+}
+
+/// Choose the evictions that make `needed` bytes fit under `ceiling`, or
+/// `None` when no permissible set of them does.
+///
+/// Planning before evicting is the whole point, and it is why this is a pure
+/// function with tests. Evicting greedily and only then discovering the
+/// admission still does not fit frees geometry for nothing: those nodes are
+/// wanted again on the next pass, are re-admitted because there is now room,
+/// refill the budget, and are evicted again by the same oversized candidate.
+/// Every lap uploads geometry, every upload resets the GPU settle evidence,
+/// and `complete` — which requires a settled frame — never arrives. That is
+/// the whole of the `complete` hang on a map whose closure does not fit in
+/// the budget.
+///
+/// All-or-nothing also makes progress provable rather than hoped for. A
+/// candidate only displaces strictly less important nodes, so the priority of
+/// whatever is evicted is strictly below the priority of what replaces it;
+/// a re-admission therefore has to displace something strictly cheaper still,
+/// and a strictly decreasing chain over a finite node set terminates. No
+/// damping constant is needed, and adding one would only widen the band of
+/// candidates that plan, fail, and leave the resident set thrashing.
+fn plan_evictions(
+    evictable: &mut [Evictable],
+    committed: u64,
+    ceiling: u64,
+    needed: u64,
+    candidate_priority: f32,
+) -> Option<Vec<usize>> {
+    let Some(deficit) = committed.saturating_add(needed).checked_sub(ceiling).filter(|gap| *gap > 0)
+    else {
+        return Some(Vec::new());
+    };
+    evictable.sort_by(|left, right| left.priority.total_cmp(&right.priority));
+    let mut freed = 0u64;
+    let mut plan = Vec::new();
+    for candidate in evictable.iter() {
+        if freed >= deficit {
+            break;
+        }
+        // Ties never evict: two nodes of equal importance displacing each
+        // other is the thrash this function exists to prevent.
+        if candidate.priority >= candidate_priority {
+            break;
+        }
+        freed += candidate.bytes;
+        plan.push(candidate.index);
+    }
+    (freed >= deficit).then_some(plan)
+}
+
+/// Free `needed` bytes under `ceiling` for a candidate of `candidate_priority`,
+/// or leave the resident set untouched and report that it cannot be done.
 fn free_bytes_for(
     map: &mut LoadedMap,
     commands: &mut Commands,
@@ -618,31 +711,31 @@ fn free_bytes_for(
     needed: u64,
     candidate_priority: f32,
     camera: Vec3,
+    ceiling: u64,
 ) -> bool {
-    let ceiling = map.budget_bytes;
-    let committed = |map: &LoadedMap| map.resident_bytes + map.reserved_bytes;
-    let mut resident: Vec<(usize, f32)> = map
+    let mut evictable: Vec<Evictable> = map
         .resident
         .iter()
         .enumerate()
         .filter(|(index, tier)| **tier != Tier::Absent && !map.plan_member[*index])
-        .map(|(index, _)| (index, priority(&map.index.nodes[index], camera)))
+        .map(|(index, tier)| Evictable {
+            index,
+            // What `evict_node` will actually subtract. Shared material bytes
+            // it may additionally release are not counted, so a plan can only
+            // ever free more than it promised, never less.
+            bytes: map.index.nodes[index].bytes_at(*tier),
+            priority: priority(&map.index.nodes[index], camera),
+        })
         .collect();
-    resident.sort_by(|left, right| left.1.total_cmp(&right.1));
-    for (index, resident_priority) in resident {
-        if committed(map) + needed <= ceiling {
-            return true;
-        }
-        // Hysteresis: evict only for a candidate that is materially more
-        // important. Without the margin a saturated budget churns forever —
-        // the evicted node is immediately wanted again, so the scheduler
-        // never settles and `complete` never arrives.
-        if resident_priority * EVICTION_HYSTERESIS >= candidate_priority {
-            break;
-        }
+    let committed = map.resident_bytes + map.reserved_bytes;
+    let Some(plan) = plan_evictions(&mut evictable, committed, ceiling, needed, candidate_priority)
+    else {
+        return false;
+    };
+    for index in plan {
         evict_node(map, commands, materials, index, Tier::Absent);
     }
-    committed(map) + needed <= ceiling
+    true
 }
 
 fn evict_node(
@@ -656,6 +749,9 @@ fn evict_node(
         commands.entity(entity).despawn();
     }
     let previous = std::mem::replace(&mut map.resident[index], Tier::Absent);
+    if previous != Tier::Absent {
+        map.evictions += 1;
+    }
     map.resident_bytes = map.resident_bytes.saturating_sub(map.index.nodes[index].bytes_at(previous));
     if previous == Tier::Detail {
         release_materials(map, materials, index);
@@ -883,6 +979,8 @@ fn readiness_system(
             "residentNodes": map.entities.len(),
             "budgetSkippedNodes": map.budget_skipped.len(),
             "budgetSkippedBytes": skipped_bytes,
+            "admissions": map.admissions,
+            "evictions": map.evictions,
             "verified": [manifest::MASTER_GLTF, manifest::GEOMETRY_BIN],
         }),
     );
@@ -996,16 +1094,26 @@ fn frame_stats_system(args: Res<Args>, time: Res<Time>, mut state: ResMut<Viewpo
         let at = ((deltas.len() as f32 - 1.0) * fraction).round() as usize;
         deltas[at.min(deltas.len() - 1)]
     };
+    let (frames, p50, p95, p99) = (deltas.len(), quantile(0.50), quantile(0.95), quantile(0.99));
     protocol::emit(
         "frame-stats",
         json!({
+            // CPU frame delta, not a GPU timestamp query. Neither backend has
+            // timestamp queries, so anything reported from here is wall time
+            // between main-world frames and must be labelled as such.
             "source": "cpu-frame-delta",
-            "frames": deltas.len(),
-            "p50Ms": quantile(0.50),
-            "p95Ms": quantile(0.95),
-            "p99Ms": quantile(0.99),
+            "frames": frames,
+            "p50Ms": p50,
+            "p95Ms": p95,
+            "p99Ms": p99,
+            // The raw window, so a consumer spanning several buckets can take
+            // true percentiles instead of averaging percentiles.
+            "samplesMs": deltas,
             "residentBytes": map.as_ref().map(|map| map.resident_bytes).unwrap_or(0),
             "peakResidentBytes": map.as_ref().map(|map| map.peak_resident_bytes).unwrap_or(0),
+            "admissions": map.as_ref().map(|map| map.admissions).unwrap_or(0),
+            "evictions": map.as_ref().map(|map| map.evictions).unwrap_or(0),
+            "budgetSkippedNodes": map.as_ref().map(|map| map.budget_skipped.len()).unwrap_or(0),
         }),
     );
 }
@@ -1225,4 +1333,68 @@ fn emit_pick(
     let hits = picking::hits(origin, direction, layers, max_hits, candidates.iter());
     protocol::emit("picked", json!({ "hits": hits }));
     hits
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn evictable(entries: &[(usize, u64, f32)]) -> Vec<Evictable> {
+        entries
+            .iter()
+            .map(|(index, bytes, priority)| Evictable { index: *index, bytes: *bytes, priority: *priority })
+            .collect()
+    }
+
+    #[test]
+    fn an_admission_that_already_fits_evicts_nothing() {
+        let mut resident = evictable(&[(0, 100, 0.1)]);
+        let plan = plan_evictions(&mut resident, 400, 1_000, 100, 9.0);
+        assert_eq!(plan, Some(Vec::new()));
+    }
+
+    #[test]
+    fn evicts_the_least_important_nodes_and_stops_once_the_deficit_is_covered() {
+        // Deficit is 150 bytes; the two cheapest-priority nodes cover it, and
+        // the third must be left alone even though it is also evictable.
+        let mut resident = evictable(&[(7, 100, 0.3), (3, 100, 0.1), (5, 100, 0.2)]);
+        let plan = plan_evictions(&mut resident, 950, 1_000, 200, 9.0);
+        assert_eq!(plan, Some(vec![3, 5]));
+    }
+
+    #[test]
+    fn refuses_to_evict_anything_more_important_than_the_candidate() {
+        let mut resident = evictable(&[(0, 500, 2.0)]);
+        assert_eq!(plan_evictions(&mut resident, 1_000, 1_000, 100, 1.0), None);
+        // Equal importance is not more important, and still must not evict:
+        // two equally ranked nodes displacing each other is pure thrash.
+        let mut tied = evictable(&[(0, 500, 1.0)]);
+        assert_eq!(plan_evictions(&mut tied, 1_000, 1_000, 100, 1.0), None);
+    }
+
+    /// The `complete` hang, as a unit test. A candidate too large for even the
+    /// whole evictable set must leave the resident set untouched: evicting
+    /// part of it frees geometry for an admission that still fails, and those
+    /// nodes are then re-admitted, re-evicted, and re-uploaded forever, which
+    /// resets the GPU settle evidence and starves `complete`.
+    #[test]
+    fn an_unsatisfiable_candidate_evicts_nothing_at_all() {
+        let mut resident = evictable(&[(1, 100, 0.1), (2, 100, 0.2), (3, 100, 0.3)]);
+        let plan = plan_evictions(&mut resident, 1_000, 1_000, 5_000, 9.0);
+        assert_eq!(plan, None);
+    }
+
+    /// Eviction only ever runs downhill in priority, which is what makes the
+    /// scheduler terminate: whatever is displaced can only come back by
+    /// displacing something strictly less important than itself.
+    #[test]
+    fn every_planned_eviction_ranks_below_the_candidate() {
+        let mut resident = evictable(&[(1, 40, 0.9), (2, 40, 0.5), (3, 40, 1.4), (4, 40, 0.2)]);
+        let plan = plan_evictions(&mut resident, 1_000, 1_000, 120, 1.0).expect("plan");
+        assert_eq!(plan, vec![4, 2, 1]);
+        for index in plan {
+            let ranked = resident.iter().find(|entry| entry.index == index).expect("entry");
+            assert!(ranked.priority < 1.0, "evicted node {index} outranks its candidate");
+        }
+    }
 }

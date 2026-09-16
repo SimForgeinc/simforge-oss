@@ -24,6 +24,7 @@
 use bevy::pbr::{RenderMaterialBindings, RenderMaterialInstances};
 use bevy::prelude::*;
 use bevy::render::render_resource::{CachedPipelineState, PipelineCache};
+use bevy::render::renderer::RenderAdapterInfo;
 use bevy::render::{Render, RenderApp, RenderSystems};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -130,6 +131,18 @@ impl GpuSettle {
     }
 }
 
+/// The GPU the render world actually got, as reported by wgpu. A benchmark
+/// that cannot name its adapter is not a measurement, and "the machine has an
+/// RTX 5080" is not evidence that this process is using it.
+#[derive(Resource, Clone, Debug)]
+pub struct GpuAdapter {
+    pub name: String,
+    pub backend: String,
+    pub device_type: String,
+    pub driver: String,
+    pub driver_info: String,
+}
+
 pub struct GpuReadinessPlugin;
 
 impl Plugin for GpuReadinessPlugin {
@@ -148,9 +161,17 @@ impl Plugin for GpuReadinessPlugin {
             pending.samples.store(1, Ordering::Release);
             return;
         };
+        let info = render_app.world().resource::<RenderAdapterInfo>().clone();
         render_app
             .insert_resource(pending)
             .add_systems(Render, sample_pending.after(RenderSystems::Render));
+        app.insert_resource(GpuAdapter {
+            name: info.name.clone(),
+            backend: format!("{:?}", info.backend),
+            device_type: format!("{:?}", info.device_type),
+            driver: info.driver.clone(),
+            driver_info: info.driver_info.clone(),
+        });
     }
 }
 

@@ -482,6 +482,19 @@ impl SceneIndex {
         format!("{}:{}:{}", draw.layer(), draw.node, draw.name)
     }
 
+    /// World-space bounds of every drawable node, or `None` for an empty
+    /// scene. The editor needs this to frame a map it has never opened, and a
+    /// benchmark needs it to put both backends on the same camera path.
+    pub fn bounds(&self) -> Option<(Vec3, Vec3)> {
+        let mut min = Vec3::splat(f32::INFINITY);
+        let mut max = Vec3::splat(f32::NEG_INFINITY);
+        for node in &self.nodes {
+            min = min.min(node.min);
+            max = max.max(node.max);
+        }
+        (min.is_finite() && max.is_finite()).then_some((min, max))
+    }
+
     /// Extent-ranked prefix of the scene that fits `budget_bytes`: the coarse
     /// plan. Biggest-first, because the first frame a user judges is decided
     /// by the large surfaces, not by fence posts.

@@ -17,12 +17,14 @@
 //   node scripts/verify-native-viewport.mjs [--checks=identity,protocol,pick,readiness,progressive]
 //                                           [--map=richmond-field-station] [--json=<path>]
 // Environment:
-//   SIMFORGE_MAPS_CACHE_ROOT  cache root holding `.corpus/<sourceMapId>` (required)
+//   SIMFORGE_MAPS_CACHE_ROOT  cache root holding `.corpus/<sourceMapId>`
+//                             (default: $XDG_DATA_HOME/simforge/maps)
 //   SIMFORGE_NATIVE_VIEWPORT  viewport binary (default: renderer/target/release/...)
 
 import { spawn } from "node:child_process";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { register } from "tsx/esm/api";
 
 register();
@@ -35,14 +37,24 @@ const args = new Map(process.argv.slice(2).map((arg) => {
   return [name, value.join("=") || "true"];
 }));
 const binary = process.env.SIMFORGE_NATIVE_VIEWPORT ?? join(root, "renderer/target/release/simforge-native-viewport");
-const cacheRoot = process.env.SIMFORGE_MAPS_CACHE_ROOT;
-if (!cacheRoot) throw new Error("SIMFORGE_MAPS_CACHE_ROOT is required");
+// Same resolution as `studio/scripts/seed.ts`: one map cache per machine, at
+// the XDG data path. Override only to point at a variant of that root.
+const cacheRoot =
+  process.env.SIMFORGE_MAPS_CACHE_ROOT ??
+  join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "simforge/maps");
 await access(binary);
 
 const CHECKS = ["identity", "protocol", "pick", "readiness", "progressive"];
 const selected = (args.get("checks") ?? CHECKS.join(",")).split(",").filter((name) => CHECKS.includes(name));
 const sourceMapId = args.get("map") ?? "richmond-field-station";
-const progressiveMapId = args.get("progressive-map") ?? "san-ramon-phase-2";
+// How long `complete` may take. Lowerable so a scheduler that never settles
+// reports in minutes instead of holding the suite for twenty of them.
+const completeTimeoutMs = Number(args.get("complete-timeout-ms") ?? 1_200_000);
+// `--map` selects the map for every check, progressive included; the largest
+// canonical map stays the default so the unflagged suite keeps stressing it.
+// Without this, `--checks=progressive --map=X` silently measured a different
+// map than the one named on the command line.
+const progressiveMapId = args.get("progressive-map") ?? args.get("map") ?? "san-ramon-phase-2";
 const READINESS = ["manifest-ready", "coarse-ready", "interactive", "complete", "device-lost", "error"];
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -313,8 +325,14 @@ async function checkProgressive() {
     run.viewport.loadMap(identity);
     const coarse = await waitFor(run.events, (event) => event.event === "coarse-ready", 180_000, "coarse-ready");
     const interactive = await waitFor(run.events, (event) => event.event === "interactive", 180_000, "interactive");
-    const complete = await waitFor(run.events, (event) => event.event === "complete", 1_200_000, "complete");
-    record("progressive.interactive-on-coarse-geometry", interactive.elapsedMs < 10_000, {
+    const complete = await waitFor(run.events, (event) => event.event === "complete", completeTimeoutMs, "complete");
+    // Two independent claims, both required: the editor becomes interactive on
+    // coarse geometry quickly, and streaming to `complete` never exceeds the
+    // budget it was given. A run that completes by overshooting the budget is
+    // a failure, not a pass.
+    const withinBudget = complete.peakResidentBytes <= complete.budgetBytes;
+    record("progressive.interactive-on-coarse-geometry", interactive.elapsedMs < 10_000 && withinBudget, {
+      withinBudget,
       map: identity.mapVersionId,
       coarseReadyMs: coarse.elapsedMs,
       coarseNodes: coarse.nodes,
