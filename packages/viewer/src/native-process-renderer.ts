@@ -15,7 +15,7 @@ export class NativeProcessRenderer implements NativeViewportPort {
   private readonly listeners = new Set<(state: NativeReadiness, detail?: string) => void>();
   private readonly process: NativeProcess;
   private camera: CameraStateReport | null = null;
-  private unsubscribe: (() => void) | null = null;
+  private unsubscribe: (() => void) | null;
 
   constructor(process: NativeProcess) {
     this.process = process;
@@ -32,6 +32,9 @@ export class NativeProcessRenderer implements NativeViewportPort {
   get readiness(): NativeReadiness { return this.state; }
 
   async loadMap(input: { mapRoot: string; mapVersionId: string; releaseDigest: string }): Promise<void> {
+    if (!input.mapRoot || !input.mapVersionId || !input.releaseDigest) {
+      throw new Error('native map load requires mapRoot, mapVersionId, and releaseDigest');
+    }
     this.state = 'starting';
     await this.process.start();
   }
@@ -44,7 +47,7 @@ export class NativeProcessRenderer implements NativeViewportPort {
   cameraState(): CameraStateReport | null { return this.camera; }
 
   async pick(_request: PickRequest): Promise<PickResult> {
-    throw new Error('native viewport picking is not available until the interactive pick IPC is connected');
+    throw new Error('native viewport picking is not available until interactive pick IPC is connected');
   }
 
   onReadiness(listener: (state: NativeReadiness, detail?: string) => void): () => void {
