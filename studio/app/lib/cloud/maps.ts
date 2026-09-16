@@ -302,6 +302,7 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
         }
       }
     }
+    seen.add(descriptor.sourceMapId);
     maps.push({
       ...descriptor,
       access,
@@ -319,8 +320,8 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
     reachability = { reachable: false, message: error.message };
   }
   for (const map of upstream) {
-    if (seen.has(map.mapVersionId)) continue;
-    seen.add(map.mapVersionId);
+    if (seen.has(map.sourceMapId)) continue;
+    seen.add(map.sourceMapId);
     maps.push({
       ...localizeDescriptor(map),
       access: accessOf(map),
