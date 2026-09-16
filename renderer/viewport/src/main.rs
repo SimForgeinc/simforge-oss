@@ -1,5 +1,5 @@
 use anyhow::Result;
-use bevy::asset::LoadState;
+use bevy::asset::{LoadState, UnapprovedPathMode};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use bevy::window::ExitCondition;
@@ -56,6 +56,7 @@ struct RuntimeState {
     scene: Handle<Gltf>,
     announced_interactive: bool,
 }
+
 fn emit(state: &RuntimeState, event: &'static str, error: Option<String>) {
     let elapsed_ms = (event == "interactive").then(|| state.started.elapsed().as_millis());
     println!("{}", serde_json::to_string(&RendererEvent {
@@ -67,10 +68,8 @@ fn emit(state: &RuntimeState, event: &'static str, error: Option<String>) {
         error,
     }).expect("renderer event serializes"));
 }
-
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, args: Res<Args>) {
-    let root = args.map_root.to_string_lossy().replace('\\', "/");
-    let scene = asset_server.load::<Gltf>(format!("{root}/master.gltf"));
+    let scene = asset_server.load::<Gltf>("master.gltf");
     commands.insert_resource(RuntimeState {
         args: args.clone(),
         started: Instant::now(),
@@ -155,12 +154,12 @@ fn main() -> Result<()> {
     app.insert_resource(ControlChannel(Mutex::new(control_rx)));
     if args.headless {
         app.add_plugins(DefaultPlugins
-            .set(AssetPlugin { file_path: asset_root, ..default() })
+            .set(AssetPlugin { file_path: asset_root, unapproved_path_mode: UnapprovedPathMode::Allow, ..default() })
             .set(WindowPlugin { primary_window: None, exit_condition: ExitCondition::DontExit, ..default() })
             .disable::<bevy::winit::WinitPlugin>()
             .disable::<bevy::audio::AudioPlugin>());
     } else {
-        app.add_plugins(DefaultPlugins.set(AssetPlugin { file_path: asset_root, ..default() }));
+        app.add_plugins(DefaultPlugins.set(AssetPlugin { file_path: asset_root, unapproved_path_mode: UnapprovedPathMode::Allow, ..default() }));
     }
     app.add_systems(Startup, setup);
     app.add_systems(Update, (load_scene, orbit_camera, control_system));
