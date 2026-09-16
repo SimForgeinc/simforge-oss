@@ -14,7 +14,6 @@ function vector3(value: unknown): readonly [number, number, number] {
   return [value[0] as number, value[1] as number, value[2] as number];
 }
 
-/** Adapts the typed Electron capability to the process-shaped viewer adapter. */
 export function nativeViewportProcessPort(
   bridge: NativeViewportBridge,
   onError: (error: unknown) => void = () => {},
@@ -32,15 +31,19 @@ export function nativeViewportProcessPort(
     },
     start: () => bridge.start(),
     send(command) {
-      let operation: Promise<unknown>;
-      if (command.command === 'camera') {
-        operation = bridge.camera(vector3(command.position), vector3(command.target));
-      } else if (command.command === 'quit') {
-        operation = bridge.stop();
-      } else {
-        operation = Promise.reject(new Error(`native viewport command is not supported: ${String(command.command)}`));
+      try {
+        let operation: Promise<unknown>;
+        if (command.command === 'camera') {
+          operation = bridge.camera(vector3(command.position), vector3(command.target));
+        } else if (command.command === 'quit') {
+          operation = bridge.stop();
+        } else {
+          operation = Promise.reject(new Error(`native viewport command is not supported: ${String(command.command)}`));
+        }
+        void operation.catch(onError);
+      } catch (error) {
+        onError(error);
       }
-      void operation.catch(onError);
     },
     stop() { void bridge.stop().catch(onError); },
   };
