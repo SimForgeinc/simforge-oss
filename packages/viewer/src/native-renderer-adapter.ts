@@ -13,7 +13,16 @@ export interface NativeViewportPort {
   readonly implementation: Extract<RendererImplementation, 'bevy-native'>;
   readonly mode: 'native';
   readonly readiness: NativeReadiness;
-  loadMap(input: { mapRoot: string; mapVersionId: string; releaseDigest: string }): Promise<void>;
+  /**
+   * Load a map by immutable identity. Deliberately not a filesystem path: the
+   * map root is a host location that page script must never receive, so the
+   * desktop main process resolves it from this identity after verifying the
+   * release digest against the studio's native-profile endpoint.
+   */
+  loadMap(input: { mapVersionId: string; releaseDigest: string }): Promise<void>;
+  /** Position and size the native surface over the editor's viewport region. */
+  resize(input: { width: number; height: number; pixelRatio: number; x?: number; y?: number }): void;
+  setSelection(ids: readonly string[]): void;
   applyCamera(command: CameraCommand): void;
   cameraState(): CameraStateReport | null;
   pick(request: PickRequest): Promise<PickResult>;

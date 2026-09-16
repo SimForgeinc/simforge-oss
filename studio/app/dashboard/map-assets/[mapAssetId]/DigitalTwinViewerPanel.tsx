@@ -75,12 +75,58 @@ export function DigitalTwinViewerPanel({
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
   const quality = useRenderingPreference() ?? "high";
+  const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
+    ? "native"
+    : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"
+      ? "auto"
+      : "web";
   const nativeViewport = useMemo<NativeViewportPort | undefined>(() => {
     const bridge = typeof window !== "undefined" ? window.simforgeDesktop?.nativeViewport : undefined;
     if (!bridge) return undefined;
     return new NativeProcessRenderer(nativeViewportProcessPort(bridge, (error) => setViewerError(String(error))));
   }, []);
   useEffect(() => () => { void nativeViewport?.dispose(); }, [nativeViewport]);
+
+  /**
+   * Immutable native map identity for this asset.
+   *
+   * Two existing endpoints, no new identity path: `maps.list` turns this
+   * page's map-asset id into the immutable map version id, and the shell's
+   * `native-profile` call turns that into the verified release digest. The
+   * native branch needs both, which is why `auto` used to resolve to web even
+   * inside the desktop shell — the mode was read, the identity never fetched.
+   *
+   * A 404 from the profile is the host saying this map has no complete native
+   * identity, so the native backend really is unavailable for it.
+   */
+  const [nativeIdentity, setNativeIdentity] = useState<{ mapVersionId: string; releaseDigest: string } | null>(null);
+  useEffect(() => {
+    const bridge = typeof window !== "undefined" ? window.simforgeDesktop?.nativeViewport : undefined;
+    if (rendererMode === "web" || !bridge) {
+      setNativeIdentity(null);
+      return;
+    }
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch("/api/simforge/maps", { signal: controller.signal });
+        if (!response.ok) throw new Error(`map catalog unavailable (${response.status})`);
+        const catalog = (await response.json()) as { maps?: { mapVersionId?: string; sourceMapId?: string }[] };
+        const match = catalog.maps?.find((map) => map.sourceMapId === asset.map_asset_id);
+        if (!match?.mapVersionId) throw new Error(`no immutable map version is registered for ${asset.map_asset_id}`);
+        const profile = await bridge.profile(match.mapVersionId);
+        if (controller.signal.aborted) return;
+        setNativeIdentity({ mapVersionId: profile.mapVersionId, releaseDigest: profile.releaseDigest });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setNativeIdentity(null);
+        // `auto` degrades to WebGL silently; a mode the user named by hand
+        // has to say why it cannot honour the request.
+        if (rendererMode === "native") setViewerError(error instanceof Error ? error.message : String(error));
+      }
+    })();
+    return () => controller.abort();
+  }, [asset.map_asset_id, rendererMode]);
 
   useEffect(() => {
     setHas3D(hasArtifact ? true : null);
@@ -183,8 +229,10 @@ export function DigitalTwinViewerPanel({
       <CityViewDynamic
         key={quality}
         manifestUrl={manifestUrl}
-        rendererMode={process.env.NEXT_PUBLIC_RENDERER_MODE === "native" ? "native" : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto" ? "auto" : "web"}
+        rendererMode={rendererMode}
         nativeViewport={nativeViewport}
+        nativeMapVersionId={nativeIdentity?.mapVersionId}
+        nativeReleaseDigest={nativeIdentity?.releaseDigest}
         options={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
         onReady={onReady}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}

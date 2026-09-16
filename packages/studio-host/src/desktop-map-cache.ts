@@ -76,23 +76,83 @@ export interface DesktopMapCacheBridge {
   chooseDirectory(options?: { move?: boolean }): Promise<DesktopMapCacheStatus>;
 }
 
+/**
+ * One event from the native viewport process, verbatim.
+ *
+ * The wire is camelCase in both directions (see
+ * `renderer/viewport/PROTOCOL.md`): the renderer, this bridge and the Rust
+ * process all name the same field the same way, so no projection layer exists
+ * to drop a field. `hits` is why that matters — it used to be projected away.
+ */
 export type NativeViewportEvent = {
-  readonly event: "manifest-ready" | "coarse-ready" | "interactive" | "device-lost" | "error" | "closed" | "camera-applied";
-  readonly map_version_id?: string;
-  readonly release_digest?: string;
+  readonly event:
+    | "starting"
+    | "manifest-ready"
+    | "coarse-ready"
+    | "interactive"
+    | "complete"
+    | "device-lost"
+    | "error"
+    | "closed"
+    | "camera-state"
+    | "picked"
+    | "selection-changed"
+    | "overlay-state"
+    | "resized"
+    | "frame-stats";
+  readonly mapVersionId?: string;
+  readonly releaseDigest?: string;
+  readonly canonicalDigest?: string;
   readonly renderer?: string;
-  readonly elapsed_ms?: number;
-  readonly error?: string;
+  readonly elapsedMs?: number;
+  readonly code?: string;
+  readonly message?: string;
   readonly reason?: string;
   readonly recoverable?: boolean;
+  readonly hits?: readonly {
+    readonly layer: string;
+    readonly id: string | null;
+    readonly distanceM: number;
+    readonly point: readonly [number, number, number];
+  }[];
+  readonly ids?: readonly string[];
+  readonly position?: readonly [number, number, number];
+  readonly target?: readonly [number, number, number];
+  readonly fovYRad?: number;
+  readonly aspect?: number;
+  readonly residentBytes?: number;
+  readonly peakResidentBytes?: number;
 };
 
+/**
+ * Control surface the preload exposes for the native viewport.
+ *
+ * `loadMap` takes identity, never a path: the main process resolves the map
+ * root under the cache root itself, after checking the identity against the
+ * studio's `native-profile` endpoint. A filesystem path must not be reachable
+ * from page script, so it is not in this type.
+ */
 export interface NativeViewportBridge {
+  profile(mapVersionId: string): Promise<NativeMapProfile>;
+  loadMap(identity: { mapVersionId: string; releaseDigest: string }): Promise<{ ok: true }>;
   start(): Promise<{ ok: true }>;
   camera(position: readonly number[], target: readonly number[]): Promise<{ ok: true }>;
+  /** Any other protocol command, forwarded verbatim to the process stdin. */
+  command(command: Readonly<Record<string, unknown>>): Promise<{ ok: true }>;
   stop(): Promise<{ ok: true }>;
   onEvent(listener: (event: NativeViewportEvent) => void): () => void;
 }
+
+/** Response of `GET /api/simforge/maps/{mapVersionId}/native-profile`. */
+export type NativeMapProfile = {
+  readonly mapVersionId: string;
+  readonly sourceMapId: string;
+  readonly profile: "native";
+  readonly releaseDigest: string;
+  readonly canonicalDigest: string;
+  readonly availability: string;
+  readonly members: readonly { readonly relativePath: string; readonly sha256: string; readonly sizeBytes: number }[];
+};
 
 export type SimforgeDesktopBridge = {
   version: typeof DESKTOP_BRIDGE_VERSION;

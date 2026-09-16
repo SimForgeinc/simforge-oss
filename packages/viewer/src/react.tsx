@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { CityViewer } from './viewer';
 import type { CityViewerOptions } from './types';
@@ -9,9 +9,16 @@ export interface CityViewProps {
   manifestUrl: string;
   rendererMode?: 'web' | 'native' | 'auto';
   nativeViewport?: NativeViewportPort;
-  nativeMapRoot?: string;
+  /** Immutable map version id; required for the native backend. */
   nativeMapVersionId?: string;
+  /** Release digest of that map version; required for the native backend. */
   nativeReleaseDigest?: string;
+  /**
+   * Screen-space offset of the page's client area, from the desktop shell.
+   * The native surface is an OS window positioned over this component, so it
+   * needs page coordinates translated into screen coordinates.
+   */
+  nativeScreenOffset?: { x: number; y: number };
   options?: CityViewerOptions;
   className?: string;
   style?: CSSProperties;
@@ -19,6 +26,8 @@ export interface CityViewProps {
   onMapLoaded?: (manifestUrl: string) => void;
   onError?: (error: unknown, manifestUrl: string) => void;
   onCapabilitiesChange?: (capabilities: readonly string[]) => void;
+  /** Every native readiness transition, for UI that shows load progress. */
+  onNativeReadiness?: (state: NativeReadiness, detail?: string) => void;
   ariaLabel?: string;
   role?: string;
   tabIndex?: number;
@@ -30,9 +39,9 @@ export function CityView({
   manifestUrl,
   rendererMode = 'web',
   nativeViewport,
-  nativeMapRoot,
   nativeMapVersionId,
   nativeReleaseDigest,
+  nativeScreenOffset,
   options,
   className,
   style,
@@ -40,17 +49,27 @@ export function CityView({
   onMapLoaded,
   onError,
   onCapabilitiesChange,
+  onNativeReadiness,
   ariaLabel,
   role,
   tabIndex,
 }: CityViewProps): ReactElement {
   const nativeRequested = rendererMode === 'native';
-  const nativeConfigured = nativeViewport !== undefined && Boolean(nativeMapRoot && nativeMapVersionId && nativeReleaseDigest);
-  const useNative = nativeRequested || (rendererMode === 'auto' && nativeConfigured);
+  const nativeConfigured = nativeViewport !== undefined && Boolean(nativeMapVersionId && nativeReleaseDigest);
+  /**
+   * `auto` gives up on the native backend for good once it fails, so the
+   * WebGL canvas mounts in its place without a page reload. Explicit `native`
+   * never falls back: a mode the user asked for by name has to report its own
+   * failure, or "native" silently means "whatever worked".
+   */
+  const [nativeFailed, setNativeFailed] = useState(false);
+  const useNative = nativeRequested || (rendererMode === 'auto' && nativeConfigured && !nativeFailed);
   const nativeUnavailable = nativeRequested && !nativeConfigured;
   const [nativeReadiness, setNativeReadiness] = useState<NativeReadiness | null>(null);
+  const [nativeDetail, setNativeDetail] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nativeRegionRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<CityViewer | null>(null);
   const diagnosticsRef = useRef<ViewerRuntimeDiagnostics | null>(null);
   const generationRef = useRef(0);
@@ -58,11 +77,13 @@ export function CityView({
   const onErrorRef = useRef(onError);
   const onMapLoadedRef = useRef(onMapLoaded);
   const onCapabilitiesRef = useRef(onCapabilitiesChange);
+  const onNativeReadinessRef = useRef(onNativeReadiness);
   const manifestRef = useRef(manifestUrl);
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
   onMapLoadedRef.current = onMapLoaded;
   onCapabilitiesRef.current = onCapabilitiesChange;
+  onNativeReadinessRef.current = onNativeReadiness;
   manifestRef.current = manifestUrl;
 
   useEffect(() => {
@@ -88,19 +109,82 @@ export function CityView({
   }, [options, useNative]);
 
   useEffect(() => {
-    if (!useNative || !nativeConfigured || !nativeViewport || !nativeMapRoot || !nativeMapVersionId || !nativeReleaseDigest) return;
+    if (!useNative || !nativeViewport || !nativeMapVersionId || !nativeReleaseDigest) return;
     setNativeReadiness('starting');
+    setNativeDetail(null);
+    let disposed = false;
     const unsubscribe = nativeViewport.onReadiness((state, detail) => {
+      if (disposed) return;
       setNativeReadiness(state);
+      setNativeDetail(detail ?? null);
+      onNativeReadinessRef.current?.(state, detail);
       if (state === 'interactive') onMapLoadedRef.current?.(manifestRef.current);
-      if (state === 'error' || state === 'device-lost') onErrorRef.current?.(new Error(detail ?? `Native viewport ${state}`), manifestRef.current);
+      if (state !== 'error' && state !== 'device-lost') return;
+      const failure = new Error(detail ?? `Native viewport ${state}`);
+      if (rendererMode === 'auto') {
+        // Dispose first: the native window has to be gone before the WebGL
+        // canvas takes over the region, or two renderers fight over it.
+        void nativeViewport.dispose().finally(() => {
+          if (!disposed) setNativeFailed(true);
+        });
+        return;
+      }
+      setError(failure);
+      onErrorRef.current?.(failure, manifestRef.current);
     });
-    nativeViewport.loadMap({ mapRoot: nativeMapRoot, mapVersionId: nativeMapVersionId, releaseDigest: nativeReleaseDigest }).catch((reason: unknown) => {
+    nativeViewport.loadMap({ mapVersionId: nativeMapVersionId, releaseDigest: nativeReleaseDigest }).catch((reason: unknown) => {
+      if (disposed) return;
       setNativeReadiness('error');
+      setNativeDetail(reason instanceof Error ? reason.message : String(reason));
+      if (rendererMode === 'auto') {
+        setNativeFailed(true);
+        return;
+      }
       onErrorRef.current?.(reason, manifestRef.current);
     });
-    return unsubscribe;
-  }, [manifestUrl, nativeViewport, nativeConfigured, nativeMapRoot, nativeMapVersionId, nativeReleaseDigest, useNative]);
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [manifestUrl, nativeViewport, nativeMapVersionId, nativeReleaseDigest, rendererMode, useNative]);
+
+  /**
+   * Keep the native OS window over this component's rectangle.
+   *
+   * This is option (a) from `renderer/viewport/PROTOCOL.md`: a native child
+   * window clipped to the editor's viewport region, which keeps the GPU
+   * surface under the renderer's own control instead of paying a per-frame
+   * copy to composite into a DOM canvas.
+   */
+  const syncNativeRegion = useCallback(() => {
+    const region = nativeRegionRef.current;
+    if (!region || !nativeViewport) return;
+    const rect = region.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    const offset = nativeScreenOffset ?? { x: typeof window === 'undefined' ? 0 : window.screenX, y: typeof window === 'undefined' ? 0 : window.screenY };
+    nativeViewport.resize({
+      width: rect.width,
+      height: rect.height,
+      pixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio,
+      x: Math.round(offset.x + rect.left),
+      y: Math.round(offset.y + rect.top),
+    });
+  }, [nativeScreenOffset, nativeViewport]);
+
+  useEffect(() => {
+    if (!useNative || !nativeViewport || nativeReadiness === null) return;
+    syncNativeRegion();
+    const region = nativeRegionRef.current;
+    const observer = region && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncNativeRegion) : null;
+    if (region) observer?.observe(region);
+    window.addEventListener('resize', syncNativeRegion);
+    window.addEventListener('scroll', syncNativeRegion, true);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', syncNativeRegion);
+      window.removeEventListener('scroll', syncNativeRegion, true);
+    };
+  }, [nativeReadiness, nativeViewport, syncNativeRegion, useNative]);
 
   useEffect(() => {
     if (useNative) return;
@@ -124,7 +208,42 @@ export function CityView({
 
   if (useNative) {
     const readiness = nativeUnavailable ? 'error' : (nativeReadiness ?? 'starting');
-    return <div aria-label={ariaLabel} className={className} role={role} tabIndex={tabIndex} style={{ ...CANVAS_STYLE, ...style, display: 'grid', placeItems: 'center' }} data-renderer="native" data-readiness={readiness}>{readiness === 'error' ? 'Native renderer unavailable; switch to WebGL.' : `Native renderer: ${readiness}`}</div>;
+    const settled = readiness === 'interactive' || readiness === 'complete';
+    // The region is transparent and empty on purpose: the pixels come from
+    // the native window positioned over it. The overlay is the load/failure
+    // story the user needs while that window has nothing to show.
+    return (
+      <div
+        ref={nativeRegionRef}
+        aria-label={ariaLabel}
+        className={className}
+        role={role}
+        tabIndex={tabIndex}
+        style={{ ...CANVAS_STYLE, ...style, position: 'relative' }}
+        data-renderer="native"
+        data-readiness={readiness}
+        data-native-fallback={rendererMode === 'auto' ? 'webgl' : 'none'}
+      >
+        {settled ? null : (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
+            {readiness === 'error' || readiness === 'device-lost'
+              ? `Native renderer ${readiness}${nativeDetail ? `: ${nativeDetail}` : ''}`
+              : `Native renderer: ${readiness}`}
+          </div>
+        )}
+      </div>
+    );
   }
-  return <canvas ref={canvasRef} aria-label={ariaLabel} className={className} role={role} style={{ ...CANVAS_STYLE, ...style }} tabIndex={tabIndex} data-error={error ? String(error) : undefined} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-label={ariaLabel}
+      className={className}
+      role={role}
+      style={{ ...CANVAS_STYLE, ...style }}
+      tabIndex={tabIndex}
+      data-renderer={nativeFailed ? 'web-after-native-fallback' : 'web'}
+      data-error={error ? String(error) : undefined}
+    />
+  );
 }

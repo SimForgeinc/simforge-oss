@@ -69,8 +69,11 @@ contextBridge.exposeInMainWorld("simforgeDesktop", {
   },
   nativeViewport: {
     profile: (mapVersionId) => callNative("profile", mapVersionId),
+    // Identity in, no path out: the main process owns the map root.
+    loadMap: (identity) => callNative("load-map", identity),
     start: () => callNative("start"),
     camera: (position, target) => callNative("camera", position, target),
+    command: (command) => callNative("command", command),
     stop: () => callNative("stop"),
     onEvent: (listener) => {
       const handler = (_event, payload) => listener(payload);
