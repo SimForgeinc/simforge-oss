@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld("simforgeDesktop", {
     chooseDirectory: (options) => call("chooseDirectory", options),
   },
   nativeViewport: {
+    profile: (mapVersionId) => callNative("profile", mapVersionId),
     start: () => callNative("start"),
     camera: (position, target) => callNative("camera", position, target),
     stop: () => callNative("stop"),

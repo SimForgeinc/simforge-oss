@@ -713,8 +713,14 @@ if (!app.requestSingleInstanceLock()) {
         shellUpdater.timer.unref();
       }
       const installNativeViewport = () => {
-        const validSender = (event) => event.sender === win?.webContents
-          && event.senderFrame === win?.webContents.mainFrame;
+        const validSender = (event) => event.sender === win?.webContents && event.senderFrame === win?.webContents.mainFrame;
+        ipcMain.handle("simforge:map-cache:native-viewport:profile", async (event, mapVersionId) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          if (typeof mapVersionId !== "string" || !mapVersionId) throw new Error("native profile needs a mapVersionId");
+          const response = await fetch(`${trustedOrigin}/api/simforge/maps/${encodeURIComponent(mapVersionId)}/native-profile`, { headers: await localHost.authorization() });
+          if (!response.ok) throw new Error(`native profile unavailable (${response.status})`);
+          return await response.json();
+        });
         ipcMain.handle("simforge:map-cache:native-viewport:start", async (event) => {
           if (!validSender(event)) throw new Error("native viewport sender rejected");
           const listener = (payload) => {
