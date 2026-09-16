@@ -126,14 +126,17 @@ fn orbit_camera(
     if direction != Vec3::ZERO { transform.translation += direction.normalize() * 20.0 * time.delta_secs(); }
 }
 
-fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transform, With<Camera3d>>) {
+fn control_system(channel: Res<ControlChannel>, mut cameras: Query<&mut Transform, With<Camera3d>>, mut app_exit: MessageWriter<AppExit>) {
     let Ok(mut camera) = cameras.single_mut() else { return; };
     let Ok(commands) = channel.0.lock() else { return; };
     for command in commands.try_iter() {
-        if let ControlCommand::Camera { position, target } = command {
-            camera.translation = Vec3::from_array(position);
-            camera.look_at(Vec3::from_array(target), Vec3::Y);
-            println!("{{\"event\":\"camera-applied\"}}");
+        match command {
+            ControlCommand::Camera { position, target } => {
+                camera.translation = Vec3::from_array(position);
+                camera.look_at(Vec3::from_array(target), Vec3::Y);
+                println!("{{\"event\":\"camera-applied\"}}");
+            }
+            ControlCommand::Quit => { app_exit.write(AppExit::Success); }
         }
     }
 }
