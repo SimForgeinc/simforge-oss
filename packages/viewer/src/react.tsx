@@ -2,47 +2,31 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { CityViewer } from './viewer';
 import type { CityViewerOptions } from './types';
-import {
-  installViewerRuntimeDiagnostics,
-  type ViewerRuntimeDiagnostics,
-} from './viewer-diagnostics';
+import type { NativeReadiness, NativeViewportPort } from './native-renderer-adapter';
+import { installViewerRuntimeDiagnostics, type ViewerRuntimeDiagnostics } from './viewer-diagnostics';
 
 export interface CityViewProps {
-  /** Manifest URL, relative to `options.baseUrl` when set. */
   manifestUrl: string;
+  rendererMode?: 'web' | 'native' | 'auto';
+  nativeViewport?: NativeViewportPort;
   options?: CityViewerOptions;
   className?: string;
   style?: CSSProperties;
-  /** Called once the viewer exists — before the map has finished streaming. */
   onReady?: (viewer: CityViewer) => void;
-  /** Called after this manifest has replaced the previous streamed map. */
   onMapLoaded?: (manifestUrl: string) => void;
   onError?: (error: unknown, manifestUrl: string) => void;
-  /** Reports capabilities backed by metadata that loaded and validated. */
   onCapabilitiesChange?: (capabilities: readonly string[]) => void;
-  /**
-   * Accessible name for the scene. A `<canvas>` has no implicit name and no
-   * inner text to fall back on, so without this the whole 3D surface announces
-   * as nothing at all.
-   */
   ariaLabel?: string;
-  /**
-   * ARIA role, normally `"application"` — the canvas handles its own keys, so
-   * assistive tech has to stop intercepting them. Pair it with `tabIndex` or
-   * there is no way to reach the scene from the keyboard.
-   */
   role?: string;
   tabIndex?: number;
 }
 
 const CANVAS_STYLE: CSSProperties = { display: 'block', width: '100%', height: '100%' };
 
-/**
- * Thin React wrapper: mounts a {@link CityViewer} on a canvas and disposes it
- * on unmount. All interaction stays on the viewer instance handed to `onReady`.
- */
 export function CityView({
   manifestUrl,
+  rendererMode = 'web',
+  nativeViewport,
   options,
   className,
   style,
@@ -54,35 +38,34 @@ export function CityView({
   role,
   tabIndex,
 }: CityViewProps): ReactElement {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const useNative = rendererMode === 'native' || (rendererMode === 'auto' && nativeViewport !== undefined);
+  const [nativeReadiness, setNativeReadiness] = useState<NativeReadiness | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<CityViewer | null>(null);
   const diagnosticsRef = useRef<ViewerRuntimeDiagnostics | null>(null);
-  const loadGenerationRef = useRef(0);
-  // Options are read once at mount; changing them later requires a remount.
-  const optionsRef = useRef(options);
+  const generationRef = useRef(0);
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const onMapLoadedRef = useRef(onMapLoaded);
-  const onCapabilitiesChangeRef = useRef(onCapabilitiesChange);
-  const manifestUrlRef = useRef(manifestUrl);
-  manifestUrlRef.current = manifestUrl;
+  const onCapabilitiesRef = useRef(onCapabilitiesChange);
+  const manifestRef = useRef(manifestUrl);
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
   onMapLoadedRef.current = onMapLoaded;
-  onCapabilitiesChangeRef.current = onCapabilitiesChange;
+  onCapabilitiesRef.current = onCapabilitiesChange;
+  manifestRef.current = manifestUrl;
 
   useEffect(() => {
+    if (useNative || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const viewer = new CityViewer(canvas, optionsRef.current);
+    const viewer = new CityViewer(canvas, options);
     diagnosticsRef.current = installViewerRuntimeDiagnostics(viewer);
     viewerRef.current = viewer;
     const onContextLost = () => {
       const failure = new Error('WebGL context was lost; reload the map to recreate its GPU resources');
       setError(failure);
-      diagnosticsRef.current?.mapLoadFailed(manifestUrlRef.current, failure);
-      onErrorRef.current?.(failure, manifestUrlRef.current);
+      onErrorRef.current?.(failure, manifestRef.current);
     };
     canvas.addEventListener('webglcontextlost', onContextLost);
     onReadyRef.current?.(viewer);
@@ -93,40 +76,45 @@ export function CityView({
       viewerRef.current = null;
       viewer.dispose();
     };
-  }, []);
+  }, [options, useNative]);
 
   useEffect(() => {
+    if (!useNative || !nativeViewport) return;
+    setNativeReadiness('starting');
+    const unsubscribe = nativeViewport.onReadiness((state, detail) => {
+      setNativeReadiness(state);
+      if (state === 'interactive') onMapLoadedRef.current?.(manifestRef.current);
+      if (state === 'error' || state === 'device-lost') onErrorRef.current?.(new Error(detail ?? `Native viewport ${state}`), manifestRef.current);
+    });
+    nativeViewport.loadMap({ mapRoot: '', mapVersionId: manifestUrl, releaseDigest: '' }).catch((reason: unknown) => {
+      setNativeReadiness('error');
+      onErrorRef.current?.(reason, manifestRef.current);
+    });
+    return unsubscribe;
+  }, [manifestUrl, nativeViewport, useNative]);
+
+  useEffect(() => {
+    if (useNative) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
-    const generation = ++loadGenerationRef.current;
+    const generation = ++generationRef.current;
     setError(null);
-    onCapabilitiesChangeRef.current?.([]);
+    onCapabilitiesRef.current?.([]);
     diagnosticsRef.current?.mapLoadStarted(manifestUrl);
-    viewer.loadMap(manifestUrl)
-      .then(() => {
-        if (generation !== loadGenerationRef.current) return;
-        diagnosticsRef.current?.mapLoadSucceeded(manifestUrl);
-        onMapLoadedRef.current?.(manifestUrl);
-        onCapabilitiesChangeRef.current?.(viewer.getCapabilities());
-      })
-      .catch((err: unknown) => {
-        if (generation !== loadGenerationRef.current) return;
-        diagnosticsRef.current?.mapLoadFailed(manifestUrl, err);
-        setError(err);
-        onErrorRef.current?.(err, manifestUrl);
-        console.error('[city-renderer] loadMap failed', err);
-      });
-  }, [manifestUrl]);
+    viewer.loadMap(manifestUrl).then(() => {
+      if (generation !== generationRef.current) return;
+      diagnosticsRef.current?.mapLoadSucceeded(manifestUrl);
+      onMapLoadedRef.current?.(manifestUrl);
+      onCapabilitiesRef.current?.(viewer.getCapabilities());
+    }).catch((reason: unknown) => {
+      if (generation !== generationRef.current) return;
+      setError(reason);
+      onErrorRef.current?.(reason, manifestUrl);
+    });
+  }, [manifestUrl, useNative]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      aria-label={ariaLabel}
-      className={className}
-      role={role}
-      style={{ ...CANVAS_STYLE, ...style }}
-      tabIndex={tabIndex}
-      data-error={error ? String(error) : undefined}
-    />
-  );
+  if (useNative) {
+    return <div aria-label={ariaLabel} className={className} role={role} tabIndex={tabIndex} style={{ ...CANVAS_STYLE, ...style, display: 'grid', placeItems: 'center' }} data-renderer="native" data-readiness={nativeReadiness ?? 'starting'}>{nativeReadiness === 'error' ? 'Native renderer unavailable; switch to WebGL.' : `Native renderer: ${nativeReadiness ?? 'starting'}`}</div>;
+  }
+  return <canvas ref={canvasRef} aria-label={ariaLabel} className={className} role={role} style={{ ...CANVAS_STYLE, ...style }} tabIndex={tabIndex} data-error={error ? String(error) : undefined} />;
 }
