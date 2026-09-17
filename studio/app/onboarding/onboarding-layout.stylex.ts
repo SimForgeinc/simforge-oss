@@ -2,28 +2,47 @@ import * as stylex from "@stylexjs/stylex";
 import { space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
- * The onboarding route shell: one full-height canvas with the hero behind it
- * and one centred column the steps render into. `#050607` is the onboarding
+ * The onboarding route shell: one viewport-height canvas with the hero behind
+ * it and one centred column the steps render into. `#050607` is the onboarding
  * canvas the hero gradient fades to, so the area outside a short step matches
  * rather than falling back to the dashboard background.
+ *
+ * The shell owns the viewport rather than growing past it: first run is three
+ * short decisions, and a step that scrolls hides the very button it is asking
+ * the user to press. `height` (not `minHeight`) with `overflow: hidden` makes
+ * the page unscrollable by construction, which in turn makes the column's
+ * height *definite* — that is what lets a step hand its flexible region (the
+ * map grid) the space left over from its heading and its actions instead of
+ * measuring anything.
  */
 export const layout = stylex.create({
   shell: {
     position: "relative",
-    display: "grid",
-    placeItems: "center",
-    minHeight: "100svh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100svh",
     overflow: "hidden",
     backgroundColor: "#050607",
     paddingInline: space.xxl,
-    paddingBlock: "3rem",
+    paddingBlock: "2rem",
     color: "#ffffff",
   },
+  /**
+   * Full height so a step that wants the whole viewport (the map grid) can
+   * take it, and `justifyContent: center` so a step that does not (welcome,
+   * native render) still reads as centred rather than pinned to the top.
+   */
   column: {
     position: "relative",
     zIndex: 10,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
     width: "100%",
-    maxWidth: "42rem",
+    maxWidth: "48rem",
+    height: "100%",
+    minHeight: 0,
   },
   /**
    * Onboarding has no top bar, so in the desktop shell nothing would drag the

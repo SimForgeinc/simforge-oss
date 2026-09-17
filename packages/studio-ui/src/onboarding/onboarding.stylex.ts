@@ -37,6 +37,27 @@ const spin = stylex.keyframes({
 });
 
 export const onboarding = stylex.create({
+  /* ── Step frame ────────────────────────────────────────────────── */
+  /**
+   * A step that fills the column: a heading that keeps its size, one
+   * flexible region in the middle, and the controls that end the step. The
+   * column's height is definite (see the host's route layout), so the middle
+   * region is exactly what the viewport has left — no step can push its
+   * primary action off screen, and nothing has to be measured to know that.
+   */
+  stepSection: {
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+    minHeight: 0,
+  },
+  stepHeader: {
+    flexShrink: 0,
+  },
+  stepFooter: {
+    flexShrink: 0,
+  },
+
   /* ── Type ──────────────────────────────────────────────────────── */
   eyebrow: {
     fontFamily: text.fontMeta,
@@ -46,18 +67,23 @@ export const onboarding = stylex.create({
     letterSpacing: text.trackingMetaWidest,
     color: colors.accent,
   },
+  /**
+   * The step title. Two sizes rather than the marketing site's three: the
+   * whole step has to fit one viewport alongside its controls, so the
+   * headline takes the space a headline needs and no more.
+   */
   welcomeTitle: {
-    marginTop: space.lg,
-    fontSize: { default: "2.25rem", "@media (min-width: 640px)": "3rem" },
-    lineHeight: { default: "2.5rem", "@media (min-width: 640px)": 1 },
+    marginTop: space.sm,
+    fontSize: { default: "1.75rem", "@media (min-width: 640px)": "2.25rem" },
+    lineHeight: 1.1,
     fontWeight: 600,
     letterSpacing: "-0.025em",
   },
   welcomeLede: {
-    marginTop: "1.25rem",
-    maxWidth: "36rem",
-    fontSize: "1rem",
-    lineHeight: "1.75rem",
+    marginTop: space.lg,
+    maxWidth: "40rem",
+    fontSize: "0.9375rem",
+    lineHeight: "1.5rem",
     color: "rgba(255, 255, 255, 0.75)",
   },
   accountNote: {
@@ -75,13 +101,13 @@ export const onboarding = stylex.create({
     color: "rgba(252, 211, 77, 0.9)",
   },
   blockedNote: {
-    marginTop: space.xl,
+    marginTop: space.lg,
     fontSize: "0.75rem",
     lineHeight: "1.25rem",
     color: "rgba(252, 211, 77, 0.9)",
   },
   footnote: {
-    marginTop: space.xl,
+    marginTop: space.lg,
     fontSize: "0.75rem",
     lineHeight: "1rem",
     color: colors.textSubtle,
@@ -111,7 +137,7 @@ export const onboarding = stylex.create({
     display: "flex",
     flexDirection: { default: "column", "@media (min-width: 640px)": "row" },
     gap: space.lg,
-    marginTop: "2.5rem",
+    marginTop: space.xl,
   },
   rowActions: {
     display: "flex",
@@ -127,7 +153,7 @@ export const onboarding = stylex.create({
   signInSlot: {
     display: "flex",
     flexDirection: "column",
-    marginTop: "2.5rem",
+    marginTop: space.xl,
   },
   /**
    * The way out of the revealed sign-in flow, back to the two choices. Sized
@@ -152,139 +178,203 @@ export const onboarding = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.md,
-    marginTop: space.xxxl,
+    marginTop: space.xl,
     fontSize: "0.875rem",
     lineHeight: "1.25rem",
     color: "rgba(255, 255, 255, 0.45)",
   },
   /**
-   * One row per map, over the hero. The rows share the welcome buttons'
-   * glass treatment rather than the map gallery's cards: this is the same
-   * surface the user just pressed "Continue locally" on.
+   * The step's flexible middle: whichever of the map grid, the install
+   * progress or a catalog message the step is showing. It takes the height
+   * the heading and the controls leave and never more, so the step's primary
+   * action cannot be pushed out of the viewport.
+   */
+  mapRegion: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minHeight: 0,
+    marginTop: space.lg,
+  },
+  /**
+   * Ten maps as a three-column contact sheet rather than ten full-width
+   * rows: four rows instead of ten is most of what makes the step fit one
+   * viewport, and a map is something you recognise by looking at it, so the
+   * thumbnail is the card rather than a chip beside a filename.
+   *
+   * Rows share the region's leftover height (`1fr`), which makes every
+   * card's height definite before a single thumbnail has arrived — the
+   * images fill a box the layout already sized, so none of them reflows the
+   * grid as it decodes. `minmax` keeps a floor under that: where the
+   * viewport cannot pay for four legible rows the region scrolls itself
+   * rather than letting the page scroll.
    */
   mapList: {
     display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridAutoRows: "minmax(4.5rem, 1fr)",
     gap: space.md,
-    marginTop: "2rem",
+    height: "100%",
+    margin: 0,
+    padding: 0,
+    overflowY: "auto",
+    listStyle: "none",
   },
-  mapRow: {
+  mapListItem: {
     display: "flex",
-    alignItems: "center",
-    gap: space.lg,
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    minWidth: 0,
+    minHeight: 0,
+  },
+  /**
+   * One card, thumbnail-first: the image fills it and the name, the locality
+   * and the download size sit on a scrim over the bottom of the image, so
+   * nothing competes with the picture for the card's height.
+   */
+  mapCard: {
+    position: "relative",
+    display: "block",
+    flexGrow: 1,
+    minWidth: 0,
+    overflow: "hidden",
     borderWidth: 1,
     borderStyle: "solid",
     borderRadius: radii.none,
-    transitionProperty: "color, background-color, border-color",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    transitionProperty: "color, background-color, border-color, box-shadow",
     transitionDuration: "150ms",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    ":focus-within": { outline: `2px solid ${colors.accent}`, outlineOffset: "2px" },
   },
-  mapRowIdle: {
+  mapCardIdle: {
     cursor: "pointer",
     borderColor: {
       default: "rgba(255, 255, 255, 0.14)",
-      ":hover": "rgba(255, 255, 255, 0.3)",
+      ":hover": "rgba(255, 255, 255, 0.45)",
     },
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
-  mapRowSelected: {
+  /**
+   * Selected and included read the same because they mean the same thing to
+   * the download that follows; only the corner control says which of them is
+   * a choice.
+   */
+  mapCardSelected: {
     cursor: "pointer",
-    borderColor: "rgba(232, 224, 68, 0.7)",
-    backgroundColor: "rgba(232, 224, 68, 0.08)",
+    borderColor: "rgba(232, 224, 68, 0.85)",
+    boxShadow: "inset 0 0 0 1px rgba(232, 224, 68, 0.45)",
   },
   /** The public map: not a choice, so no pointer affordance. */
-  mapRowIncluded: {
-    borderColor: "rgba(232, 224, 68, 0.7)",
-    backgroundColor: "rgba(232, 224, 68, 0.08)",
+  mapCardIncluded: {
+    borderColor: "rgba(232, 224, 68, 0.85)",
+    boxShadow: "inset 0 0 0 1px rgba(232, 224, 68, 0.45)",
   },
-  mapRowLocked: {
+  mapCardLocked: {
     cursor: "not-allowed",
     borderColor: "rgba(255, 255, 255, 0.08)",
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
     opacity: 0.55,
   },
-  mapRowControl: {
-    display: "grid",
-    placeItems: "center",
-    flexShrink: 0,
-    width: "1.25rem",
-    height: "1.25rem",
-  },
-  mapRowThumbnail: {
-    display: "block",
-    flexShrink: 0,
-    width: "4rem",
-    aspectRatio: "16 / 9",
+  /** The picture layer: the whole card, behind everything else on it. */
+  mapCardThumbnail: {
+    position: "absolute",
+    inset: 0,
     overflow: "hidden",
     backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   thumbnailImage: {
+    display: "block",
     width: "100%",
     height: "100%",
     objectFit: "cover",
   },
-  mapRowMeta: {
-    display: "flex",
-    flexShrink: 0,
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: space.xxs,
+  /** Holds the caption legible over whatever the thumbnail happens to be. */
+  mapCardScrim: {
+    position: "absolute",
+    insetInline: 0,
+    bottom: 0,
+    height: "70%",
+    backgroundImage:
+      "linear-gradient(180deg, rgba(5,6,7,0) 0%, rgba(5,6,7,0.55) 45%, rgba(5,6,7,0.92) 100%)",
   },
-  includedTag: {
+  mapCardControl: {
+    position: "absolute",
+    top: space.xs,
+    left: space.xs,
+    zIndex: 1,
+    display: "grid",
+    placeItems: "center",
+    width: "1.25rem",
+    height: "1.25rem",
+    backgroundColor: "rgba(5, 6, 7, 0.65)",
+  },
+  mapCardTag: {
+    position: "absolute",
+    top: space.xs,
+    right: space.xs,
+    zIndex: 1,
+    paddingInline: space.xs,
+    paddingBlock: "1px",
+    backgroundColor: "rgba(5, 6, 7, 0.65)",
     fontFamily: text.fontMeta,
     fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
+  },
+  includedTag: {
     color: colors.accent,
   },
   lockedTag: {
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "rgba(255, 255, 255, 0.5)",
+    color: "rgba(255, 255, 255, 0.7)",
   },
   checkbox: {
-    width: "1rem",
-    height: "1rem",
+    width: "0.875rem",
+    height: "0.875rem",
+    margin: 0,
     accentColor: colors.accent,
   },
   mapCardText: {
+    position: "absolute",
+    insetInline: 0,
+    bottom: 0,
+    zIndex: 1,
     minWidth: 0,
-    flex: 1,
+    paddingInline: space.md,
+    paddingBlock: space.xs,
   },
   mapCardLabel: {
     display: "block",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontSize: "0.875rem",
-    lineHeight: "1.25rem",
-    fontWeight: 500,
-    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: "0.8125rem",
+    lineHeight: "1.125rem",
+    fontWeight: 600,
+    color: "rgba(255, 255, 255, 0.95)",
+  },
+  mapCardFooter: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.xs,
   },
   mapCardLocality: {
-    display: "block",
-    marginTop: space.xxs,
+    minWidth: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontSize: "0.75rem",
+    fontSize: "0.6875rem",
     lineHeight: "1rem",
-    color: "rgba(255, 255, 255, 0.45)",
+    color: "rgba(255, 255, 255, 0.55)",
   },
   mapCardSize: {
+    flexShrink: 0,
     fontFamily: text.fontMono,
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.5)",
+    fontSize: "10px",
+    color: "rgba(255, 255, 255, 0.7)",
   },
 
   /* ── Graphics level ────────────────────────────────────────────── */
   qualityField: {
-    marginTop: "2rem",
+    marginTop: space.lg,
     minWidth: 0,
     padding: 0,
     borderWidth: 0,
@@ -310,7 +400,7 @@ export const onboarding = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.xxs,
-    minHeight: "2.75rem",
+    minHeight: "2.5rem",
     paddingInline: space.md,
     paddingBlock: space.sm,
     cursor: "pointer",
@@ -348,9 +438,9 @@ export const onboarding = stylex.create({
     opacity: 0.8,
   },
   qualityGuidance: {
-    marginTop: space.md,
-    fontSize: "0.75rem",
-    lineHeight: "1.25rem",
+    marginTop: space.sm,
+    fontSize: "0.6875rem",
+    lineHeight: "1rem",
     color: "rgba(255, 255, 255, 0.45)",
   },
   srOnly: {
@@ -371,7 +461,7 @@ export const onboarding = stylex.create({
     flexWrap: "wrap",
     columnGap: space.md,
     rowGap: space.xs,
-    marginTop: space.xl,
+    marginTop: space.lg,
     marginBottom: 0,
     fontSize: "0.75rem",
     lineHeight: "1rem",
@@ -426,12 +516,23 @@ export const onboarding = stylex.create({
   },
 });
 
-/** Install rows, as the onboarding screen shows them. */
+/**
+ * Install rows, as the onboarding screen shows them. They take the place of
+ * the map grid once a download starts — the selection is frozen for the rest
+ * of the step, and progress is what there is left to watch — so the list
+ * lives in the same flexible region and scrolls inside it rather than
+ * lengthening the page past its own "Download and continue".
+ */
 export const installRows = stylex.create({
   list: {
     display: "grid",
-    gap: space.md,
-    marginTop: space.xxxl,
+    gridAutoRows: "min-content",
+    gap: space.sm,
+    height: "100%",
+    margin: 0,
+    padding: 0,
+    overflowY: "auto",
+    listStyle: "none",
   },
   row: {
     borderWidth: 1,
@@ -439,8 +540,8 @@ export const installRows = stylex.create({
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
-    paddingInline: space.xl,
-    paddingBlock: space.lg,
+    paddingInline: space.lg,
+    paddingBlock: space.md,
   },
   rowHead: {
     display: "flex",
@@ -499,9 +600,9 @@ export const installRows = stylex.create({
 });
 
 /**
- * The animated hero layer. Everything here is decoration behind the copy: the
- * gradient the server paints, the two masked scene slots, and the two scrims
- * that hold the scene down far enough for body text to stay readable.
+ * The hero layer. Everything here is decoration behind the copy: the gradient
+ * the server paints and the two scrims that hold it down far enough for body
+ * text to stay readable.
  */
 export const hero = stylex.create({
   root: {
@@ -515,14 +616,6 @@ export const hero = stylex.create({
   layer: {
     position: "absolute",
     inset: 0,
-  },
-  skyMask: {
-    maskImage: "linear-gradient(202deg, black 0%, black 50%, transparent 72%)",
-    WebkitMaskImage: "linear-gradient(202deg, black 0%, black 50%, transparent 72%)",
-  },
-  groundMask: {
-    maskImage: "linear-gradient(202deg, transparent 46%, black 68%, black 100%)",
-    WebkitMaskImage: "linear-gradient(202deg, transparent 46%, black 68%, black 100%)",
   },
   verticalScrim: {
     backgroundImage:
