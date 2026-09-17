@@ -130,6 +130,53 @@ describe("unified map asset cache", () => {
     await expect(prepareMapAssetCache()).resolves.toBe(false);
   });
 
+  it("delivers assets when browser storage refuses the cache write", async () => {
+    // A profile that has filled its quota rejects `cache.put`. The bytes are
+    // already here and verified, so the asset must still be delivered: a
+    // rejected write used to surface as a tile "download/decode" failure and
+    // marked a loaded map as broken.
+    const storage = {
+      open: vi.fn(async () => ({
+        match: vi.fn(async () => undefined),
+        put: vi.fn(async () => {
+          throw new DOMException("Quota exceeded.", "QuotaExceededError");
+        }),
+      })),
+      delete: vi.fn(async () => true),
+    };
+    vi.stubGlobal("caches", storage);
+    Object.defineProperty(window, "caches", { configurable: true, value: storage });
+    const bytes = new TextEncoder().encode("road lod0 geometry");
+    const sha = await sha256Hex(bytes.buffer);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(bytes)));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const response = await fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/tiles/road.glb", {}, sha!);
+
+    expect(response.ok).toBe(true);
+    expect([...new Uint8Array(await response.arrayBuffer())]).toEqual([...bytes]);
+    expect(warn.mock.calls[0]?.[0]).toContain("QuotaExceededError");
+  });
+
+  it("still rejects content that fails its digest when the cache write fails", async () => {
+    const storage = {
+      open: vi.fn(async () => ({
+        match: vi.fn(async () => undefined),
+        put: vi.fn(async () => {
+          throw new DOMException("Quota exceeded.", "QuotaExceededError");
+        }),
+      })),
+      delete: vi.fn(async () => true),
+    };
+    vi.stubGlobal("caches", storage);
+    Object.defineProperty(window, "caches", { configurable: true, value: storage });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new TextEncoder().encode("tampered"))));
+
+    await expect(
+      fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/tiles/road.glb", {}, "b".repeat(64)),
+    ).rejects.toThrow(/integrity/i);
+  });
+
   it("downloads directly from a batch-resolved URL and flushes one deferred index", async () => {
     const canonical = "/api/simforge/maps/a/browser-assets/3d/direct.glb";
     const direct = "https://optimized-assets.s3.amazonaws.com/direct.glb?signed=1";
