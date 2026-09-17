@@ -24,7 +24,23 @@ from .runtime.compiler import ContractError, _entities
 
 DEG_TO_RAD = 3.141592653589793 / 180.0
 ASPECT_RATIO = 16 / 9
+#: Default camera/video format. `run-local --camera-width/--camera-height/--fps`
+#: overrides it per run: the deliverable resolution is a property of the run, not
+#: a constant, and matching the other renderer's frame size matters for review.
 VIDEO = {"width": 1280, "height": 720, "fps": 24, "container": "mp4", "codec": "h264", "quality": "standard"}
+
+
+def video_format(width: int | None = None, height: int | None = None,
+                 fps: int | None = None) -> dict[str, Any]:
+    """`VIDEO` with explicit overrides applied."""
+    resolved = dict(VIDEO)
+    if width:
+        resolved["width"] = int(width)
+    if height:
+        resolved["height"] = int(height)
+    if fps:
+        resolved["fps"] = int(fps)
+    return resolved
 ENVIRONMENT = {"weather": "clear", "timeOfDay": "noon", "sunAzimuthDeg": 180,
                "sunElevationDeg": 60, "surfacePatches": []}
 CAPABILITY_INTENT = {
@@ -72,8 +88,17 @@ def _camera(sensor_id: str, hfov_deg: float, mount: dict[str, Any]) -> dict[str,
     return {"id": sensor_id, "kind": "camera", "hfovDeg": hfov_deg, "mount": mount}
 
 
-def _lidar(sensor_id: str, vfov_deg: float, yaw_deg: float, mount: dict[str, Any]) -> dict[str, Any]:
-    return {"id": sensor_id, "kind": "lidar", "vfovDeg": vfov_deg, "yawDeg": yaw_deg, "mount": mount}
+def _lidar(sensor_id: str, vfov_deg: float, yaw_deg: float, mount: dict[str, Any],
+           range_m: float | None = None, channels: int | None = None) -> dict[str, Any]:
+    sensor = {"id": sensor_id, "kind": "lidar", "vfovDeg": vfov_deg, "yawDeg": yaw_deg,
+              "mount": mount}
+    # Presets that state their own reach carry it; Pronto's lidars keep the
+    # lowering defaults.
+    if range_m is not None:
+        sensor["rangeM"] = range_m
+    if channels is not None:
+        sensor["channels"] = channels
+    return sensor
 
 
 def _radar(sensor_id: str, mount: dict[str, Any]) -> dict[str, Any]:
@@ -117,7 +142,7 @@ def expand_sdg(sources: list[dict[str, Any]], modalities: list[str]) -> list[dic
     return expanded
 
 
-def pronto_port_e_sources(actor_id: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
+def pronto_port_e_sources(actor_id: str, video: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """The 19 lowered sources of Pronto Port E plus its 8/6/4 measurement counts."""
     sources = [
         _camera("pronto-cam0", 120, _mount(-150.9, -795.8, 51.7, 122, 25)),
@@ -143,12 +168,114 @@ def pronto_port_e_sources(actor_id: str) -> tuple[list[dict[str, Any]], dict[str
                 {"position": {"x": -9, "y": 3.4, "z": 0},
                  "rotation": {"yawRad": 0, "pitchRad": _q(_angle_rad(15)), "rollRad": 0}}),
     ]
-    lowered = [_lower_source(actor_id, template) for template in sources]
+    lowered = [_lower_source(actor_id, template, video) for template in sources]
     counts = {"cameras": 8, "lidars": 6, "radars": 4}
     return lowered, counts
 
+def parity_front_sources(actor_id: str, video: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """One forward camera plus the trailing chase view.
 
-def _lower_source(actor_id: str, template: dict[str, Any]) -> dict[str, Any]:
+    Cross-renderer comparison needs one camera whose pose and FOV match the other
+    renderer's, not a measurement rig. It also needs to fit: Port E lowers 19 sources
+    (8 cameras, 6 lidars, 4 radars), and an RTX 3080's 10 GiB cannot hold that plus a
+    cooked RoadRunner map — the engine dies with "Out of memory on Vulkan" and the
+    sensor streams collapse mid-run.
+
+    The forward camera keeps `pronto-cam3`'s pose and 30 deg HFOV so a run with this
+    rig is directly comparable with the same camera in a Port E run.
+    """
+    sources = [
+        _camera("pronto-cam3", 30, _mount(-48.4, -595.3, 72.7)),
+        # Chase view: 9 m behind, 3.4 m above, aimed *down* at the vehicle.
+        # Port E's presentation chase camera pitches +15 deg, which points at the
+        # sky and leaves the ego out of frame; for a side-by-side against another
+        # renderer's chase view the camera has to look where the other one looks.
+        # -11.3 deg = atan(3.4 / 17), i.e. aimed at a point 8 m ahead of the ego,
+        # matching the native renderer's `look_at(ego + 8 m forward)`.
+        _camera(CHASE_CAMERA_SENSOR_ID, 70,
+                {"position": {"x": -9, "y": 3.4, "z": 0},
+                 "rotation": {"yawRad": 0, "pitchRad": _q(_angle_rad(-11.3)), "rollRad": 0}}),
+    ]
+    return [_lower_source(actor_id, template, video) for template in sources], {
+        "cameras": 1, "lidars": 0, "radars": 0,
+    }
+
+
+def single_front_sources(actor_id: str, video: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """The forward camera alone: the smallest rig CARLA can be asked for.
+
+    This exists to answer "how much of a 10 GiB card is the engine, and how much
+    is a sensor?" — `parity-front` is two sources, so it cannot separate the two.
+    Same pose and 30 deg HFOV as `parity-front`'s forward camera, so the two rigs
+    differ by exactly one camera and the delta is the per-source cost.
+    """
+    sources = [_camera("pronto-cam3", 30, _mount(-48.4, -595.3, 72.7))]
+    return [_lower_source(actor_id, template, video) for template in sources], {
+        "cameras": 1, "lidars": 0, "radars": 0,
+    }
+
+
+def _vehicle_mount(x_m: float, lateral_right_m: float, up_m: float,
+                   yaw_deg: float = 0.0, pitch_deg: float = 0.0) -> dict[str, Any]:
+    """A vehicle-local pose in metres, in the platform's authoring frame.
+
+    `packages/scenario/src/schema/v2/sensor-rigs.ts` authors preset poses as
+    `{x forward, lateralRight, up}` metres and converts lateral-right to the
+    canonical left-handed `z`; this mirrors that conversion so a preset's
+    numbers can be transcribed without reinterpretation. Unlike `_mount` there
+    is no pod datum: these poses are already vehicle-local.
+    """
+    return {
+        "position": {"x": _q(x_m), "y": _q(up_m), "z": _q(-lateral_right_m)},
+        "rotation": {"yawRad": _q(_angle_rad(yaw_deg)),
+                     "pitchRad": _q(_angle_rad(pitch_deg)), "rollRad": 0},
+    }
+
+
+def nvidia_sdg_av_sources(actor_id: str, video: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """NVIDIA Sensor Config: the platform's `nvidia-sdg-av` surround preset.
+
+    Seven 120 deg surround cameras plus a roof lidar, transcribed from
+    `packages/scenario/src/schema/v2/sensor-rigs.ts` (`NVIDIA_SDG_AV`), whose
+    poses are authored in metres about the vehicle. Eight sources against Port
+    E's nineteen: Port E cannot be hosted on an RTX 3080 at all — the engine
+    dies with "Out of memory on Vulkan" during sensor construction — while this
+    rig is a real published surround configuration rather than a reduced one.
+
+    The preset's 1920x1208 camera format is deliberately not forced here: the
+    caller's `--camera-width/--camera-height` decide, so the same rig can be
+    measured at a size that fits alongside a cooked map.
+    """
+    sources = [
+        _camera("camera_front_center", 120, _vehicle_mount(2.1, 0, 1.45)),
+        _camera("camera_front_left", 120, _vehicle_mount(2, -0.42, 1.43, -50)),
+        _camera("camera_front_right", 120, _vehicle_mount(2, 0.42, 1.43, 50)),
+        _camera("camera_left_side", 120, _vehicle_mount(0.2, -0.95, 1.35, -90)),
+        _camera("camera_right_side", 120, _vehicle_mount(0.2, 0.95, 1.35, 90)),
+        _camera("camera_rear_left", 120, _vehicle_mount(-1, -0.38, 1.33, -140)),
+        _camera("camera_rear_right", 120, _vehicle_mount(-1, 0.38, 1.33, 140)),
+        # Roof lidar: 250 m range, +10/-30 deg vertical span = 40 deg of VFOV.
+        _lidar("lidar_roof_center", 40, 0, _vehicle_mount(0.15, 0, 1.85), range_m=250),
+        # Presentation chase view, same pose and pitch as the parity rig so a
+        # side-by-side against the native renderer stays comparable.
+        _camera(CHASE_CAMERA_SENSOR_ID, 70,
+                {"position": {"x": -9, "y": 3.4, "z": 0},
+                 "rotation": {"yawRad": 0, "pitchRad": _q(_angle_rad(-11.3)), "rollRad": 0}}),
+    ]
+    return [_lower_source(actor_id, template, video) for template in sources], {
+        "cameras": 7, "lidars": 1, "radars": 0,
+    }
+
+SENSOR_RIGS = {
+    "pronto-port-e": pronto_port_e_sources,
+    "nvidia-sdg-av": nvidia_sdg_av_sources,
+    "parity-front": parity_front_sources,
+    "single-front": single_front_sources,
+}
+
+
+def _lower_source(actor_id: str, template: dict[str, Any],
+                  video: dict[str, Any] | None = None) -> dict[str, Any]:
     kind = template["kind"]
     modality = "rgb" if kind == "camera" else kind
     output_name = f"{actor_id}-{template['id']}-{modality}"
@@ -157,12 +284,15 @@ def _lower_source(actor_id: str, template: dict[str, Any]) -> dict[str, Any]:
         "transform": template["mount"], "modality": modality,
     }
     if kind == "camera":
-        source["attributes"] = {"width": VIDEO["width"], "height": VIDEO["height"],
-                                "fps": VIDEO["fps"], "horizontalFovDeg": template["hfovDeg"],
+        fmt = video or VIDEO
+        source["attributes"] = {"width": fmt["width"], "height": fmt["height"],
+                                "fps": fmt["fps"], "horizontalFovDeg": template["hfovDeg"],
                                 "nearM": 0.05, "farM": 1000}
     elif kind == "lidar":
         half_fov = template["vfovDeg"] / 2.0
-        source["attributes"] = {"channels": 32, "rangeM": 200, "pointsPerSecond": 100000,
+        source["attributes"] = {"channels": template.get("channels", 32),
+                                "rangeM": template.get("rangeM", 200),
+                                "pointsPerSecond": 100000,
                                 "rotationFrequencyHz": 10,
                                 "upperFovDeg": _q(half_fov), "lowerFovDeg": _q(-half_fov)}
     else:
@@ -187,12 +317,17 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
                  start_seconds: float = 0.0, end_seconds: float = 20.0,
                  seed: int | None = None,
                  sdg_modalities: list[str] | None = None,
-                 annotations: bool = False) -> dict[str, Any]:
+                 annotations: bool = False,
+                 rig: str = "pronto-port-e",
+                 video: dict[str, Any] | None = None) -> dict[str, Any]:
     xodr_bytes = xodr_path.read_bytes()
     scenario_sha = hashlib.sha256(scenario_bytes).hexdigest()
     root = ET.fromstring(scenario_bytes)
     actor_id = _host_actor(root)
-    sources, rig_counts = pronto_port_e_sources(actor_id)
+    if rig not in SENSOR_RIGS:
+        raise ContractError(f"unknown sensor rig {rig!r}; choose from {sorted(SENSOR_RIGS)}")
+    fmt = video or dict(VIDEO)
+    sources, rig_counts = SENSOR_RIGS[rig](actor_id, fmt)
     if sdg_modalities:
         sources = expand_sdg(sources, sdg_modalities)
     digest = hashlib.sha256(json.dumps([scenario_sha, map_label], separators=(",", ":")).encode()).hexdigest()
@@ -233,7 +368,7 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
             "schema": "simforge.render-spec/v3",
             "sources": sources,
             "clip": {"startSeconds": start_seconds, "endSeconds": end_seconds},
-            "video": dict(VIDEO),
+            "video": dict(fmt),
             "artifacts": ["manifest", "video"] + (["annotations"] if annotations else []),
             "capabilityIntent": CAPABILITY_INTENT,
             "authoredEnvironment": ENVIRONMENT,
@@ -274,6 +409,12 @@ def run_local_command(args: argparse.Namespace) -> dict[str, object]:
         start_seconds=args.start_seconds, end_seconds=args.end_seconds,
         seed=args.seed, sdg_modalities=sdg_modalities,
         annotations=bool(getattr(args, "annotations", False)),
+        rig=getattr(args, "rig", None) or "pronto-port-e",
+        video=video_format(
+            getattr(args, "camera_width", None),
+            getattr(args, "camera_height", None),
+            getattr(args, "fps", None),
+        ),
     )
     intent_path = output_dir / "render-intent.json"
     intent_path.write_text(json.dumps(intent, sort_keys=True, separators=(",", ":")) + "\n", "utf-8")
@@ -283,10 +424,28 @@ def run_local_command(args: argparse.Namespace) -> dict[str, object]:
         return {"inputId": input_id, "path": str(path.resolve()),
                 "sha256": hashlib.sha256(body).hexdigest(), "sizeBytes": len(body)}
 
+    inputs = [entry("scenario.xosc", Path(args.scenario)),
+              entry("local-map", xodr_input), entry("local-catalog", catalog_input)]
+    intent_sha256 = hashlib.sha256(_canonical_render_intent_json(intent).encode("utf-8")).hexdigest()
+    # Offline runs have no control plane to issue the attempt-lineage digest the
+    # executor records in every artifact, so the lineage is the closure that
+    # produced it: the canonical intent plus each input's identity. Deterministic,
+    # so re-running identical files reproduces the digest.
     package = {
-        "intentSha256": hashlib.sha256(_canonical_render_intent_json(intent).encode("utf-8")).hexdigest(),
-        "inputs": [entry("scenario.xosc", Path(args.scenario)),
-                   entry("local-map", xodr_input), entry("local-catalog", catalog_input)],
+        "intentSha256": intent_sha256,
+        "executionPackageControlSha256": hashlib.sha256(
+            json.dumps(
+                {
+                    "intentSha256": intent_sha256,
+                    "inputs": [
+                        {"inputId": item["inputId"], "sha256": item["sha256"], "sizeBytes": item["sizeBytes"]}
+                        for item in inputs
+                    ],
+                },
+                sort_keys=True, separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest(),
+        "inputs": inputs,
     }
     package_path = output_dir / "input-package.json"
     package_path.write_text(json.dumps(package, sort_keys=True, separators=(",", ":")) + "\n", "utf-8")

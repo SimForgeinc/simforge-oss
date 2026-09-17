@@ -1072,6 +1072,21 @@ def main() -> None:
                        help="extra camera modalities per Pronto camera (comma-separated: depth,semantic,instance,normals) or a profile preset: playback,training_basic,training_multimodal,raw_multisensor,tao_detection,sdg")
     local.add_argument("--annotations", action="store_true",
                        help="emit per-frame actor ground truth as an ndjson annotations artifact")
+    # Choices come from the rig registry, so adding a rig in one place is enough.
+    from .run_local import SENSOR_RIGS
+    local.add_argument("--rig", default="pronto-port-e",
+                       choices=sorted(SENSOR_RIGS),
+                       help="sensor rig: the 19-source Pronto Port E measurement rig, "
+                            "nvidia-sdg-av (the platform's NVIDIA Sensor Config: seven "
+                            "120 deg surround cameras + roof lidar), or parity-front "
+                            "(one forward camera + chase view) for cross-renderer "
+                            "comparison and 10 GiB GPUs")
+    local.add_argument("--camera-width", type=int, default=None,
+                       help="camera/video width (default 1280)")
+    local.add_argument("--camera-height", type=int, default=None,
+                       help="camera/video height (default 720)")
+    local.add_argument("--fps", type=int, default=None,
+                       help="camera/video frame rate (default 24)")
     args = parser.parse_args()
     if args.command == "run-local":
         from .run_local import run_local_command

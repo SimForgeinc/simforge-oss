@@ -229,9 +229,13 @@ def scene_documents(scenario: dict, map_id: str, fps: int) -> tuple[list[dict], 
         frames.append({"tick": tick, "t": t, "actors": [
             {k: r[k] for k in ("id", "kind", "position", "rotation", "yawRad", "velocity")} for r in records
         ]})
-    playback = {"version": "simforge.scene-state.v1", "mapId": map_id, "frame": "map-y-up", "dt": 1 / fps,
-                "tickHz": fps, "tickCount": count, "weather": {"preset": weather, "fog_density": 0,
-                "rain_intensity": 0, "wetness": 0}, "timeOfDay": minutes / 60, "profile": "cinematic",
+    # scene-state.v1 field names are normative: the frame literal is `scene-yup`
+    # and weather keys are camelCase. Authored motion here is a campaign preview;
+    # deliverable renders consume engine-emitted scene state
+    # (artifacts/production-scenarios/compile-scenarios.mjs).
+    playback = {"version": "simforge.scene-state.v1", "mapId": map_id, "frame": "scene-yup", "dt": 1 / fps,
+                "tickHz": fps, "tickCount": count, "weather": {"preset": weather, "fogDensity": 0,
+                "rainIntensity": 0, "wetness": 0}, "timeOfDay": minutes / 60, "profile": "cinematic",
                 "actors": descriptors, "frames": frames}
     return states, playback
 
@@ -774,10 +778,9 @@ def render_playback(args) -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     frame_count = min(job["frameCount"], args.ticks) if args.ticks else job["frameCount"]
-    initial_y = load(Path(job["jobDir"]) / "scene-playback.json")["frames"][0]["actors"][0]["position"][1]
     cmd = [args.binary, "--glbs", ",".join(job["corpusGlbs"]), "--scene-state", str(Path(job["jobDir"]) / "scene-playback.json"),
            "--ticks", str(frame_count), "--width", str(job["width"]), "--height", str(job["height"]),
-           "--fov", str(job["chase"]["camera"]["verticalFovDeg"]), "--warmup", "20", "--ground-y", str(initial_y),
+           "--fov", str(job["chase"]["camera"]["verticalFovDeg"]), "--warmup", "20",
            "--camera", "follow", "--chase-dist", "8.6", "--chase-height", "3.2", "--out-dir", str(out),
            "--vehicle-models", job["vehicleModels"]]
     started = time.time()

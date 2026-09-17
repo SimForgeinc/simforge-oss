@@ -266,6 +266,62 @@ EL_CAMINO_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
     "2288": "2295",
     "2289": "2296",
 }
+#: Yale Street: the cooked world renumbers its signal heads and merges the
+#: authored map's multi-head poles, so it exposes 46 heads where the authored
+#: OpenDRIVE declares 59. These pairs were derived geometrically, not by guessing
+#: an id offset: authored head positions were projected with the map's own
+#: `geoReference` (transverse Mercator) and matched to the cooked heads' world
+#: transforms by unique nearest neighbour inside 6 m — 45 pairs, worst distance
+#: 4.80 m (`artifacts/production-scenarios/signal-id-map-yale-street-*.json`).
+#: The 14 authored heads with no counterpart are secondary lamps on poles that
+#: are already owned through this map; CARLA has no separate actor for them.
+YALE_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
+    "1425": "1594",
+    "1426": "1595",
+    "1427": "1596",
+    "1428": "1597",
+    "1429": "1599",
+    "1430": "1598",
+    "1431": "1600",
+    "1432": "1601",
+    "1433": "1705",
+    "1435": "1602",
+    "1436": "1603",
+    "1437": "1604",
+    "1438": "1605",
+    "1440": "1607",
+    "1441": "1608",
+    "1442": "1606",
+    "1443": "1609",
+    "1444": "1610",
+    "1463": "1629",
+    "1464": "1628",
+    "1475": "1640",
+    "1476": "1641",
+    "1484": "1645",
+    "1511": "1672",
+    "1512": "1673",
+    "1514": "1675",
+    "1518": "1679",
+    "1519": "1680",
+    "1520": "1681",
+    "1523": "1683",
+    "1524": "1684",
+    "1526": "1685",
+    "1528": "1686",
+    "1529": "1706",
+    "1531": "1688",
+    "1532": "1691",
+    "1536": "1694",
+    "1538": "1695",
+    "1541": "1699",
+    "1542": "1698",
+    "1543": "1700",
+    "1545": "1702",
+    "1546": "1703",
+    "1549": "1693",
+    "1550": "1704",
+}
 COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = {
     (
         "Richmond_Field_Station_Richmond_CA",
@@ -277,6 +333,11 @@ COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = {
         "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
         "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
     ): EL_CAMINO_COOKED_SIGNAL_ID_MAP,
+    (
+        "Yale_St_Palo_Alto_CA",
+        "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
+    ): YALE_COOKED_SIGNAL_ID_MAP,
 }
 
 #: Cooked RoadRunner worlds shipped in the managed CARLA engine images, keyed
@@ -289,6 +350,11 @@ COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = {
     "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": "Richmond_Field_Station_Richmond_CA",
     "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": "Belmont_Office_Park_Belmont_CA",
     "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": "El_Camino_Rd_Palo_Alto_CA",
+    # Yale Street is cooked in the engine image (Yale_St_Palo_Alto_CA.umap) but was
+    # missing here, so loading it fell through to a generated bare-OpenDRIVE world:
+    # an empty void with no meshes. The digest is the authored source XODR recorded in
+    # uniscenario.map_versions for usmap_6e5559c1e7c4d9e4c93426f9d1e65f9e.
+    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": "Yale_St_Palo_Alto_CA",
 }
 
 
