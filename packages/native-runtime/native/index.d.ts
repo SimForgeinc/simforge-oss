@@ -390,6 +390,12 @@ export const HANDOFF_ACTOR_ROW: number
 /** Row width of `TrafficHandoff.bodies()`. */
 export const HANDOFF_BODY_ROW: number
 
+/**
+ * Lift a map-bound template to portable JSON. Refusals remain successful
+ * values with structured diagnostics (`template: null`, `issues: [...]`).
+ */
+export declare function liftMapBoundTemplate(templateJson: string, bundle: MapBundle, optionsJson?: string | undefined | null): string
+
 /** Ranked `SiteMatch` JSON (`{mapId, report: MatchReport, notes}`); `optionsJson = {minScore?, maxSites?, exactCatalogSiteResolution?}`. */
 export declare function matchSites(templateJson: string, bundle: MapBundle, optionsJson?: string | undefined | null): string
 
