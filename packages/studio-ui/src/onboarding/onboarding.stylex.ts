@@ -118,6 +118,17 @@ export const onboarding = stylex.create({
     flexShrink: 0,
     gap: space.md,
   },
+  /**
+   * The host's inline sign-in flow, in the column's own rhythm. The form
+   * brings its own internal spacing and 26rem measure, so this only places
+   * it: the same gap the actions row uses, and no card around it, because
+   * the flow is part of the page rather than a panel over it.
+   */
+  signInSlot: {
+    display: "flex",
+    flexDirection: "column",
+    marginTop: "2.5rem",
+  },
 
   /* ── Catalog ───────────────────────────────────────────────────── */
   catalogLoading: {

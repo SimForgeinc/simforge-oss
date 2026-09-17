@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
 import { WelcomeScreen } from "@simforge-oss/studio-ui/onboarding";
+import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 const MAPS_PATH = "/onboarding/maps";
@@ -10,32 +10,28 @@ const MAPS_PATH = "/onboarding/maps";
 /**
  * Step 1: sign in to SimCloud, or continue locally.
  *
- * Sign-in opens the in-app account sheet (email + password, sign-up, or the
- * Google/GitHub browser hop). Only a sign-in the user actually started
- * advances the flow: a data root that is already connected still shows this
- * screen, because the user may well want to review it before downloading
- * anything.
+ * The account flow is inline in the page (email + password, sign-up, or the
+ * Google/GitHub browser hop) — the same pieces every other surface composes,
+ * with no sheet over the column. Only a sign-in the user actually completed
+ * here advances the flow: a data root that is already connected still shows
+ * this screen, because the user may well want to review it before
+ * downloading anything.
  */
 export function OnboardingWelcomeClient() {
   const router = useRouter();
   const cloud = useStudioCloudStatus();
-  const requested = useRef(false);
   const state = cloud.status?.state ?? null;
-
-  useEffect(() => {
-    if (requested.current && state === "connected") router.replace(MAPS_PATH);
-  }, [state, router]);
+  const connected = state === "connected";
 
   return (
     <WelcomeScreen
       busy={cloud.loading}
       cloudState={state}
-      error={cloud.error}
+      // Signed out, the inline flow reports its own failures; showing
+      // `cloud.error` here as well would print the same line twice.
+      error={connected ? cloud.error : null}
       onContinueLocally={() => router.push(MAPS_PATH)}
-      onSignIn={() => {
-        requested.current = true;
-        cloud.openAccountPanel();
-      }}
+      signIn={connected ? undefined : <CloudAccountPanel onSignedIn={() => router.replace(MAPS_PATH)} />}
       userEmail={cloud.status?.state === "connected" ? (cloud.status.user?.email ?? null) : null}
     />
   );

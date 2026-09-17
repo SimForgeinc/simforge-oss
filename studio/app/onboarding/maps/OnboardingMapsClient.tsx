@@ -8,6 +8,7 @@ import {
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapSelectionScreen, type OnboardingMapOption } from "@simforge-oss/studio-ui/onboarding";
+import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { completeStudioSetup } from "@/app/lib/host/setup";
@@ -147,7 +148,9 @@ export function OnboardingMapsClient() {
   return (
     <MapSelectionScreen
       catalogError={catalogError}
-      error={error ?? cloud.error}
+      // Signed out, the inline flow below reports its own failures, so only
+      // this page's catalog and setup errors go to the screen.
+      error={error ?? (signedIn ? cloud.error : null)}
       freeBytes={freeBytes}
       loading={loading}
       maps={maps}
@@ -159,7 +162,6 @@ export function OnboardingMapsClient() {
       }}
       onQualityChange={setQuality}
       onRetry={preparation.retry}
-      onSignIn={cloud.openAccountPanel}
       onSkip={preparation.skip}
       onToggle={(mapVersionId) =>
         setSelection((current) => {
@@ -173,6 +175,7 @@ export function OnboardingMapsClient() {
       quality={quality}
       selection={selection}
       signedIn={signedIn}
+      signIn={signedIn ? undefined : <CloudAccountPanel />}
     />
   );
 }

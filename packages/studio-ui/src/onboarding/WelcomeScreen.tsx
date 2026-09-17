@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, LogIn } from "lucide-react";
+import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "../components/ui/button";
@@ -11,14 +11,16 @@ import { onboarding } from "./onboarding.stylex";
  * the one public map. Renders into the host's onboarding column - the hero
  * behind it and the column geometry belong to the host's route layout, so
  * the next step can replace this copy in place. Props only: the host app
- * owns the account sheet, the connection state and where each action leads.
+ * owns the connection state, where each action leads, and the sign-in flow
+ * itself, which arrives as a node this screen places in the page body -
+ * under the lede, never behind an overlay.
  */
 export function WelcomeScreen({
   cloudState,
   userEmail,
   error,
   busy,
-  onSignIn,
+  signIn,
   onContinueLocally,
 }: {
   /** `null` until the local service has answered once. */
@@ -27,10 +29,14 @@ export function WelcomeScreen({
   error: string | null;
   /** An account request, or the Google/GitHub browser hop, is in flight. */
   busy: boolean;
-  onSignIn: () => void;
+  /**
+   * The host's sign-in flow, rendered inline in this column. Omitted once
+   * there is a session: the account note and "Continue with SimCloud" say
+   * everything that is left to say.
+   */
+  signIn?: ReactNode;
   onContinueLocally: () => void;
 }) {
-  const connecting = cloudState === "connecting";
   const connected = cloudState === "connected";
 
   return (
@@ -57,29 +63,25 @@ export function WelcomeScreen({
           </p>
         ) : null}
 
+        {signIn ? (
+          <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-sign-in">
+            {signIn}
+          </div>
+        ) : null}
+
         <div {...stylex.props(onboarding.welcomeActions)}>
-          <Button
-            autoFocus
-            xstyle={onboarding.primaryAction}
-            data-testid="onboarding-sign-in"
-            disabled={busy || connecting}
-            onClick={connected ? onContinueLocally : onSignIn}
-            type="button"
-          >
-            {connecting ? (
-              <>
-                <LoaderCircle {...stylex.props(onboarding.icon, onboarding.iconWithLabel, onboarding.spinner)} aria-hidden="true" />
-                Finishing in your browser…
-              </>
-            ) : connected ? (
-              "Continue with SimCloud"
-            ) : (
-              <>
-                <LogIn {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
-                Sign in to SimCloud
-              </>
-            )}
-          </Button>
+          {connected ? (
+            <Button
+              autoFocus
+              xstyle={onboarding.primaryAction}
+              data-testid="onboarding-continue-cloud"
+              disabled={busy}
+              onClick={onContinueLocally}
+              type="button"
+            >
+              Continue with SimCloud
+            </Button>
+          ) : null}
           <Button
             xstyle={onboarding.secondaryAction}
             data-testid="onboarding-continue-locally"

@@ -1,7 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { Check, CircleAlert, Download, LoaderCircle, Lock, LogIn, RotateCcw, SkipForward } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import { Check, CircleAlert, Download, LoaderCircle, Lock, RotateCcw, SkipForward } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
 import { SCENARIO_AUTHORING_QUALITY_CHOICES, type ScenarioAuthoringQuality } from "../lib/scenario/contracts";
@@ -70,7 +70,7 @@ export function MapSelectionScreen({
   onRetry,
   onSkip,
   signedIn,
-  onSignIn,
+  signIn,
 }: {
   maps: readonly OnboardingMapOption[];
   selection: readonly string[];
@@ -91,8 +91,11 @@ export function MapSelectionScreen({
   onSkip: (mapVersionId: string) => void;
   /** A SimCloud session is active: every published map is selectable. */
   signedIn: boolean;
-  /** Offered while signed out; opens the same in-app account sheet as Welcome. */
-  onSignIn: () => void;
+  /**
+   * The host's sign-in flow, rendered inline beneath the actions while
+   * signed out, so unlocking the account maps never leaves this page.
+   */
+  signIn?: ReactNode;
 }) {
   const selectedMaps = maps.filter(
     (map) => !map.locked && (map.required || selection.includes(map.mapVersionId)),
@@ -342,20 +345,12 @@ export function MapSelectionScreen({
             </>
           )}
         </Button>
-        {signedIn ? null : (
-          <Button
-            xstyle={onboarding.secondaryAction}
-            data-testid="onboarding-locked-notice"
-            disabled={downloading}
-            onClick={onSignIn}
-            type="button"
-            variant="outline"
-          >
-            <LogIn {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
-            Sign in to SimCloud
-          </Button>
-        )}
       </div>
+      {signIn ? (
+        <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-locked-notice">
+          {signIn}
+        </div>
+      ) : null}
       <p {...stylex.props(onboarding.footnote)}>
         {signedIn
           ? "Every map your account can read is listed; untick the ones you do not need yet."
