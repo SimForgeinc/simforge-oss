@@ -13,9 +13,12 @@ import {
   cellSeedWith,
   compileTemplateWith,
   findSitesWith,
+  liftMapBoundTemplateWith,
   templateIdentityWith,
   type CompiledTemplate,
   type MaterializeOptions,
+  type PortableLiftOptions,
+  type PortableLiftResult,
   type TemplateIdentity,
 } from './materialize.js';
 import type { MapBundle } from './types.js';
@@ -42,6 +45,15 @@ export function compileTemplate(template: ScenarioTemplateV2, bundle: MapBundle,
 /** Site ids in `bundle` that satisfy the template's anchor, ranked by the native matcher. */
 export function findSites(template: ScenarioTemplateV2, bundle: MapBundle): string[] {
   return findSitesWith(engine().module, template, bundle);
+}
+
+/** Lift a map-bound template into a portable structural template. Refusals are returned as structured issues. */
+export function liftMapBoundTemplate(
+  template: ScenarioTemplateV2,
+  bundle: MapBundle,
+  options?: PortableLiftOptions,
+): PortableLiftResult {
+  return liftMapBoundTemplateWith(engine().module, template, bundle, options);
 }
 
 /** `{templateId, paramsVersion}`: the replay-key identity the native manifest stamps. */

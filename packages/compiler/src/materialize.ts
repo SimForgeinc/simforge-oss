@@ -175,6 +175,63 @@ export interface MaterializeOptions {
   readonly catalogEntries?: readonly CatalogEntry[] | undefined;
 }
 
+/** Controls conversion of a map-bound template into a portable anchor. */
+export interface PortableLiftOptions {
+  readonly referenceRoleId?: string;
+  readonly origin?: 'auto' | 'junction' | 'corridor';
+  readonly allowMirror?: boolean;
+  readonly maxProjectionDistanceM?: number;
+  readonly corridorExtentM?: number;
+  readonly maxRouteProjectionErrorM?: number;
+}
+
+/** Structured lift diagnostic. Refusal codes are deliberately open for forward compatibility. */
+export interface PortableLiftIssue {
+  code: string;
+  severity: 'error' | 'warning' | 'info';
+  path?: string;
+  message: string;
+}
+
+/** Informational evidence captured from the source map. */
+export interface PortableSourceSignature {
+  readonly throughLanesSameDir: number;
+  readonly throughLanesOpposing: number;
+  readonly originKind: string;
+  readonly egoTurn: string | null;
+}
+
+export interface PortableLiftResult {
+  template: ScenarioTemplateV2 | null;
+  issues: PortableLiftIssue[];
+  sourceSignature: PortableSourceSignature | null;
+  sourceSiteId: string | null;
+}
+
+type LiftNativeModule = NativeModule & {
+  liftMapBoundTemplate(
+    templateJson: string,
+    bundle: MapBundle['native'],
+    optionsJson?: string | null,
+  ): string;
+};
+
+/** Lift a map-bound template into a portable structural template. Refusals are returned, not thrown. */
+export function liftMapBoundTemplateWith(
+  module: NativeModule,
+  template: ScenarioTemplateV2,
+  bundle: MapBundle,
+  options: PortableLiftOptions = {},
+): PortableLiftResult {
+  const optionsJson = Object.keys(options).length === 0 ? null : JSON.stringify(options);
+  const native = module as LiftNativeModule;
+  return JSON.parse(guard(() => native.liftMapBoundTemplate(
+    JSON.stringify(template),
+    bundle.native,
+    optionsJson,
+  ))) as PortableLiftResult;
+}
+
 /** One compiled instance: the executable scenario handle plus its evidence. */
 export interface CompiledTemplate extends MaterializeResult {
   /** The validated native scenario; pass it straight to a session or run. */

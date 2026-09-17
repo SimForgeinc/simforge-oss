@@ -608,6 +608,17 @@ pub fn match_sites(
     rt::match_sites(&template_json, &bundle.inner, options_json.as_deref()).js()
 }
 
+/// Lift a map-bound template to portable JSON. Refusals remain successful
+/// values with structured diagnostics (`template: null`, `issues: [...]`).
+#[napi]
+pub fn lift_map_bound_template(
+    template_json: String,
+    bundle: &JsMapBundle,
+    options_json: Option<String>,
+) -> Result<String> {
+    rt::lift_map_bound_template(&template_json, &bundle.inner, options_json.as_deref()).js()
+}
+
 /// Returns `[scenarioInput, boundSituationJson]`.
 #[napi]
 pub fn compile_situation(
