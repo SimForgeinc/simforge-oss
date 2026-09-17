@@ -78,9 +78,8 @@ export function localHostConfig(
  * `data:` import needs no file to stage, and forked grandchildren inherit it
  * through `execArgv`. Other platforms have no such surface and get nothing.
  */
-const HOLD_PROCESS_TITLE = `data:text/javascript,${encodeURIComponent(
-  'Object.defineProperty(process, "title", { configurable: true, enumerable: true, get: () => "simforge-host", set() {} });',
-)}`;
+const HOLD_PROCESS_TITLE_SOURCE =
+  'Object.defineProperty(process, "title", { configurable: true, enumerable: true, get: () => "simforge-host", set() {} });';
 
 /**
  * Makes a host child die with the supervisor.
@@ -100,10 +99,24 @@ const HOLD_PROCESS_TITLE = `data:text/javascript,${encodeURIComponent(
  * otherwise-finished process alive. Children forked by a child inherit it
  * through `execArgv`, which is what reaches `next dev`'s own server process.
  */
-const PARENT_DEATH_WATCH = `data:text/javascript,${encodeURIComponent(
+const PARENT_DEATH_WATCH_SOURCE =
   'const parent = process.ppid;'
-  + 'setInterval(() => { if (process.ppid !== parent) process.exit(1); }, 1000).unref();',
-)}`;
+  + 'setInterval(() => { if (process.ppid !== parent) process.exit(1); }, 1000).unref();';
+
+/**
+ * Both concerns ride in one `data:` module. Node re-serializes a child's
+ * `execArgv` into `NODE_OPTIONS` for its own grandchildren, and two separate
+ * `--import data:…` flags come back joined on whitespace there — the
+ * grandchild then evaluates both URLs as a single malformed module (observed
+ * on Node 26 as `ReferenceError: text is not defined`). One flag cannot be
+ * split that way.
+ */
+function childImportModule(): string {
+  const source = process.platform === "darwin"
+    ? `${PARENT_DEATH_WATCH_SOURCE}${HOLD_PROCESS_TITLE_SOURCE}`
+    : PARENT_DEATH_WATCH_SOURCE;
+  return `data:text/javascript,${encodeURIComponent(source)}`;
+}
 
 function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>): ChildProcess {
   const args = command.args.map((arg) =>
@@ -111,14 +124,10 @@ function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>
       ? extraEnv.SIMFORGE_RENDER_WORKER_TOKEN ?? arg
       : arg,
   );
-  // Every host child runs this interpreter, so both concerns ride in as
-  // loaders rather than as wrappers the plans would have to carry.
+  // Every host child runs this interpreter, so both concerns ride in as one
+  // loader rather than as wrappers the plans would have to carry.
   const finalArgs = command.command === process.execPath
-    ? [
-      "--import", PARENT_DEATH_WATCH,
-      ...(process.platform === "darwin" ? ["--import", HOLD_PROCESS_TITLE] : []),
-      ...args,
-    ]
+    ? ["--import", childImportModule(), ...args]
     : args;
   return spawn(command.command, finalArgs, {
     cwd: command.cwd,
