@@ -24,7 +24,8 @@
 use bevy::pbr::{RenderMaterialBindings, RenderMaterialInstances};
 use bevy::prelude::*;
 use bevy::render::render_resource::{CachedPipelineState, PipelineCache};
-use bevy::render::renderer::RenderAdapterInfo;
+use bevy::render::renderer::{RenderAdapterInfo, RenderDevice};
+use bevy::render::settings::WgpuFeatures;
 use bevy::render::{Render, RenderApp, RenderSystems};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -141,6 +142,17 @@ pub struct GpuAdapter {
     pub device_type: String,
     pub driver: String,
     pub driver_info: String,
+    /// Bytes per pixel a KTX2 map texture costs on this device once the
+    /// loader has transcoded it.
+    ///
+    /// The map profile authors UASTC, and `bevy_image`'s ktx2 loader
+    /// transcodes it to whichever block format the device supports — BC7,
+    /// ASTC 4x4 or ETC2 RGBA8, all of which are 16 bytes per 4x4 block, so
+    /// exactly 1 byte per pixel — and falls back to `Rgba8UnormSrgb` at 4
+    /// bytes per pixel when the device supports none of them. The budget has
+    /// to charge the figure this device will actually pay, and the fallback
+    /// is a 4x difference, so it is read from the device rather than assumed.
+    pub texture_bytes_per_pixel: u32,
 }
 
 pub struct GpuReadinessPlugin;
@@ -162,6 +174,12 @@ impl Plugin for GpuReadinessPlugin {
             return;
         };
         let info = render_app.world().resource::<RenderAdapterInfo>().clone();
+        // `TEXTURE_COMPRESSION_*` is the same condition `bevy_image`'s ktx2
+        // loader branches on when it picks a transcode target.
+        let features = render_app.world().resource::<RenderDevice>().features();
+        let compressed = features.contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
+            || features.contains(WgpuFeatures::TEXTURE_COMPRESSION_ASTC)
+            || features.contains(WgpuFeatures::TEXTURE_COMPRESSION_ETC2);
         render_app
             .insert_resource(pending)
             .add_systems(Render, sample_pending.after(RenderSystems::Render));
@@ -171,6 +189,7 @@ impl Plugin for GpuReadinessPlugin {
             device_type: format!("{:?}", info.device_type),
             driver: info.driver.clone(),
             driver_info: info.driver_info.clone(),
+            texture_bytes_per_pixel: if compressed { 1 } else { 4 },
         });
     }
 }

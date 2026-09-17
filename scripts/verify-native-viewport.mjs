@@ -16,6 +16,9 @@
 // Usage:
 //   node scripts/verify-native-viewport.mjs [--checks=identity,protocol,pick,readiness,progressive]
 //                                           [--map=richmond-field-station] [--json=<path>]
+//   node scripts/verify-native-viewport.mjs --checks=memory-census
+//                                           [--census-maps=a,b] [--census-json=<path>]
+//                                           [--census-tolerance=0.1] [--census-sample-ms=150]
 // Environment:
 //   SIMFORGE_MAPS_CACHE_ROOT  cache root holding `.corpus/<sourceMapId>`
 //                             (default: $XDG_DATA_HOME/simforge/maps)
@@ -25,6 +28,7 @@ import { spawn } from "node:child_process";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { BENCH_DWELL_MS, BENCH_VIEWPORT_ARGS, cameraPath } from "./bench/interactive-viewport/camera-path.mjs";
 import { register } from "tsx/esm/api";
 import { createRequire } from "node:module";
 import { chromium } from "playwright-core";
@@ -56,8 +60,11 @@ const chromeBinary = process.env.SIMFORGE_CHROMIUM
 const shotDir = args.get("screenshots") ?? null;
 await access(binary);
 
-const CHECKS = ["identity", "protocol", "pick", "readiness", "progressive", "parity"];
-const selected = (args.get("checks") ?? CHECKS.join(",")).split(",").filter((name) => CHECKS.includes(name));
+// `memory-census` is not in the default suite: it runs two maps to `complete`
+// twice over and polls the driver throughout, so it is asked for by name.
+const CHECKS = ["identity", "protocol", "pick", "readiness", "progressive", "parity", "memory-census"];
+const DEFAULT_CHECKS = CHECKS.filter((name) => name !== "memory-census");
+const selected = (args.get("checks") ?? DEFAULT_CHECKS.join(",")).split(",").filter((name) => CHECKS.includes(name));
 const sourceMapId = args.get("map") ?? "richmond-field-station";
 // How long `complete` may take. Lowerable so a scheduler that never settles
 // reports in minutes instead of holding the suite for twenty of them.
@@ -67,6 +74,14 @@ const completeTimeoutMs = Number(args.get("complete-timeout-ms") ?? 1_200_000);
 // Without this, `--checks=progressive --map=X` silently measured a different
 // map than the one named on the command line.
 const progressiveMapId = args.get("progressive-map") ?? args.get("map") ?? "san-ramon-phase-2";
+// The census runs the worst absolute gap and the worst ratio by default:
+// san-ramon-phase-2 (2 GiB accounted inside 6.6 GB of driver memory) and
+// el-camino-road (213 MB accounted inside 2.36 GB, so mostly fixed overhead).
+const censusMapIds = (args.get("census-maps") ?? "san-ramon-phase-2,el-camino-road").split(",").filter(Boolean);
+const censusJsonPath = args.get("census-json") ?? null;
+const censusSampleMs = Number(args.get("census-sample-ms") ?? 150);
+// Fraction of the driver's peak the census is allowed to leave unexplained.
+const censusTolerance = Number(args.get("census-tolerance") ?? 0.1);
 const READINESS = ["manifest-ready", "coarse-ready", "interactive", "complete", "device-lost", "error"];
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -194,7 +209,11 @@ async function checkProtocol() {
     .split("\n")
     .filter((line) => line.trim().startsWith("{"))
     .map((line) => JSON.parse(line));
-  const run = await launch(identity.mapRoot);
+  // `--memory-census` because the documented `memory-census` command
+  // declares that flag as its precondition, and this check's claim is that
+  // every documented command is accepted when its contract is satisfied —
+  // not that the diagnostics sampler runs in every session.
+  const run = await launch(identity.mapRoot, ["--memory-census"]);
   try {
     await run.started;
     run.viewport.loadMap(identity);
@@ -612,6 +631,224 @@ async function checkParity() {
     await new Promise((done) => mapServer.close(done));
   }
 }
+// ---------------------------------------------------------------------------
+// memory-census: attribute the driver's per-process GPU bytes to named
+// categories, and state what is left unexplained.
+//
+// Three ledgers, never conflated:
+//   * scheduler accounting  — what the residency planner believes it admitted
+//   * wgpu/hal counters     — what wgpu's backend actually allocated
+//   * nvidia-smi per-process— what the driver charges the process
+//
+// The driver figure is polled throughout the run and reduced to a MAX, so it
+// is a peak rather than the single dwell-time sample `gpuProcessBytes` is.
+// The fixed driver-side overhead (contexts, shader binaries, driver heaps)
+// is measured on the empty scene before the map loads, not assumed.
+// ---------------------------------------------------------------------------
+
+/** Per-process GPU bytes from the driver. Total `memory.used` is useless: the GPU is shared. */
+async function driverBytes(pid) {
+  const out = await new Promise((done) => {
+    const child = spawn("nvidia-smi", ["--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let text = "";
+    child.stdout.on("data", (chunk) => { text += String(chunk); });
+    child.on("exit", () => done(text));
+    child.on("error", () => done(""));
+  });
+  for (const line of out.split("\n")) {
+    const [reported, mib] = line.split(",").map((field) => field.trim());
+    if (Number(reported) === pid) return Number(mib) * 1024 * 1024;
+  }
+  return null;
+}
+
+/** Peak host RSS the kernel recorded for the process, in bytes. */
+async function hostPeakBytes(pid) {
+  const status = await readFile(`/proc/${pid}/status`, "utf8").catch(() => "");
+  const match = /^VmHWM:\s+(\d+) kB$/m.exec(status);
+  return match ? Number(match[1]) * 1024 : null;
+}
+
+/** Poll the driver until stopped, keeping every sample. */
+function pollDriver(pid, intervalMs) {
+  const samples = [];
+  let stopped = false;
+  const loop = (async () => {
+    while (!stopped) {
+      const value = await driverBytes(pid);
+      if (value !== null) samples.push({ at: Date.now(), value });
+      await sleep(intervalMs);
+    }
+  })();
+  return {
+    samples,
+    async stop() {
+      stopped = true;
+      await loop;
+      return samples;
+    },
+  };
+}
+
+async function censusOneMap(sourceMapIdForCensus) {
+  const identity = await hostIdentity(sourceMapIdForCensus);
+  // Same flags the ten-map benchmark launches with, because the driver
+  // figure being explained is the one that table reports.
+  const run = await launch(identity.mapRoot, ["--memory-census", ...BENCH_VIEWPORT_ARGS]);
+  try {
+    await run.started;
+    const pid = run.viewport.pid;
+    const driver = pollDriver(pid, censusSampleMs);
+    // The empty-scene settle: the viewport is up, the swapchain and every
+    // render target exist, no map byte does. This is where the render-target
+    // and driver-overhead baselines come from.
+    await sleep(3000);
+    const baselineDriverBytes = Math.max(0, ...driver.samples.map((sample) => sample.value));
+    const censusAt = (label) => waitFor(run.events, (event) => event.event === "memory-census" && event.label === label, 120_000, `memory-census ${label}`);
+    run.viewport.send({ command: "memory-census", label: "empty-scene" });
+    const emptyScene = await censusAt("empty-scene");
+
+    run.viewport.loadMap(identity);
+    const manifest = await waitFor(run.events, (event) => event.event === "manifest-ready", 180_000, "manifest-ready");
+    const interactive = await waitFor(run.events, (event) => event.event === "interactive", 180_000, "interactive");
+    const complete = await waitFor(run.events, (event) => event.event === "complete", completeTimeoutMs, "complete");
+    run.viewport.send({ command: "memory-census", label: "at-complete" });
+    const atComplete = await censusAt("at-complete");
+    // Then the benchmark's own camera path. Standing still at the load pose
+    // never admits the far side of the map, never evicts, and never
+    // exercises the allocator churn the driver figure is mostly made of: a
+    // census taken there explains a number nobody reported.
+    if (!manifest.sceneBounds) throw new Error("manifest-ready carried no sceneBounds");
+    const poses = cameraPath(manifest.sceneBounds);
+    for (const pose of poses) {
+      run.viewport.setCamera(pose.position, pose.target);
+      await sleep(BENCH_DWELL_MS);
+    }
+    run.viewport.send({ command: "memory-census", label: "after-camera-path" });
+    const afterPath = await censusAt("after-camera-path");
+    const driverPeakBytes = Math.max(0, ...driver.samples.map((sample) => sample.value));
+
+    // Then the retirement half: evict everything, poll the device to
+    // completion, and ask the driver again. Releasing an ECS handle is not
+    // proof the GPU retired the memory.
+    run.viewport.send({ command: "memory-census", label: "after-eviction", evictAll: true });
+    const afterEviction = await censusAt("after-eviction");
+    const afterEvictionDriverBytes = await driverBytes(pid);
+    const hostPeak = await hostPeakBytes(pid);
+    const samples = await driver.stop();
+
+    // What the census claims to explain. `wgpuTotalBytes` is measured; the
+    // driver-side remainder is measured too, on the empty scene, and held
+    // fixed across the run. Anything left over is stated, not absorbed.
+    const driverOverheadBytes = Math.max(0, baselineDriverBytes - emptyScene.current.wgpuTotalBytes);
+    const explainedBytes = afterPath.peak.wgpuTotalBytes + driverOverheadBytes;
+    const residualBytes = driverPeakBytes - explainedBytes;
+    const residualFraction = driverPeakBytes > 0 ? residualBytes / driverPeakBytes : null;
+    return {
+      map: identity.mapVersionId,
+      sourceMapId: sourceMapIdForCensus,
+      mapRoot: identity.mapRoot,
+      timeToInteractiveMs: interactive.elapsedMs,
+      timeToCompleteMs: complete.elapsedMs,
+      driver: {
+        peakBytes: driverPeakBytes,
+        emptySceneBytes: baselineDriverBytes,
+        afterEvictionBytes: afterEvictionDriverBytes,
+        overheadBytes: driverOverheadBytes,
+        overheadSource: "nvidia-smi per-process on the empty scene minus wgpu's own allocation total there: contexts, shader binaries and driver heaps wgpu never sees",
+        samples: samples.length,
+        sampleIntervalMs: censusSampleMs,
+        source: "nvidia-smi-per-process, max over samples (a peak, not a dwell sample)",
+      },
+      hostPeakResidentBytes: { value: hostPeak, source: "/proc/<pid>/status VmHWM" },
+      wgpuCountersAvailable: afterPath.wgpuCountersAvailable === true,
+      renderFramesSampled: afterPath.renderFramesSampled,
+      cameraPath: poses.map((pose) => pose.name),
+      scheduler: afterPath.scheduler,
+      emptyScene: emptyScene.current,
+      atComplete: { current: atComplete.current, scheduler: atComplete.scheduler },
+      afterCameraPath: { current: afterPath.current, peak: afterPath.peak, baseline: afterPath.baseline },
+      afterEviction: { current: afterEviction.current, unreclaimed: afterEviction.unreclaimed },
+      reconciliation: {
+        explainedBytes,
+        residualBytes,
+        residualFraction,
+        // The number the whole exercise exists to kill.
+        schedulerToDriverRatio: afterPath.scheduler.peakResidentBytes > 0
+          ? driverPeakBytes / afterPath.scheduler.peakResidentBytes
+          : null,
+        note: "explainedBytes = wgpu peak buffer+texture allocation over the whole run (measured) + empty-scene driver overhead (measured). residualBytes is what neither ledger accounts for.",
+      },
+    };
+  } finally {
+    run.stop();
+  }
+}
+
+async function checkMemoryCensus() {
+  const census = { ranAt: new Date().toISOString(), binary, cacheRoot, maps: [] };
+  for (const id of censusMapIds) {
+    const entry = await censusOneMap(id);
+    census.maps.push(entry);
+    // Before anything is believed: wgpu's allocation counters compile to a
+    // no-op that reads 0 unless the `counters` feature is on, and a ledger
+    // of zeroes is indistinguishable from a tidy result.
+    record(`memory-census.${id}.wgpu-counters-live`, entry.wgpuCountersAvailable, {
+      wgpuBufferBytes: entry.atComplete.current.wgpuBufferBytes,
+      wgpuTextureBytes: entry.atComplete.current.wgpuTextureBytes,
+      wgpuAllocations: entry.atComplete.current.wgpuAllocations,
+      renderFramesSampled: entry.renderFramesSampled,
+    });
+    const fraction = entry.reconciliation.residualFraction;
+    record(`memory-census.${id}.driver-bytes-attributed`, fraction !== null && Math.abs(fraction) <= censusTolerance, {
+      map: entry.map,
+      driverPeakBytes: entry.driver.peakBytes,
+      schedulerPeakBytes: entry.scheduler.peakResidentBytes,
+      schedulerToDriverRatio: entry.reconciliation.schedulerToDriverRatio,
+      wgpuPeakBytes: entry.afterCameraPath.peak.wgpuTotalBytes,
+      driverOverheadBytes: entry.driver.overheadBytes,
+      residualBytes: entry.reconciliation.residualBytes,
+      residualFraction: fraction,
+      tolerance: censusTolerance,
+    });
+    // A category ledger that does not name where its bytes came from is a
+    // guess with extra steps, so the presence of every category is asserted.
+    const categories = entry.afterCameraPath.peak.categories;
+    const named = Object.entries(categories).filter(([, value]) => typeof value?.source === "string" && typeof value?.allocatedBy === "string");
+    record(`memory-census.${id}.categories-name-their-code-path`, named.length === Object.keys(categories).length, {
+      categories: Object.fromEntries(Object.entries(categories).map(([name, value]) => [name, value.bytes])),
+      named: named.length,
+    });
+  }
+  if (censusJsonPath) await writeFile(censusJsonPath, `${JSON.stringify(census, null, 2)}\n`);
+  console.log(censusTable(census));
+}
+
+/** The before/after table the video has to show on screen. */
+function censusTable(census) {
+  const mib = (value) => (value === null || value === undefined ? "n/a" : `${(value / 1024 / 1024).toFixed(0)} MiB`);
+  const lines = [
+    "",
+    "map                     scheduler      wgpu peak    driver peak   ratio   residual",
+    "--------------------------------------------------------------------------------",
+  ];
+  for (const entry of census.maps) {
+    lines.push(
+      [
+        entry.sourceMapId.padEnd(22),
+        mib(entry.scheduler.peakResidentBytes).padStart(12),
+        mib(entry.afterCameraPath.peak.wgpuTotalBytes).padStart(13),
+        mib(entry.driver.peakBytes).padStart(14),
+        `${(entry.reconciliation.schedulerToDriverRatio ?? 0).toFixed(2)}x`.padStart(8),
+        `${((entry.reconciliation.residualFraction ?? 0) * 100).toFixed(1)}%`.padStart(10),
+      ].join(""),
+    );
+  }
+  return lines.join("\n");
+}
+
 
 const runners = {
   identity: checkIdentity,
@@ -620,6 +857,7 @@ const runners = {
   readiness: checkReadiness,
   progressive: checkProgressive,
   parity: checkParity,
+  "memory-census": checkMemoryCensus,
 };
 for (const check of selected) {
   try {

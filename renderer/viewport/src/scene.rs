@@ -25,7 +25,7 @@
 
 use bevy::math::{Mat4, Quat, Vec3};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -130,9 +130,63 @@ pub struct MaterialDef {
     /// through `KHR_texture_basisu`. The `.png` entries a profile also
     /// declares are placeholders that are not shipped.
     pub base_color_texture: Option<String>,
+    /// GPU bytes the base-colour texture costs once the loader has
+    /// transcoded it: the whole mip chain, at this device's transcode
+    /// target. This is what the budget charges.
     pub texture_bytes: u64,
+    /// Length of the KTX2 member on disk. Kept only so the census can show
+    /// the two side by side: this is the figure the budget used to charge,
+    /// and it is 3-4x smaller than the GPU cost because the payload is
+    /// zstd-supercompressed UASTC and carries no mip storage.
+    pub texture_file_bytes: u64,
     pub alpha_blend: bool,
     pub double_sided: bool,
+}
+
+/// GPU bytes a KTX2 texture occupies after transcoding, from its header.
+///
+/// The header is the only honest source: the file length is a compressed
+/// length, and the map profile's textures are zstd-supercompressed UASTC
+/// whose GPU footprint is fixed by dimensions, mip count and the transcode
+/// target — never by how well they compressed.
+///
+/// Layout per the KTX2 spec: a 12-byte identifier, then `vkFormat`,
+/// `typeSize`, `pixelWidth`, `pixelHeight`, `pixelDepth`, `layerCount`,
+/// `faceCount`, `levelCount`, `supercompressionScheme` as little-endian u32.
+pub fn ktx2_gpu_bytes(path: &Path, bytes_per_pixel: u32) -> Option<u64> {
+    const KTX2_IDENTIFIER: [u8; 12] =
+        [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
+    let mut header = [0u8; 48];
+    File::open(path).ok()?.read_exact(&mut header).ok()?;
+    if header[..12] != KTX2_IDENTIFIER {
+        return None;
+    }
+    let field = |index: usize| -> u32 {
+        u32::from_le_bytes([header[index], header[index + 1], header[index + 2], header[index + 3]])
+    };
+    let width = field(20);
+    let height = field(24).max(1);
+    let layers = field(32).max(1);
+    let faces = field(36).max(1);
+    // `levelCount == 0` means "the loader generates the chain", which costs
+    // the same as a stored one.
+    let levels = field(40).max(1);
+    if width == 0 {
+        return None;
+    }
+    let mut total = 0u64;
+    for level in 0..levels {
+        let level_width = (width >> level).max(1);
+        let level_height = (height >> level).max(1);
+        total += match bytes_per_pixel {
+            // Every transcode target the loader picks for UASTC — BC7,
+            // ASTC 4x4, ETC2 RGBA8 — is 16 bytes per 4x4 block, and a
+            // partial block still costs a whole one.
+            1 => u64::from(level_width.div_ceil(4)) * u64::from(level_height.div_ceil(4)) * 16,
+            bytes => u64::from(level_width) * u64::from(level_height) * u64::from(bytes),
+        };
+    }
+    Some(total * u64::from(layers) * u64::from(faces))
 }
 
 /// The parsed index: everything needed to plan and execute loading without
@@ -230,13 +284,18 @@ fn transform_aabb(transform: &Mat4, min: Vec3, max: Vec3) -> (Vec3, Vec3) {
 
 impl SceneIndex {
     /// Parse `master.gltf` into the index. `members` is the verified manifest
-    /// member table, used for texture byte costs so the budget is decided
-    /// from published sizes rather than from a guess about GPU layout.
+    /// member table; `texture_bytes_per_pixel` is this device's KTX2
+    /// transcode target (see [`crate::readiness::GpuAdapter`]), because the
+    /// GPU cost of a texture is decided by the device, not by the file.
     pub fn parse(
         root: &Path,
         document: &Value,
         members: &BTreeMap<String, crate::manifest::Member>,
+        texture_bytes_per_pixel: u32,
     ) -> Result<Self, String> {
+        // One header read per distinct image, not per material: a KTX2 the
+        // profile shares between materials is one GPU texture.
+        let mut gpu_bytes_by_uri: HashMap<String, u64> = HashMap::new();
         let accessors: Vec<Accessor> = document
             .get("accessors")
             .and_then(Value::as_array)
@@ -329,10 +388,24 @@ impl SceneIndex {
                             .and_then(|image| images.get(image).copied())
                             .filter(|uri| uri.ends_with(".ktx2"))
                             .map(str::to_owned);
-                        let texture_bytes = texture
+                        let texture_file_bytes = texture
                             .as_deref()
                             .and_then(|uri| members.get(uri))
                             .map(|member| member.bytes)
+                            .unwrap_or(0);
+                        let texture_bytes = texture
+                            .as_deref()
+                            .map(|uri| {
+                                *gpu_bytes_by_uri.entry(uri.to_owned()).or_insert_with(|| {
+                                    ktx2_gpu_bytes(&root.join(uri), texture_bytes_per_pixel)
+                                        // A texture whose header cannot be
+                                        // read is charged its file length
+                                        // rather than nothing: an unreadable
+                                        // header is a reason to be careful,
+                                        // not a reason to be free.
+                                        .unwrap_or(texture_file_bytes)
+                                })
+                            })
                             .unwrap_or(0);
                         MaterialDef {
                             base_color,
@@ -346,6 +419,7 @@ impl SceneIndex {
                                 .unwrap_or(1.0) as f32,
                             base_color_texture: texture,
                             texture_bytes,
+                            texture_file_bytes,
                             alpha_blend: raw.get("alphaMode").and_then(Value::as_str) == Some("BLEND"),
                             double_sided: raw.get("doubleSided").and_then(Value::as_bool).unwrap_or(false),
                         }
@@ -758,7 +832,7 @@ mod tests {
 
     #[test]
     fn indexes_nodes_with_world_bounds_and_costs() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members()).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
         assert_eq!(index.nodes.len(), 2);
         let slab = index.nodes.iter().find(|node| node.name == "Slab").expect("slab");
         // Parent translation must reach the child's world bounds.
@@ -775,7 +849,7 @@ mod tests {
 
     #[test]
     fn resolves_base_colour_through_the_basisu_extension() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members()).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
         let material = &index.materials[0];
         // The `.png` entry is a placeholder the profile does not ship; the
         // KTX2 the extension points at is the real payload.
@@ -786,7 +860,7 @@ mod tests {
 
     #[test]
     fn coarse_plan_is_extent_ranked_and_budget_bounded() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members()).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
         let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
         // A budget that fits only one node must keep the larger one.
         let plan = index.coarse_plan(index.nodes[slab].coarse_bytes);
@@ -797,7 +871,7 @@ mod tests {
 
     #[test]
     fn stable_ids_are_derived_from_immutable_node_identity() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members()).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
         let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
         assert_eq!(index.stable_id(slab), "ground:1:Slab");
     }
@@ -828,7 +902,7 @@ mod tests {
         bytes.resize(176, 0);
         bytes.extend_from_slice(&[0, 1, 2]);
         std::fs::write(root.join("geometry.bin"), &bytes).expect("buffer");
-        let index = SceneIndex::parse(&root, &document(), &members()).expect("parse");
+        let index = SceneIndex::parse(&root, &document(), &members(), 1).expect("parse");
         let mut file = File::open(index.buffer.clone()).expect("open");
         let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
         let coarse = read_node(&index, &mut file, slab, Tier::Coarse).expect("coarse");

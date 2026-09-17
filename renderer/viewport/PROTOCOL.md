@@ -32,6 +32,7 @@ against `.map-release.json` and the bytes on disk before it loads anything
 {"command":"overlay","id":"coverage","visible":true,"payload":{"points":[],"lines":[]}}
 {"command":"resize","width":1600,"height":1000,"pixelRatio":1,"x":320,"y":180}
 {"command":"debug-device-lost","reason":"fault injection"}
+{"command":"memory-census","label":"at-complete","evictAll":false}
 {"command":"quit"}
 ```
 
@@ -66,6 +67,13 @@ against `.map-release.json` and the bytes on disk before it loads anything
 * `debug-device-lost` — **fault injection.** Drives the same device-lost
   producer a real wgpu device-lost callback drives. It ships in the binary
   because the recovery path is otherwise reachable only by breaking a GPU.
+* `memory-census` — **diagnostics.** Publish the GPU allocation census as a
+  `memory-census` event. Requires `--memory-census` at launch; without it the
+  command answers `census_unavailable` rather than silence, because a census
+  that is quietly absent is worse than one that is refused. `evictAll` first
+  retires every resident node and polls the device to completion, which is
+  the only way to tell a released ECS handle apart from memory the driver
+  actually gave back.
 * `quit` — exit cleanly.
 
 An unrecognized command is **never** ignored. It produces an `error` event
@@ -87,6 +95,7 @@ command this document declares for v2.
 {"event":"overlay-state","id":"coverage","visible":true}
 {"event":"resized","width":1600,"height":1000,"pixelRatio":1,"x":320,"y":180}
 {"event":"frame-stats","source":"cpu-frame-delta","frames":57,"p50Ms":16.7,"p95Ms":18.2,"p99Ms":24.9,"residentBytes":898415932,"peakResidentBytes":898415932}
+{"event":"memory-census","label":"at-complete","renderFramesSampled":812,"scheduler":{"residentBytes":2147483603,"source":"scheduler-accounting (scene.rs bytes_at + KTX2 member file length)"},"current":{"wgpuBufferBytes":0,"wgpuTextureBytes":0,"wgpuTotalBytes":0,"categories":{}},"peak":{},"baseline":{},"unreclaimed":{}}
 {"event":"device-lost","reason":"...","recoverable":true}
 {"event":"error","code":"release_digest_mismatch","message":"..."}
 ```
@@ -159,7 +168,7 @@ fails the load with `member_digest_mismatch`.
 `master.gltf` is an index, not a unit of work: the canonical native profiles
 are 0.6–8.7 GB, of which 0.6–8.5 GB is KTX2 texture payload. The viewport
 therefore parses the document itself and admits nodes in tiers under an
-explicit budget (`--gpu-budget-bytes`, default 2 GiB):
+explicit budget (`--gpu-budget-bytes`):
 
 * **coarse** — positions and indices only, unlit. The coarse plan is the
   extent-ranked prefix of the scene that fits `--coarse-budget-fraction` of
@@ -167,6 +176,23 @@ explicit budget (`--gpu-budget-bytes`, default 2 GiB):
   rather than by fence posts.
 * **detail** — positions, normals, UVs and the authored material, with its
   base-colour KTX2 admitted only if the texture budget has room.
+
+The budget is **derived, not picked**. What is fixed is a total GPU byte
+ceiling for the process as the *driver* counts it
+(`--gpu-process-ceiling-bytes`, default 4 GiB); the map budget is what is
+left of it after the costs that are not map bytes (driver overhead, LUTs,
+and render targets at 64 bytes per window pixel), divided by the measured
+amplification the two allocators below wgpu apply — Bevy's mesh slabs and
+wgpu's device memory blocks, neither of which returns memory on eviction.
+Every one of those figures is measured by
+`node scripts/verify-native-viewport.mjs --checks=memory-census`, and
+`manifest-ready` reports both `budgetBytes` and `processCeilingBytes`.
+
+A texture is charged its **transcoded GPU size including the mip chain**,
+computed from the KTX2 header and this device's transcode target, once per
+distinct image rather than once per material that references it. Charging the
+compressed file length instead — which is what this renderer did until the
+census measured it — understated real texture memory by 3.6x.
 
 Between `coarse-ready` and `interactive` nothing new is admitted: the GPU has
 to prove it can draw the coarse tier before the editor is told it can

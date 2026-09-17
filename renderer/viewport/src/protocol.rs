@@ -82,6 +82,20 @@ pub enum ControlCommand {
     DebugDeviceLost {
         reason: Option<String>,
     },
+    /// Diagnostics: publish the GPU allocation census as a `memory-census`
+    /// event. Answered only when the viewport was started with
+    /// `--memory-census`; otherwise it reports that it has no census to give,
+    /// which is a fact the caller needs rather than silence.
+    ///
+    /// `evictAll` additionally retires every resident node and polls the
+    /// device to completion before sampling, which is the only way to tell a
+    /// released ECS handle apart from memory the driver actually gave back.
+    #[serde(rename_all = "camelCase")]
+    MemoryCensus {
+        label: Option<String>,
+        #[serde(default)]
+        evict_all: bool,
+    },
     Quit,
 }
 
@@ -102,7 +116,7 @@ pub enum KeyState {
 
 /// Command names this build accepts. Used only to tell "you sent a command I
 /// do not know" apart from "you sent a command I know, malformed".
-pub const COMMANDS: [&str; 11] = [
+pub const COMMANDS: [&str; 12] = [
     "load-map",
     "camera",
     "pointer-ray",
@@ -112,6 +126,7 @@ pub const COMMANDS: [&str; 11] = [
     "overlay",
     "resize",
     "debug-device-lost",
+    "memory-census",
     "quit",
     // `gizmo` is documented as v2 in PROTOCOL.md and deliberately absent: it
     // is listed here so the rejection says "not implemented in v1" instead of
@@ -243,6 +258,7 @@ mod tests {
             r#"{"command":"overlay","id":"coverage","visible":true,"payload":{"points":[],"lines":[]}}"#,
             r#"{"command":"resize","width":1600,"height":1000,"pixelRatio":1}"#,
             r#"{"command":"debug-device-lost","reason":"injected"}"#,
+            r#"{"command":"memory-census","label":"at-complete","evictAll":false}"#,
             r#"{"command":"quit"}"#,
         ];
         for line in lines {

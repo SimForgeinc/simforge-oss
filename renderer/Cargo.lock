@@ -5457,6 +5457,8 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "sha2",
+ "wgpu",
 ]
 
 [[package]]

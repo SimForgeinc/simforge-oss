@@ -38,6 +38,7 @@ import { createRequire } from 'node:module';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { BENCH_DWELL_MS, BENCH_VIEWPORT_ARGS, cameraPath } from './camera-path.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const require = createRequire(path.join(repoRoot, 'packages/viewer/package.json'));
@@ -55,7 +56,7 @@ const binary = process.env.SIMFORGE_NATIVE_VIEWPORT
   ?? path.join(repoRoot, 'renderer/target/release/simforge-native-viewport');
 const chromeBinary = process.env.SIMFORGE_CHROMIUM
   ?? path.join(homedir(), '.cache/ms-playwright/chromium-1243/chrome-linux64/chrome');
-const dwellMs = Number(args.get('dwell-ms') ?? 2000);
+const dwellMs = Number(args.get('dwell-ms') ?? BENCH_DWELL_MS);
 const backends = (args.get('backends') ?? 'native,web').split(',');
 const passes = (args.get('passes') ?? 'cold,warm').split(',');
 const loadTimeoutMs = Number(args.get('load-timeout-ms') ?? 900_000);
@@ -107,37 +108,6 @@ async function canonicalMaps() {
   return maps;
 }
 
-/**
- * Six poses derived from the map's own bounds, so one path description drives
- * every map: an overview, four orbit stations, then a street-level pose.
- * Normalised against the bounds rather than absolute, because the maps differ
- * by two orders of magnitude in footprint.
- */
-function cameraPath(bounds) {
-  const centre = [0, 1, 2].map((axis) => (bounds.min[axis] + bounds.max[axis]) / 2);
-  const size = [0, 1, 2].map((axis) => bounds.max[axis] - bounds.min[axis]);
-  const footprint = Math.max(size[0], size[2]);
-  const radius = footprint * 0.6;
-  const height = centre[1] + footprint * 0.35;
-  const look = [centre[0], centre[1], centre[2]];
-  const poses = [
-    { name: 'overview', position: [centre[0], height * 1.25, centre[2] + radius * 1.25], target: look },
-  ];
-  for (const [name, degrees] of [['orbit-n', 0], ['orbit-e', 90], ['orbit-s', 180], ['orbit-w', 270]]) {
-    const radians = (degrees * Math.PI) / 180;
-    poses.push({
-      name,
-      position: [centre[0] + Math.cos(radians) * radius, height * 0.5, centre[2] + Math.sin(radians) * radius],
-      target: look,
-    });
-  }
-  poses.push({
-    name: 'street',
-    position: [centre[0], bounds.min[1] + Math.max(3, size[1] * 0.12), centre[2] + footprint * 0.12],
-    target: [centre[0] + footprint * 0.3, bounds.min[1] + Math.max(2, size[1] * 0.08), centre[2]],
-  });
-  return poses;
-}
 
 function percentiles(samples) {
   if (samples.length === 0) return { frames: 0, minMs: null, p50Ms: null, p95Ms: null, p99Ms: null };
@@ -198,7 +168,7 @@ async function runNative(map, { cold }) {
   const viewport = new NativeViewportProcess({
     executable: binary,
     mapRoot: map.corpus,
-    args: ['--frame-stats', '--present-mode', 'immediate'],
+    args: BENCH_VIEWPORT_ARGS,
   });
   const events = [];
   viewport.onEvent((event) => events.push({ ...event, at: performance.now() }));

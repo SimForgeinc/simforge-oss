@@ -10,6 +10,7 @@
 //! subsystem has its own transport (MessagePack over a length-prefixed
 //! socket) and its own frame ring, and nothing here applies to it.
 
+mod census;
 mod manifest;
 mod picking;
 mod protocol;
@@ -23,7 +24,8 @@ use bevy::camera::Projection;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::render::error_handler::{RenderErrorHandler, RenderErrorPolicy};
-use bevy::render::settings::RenderCreation;
+use bevy::render::settings::{MemoryHints, RenderCreation, WgpuSettings};
+use bevy::render::RenderPlugin;
 use bevy::window::{ExitCondition, PresentMode, WindowLevel, WindowPosition, WindowResolution};
 use clap::Parser;
 use picking::MapEntity;
@@ -40,12 +42,77 @@ use std::time::Instant;
 
 pub const RENDERER_ID: &str = "native-wgpu-bevy";
 
-/// Default GPU byte budget. An RTX 3080 has 10 GB and a macOS unified-memory
-/// machine shares its budget with the compositor, so 2 GiB is the largest
-/// resident set that leaves room for the window system on every machine the
-/// team runs. Overridable, not guessed per-machine: a budget that changes
-/// under you is a budget you cannot benchmark.
-const DEFAULT_GPU_BUDGET_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+/// Total GPU bytes this process is allowed to hold, as the *driver* counts
+/// them — not as the scheduler accounts for them.
+///
+/// 4 GiB, chosen from two constraints and stated rather than guessed:
+///
+/// * the machine this renderer exists for is a 24 GB unified-memory Mac,
+///   where GPU bytes are the same bytes the window server and the Electron
+///   shell need; a viewport that peaks at 6.6 GB there is not self-evidently
+///   safer than the WebGL path that killed `WindowServer`. 4 GiB leaves
+///   above 80% of that machine to everything else;
+/// * 4 GB is also the VRAM of the smallest discrete GPU the team runs, so
+///   the same ceiling keeps a Windows/Linux session off the driver's
+///   host-memory fallback path.
+///
+/// The map budget is derived from this, never the other way round: see
+/// [`map_budget_bytes`].
+const DEFAULT_GPU_PROCESS_CEILING_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+
+/// GPU bytes the process holds no matter which map is open, independent of
+/// window size: wgpu's own contexts and shader binaries, the driver's heaps,
+/// and the tonemapping LUTs.
+///
+/// Measured by `--checks=memory-census` on the empty scene, before a map is
+/// loaded: 197.3 MB of driver-side memory `nvidia-smi` charges the process
+/// but wgpu's counters never see, plus 3.0 MB of LUTs. Charged at 256 MiB.
+const NON_MAP_FIXED_BYTES: u64 = 256 * 1024 * 1024;
+
+/// GPU bytes of render target, depth and post-processing texture per window
+/// pixel.
+///
+/// Measured by the same empty-scene census: 81,315,800 bytes of non-asset
+/// texture memory at 1600x1000, which is 50.8 bytes per pixel. Charged at 64
+/// so a resize cannot push the process past its ceiling before the budget
+/// notices. Scaling with pixels rather than charging a constant matters:
+/// the same figure at 3840x2160 is 421 MB, and a fixed headroom sized for a
+/// small window is a ceiling that silently stops holding at 4K.
+const RENDER_TARGET_BYTES_PER_PIXEL: u64 = 64;
+
+/// How many driver bytes the process ends up holding per byte of map the
+/// scheduler admits, as a percentage.
+///
+/// This is not a safety margin, it is a measurement. Two allocators sit
+/// between an admitted byte and the driver, and neither returns memory when
+/// the scheduler retires a node:
+///
+/// * Bevy's `MeshAllocator` packs meshes into slabs and never shrinks one,
+///   so the slab set grows to the historical high-water mark of the resident
+///   set rather than tracking it;
+/// * wgpu's `gpu-allocator` carves device memory into blocks and keeps them.
+///
+/// Measured by `--checks=memory-census`: with the texture and image-identity
+/// accounting corrected and `MemoryHints::MemoryUsage` in force, a
+/// san-ramon-phase-2 run that admitted 2,267,171,036 accounted bytes ended at
+/// a 4,542,431,232-byte driver peak, which is 200.4%. Charged at 210% so the
+/// ceiling holds with margin rather than exactly.
+///
+/// The census is the calibration, and re-running it is how this number is
+/// checked rather than trusted.
+const ALLOCATOR_AMPLIFICATION_PERCENT: u64 = 210;
+
+/// The resident map budget for this process: what is left of the process
+/// ceiling after the costs that are not map bytes, divided by the
+/// amplification the allocators apply on the way to the driver.
+///
+/// Pure, and tested, because the alternative is a magic number that nobody
+/// can re-derive when the window size or the ceiling changes.
+fn map_budget_bytes(ceiling_bytes: u64, width: f32, height: f32) -> u64 {
+    let pixels = (width.max(1.0) as u64) * (height.max(1.0) as u64);
+    let non_map = NON_MAP_FIXED_BYTES + RENDER_TARGET_BYTES_PER_PIXEL * pixels;
+    ceiling_bytes.saturating_sub(non_map) * 100 / ALLOCATOR_AMPLIFICATION_PERCENT
+}
 
 #[derive(Parser, Resource, Clone, Debug)]
 #[command(about = "SimForge native interactive viewport")]
@@ -75,9 +142,23 @@ struct Args {
     x: Option<i32>,
     #[arg(long)]
     y: Option<i32>,
-    /// Resident GPU byte budget for map geometry and textures.
-    #[arg(long, default_value_t = DEFAULT_GPU_BUDGET_BYTES)]
-    gpu_budget_bytes: u64,
+    /// Resident GPU byte budget for map geometry and textures. Derived from
+    /// `--gpu-process-ceiling-bytes` and the window size when absent, which
+    /// is what makes the ceiling a property of the process rather than of
+    /// one hand-picked number.
+    #[arg(long)]
+    gpu_budget_bytes: Option<u64>,
+    /// Total GPU bytes this process may hold as the driver counts them,
+    /// including render targets, driver overhead and the bytes the
+    /// allocators keep after an eviction.
+    #[arg(long, default_value_t = DEFAULT_GPU_PROCESS_CEILING_BYTES)]
+    gpu_process_ceiling_bytes: u64,
+    /// Block size policy for wgpu's device memory allocator. `memory-usage`
+    /// is the default because the allocator never returns a block: with
+    /// `performance`'s 128-256 MiB blocks the driver kept 87% of its peak
+    /// after every node had been evicted.
+    #[arg(long, value_enum, default_value_t = MemoryHintArg::MemoryUsage)]
+    gpu_memory_hint: MemoryHintArg,
     /// Fraction of the budget the coarse tier may use.
     #[arg(long, default_value_t = 0.08)]
     coarse_budget_fraction: f32,
@@ -104,6 +185,32 @@ struct Args {
     /// measures the display.
     #[arg(long, value_enum, default_value_t = PresentModeArg::AutoVsync)]
     present_mode: PresentModeArg,
+    /// Sample and publish the GPU allocation census (`memory-census`
+    /// command, `memory-census` event). Off by default: it costs a
+    /// `get_internal_counters` call and a walk of every resident GPU image
+    /// per render frame, which a shipped interactive session should not pay.
+    #[arg(long, default_value_t = false)]
+    memory_census: bool,
+}
+
+/// Which of wgpu's allocator block-size policies to run. Exposed because the
+/// census has to be able to reproduce the old behaviour on demand: the
+/// before/after in `memory-census.json` is a difference between these two.
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
+enum MemoryHintArg {
+    /// 128-256 MiB device blocks. wgpu's own default.
+    Performance,
+    /// 8-64 MiB device blocks.
+    MemoryUsage,
+}
+
+impl From<MemoryHintArg> for MemoryHints {
+    fn from(value: MemoryHintArg) -> Self {
+        match value {
+            MemoryHintArg::Performance => MemoryHints::Performance,
+            MemoryHintArg::MemoryUsage => MemoryHints::MemoryUsage,
+        }
+    }
 }
 
 #[derive(clap::ValueEnum, Clone, Copy, Debug)]
@@ -180,6 +287,18 @@ struct LoadedMap {
     in_flight: HashMap<usize, u64>,
     reserved_bytes: u64,
     materials: HashMap<usize, MaterialSlot>,
+    /// Resident GPU textures, keyed by the KTX2 path — the image's identity.
+    ///
+    /// Charged once per image, not once per material that references it, the
+    /// same deduplication the patched glTF loader performs by image plus
+    /// sampler plus colour space
+    /// (`renderer/vendor/bevy_gltf/src/loader/mod.rs:626-647`). Here the
+    /// sampler and colour space are fixed by the native profile, so the path
+    /// is the whole of the identity: two materials naming the same KTX2 get
+    /// one `Handle<Image>` from the asset server and therefore one GPU
+    /// texture, and charging both would budget for a texture that does not
+    /// exist.
+    images: HashMap<String, ImageSlot>,
     coarse_material: Handle<StandardMaterial>,
     resident_bytes: u64,
     peak_resident_bytes: u64,
@@ -200,12 +319,35 @@ struct LoadedMap {
     interactive_announced: bool,
     complete_announced: bool,
     geometry_verified: Arc<Mutex<Option<Result<(), String>>>>,
+    /// Set by `memory-census --evictAll`: the scheduler stops admitting so a
+    /// retirement measurement measures retirement. Without it the streamer
+    /// re-admits whatever the camera still wants on the very next frame, and
+    /// the "after eviction" sample is a sample of a reloaded scene.
+    census_quiesced: bool,
 }
 
 struct MaterialSlot {
     handle: Handle<StandardMaterial>,
     users: usize,
+    /// Path of the base-colour KTX2, or `None` for an untextured material.
+    /// The texture's bytes are charged against [`LoadedMap::images`], not
+    /// here, because the image can be shared.
+    texture: Option<String>,
+}
+
+struct ImageSlot {
+    /// Materials currently referencing this image.
+    users: usize,
+    /// GPU bytes charged for it: the transcoded mip chain
+    /// (`scene::ktx2_gpu_bytes`), not the compressed file length.
     bytes: u64,
+    /// Length of the KTX2 on disk, reported by the census beside `bytes` so
+    /// the size of the old undercount stays visible.
+    file_bytes: u64,
+    /// Weak id of the loaded image, so the census can tell a transcoded map
+    /// texture apart from a tonemapping LUT without holding the image alive
+    /// and changing the very lifetime it is measuring.
+    image: Option<AssetId<Image>>,
 }
 
 #[derive(Resource, Default)]
@@ -266,10 +408,24 @@ fn main() -> anyhow::Result<()> {
         unapproved_path_mode: UnapprovedPathMode::Allow,
         ..default()
     };
+    // `MemoryHints` decides how large a block wgpu's allocator carves device
+    // memory into, and the allocator never hands a block back: 128-256 MiB
+    // blocks under `Performance` are why the driver kept 2.05 GB of a 2.36 GB
+    // peak after this process had evicted every node (measured by
+    // `--checks=memory-census`). `MemoryUsage` uses 8-64 MiB blocks, so the
+    // memory a retirement frees is memory the process stops holding.
+    let render_plugin = RenderPlugin {
+        render_creation: RenderCreation::Automatic(Box::new(WgpuSettings {
+            memory_hints: args.gpu_memory_hint.into(),
+            ..default()
+        })),
+        ..default()
+    };
     if args.headless {
         app.add_plugins(
             DefaultPlugins
                 .set(asset_plugin)
+                .set(render_plugin)
                 .set(WindowPlugin {
                     primary_window: None,
                     exit_condition: ExitCondition::DontExit,
@@ -293,13 +449,17 @@ fn main() -> anyhow::Result<()> {
             present_mode: args.present_mode.into(),
             ..default()
         };
-        app.add_plugins(DefaultPlugins.set(asset_plugin).set(WindowPlugin {
+        app.add_plugins(DefaultPlugins.set(asset_plugin).set(render_plugin).set(WindowPlugin {
             primary_window: Some(window),
             ..default()
         }));
         app.insert_resource(RenderErrorHandler(render_error_policy));
     }
     app.add_plugins(GpuReadinessPlugin);
+    if args.memory_census {
+        app.add_plugins(census::MemoryCensusPlugin);
+        app.init_resource::<CensusRequests>();
+    }
     app.add_systems(Startup, setup);
     app.add_systems(
         Update,
@@ -311,6 +471,7 @@ fn main() -> anyhow::Result<()> {
             overlay_system,
             frame_stats_system,
             orbit_camera,
+            census_system.run_if(|args: Res<Args>| args.memory_census),
         )
             .chain(),
     );
@@ -427,7 +588,12 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
             return;
         }
     };
-    let index = match SceneIndex::parse(&root, &document, &verified.release.members) {
+    // A build with no render app has no device to ask, and the compressed
+    // target is the one every GPU the team runs actually supports; the
+    // headless smoke path never charges a real budget anyway.
+    let texture_bytes_per_pixel =
+        world.get_resource::<GpuAdapter>().map(|adapter| adapter.texture_bytes_per_pixel).unwrap_or(1);
+    let index = match SceneIndex::parse(&root, &document, &verified.release.members, texture_bytes_per_pixel) {
         Ok(index) => index,
         Err(error) => {
             protocol::emit_error("scene_index_failed", error);
@@ -436,8 +602,11 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
         }
     };
     let index = Arc::new(index);
+    let budget_bytes = args
+        .gpu_budget_bytes
+        .unwrap_or_else(|| map_budget_bytes(args.gpu_process_ceiling_bytes, args.width, args.height));
     let coarse_budget_bytes =
-        (args.gpu_budget_bytes as f64 * f64::from(args.coarse_budget_fraction.clamp(0.001, 1.0))) as u64;
+        (budget_bytes as f64 * f64::from(args.coarse_budget_fraction.clamp(0.001, 1.0))) as u64;
     let coarse_plan = index.coarse_plan(coarse_budget_bytes);
     let node_count = index.nodes.len();
     let (request_tx, request_rx) = mpsc::channel();
@@ -484,6 +653,7 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
     world.insert_resource(LoadedMap {
         index,
         release: verified.release,
+        images: HashMap::new(),
         requests: request_tx,
         responses: Mutex::new(response_rx),
         coarse_plan,
@@ -495,7 +665,7 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
         coarse_material,
         resident_bytes: 0,
         peak_resident_bytes: 0,
-        budget_bytes: args.gpu_budget_bytes,
+        budget_bytes,
         coarse_budget_bytes,
         budget_skipped: HashSet::new(),
         admissions: 0,
@@ -506,6 +676,7 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
         interactive_announced: false,
         complete_announced: false,
         geometry_verified,
+        census_quiesced: false,
     });
     world.resource_mut::<GpuSettle>().reset();
     let mut state = world.resource_mut::<ViewportState>();
@@ -521,7 +692,8 @@ fn begin_load(world: &mut World, root: PathBuf, map_version_id: String, release_
             "sizeCheckedMembers": size_checked,
             "drawableNodes": node_count,
             "coarseNodes": coarse_nodes,
-            "budgetBytes": args.gpu_budget_bytes,
+            "budgetBytes": budget_bytes,
+            "processCeilingBytes": args.gpu_process_ceiling_bytes,
             "coarseBudgetBytes": coarse_budget_bytes,
             // World-space bounds of the drawable set. The editor frames a map
             // it has never opened from this, and it is the only way a caller
@@ -563,6 +735,9 @@ fn stream_system(
     mut settle: ResMut<GpuSettle>,
 ) {
     let Some(map) = map.as_deref_mut() else { return };
+    if map.census_quiesced {
+        return;
+    }
     let camera = cameras.iter().next().map(|transform| transform.translation()).unwrap_or(Vec3::ZERO);
 
     let mut spawned = 0usize;
@@ -655,18 +830,26 @@ fn stream_system(
 
 /// GPU bytes a node occupies at `tier`, including the textures its materials
 /// would pull in at detail tier.
+///
+/// Textures are charged by image identity, counted once per distinct KTX2
+/// the node would newly make resident. A node with four primitives sharing
+/// one atlas pays for that atlas once, and pays nothing at all for an image
+/// another resident node already holds.
 fn node_cost(map: &LoadedMap, index: usize, tier: Tier) -> u64 {
     let node = &map.index.nodes[index];
     let mut bytes = node.bytes_at(tier);
-    if tier == Tier::Detail {
-        for primitive in &node.primitives {
-            if let Some(material) = primitive.material {
-                if map.materials.contains_key(&material) {
-                    continue;
-                }
-                bytes += map.index.materials.get(material).map(|slot| slot.texture_bytes).unwrap_or(0);
-            }
+    if tier != Tier::Detail {
+        return bytes;
+    }
+    let mut charged: HashSet<&str> = HashSet::new();
+    for primitive in &node.primitives {
+        let Some(material) = primitive.material else { continue };
+        let Some(definition) = map.index.materials.get(material) else { continue };
+        let Some(path) = definition.base_color_texture.as_deref() else { continue };
+        if map.images.contains_key(path) || !charged.insert(path) {
+            continue;
         }
+        bytes += definition.texture_bytes;
     }
     bytes
 }
@@ -789,6 +972,13 @@ fn evict_node(
     }
 }
 
+/// Give up one use of each material this node referenced, and with the last
+/// use of a material, one use of its image.
+///
+/// Two levels of refcount because they have different identities: a material
+/// is per glTF material index, an image is per KTX2 path and is shared
+/// between materials. Collapsing them would either free a texture another
+/// material is still drawing with, or never free it at all.
 fn release_materials(map: &mut LoadedMap, materials: &mut Assets<StandardMaterial>, index: usize) {
     let used: Vec<usize> = map.index.nodes[index]
         .primitives
@@ -798,10 +988,17 @@ fn release_materials(map: &mut LoadedMap, materials: &mut Assets<StandardMateria
     for material in used {
         let Some(slot) = map.materials.get_mut(&material) else { continue };
         slot.users = slot.users.saturating_sub(1);
-        if slot.users == 0 {
-            let slot = map.materials.remove(&material).expect("material slot");
-            map.resident_bytes = map.resident_bytes.saturating_sub(slot.bytes);
-            materials.remove(&slot.handle);
+        if slot.users > 0 {
+            continue;
+        }
+        let slot = map.materials.remove(&material).expect("material slot");
+        materials.remove(&slot.handle);
+        let Some(path) = slot.texture else { continue };
+        let Some(image) = map.images.get_mut(&path) else { continue };
+        image.users = image.users.saturating_sub(1);
+        if image.users == 0 {
+            let image = map.images.remove(&path).expect("image slot");
+            map.resident_bytes = map.resident_bytes.saturating_sub(image.bytes);
         }
     }
 }
@@ -891,10 +1088,23 @@ fn acquire_material(
     let Some(definition) = map.index.materials.get(material_index).cloned() else {
         return map.coarse_material.clone();
     };
-    let texture = definition
-        .base_color_texture
-        .as_deref()
-        .map(|path| asset_server.load::<Image>(path.to_owned()));
+    let texture = definition.base_color_texture.as_deref().map(|path| {
+        let handle = asset_server.load::<Image>(path.to_owned());
+        // Charged once per image. A second material naming the same KTX2
+        // gets the same `Handle<Image>` from the asset server, so it costs
+        // no additional GPU bytes and must not be billed for any.
+        let slot = map.images.entry(path.to_owned()).or_insert_with(|| {
+            map.resident_bytes += definition.texture_bytes;
+            ImageSlot {
+                users: 0,
+                bytes: definition.texture_bytes,
+                file_bytes: definition.texture_file_bytes,
+                image: Some(handle.id()),
+            }
+        });
+        slot.users += 1;
+        handle
+    });
     let handle = materials.add(StandardMaterial {
         base_color: Color::srgba(
             definition.base_color[0],
@@ -902,7 +1112,7 @@ fn acquire_material(
             definition.base_color[2],
             definition.base_color[3],
         ),
-        base_color_texture: texture.clone(),
+        base_color_texture: texture,
         metallic: definition.metallic,
         perceptual_roughness: definition.roughness.max(0.05),
         alpha_mode: if definition.alpha_blend { AlphaMode::Blend } else { AlphaMode::Opaque },
@@ -910,10 +1120,9 @@ fn acquire_material(
         cull_mode: if definition.double_sided { None } else { Some(bevy::render::render_resource::Face::Back) },
         ..default()
     });
-    map.resident_bytes += definition.texture_bytes;
     map.materials.insert(
         material_index,
-        MaterialSlot { handle: handle.clone(), users: 1, bytes: definition.texture_bytes },
+        MaterialSlot { handle: handle.clone(), users: 1, texture: definition.base_color_texture },
     );
     handle
 }
@@ -1024,6 +1233,7 @@ fn device_loss_system(
     mut state: ResMut<ViewportState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut settle: ResMut<GpuSettle>,
+    census: Option<Res<census::GpuCensus>>,
 ) {
     if let Some(message) = RENDER_ERROR.lock().expect("render error").take() {
         protocol::emit_error("render_error", message);
@@ -1038,6 +1248,11 @@ fn device_loss_system(
         "reason": if reason.is_empty() { "wgpu reported device loss".to_owned() } else { reason },
         "recoverable": true,
     }));
+    // A peak measured on a device that no longer exists says nothing about
+    // the one being built to replace it.
+    if let Some(census) = census.as_deref() {
+        census.reset_peak();
+    }
     let Some(map) = map.as_deref_mut() else { return };
     let resident: Vec<usize> = map
         .resident
@@ -1144,6 +1359,207 @@ fn frame_stats_system(args: Res<Args>, time: Res<Time>, mut state: ResMut<Viewpo
     );
 }
 
+/// A `memory-census` request waiting for the render world to produce a
+/// settled sample. Requests are queued rather than answered inline because
+/// the numbers worth reporting are the ones taken *after* the device has
+/// retired what the main world just dropped.
+struct CensusRequest {
+    label: String,
+    evict_all: bool,
+    /// Render-world frames still to elapse before the sample is trusted.
+    wait_frames: u32,
+}
+
+#[derive(Resource, Default)]
+struct CensusRequests(Vec<CensusRequest>);
+
+/// Publish what only the main world knows (which images belong to the map,
+/// whether a map is loaded at all), and answer queued census requests once
+/// the render world has sampled a settled device.
+fn census_system(
+    census: Res<census::GpuCensus>,
+    pending: Res<GpuPending>,
+    mut requests: ResMut<CensusRequests>,
+    mut map: Option<ResMut<LoadedMap>>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    meshes: Query<&Mesh3d>,
+) {
+    census.set_map_images(
+        map.as_deref()
+            .map(|map| map.images.values().filter_map(|slot| slot.image).collect())
+            .unwrap_or_default(),
+    );
+    // The empty-scene baseline: every render target, depth buffer, LUT and
+    // fallback image this process allocates before a single map byte exists.
+    // Armed only while no map is loaded, so it can never be polluted by
+    // geometry, and only after the GPU has settled, so it is not a sample of
+    // a half-built swapchain.
+    if census.baseline().is_none() && map.is_none() && pending.samples() >= 30 {
+        census.arm_baseline();
+    }
+
+    if requests.0.is_empty() {
+        return;
+    }
+    let frames = census.frames();
+    let mut ready = Vec::new();
+    requests.0.retain_mut(|request| {
+        if request.evict_all {
+            // Evicting everything is the only way to ask the driver whether
+            // it really gave the bytes back. Done once, at request time.
+            request.evict_all = false;
+            if let Some(map) = map.as_deref_mut() {
+                let resident: Vec<usize> = map
+                    .resident
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, tier)| **tier != Tier::Absent)
+                    .map(|(index, _)| index)
+                    .collect();
+                for index in resident {
+                    evict_node(map, &mut commands, &mut materials, index, Tier::Absent);
+                }
+                // The scheduler must stop too. It wants whatever the camera
+                // is pointed at, so without this it re-admits on the very
+                // next frame and the retirement sample measures a reload.
+                map.census_quiesced = true;
+                map.plan_member.iter_mut().for_each(|member| *member = false);
+                map.coarse_plan.clear();
+                map.in_flight.clear();
+                map.reserved_bytes = 0;
+            }
+            census.request_device_poll();
+            return true;
+        }
+        if request.wait_frames > 0 {
+            request.wait_frames -= 1;
+            return true;
+        }
+        ready.push(std::mem::replace(
+            request,
+            CensusRequest { label: String::new(), evict_all: false, wait_frames: 0 },
+        ));
+        false
+    });
+    for request in ready {
+        emit_census(&census, &request, frames, map.as_deref(), meshes.iter().count());
+    }
+}
+
+/// One census event: three ledgers side by side, each byte attributed to a
+/// named category with the code path that allocates it, and the residual
+/// stated rather than hidden.
+fn emit_census(
+    census: &census::GpuCensus,
+    request: &CensusRequest,
+    frames: u64,
+    map: Option<&LoadedMap>,
+    mesh_instances: usize,
+) {
+    let latest = census.latest();
+    let peak = census.peak();
+    let baseline = census.baseline();
+    let targets = baseline.map(|sample| sample.non_asset_texture_bytes());
+    let describe = |sample: census::GpuSample| {
+        json!({
+            "frame": sample.frame,
+            "wgpuBufferBytes": sample.wgpu_buffer_bytes,
+            "wgpuTextureBytes": sample.wgpu_texture_bytes,
+            "wgpuTotalBytes": sample.wgpu_total(),
+            "wgpuAllocations": sample.wgpu_allocations,
+            "categories": {
+                "mapGeometry": {
+                    "bytes": sample.mesh_slab_bytes,
+                    "slabs": sample.mesh_slab_count,
+                    "source": "MeshAllocator::slabs_size (bevy_render::mesh::allocator)",
+                    "allocatedBy": "main.rs spawn_node -> Assets<Mesh>::add -> MeshAllocator slab",
+                },
+                "transcodedTexturesAndMips": {
+                    "bytes": sample.map_texture_bytes,
+                    "textures": sample.map_textures,
+                    "source": "RenderAssets<GpuImage> texture_descriptor, map material images",
+                    "allocatedBy": "main.rs acquire_material -> AssetServer::load::<Image> -> ktx2 transcode",
+                },
+                "skyAndLuts": {
+                    "bytes": sample.other_texture_bytes,
+                    "textures": sample.other_textures,
+                    "source": "RenderAssets<GpuImage> texture_descriptor, non-map images",
+                    "allocatedBy": "bevy_core_pipeline tonemapping LUTs and bevy_render fallback images",
+                },
+                "renderTargetsAndDepth": {
+                    "bytes": targets,
+                    "source": if targets.is_some() { "empty-scene baseline: wgpu texture memory minus asset images" } else { "unmeasured: no empty-scene baseline was captured" },
+                    "allocatedBy": "bevy_render::texture::TextureCache via bevy_core_pipeline view targets and depth",
+                },
+                "internalTextureGrowth": {
+                    "bytes": targets.map(|baseline| sample.non_asset_texture_bytes().saturating_sub(baseline)),
+                    "source": "wgpu non-asset texture memory above the empty-scene baseline",
+                    "allocatedBy": "bevy_render::texture::TextureCache growth after the map loads",
+                },
+                "shadowAtlas": {
+                    "bytes": 0,
+                    "shadowCastingLights": sample.shadow_casting_lights,
+                    "source": "measured: count of extracted lights with shadow_maps_enabled",
+                    "allocatedBy": "bevy_pbr shadow atlas; empty while no light casts shadows",
+                },
+                "actorsAndPrototypes": {
+                    "bytes": 0,
+                    "meshInstances": mesh_instances,
+                    "mapOwnedNodes": map.map(|map| map.entities.len()).unwrap_or(0),
+                    "source": "measured: this binary has no actor system, and every Mesh3d is a map node child",
+                    "allocatedBy": "n/a in the viewport binary",
+                },
+                "stagingAndTransient": {
+                    "bytes": sample.transient_buffer_bytes(),
+                    "source": "wgpu buffer memory minus the mesh slabs",
+                    "allocatedBy": "bevy_render view/mesh uniforms, GPU preprocessing instance buffers, wgpu staging belt",
+                },
+            },
+        })
+    };
+    let unreclaimed = baseline.map(|base| {
+        json!({
+            "wgpuBytesAboveEmptyScene": latest.wgpu_total().saturating_sub(base.wgpu_total()),
+            "meshSlabBytes": latest.mesh_slab_bytes,
+            "mapTextureBytes": latest.map_texture_bytes,
+            "source": "current sample minus empty-scene baseline, after Device::poll(Wait)",
+        })
+    });
+    protocol::emit(
+        "memory-census",
+        json!({
+            "label": request.label,
+            "renderFramesSampled": frames,
+            // The census is worthless if wgpu's counters were compiled out:
+            // `InternalCounter::read` returns 0 without the `counters`
+            // feature, and a ledger of zeroes reads exactly like a
+            // measurement. Report the fact rather than the zeroes.
+            "wgpuCountersAvailable": latest.wgpu_total() > 0,
+            "scheduler": {
+                "residentBytes": map.map(|map| map.resident_bytes).unwrap_or(0),
+                "peakResidentBytes": map.map(|map| map.peak_resident_bytes).unwrap_or(0),
+                // Both halves of the texture ledger, so the size of the
+                // undercount the census found stays on the record.
+                "textureGpuBytes": map.map(|map| map.images.values().map(|slot| slot.bytes).sum::<u64>()).unwrap_or(0),
+                "textureFileBytes": map.map(|map| map.images.values().map(|slot| slot.file_bytes).sum::<u64>()).unwrap_or(0),
+                "residentImages": map.map(|map| map.images.len()).unwrap_or(0),
+                "materialSlots": map.map(|map| map.materials.len()).unwrap_or(0),
+                "residentNodes": map.map(|map| map.entities.len()).unwrap_or(0),
+                "admissions": map.map(|map| map.admissions).unwrap_or(0),
+                "evictions": map.map(|map| map.evictions).unwrap_or(0),
+                "budgetBytes": map.map(|map| map.budget_bytes),
+                "quiesced": map.map(|map| map.census_quiesced).unwrap_or(false),
+                "source": "scheduler-accounting (scene.rs bytes_at + KTX2 member file length), read when the sample is emitted",
+            },
+            "current": describe(latest),
+            "peak": describe(peak),
+            "baseline": baseline.map(describe),
+            "unreclaimed": unreclaimed,
+        }),
+    );
+}
+
 fn orbit_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -1199,6 +1615,7 @@ fn control_system(
     candidates: Query<(&MapEntity, &Aabb, &GlobalTransform)>,
     mut windows: Query<&mut Window>,
     mut exit: MessageWriter<AppExit>,
+    mut census_requests: Option<ResMut<CensusRequests>>,
 ) {
     let Ok(channel) = channel.0.lock() else { return };
     for incoming in channel.try_iter() {
@@ -1342,6 +1759,24 @@ fn control_system(
             ControlCommand::DebugDeviceLost { reason } => {
                 signal_device_lost(reason.unwrap_or_else(|| "injected by debug-device-lost".to_owned()));
             }
+            ControlCommand::MemoryCensus { label, evict_all } => {
+                let Some(requests) = census_requests.as_deref_mut() else {
+                    protocol::emit_error(
+                        "census_unavailable",
+                        "this viewport was not started with --memory-census, so it has no allocation census to publish",
+                    );
+                    continue;
+                };
+                requests.0.push(CensusRequest {
+                    label: label.unwrap_or_else(|| "census".to_owned()),
+                    evict_all,
+                    // Eviction has to reach the render world, be extracted,
+                    // and have its submissions complete before the counters
+                    // mean anything; a settled second of frames is cheap and
+                    // removes the guesswork.
+                    wait_frames: if evict_all { 60 } else { 4 },
+                });
+            }
             ControlCommand::Quit => {
                 exit.write(AppExit::Success);
             }
@@ -1364,6 +1799,30 @@ fn emit_pick(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The budget has to leave room for everything that is not map bytes,
+    /// and the bytes the allocators keep on the way to the driver. The
+    /// property that matters is the one the ceiling claims: charged at the
+    /// measured amplification, the admitted set plus the non-map cost stays
+    /// under the ceiling.
+    #[test]
+    fn the_derived_budget_keeps_the_process_under_its_ceiling() {
+        let ceiling = 4 * 1024 * 1024 * 1024u64;
+        for (width, height) in [(1280.0, 720.0), (1600.0, 1000.0), (3840.0, 2160.0)] {
+            let budget = map_budget_bytes(ceiling, width, height);
+            let non_map = NON_MAP_FIXED_BYTES + RENDER_TARGET_BYTES_PER_PIXEL * (width as u64) * (height as u64);
+            let driver = budget * ALLOCATOR_AMPLIFICATION_PERCENT / 100 + non_map;
+            assert!(driver <= ceiling, "{width}x{height}: {driver} bytes exceeds the {ceiling} ceiling");
+            assert!(budget > 0, "{width}x{height}: a window that fits must still get a budget");
+        }
+    }
+
+    /// A window large enough to exhaust the ceiling on render targets alone
+    /// must produce no map budget rather than an underflowed enormous one.
+    #[test]
+    fn a_ceiling_smaller_than_its_render_targets_yields_no_map_budget() {
+        assert_eq!(map_budget_bytes(256 * 1024 * 1024, 3840.0, 2160.0), 0);
+    }
 
     fn evictable(entries: &[(usize, u64, f32)]) -> Vec<Evictable> {
         entries

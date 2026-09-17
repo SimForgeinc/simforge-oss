@@ -14,3 +14,10 @@ clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+# Not used directly: this is how the `counters` feature is turned on for the
+# wgpu that Bevy builds. Cargo unions features across the graph, so the
+# allocation counters the census reads (`HalCounters::buffer_memory`,
+# `texture_memory`, `memory_allocations`) compile to real atomics instead of
+# the no-op `InternalCounter` that always reads 0. Without it the census
+# reports zeroes that look like a measurement.
+wgpu = { version = "29", default-features = false, features = ["counters"] }
