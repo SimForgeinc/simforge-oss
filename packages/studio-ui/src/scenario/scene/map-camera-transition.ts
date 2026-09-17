@@ -15,7 +15,10 @@ export type MapModelLoadSnapshot = {
   uploading: number;
   pendingTextureUploads?: number;
   downloads?: AssetDownloadStats;
+  /** Only a failure that makes the map unusable; detail tiles are counted below. */
   streamingError?: string | null;
+  /** Optional detail tiles that gave up. A map with these is loaded, not failed. */
+  detailFailures?: number;
 };
 
 export function mapModelsFullyLoaded(snapshot: MapModelLoadSnapshot): boolean {

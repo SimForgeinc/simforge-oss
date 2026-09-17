@@ -247,6 +247,14 @@ export interface CityViewerStats {
   requiredPendingAssets?: number;
   /** Terminal failure of required scene preparation, not optional refinement. */
   requiredError?: string | null;
+  /**
+   * Optional detail tiles that gave up after their retries. The map is usable
+   * with them missing, so a consumer reports reduced detail rather than a
+   * failed load; `requiredError` is the failure that makes a map unusable.
+   */
+  detailFailures?: number;
+  /** The last optional-detail failure, for a "some detail is missing" line. */
+  detailError?: string | null;
   /** Completion counters never decrease during a map load, including LOD eviction. */
   loadProgress?: {
     decodedAssets: number;

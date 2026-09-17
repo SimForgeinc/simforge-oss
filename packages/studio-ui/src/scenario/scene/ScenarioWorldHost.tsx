@@ -324,8 +324,10 @@ export function ScenarioWorldHost({
           queued: stats.queued,
           uploading: stats.uploading,
           pendingTextureUploads: stats.pendingTextureUploads,
-          downloads: stats.downloads,
-          streamingError: stats.streamingError,
+          // Only a required failure fails the load; missing detail tiles are
+          // reported as reduced detail once the map is up.
+          streamingError: stats.requiredError ?? null,
+          detailFailures: stats.detailFailures ?? 0,
         };
       },
       () => {

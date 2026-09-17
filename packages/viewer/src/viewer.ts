@@ -374,6 +374,16 @@ export class CityViewer {
   private variantFallbacks = 0;
   private assetVariantReloadGeneration = 0;
   private streamingError: string | null = null;
+  /**
+   * Optional detail that gave up, kept apart from `streamingError`.
+   *
+   * A city or vegetation tile that cannot be decoded costs that tile's detail;
+   * roads, semantics and the map load itself are what make a map usable. Both
+   * used to land in `streamingError`, so one unreadable texture reported the
+   * whole map as failed while the rest of it was already on screen.
+   */
+  private detailFailures = 0;
+  private detailError: string | null = null;
   private mapLoadActive = false;
   private presetTransitions = 0;
   private auxiliaryLoads = 0;
@@ -537,6 +547,8 @@ export class CityViewer {
       this.pendingTextureBudgetError = null;
       this.downloadTracker.reset();
       this.streamingError = null;
+      this.detailFailures = 0;
+      this.detailError = null;
       this.mapLoadActive = true;
       try {
         await this.loadMapInner(manifestUrl);
@@ -1125,7 +1137,8 @@ export class CityViewer {
       name: 'city-layer',
       renderer: this.renderer,
       scene: this.scene,
-      onError: (error) => this.recordStreamingError(error),
+      // City detail: a tile that will not decode costs that tile, not the map.
+      onError: (error) => this.recordDetailFailure(error),
       defs,
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
@@ -1203,7 +1216,8 @@ export class CityViewer {
       name: 'vegetation-layer',
       renderer: this.renderer,
       scene: this.scene,
-      onError: (error) => this.recordStreamingError(error),
+      // Vegetation is never required for a usable map.
+      onError: (error) => this.recordDetailFailure(error),
       defs,
       maxConcurrent: 2,
       memory: this.memory,
@@ -1499,6 +1513,8 @@ export class CityViewer {
       roadVisible: this.roadReady && this.roadGroup.visible,
       streamingError,
       requiredError: streamingError,
+      detailFailures: this.detailFailures,
+      detailError: this.detailError,
       uiTicksPerSecond: this.fps,
       surfaceMaterials: this.surfaceMaterials.report(),
       snowCover: snow,
@@ -1640,6 +1656,8 @@ export class CityViewer {
     this.ultraLowFidelity = enabled;
     this.roadsOnlyFidelity = roadsOnly;
     this.streamingError = null;
+    this.detailFailures = 0;
+    this.detailError = null;
     if (ultraChanged && enabled) {
       this.simplifyTree(this.cityGroup, 'city');
       this.simplifyTree(this.roadGroup, 'road');
@@ -1706,6 +1724,23 @@ export class CityViewer {
   private mapTextureBudgetPerAsset(): number {
     // Reserve half the budget for geometry, environment resources and work in flight.
     return this.options.byteBudget * 0.5 / Math.max(1, (this.manifest?.tiles.length ?? 0) + 1);
+  }
+
+  /**
+   * A detail tile gave up after its retries. The map stays usable, so this is
+   * counted and reported as reduced detail instead of failing the load; a
+   * budget error still goes through `recordStreamingError`, which knows how to
+   * refit the texture budget and retry.
+   */
+  private recordDetailFailure(error: unknown): void {
+    if (this.disposed || (error as { name?: string } | null)?.name === 'AbortError') return;
+    if (error instanceof RequiredAssetBudgetError) {
+      this.recordStreamingError(error);
+      return;
+    }
+    this.detailFailures += 1;
+    this.detailError = error instanceof Error ? error.message : String(error);
+    console.warn('[city-renderer] detail tile unavailable', error);
   }
 
   private recordStreamingError(error: unknown): void {
