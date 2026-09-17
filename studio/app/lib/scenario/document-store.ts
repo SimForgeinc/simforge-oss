@@ -398,6 +398,363 @@ export async function duplicateScenarioDocument(
   });
 }
 
+export type VariationTransferReceipt = {
+  id: string;
+  targetDocumentId: string;
+  sourceDocumentId: string;
+  sourceRevisionId: string | null;
+  sourceMapVersionId: string;
+  targetMapVersionId: string;
+  patternId: string;
+  patternSha256: string;
+  sourceSiteId: string;
+  targetSiteId: string;
+  permutationKey: string | null;
+  verdict: "equivalent" | "review" | "rejected";
+  acceptance:
+    | "pending_materialization"
+    | "pending_validation"
+    | "pending_simulation"
+    | "accepted"
+    | "rejected";
+  equivalenceScore: number;
+  topologyScore: number | null;
+  roleBindingScore: number | null;
+  intentPreserved: boolean;
+  issues: unknown[];
+  resumeToken: string | null;
+  sourceTopologyDigest: string | null;
+  targetTopologyDigest: string | null;
+  sourceClosureDigest: string | null;
+  targetClosureDigest: string | null;
+  compilerVersion: string | null;
+  matcherVersion: string | null;
+  solverVersion: string | null;
+  paramSeed: string | null;
+  drawIndex: number | null;
+  inputHash: string | null;
+  replayKey: Record<string, unknown> | null;
+  replayToken: string | null;
+  transferVerdict:
+    | "equivalent"
+    | "adapted-equivalent"
+    | "adapted-different"
+    | "incompatible"
+    | null;
+  geometryTransfer: "exact" | "adapted" | "failed" | null;
+  behaviorPreservation: "preserved" | "drift" | "changed" | "unmeasured" | null;
+  behaviorMetrics: Record<string, unknown> | null;
+  requiredChecksPassed: boolean | null;
+  identityProvenance: string | null;
+  createdAt: string;
+};
+
+export type CrossMapVariationTransferReceiptInput = Omit<
+  VariationTransferReceipt,
+  | "id"
+  | "targetDocumentId"
+  | "sourceDocumentId"
+  | "sourceRevisionId"
+  | "sourceMapVersionId"
+  | "targetMapVersionId"
+  | "createdAt"
+>;
+
+type VariationTransferRow = {
+  id: string;
+  target_document_id: string;
+  source_document_id: string;
+  source_revision_id: string | null;
+  source_map_version_id: string;
+  target_map_version_id: string;
+  pattern_id: string;
+  pattern_sha256: string;
+  source_site_id: string;
+  target_site_id: string;
+  permutation_key: string | null;
+  verdict: VariationTransferReceipt["verdict"];
+  acceptance: VariationTransferReceipt["acceptance"];
+  equivalence_score: number;
+  topology_score: number | null;
+  role_binding_score: number | null;
+  intent_preserved: boolean;
+  issues: string | unknown[] | null;
+  resume_token: string | null;
+  source_topology_digest: string | null;
+  target_topology_digest: string | null;
+  source_closure_digest: string | null;
+  target_closure_digest: string | null;
+  compiler_version: string | null;
+  matcher_version: string | null;
+  solver_version: string | null;
+  param_seed: string | null;
+  draw_index: number | null;
+  input_hash: string | null;
+  replay_key: string | Record<string, unknown> | null;
+  replay_token: string | null;
+  transfer_verdict: VariationTransferReceipt["transferVerdict"];
+  geometry_transfer: VariationTransferReceipt["geometryTransfer"];
+  behavior_preservation: VariationTransferReceipt["behaviorPreservation"];
+  behavior_metrics: string | Record<string, unknown> | null;
+  required_checks_passed: boolean | null;
+  identity_provenance: string | null;
+  created_at: string;
+};
+
+const VARIATION_TRANSFER_SELECT = `SELECT id, target_document_id, source_document_id,
+    source_revision_id, source_map_version_id, target_map_version_id, pattern_id, pattern_sha256,
+    source_site_id, target_site_id, permutation_key, verdict, acceptance, equivalence_score,
+    topology_score, role_binding_score, intent_preserved, issues, resume_token,
+    source_topology_digest, target_topology_digest, source_closure_digest, target_closure_digest,
+    compiler_version, matcher_version, solver_version, param_seed, draw_index, input_hash,
+    replay_key, replay_token, transfer_verdict, geometry_transfer, behavior_preservation,
+    behavior_metrics, required_checks_passed, identity_provenance, created_at::text AS created_at
+  FROM simforge.variation_transfers`;
+
+function variationTransferReceipt(row: VariationTransferRow): VariationTransferReceipt {
+  const object = (value: string | Record<string, unknown> | null) =>
+    value === null
+      ? null
+      : typeof value === "string"
+        ? (JSON.parse(value) as Record<string, unknown>)
+        : value;
+  const issues = row.issues === null
+    ? []
+    : typeof row.issues === "string"
+      ? (JSON.parse(row.issues) as unknown[])
+      : row.issues;
+  return {
+    id: row.id,
+    targetDocumentId: row.target_document_id,
+    sourceDocumentId: row.source_document_id,
+    sourceRevisionId: row.source_revision_id,
+    sourceMapVersionId: row.source_map_version_id,
+    targetMapVersionId: row.target_map_version_id,
+    patternId: row.pattern_id,
+    patternSha256: row.pattern_sha256,
+    sourceSiteId: row.source_site_id,
+    targetSiteId: row.target_site_id,
+    permutationKey: row.permutation_key,
+    verdict: row.verdict,
+    acceptance: row.acceptance,
+    equivalenceScore: Number(row.equivalence_score),
+    topologyScore: row.topology_score === null ? null : Number(row.topology_score),
+    roleBindingScore: row.role_binding_score === null ? null : Number(row.role_binding_score),
+    intentPreserved: row.intent_preserved,
+    issues,
+    resumeToken: row.resume_token,
+    sourceTopologyDigest: row.source_topology_digest,
+    targetTopologyDigest: row.target_topology_digest,
+    sourceClosureDigest: row.source_closure_digest,
+    targetClosureDigest: row.target_closure_digest,
+    compilerVersion: row.compiler_version,
+    matcherVersion: row.matcher_version,
+    solverVersion: row.solver_version,
+    paramSeed: row.param_seed,
+    drawIndex: row.draw_index === null ? null : Number(row.draw_index),
+    inputHash: row.input_hash,
+    replayKey: object(row.replay_key),
+    replayToken: row.replay_token,
+    transferVerdict: row.transfer_verdict,
+    geometryTransfer: row.geometry_transfer,
+    behaviorPreservation: row.behavior_preservation,
+    behaviorMetrics: object(row.behavior_metrics),
+    requiredChecksPassed: row.required_checks_passed,
+    identityProvenance: row.identity_provenance,
+    createdAt: row.created_at,
+  };
+}
+
+/**
+ * Persist a cross-map child and its transfer receipt as one indivisible operation.
+ *
+ * This is deliberately a sibling of `duplicateScenarioDocument`: the common copy/Driver-in-the-
+ * Loop path keeps its small input and same-map invariant, while this path makes the target map and
+ * complete receipt impossible to omit.
+ */
+export async function createCrossMapScenarioDocument(
+  context: AppContext,
+  sourceDocumentId: string,
+  input: {
+    title?: string;
+    targetMapVersionId: string;
+    content: ScenarioTemplateV2;
+    receipt: CrossMapVariationTransferReceiptInput;
+  },
+): Promise<
+  | { kind: "created"; document: ScenarioDocumentDto; receipt: VariationTransferReceipt }
+  | { kind: "not_found" }
+> {
+  return withTransaction(async (tx) => {
+    const sourceRow = await tx.queryOne<DocumentRow>(
+      `${DOCUMENT_SELECT}
+       WHERE d.workspace_id = :workspace_id AND d.id = :document_id AND d.deleted_at IS NULL
+       LIMIT 1`,
+      { workspace_id: context.workspaceId, document_id: sourceDocumentId },
+    );
+    if (!sourceRow) return { kind: "not_found" as const };
+    const source = documentDto(sourceRow);
+    if (!source.mapVersionId) {
+      throw new Error("A cross-map variation requires a source map version.");
+    }
+    if (source.mapVersionId === input.targetMapVersionId) {
+      throw new Error("A cross-map variation requires a different target map version.");
+    }
+
+    const targetMap = await tx.queryOne<{ id: string }>(
+      `SELECT id
+         FROM simforge.map_versions
+        WHERE id = :target_map_version_id
+          AND retired_at IS NULL
+        LIMIT 1`,
+      { target_map_version_id: input.targetMapVersionId },
+    );
+    if (!targetMap) return { kind: "not_found" as const };
+
+    const childId = scenarioId("uscn");
+    const receiptId = scenarioId("uvtr");
+    const title = (input.title ?? `${source.title} Variation`).slice(0, 200);
+    await tx.execute(
+      `INSERT INTO simforge.documents (
+         id, workspace_id, title, schema_version, map_version_id, dataset_id,
+         created_by_user_id, updated_by_user_id, derivation_kind, derived_from_document_id,
+         derived_from_revision_id, derived_from_map_version_id, derived_by_user_id, derived_at
+       ) VALUES (
+         :id, :workspace_id, :title, :schema_version, :target_map_version_id, :dataset_id,
+         :user_id, :user_id, 'cross_map_variation', :source_document_id,
+         :source_revision_id, :source_map_version_id, :user_id, NOW()
+       )`,
+      {
+        id: childId,
+        workspace_id: context.workspaceId,
+        title,
+        schema_version: source.schemaVersion,
+        target_map_version_id: input.targetMapVersionId,
+        dataset_id: source.datasetId,
+        user_id: context.userId,
+        source_document_id: source.id,
+        source_revision_id: source.latestRevisionId,
+        source_map_version_id: source.mapVersionId,
+      },
+    );
+    await tx.execute(
+      `INSERT INTO simforge.drafts (
+         document_id, workspace_id, schema_version, canonical_content, content_sha256,
+         map_version_id, authoring_quality_id, updated_by_user_id
+       ) VALUES (
+         :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb), :content_sha256,
+         :target_map_version_id, :authoring_quality_id, :user_id
+       )`,
+      {
+        document_id: childId,
+        workspace_id: context.workspaceId,
+        schema_version: source.schemaVersion,
+        content: input.content,
+        content_sha256: canonicalContentSha256(input.content),
+        target_map_version_id: input.targetMapVersionId,
+        authoring_quality_id: source.authoringQualityId,
+        user_id: context.userId,
+      },
+    );
+    await tx.execute(
+      `INSERT INTO simforge.variation_transfers (
+         id, workspace_id, target_document_id, source_document_id, source_revision_id,
+         source_map_version_id, target_map_version_id, pattern_id, pattern_sha256, source_site_id,
+         target_site_id, permutation_key, verdict, acceptance, equivalence_score, topology_score,
+         role_binding_score, intent_preserved, issues, resume_token, source_topology_digest,
+         target_topology_digest, source_closure_digest, target_closure_digest, compiler_version,
+         matcher_version, solver_version, param_seed, draw_index, input_hash, replay_key,
+         replay_token, transfer_verdict, geometry_transfer, behavior_preservation,
+         behavior_metrics, required_checks_passed, identity_provenance, created_by_user_id
+       ) VALUES (
+         :id, :workspace_id, :target_document_id, :source_document_id, :source_revision_id,
+         :source_map_version_id, :target_map_version_id, :pattern_id, :pattern_sha256,
+         :source_site_id, :target_site_id, :permutation_key, :verdict, :acceptance,
+         :equivalence_score, :topology_score, :role_binding_score, :intent_preserved,
+         CAST(:issues AS jsonb), :resume_token, :source_topology_digest, :target_topology_digest,
+         :source_closure_digest, :target_closure_digest, :compiler_version, :matcher_version,
+         :solver_version, :param_seed, :draw_index, :input_hash, CAST(:replay_key AS jsonb),
+         :replay_token, :transfer_verdict, :geometry_transfer, :behavior_preservation,
+         CAST(:behavior_metrics AS jsonb), :required_checks_passed, :identity_provenance, :user_id
+       )`,
+      {
+        id: receiptId,
+        workspace_id: context.workspaceId,
+        target_document_id: childId,
+        source_document_id: source.id,
+        source_revision_id: source.latestRevisionId,
+        source_map_version_id: source.mapVersionId,
+        target_map_version_id: input.targetMapVersionId,
+        pattern_id: input.receipt.patternId,
+        pattern_sha256: input.receipt.patternSha256,
+        source_site_id: input.receipt.sourceSiteId,
+        target_site_id: input.receipt.targetSiteId,
+        permutation_key: input.receipt.permutationKey,
+        verdict: input.receipt.verdict,
+        acceptance: input.receipt.acceptance,
+        equivalence_score: input.receipt.equivalenceScore,
+        topology_score: input.receipt.topologyScore,
+        role_binding_score: input.receipt.roleBindingScore,
+        intent_preserved: input.receipt.intentPreserved,
+        issues: input.receipt.issues,
+        resume_token: input.receipt.resumeToken,
+        source_topology_digest: input.receipt.sourceTopologyDigest,
+        target_topology_digest: input.receipt.targetTopologyDigest,
+        source_closure_digest: input.receipt.sourceClosureDigest,
+        target_closure_digest: input.receipt.targetClosureDigest,
+        compiler_version: input.receipt.compilerVersion,
+        matcher_version: input.receipt.matcherVersion,
+        solver_version: input.receipt.solverVersion,
+        param_seed: input.receipt.paramSeed,
+        draw_index: input.receipt.drawIndex,
+        input_hash: input.receipt.inputHash,
+        replay_key: input.receipt.replayKey,
+        replay_token: input.receipt.replayToken,
+        transfer_verdict: input.receipt.transferVerdict,
+        geometry_transfer: input.receipt.geometryTransfer,
+        behavior_preservation: input.receipt.behaviorPreservation,
+        behavior_metrics: input.receipt.behaviorMetrics,
+        required_checks_passed: input.receipt.requiredChecksPassed,
+        identity_provenance: input.receipt.identityProvenance,
+        user_id: context.userId,
+      },
+    );
+
+    const documentRow = await tx.queryOne<DocumentRow>(
+      `${DOCUMENT_SELECT} WHERE d.workspace_id = :workspace_id AND d.id = :document_id`,
+      { workspace_id: context.workspaceId, document_id: childId },
+    );
+    const receiptRow = await tx.queryOne<VariationTransferRow>(
+      `${VARIATION_TRANSFER_SELECT}
+       WHERE workspace_id = :workspace_id AND target_document_id = :target_document_id
+       LIMIT 1`,
+      { workspace_id: context.workspaceId, target_document_id: childId },
+    );
+    if (!documentRow || !receiptRow) {
+      throw new Error("Cross-map scenario creation did not return its document and receipt.");
+    }
+    return {
+      kind: "created" as const,
+      document: documentDto(documentRow),
+      receipt: variationTransferReceipt(receiptRow),
+    };
+  });
+}
+
+/** Return the transfer receipt for a promoted child, or null for a non-transfer document. */
+export async function getVariationTransferReceipt(
+  context: AppContext,
+  targetDocumentId: string,
+): Promise<VariationTransferReceipt | null> {
+  const row = await queryOne<VariationTransferRow>(
+    `${VARIATION_TRANSFER_SELECT}
+     WHERE workspace_id = :workspace_id AND target_document_id = :target_document_id
+     LIMIT 1`,
+    { workspace_id: context.workspaceId, target_document_id: targetDocumentId },
+  );
+  return row ? variationTransferReceipt(row) : null;
+}
+
 export async function getScenarioDocument(context: AppContext, documentId: string) {
   const rows = await queryRows<DocumentRow>(
     `${DOCUMENT_SELECT}
