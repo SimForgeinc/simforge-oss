@@ -515,6 +515,30 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
           if (interaction.target.mode === 'customTimedRoute') {
             validateTimedRoute(interaction.target.points, joinPath(base, 'target'), out);
           }
+        } else if (interaction.target.mode === 'timedPolyline') {
+          validateTimedRoute(interaction.target.points, joinPath(base, 'target'), out);
+        } else if (interaction.target.mode === 'actorPolyline') {
+          // Only the timed reading has an ordering to break: an untimed
+          // actor-anchored route is a path, exactly like `polyline`. A mix is
+          // refused rather than guessed at — a route is either time-driven or
+          // it is not, and honouring half a timeline would silently change
+          // what the actor obeys.
+          const points = interaction.target.points;
+          const timed = points.filter((point) => point.timeS !== undefined);
+          if (timed.length > 0 && timed.length !== points.length) {
+            out.push(issue(
+              'error',
+              'route_disconnected',
+              joinPath(base, 'target', 'points'),
+              'an actor-anchored route must be either fully timed or fully untimed',
+            ));
+          } else if (timed.length === points.length) {
+            validateTimedRoute(
+              points as readonly { timeS: number }[],
+              joinPath(base, 'target'),
+              out,
+            );
+          }
         } else if (interaction.target.mode === 'manualDrive') {
           const actor = roles.get(interaction.actor);
           if (!actor || actor.kind !== 'scene_absolute' || !template.anchor.pin) {

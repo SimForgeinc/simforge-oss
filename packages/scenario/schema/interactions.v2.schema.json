@@ -24,10 +24,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -160,10 +160,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -219,10 +219,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -291,10 +291,10 @@
               "$ref": "#/$defs/Dynamics"
             },
             "maneuverDurationS": {
-              "$ref": "#/$defs/__schema17"
+              "$ref": "#/$defs/__schema20"
             },
             "maneuverStyle": {
-              "$ref": "#/$defs/__schema18"
+              "$ref": "#/$defs/__schema21"
             }
           },
           "required": [
@@ -319,10 +319,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -353,10 +353,10 @@
               "$ref": "#/$defs/Dynamics"
             },
             "maneuverDurationS": {
-              "$ref": "#/$defs/__schema17"
+              "$ref": "#/$defs/__schema20"
             },
             "maneuverStyle": {
-              "$ref": "#/$defs/__schema18"
+              "$ref": "#/$defs/__schema21"
             }
           },
           "required": [
@@ -381,10 +381,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -496,11 +496,70 @@
                     },
                     "points": {
                       "minItems": 2,
-                      "maxItems": 32,
+                      "maxItems": 128,
                       "type": "array",
                       "items": {
                         "$ref": "#/$defs/FramePose"
                       }
+                    },
+                    "joinFromCurrentPose": {
+                      "type": "boolean"
+                    },
+                    "bestEffortWorldPath": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "points"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "timedPolyline"
+                    },
+                    "points": {
+                      "minItems": 1,
+                      "maxItems": 1024,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema22"
+                      }
+                    },
+                    "bestEffortWorldPath": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "points"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "actorPolyline"
+                    },
+                    "points": {
+                      "minItems": 1,
+                      "maxItems": 1024,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema23"
+                      }
+                    },
+                    "joinFromCurrentPose": {
+                      "type": "boolean"
+                    },
+                    "bestEffortWorldPath": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -521,7 +580,7 @@
                       "maxItems": 128,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema19"
+                        "$ref": "#/$defs/__schema24"
                       }
                     }
                   },
@@ -543,7 +602,7 @@
                       "maxItems": 128,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema20"
+                        "$ref": "#/$defs/__schema25"
                       }
                     }
                   },
@@ -565,7 +624,7 @@
                       "maxItems": 1024,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema21"
+                        "$ref": "#/$defs/__schema26"
                       }
                     }
                   },
@@ -598,7 +657,7 @@
                           "maxItems": 6001,
                           "type": "array",
                           "items": {
-                            "$ref": "#/$defs/__schema22"
+                            "$ref": "#/$defs/__schema27"
                           }
                         }
                       },
@@ -696,10 +755,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -744,10 +803,10 @@
               "$ref": "#/$defs/Trigger"
             },
             "until": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema18"
             },
             "label": {
-              "$ref": "#/$defs/__schema16"
+              "$ref": "#/$defs/__schema19"
             },
             "verb": {
               "type": "string",
@@ -892,7 +951,7 @@
           "type": "object",
           "properties": {
             "kind": {
-              "$ref": "#/$defs/__schema12"
+              "$ref": "#/$defs/__schema15"
             },
             "of": {
               "$ref": "#/$defs/__schema3"
@@ -904,10 +963,10 @@
               "$ref": "#/$defs/__schema3"
             },
             "ttc": {
-              "$ref": "#/$defs/__schema13"
+              "$ref": "#/$defs/__schema16"
             },
             "deltaT": {
-              "$ref": "#/$defs/__schema14"
+              "$ref": "#/$defs/__schema17"
             }
           },
           "required": [
@@ -1165,7 +1224,7 @@
               ]
             },
             "op": {
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema14"
             },
             "valueM": {
               "$ref": "#/$defs/NumberOrExpr"
@@ -1197,7 +1256,7 @@
               "$ref": "#/$defs/__schema3"
             },
             "op": {
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema14"
             },
             "valueS": {
               "$ref": "#/$defs/NumberOrExpr"
@@ -1226,7 +1285,7 @@
               "$ref": "#/$defs/__schema3"
             },
             "op": {
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema14"
             },
             "valueS": {
               "$ref": "#/$defs/NumberOrExpr"
@@ -1276,7 +1335,7 @@
               "$ref": "#/$defs/__schema3"
             },
             "op": {
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema14"
             },
             "valueKph": {
               "$ref": "#/$defs/NumberOrExpr"
@@ -1555,31 +1614,16 @@
       "type": "object",
       "properties": {
         "laneOffset": {
-          "default": 0,
-          "type": "integer",
-          "minimum": -8,
-          "maximum": 8
+          "$ref": "#/$defs/__schema11"
         },
         "s": {
           "$ref": "#/$defs/NumberOrExpr"
         },
         "tFrac": {
-          "anyOf": [
-            {
-              "type": "number",
-              "minimum": -1,
-              "maximum": 1
-            },
-            {
-              "$ref": "#/$defs/__schema4"
-            }
-          ]
+          "$ref": "#/$defs/__schema12"
         },
         "headingOffsetRad": {
-          "default": 0,
-          "type": "number",
-          "minimum": -3.141592653589793,
-          "maximum": 3.141592653589793
+          "$ref": "#/$defs/__schema13"
         }
       },
       "required": [
@@ -1588,6 +1632,30 @@
       "additionalProperties": false
     },
     "__schema11": {
+      "default": 0,
+      "type": "integer",
+      "minimum": -8,
+      "maximum": 8
+    },
+    "__schema12": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        {
+          "$ref": "#/$defs/__schema4"
+        }
+      ]
+    },
+    "__schema13": {
+      "default": 0,
+      "type": "number",
+      "minimum": -3.141592653589793,
+      "maximum": 3.141592653589793
+    },
+    "__schema14": {
       "type": "string",
       "enum": [
         "<",
@@ -1596,20 +1664,20 @@
         ">="
       ]
     },
-    "__schema12": {
+    "__schema15": {
       "type": "string",
       "const": "arrival"
     },
-    "__schema13": {
+    "__schema16": {
       "$ref": "#/$defs/NumberOrExpr"
     },
-    "__schema14": {
+    "__schema17": {
       "$ref": "#/$defs/NumberOrExpr"
     },
-    "__schema15": {
+    "__schema18": {
       "$ref": "#/$defs/Trigger"
     },
-    "__schema16": {
+    "__schema19": {
       "type": "string",
       "maxLength": 200
     },
@@ -1644,10 +1712,10 @@
       ],
       "additionalProperties": false
     },
-    "__schema17": {
+    "__schema20": {
       "$ref": "#/$defs/NumberOrExpr"
     },
-    "__schema18": {
+    "__schema21": {
       "type": "string",
       "enum": [
         "cautious",
@@ -1655,11 +1723,57 @@
         "assertive"
       ]
     },
-    "__schema19": {
+    "__schema22": {
+      "type": "object",
+      "properties": {
+        "laneOffset": {
+          "$ref": "#/$defs/__schema11"
+        },
+        "s": {
+          "$ref": "#/$defs/NumberOrExpr"
+        },
+        "tFrac": {
+          "$ref": "#/$defs/__schema12"
+        },
+        "headingOffsetRad": {
+          "$ref": "#/$defs/__schema13"
+        },
+        "timeS": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "s",
+        "timeS"
+      ],
+      "additionalProperties": false
+    },
+    "__schema23": {
+      "type": "object",
+      "properties": {
+        "alongM": {
+          "type": "number"
+        },
+        "acrossM": {
+          "type": "number"
+        },
+        "timeS": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "alongM",
+        "acrossM"
+      ],
+      "additionalProperties": false
+    },
+    "__schema24": {
       "type": "string",
       "minLength": 1
     },
-    "__schema20": {
+    "__schema25": {
       "type": "object",
       "properties": {
         "x": {
@@ -1675,7 +1789,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema21": {
+    "__schema26": {
       "type": "object",
       "properties": {
         "timeS": {
@@ -1696,7 +1810,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema22": {
+    "__schema27": {
       "type": "object",
       "properties": {
         "timeS": {
