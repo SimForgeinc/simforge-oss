@@ -523,3 +523,50 @@ pub fn build_corridor_frame(
         runway_downstream_m: downstream.length_m + entry_lane.length_m,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::map_index::Handedness;
+
+    #[test]
+    fn corridor_frame_pins_station_orientation_and_right_handedness() {
+        let index = crate::test_support::index(Handedness::Right);
+        let frame = crate::test_support::frame(&index);
+        assert_eq!(frame.origin.kind, OriginKind::Corridor);
+        assert_eq!(frame.entry_lane_rsl, "main");
+        assert_eq!(frame.handedness, Handedness::Right);
+        assert!(!frame.mirrored);
+        assert_eq!(frame.s_range, (0.0, 180.0));
+        assert_eq!(frame.s_of_lane["main"], 0.0);
+        assert_eq!(frame.s_of_lane["next"], 100.0);
+        assert_eq!(
+            frame.reference_path.iter().map(|span| (span.lane_rsl.as_str(), span.s_start, span.s_end)).collect::<Vec<_>>(),
+            [("main", 0.0, 100.0), ("next", 100.0, 180.0)]
+        );
+    }
+
+    #[test]
+    fn corridor_frame_preserves_left_handed_map_and_mirror_flag_without_flipping_map_space() {
+        let index = crate::test_support::index(Handedness::Left);
+        let segment = index.segments.iter().find(|segment| segment.lane_rsls[0] == "main").unwrap();
+        let frame = build_corridor_frame(&index, &segment.id, &CorridorFrameOptions {
+            anchor_feature_id: "origin".into(),
+            runway_downstream_m: Some(150.0),
+            mirrored: true,
+        }).unwrap();
+        assert_eq!(frame.handedness, Handedness::Left);
+        assert!(frame.mirrored);
+        assert_eq!(frame.entry_lane_rsl, "main");
+        assert_eq!(frame.s_of_lane["next"], 100.0);
+    }
+
+    #[test]
+    fn enumerate_chains_marks_geometrically_disconnected_declared_link() {
+        let mut index = crate::test_support::index(Handedness::Right);
+        index.lanes.get_mut("next").unwrap().polyline[0].y = 20.0;
+        let chains = enumerate_chains(&index, "main", 50.0, WalkDir::Forward, 1);
+        assert_eq!(chains[0].lanes, ["next"]);
+        assert_eq!(chains[0].contiguous, [false]);
+    }
+}

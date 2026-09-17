@@ -918,3 +918,156 @@ pub fn bind_roles(
     enforce_local_role_semantics(index, frame, roles, &mut out);
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::anchor::{MCrossingDirection, MLaneDropLane, MParkingSide};
+    use crate::map_index::Handedness;
+    use crate::template::{Essentiality, TurnDirection};
+
+    fn role(name: &str, kind: MRoleKind) -> MRole {
+        MRole {
+            role: name.into(),
+            essentiality: Essentiality::Required,
+            required_same_segment_as: None,
+            required_same_road_section_as: None,
+            required_heading_relation: None,
+            kind,
+        }
+    }
+
+    #[test]
+    fn bind_roles_pins_reference_offset_relative_success_and_lane_refusals() {
+        let index = crate::test_support::index(Handedness::Right);
+        let mut frame = crate::test_support::frame(&index);
+        frame.lateral_lanes = BTreeMap::from([(0, "main".into()), (1, "left".into())]);
+        let roles = vec![
+            role("ego", MRoleKind::OnReference { ds_m: 20.0, t_frac: 0.1 }),
+            role("left", MRoleKind::LaneOffset { k: 1, on_missing: OnMissing::Fail, ds_m: 20.0, t_frac: -0.2 }),
+            role("clamp", MRoleKind::LaneOffset { k: 4, on_missing: OnMissing::Clamp, ds_m: 20.0, t_frac: 0.0 }),
+            role("drop", MRoleKind::LaneOffset { k: -3, on_missing: OnMissing::Drop, ds_m: 20.0, t_frac: 0.0 }),
+            role("fail", MRoleKind::LaneOffset { k: -3, on_missing: OnMissing::Fail, ds_m: 20.0, t_frac: 0.0 }),
+            role("relative", MRoleKind::RelativeTo { r#ref: "ego".into(), d_lane: 1, on_missing: OnMissing::Fail, ds_m: 7.0, t_frac: None }),
+            role("missing-ref", MRoleKind::RelativeTo { r#ref: "later".into(), d_lane: 0, on_missing: OnMissing::Fail, ds_m: 0.0, t_frac: None }),
+            role("outside", MRoleKind::OnReference { ds_m: 999.0, t_frac: 0.0 }),
+        ];
+        let bindings = bind_roles(&index, &frame, &roles, &BTreeMap::new());
+        let status: Vec<BindingStatus> = bindings.iter().map(|binding| binding.status).collect();
+        assert_eq!(status, [
+            BindingStatus::Bound, BindingStatus::Bound, BindingStatus::Clamped,
+            BindingStatus::Dropped, BindingStatus::Failed, BindingStatus::Bound,
+            BindingStatus::Failed, BindingStatus::Failed
+        ]);
+        assert_eq!(bindings[0].lane_rsl.as_deref(), Some("main"));
+        assert_eq!(bindings[2].pose.unwrap().k, 1);
+        assert_eq!(bindings[5].pose.unwrap(), SitePose { k: 1, s: 27.0, t_frac: 0.1, heading_offset_rad: 0.0 });
+        assert_eq!(bindings[6].notes, ["reference role \"later\" is not bound"]);
+        assert_eq!(bindings[7].notes, ["s=999 m is outside the reference path"]);
+    }
+
+    #[test]
+    fn bind_roles_pins_feature_layer_refusals() {
+        let mut index = crate::test_support::index(Handedness::Right);
+        index.capabilities.crossings = false;
+        index.capabilities.parking_zones = false;
+        let frame = crate::test_support::frame(&index);
+        let roles = vec![
+            role("cross", MRoleKind::OnCrossing { feature: "crossing".into(), start_frac: 0.5, direction: MCrossingDirection::LeftToRight }),
+            role("park", MRoleKind::InParkingZone { feature: "parking".into(), side: MParkingSide::Right, slot_index: 0 }),
+            role("drop", MRoleKind::AtLaneDrop { feature: "taper".into(), lane: MLaneDropLane::Terminating, ds_m: 0.0, t_frac: 0.0 }),
+        ];
+        let bindings = bind_roles(&index, &frame, &roles, &BTreeMap::new());
+        assert!(bindings.iter().all(|binding| binding.status == BindingStatus::Failed));
+        assert_eq!(bindings[0].notes, ["this map index carries no crossing layer, so a pedestrian cannot be placed on a crossing"]);
+        assert_eq!(bindings[1].notes, ["this map index carries no parking-zone layer"]);
+        assert_eq!(bindings[2].notes, ["feature \"taper\" has no exact lane_drop:<terminating-rsl> identity"]);
+    }
+
+    #[test]
+    fn bind_conflicting_gate_pins_missing_feature_and_missing_ego_gate_refusals() {
+        let index = crate::test_support::index(Handedness::Right);
+        let frame = crate::test_support::frame(&index);
+        let gate = role("gate", MRoleKind::ConflictingGate {
+            feature: "jx".into(),
+            from: ApproachRelation::FromLeft,
+            turn: TurnDirection::Straight,
+            template_crossing_angle_deg: Some(90.0),
+            arrive_at_conflict: None,
+            min_upstream_runway_m: None,
+        });
+        let absent = bind_roles(&index, &frame, std::slice::from_ref(&gate), &BTreeMap::new());
+        assert_eq!(absent[0].notes, ["role references feature \"jx\", which did not bind to a junction"]);
+        let matches = BTreeMap::from([("jx".into(), FeatureMatch {
+            map_feature_id: "junction:missing".into(),
+            s: 0.0,
+            kind: super::super::MFeatureKind::Junction,
+        })]);
+        let missing_gate = bind_roles(&index, &frame, &[gate], &matches);
+        assert_eq!(missing_gate[0].notes, ["no ego gate through junction missing"]);
+    }
+
+    #[test]
+    fn bind_roles_pins_opposing_lane_refusal() {
+        let index = crate::test_support::index(Handedness::Right);
+        let mut frame = crate::test_support::frame(&index);
+        frame.opposing_lanes.clear();
+        let bindings = bind_roles(
+            &index,
+            &frame,
+            &[role("opposing", MRoleKind::Opposing { index: 0, ds_m: 0.0, t_frac: 0.0 })],
+            &BTreeMap::new(),
+        );
+        assert_eq!(bindings[0].status, BindingStatus::Failed);
+        assert_eq!(bindings[0].notes, ["no opposing lane #0 at this site"]);
+    }
+
+    #[test]
+    fn bind_roles_pins_empty_clamp_and_local_constraint_refusals() {
+        let index = crate::test_support::index(Handedness::Right);
+        let mut frame = crate::test_support::frame(&index);
+        frame.lateral_lanes.clear();
+        let mut same_segment = role(
+            "same-segment",
+            MRoleKind::OnReference { ds_m: 10.0, t_frac: 0.0 },
+        );
+        same_segment.required_same_segment_as = Some("absent".into());
+        let mut same_section = role(
+            "same-section",
+            MRoleKind::OnReference { ds_m: 10.0, t_frac: 0.0 },
+        );
+        same_section.required_same_road_section_as = Some("absent".into());
+        let mut heading = role(
+            "heading",
+            MRoleKind::OnReference { ds_m: 10.0, t_frac: 0.0 },
+        );
+        heading.required_heading_relation = Some(super::super::MHeadingRelation {
+            role: "absent".into(),
+            relation: HeadingRelationKind::Parallel,
+            max_error_deg: 5.0,
+        });
+        let bindings = bind_roles(
+            &index,
+            &frame,
+            &[
+                role("clamp", MRoleKind::LaneOffset {
+                    k: 2,
+                    on_missing: OnMissing::Clamp,
+                    ds_m: 10.0,
+                    t_frac: 0.0,
+                }),
+                same_segment,
+                same_section,
+                heading,
+            ],
+            &BTreeMap::new(),
+        );
+        assert!(bindings.iter().all(|binding| binding.status == BindingStatus::Failed));
+        assert_eq!(bindings[0].notes, ["no same-direction lanes to clamp to"]);
+        assert!(bindings[1].notes[0].starts_with("requires same local segment as absent"));
+        assert!(bindings[2].notes[0].starts_with("requires same road section as absent"));
+        assert_eq!(bindings[3].notes, ["cannot resolve local heading relative to absent"]);
+    }
+}

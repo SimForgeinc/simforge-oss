@@ -4731,3 +4731,204 @@ impl<'a> Materializer<'a> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use serde_json::json;
+    use simforge_core::types::{
+        ActorBehavior, ActorInitial, ActorKind, ActorRules, Dims, LaneRef, Pose, RouteSpec,
+        SimActor,
+    };
+
+    use super::*;
+    use crate::anchor::{FeatureMatch, MFeatureKind};
+
+    fn template() -> ScenarioTemplate {
+        serde_json::from_str(include_str!(
+            "../../../../../examples/mechanisms/obstacle/curve-loss-control.template.json"
+        ))
+        .unwrap()
+    }
+
+    fn draw() -> ParamDraw {
+        ParamDraw {
+            values: BTreeMap::new(),
+            categorical: BTreeMap::new(),
+            param_seed: "fixture".into(),
+            rejected_constraints: vec![],
+        }
+    }
+
+    fn actor(id: &str, lane_bound: bool, lane_path: bool) -> SimActor {
+        SimActor {
+            id: id.into(),
+            kind: ActorKind::Car,
+            dims: Dims { l: 4.0, w: 2.0, h: 1.5 },
+            initial: ActorInitial {
+                lane_ref: lane_bound.then(|| LaneRef { rsl: "main".into(), s: 10.0, t_frac: 0.0 }),
+                pose: Pose { x: 10.0, z: 20.0, heading_rad: std::f64::consts::FRAC_PI_2 },
+                speed_mps: 5.0,
+            },
+            behavior: ActorBehavior {
+                rules: ActorRules::default(),
+                route: if lane_path {
+                    RouteSpec::LanePath { lanes: vec!["main".into()] }
+                } else {
+                    RouteSpec::Polyline { points: vec![], stop_controls: vec![] }
+                },
+                driving_profile: None,
+                cruise_speed_mps: None,
+            },
+            present_at_start: true,
+            is_static: false,
+            tags: vec![],
+            sensors: None,
+        }
+    }
+
+    fn interaction(actor: &str, target: Value) -> t::Interaction {
+        serde_json::from_value(json!({
+            "id": "route-action",
+            "actor": actor,
+            "verb": "route",
+            "trigger": { "kind": "at", "t": 0 },
+            "target": target
+        }))
+        .unwrap()
+    }
+
+    fn with_materializer(test: impl FnOnce(&mut Materializer<'_>)) {
+        let template = template();
+        let topology = crate::test_support::topology();
+        let bundle = MapBundle::from_topology("anchor-characterization", topology).unwrap();
+        let site = crate::test_support::site(bundle.index());
+        let options = MaterializeOptions::default();
+        let mut materializer = Materializer::new(&template, &bundle, &site, draw(), &options);
+        test(&mut materializer);
+    }
+
+    #[test]
+    fn relative_parallel_route_pins_extension_offsets_length_and_ds() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            let role = materializer.template.role("road-edge").unwrap();
+            let route = materializer
+                .relative_parallel_route_for(role, &ExprScope::default(), "roles.road-edge")
+                .unwrap()
+                .unwrap();
+            assert_eq!(route.length_m(), 60.0);
+            let start = route.pose_at(0.0);
+            let end = route.pose_at(route.length_m());
+            assert!((start.point.x - 7.2).abs() < 1e-12);
+            assert!((start.point.y - 125.0).abs() < 1e-12);
+            assert!((end.point.x - 7.2).abs() < 1e-12);
+            assert!((end.point.y - 185.0).abs() < 1e-12);
+            assert_eq!(materializer.notes.len(), 1);
+            assert_eq!(materializer.notes[0].path, "roles.road-edge.extensions.pathSemantics");
+        });
+    }
+
+    #[test]
+    fn relative_parallel_route_pins_route_backed_sampling_and_endpoint_extrapolation() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            materializer.route_by_role.insert(
+                "ego".into(),
+                Route::from_polyline([
+                    Vec2 { x: 0.0, y: 0.0 },
+                    Vec2 { x: 50.0, y: 0.0 },
+                ]),
+            );
+            materializer.spawn_s_by_role.insert("ego".into(), 10.0);
+            let role = materializer.template.role("road-edge").unwrap();
+            let route = materializer
+                .relative_parallel_route_for(role, &ExprScope::default(), "roles.road-edge")
+                .unwrap()
+                .unwrap();
+            assert_eq!(route.length_m(), 60.0);
+            let start = route.pose_at(0.0);
+            let end = route.pose_at(route.length_m());
+            assert!((start.point.x - 155.0).abs() < 1e-12);
+            assert!((start.point.y + 17.2).abs() < 1e-12);
+            assert!((end.point.x - 215.0).abs() < 1e-12);
+            assert!((end.point.y + 17.2).abs() < 1e-12);
+        });
+    }
+
+    #[test]
+    fn next_junction_route_refuses_an_unmaterialized_actor_at_first_emission_site() {
+        with_materializer(|materializer| {
+            let interaction = interaction("missing", json!({ "mode": "nextJunction", "turn": "left" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.0").unwrap_err();
+            assert_eq!((error.code.as_str(), error.path.as_deref(), error.reason.as_str()), (
+                "route_turn_unbindable",
+                Some("choreography.interactions.0.target"),
+                "next-junction route for \"missing\" needs a lane-bound actor",
+            ));
+        });
+    }
+
+    #[test]
+    fn next_junction_route_refuses_a_world_only_actor_at_second_emission_site() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, true));
+            let interaction = interaction("ego", json!({ "mode": "nextJunction", "turn": "right" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.1").unwrap_err();
+            assert_eq!(error.code, "route_turn_unbindable");
+            assert_eq!(error.reason, "next-junction route for \"ego\" needs a lane-bound actor");
+        });
+    }
+
+    #[test]
+    fn feature_turn_refuses_an_unmatched_feature_at_third_emission_site() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", true, true));
+            let interaction = interaction("ego", json!({ "mode": "turn", "feature": "jx", "turn": "left" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.2").unwrap_err();
+            assert_eq!(error.code, "route_turn_unbindable");
+            assert_eq!(error.reason, "turn route for \"ego\" is not backed by a concrete lane path");
+            assert_eq!(error.detail.as_ref().unwrap()["feature"], "jx");
+            assert_eq!(error.detail.as_ref().unwrap()["turn"], "left");
+        });
+    }
+
+    #[test]
+    fn feature_turn_refuses_a_non_lane_path_at_fourth_emission_site() {
+        let template = template();
+        let topology = crate::test_support::topology();
+        let bundle = MapBundle::from_topology("anchor-characterization", topology).unwrap();
+        let mut site = crate::test_support::site(bundle.index());
+        site.feature_matches.insert("jx".into(), FeatureMatch {
+            map_feature_id: "junction:fixture".into(),
+            s: 0.0,
+            kind: MFeatureKind::Junction,
+        });
+        let options = MaterializeOptions::default();
+        let mut materializer = Materializer::new(&template, &bundle, &site, draw(), &options);
+        materializer.actors.push(actor("ego", true, false));
+        let interaction = interaction("ego", json!({ "mode": "turn", "feature": "jx", "turn": "left" }));
+        let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+        let error = materializer
+            .build_route_verb(
+                &interaction,
+                target,
+                &ExprScope::default(),
+                "choreography.interactions.3",
+            )
+            .unwrap_err();
+        assert_eq!(error.code, "route_turn_unbindable");
+        assert_eq!(
+            error.reason,
+            "turn route for \"ego\" is not backed by a concrete lane path"
+        );
+        assert_eq!(
+            error.path.as_deref(),
+            Some("choreography.interactions.3.target")
+        );
+    }
+}

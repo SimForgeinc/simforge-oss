@@ -667,3 +667,142 @@ pub fn adapt_template(template: &ScenarioTemplate) -> AdaptedAnchor {
         notes,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{json, Value};
+
+    use super::*;
+    use crate::template::ScenarioTemplate;
+
+    fn template_value() -> Value {
+        serde_json::from_str(include_str!("../../../../../examples/ltap-opposing.template.json"))
+            .unwrap()
+    }
+
+    fn template_with_roles(roles: Vec<Value>) -> ScenarioTemplate {
+        let mut value = template_value();
+        value["roles"] = Value::Array(roles);
+        serde_json::from_value(value).unwrap()
+    }
+
+    fn base(id: &str, kind: &str) -> serde_json::Map<String, Value> {
+        json!({
+            "id": id,
+            "kind": kind,
+            "actor": { "class": "car" },
+            "essentiality": "required"
+        })
+        .as_object()
+        .unwrap()
+        .clone()
+    }
+
+    fn pose() -> Value {
+        json!({ "laneOffset": 0, "s": 12, "tFrac": 0.25, "headingOffsetRad": 0 })
+    }
+
+    #[test]
+    fn adapt_template_pins_map_bound_notes_and_clause_set() {
+        let mut value = template_value();
+        value["anchor"]["pin"] = json!({ "mapId": "source-map" });
+        value["roles"].as_array_mut().unwrap().push(json!({
+            "id": "authored",
+            "kind": "scene_absolute",
+            "actor": { "class": "car" },
+            "essentiality": "required",
+            "pose": { "position": { "x": 1, "y": 0, "z": 2 }, "headingRad": 0 }
+        }));
+        let template: ScenarioTemplate = serde_json::from_value(value).unwrap();
+
+        let adapted = adapt_template(&template);
+        let paths: Vec<&str> = adapted.notes.iter().map(|note| note.path.as_str()).collect();
+        let codes: Vec<Option<&str>> = adapted.notes.iter().map(|note| note.code).collect();
+        assert_eq!(paths, ["anchor.pin", "roles.authored"]);
+        assert_eq!(codes, [None, None]);
+        assert_eq!(adapted.roles.len(), 2);
+        assert!(adapted.roles.iter().all(|role| role.role != "authored"));
+        let corridor = adapted.anchor.corridor.unwrap();
+        assert_eq!(corridor.through_lanes_same_dir.unwrap().value, (2.0, 4.0));
+        assert_eq!(corridor.through_lanes_opposing.unwrap().value, (1.0, 4.0));
+        assert_eq!(corridor.speed_limit_kph.unwrap().value, (30.0, 80.0));
+        assert_eq!(corridor.runway_upstream_m.unwrap().value, 118.0);
+        assert_eq!(corridor.runway_downstream_m.unwrap().value, 80.0);
+        let feature = &adapted.anchor.features[0];
+        assert_eq!(feature.kind, MFeatureKind::Junction);
+        assert_eq!(feature.at_m.value, (0.0, 0.0));
+        assert_eq!(
+            feature.junction.as_ref().unwrap().ego_turn.as_ref().unwrap().value,
+            crate::template::TurnDirection::Left
+        );
+    }
+
+    #[test]
+    fn adapt_role_pins_every_authored_placement_variant() {
+        let mut roles = Vec::new();
+        let mut on_ref = base("on-ref", "on_reference");
+        on_ref.insert("pose".into(), pose());
+        roles.push(Value::Object(on_ref));
+        let mut offset = base("offset", "lane_offset");
+        offset.extend([("k".into(), json!(2)), ("onMissing".into(), json!("clamp")), ("pose".into(), pose())]);
+        roles.push(Value::Object(offset));
+        let mut drop = base("drop", "at_lane_drop");
+        drop.extend([("feature".into(), json!("jx")), ("lane".into(), json!("terminating")), ("pose".into(), pose())]);
+        roles.push(Value::Object(drop));
+        let mut opposing = base("opposing", "opposing");
+        opposing.extend([("k".into(), json!(-3)), ("pose".into(), json!({ "laneOffset": 2, "s": 12, "tFrac": 0.25, "headingOffsetRad": 0 }))]);
+        roles.push(Value::Object(opposing));
+        let mut gate = base("gate", "conflicting_gate");
+        gate.extend([("feature".into(), json!("jx")), ("from".into(), json!("opposing")), ("turn".into(), json!("straight"))]);
+        roles.push(Value::Object(gate));
+        let mut crossing = base("crossing", "on_crossing");
+        crossing.extend([("feature".into(), json!("cross")), ("startFrac".into(), json!(0.2)), ("direction".into(), json!("far_to_near"))]);
+        roles.push(Value::Object(crossing));
+        let mut parking = base("parking", "in_parking_zone");
+        parking.extend([("feature".into(), json!("park")), ("slot".into(), json!("last"))]);
+        roles.push(Value::Object(parking));
+        let mut relative = base("relative", "relative_to");
+        relative.extend([("ref".into(), json!("on-ref")), ("dLane".into(), json!(-1)), ("dsM".into(), json!(7)), ("tFrac".into(), json!(-0.5))]);
+        roles.push(Value::Object(relative));
+        let mut absolute = base("absolute", "scene_absolute");
+        absolute.insert("pose".into(), json!({ "position": { "x": 1, "y": 0, "z": 2 }, "headingRad": 0 }));
+        roles.push(Value::Object(absolute));
+
+        let template = template_with_roles(roles);
+        let adapted = adapt_template(&template);
+        let names: Vec<&str> = adapted.roles.iter().map(|role| role.kind.name()).collect();
+        assert_eq!(names, [
+            "on_reference", "lane_offset", "at_lane_drop", "opposing",
+            "conflicting_gate", "on_crossing", "in_parking_zone", "relative_to"
+        ]);
+        assert!(matches!(adapted.roles[1].kind, MRoleKind::LaneOffset { k: 2, on_missing: crate::template::OnMissing::Clamp, ds_m: 12.0, t_frac: 0.25 }));
+        assert!(matches!(adapted.roles[3].kind, MRoleKind::Opposing { index: 0, .. }));
+        assert!(matches!(adapted.roles[5].kind, MRoleKind::OnCrossing { direction: MCrossingDirection::RightToLeft, .. }));
+        assert!(matches!(adapted.roles[7].kind, MRoleKind::RelativeTo { d_lane: -1, on_missing: crate::template::OnMissing::Fail, ds_m: 7.0, t_frac: Some(-0.5), .. }));
+        assert!(adapted.notes.iter().any(|note| note.path == "roles.absolute"));
+        assert!(adapted.notes.iter().any(|note| note.path == "roles.opposing.pose.laneOffset"));
+        assert!(adapted.notes.iter().any(|note| note.path == "roles.parking.slot"));
+    }
+
+    #[test]
+    fn adapt_feature_pins_supported_and_unmatchable_kinds() {
+        let mut value = template_value();
+        value["anchor"]["features"] = json!([
+            { "id": "jx", "kind": "junction", "essentiality": "required" },
+            { "id": "cross", "kind": "crossing", "essentiality": "required", "marked": { "value": true, "essentiality": "preferred" } },
+            { "id": "park", "kind": "parking_zone", "essentiality": "required", "orientation": { "value": "parallel", "essentiality": "preferred" } },
+            { "id": "merge", "kind": "merge", "essentiality": "required" },
+            { "id": "curve", "kind": "curve", "essentiality": "required" }
+        ]);
+        value["roles"] = json!([]);
+        let template: ScenarioTemplate = serde_json::from_value(value).unwrap();
+        let adapted = adapt_template(&template);
+        let kinds: Vec<MFeatureKind> = adapted.anchor.features.iter().map(|feature| feature.kind).collect();
+        assert_eq!(kinds, [MFeatureKind::Junction, MFeatureKind::Crossing, MFeatureKind::ParkingZone, MFeatureKind::Merge]);
+        assert_eq!(adapted.anchor.features[0].at_m.value, (0.0, 0.0));
+        assert_eq!(adapted.anchor.features[1].at_m.value, (-OPEN_END_M, OPEN_END_M));
+        let dropped = adapted.notes.iter().find(|note| note.path == "anchor.features.curve").unwrap();
+        assert_eq!(dropped.code, Some(CLAUSE_UNMATCHABLE));
+        assert_eq!(dropped.severity, AdaptSeverity::Error);
+    }
+}

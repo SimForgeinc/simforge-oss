@@ -38,6 +38,8 @@ pub mod signal_plan;
 pub mod sites;
 pub mod situation;
 pub mod template;
+#[cfg(test)]
+mod test_support;
 
 pub use ambient::{
     apply_ambient_traffic, prune_dangling_after_interactions, resolve_ambient_traffic_profile,
