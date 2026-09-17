@@ -50,6 +50,7 @@ export type CloudConnectionErrorCode =
   | "cloud_disconnected"
   | "cloud_session_expired"
   | "cloud_unreachable"
+  | "cloud_desktop_api_missing"
   | "cloud_invalid_path"
   | "cloud_invalid_origin"
   | "cloud_invalid_response"
@@ -430,12 +431,28 @@ async function sendAuthRequest(url: URL, init: AuthRequestOptions, token: string
   }
 }
 
-/** A non-2xx native API answer, in the contract's `{error, error_description}` shape. */
-async function authResponseError(response: Response): Promise<CloudConnectionError> {
+/**
+ * A non-2xx native API answer, in the contract's `{error, error_description}`
+ * shape. A 404 that carries no native error is the one answer that is not
+ * about the request at all: the configured origin serves no `/api/desktop/**`
+ * surface, so every account flow against it fails the same way until an
+ * operator points this installation at a Cloud that does. It is reported as
+ * the configuration problem it is, naming the origin in use, rather than as a
+ * bare status. A 404 the Cloud itself authored (an invitation or session that
+ * is gone, `{"error":"not_found"}`) keeps its own code and message.
+ */
+async function authResponseError(response: Response, origin: string): Promise<CloudConnectionError> {
   const payload = (await response.json().catch(() => null)) as { error?: unknown; error_description?: unknown } | null;
-  const code = typeof payload?.error === "string" && payload.error
-    ? payload.error
-    : response.status === 429 ? "throttled" : `cloud_request_failed_${response.status}`;
+  const native = typeof payload?.error === "string" && payload.error ? payload.error : null;
+  if (native === null && response.status === 404) {
+    return new CloudConnectionError(
+      "cloud_desktop_api_missing",
+      `SimCloud at ${origin} does not offer the Studio desktop API, so accounts are unavailable from this installation.`
+      + " Point Studio at a SimCloud that does, with the SIMFORGE_CLOUD_ORIGIN environment variable or the --cloud-origin option.",
+      response.status,
+    );
+  }
+  const code = native ?? (response.status === 429 ? "throttled" : `cloud_request_failed_${response.status}`);
   const description = typeof payload?.error_description === "string" && payload.error_description
     ? payload.error_description
     : `SimCloud answered ${response.status} (${code}).`;
@@ -467,12 +484,12 @@ export async function cloudAuthRequest(path: string, options: AuthRequestOptions
       // it is still signed in to. Let the Cloud's own code separate the two.
       // Every other 401, including one carrying no code at all, keeps the
       // refresh-once behaviour.
-      const rejection = await authResponseError(response);
+      const rejection = await authResponseError(response, origin);
       if (rejection.code === "invalid_credentials") throw rejection;
       credential = await validAccessToken(options.signal, true);
       response = await sendAuthRequest(url, options, credential.accessToken);
       if (response.status === 401) {
-        const refreshed = await authResponseError(response);
+        const refreshed = await authResponseError(response, origin);
         if (refreshed.code === "invalid_credentials") throw refreshed;
         state.expiredMessage = "SimCloud rejected the current session. Sign in again.";
         throw new CloudConnectionError("cloud_session_expired", state.expiredMessage, 401);
@@ -481,7 +498,7 @@ export async function cloudAuthRequest(path: string, options: AuthRequestOptions
   } else {
     response = await sendAuthRequest(url, options, null);
   }
-  if (!response.ok) throw await authResponseError(response);
+  if (!response.ok) throw await authResponseError(response, origin);
   if (response.status === 204) return null;
   return response.json().catch(() => {
     throw new CloudConnectionError("cloud_invalid_response", "SimCloud answered with a body that is not JSON.", 502);

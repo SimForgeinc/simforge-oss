@@ -27,6 +27,10 @@ const CLOUD = "/api/simforge/cloud";
 /**
  * Product messages for the connection and account error codes. A known code
  * gets this copy; anything else keeps the local service's message.
+ *
+ * `cloud_desktop_api_missing` is deliberately absent: its message names the
+ * configured Cloud origin, which fixed copy here cannot, so the service's own
+ * wording must reach the screen.
  */
 export const STUDIO_CLOUD_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   cloud_disconnected: "Sign in to SimCloud to use cloud maps and storage.",

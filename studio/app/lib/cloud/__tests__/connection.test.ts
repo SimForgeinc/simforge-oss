@@ -117,6 +117,11 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         local_data_untouched: true,
         message: "Your account and the organization Ada were deleted. Nothing on this computer was removed.",
       });
+    case "POST /api/desktop/auth/password/forgot":
+      // A Cloud that serves its website but no `/api/desktop/**` at all: an
+      // HTML 404 page, nothing of the JSON error contract.
+      response.writeHead(404, { "content-type": "text/html", "cache-control": "no-store" });
+      return response.end("<!doctype html><title>404 - Not Found</title>");
     default:
       return json(404, { error: "not_found" });
   }
@@ -289,4 +294,27 @@ test("a v1 vault entry from the retired consent flow is dropped, not treated as 
   assert.equal(status.user, null);
   assert.equal(vault.entries.has(`cloud:${origin}`), false);
   assert.equal(cloudSessionScope().active, false);
+});
+
+test("a 404 with no Cloud error body is reported as a misconfigured origin, not a bare status", async () => {
+  const { forgotCloudPassword, CloudConnectionError } = connection;
+  await assert.rejects(forgotCloudPassword("ada@example.test"), (error: unknown) => {
+    assert.ok(error instanceof CloudConnectionError);
+    assert.equal(error.code, "cloud_desktop_api_missing");
+    // The operator has to see which origin was called and how to change it.
+    assert.ok(error.message.includes(origin), error.message);
+    assert.match(error.message, /SIMFORGE_CLOUD_ORIGIN/);
+    assert.match(error.message, /--cloud-origin/);
+    // And never the address that was being recovered.
+    assert.doesNotMatch(error.message, /ada@example\.test/);
+    return true;
+  });
+});
+
+test("a 404 the Cloud itself authored keeps the Cloud's own code", async () => {
+  const { signUpCloud, CloudConnectionError } = connection;
+  await assert.rejects(
+    signUpCloud({ email: "ada@example.test", password: "correct horse", name: "Ada" }),
+    (error: unknown) => error instanceof CloudConnectionError && error.code === "not_found" && error.status === 404,
+  );
 });
