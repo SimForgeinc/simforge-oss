@@ -255,6 +255,12 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     duplicateDocument(documentId, input = {}) {
       return call(documents.duplicate, { params: { documentId }, body: input });
     },
+    transferDocument(documentId, input) {
+      return call(documents.transfer, { params: { documentId }, body: input });
+    },
+    getDocumentTransferOptions(documentId, input = {}) {
+      return call(documents.transferOptions, { params: { documentId }, body: input });
+    },
     startDriverInTheLoop(documentId, input = {}) {
       return call(documents.startDriverInTheLoop, { params: { documentId }, body: input });
     },

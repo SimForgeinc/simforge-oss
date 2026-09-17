@@ -205,6 +205,33 @@ describe("useScenarioDocumentActions", () => {
     });
   });
 
+  describe("transferDocument", () => {
+    it("splices the cross-map variation without refetching the list", async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({
+        ...FULL_DOCUMENT,
+        id: "uscn_transfer",
+        contentSha256: "a".repeat(64),
+        mapVersionId: "usmap_2",
+      }, 201));
+      const { result } = setup();
+      await act(async () => {
+        await result.current.transferDocument(summary(), {
+          targetMapVersionId: "usmap_2",
+          siteId: "site_2",
+        });
+      });
+      expect(spliced).toHaveLength(1);
+      expect(spliced[0]).toMatchObject({
+        id: "uscn_transfer",
+        mapVersionId: "usmap_2",
+        derivationKind: "cross_map_variation",
+        derivedFromDocumentId: "uscn_1",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/documents/uscn_1/transfer");
+    });
+  });
+
   describe("deleteDocument", () => {
     it("removes the row after a confirmed delete", async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));

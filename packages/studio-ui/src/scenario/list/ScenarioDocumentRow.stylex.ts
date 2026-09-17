@@ -33,6 +33,11 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
   },
+  transferMapPin: {
+    marginRight: space.md,
+    width: "0.875rem",
+    height: "0.875rem",
+  },
   // mr-2 size-3.5
   deleteTrash2: {
     marginRight: space.md,
