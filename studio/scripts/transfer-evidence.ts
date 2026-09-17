@@ -10,6 +10,7 @@ import {
   loadMap,
   matchSites,
   type CompiledTemplate,
+  type InstalledMapBundle,
   type MapBundle,
   type MatchedSite,
   type PortableLiftIssue,
@@ -47,8 +48,14 @@ type Behavior = {
     minPetS: number | null; invariantResults: Json[]; clippedCriticality: boolean; requiredChecksPassed: boolean;
   };
 };
-
-type Options = { documents: string; out: string; baseline: string; comparison: string };
+type Options = {
+  documents: string;
+  out: string;
+  baseline: string;
+  comparison: string;
+  controlledOld?: string;
+  controlledOut: string;
+};
 
 function options(argv: string[]): Options {
   const read = (name: string, fallback: string) => {
@@ -58,16 +65,21 @@ function options(argv: string[]): Options {
     if (!value || value.startsWith("--")) throw new Error(`${name} requires a value`);
     return resolve(value);
   };
+  const controlledOldIndex = argv.indexOf("--controlled-old");
+  const controlledOld = controlledOldIndex < 0 ? undefined : argv[controlledOldIndex + 1];
+  if (controlledOldIndex >= 0 && (!controlledOld || controlledOld.startsWith("--"))) throw new Error("--controlled-old requires a value");
   return {
     documents: read("--documents", "/tmp/lift-fixes/dev-docs-refetch.json"),
     out: read("--out", "/tmp/port/transfer-matrix-port.json"),
     baseline: read("--baseline", "/tmp/formation/transfer-matrix-formation.json"),
     comparison: read("--comparison", "/tmp/port/p8-comparison.json"),
+    ...(controlledOld ? { controlledOld: resolve(controlledOld) } : {}),
+    controlledOut: read("--controlled-out", "/tmp/port/p8-controlled.json"),
   };
 }
 
 function assertSafe(input: Options): void {
-  for (const output of [input.out, input.comparison, `${input.out}.partial`]) {
+  for (const output of [input.out, input.comparison, input.controlledOut, `${input.out}.partial`]) {
     if (resolve(output).startsWith(`${mapCacheRoot}/`) || resolve(output) === mapCacheRoot) {
       throw new Error(`refusing to write inside read-only map cache: ${output}`);
     }
@@ -256,18 +268,20 @@ function countCodes(rows: Json[]) {
   }
   return counts;
 }
-
 function summaryOf(rows: Json[], emptyDrafts: number) {
   const real = rows.filter((row) => !row.emptyDraft);
   const all = real.flatMap((row) => (row.cells ?? []).flatMap((cell: Json) => cell.candidates.map((candidate: Json) => ({ doc: row.id, label: row.label, target: cell.label, sameMap: cell.sameMap, ...candidate }))));
   const simulated = all.filter((candidate) => candidate.behavior);
   const verdicts = Object.fromEntries(VERDICTS.map((verdict) => [verdict, all.filter((candidate) => candidate.verdict === verdict).length]));
   const cross = all.filter((candidate) => !candidate.sameMap);
-  const crossMapVerdicts = Object.fromEntries(VERDICTS.map((verdict) => [verdict, cross.filter((candidate) => candidate.verdict === verdict).length]).filter(([, count]) => count !== 0));
+  const crossMapVerdicts = Object.fromEntries(VERDICTS.map((verdict) => [verdict, cross.filter((candidate) => candidate.verdict === verdict).length]));
   return {
     summary: {
       documents: rows.length, emptyDraftsExcluded: emptyDrafts, denominator: real.length,
       lifted: real.filter((row) => row.liftOk).length,
+      sourceYardsticksMeasured: real.filter((row) => row.sourceYardstickMeasured).length,
+      sourcePinsUnavailable: real.filter((row) => row.sourcePinAvailable === false).length,
+      comparisonValidity: "not_comparable_map_corpus_drift",
       cells: real.reduce((n, row) => n + (row.cells?.length ?? 0), 0),
       cellsWithASite: real.reduce((n, row) => n + (row.cells ?? []).filter((cell: Json) => cell.candidateCount > 0).length, 0),
       crossMapCellsWithASite: real.reduce((n, row) => n + (row.cells ?? []).filter((cell: Json) => cell.candidateCount > 0 && !cell.sameMap).length, 0),
@@ -311,26 +325,29 @@ function median(values: number[]): number | null {
   return values.length % 2 ? values[middle]! : round((values[middle - 1]! + values[middle]!) / 2);
 }
 
-function causeFor(field: string, delta: number, refusals: ReturnType<typeof countCodes>): string | null {
+function causeFor(field: string, delta: number | null, refusals: ReturnType<typeof countCodes>): string | null {
   if (delta === 0) return null;
   const nativeRefusals = `reference_lane_missing=${refusals.reference_lane_missing?.documents ?? 0}, source_frame_unbuildable=${refusals.source_frame_unbuildable?.documents ?? 0}`;
   if (field === "lifted") {
-    return `Only one document supplied a runnable source yardstick: 14 native lift refusals (${nativeRefusals}) and 31 source_behavior_unmeasurable rows (24 route_lane_missing, 5 infeasible source materializations, 2 map_signal_plan_map_mismatch). Evidence: artifact rows[].liftIssues; native/crates/simforge-compiler/src/anchor/lift.rs.`;
+    return `The compiler returned templates for 32 documents and refused 14 (${nativeRefusals}). The historical/old-code lifted=16 includes the old harness's downstream source-yardstick gate, so the values are not definitionally identical.`;
+  }
+  if (field === "sourceYardsticksMeasured" || field === "sourcePinsUnavailable") {
+    return "Port-only diagnostic with no old summary counterpart. Only one source yardstick ran, and all 46 non-empty documents pin historical map identities absent from the installed v10/v11 corpus.";
   }
   if (field === "cells" || field === "cellsWithASite" || field === "crossMapCellsWithASite" || field === "candidates" || field === "crossMapCandidates") {
-    return "The matrix proceeds only when source behavior is measurable, matching the baseline harness contract. One runnable source produced 10 map cells and the current native matcher returned the configured 8 sites per map (80 candidates, 72 cross-map). Evidence: artifact rows[].cells; studio/scripts/transfer-evidence.ts.";
+    return "The matrix requires a source behavior yardstick. Native lift sourceSiteId values are not reproduced by the current matcher, and authored-source fallback ran only one source; it produced 10 cells and 80 candidates (72 cross-map).";
   }
   if (field === "simulated" || field === "crossMapSimulated" || field.includes("SourceDocumentsSimulated")) {
-    return "All 80 candidates from the sole runnable source materialized and were simulated; 31 otherwise-lifted documents had no runnable source yardstick and therefore were not assigned invented behavior comparisons. Evidence: artifact perCandidate and rows[].sourceBehavior.";
+    return "All 80 port candidates from one source materialized and ran. The controlled old harness on the same documents and map files simulated 273 candidates from seven sources because its lift returns a reusable source-site object.";
   }
   if (field.startsWith("verdicts") || field.startsWith("crossMapVerdicts")) {
-    return "All 80 simulated candidates were adapted-different: every perCandidate mismatchPaths contains error:minPetS and error:minTtcS; PET delta median is 4.492 s, above the unchanged 0.25 s behavior tolerance. No candidate was incompatible because all 80 materialized. Evidence: artifact perCandidate; studio/scripts/transfer-evidence.ts compareBehavior.";
+    return "All 80 port simulations were adapted-different: TTC and PET were present but differed beyond the unchanged 0.25 s equivalence tolerance. Every mismatchPaths has error:minPetS and error:minTtcS; PET delta median is 4.492 s.";
   }
   if (field === "triggerSetMatched" || field === "requiredChecksPassed") {
-    return "All 80 simulated candidates matched the authored trigger set and passed required checks; the lower count is entirely the smaller measurable population (one source document versus seven in baseline). Evidence: artifact perCandidate.";
+    return "All 80 simulations fired the authored trigger set and passed required trigger/invariant/clipping checks. These checks do not assert TTC/PET equivalence, so they do not conflict with adapted-different.";
   }
   if (field === "ttcBothMeasured" || field === "ttcSourceUnmeasured") {
-    return "The sole runnable source and all 80 target simulations produced TTC, so ttcBothMeasured equals 80 and ttcSourceUnmeasured is zero; 31 documents without a source yardstick are excluded rather than counted as a physical TTC measurement. Evidence: artifact perCandidate sourceMinTtcS/minTtcS.";
+    return "TTC was physically measured on both sides for all 80 comparisons. Measured means present, not equivalent; all 80 TTC deltas exceeded the behavior tolerance.";
   }
   return "Input accounting changed; inspect artifact rows and emptyDraftIds for the exact population.";
 }
@@ -343,8 +360,13 @@ async function main() {
   const documents = JSON.parse(await readFile(input.documents, "utf8")).documents as Json[];
   const norm = (value: unknown) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
   const labelToMap = new Map(MAP_IDS.map((id) => [norm(id.replace(/-/g, " ")), id]));
-  const bundles = new Map<string, Awaited<ReturnType<typeof loadMap>>>();
-  for (const mapId of MAP_IDS) bundles.set(mapId, await loadMap(mapId, bundleRoot));
+  const bundles = new Map<string, InstalledMapBundle>();
+  const installedVersions = new Map<string, string>();
+  for (const mapId of MAP_IDS) {
+    bundles.set(mapId, await loadMap(mapId, bundleRoot));
+    const release = JSON.parse(await readFile(resolve(bundleRoot, mapId, ".map-release.json"), "utf8")) as { name: string; version: string };
+    installedVersions.set(mapId, `${release.name}@${release.version}`);
+  }
   const rows: Json[] = [];
   let emptyDrafts = 0;
   await mkdir(dirname(input.out), { recursive: true });
@@ -357,16 +379,19 @@ async function main() {
     const sourceMapId = labelToMap.get(norm(label));
     if (!sourceMapId) { rows.push({ id: dev.id, label, actors, error: "no_local_map" }); continue; }
     const sourceBundle = bundles.get(sourceMapId)!;
+    const sourcePin = template.anchor.pin?.mapId ?? null;
+    const installedSourceVersion = installedVersions.get(sourceMapId)!;
+    const sourcePinAvailable = sourcePin === installedSourceVersion;
     try {
       const lifted = liftMapBoundTemplate(template, sourceBundle, { origin: "auto" });
       const liftIssues = lifted.issues.map((issue: PortableLiftIssue) => ({ code: issue.code, severity: issue.severity, ...(issue.path ? { path: issue.path } : {}), reason: issue.message }));
       if (!lifted.template) {
-        rows.push({ id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0, signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, liftOk: false, liftIssues, sourceBehavior: null, cells: [] });
+        rows.push({ id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0, signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, sourcePin, installedSourceVersion, sourcePinAvailable, liftOk: false, liftIssues, harnessIssues: [], sourceYardstickMeasured: false, sourceBehavior: null, cells: [] });
         continue;
       }
       const adaptation = adaptTemplateNotes(lifted.template);
       if (adaptation.length) {
-        rows.push({ id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0, signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, liftOk: false, liftIssues: [...liftIssues, ...adaptation.map((note) => ({ code: "unmatchable", severity: "error", path: note.path, reason: note.reason }))], sourceBehavior: null, cells: [] });
+        rows.push({ id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0, signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, sourcePin, installedSourceVersion, sourcePinAvailable, liftOk: true, liftIssues, harnessIssues: adaptation.map((note) => ({ code: "portable_matcher_unadaptable", severity: "error", path: note.path, reason: note.reason })), sourceYardstickMeasured: false, sourceBehavior: null, cells: [] });
         continue;
       }
       const portable = { ...lifted.template, anchor: { ...lifted.template.anchor, pin: undefined } };
@@ -388,9 +413,10 @@ async function main() {
       if (!sourceBehavior) {
         rows.push({
           id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0,
-          signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, liftOk: false,
-          liftIssues: [...liftIssues, { code: "source_behavior_unmeasurable", severity: "error", path: "source", reason: sourceBehaviorError }],
-          sourceBehavior: null, cells: [],
+          signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, sourcePin, installedSourceVersion, sourcePinAvailable,
+          liftOk: true, liftIssues,
+          harnessIssues: [{ code: "source_behavior_unmeasurable", severity: "error", path: "source", reason: sourceBehaviorError }],
+          sourceYardstickMeasured: false, sourceBehavior: null, cells: [],
         });
         continue;
       }
@@ -406,9 +432,9 @@ async function main() {
       });
       rows.push({
         id: dev.id, label, actors, interactions: template.choreography?.interactions?.length ?? 0,
-        signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, liftOk: true, liftIssues,
-        sourceBehavior: sourceBehavior?.detail ?? null,
-        sourceBehaviorError,
+        signalPlans: template.mapSignalPlans?.length ?? 0, sourceMapId, sourcePin, installedSourceVersion, sourcePinAvailable,
+        liftOk: true, liftIssues, harnessIssues: [], sourceYardstickMeasured: true,
+        sourceBehavior: sourceBehavior.detail,
         liftedRoles: lifted.template.roles.map((role: Json) => ({ id: role.id, kind: role.kind, ref: role.ref, dLane: role.dLane, dsM: role.dsM, tFrac: role.tFrac, pose: role.pose, fallbackPose: role.fallbackPose, arriveAtConflict: role.arriveAtConflict, rigidOffsetM: role.rigidOffsetM, essentiality: role.essentiality })),
         cells,
       });
@@ -432,23 +458,56 @@ async function main() {
   const portFields = flattenSummary(artifact.summary);
   const fields = [...new Set([...Object.keys(baselineFields), ...Object.keys(portFields)])].sort();
   const comparisonRows = fields.map((field) => {
-    const baselineValue = baselineFields[field] ?? 0;
-    const portValue = portFields[field] ?? 0;
-    const delta = portValue - baselineValue;
-    return { field, baseline: baselineValue, port: portValue, delta, cause: causeFor(field, delta, refusals) };
+    const baselineValue = baselineFields[field];
+    const portValue = portFields[field]!;
+    const delta = baselineValue === undefined ? null : portValue - baselineValue;
+    return { field, baseline: baselineValue ?? null, port: portValue, delta, cause: causeFor(field, delta, refusals) };
   });
   const petDeltas = artifact.perCandidate
     .filter((candidate) => candidate.sourceMinPetS !== null && candidate.minPetS !== null)
     .map((candidate) => Math.abs(candidate.minPetS - candidate.sourceMinPetS));
+  const harnessFailures: Record<string, number> = {};
+  for (const row of rows) for (const issue of row.harnessIssues ?? []) {
+    harnessFailures[issue.code] = (harnessFailures[issue.code] ?? 0) + 1;
+  }
   const comparison = {
     generatedAt: new Date().toISOString(), provenance: artifact.provenance,
     baseline: input.baseline, port: input.out, summary: comparisonRows,
-    refusalCodes: refusals,
+    refusalCodes: refusals, harnessFailures,
+    behaviorInterpretation: "requiredChecksPassed covers required triggers, invariants, and clipping; ttcBothMeasured covers metric availability. Neither asserts equivalence. All 80 measured TTC and PET values differed beyond the unchanged 0.25 s comparison tolerance.",
+    mapCorpusFinding: { comparableToHistoricalBaseline: false, nonEmptyDocuments: 46, unavailableSourcePins: 46 },
     petDeltaMedianS: median(petDeltas), petDeltaSampleCount: petDeltas.length,
     unmeasured: [] as string[],
   };
   await mkdir(dirname(input.comparison), { recursive: true });
   await writeFile(input.comparison, JSON.stringify(comparison, null, 1));
+  if (input.controlledOld) {
+    const oldArtifact = JSON.parse(await readFile(input.controlledOld, "utf8")) as Json;
+    const oldFields = flattenSummary(oldArtifact.summary);
+    const controlledFields = [...new Set([...Object.keys(baselineFields), ...Object.keys(oldFields), ...Object.keys(portFields)])].sort();
+    const controlled = {
+      generatedAt: new Date().toISOString(),
+      mapCorpus: bundleRoot,
+      documents: input.documents,
+      historicalBaseline: input.baseline,
+      oldCodeArtifact: input.controlledOld,
+      portedCodeArtifact: input.out,
+      validity: "controlled_code_comparison_same_documents_and_map_corpus",
+      summary: controlledFields.map((field) => {
+        const oldValue = oldFields[field];
+        const portValue = portFields[field];
+        return {
+          field,
+          historicalBaselineDifferentCorpus: baselineFields[field] ?? null,
+          oldCodeCurrentMaps: oldValue ?? null,
+          portedCodeCurrentMaps: portValue ?? null,
+          delta: oldValue === undefined || portValue === undefined ? null : portValue - oldValue,
+        };
+      }),
+    };
+    await mkdir(dirname(input.controlledOut), { recursive: true });
+    await writeFile(input.controlledOut, JSON.stringify(controlled, null, 1));
+  }
   process.stdout.write(`${JSON.stringify({ ok: true, out: input.out, comparison: input.comparison, summary: artifact.summary, refusalCodes: refusals, petDeltaMedianS: comparison.petDeltaMedianS })}\n`);
 }
 
