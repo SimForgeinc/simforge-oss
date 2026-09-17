@@ -16,6 +16,7 @@ import {
   DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
   type ScenarioAuthoringQuality,
 } from "@/app/lib/scenario/contracts";
+import { inlineSignIn } from "../onboarding-layout.stylex";
 
 const NATIVE_RENDER_PATH = "/onboarding/native-render";
 
@@ -175,7 +176,7 @@ export function OnboardingMapsClient() {
       quality={quality}
       selection={selection}
       signedIn={signedIn}
-      signIn={signedIn ? undefined : <CloudAccountPanel />}
+      signIn={signedIn ? undefined : <CloudAccountPanel xstyle={inlineSignIn.panel} />}
     />
   );
 }

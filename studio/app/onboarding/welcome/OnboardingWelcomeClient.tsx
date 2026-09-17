@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { WelcomeScreen } from "@simforge-oss/studio-ui/onboarding";
 import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { inlineSignIn } from "../onboarding-layout.stylex";
 
 const MAPS_PATH = "/onboarding/maps";
 
@@ -31,7 +32,11 @@ export function OnboardingWelcomeClient() {
       // `cloud.error` here as well would print the same line twice.
       error={connected ? cloud.error : null}
       onContinueLocally={() => router.push(MAPS_PATH)}
-      signIn={connected ? undefined : <CloudAccountPanel onSignedIn={() => router.replace(MAPS_PATH)} />}
+      signIn={
+        connected ? undefined : (
+          <CloudAccountPanel onSignedIn={() => router.replace(MAPS_PATH)} xstyle={inlineSignIn.panel} />
+        )
+      }
       userEmail={cloud.status?.state === "connected" ? (cloud.status.user?.email ?? null) : null}
     />
   );

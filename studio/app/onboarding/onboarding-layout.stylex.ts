@@ -40,3 +40,18 @@ export const layout = stylex.create({
     zIndex: 1,
   },
 });
+
+/**
+ * The inline SimCloud account flow, as onboarding places it.
+ *
+ * `CloudAccountPanel` is written for the Settings plate and the SimCloud
+ * panel, where a 26rem measure keeps the form readable beside other content.
+ * Onboarding composes it into `column` instead, where every other row — the
+ * welcome actions, the map list, the download button — runs the column's
+ * full measure, so that clamp reads as a narrow card dropped into the flow.
+ * Releasing it hands the measure back to `column`'s own 42rem cap rather
+ * than restating a width that would then have to be kept in step with it.
+ */
+export const inlineSignIn = stylex.create({
+  panel: { maxWidth: "none" },
+});
