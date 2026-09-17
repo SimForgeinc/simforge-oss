@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { LoaderCircle, LogIn } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "../components/ui/button";
@@ -12,8 +13,11 @@ import { onboarding } from "./onboarding.stylex";
  * behind it and the column geometry belong to the host's route layout, so
  * the next step can replace this copy in place. Props only: the host app
  * owns the connection state, where each action leads, and the sign-in flow
- * itself, which arrives as a node this screen places in the page body -
- * under the lede, never behind an overlay.
+ * itself.
+ *
+ * The two choices come first. Asking for the sign-in flow replaces them, in
+ * place, with the host's {@link signIn} node - in the page body, never behind
+ * an overlay - so the column shows one decision at a time.
  */
 export function WelcomeScreen({
   cloudState,
@@ -21,6 +25,8 @@ export function WelcomeScreen({
   error,
   busy,
   signIn,
+  onSignIn,
+  onCancelSignIn,
   onContinueLocally,
 }: {
   /** `null` until the local service has answered once. */
@@ -30,13 +36,21 @@ export function WelcomeScreen({
   /** An account request, or the Google/GitHub browser hop, is in flight. */
   busy: boolean;
   /**
-   * The host's sign-in flow, rendered inline in this column. Omitted once
-   * there is a session: the account note and "Continue with SimCloud" say
-   * everything that is left to say.
+   * The host's sign-in flow, once the user has asked for it. Present, it
+   * takes the place of the actions row; absent, the two choices are what the
+   * column offers.
    */
   signIn?: ReactNode;
+  onSignIn: () => void;
+  /**
+   * Leaves the sign-in flow for the two choices again. Omitted while the
+   * flow owns its own dismissal — the browser hop already offers Cancel, and
+   * two of them beside each other would mean two different things.
+   */
+  onCancelSignIn?: () => void;
   onContinueLocally: () => void;
 }) {
+  const connecting = cloudState === "connecting";
   const connected = cloudState === "connected";
 
   return (
@@ -64,34 +78,55 @@ export function WelcomeScreen({
         ) : null}
 
         {signIn ? (
-          <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-sign-in">
+          <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-sign-in-flow">
             {signIn}
+            {onCancelSignIn ? (
+              <Button
+                xstyle={onboarding.signInDismiss}
+                data-testid="onboarding-sign-in-cancel"
+                onClick={onCancelSignIn}
+                type="button"
+                variant="outline"
+              >
+                Cancel
+              </Button>
+            ) : null}
           </div>
-        ) : null}
-
-        <div {...stylex.props(onboarding.welcomeActions)}>
-          {connected ? (
+        ) : (
+          <div {...stylex.props(onboarding.welcomeActions)}>
             <Button
               autoFocus
               xstyle={onboarding.primaryAction}
-              data-testid="onboarding-continue-cloud"
-              disabled={busy}
-              onClick={onContinueLocally}
+              data-testid="onboarding-sign-in"
+              disabled={busy || connecting}
+              onClick={connected ? onContinueLocally : onSignIn}
               type="button"
             >
-              Continue with SimCloud
+              {connecting ? (
+                <>
+                  <LoaderCircle {...stylex.props(onboarding.icon, onboarding.iconWithLabel, onboarding.spinner)} aria-hidden="true" />
+                  Finishing in your browser…
+                </>
+              ) : connected ? (
+                "Continue with SimCloud"
+              ) : (
+                <>
+                  <LogIn {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
+                  Sign in to SimCloud
+                </>
+              )}
             </Button>
-          ) : null}
-          <Button
-            xstyle={onboarding.secondaryAction}
-            data-testid="onboarding-continue-locally"
-            onClick={onContinueLocally}
-            type="button"
-            variant="outline"
-          >
-            Continue locally
-          </Button>
-        </div>
+            <Button
+              xstyle={onboarding.secondaryAction}
+              data-testid="onboarding-continue-locally"
+              onClick={onContinueLocally}
+              type="button"
+              variant="outline"
+            >
+              Continue locally
+            </Button>
+          </div>
+        )}
         <p {...stylex.props(onboarding.footnote)}>
           You can sign in later from Settings; nothing here is permanent.
         </p>

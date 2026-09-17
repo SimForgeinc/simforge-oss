@@ -61,10 +61,14 @@ export function OnboardingMapsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [revealSignIn, setRevealSignIn] = useState(false);
   const finishing = useRef(false);
   const preparation = useMapPreparation({ mapVersionIds: selection });
   const cloudState = cloud.status?.state ?? null;
   const signedIn = cloudState === "connected";
+  // Signed in, every published map is already selectable; the flow would have
+  // nothing left to unlock.
+  const signingIn = revealSignIn && !signedIn;
   const started = preparation.phase !== "idle";
 
   useEffect(() => setQuality(readRenderingPreference() ?? DEFAULT_SCENARIO_AUTHORING_QUALITY_ID), []);
@@ -149,12 +153,13 @@ export function OnboardingMapsClient() {
   return (
     <MapSelectionScreen
       catalogError={catalogError}
-      // Signed out, the inline flow below reports its own failures, so only
-      // this page's catalog and setup errors go to the screen.
-      error={error ?? (signedIn ? cloud.error : null)}
+      // The revealed flow reports its own failures, so only this page's
+      // catalog and setup errors go to the screen while it is open.
+      error={error ?? (signingIn ? null : cloud.error)}
       freeBytes={freeBytes}
       loading={loading}
       maps={maps}
+      onCancelSignIn={cloudState === "connecting" ? undefined : () => setRevealSignIn(false)}
       onDownload={() => {
         // The viewer reads the level from browser storage; save it before the
         // first map lands so a mid-download navigation already renders right.
@@ -163,6 +168,7 @@ export function OnboardingMapsClient() {
       }}
       onQualityChange={setQuality}
       onRetry={preparation.retry}
+      onSignIn={() => setRevealSignIn(true)}
       onSkip={preparation.skip}
       onToggle={(mapVersionId) =>
         setSelection((current) => {
@@ -176,7 +182,7 @@ export function OnboardingMapsClient() {
       quality={quality}
       selection={selection}
       signedIn={signedIn}
-      signIn={signedIn ? undefined : <CloudAccountPanel xstyle={inlineSignIn.panel} />}
+      signIn={signingIn ? <CloudAccountPanel xstyle={inlineSignIn.panel} /> : undefined}
     />
   );
 }

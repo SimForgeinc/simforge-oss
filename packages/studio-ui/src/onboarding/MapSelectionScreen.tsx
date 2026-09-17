@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { Check, CircleAlert, Download, LoaderCircle, Lock, RotateCcw, SkipForward } from "lucide-react";
+import { Check, CircleAlert, Download, LoaderCircle, Lock, LogIn, RotateCcw, SkipForward } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
 import { SCENARIO_AUTHORING_QUALITY_CHOICES, type ScenarioAuthoringQuality } from "../lib/scenario/contracts";
@@ -71,6 +71,8 @@ export function MapSelectionScreen({
   onSkip,
   signedIn,
   signIn,
+  onSignIn,
+  onCancelSignIn,
 }: {
   maps: readonly OnboardingMapOption[];
   selection: readonly string[];
@@ -92,10 +94,19 @@ export function MapSelectionScreen({
   /** A SimCloud session is active: every published map is selectable. */
   signedIn: boolean;
   /**
-   * The host's sign-in flow, rendered inline beneath the actions while
-   * signed out, so unlocking the account maps never leaves this page.
+   * The host's sign-in flow, once the user has asked for it. Present, it
+   * takes the place of the sign-in button beneath the actions, so unlocking
+   * the account maps never leaves this page.
    */
   signIn?: ReactNode;
+  /** Offered while signed out; reveals the inline flow in this column. */
+  onSignIn: () => void;
+  /**
+   * Leaves the sign-in flow for the actions row again. Omitted while the
+   * flow owns its own dismissal — the browser hop already offers Cancel, and
+   * two of them beside each other would mean two different things.
+   */
+  onCancelSignIn?: () => void;
 }) {
   const selectedMaps = maps.filter(
     (map) => !map.locked && (map.required || selection.includes(map.mapVersionId)),
@@ -345,10 +356,34 @@ export function MapSelectionScreen({
             </>
           )}
         </Button>
+        {signedIn || signIn ? null : (
+          <Button
+            xstyle={onboarding.secondaryAction}
+            data-testid="onboarding-locked-notice"
+            disabled={downloading}
+            onClick={onSignIn}
+            type="button"
+            variant="outline"
+          >
+            <LogIn {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
+            Sign in to SimCloud
+          </Button>
+        )}
       </div>
       {signIn ? (
-        <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-locked-notice">
+        <div {...stylex.props(onboarding.signInSlot)} data-testid="onboarding-sign-in-flow">
           {signIn}
+          {onCancelSignIn ? (
+            <Button
+              xstyle={onboarding.signInDismiss}
+              data-testid="onboarding-sign-in-cancel"
+              onClick={onCancelSignIn}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <p {...stylex.props(onboarding.footnote)}>

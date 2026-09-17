@@ -129,6 +129,23 @@ export const onboarding = stylex.create({
     flexDirection: "column",
     marginTop: "2.5rem",
   },
+  /**
+   * The way out of the revealed sign-in flow, back to the two choices. Sized
+   * to its label rather than stretched like the actions row: it is the
+   * smaller of the decisions on offer here, and the form's own submit is
+   * what the column should lead the eye to.
+   */
+  signInDismiss: {
+    alignSelf: "flex-start",
+    marginTop: space.xl,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    color: "white",
+    ":hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+  },
 
   /* ── Catalog ───────────────────────────────────────────────────── */
   catalogLoading: {
