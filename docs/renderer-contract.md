@@ -26,6 +26,25 @@ of the two existing Three surfaces; Bevy work lands in the native lane. A
 Bevy WASM editor is gated behind the strategy-A feasibility spike and is out
 of scope for this contract version.
 
+### Native playback readiness
+
+`scen-play` loads the complete native `master.gltf` from an OSS map pull,
+including its external textures. Playback waits for recursive asset
+dependencies and for the shared GPU-readiness barrier (material bindings
+and compiled pipelines) before counting warmup frames or capturing tick 0.
+Missing or failed map dependencies are fatal; partial maps are not successful
+captures. Large masters may require a higher process file-descriptor limit
+(for example, `ulimit -n 65535`) while loading their texture closure.
+
+The standalone binary embeds its motion-vector shader, so deployment does
+not require the source checkout at the original build path.
+
+Playback places ground-contact actors and the chase camera using the native
+scene engine's terrain-height field. `--ground-y` explicitly overrides that
+with a constant elevation for flat fixtures. Each captured RGB frame has a
+corresponding `observed-frames.jsonl` record containing the rendered actor
+and camera world transforms; these are observations, not echoed input poses.
+
 ### CityViewer map-loading observability
 
 `CityViewerStats` reports implementation telemetry separately from the frozen

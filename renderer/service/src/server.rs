@@ -1490,17 +1490,47 @@ fn render_bundle_op(
                 }
             }
         }
-        let instance_class = |instance_id| {
+        // The sensor models now split a scan across worker threads, so their
+        // class lookup has to be `Sync`; the engine `App` is not. Resolve every
+        // instance's class up front into a plain map and let the scan read that.
+        //
+        // `state.legend` is the frozen STATIC legend, so it alone would drop
+        // every actor back to the default albedo. The current frame's actors are
+        // resolved through the engine as well, so a car stays a car.
+        let mut instance_classes: std::collections::HashMap<u32, sensors::taxonomy::SemanticClass> =
             state
-                .app
-                .actor_instance_class(instance_id)
-                .map(sensors::taxonomy::SemanticClass::from_actor_class)
-                .or_else(|| {
-                    state
-                        .legend
-                        .get(&instance_id)
-                        .map(|name| sensors::taxonomy::SemanticClass::from_mesh_name(name))
+                .legend
+                .iter()
+                .map(|(instance_id, name)| {
+                    let class = state
+                        .app
+                        .actor_instance_class(*instance_id)
+                        .map(sensors::taxonomy::SemanticClass::from_actor_class)
+                        .unwrap_or_else(|| {
+                            sensors::taxonomy::SemanticClass::from_mesh_name(name)
+                        });
+                    (*instance_id, class)
                 })
+                .collect();
+        if let Some(frame) = state
+            .current_tick
+            .and_then(|index| state.scene.get(index as usize))
+        {
+            for actor in &frame.actors {
+                let Some(instance_id) = state.app.actor_instance_id(&actor.id) else { continue };
+                if let Some(class) = state
+                    .app
+                    .actor_instance_class(instance_id)
+                    .map(sensors::taxonomy::SemanticClass::from_actor_class)
+                {
+                    instance_classes.insert(instance_id, class);
+                }
+            }
+        }
+        let instance_class = move |instance_id: u32| -> sensors::taxonomy::SemanticClass {
+            instance_classes
+                .get(&instance_id)
+                .copied()
                 .unwrap_or(sensors::taxonomy::SemanticClass::Prop)
         };
         let mut sensor_payloads: Vec<(

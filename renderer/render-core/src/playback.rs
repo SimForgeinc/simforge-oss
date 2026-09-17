@@ -16,10 +16,12 @@ use crate::actor_lights::{
     PROJECTED_HEADLIGHT_LIMIT,
 };
 use crate::catalog::{actor_body_color, actor_dims, actor_parts, ActorPartKind};
-use crate::motion_vector::{decode_rg16f, MotionVectorMaterial};
+use crate::engine::GroundField;
+use crate::motion_vector::{decode_rg16f, MotionVectorMaterial, MotionVectorPlugin};
 use crate::readback::{
     self, Copiers, GlobalFrame, MainReceiver, PassCopier, SentPass,
 };
+use crate::readiness::{GpuPending, GpuReadinessPlugin, GPU_IDLE_FRAMES};
 use crate::scene_state::{ActorDesc, ActorTickKind, SceneState};
 use crate::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
 use anyhow::{bail, Result};
@@ -27,7 +29,7 @@ use bevy::app::{AppExit, ScheduleRunnerPlugin};
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::RenderTarget;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::asset::RenderAssetUsages;
+use bevy::asset::{LoadState, RecursiveDependencyLoadState, RenderAssetUsages};
 use bevy::gltf::{Gltf, GltfMaterial, GltfMesh, GltfNode};
 use bevy::light::{DirectionalLight, DirectionalLightShadowMap, NotShadowCaster, SpotLight};
 use bevy::log::LogPlugin;
@@ -43,6 +45,7 @@ use bevy::window::ExitCondition;
 use clap::Parser;
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -74,9 +77,9 @@ pub struct PlaybackArgs {
     /// Warmup frames (shader compile) before tick 0 is captured.
     #[arg(long, default_value_t = 30)]
     pub warmup: u32,
-    /// Road-surface elevation for actor origins (traces are heightless).
-    #[arg(long, default_value_t = 12.99)]
-    pub ground_y: f32,
+    /// Override terrain-following placement with a fixed road-surface elevation.
+    #[arg(long)]
+    pub ground_y: Option<f32>,
     /// `static` fixes the camera at the initial chase pose; `follow` tracks ego.
     #[arg(long, default_value = "follow")]
     pub camera: String,
@@ -116,8 +119,72 @@ pub struct PlaybackArgs {
     /// Spawn a flat ground plane at --ground-y (for tile-less runs).
     #[arg(long, default_value_t = false)]
     pub ground_plane: bool,
+    /// Shading tier.
+    ///
+    /// `sensor` is the historical capture stack: one fixed directional light,
+    /// a flat clear-colour sky, no IBL, no AO, no anti-aliasing. Byte-stable,
+    /// and what the machine-vision outputs are calibrated against.
+    ///
+    /// `high` uses the systems this crate already owns: the physical
+    /// atmosphere as both sky and IBL source (`crate::atmosphere`), the
+    /// extraterrestrial solar beam with a real 0.53 deg disc, GTAO plus
+    /// contact shadows, PCSS soft shadows at the sun's angular diameter, a
+    /// 4096 shadow atlas, metered fixed exposure with AgX tonemapping, and
+    /// SMAA Ultra. Every one of those is deterministic per frame — no TAA, no
+    /// temporal accumulation — so captures stay reproducible.
+    #[arg(long, default_value = "sensor")]
+    pub quality: String,
+    /// Exposure trim for `--quality high`, in stops. Negative brightens.
+    ///
+    /// The base value is an incident-meter reading of the atmosphere's own
+    /// resolved illuminance, which is correct for a physical camera but reads
+    /// slightly dark next to a game-engine reference because nothing here
+    /// bounces indirect light off the road. This is the one hand-set number in
+    /// the tier, so it is explicit rather than folded into the meter.
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    pub ev100_bias: f32,
 }
 
+// ---------------------------------------------------------------------------
+// Shading tier
+// ---------------------------------------------------------------------------
+
+/// Which shading stack a playback run uses.
+///
+/// This is the one switch: every quality decision below reads it, so a run's
+/// look is fully described by `--quality` plus the scene-state document.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum QualityTier {
+    /// Historical deterministic capture stack. Unchanged byte-for-byte.
+    Sensor,
+    /// Physical atmosphere, IBL, GTAO, contact shadows, PCSS, AgX, SMAA Ultra.
+    High,
+}
+
+impl QualityTier {
+    pub fn parse(value: &str) -> Result<Self> {
+        match value {
+            "sensor" => Ok(Self::Sensor),
+            "high" => Ok(Self::High),
+            other => anyhow::bail!("unknown --quality '{other}' (sensor|high)"),
+        }
+    }
+
+    /// True when the atmosphere owns the sky and the ambient term, which also
+    /// means the painted contact-shadow blob must go: real contact shadows and
+    /// GTAO already darken the ground under a body, and the blob would
+    /// double-darken it.
+    pub fn physical_sky(self) -> bool {
+        matches!(self, Self::High)
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Sensor => "sensor",
+            Self::High => "high",
+        }
+    }
+}
 // ---------------------------------------------------------------------------
 // Markers & resources
 // ---------------------------------------------------------------------------
@@ -187,6 +254,10 @@ struct VisualTick(Option<usize>);
 /// Shared handles for lenses, contact shadows and the ground plane.
 #[derive(Resource)]
 struct ActorVisualAssets {
+    /// Draw the painted contact-shadow blob under each actor. False under the
+    /// physical tier, where GTAO and real contact shadows produce that
+    /// darkening from geometry and the blob would double-darken it.
+    painted_contact_shadow: bool,
     unit_cube: Handle<Mesh>,
     shadow_mesh: Handle<Mesh>,
     shadow_mat: Handle<StandardMaterial>,
@@ -238,6 +309,7 @@ struct Playback {
     args: PlaybackArgs,
     state: std::sync::Arc<SceneState>,
     n_ticks: u32,
+    started_at: Instant,
 }
 
 #[derive(Resource, Default)]
@@ -246,7 +318,25 @@ struct Readiness {
     build_ready_at: Option<Instant>,
     tiles_id_done: bool,
     actors_spawned: bool,
+    last_gpu_sample: usize,
+    idle_frames: u32,
+    capture_ready_frame: Option<u64>,
+    terrain: GroundField,
 }
+
+impl Readiness {
+    fn ground_y(&self, pb: &Playback, position: [f64; 3]) -> f32 {
+        pb.args.ground_y.unwrap_or_else(|| {
+            self.terrain.sample(position[0] as f32, position[2] as f32)
+        })
+    }
+}
+
+#[derive(Component)]
+struct StaticMapMesh;
+
+#[derive(Resource)]
+struct PlaybackObservations(std::io::BufWriter<std::fs::File>);
 
 #[derive(Resource, Default)]
 struct ActorRegistry {
@@ -384,13 +474,18 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
     }
     std::env::set_var("BEVY_ASSET_ROOT", crate::platform::ASSET_ROOT);
     std::fs::create_dir_all(&args.out_dir)?;
+    let observations = PlaybackObservations(std::io::BufWriter::new(std::fs::File::create(
+        Path::new(&args.out_dir).join("observed-frames.jsonl"),
+    )?));
 
     let playback = Playback {
         state: std::sync::Arc::new(doc),
         n_ticks,
         args: args.clone(),
+        started_at: Instant::now(),
     };
 
+    let tier = QualityTier::parse(&args.quality)?;
     let clear = if global_low_beams {
         // Authored darkness: deep dusk sky instead of the daylight blue.
         Color::srgb(0.05, 0.07, 0.12)
@@ -398,7 +493,14 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
         Color::srgb(0.53, 0.74, 0.92)
     };
     let mut app = App::new();
-    app.insert_resource(ClearColor(clear))
+    // Under `high` the visible sky is the atmosphere's sky pass, so the clear
+    // colour is only what shows if that pass were absent — keep it black there
+    // so a missing sky is obvious rather than a plausible flat blue.
+    app.insert_resource(ClearColor(if tier.physical_sky() {
+        Color::BLACK
+    } else {
+        clear
+    }))
         .add_plugins((
             DefaultPlugins
                 .set(crate::platform::asset_plugin())
@@ -417,11 +519,16 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                     ..default()
                 }),
             ScheduleRunnerPlugin::run_loop(Duration::ZERO),
-            MaterialPlugin::<MotionVectorMaterial>::default(),
+            MotionVectorPlugin,
+            GpuReadinessPlugin,
         ))
-        .insert_resource(DirectionalLightShadowMap { size: 2048 })
+        .insert_resource(DirectionalLightShadowMap {
+            size: if tier.physical_sky() { 4096 } else { 2048 },
+        })
+        .insert_resource(tier)
         .insert_resource(playback.clone())
         .insert_resource(Readiness::default())
+        .insert_resource(observations)
         .insert_resource(ActorRegistry::default())
         .insert_resource(Legend::default())
         .insert_resource(PlayCursor {
@@ -451,6 +558,7 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                 prepare_vehicle_models,
                 poll_roots,
                 on_scene_ready,
+                poll_capture_ready,
                 apply_tick,
                 update_actor_visuals,
                 bump_frame,
@@ -476,12 +584,37 @@ fn sun_direction(elev_deg: f32, azim_deg: f32) -> Dir3 {
     Dir3::new(dir.normalize()).unwrap()
 }
 
+/// Sun position used by playback. Mid-afternoon, sun in the south-east: high
+/// enough for clean cascade coverage, low enough that bodies cast readable
+/// shadows.
+const SUN_ELEVATION_DEG: f32 = 38.0;
+const SUN_AZIMUTH_DEG: f32 = 145.0;
+
+/// Incident-meter EV100 from a horizontal illuminance reading.
+///
+/// `EV100 = log2(E_v / C)` with the ISO 2720 incident constant C = 2.5, which
+/// puts a ~100 klx clear-day sun at EV100 ≈ 15.3 — the sunny-16 rule. Using
+/// the atmosphere's own resolved illuminance keeps exposure consistent with
+/// the sky that is actually being rendered instead of a hand-tuned constant.
+fn metered_ev100(horizontal_lux: f32) -> f32 {
+    (horizontal_lux.max(1.0e-4) / 2.5).log2().clamp(-4.5, 20.0)
+}
+
+/// Per-view numbers the physical tier resolves once at startup.
+#[derive(Clone, Copy)]
+struct HighFidelityView {
+    ev100: f32,
+    far_plane_m: f32,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn startup_setup(
     mut commands: Commands,
     pb: Res<Playback>,
+    tier: Res<QualityTier>,
     mut cam_pose: ResMut<CameraPose>,
     mut images: ResMut<Assets<Image>>,
+    mut media: ResMut<Assets<bevy::light::atmosphere::ScatteringMedium>>,
     device: Res<RenderDevice>,
     server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -489,24 +622,97 @@ fn startup_setup(
     mut models: ResMut<VehicleModels>,
     low_beams: Res<GlobalLowBeams>,
 ) {
-    // Authored darkness dims the fixed sun to deep dusk so emissive lenses
-    // and projected beams read in captures.
-    let sun_lux = if low_beams.0 { 400.0 } else { 28_000.0 };
-    commands.spawn((
-        DirectionalLight {
-            illuminance: sun_lux,
-            shadow_maps_enabled: true,
-            ..default()
-        },
-        bevy::light::CascadeShadowConfigBuilder {
-            minimum_distance: 1.0,
-            maximum_distance: 400.0,
-            num_cascades: 4,
-            ..default()
-        }
-        .build(),
-        Transform::IDENTITY.looking_to(sun_direction(38.0, 145.0), Vec3::Y),
-    ));
+    let sun_dir = sun_direction(SUN_ELEVATION_DEG, SUN_AZIMUTH_DEG);
+    // Ground height the atmosphere is anchored to: the boundary-layer aerosol
+    // term has a 300 m scale height, so the planet centre goes one Earth
+    // radius below the road rather than below the world origin.
+    let scene_ground_y = pb.args.ground_y.unwrap_or_else(|| {
+        pb.state
+            .frames
+            .first()
+            .and_then(|f| f.actors.first())
+            .map(|a| a.position[1] as f32)
+            .unwrap_or(0.0)
+    });
+    let mut high_fidelity: Option<HighFidelityView> = None;
+
+    if tier.physical_sky() {
+        // Physical sky: the atmosphere owns the visible sky, the IBL and the
+        // aerial perspective, and the directional light carries the
+        // *extraterrestrial* beam because `pbr_lighting.wgsl` applies the
+        // transmittance LUT to it under `#ifdef ATMOSPHERE`.
+        let inputs = crate::atmosphere::AtmosphereInputs {
+            sun_elevation_deg: if low_beams.0 { -6.0 } else { SUN_ELEVATION_DEG },
+            turbidity: 2.5,
+            ozone_du: crate::atmosphere::REFERENCE_OZONE_DU,
+            air_density: 1.0,
+            visibility_m: 40_000.0,
+            deck: crate::atmosphere::CloudDeck::None,
+            cloud_cover: 0.0,
+            cloud_base_m: 1_500.0,
+            cloud_beam_transmittance: None,
+            ground_albedo: crate::atmosphere::GROUND_ALBEDO,
+            meter_view: None,
+            sky_cube: false,
+        };
+        let (medium, readback) =
+            crate::atmosphere::resolve(&inputs, SUN_AZIMUTH_DEG, pb.args.far);
+        let medium_handle = crate::atmosphere::upload_medium(&mut media, &None, medium);
+        commands.spawn((
+            crate::atmosphere::atmosphere(&inputs, medium_handle),
+            Transform::from_xyz(0.0, scene_ground_y - crate::atmosphere::INNER_RADIUS_M, 0.0),
+        ));
+        commands.spawn((
+            DirectionalLight {
+                illuminance: crate::atmosphere::SOLAR_CONSTANT_LX,
+                color: crate::atmosphere::color_of(readback.sun_color),
+                shadow_maps_enabled: true,
+                contact_shadows_enabled: true,
+                // PCSS: penumbrae sized by the sun's real angular diameter
+                // instead of a hard shadow-map edge.
+                soft_shadow_size: Some(
+                    crate::atmosphere::SUN_ANGULAR_DIAMETER_DEG.to_radians(),
+                ),
+                ..default()
+            },
+            bevy::light::SunDisk {
+                angular_size: crate::atmosphere::SUN_ANGULAR_DIAMETER_DEG.to_radians(),
+                intensity: 1.0,
+            },
+            bevy::light::CascadeShadowConfigBuilder {
+                minimum_distance: 1.0,
+                maximum_distance: 400.0,
+                num_cascades: 4,
+                ..default()
+            }
+            .build(),
+            Transform::IDENTITY.looking_to(sun_dir, Vec3::Y),
+        ));
+        high_fidelity = Some(HighFidelityView {
+            ev100: metered_ev100(readback.total_horizontal_illuminance_lx)
+                + pb.args.ev100_bias,
+            far_plane_m: pb.args.far,
+        });
+    } else {
+        // Authored darkness dims the fixed sun to deep dusk so emissive lenses
+        // and projected beams read in captures.
+        let sun_lux = if low_beams.0 { 400.0 } else { 28_000.0 };
+        commands.spawn((
+            DirectionalLight {
+                illuminance: sun_lux,
+                shadow_maps_enabled: true,
+                ..default()
+            },
+            bevy::light::CascadeShadowConfigBuilder {
+                minimum_distance: 1.0,
+                maximum_distance: 400.0,
+                num_cascades: 4,
+                ..default()
+            }
+            .build(),
+            Transform::IDENTITY.looking_to(sun_dir, Vec3::Y),
+        ));
+    }
 
     // Initial chase pose around the first ego position; refined per tick.
     let ego = pb
@@ -514,10 +720,10 @@ fn startup_setup(
         .frames
         .first()
         .and_then(|f| f.actors.first())
-        .map(|a| [a.position[0] as f32, pb.args.ground_y, a.position[2] as f32])
+        .map(|a| [a.position[0] as f32, pb.args.ground_y.unwrap_or(a.position[1] as f32), a.position[2] as f32])
         .unwrap_or([0.0; 3]);
-    let eye = Vec3::new(ego[0], pb.args.ground_y + pb.args.chase_height, ego[2] + pb.args.chase_dist);
-    let target = Vec3::new(ego[0], pb.args.ground_y + 1.2, ego[2]);
+    let eye = Vec3::new(ego[0], ego[1] + pb.args.chase_height, ego[2] + pb.args.chase_dist);
+    let target = Vec3::new(ego[0], ego[1] + 1.2, ego[2]);
     *cam_pose = CameraPose {
         eye: [f64::from(eye.x), f64::from(eye.y), f64::from(eye.z)],
         target: [f64::from(target.x), f64::from(target.y), f64::from(target.z)],
@@ -542,24 +748,50 @@ fn startup_setup(
         src_image: rgb_image.clone(),
         key: "rgb".into(),
     });
-    commands.spawn((
-        CameraMarker,
-        Camera3d {
-            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC)
-                .into(),
-            ..default()
-        },
-        Projection::from(PerspectiveProjection {
-            fov: pb.args.fov.to_radians(),
-            near: pb.args.near,
-            far: pb.args.far,
-            ..default()
-        }),
-        Msaa::Off,
-        Tonemapping::AgX,
-        Transform::from_translation(eye).looking_at(target, Vec3::Y),
-        RenderTarget::Image(rgb_image.into()),
-    ));
+    let rgb_camera = commands
+        .spawn((
+            CameraMarker,
+            Camera3d {
+                depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC)
+                    .into(),
+                ..default()
+            },
+            Projection::from(PerspectiveProjection {
+                fov: pb.args.fov.to_radians(),
+                near: pb.args.near,
+                far: pb.args.far,
+                ..default()
+            }),
+            // MSAA stays off in both tiers: the instance-ID and depth passes
+            // must not blend across primitives, and Bevy's SSAO requires it.
+            Msaa::Off,
+            Tonemapping::AgX,
+            Transform::from_translation(eye).looking_at(target, Vec3::Y),
+            RenderTarget::Image(rgb_image.into()),
+        ))
+        .id();
+    if let Some(view) = high_fidelity {
+        commands.entity(rgb_camera).insert((
+            // HDR is required before the atmosphere's sky pass and bloom have
+            // anywhere to put values above 1.0.
+            bevy::camera::Hdr,
+            crate::atmosphere::settings(view.far_plane_m),
+            crate::atmosphere::environment_light(1.0, 256),
+            bevy::camera::Exposure { ev100: view.ev100 },
+            bevy::pbr::ScreenSpaceAmbientOcclusion::default(),
+            bevy::pbr::ContactShadows::default(),
+            // SMAA is morphological and single-frame. TAA would look smoother
+            // still, but it jitters the projection and accumulates history,
+            // which would make captures irreproducible.
+            bevy::anti_alias::smaa::Smaa {
+                preset: bevy::anti_alias::smaa::SmaaPreset::Ultra,
+            },
+            bevy::post_process::bloom::Bloom {
+                intensity: 0.06,
+                ..bevy::post_process::bloom::Bloom::NATURAL
+            },
+        ));
+    }
 
     let id_image = readback::setup_target_image(
         &mut images,
@@ -634,6 +866,7 @@ fn startup_setup(
     }
     // --- shared actor visual assets (lenses, contact shadows, beams) -----
     let visual = ActorVisualAssets {
+        painted_contact_shadow: !tier.physical_sky(),
         unit_cube: meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(1.0, 1.0, 1.0))),
         shadow_mesh: meshes.add(Mesh::from(bevy::math::primitives::Plane3d {
             normal: Dir3::Y,
@@ -695,7 +928,7 @@ fn startup_setup(
         commands.spawn((
             Mesh3d(plane),
             MeshMaterial3d(mat),
-            Transform::from_xyz(0.0, pb.args.ground_y, 0.0),
+            Transform::from_xyz(0.0, pb.args.ground_y.unwrap_or(0.0), 0.0),
             RenderLayers::layer(0),
         ));
     }
@@ -765,11 +998,27 @@ fn contact_shadow_image() -> Image {
 
 fn check_assets(
     mut commands: Commands,
+    server: Res<AssetServer>,
     gltfs: Res<Assets<Gltf>>,
     loads: Query<(Entity, &TileLoad), Without<SceneSpawned>>,
     mut readiness: ResMut<Readiness>,
     pb: Res<Playback>,
 ) {
+    if readiness.loaded_at.is_some() {
+        return;
+    }
+    for (_, tile) in &loads {
+        if let LoadState::Failed(error) = server.load_state(tile.handle.id()) {
+            panic!("map failed to load: {error}");
+        }
+        match server.recursive_dependency_load_state(tile.handle.id()) {
+            RecursiveDependencyLoadState::Loaded => {}
+            RecursiveDependencyLoadState::Failed(error) => {
+                panic!("map dependency failed to load: {error}");
+            }
+            RecursiveDependencyLoadState::NotLoaded | RecursiveDependencyLoadState::Loading => return,
+        }
+    }
     // Determinism: wait for EVERY GLB, then spawn roots in CLI --glbs order
     // so entity/draw order never races async load completion (WSB6 fix).
     let mut ordered: Vec<(usize, Entity, &TileLoad)> =
@@ -950,6 +1199,42 @@ fn poll_roots(
     }
 }
 
+/// Do not capture partially uploaded maps: the master and its textures can
+/// finish loading long after the process-global warmup counter has elapsed.
+fn poll_capture_ready(
+    pb: Res<Playback>,
+    mut readiness: ResMut<Readiness>,
+    pending: Res<GpuPending>,
+    frame: Res<GlobalFrame>,
+    meshes: Res<Assets<Mesh>>,
+    map_meshes: Query<(&Mesh3d, &GlobalTransform), With<StaticMapMesh>>,
+) {
+    if readiness.capture_ready_frame.is_some() {
+        return;
+    }
+    if pb.started_at.elapsed() > Duration::from_secs(300) {
+        panic!(
+            "playback failed to become ready within 300 s ({} pipelines compiling, {} materials unbound)",
+            pending.pipelines(), pending.materials()
+        );
+    }
+    if !readiness.actors_spawned {
+        return;
+    }
+    let sample = pending.samples();
+    if sample == readiness.last_gpu_sample {
+        return;
+    }
+    readiness.last_gpu_sample = sample;
+    readiness.idle_frames = if pending.is_idle() { readiness.idle_frames + 1 } else { 0 };
+    if readiness.idle_frames >= GPU_IDLE_FRAMES {
+        if pb.args.ground_y.is_none() {
+            readiness.terrain = GroundField::from_meshes(&meshes, map_meshes.iter(), 2.0);
+        }
+        readiness.capture_ready_frame = Some(frame.0 + u64::from(pb.args.warmup));
+    }
+}
+
 /// One-time post-load step: number the tile meshes into the legend, spawn the
 /// initial actor set, write the merged legend.
 #[allow(clippy::too_many_arguments)]
@@ -983,6 +1268,7 @@ fn on_scene_ready(
     // --- tile instance IDs (deterministic: name, then entity bits) ---
     let mut entries: Vec<(String, u64, Handle<Mesh>, Option<Entity>, Transform)> = Vec::new();
     for (e, mesh, name, child_of, transform) in &meshes_q {
+        commands.entity(e).insert(StaticMapMesh);
         entries.push((
             name.map(|n| n.to_string())
                 .unwrap_or_else(|| format!("unnamed_mesh_{e}")),
@@ -1302,18 +1588,20 @@ fn spawn_actor_if_needed(
 
     // Contact shadow blob under every actor: soft dark quad 6 cm above the
     // ground plane (the viewer's SHADOW_LIFT), footprint-scaled.
-    commands.spawn((
-        Mesh3d(visual.shadow_mesh.clone()),
-        MeshMaterial3d(visual.shadow_mat.clone()),
-        Transform {
-            translation: Vec3::new(0.0, 0.06, 0.0),
-            scale: Vec3::new(l * 1.3, 1.0, w * 1.7),
-            ..default()
-        },
-        ChildOf(root),
-        RenderLayers::layer(0),
-        NotShadowCaster,
-    ));
+    if visual.painted_contact_shadow {
+        commands.spawn((
+            Mesh3d(visual.shadow_mesh.clone()),
+            MeshMaterial3d(visual.shadow_mat.clone()),
+            Transform {
+                translation: Vec3::new(0.0, 0.06, 0.0),
+                scale: Vec3::new(l * 1.3, 1.0, w * 1.7),
+                ..default()
+            },
+            ChildOf(root),
+            RenderLayers::layer(0),
+            NotShadowCaster,
+        ));
+    }
 
     // Vehicle light lenses (hidden until the visual-state pass lights them).
     if is_vehicle_class(&desc.actor_class) {
@@ -1388,8 +1676,7 @@ fn apply_tick(
     if !readiness.actors_spawned
         || cursor.next_frame >= pb.n_ticks as usize
         || cursor.awaiting >= 1
-        // Let the warmup frames pass before binding tick 0 to a render.
-        || global_frame.0 < u64::from(pb.args.warmup)
+        || readiness.capture_ready_frame.is_none_or(|ready| global_frame.0 < ready)
     {
         return;
     }
@@ -1424,7 +1711,7 @@ fn apply_tick(
             .any(|d| d.id == rec.id && crate::catalog::body_centred_origin(&d.catalog_id));
         transform.translation = Vec3::new(
             rec.position[0] as f32,
-            if body_centred { rec.position[1] as f32 } else { pb.args.ground_y },
+            if body_centred { rec.position[1] as f32 } else { readiness.ground_y(&pb, rec.position) },
             rec.position[2] as f32,
         );
         transform.rotation = Quat::from_xyzw(
@@ -1451,7 +1738,7 @@ fn apply_tick(
     }
     visual_tick.0 = Some(frame_idx);
     // Camera follows the ego unless explicitly static.
-    if pb.args.camera != "static" {
+    if pb.args.camera != "static" || frame_idx == 0 {
         if let Ok(mut cam) = cams.single_mut() {
             let focus_rec = frame
                 .actors
@@ -1460,7 +1747,7 @@ fn apply_tick(
                 .or_else(|| frame.actors.first());
             if let Some(focus) = focus_rec {
                 let pos =
-                    Vec3::new(focus.position[0] as f32, pb.args.ground_y, focus.position[2] as f32);
+                    Vec3::new(focus.position[0] as f32, readiness.ground_y(&pb, focus.position), focus.position[2] as f32);
                 let yaw = focus.yaw_rad as f32;
                 let fwd = Vec3::new(yaw.cos(), 0.0, -yaw.sin());
                 let eye = pos - fwd * pb.args.chase_dist + Vec3::Y * pb.args.chase_height;
@@ -1486,6 +1773,7 @@ fn apply_tick(
 #[allow(clippy::too_many_arguments)]
 fn update_actor_visuals(
     pb: Res<Playback>,
+    readiness: Res<Readiness>,
     mut visual_tick: ResMut<VisualTick>,
     cues: Res<Cues>,
     low_beams: Res<GlobalLowBeams>,
@@ -1587,7 +1875,7 @@ fn update_actor_visuals(
         let rot = Quat::from_rotation_y(yaw);
         let origin = Vec3::new(
             rec.position[0] as f32,
-            pb.args.ground_y,
+            readiness.ground_y(&pb, rec.position),
             rec.position[2] as f32,
         );
         let source = origin + rot * Vec3::from(beam_source(l, h));
@@ -1637,6 +1925,7 @@ fn expected_keys(pb: &PlaybackArgs) -> Vec<String> {
 fn collect_passes(
     receiver: Res<MainReceiver>,
     pb: Res<Playback>,
+    readiness: Res<Readiness>,
     cam_pose: Res<CameraPose>,
     mut cursor: ResMut<PlayCursor>,
     mut metrics: ResMut<Metrics>,
@@ -1644,6 +1933,9 @@ fn collect_passes(
     registry: Res<ActorRegistry>,
     models: Res<VehicleModels>,
     low_beams: Res<GlobalLowBeams>,
+    actor_poses: Query<(&ActorRoot, &GlobalTransform, &Visibility)>,
+    camera_pose: Query<&GlobalTransform, With<CameraMarker>>,
+    mut observations: ResMut<PlaybackObservations>,
 ) {
     let mut latest: HashMap<String, SentPass> = HashMap::new();
     while let Ok(p) = receiver.try_recv() {
@@ -1700,6 +1992,25 @@ fn collect_passes(
         metrics.last_capture_at = Some(now);
         metrics.readback_us_total += passes.iter().map(|p| p.readback_us).sum::<u64>();
         metrics.captured += 1;
+        let mut poses: Vec<_> = actor_poses.iter().collect();
+        poses.sort_unstable_by(|(a, _, _), (b, _, _)| a.id.cmp(&b.id));
+        let camera = camera_pose.single().expect("playback RGB camera");
+        let record = json!({
+            "tick": tick,
+            "time": pb.state.frames[tick].t,
+            "actors": poses.iter().map(|(actor, pose, visibility)| json!({
+                "id": actor.id,
+                "position": pose.translation().to_array(),
+                "rotation": pose.rotation().to_array(),
+                "visible": **visibility != Visibility::Hidden,
+            })).collect::<Vec<_>>(),
+            "camera": {
+                "position": camera.translation().to_array(),
+                "rotation": camera.rotation().to_array(),
+            },
+        });
+        serde_json::to_writer(&mut observations.0, &record).expect("write observed frame");
+        observations.0.write_all(b"\n").expect("write observed frame newline");
 
         let w = pb.args.width as usize;
         let h = pb.args.height as usize;
@@ -1730,6 +2041,7 @@ fn collect_passes(
         if pb.args.mv && pb.args.validate_mv_actor.is_some() {
             validate_motion_vectors(
                 &pb,
+                &readiness,
                 &cam_pose,
                 &mut metrics,
                 tick,
@@ -1743,6 +2055,7 @@ fn collect_passes(
         cursor.frame_to_tick.remove(&f);
         cursor.awaiting = cursor.awaiting.saturating_sub(1);
         if metrics.captured == u64::from(pb.n_ticks) {
+            observations.0.flush().expect("flush observed frames");
             write_outputs(&pb.args, &metrics);
             write_actor_visuals_report(&pb.args, &registry, &models, low_beams.0);
             exit.write(AppExit::Success);
@@ -1803,6 +2116,7 @@ fn write_actor_visuals_report(
 #[allow(clippy::too_many_arguments)]
 fn validate_motion_vectors(
     pb: &Res<Playback>,
+    readiness: &Readiness,
     cam_pose: &CameraPose,
     metrics: &mut Metrics,
     tick: usize,
@@ -1850,7 +2164,7 @@ fn validate_motion_vectors(
             let frame = pb.state.frames.get(tick_idx)?;
             let rec = frame.actors.iter().find(|r| r.id == actor_id)?;
             Some(project_with_camera(
-                [rec.position[0], pb.args.ground_y as f64, rec.position[2]],
+                [rec.position[0], readiness.ground_y(pb, rec.position) as f64, rec.position[2]],
                 cam_pose.eye,
                 cam_pose.target,
                 pb.args.fov as f64,

@@ -4,8 +4,8 @@
 //!
 //! Source frame (per the qualification program): vehicle sheet in
 //! longitudinal-mm / lateral-right-mm / up-mm with yaw/pitch/roll degrees.
-//! Canonical frame: x-forward, y-up, z-left; metres; radians — matching the
-//! lowering math in `adapters/carla-bridge/.../run_local.py`
+//! Lowered coordinates are metres in (x-forward, y-up, -sheet lateral-right),
+//! with source-sign angles in radians, matching `carla-exec/run_local.py`.
 //! (`POD_FRONT_DATUM_M = 0.85`, `POD_PLATE_HEIGHT_M = 1.78`):
 //!
 //! ```text
@@ -33,9 +33,9 @@ pub struct Mount {
     pub x: f32,
     /// Metres up from the ground plane.
     pub y: f32,
-    /// Metres left (+) / right (-).
+    /// Lowered lateral coordinate: negative source-sheet lateral-right.
     pub z: f32,
-    /// Yaw around +Y, radians, 0 = forward.
+    /// Source/CARLA yaw in radians: 0 = +X forward, +90 degrees = +Z.
     pub yaw: f32,
     /// Pitch, radians, positive up.
     pub pitch: f32,
@@ -218,16 +218,16 @@ pub fn parse_pronto_rig(program_json: &str, render_width: u32, render_height: u3
 }
 
 /// The authored trailing chase presentation view. Presentation-only pose:
-/// 8 m behind the host origin, 3 m up, pitched slightly down, looking forward
-/// along the host heading. Outside the measurement rig by contract.
+/// 9 m behind and 3.4 m above the host, aimed approximately 8 m ahead of it.
+/// Matches the CARLA adapter's parity-front and extended-rig chase calibration.
 pub fn chase_camera(render_width: u32, render_height: u32) -> RigSensor {
     let aspect = render_width as f32 / render_height as f32;
-    let hfov = 58.0_f32;
+    let hfov = 70.0_f32;
     RigSensor {
         id: CHASE_CAMERA_SENSOR_ID.to_string(),
         label: "Trailing chase (presentation)".to_string(),
         kind: SensorKind::Camera,
-        mount: Mount { x: -8.0, y: 3.0, z: 0.0, yaw: 0.0, pitch: (-6.0f32).to_radians(), roll: 0.0 },
+        mount: Mount { x: -9.0, y: 3.4, z: 0.0, yaw: 0.0, pitch: (-11.3f32).to_radians(), roll: 0.0 },
         horizontal_fov_deg: hfov,
         vertical_fov_deg: Some((2.0 * ((hfov.to_radians() / 2.0).tan() / aspect).atan()).to_degrees()),
         range_m: 1000.0,

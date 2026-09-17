@@ -15,12 +15,15 @@ use bevy::render::render_resource::{
 };
 
 
-/// Asset path of the on-disk shader copy (committed under the crate's
-/// assets dir; the playback tool runs from a source checkout, see
-/// `platform::asset_path` for the root convention).
-pub fn shader_asset_path() -> String {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/shaders/motion_vector.wgsl");
-    crate::platform::asset_path(&path).expect("CARGO_MANIFEST_DIR is absolute")
+/// Embedded shader registration keeps standalone playback independent of the
+/// source checkout's absolute build path.
+pub struct MotionVectorPlugin;
+
+impl Plugin for MotionVectorPlugin {
+    fn build(&self, app: &mut App) {
+        bevy::asset::embedded_asset!(app, "shaders/motion_vector.wgsl");
+        app.add_plugins(MaterialPlugin::<MotionVectorMaterial>::default());
+    }
 }
 
 #[derive(Asset, TypePath, Debug, Clone, Default, AsBindGroup)]
@@ -28,7 +31,7 @@ pub struct MotionVectorMaterial {}
 
 impl Material for MotionVectorMaterial {
     fn fragment_shader() -> ShaderRef {
-        ShaderRef::Path(shader_asset_path().into())
+        ShaderRef::Path("embedded://render_core/shaders/motion_vector.wgsl".into())
     }
 }
 

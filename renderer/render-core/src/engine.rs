@@ -1548,15 +1548,13 @@ fn sync_light_layers(
 // Dynamic actors + ground height (V4 SensorRig)
 // ---------------------------------------------------------------------------
 
-/// Coarse ground-height lookup: minimum world vertex Y per grid cell.
+/// Coarse ground-height lookup: minimum world surface Y per grid cell.
 ///
-/// Traces carry no height channel (scene-state.v1 groundY may be null), so
-/// actor origins are snapped onto the static scene. Taking the per-cell
-/// MINIMUM keeps walls/roofs from inflating the estimate: every mesh that
-/// meets the ground contributes ground-level vertices, while anything
-/// elevated (roofs, foliage) only raises the maximum.
+/// Rasterize triangle interiors as well as vertices. Otherwise sparse road
+/// meshes leave cells containing only foliage/roof vertices, and actors are
+/// incorrectly snapped onto those elevated surfaces.
 #[derive(Default)]
-struct GroundField {
+pub(crate) struct GroundField {
     cell_m: f32,
     min_y: HashMap<(i64, i64), f32>,
     /// Median per-cell height, fixed at build; the far fallback of `sample`.
@@ -1566,16 +1564,26 @@ struct GroundField {
 impl GroundField {
     fn build(app: &mut App, cell_m: f32) -> GroundField {
         let world = app.world_mut();
-        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
         let mut q = world.query::<(&Mesh3d, &GlobalTransform)>();
         let meshes = world.resource::<Assets<Mesh>>();
-        for (mesh, gt) in q.iter(world) {
+        Self::from_meshes(meshes, q.iter(world), cell_m)
+    }
+
+    pub(crate) fn from_meshes<'a>(
+        meshes: &Assets<Mesh>,
+        instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
+        cell_m: f32,
+    ) -> GroundField {
+        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        for (mesh, gt) in instances {
             let Some(mesh) = meshes.get(&mesh.0) else { continue };
             let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
             let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { continue };
             let gt = gt.to_matrix();
-            for v in values.iter() {
-                let p = gt.transform_point3(Vec3::from(*v));
+            let positions: Vec<Vec3> = values.iter()
+                .map(|v| gt.transform_point3(Vec3::from(*v)))
+                .collect();
+            for p in &positions {
                 let key = (
                     (p.x / cell_m).floor() as i64,
                     (p.z / cell_m).floor() as i64,
@@ -1586,20 +1594,58 @@ impl GroundField {
                     .and_modify(|y| *y = y.min(p.y))
                     .or_insert(p.y);
             }
+            if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
+                if let Some(indices) = mesh.indices() {
+                    let mut indices = indices.iter();
+                    while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
+                        field.rasterize_triangle(positions[a], positions[b], positions[c]);
+                    }
+                } else {
+                    for triangle in positions.chunks_exact(3) {
+                        field.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
+                    }
+                }
+            }
         }
         field.median = field.median_y();
         field
     }
 
+    fn rasterize_triangle(&mut self, a: Vec3, b: Vec3, c: Vec3) {
+        let ab = b - a;
+        let ac = c - a;
+        let area = ab.x * ac.z - ab.z * ac.x;
+        if area.abs() < 1.0e-8 {
+            return;
+        }
+        let min = a.min(b).min(c);
+        let max = a.max(b).max(c);
+        let inv_area = area.recip();
+        let x0 = (min.x / self.cell_m - 0.5).ceil() as i64;
+        let x1 = (max.x / self.cell_m - 0.5).floor() as i64;
+        let z0 = (min.z / self.cell_m - 0.5).ceil() as i64;
+        let z1 = (max.z / self.cell_m - 0.5).floor() as i64;
+        for cz in z0..=z1 {
+            let z = (cz as f32 + 0.5) * self.cell_m - a.z;
+            for cx in x0..=x1 {
+                let x = (cx as f32 + 0.5) * self.cell_m - a.x;
+                let u = (x * ac.z - z * ac.x) * inv_area;
+                let v = (ab.x * z - ab.z * x) * inv_area;
+                if u >= -1.0e-6 && v >= -1.0e-6 && u + v <= 1.0 + 1.0e-6 {
+                    let y = a.y + u * ab.y + v * ac.y;
+                    self.min_y.entry((cx, cz))
+                        .and_modify(|height| *height = height.min(y))
+                        .or_insert(y);
+                }
+            }
+        }
+    }
+
     /// Ground height under (x, z).
     ///
-    /// The field is per-vertex, so a road drawn as large triangles leaves
-    /// most 2 m cells empty; those used to read as 0.0, which put a
-    /// ground-snapped actor (and its mounted camera) eleven metres under a
-    /// street at y = 13 on every other tick. An empty cell now takes the
-    /// nearest populated cell within 20 m, then the scene median, and only
-    /// then 0.0 (a scene with no geometry at all).
-    fn sample(&self, x: f32, z: f32) -> f32 {
+    /// Cells outside the mesh coverage use the nearest populated cell within
+    /// 20 m, then the scene median, then 0.0 for an entirely empty scene.
+    pub(crate) fn sample(&self, x: f32, z: f32) -> f32 {
         let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
         if let Some(y) = self.min_y.get(&(cx, cz)) {
             return *y;
@@ -1681,7 +1727,7 @@ pub struct SceneApp {
     actor_classes: HashMap<u32, String>,
     /// Next instance id for dynamic actors (beyond the static legend range).
     next_instance_id: u32,
-    /// Coarse ground-height field (min vertex y per cell), built at readiness.
+    /// Coarse ground-height field (minimum surface Y per cell), built at readiness.
     ground: GroundField,
     /// Sky cubemap spawned by the lighting ladder (rung ≥ 1), attached as a
     /// `Skybox` to every RGB camera.
@@ -4593,6 +4639,26 @@ fn copy_device_passes(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ground_field_covers_sparse_road_under_foliage() {
+        let mut meshes = Assets::<Mesh>::default();
+        let mesh = Mesh::new(
+            bevy::render::render_resource::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::MAIN_WORLD,
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![
+            [0.0, 1.0, 0.0], [10.0, 2.0, 0.0], [0.0, 1.0, 10.0],
+            [4.2, 20.0, 4.2], [4.8, 20.0, 4.2], [4.2, 20.0, 4.8],
+        ])
+        .with_inserted_indices(bevy::mesh::Indices::U32(vec![0, 2, 1, 3, 4, 5]));
+        let mesh = Mesh3d(meshes.add(mesh));
+        let transform = GlobalTransform::IDENTITY;
+        let field = GroundField::from_meshes(&meshes, [(&mesh, &transform)], 2.0);
+        // This cell has foliage vertices but no road vertices. Its road
+        // triangle still covers the centre (5, 5), at interpolated Y = 1.5.
+        assert!((field.sample(4.3, 4.3) - 1.5).abs() < 1.0e-5);
+    }
 
     #[test]
     fn one_meter_exposes_twilight_between_noon_and_night() {

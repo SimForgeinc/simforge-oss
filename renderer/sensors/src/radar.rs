@@ -18,6 +18,7 @@
 
 use crate::bvh::Raycast;
 use bevy::math::{Quat, Vec3};
+use crate::RAY_POOL;
 
 #[derive(Debug, Clone)]
 pub struct RadarConfig {
@@ -61,47 +62,61 @@ pub struct RadarDetection {
 /// `instance_velocity` maps an instance id to its world-frame velocity (m/s);
 /// static geometry maps to zero. `host_velocity` is the sensor host's
 /// world-frame velocity.
+///
+/// Azimuth columns are cast in parallel — one task per azimuth — and the
+/// per-column detections are concatenated in azimuth order, so emitted rows
+/// keep the strict (azimuth, elevation) order a serial fan produces.
 pub fn scan(
     scene: &dyn Raycast,
     config: &RadarConfig,
     origin: Vec3,
     rot: Quat,
     host_velocity: Vec3,
-    instance_velocity: &dyn Fn(u32) -> Vec3,
+    instance_velocity: &(dyn Fn(u32) -> Vec3 + Sync),
 ) -> Vec<RadarDetection> {
-    let mut out = Vec::with_capacity((config.azimuth_rays * config.elevation_rows) as usize);
     if config.azimuth_rays == 0 || config.elevation_rows == 0 {
-        return out;
+        return Vec::new();
     }
-    for az_i in 0..config.azimuth_rays {
-        // Uniform azimuths centered on forward.
-        let az = if config.azimuth_rays > 1 {
-            (az_i as f32 / (config.azimuth_rays - 1) as f32 - 0.5) * config.hfov_deg.to_radians()
-        } else {
-            0.0
-        };
-        for el_j in 0..config.elevation_rows {
-            let el = if config.elevation_rows > 1 {
-                (el_j as f32 / (config.elevation_rows - 1) as f32 - 0.5)
-                    * config.vfov_deg.to_radians()
-            } else {
-                0.0
-            };
-            // Sensor-frame direction: az positive toward +z (left), el up.
-            let cos_e = el.cos();
-            let dir_sensor = Vec3::new(cos_e * az.cos(), el.sin(), cos_e * az.sin());
-            let dir_world = rot.mul_vec3(dir_sensor);
-            if let Some(hit) = scene.cast(origin, dir_world, config.range_m) {
-                let rel = instance_velocity(hit.instance_id) - host_velocity;
-                let beam_unit = dir_world.normalize_or_zero();
-                out.push(RadarDetection {
-                    depth: hit.distance,
-                    azimuth: az,
-                    altitude: el,
-                    velocity: rel.dot(beam_unit),
-                });
-            }
+    let azimuth_rays = config.azimuth_rays;
+    let elevation_rows = config.elevation_rows;
+    let hfov_rad = config.hfov_deg.to_radians();
+    let vfov_rad = config.vfov_deg.to_radians();
+    let range_m = config.range_m;
+
+    let columns: Vec<Vec<RadarDetection>> = RAY_POOL.scope(|scope| {
+        for az_i in 0..azimuth_rays {
+            scope.spawn(async move {
+                // Uniform azimuths centered on forward.
+                let az = if azimuth_rays > 1 {
+                    (az_i as f32 / (azimuth_rays - 1) as f32 - 0.5) * hfov_rad
+                } else {
+                    0.0
+                };
+                let mut out = Vec::with_capacity(elevation_rows as usize);
+                for el_j in 0..elevation_rows {
+                    let el = if elevation_rows > 1 {
+                        (el_j as f32 / (elevation_rows - 1) as f32 - 0.5) * vfov_rad
+                    } else {
+                        0.0
+                    };
+                    // Sensor-frame direction: az positive toward +z (left), el up.
+                    let cos_e = el.cos();
+                    let dir_sensor = Vec3::new(cos_e * az.cos(), el.sin(), cos_e * az.sin());
+                    let dir_world = rot.mul_vec3(dir_sensor);
+                    if let Some(hit) = scene.cast(origin, dir_world, range_m) {
+                        let rel = instance_velocity(hit.instance_id) - host_velocity;
+                        let beam_unit = dir_world.normalize_or_zero();
+                        out.push(RadarDetection {
+                            depth: hit.distance,
+                            azimuth: az,
+                            altitude: el,
+                            velocity: rel.dot(beam_unit),
+                        });
+                    }
+                }
+                out
+            });
         }
-    }
-    out
+    });
+    columns.into_iter().flatten().collect()
 }

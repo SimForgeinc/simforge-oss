@@ -49,6 +49,50 @@ pub fn write_lidar_ply(path: &Path, points: &[LidarPoint]) -> Result<()> {
     Ok(())
 }
 
+/// Binary little-endian PLY: the same five properties, the same order, the same
+/// values — 20 bytes per point instead of ~52 ASCII bytes, and no formatting.
+///
+/// ASCII PLY exists for byte parity with CARLA's `save_to_disk`. A scan of
+/// 67,861 points costs 3.5 MB and ~32 ms to format as text; as binary it is
+/// 1.4 MB and a memcpy. Every PLY reader in the wild (Open3D, PCL, trimesh,
+/// meshlab) reads `binary_little_endian` natively, so this is a format choice,
+/// not a fidelity one: the f32 values written are bit-identical to the floats
+/// the ASCII path formats.
+pub fn encode_lidar_ply_binary(points: &[LidarPoint]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(200 + points.len() * 20);
+    out.extend_from_slice(b"ply\nformat binary_little_endian 1.0\n");
+    out.extend_from_slice(format!("element vertex {}\n", points.len()).as_bytes());
+    out.extend_from_slice(b"property float x\n");
+    out.extend_from_slice(b"property float y\n");
+    out.extend_from_slice(b"property float z\n");
+    out.extend_from_slice(b"property float intensity\n");
+    out.extend_from_slice(b"property uint instance_id\n");
+    out.extend_from_slice(b"end_header\n");
+    for p in points {
+        out.extend_from_slice(&p.x.to_le_bytes());
+        out.extend_from_slice(&p.y.to_le_bytes());
+        out.extend_from_slice(&p.z.to_le_bytes());
+        out.extend_from_slice(&p.intensity.to_le_bytes());
+        out.extend_from_slice(&p.instance_id.to_le_bytes());
+    }
+    out
+}
+
+/// Radar detections as binary little-endian: four f32 per row, same order as
+/// the CSV columns, preceded by the CSV's header line as a comment so the
+/// column meaning travels with the file.
+pub fn encode_radar_binary(detections: &[RadarDetection]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(64 + detections.len() * 16);
+    out.extend_from_slice(b"# depth_m,azimuth_rad,altitude_rad,velocity_mps binary_le f32x4\n");
+    for d in detections {
+        out.extend_from_slice(&d.depth.to_le_bytes());
+        out.extend_from_slice(&d.azimuth.to_le_bytes());
+        out.extend_from_slice(&d.altitude.to_le_bytes());
+        out.extend_from_slice(&d.velocity.to_le_bytes());
+    }
+    out
+}
+
 pub fn encode_radar_csv(detections: &[RadarDetection]) -> Vec<u8> {
     let mut out = String::with_capacity(64 + detections.len() * 80);
     let _ = writeln!(out, "depth_m,azimuth_rad,altitude_rad,velocity_mps");
