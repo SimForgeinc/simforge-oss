@@ -35,6 +35,7 @@ import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
 import { createLocalHost } from "./local-host.mjs";
 import { createRemoteHost, REMOTE_HOST_ENV, remoteHostTarget } from "./remote-host.mjs";
 import { CHOOSE_CONNECTION_ARG, openConnectionStore, openShellVault, resolveRemoteTarget } from "./connections.mjs";
+import { NativeViewportProcess } from "./native-viewport.mjs";
 import { chooseConnection, reportLostConnection } from "./connections-window.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
 import { readDistributionIdentity } from "./release-identity.mjs";
@@ -49,7 +50,16 @@ const RENDERER_PERMISSIONS = new Set(["fullscreen", "pointerLock", "clipboard-sa
 
 /** @type {BrowserWindow | null} */
 let window = null;
-/** @type {{ dispose(): Promise<void> } | null} */
+let nativeViewport = null;
+/**
+ * Last viewport region the page reported, in screen coordinates. The native
+ * window is positioned over the editor's viewport container, so the process
+ * has to be launched with that geometry rather than snapping into place on
+ * its first frame.
+ */
+let nativeViewportGeometry = null;
+/** @type {Set<(event: Record<string, unknown>) => void>} */
+const nativeViewportListeners = new Set();
 let mapCache = null;
 /** The host origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
@@ -434,6 +444,56 @@ function connectionMenu() {
   };
 }
 
+/**
+ * Resolve the native map profile root for a verified map identity.
+ *
+ * This is the only place a native map path is constructed, and it is
+ * deliberately in the main process: the page is sandboxed and must never
+ * receive a filesystem path, so it sends identity and the shell turns that
+ * into a location under the cache root it owns. The `sourceMapId` comes from
+ * the studio's own `native-profile` response, never from the renderer, so a
+ * page cannot steer this at a directory of its choosing.
+ */
+function nativeMapRoot(sourceMapId) {
+  const cacheRoot = process.env.SIMFORGE_MAPS_CACHE_ROOT;
+  if (!cacheRoot) throw new Error("Native viewport requires SIMFORGE_MAPS_CACHE_ROOT.");
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(sourceMapId)) throw new Error(`native profile reported an unusable sourceMapId: ${sourceMapId}`);
+  return join(cacheRoot, ".corpus", sourceMapId);
+}
+
+/**
+ * Fetch and validate the immutable native profile for one map version.
+ *
+ * `authorization` is the host's, so this is the shell asking the local
+ * service a question on the window's behalf, not the page reaching the
+ * service directly.
+ */
+async function nativeProfile(mapVersionId, authorization) {
+  const response = await fetch(
+    `${trustedOrigin}/api/simforge/maps/${encodeURIComponent(mapVersionId)}/native-profile`,
+    { headers: await authorization() },
+  );
+  if (!response.ok) throw new Error(`native profile unavailable (${response.status})`);
+  const profile = await response.json();
+  if (profile?.mapVersionId !== mapVersionId || !/^[a-f0-9]{64}$/.test(profile?.releaseDigest ?? "")) {
+    throw new Error("native profile response is not a usable map identity");
+  }
+  return profile;
+}
+
+function launchNativeViewport(mapRoot, geometry) {
+  if (nativeViewport?.running) return nativeViewport;
+  const executable = process.env.SIMFORGE_NATIVE_VIEWPORT;
+  if (!executable) throw new Error("Native viewport requires SIMFORGE_NATIVE_VIEWPORT.");
+  nativeViewport = new NativeViewportProcess({ executable, mapRoot, embedded: true, geometry });
+  nativeViewport.onEvent((event) => {
+    for (const listener of nativeViewportListeners) listener(event);
+    if (event.event === "error") console.error("[native-viewport]", event.code, event.message);
+  });
+  nativeViewport.start().catch((error) => console.error("[native-viewport]", error));
+  return nativeViewport;
+}
+
 /** @param {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost>} localHost */
 function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -442,7 +502,6 @@ function installMenu(localHost) {
     { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
-    cacheMenu,
     connectionMenu(),
     { role: "windowMenu" },
     {
@@ -489,6 +548,8 @@ async function shutdown(localHost) {
   mapCache = null;
   await cache?.dispose();
   await localHost.stop();
+  nativeViewport?.stop();
+  nativeViewport = null;
 }
 
 // One application identity everywhere: profile directory, notifications,
@@ -685,6 +746,92 @@ if (!app.requestSingleInstanceLock()) {
         shellUpdater.timer = setInterval(check, 4 * 60 * 60 * 1000);
         shellUpdater.timer.unref();
       }
+      const installNativeViewport = () => {
+        const validSender = (event) => event.sender === win?.webContents && event.senderFrame === win?.webContents.mainFrame;
+        const forwardEvents = () => {
+          const listener = (payload) => {
+            if (!win?.isDestroyed()) win.webContents.send("simforge:native-viewport:event", payload);
+          };
+          nativeViewportListeners.add(listener);
+          return listener;
+        };
+        ipcMain.handle("simforge:map-cache:native-viewport:profile", async (event, mapVersionId) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          if (typeof mapVersionId !== "string" || !mapVersionId) throw new Error("native profile needs a mapVersionId");
+          return await nativeProfile(mapVersionId, localHost.authorization);
+        });
+        // The page sends identity; the shell resolves the path. The renderer's
+        // digest must match the one the service published for that map version,
+        // so a stale or tampered page cannot point the viewport at a release
+        // the host never verified.
+        ipcMain.handle("simforge:map-cache:native-viewport:load-map", async (event, identity) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          const { mapVersionId, releaseDigest } = identity ?? {};
+          if (typeof mapVersionId !== "string" || !mapVersionId) throw new Error("native viewport load-map needs a mapVersionId");
+          if (typeof releaseDigest !== "string" || !/^[a-f0-9]{64}$/.test(releaseDigest)) {
+            throw new Error("native viewport load-map needs a sha-256 releaseDigest");
+          }
+          const profile = await nativeProfile(mapVersionId, localHost.authorization);
+          if (profile.releaseDigest !== releaseDigest) {
+            throw new Error(`release digest mismatch for ${mapVersionId}: the host published ${profile.releaseDigest}`);
+          }
+          const mapRoot = nativeMapRoot(profile.sourceMapId);
+          await access(mapRoot);
+          const listener = forwardEvents();
+          try {
+            const geometry = nativeViewportGeometry ?? { width: 1280, height: 720 };
+            const viewport = launchNativeViewport(mapRoot, geometry);
+            await viewport.start();
+            viewport.loadMap({ mapRoot, mapVersionId, releaseDigest: profile.releaseDigest });
+            return { ok: true };
+          } catch (error) {
+            nativeViewportListeners.delete(listener);
+            throw error;
+          }
+        });
+        ipcMain.handle("simforge:map-cache:native-viewport:start", (event) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          // Subscribing is all a bare start can do now: the process is
+          // launched by `load-map`, which is the only call that knows which
+          // map root to anchor it to.
+          forwardEvents();
+          return { ok: true };
+        });
+        ipcMain.handle("simforge:map-cache:native-viewport:camera", (event, position, target) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          if (!nativeViewport?.running) throw new Error("native viewport is not running");
+          nativeViewport.setCamera(position, target);
+          return { ok: true };
+        });
+        // Every other protocol command, forwarded verbatim. The viewport
+        // validates its own payloads and answers an unknown command with an
+        // `error` event, so a second validator here would only be a second
+        // place for the two to disagree.
+        ipcMain.handle("simforge:map-cache:native-viewport:command", (event, command) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          if (!command || typeof command.command !== "string") throw new Error("native viewport command needs a command name");
+          if (command.command === "load-map") throw new Error("use native-viewport:load-map so the shell can resolve the map root");
+          if (!nativeViewport?.running) throw new Error("native viewport is not running");
+          if (command.command === "resize") {
+            nativeViewportGeometry = {
+              width: Number(command.width) || 1280,
+              height: Number(command.height) || 720,
+              x: Number.isFinite(command.x) ? Number(command.x) : undefined,
+              y: Number.isFinite(command.y) ? Number(command.y) : undefined,
+            };
+          }
+          nativeViewport.send(command);
+          return { ok: true };
+        });
+        ipcMain.handle("simforge:map-cache:native-viewport:stop", (event) => {
+          if (!validSender(event)) throw new Error("native viewport sender rejected");
+          nativeViewport?.stop();
+          nativeViewport = null;
+          nativeViewportListeners.clear();
+          return { ok: true };
+        });
+      };
+      installNativeViewport();
       mapCache = await installDesktopMapCache({
         ipcMain,
         window: win,
@@ -695,7 +842,6 @@ if (!app.requestSingleInstanceLock()) {
       });
       if (win.isDestroyed()) return;
       await win.loadURL(`${trustedOrigin}${PRODUCT.landing}`);
-      if (selection.kind === "remote") watchRemoteHost(win, localHost);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       // A launch the environment pinned has nothing to choose between, so it

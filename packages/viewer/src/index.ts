@@ -165,4 +165,7 @@ export type {
   VehicleLightState,
 } from './renderer-contract';
 export { ThreeRendererAdapter, cameraStateReport, cityViewerAsAdapterHost, contractActorToView } from './renderer-contract-adapter';
+export { chooseRendererMode } from './native-renderer-adapter';
+export type { NativeReadiness, NativeViewportPort, RendererMode } from './native-renderer-adapter';
+export { NativeProcessRenderer } from './native-process-renderer';
 export type { ThreeAdapterHost } from './renderer-contract-adapter';
