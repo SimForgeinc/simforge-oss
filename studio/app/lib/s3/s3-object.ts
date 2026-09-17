@@ -123,21 +123,27 @@ export async function writeLocalObjectStream(
   }
 }
 
-/** Register a seed asset without duplicating it when source and store share a filesystem. */
+/**
+ * Register a seed asset without duplicating it when source and store share a
+ * filesystem. `key` may be a function of the digest, so an immutable member is
+ * storable at a content-addressed key without a second pass over its bytes.
+ */
 export async function registerLocalFile(
   bucket: string,
-  key: string,
+  key: string | ((sha256: string) => string),
   sourcePath: string,
   contentType = "application/octet-stream",
-): Promise<LocalObjectMetadata> {
+): Promise<LocalObjectMetadata & { key: string }> {
   const hash = createHash("sha256");
   let sizeBytes = 0;
   for await (const chunk of createReadStream(sourcePath)) {
     sizeBytes += chunk.length;
     hash.update(chunk);
   }
-  const filePath = localObjectPath(bucket, key);
-  const metaPath = metadataPath(bucket, key);
+  const checksumSha256Hex = hash.digest("hex");
+  const resolvedKey = typeof key === "string" ? key : key(checksumSha256Hex);
+  const filePath = localObjectPath(bucket, resolvedKey);
+  const metaPath = metadataPath(bucket, resolvedKey);
   await mkdir(dirname(filePath), { recursive: true });
   await mkdir(dirname(metaPath), { recursive: true });
   const temporaryPath = `${filePath}.${randomUUID()}.tmp`;
@@ -148,13 +154,9 @@ export async function registerLocalFile(
     await copyFile(sourcePath, temporaryPath);
   }
   await rename(temporaryPath, filePath);
-  const metadata: LocalObjectMetadata = {
-    contentType,
-    checksumSha256Hex: hash.digest("hex"),
-    sizeBytes,
-  };
+  const metadata = { contentType, checksumSha256Hex, sizeBytes };
   await writeFile(metaPath, JSON.stringify(metadata));
-  return metadata;
+  return { ...metadata, key: resolvedKey };
 }
 
 export async function readLocalObjectMetadata(bucket: string, key: string): Promise<LocalObjectMetadata> {
