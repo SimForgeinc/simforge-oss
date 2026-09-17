@@ -20,6 +20,8 @@ import {
 } from "./cloud-loading-context";
 import { cn } from "../lib/utils";
 import { VisibleClock } from "../lib/visible-clock";
+import { formatElapsed, observeTransfers } from "./loading-liveness";
+import { formatBytes } from "../scenario/scene/map-load-progress";
 import { Button } from "./ui/button";
 
 /**
@@ -34,10 +36,19 @@ import { Button } from "./ui/button";
  */
 
 /**
- * Maximum visible time a byte-identical loading source may report no progress before
- * the overlay offers recovery instead of silently covering Studio forever.
+ * How long a load may go with no measured progress at all — neither a changed
+ * source nor a completed response — before the overlay says so and offers a
+ * reload. Progress is evidence, not elapsed time: a map that streams for ten
+ * minutes never trips this, and a load that really died reports it in 45 s.
  */
 export const CLOUD_LOADING_STALL_MS = 45_000;
+
+/**
+ * How long before the overlay starts saying how long it has been waiting and
+ * how much has arrived. A long load is normal for a multi-gigabyte map; a
+ * silent one is what makes people reload a working load.
+ */
+export const CLOUD_LOADING_PATIENCE_MS = 20_000;
 
 const EXIT_MS = 900;
 const ROUTE_ENTRY_DELAY_MS = 180;
@@ -63,6 +74,8 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
   const orderRef = useRef(0);
   const rawCandidate = highestPrioritySource(sources) ?? (hydrating ? INITIAL_ROUTE_SOURCE : null);
   const [stalled, setStalled] = useState(false);
+  /** Elapsed/transferred evidence, shown once a load outlives the patience window. */
+  const [waited, setWaited] = useState<{ elapsedMs: number; bytes: number } | null>(null);
   const stallSignature =
     rawCandidate && rawCandidate.severity !== "error"
       ? [
@@ -77,10 +90,14 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
       : null;
   const candidate = useMemo(
     () =>
-      stalled && rawCandidate && rawCandidate.severity !== "error"
-        ? stalledLoadingSource(rawCandidate)
+      rawCandidate && rawCandidate.severity !== "error"
+        ? stalled
+          ? stalledLoadingSource(rawCandidate, waited)
+          : waited
+            ? waitingLoadingSource(rawCandidate, waited)
+            : rawCandidate
         : rawCandidate,
-    [rawCandidate, stalled],
+    [rawCandidate, stalled, waited],
   );
   const [renderedSource, setRenderedSource] = useState<CloudLoadingSource>(
     INITIAL_ROUTE_SOURCE,
@@ -121,30 +138,67 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
     setHydrating(false);
   }, []);
 
+  /**
+   * The watchdog measures progress instead of inferring it from elapsed time.
+   *
+   * Two independent signals count: the published source changing
+   * (`stallSignature`) and the browser completing a response
+   * (`observeTransfers`). Either resets the window. That matters because the
+   * window before a viewer exists — route chunks, the map manifest, the first
+   * sidecars — has no publisher to report anything, and a large map spends
+   * minutes there; the old string-only watchdog called that healthy load dead
+   * and told the user to reload it.
+   *
+   * Between the patience and stall windows the overlay keeps the real source
+   * and adds what it is waiting on, so a long load reads as a long load.
+   */
   useEffect(() => {
     if (stallSignature === null) {
       setStalled(false);
+      setWaited(null);
       return;
     }
-    let timer: number | undefined;
-    const expire = () => {
-      clock.dispose();
-      setStalled(true);
-      const [kind, title] = stallSignature.split("\u0000");
-      console.error(
-        `Cloud loading stalled: ${kind} source "${title}" made no progress for ${Math.round(CLOUD_LOADING_STALL_MS / 1000)}s.`,
-      );
-    };
+    const signature = stallSignature;
+    let stallTimer: number | undefined;
+    let patienceTimer: number | undefined;
+    let transferAtLastProgress = 0;
+    const startedAt = now();
     const schedule = () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(stallTimer);
       if (clock.visible) {
-        timer = window.setTimeout(expire, Math.max(0, CLOUD_LOADING_STALL_MS - clock.now()));
+        stallTimer = window.setTimeout(expire, Math.max(0, CLOUD_LOADING_STALL_MS - clock.now()));
       }
     };
-    const clock = new VisibleClock(schedule);
+    const clock = new VisibleClock(() => schedule());
+    const transfers = observeTransfers((snapshot) => {
+      if (snapshot.bytes === transferAtLastProgress) return;
+      transferAtLastProgress = snapshot.bytes;
+      // Bytes arrived: this load is alive whatever its publisher reports.
+      clock.reset();
+      setStalled(false);
+      schedule();
+    });
+    function expire() {
+      const evidence = transfers.snapshot();
+      clock.dispose();
+      setStalled(true);
+      const [kind, title] = signature.split("\u0000");
+      console.error(
+        `Cloud loading stalled: ${kind} source "${title}" made no measured progress for `
+        + `${Math.round(CLOUD_LOADING_STALL_MS / 1000)}s `
+        + `(${evidence.responses} responses, ${evidence.bytes} bytes since it started).`,
+      );
+    }
+    const announceWait = () => {
+      setWaited({ elapsedMs: now() - startedAt, bytes: transfers.snapshot().bytes });
+      patienceTimer = window.setTimeout(announceWait, 5_000);
+    };
     schedule();
+    patienceTimer = window.setTimeout(announceWait, CLOUD_LOADING_PATIENCE_MS);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(stallTimer);
+      window.clearTimeout(patienceTimer);
+      transfers.dispose();
       clock.dispose();
     };
   }, [stallSignature]);
@@ -190,6 +244,47 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
 
   const failed = renderedSource.severity === "error";
   const enteringScene = visible && entryKind === "scene";
+
+  /**
+   * One machine-readable answer to "is Studio still loading, and on what?".
+   *
+   * The overlay is the only honest source of that, and it lives under a
+   * portal-less provider whose markup differs per surface, so a caller had to
+   * guess which component was mounted — a guess that reads "not loading" while
+   * a map streams. Automation, support and the desktop shell read these
+   * instead.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!mounted || !visible) {
+      root.removeAttribute("data-simforge-loading");
+      root.removeAttribute("data-simforge-loading-kind");
+      root.removeAttribute("data-simforge-loading-phase");
+      root.removeAttribute("data-simforge-loading-percent");
+      root.removeAttribute("data-simforge-loading-stalled");
+      return;
+    }
+    root.setAttribute("data-simforge-loading", renderedSource.title);
+    root.setAttribute("data-simforge-loading-kind", renderedSource.kind);
+    root.setAttribute("data-simforge-loading-phase", renderedSource.phase ?? "");
+    root.setAttribute(
+      "data-simforge-loading-percent",
+      renderedSource.progress == null ? "" : String(Math.round(renderedSource.progress)),
+    );
+    root.setAttribute("data-simforge-loading-stalled", String(stalled));
+  }, [mounted, renderedSource, stalled, visible]);
+
+  useEffect(
+    () => () => {
+      const root = document.documentElement;
+      root.removeAttribute("data-simforge-loading");
+      root.removeAttribute("data-simforge-loading-kind");
+      root.removeAttribute("data-simforge-loading-phase");
+      root.removeAttribute("data-simforge-loading-percent");
+      root.removeAttribute("data-simforge-loading-stalled");
+    },
+    [],
+  );
 
   return (
     <CloudLoadingContext.Provider value={contextValue}>
@@ -244,12 +339,45 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
   );
 }
 
-function stalledLoadingSource(source: CloudLoadingSource): CloudLoadingSource {
+type WaitEvidence = { elapsedMs: number; bytes: number };
+
+/** `waiting for 2m 05s · 412 MB read`, or without the byte clause at zero. */
+function waitSummary(waited: WaitEvidence): string {
+  const elapsed = `waiting for ${formatElapsed(waited.elapsedMs)}`;
+  return waited.bytes > 0 ? `${elapsed} · ${formatBytes(waited.bytes)} read` : elapsed;
+}
+
+/**
+ * A load past the patience window keeps its own title, progress and byte
+ * telemetry and gains the wait itself. Replacing the source here is what made
+ * a working load look broken: the map's own "1,412 files to go" line is more
+ * useful than any generic message this host could invent.
+ */
+function waitingLoadingSource(source: CloudLoadingSource, waited: WaitEvidence): CloudLoadingSource {
   return {
-    kind: source.kind,
-    title: "Loading is taking longer than expected",
-    detail: `“${source.title}” has made no progress for ${Math.round(CLOUD_LOADING_STALL_MS / 1000)} seconds. Reload to try again; if this keeps happening, report it with the current address.`,
-    severity: "error",
+    ...source,
+    detail: source.detail ? `${source.detail} (${waitSummary(waited)})` : waitSummary(waited),
+  };
+}
+
+/**
+ * No measured progress at all for the stall window: no completed response and
+ * no change from the publisher. The overlay says exactly that, keeps the
+ * progress it had, and offers a reload — it does not claim the load failed,
+ * because the host may simply be busy and the load may still recover.
+ */
+function stalledLoadingSource(source: CloudLoadingSource, waited: WaitEvidence | null): CloudLoadingSource {
+  const seconds = Math.round(CLOUD_LOADING_STALL_MS / 1000);
+  const evidence = waited ? `${waitSummary(waited)}; ` : "";
+  return {
+    ...source,
+    title: `${source.title} — still waiting`,
+    detail:
+      `No data has arrived for ${seconds} seconds (${evidence}`
+      + `phase ${source.phase ?? source.kind}). It may still recover on its own; `
+      + `reload if you would rather start over, and report it with the current address if it repeats.`,
+    // Deliberately not `severity: "error"`: nothing has failed, and an error
+    // severity would also freeze this source at the top priority band.
     priority: 100,
     icon: <CircleAlert aria-hidden="true" {...stylex.props(styles.alertIcon)} />,
     actions: (

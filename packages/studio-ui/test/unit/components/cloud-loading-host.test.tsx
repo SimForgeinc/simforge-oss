@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CLOUD_LOADING_PATIENCE_MS,
   CLOUD_LOADING_STALL_MS,
   CloudLoadingHost,
 } from "../../../src/components/CloudLoadingHost";
@@ -36,9 +37,44 @@ function SourceProbe({ source }: { source: CloudLoadingSource | null }) {
   );
 }
 
+/**
+ * A stalled load is no longer reported as a failure, so `role="alert"` is not
+ * the signal any more: the host keeps the real source and publishes the stall
+ * on the document root, which is also what automation reads.
+ */
+function stalled(): boolean {
+  return document.documentElement.getAttribute("data-simforge-loading-stalled") === "true";
+}
+
+/** Drive the resource-timing observer the host uses to measure liveness. */
+function installTransferObserver(): (bytes: number) => void {
+  const callbacks: Array<(list: { getEntries: () => PerformanceEntry[] }) => void> = [];
+  class FakeObserver {
+    constructor(callback: (list: { getEntries: () => PerformanceEntry[] }) => void) {
+      callbacks.push(callback);
+    }
+    observe() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("PerformanceObserver", FakeObserver);
+  return (bytes: number) => {
+    const entry = {
+      entryType: "resource",
+      initiatorType: "fetch",
+      transferSize: bytes,
+      encodedBodySize: bytes,
+      decodedBodySize: bytes,
+      responseEnd: 1,
+      startTime: 0,
+    } as unknown as PerformanceEntry;
+    for (const callback of callbacks) callback({ getEntries: () => [entry] });
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -147,7 +183,7 @@ describe("CloudLoadingHost", () => {
     expect(screen.queryByTestId("cloud-loading-surface")).toBeNull();
   });
 
-  it("surfaces an error with a reload action when a route source stalls", async () => {
+  it("keeps the load visible and offers a reload when nothing progresses", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "error").mockImplementation(() => {});
     const route = routeSource("Scenarios", "Loading Scenarios");
@@ -158,10 +194,14 @@ describe("CloudLoadingHost", () => {
     );
 
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
 
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(stalled()).toBe(true);
+    // The wait is described; the load is not declared failed.
+    expect(screen.getByText(/still waiting/)).toBeTruthy();
+    expect(screen.getByText(/No data has arrived for 45 seconds/)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
 
     const reloadSpy = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({
@@ -170,6 +210,45 @@ describe("CloudLoadingHost", () => {
     } as unknown as Location);
     screen.getByRole("button", { name: "Reload" }).click();
     expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it("says how long it has been waiting once the load outlives the patience window", () => {
+    vi.useFakeTimers();
+    render(
+      <CloudLoadingHost>
+        <SourceProbe
+          source={{ kind: "scene", title: "Preparing Belmont Research Center", detail: "Reading the map definition…", progress: 20 }}
+        />
+      </CloudLoadingHost>,
+    );
+
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_PATIENCE_MS - 1));
+    expect(screen.queryByText(/waiting for/)).toBeNull();
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByText(/Reading the map definition….*waiting for 20s/)).toBeTruthy();
+  });
+
+  it("treats responses the browser completed as progress", () => {
+    vi.useFakeTimers();
+    const transfer = installTransferObserver();
+    render(
+      <CloudLoadingHost>
+        <SourceProbe source={{ kind: "scene", title: "Loading Garching Phase 1 2", progress: 55 }} />
+      </CloudLoadingHost>,
+    );
+
+    // A large map streams for minutes behind one unchanging source line; each
+    // completed response must restart the no-progress window.
+    for (let round = 0; round < 6; round += 1) {
+      act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 5_000));
+      act(() => transfer((round + 1) * 4_000_000));
+      expect(stalled()).toBe(false);
+    }
+
+    // Bytes stop arriving: the window now runs out.
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS));
+    expect(stalled()).toBe(true);
   });
 
   it("restarts the stall window whenever the source content changes", async () => {
@@ -190,10 +269,10 @@ describe("CloudLoadingHost", () => {
       </CloudLoadingHost>,
     );
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1_000));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
 
     act(() => vi.advanceTimersByTime(1_000));
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(stalled()).toBe(true);
   });
 
   it("pauses the stall deadline while hidden without discarding prior visible waiting", () => {
@@ -213,15 +292,15 @@ describe("CloudLoadingHost", () => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
     act(() => {
       visibility = "visible";
       document.dispatchEvent(new Event("visibilitychange"));
     });
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 20_001));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(stalled()).toBe(true);
   });
 
   it("gives a source changed while hidden its full visible stall window", () => {
@@ -237,22 +316,22 @@ describe("CloudLoadingHost", () => {
     );
 
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
     view.rerender(
       <CloudLoadingHost>
         <SourceProbe source={{ ...source, progress: 20 }} />
       </CloudLoadingHost>,
     );
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
     act(() => {
       visibility = "visible";
       document.dispatchEvent(new Event("visibilitychange"));
     });
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(stalled()).toBe(true);
   });
 
   it("treats a cooperative stage heartbeat as progress", () => {
@@ -278,7 +357,7 @@ describe("CloudLoadingHost", () => {
     );
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 5_000));
 
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
   });
 
   it("never raises the stall alarm after the source clears", async () => {
@@ -303,6 +382,6 @@ describe("CloudLoadingHost", () => {
       </CloudLoadingHost>,
     );
     act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(stalled()).toBe(false);
   });
 });
