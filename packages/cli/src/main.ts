@@ -40,6 +40,7 @@ import {
   registryMapsIngest,
   registryMapsList,
   registryMapsPromote,
+  registryMapsPrune,
   registryMapsPull,
   registryMapsSourcePush,
 } from './commands/map-registry.js';
@@ -84,7 +85,7 @@ const COMMANDS = [
   { name: 'maps build', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export into a work directory (no publish)' },
   { name: 'maps ingest', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export and publish it, or publish a prebuilt master directory' },
   { name: 'maps promote', summary: 'copy one immutable version between registries' },
-  { name: 'maps sources push', summary: 'resumably multipart-upload a raw source archive' },
+  { name: 'maps prune', summary: 'delete immutable versions from a registry (--keep-latest/--whole-map, --gc, --apply)' },
   { name: 'locations find', summary: 'structured location query: --map --type --facts --near …' },
   { name: 'locations get', summary: 'one location by handle or id, optionally --describe' },
   { name: 'locations resolve', summary: 'free text → ranked handles' },
@@ -468,8 +469,23 @@ async function dispatch(argv: readonly string[]): Promise<number> {
           pretty: boolFlag(args, 'pretty'),
         });
       }
+      if (sub === 'prune') {
+        const args = parseArgs(argv.slice(2), {
+          booleans: [...GLOBAL_BOOLEANS, 'keep-latest', 'whole-map', 'gc', 'apply'],
+          values: ['registry'],
+        });
+        return registryMapsPrune({
+          reference: positional(args, 0, 'name[@version]'),
+          registry: optionalString(args, 'registry'),
+          keepLatest: boolFlag(args, 'keep-latest'),
+          wholeMap: boolFlag(args, 'whole-map'),
+          gc: boolFlag(args, 'gc'),
+          apply: boolFlag(args, 'apply'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
       throw new CliError('unknown_command', `simforge maps ${sub ?? ''}`.trim(), {
-        detail: { known: ['list', 'pull', 'ingest', 'promote', 'sources push'] },
+        detail: { known: ['list', 'pull', 'ingest', 'promote', 'prune', 'sources push'] },
       });
     }
 
