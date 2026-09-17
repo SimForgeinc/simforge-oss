@@ -423,8 +423,31 @@ pub fn lift_map_bound_template(template: &ScenarioTemplate, index: &DerivedMapIn
     let mut issues = Vec::new();
     let absolute: Vec<&RoleBinding> = template.roles.iter().filter(|r| matches!(r.kind, RoleKind::SceneAbsolute { .. })).collect();
     let reference_id = options.reference_role_id.as_deref().or(template.metric_subject.as_deref()).or_else(|| absolute.first().map(|r| r.id()));
-    let Some(reference) = reference_id.and_then(|id| absolute.iter().copied().find(|r| r.id() == id)) else {
-        issues.push(issue(PortableLiftIssueCode::ReferenceRoleMissing, PortableLiftSeverity::Error, "roles", format!("reference role \"{}\" is absent or already portable", reference_id.unwrap_or("")), "choose a scene_absolute reference actor", true));
+    let Some(reference_id) = reference_id else {
+        issues.push(issue(
+            PortableLiftIssueCode::ReferenceRoleMissing,
+            PortableLiftSeverity::Error,
+            "roles",
+            "the document has no scene_absolute role to lift from, so there is nothing to anchor the portable frame to",
+            "choose a scene_absolute reference actor",
+            true,
+        ));
+        return failed(issues);
+    };
+    let Some(reference) = absolute.iter().copied().find(|role| role.id() == reference_id) else {
+        let message = if template.role(reference_id).is_some() {
+            format!("reference role \"{reference_id}\" is already portable, not scene_absolute")
+        } else {
+            format!("reference role \"{reference_id}\" is absent")
+        };
+        issues.push(issue(
+            PortableLiftIssueCode::ReferenceRoleMissing,
+            PortableLiftSeverity::Error,
+            "roles",
+            message,
+            "choose a scene_absolute reference actor",
+            true,
+        ));
         return failed(issues);
     };
     let Some(reference_rsl) = rsl(reference) else {
@@ -681,8 +704,34 @@ mod tests {
 
     #[test]
     fn structured_early_refusals_are_distinct() {
-        let no_roles = template(json!([]), json!([]));
-        assert_eq!(lift_map_bound_template(&no_roles, &straight_index(), &PortableLiftOptions::default()).issues[0].code, PortableLiftIssueCode::ReferenceRoleMissing);
+        let mut no_roles = template(json!([]), json!([]));
+        no_roles.metric_subject = None;
+        let no_roles_result = lift_map_bound_template(&no_roles, &straight_index(), &PortableLiftOptions::default());
+        let no_roles_issue = &no_roles_result.issues[0];
+        assert_eq!(no_roles_issue.code, PortableLiftIssueCode::ReferenceRoleMissing);
+        assert_eq!(
+            no_roles_issue.message,
+            "the document has no scene_absolute role to lift from, so there is nothing to anchor the portable frame to"
+        );
+        assert!(!no_roles_issue.message.contains("\"\""));
+        let absent_options = PortableLiftOptions {
+            reference_role_id: Some("missing".into()),
+            ..Default::default()
+        };
+        let absent_result = lift_map_bound_template(&no_roles, &straight_index(), &absent_options);
+        let absent_issue = &absent_result.issues[0];
+        assert_eq!(absent_issue.message, "reference role \"missing\" is absent");
+        let mut portable = template(json!([{
+            "id": "ego",
+            "kind": "on_reference",
+            "actor": {"class": "car"},
+            "essentiality": "required",
+            "pose": {"laneOffset": 0, "s": 10, "tFrac": 0, "headingOffsetRad": 0}
+        }]), json!([]));
+        portable.metric_subject = Some("ego".into());
+        let portable_result = lift_map_bound_template(&portable, &straight_index(), &PortableLiftOptions::default());
+        let portable_issue = &portable_result.issues[0];
+        assert_eq!(portable_issue.message, "reference role \"ego\" is already portable, not scene_absolute");
         let no_anchor = template(json!([scene_role("ego", 10.0, 0.0, 0.0, None)]), json!([]));
         assert_eq!(lift_map_bound_template(&no_anchor, &straight_index(), &PortableLiftOptions::default()).issues[0].code, PortableLiftIssueCode::ReferenceLaneAnchorMissing);
         let missing = template(json!([scene_role("ego", 10.0, 0.0, 0.0, Some(json!({"roadId":"9","section":0,"laneId":-1,"s":10})))]), json!([]));
