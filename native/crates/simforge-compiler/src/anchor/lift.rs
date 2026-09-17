@@ -44,6 +44,7 @@ pub enum PortableLiftIssueCode {
     SpatialExtensionRemoved,
     RouteProjectionError,
     CandidateNotEquivalent,
+    SignalPlanTransferRequired,
 }
 
 impl PortableLiftIssueCode {
@@ -62,6 +63,7 @@ impl PortableLiftIssueCode {
             Self::SpatialExtensionRemoved => "spatial_extension_removed",
             Self::RouteProjectionError => "route_projection_error",
             Self::CandidateNotEquivalent => "candidate_not_equivalent",
+            Self::SignalPlanTransferRequired => "signal_plan_transfer_required",
         }
     }
 }
@@ -500,6 +502,18 @@ pub fn lift_map_bound_template(template: &ScenarioTemplate, index: &DerivedMapIn
             sanitize_extensions(extensions);
         }
     }
+    if !lifted.map_signal_plans.is_empty() {
+        let count = lifted.map_signal_plans.len();
+        lifted.map_signal_plans.clear();
+        issues.push(issue(
+            PortableLiftIssueCode::SignalPlanTransferRequired,
+            PortableLiftSeverity::Warning,
+            "mapSignalPlans",
+            format!("{count} source map signal plan(s) cannot be carried verbatim to another map and were removed from the portable template"),
+            "compute a target-junction proposal outside the compiler, then record a human signalPlanDecision of remove or accept-proposal",
+            true,
+        ));
+    }
     let route_stations = convert_routes(&mut lifted, &source_roles, &frame, index, options.max_route_projection_error_m, &mut issues);
     let mut stations = vec![0.0];
     stations.extend(route_stations);
@@ -734,6 +748,7 @@ mod tests {
             (PortableLiftIssueCode::RoleLaneAnchorMissing,"role_lane_anchor_missing"),
             (PortableLiftIssueCode::RoleLaneMissing,"role_lane_missing"),
             (PortableLiftIssueCode::RoleProjectionTooFar,"role_projection_too_far"),
+            (PortableLiftIssueCode::SignalPlanTransferRequired,"signal_plan_transfer_required"),
             (PortableLiftIssueCode::RoleBindingAmbiguous,"role_binding_ambiguous"),
             (PortableLiftIssueCode::SpatialExtensionRemoved,"spatial_extension_removed"),
             (PortableLiftIssueCode::RouteProjectionError,"route_projection_error"),
@@ -741,9 +756,39 @@ mod tests {
         ];
         for (code, literal) in all { assert_eq!(code.as_str(), literal); }
         let source = template(json!([scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref()))]), json!([]));
+
         let lifted = lift_map_bound_template(&source, &straight_index(), &PortableLiftOptions::default());
         let mut bad_site = lifted.source_site.unwrap();
         bad_site.degradation.intent_preserved = false;
         assert_eq!(bind_portable_variation(&lifted.template.unwrap(), &bad_site).unwrap_err().code, PortableLiftIssueCode::CandidateNotEquivalent);
+    }
+    #[test]
+    fn map_signal_plan_is_removed_with_explicit_review_issue() {
+        let mut source = template(
+            json!([scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref()))]),
+            json!([]),
+        );
+        source.map_signal_plans.push(crate::template::MapSignalPlan {
+            id: "source-signals".into(),
+            version: 1,
+            binding: crate::template::MapSignalPlanBinding {
+                map_id: "lift-test".into(),
+                junction_id: "source-junction".into(),
+                control_digest: "source-control".into(),
+            },
+            clips: vec![],
+            display_baselines: vec![],
+            route_signals: vec![],
+        });
+        let result = lift_map_bound_template(&source, &straight_index(), &PortableLiftOptions::default());
+        assert!(result.ok, "{:?}", result.issues);
+        let warning = result
+            .issues
+            .iter()
+            .find(|issue| issue.code == PortableLiftIssueCode::SignalPlanTransferRequired)
+            .expect("signal plan review issue");
+        assert_eq!(warning.severity, PortableLiftSeverity::Warning);
+        assert!(warning.message.contains("cannot be carried verbatim"));
+        assert!(result.template.unwrap().map_signal_plans.is_empty());
     }
 }
