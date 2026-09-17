@@ -48,6 +48,11 @@ pub use ambient::{
 };
 pub use anchor::matcher::{match_anchor, match_anchor_report, MatchOptions};
 pub use anchor::{MatchReport, MatchedSite, MATCH_SEMANTICS_VERSION};
+pub use anchor::lift::{
+    bind_portable_variation, lift_map_bound_template, BoundVariation, LiftOrigin,
+    PortableLiftIssue, PortableLiftIssueCode, PortableLiftOptions, PortableLiftResult,
+    PortableLiftSeverity, PortableSourceSignature,
+};
 pub use bundle::{available_maps, MapBundle, MapBundleSources, StaticColliderDiagnostics};
 pub use catalog::{ActorCatalog, ExternalCatalogEntry};
 pub use error::{CompileError, CompileResult};

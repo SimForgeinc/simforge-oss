@@ -2023,6 +2023,13 @@ impl Default for ParkingSlot {
         Self::Named(ParkingSlotName::Any)
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RigidOffsetM {
+    pub along_m: f64,
+    pub across_m: f64,
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -2130,6 +2137,8 @@ pub enum RoleKind {
         t_frac: f64,
         #[serde(default)]
         heading_offset_rad: f64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        rigid_offset_m: Option<RigidOffsetM>,
     },
     #[serde(rename_all = "camelCase")]
     SceneAbsolute {
@@ -2788,6 +2797,23 @@ fn default_to_frac() -> f64 {
     1.0
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PortablePolylinePoint {
+    pub along_m: f64,
+    pub across_m: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_s: Option<f64>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimedFramePose {
+    #[serde(flatten)]
+    pub pose: FramePose,
+    pub time_s: f64,
+}
+
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]
 pub enum RouteTarget {
@@ -2809,8 +2835,27 @@ pub enum RouteTarget {
         #[serde(default = "default_to_frac")]
         to_frac: f64,
     },
+    #[serde(rename_all = "camelCase")]
     Polyline {
         points: Vec<FramePose>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        join_from_current_pose: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        best_effort_world_path: Option<bool>,
+    },
+    #[serde(rename_all = "camelCase")]
+    TimedPolyline {
+        points: Vec<TimedFramePose>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        best_effort_world_path: Option<bool>,
+    },
+    #[serde(rename_all = "camelCase")]
+    ActorPolyline {
+        points: Vec<PortablePolylinePoint>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        join_from_current_pose: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        best_effort_world_path: Option<bool>,
     },
     LanePath {
         lanes: Vec<String>,
@@ -2858,6 +2903,8 @@ impl RouteTarget {
             Self::ManualDrive { .. } => "manualDrive",
             Self::Acquire { .. } => "acquire",
             Self::NearMiss { .. } => "nearMiss",
+            Self::TimedPolyline { .. } => "timedPolyline",
+            Self::ActorPolyline { .. } => "actorPolyline",
         }
     }
 }

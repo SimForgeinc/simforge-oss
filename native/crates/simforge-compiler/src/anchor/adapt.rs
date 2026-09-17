@@ -589,17 +589,21 @@ fn adapt_role(
             d_lane,
             ds_m,
             t_frac,
+            rigid_offset_m,
             ..
         } => base(MRoleKind::RelativeTo {
             r#ref: r#ref.clone(),
             d_lane: *d_lane,
-            on_missing: if role.base.essentiality == Essentiality::Required {
+            on_missing: if rigid_offset_m.is_some() {
+                crate::template::OnMissing::Clamp
+            } else if role.base.essentiality == Essentiality::Required {
                 crate::template::OnMissing::Fail
             } else {
                 crate::template::OnMissing::Drop
             },
             ds_m: numberish(Some(ds_m), scope, 0.0),
             t_frac: Some(*t_frac),
+            rigid_offset_m: *rigid_offset_m,
         }),
         RoleKind::SceneAbsolute { .. } => {
             notes.push(AdaptNote::note(

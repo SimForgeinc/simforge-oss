@@ -954,10 +954,10 @@ impl<'a> Materializer<'a> {
             == Some("same-approach-straight-kerb-edge");
 
         let relative_parallel = self.relative_parallel_route_for(role, &scope, &path)?;
-        let spawn_polyline = match relative_parallel {
-            Some(r) => Some(r),
-            None => self.spawn_route_polyline_for(&role.base.id)?,
-        };
+        let rigid_pair = self.rigid_pair_route_for(role, &path)?;
+        let spawn_polyline = relative_parallel
+            .or(rigid_pair)
+            .or(self.spawn_route_polyline_for(&role.base.id)?);
         if let Some(polyline) = spawn_polyline {
             route = polyline;
         } else if let RoleKind::OnCrossing {
@@ -1326,6 +1326,48 @@ impl<'a> Materializer<'a> {
         Ok(())
     }
 
+    /// Route starting at a rigid pairwise offset in the reference actor's own
+    /// initial pose frame. This placement intentionally bypasses the site's
+    /// lane cross-section: the measured formation, not an invented lane index,
+    /// owns the actor's world position.
+    fn rigid_pair_route_for(
+        &mut self,
+        role: &RoleBinding,
+        path: &str,
+    ) -> CompileResult<Option<Route>> {
+        let RoleKind::RelativeTo { r#ref, rigid_offset_m: Some(offset), .. } = &role.kind else {
+            return Ok(None);
+        };
+        let Some(reference) = self.actor(r#ref) else {
+            return Err(CompileError::at(
+                "role_reference_unmaterialized",
+                format!("{path}.ref"),
+                format!("rigid formation reference \"{}\" is not materialized", r#ref),
+            )
+            .as_findings());
+        };
+        let origin = reference.initial.pose.position_local();
+        let heading = reference.initial.pose.heading_rad;
+        let forward = Vec2 { x: cos(heading), y: sin(heading) };
+        let left = Vec2 { x: -forward.y, y: forward.x };
+        let start = Vec2 {
+            x: origin.x + forward.x * offset.along_m + left.x * offset.across_m,
+            y: origin.y + forward.y * offset.along_m + left.y * offset.across_m,
+        };
+        let points = [
+            start,
+            Vec2 { x: start.x + forward.x * 120.0, y: start.y + forward.y * 120.0 },
+        ];
+        let route = build_route_from_points(&points).ok_or_else(|| {
+            CompileError::at("route_unbuildable", path, format!("rigid formation route for \"{}\" is degenerate", role.base.id))
+        })?;
+        self.notes.push(Note::info(
+            format!("{path}.rigidOffsetM"),
+            format!("placed in {}'s initial pose frame at {:.2} m along / {:.2} m left", r#ref, offset.along_m, offset.across_m),
+        ));
+        Ok(Some(route))
+    }
+
     /// A role-local path parallel to a concrete reference actor. Parking
     /// lanes are often not members of the corridor's integer lateral frame,
     /// so a `relative_to` bicycle beside a parked car derives its path from
@@ -1564,7 +1606,7 @@ impl<'a> Materializer<'a> {
         for it in &self.template.choreography.interactions {
             let (
                 t::Verb::Route {
-                    target: t::RouteTarget::Polyline { points },
+                    target: t::RouteTarget::Polyline { points, .. },
                 },
                 t::Trigger::At { t: at },
             ) = (&it.verb, &it.base.trigger)
@@ -2864,7 +2906,7 @@ impl<'a> Materializer<'a> {
             t::RouteTarget::LanePath { lanes } => spec(sim::RouteSpec::LanePath {
                 lanes: lanes.clone(),
             }),
-            t::RouteTarget::Polyline { points } => {
+            t::RouteTarget::Polyline { points, join_from_current_pose, best_effort_world_path } => {
                 let mut out = Vec::with_capacity(points.len());
                 for (idx, p) in points.iter().enumerate() {
                     out.push(scene_point(
@@ -2877,7 +2919,51 @@ impl<'a> Materializer<'a> {
                         .point,
                     ));
                 }
-                spec(sim::RouteSpec::Polyline { points: out, stop_controls: Vec::new() })
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline { points: out, stop_controls: Vec::new() }),
+                    join_from_current_pose: *join_from_current_pose,
+                    best_effort_world_path: *best_effort_world_path,
+                }
+            }
+            t::RouteTarget::TimedPolyline { points, best_effort_world_path } => {
+                let mut out = Vec::with_capacity(points.len());
+                for (idx, p) in points.iter().enumerate() {
+                    let scene = scene_point(self.frame_pose_point(&p.pose, scope, &format!("{path}.target.points.{idx}"), 0.0)?.point);
+                    out.push(sim::TimedPoint { time_s: p.time_s, x: scene.x, z: scene.z });
+                }
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(sim::RouteSpec::TimedPolyline { points: out }),
+                    join_from_current_pose: None,
+                    best_effort_world_path: *best_effort_world_path,
+                }
+            }
+            t::RouteTarget::ActorPolyline { points, join_from_current_pose, best_effort_world_path } => {
+                let actor = self.actor(&it.base.actor).ok_or_else(|| CompileError::at(
+                    "route_disconnected", format!("{path}.target"),
+                    format!("actor-relative route for \"{}\" needs a materialized actor", it.base.actor),
+                ))?;
+                let origin = actor.initial.pose.position_local();
+                let h = actor.initial.pose.heading_rad;
+                let point = |p: &t::PortablePolylinePoint| {
+                    scene_point(Vec2 {
+                        x: origin.x + cos(h) * p.along_m - sin(h) * p.across_m,
+                        y: origin.y + sin(h) * p.along_m + cos(h) * p.across_m,
+                    })
+                };
+                let has_time = points.iter().any(|p| p.time_s.is_some());
+                let target = if has_time {
+                    sim::RouteSpec::TimedPolyline { points: points.iter().enumerate().map(|(order, p)| {
+                        let scene = point(p);
+                        sim::TimedPoint { time_s: p.time_s.unwrap_or(order as f64), x: scene.x, z: scene.z }
+                    }).collect() }
+                } else {
+                    sim::RouteSpec::Polyline { points: points.iter().map(point).collect(), stop_controls: Vec::new() }
+                };
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(target),
+                    join_from_current_pose: *join_from_current_pose,
+                    best_effort_world_path: *best_effort_world_path,
+                }
             }
             t::RouteTarget::CustomRoute { points } => sim::Verb::Route {
                 target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline {

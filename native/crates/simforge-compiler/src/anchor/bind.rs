@@ -858,17 +858,28 @@ pub fn bind_roles(
                 on_missing,
                 ds_m,
                 t_frac,
+                rigid_offset_m,
             } => {
                 let mut b = FeatureBinding::new(&role.role, "relative_to");
                 let reference = out
                     .iter()
                     .find(|x| x.role == *r#ref)
-                    .and_then(|x| x.pose.map(|p| (p, x.status)));
+                    .and_then(|x| x.pose.map(|p| (p, x.status, x.lane_rsl.clone(), x.route_lane_chain.clone())));
                 match reference {
                     None => b
                         .notes
                         .push(format!("reference role \"{ref}\" is not bound", ref = r#ref)),
-                    Some((ref_pose, _)) => {
+                    Some((ref_pose, _, reference_lane, reference_route)) if rigid_offset_m.is_some() => {
+                        // A rigid formation owns world placement in the materializer. The
+                        // matcher records the reference actor's own lane/station so it
+                        // evaluates site viability without inventing an off-frame lane.
+                        b.status = BindingStatus::Bound;
+                        b.pose = Some(ref_pose);
+                        b.lane_rsl = reference_lane;
+                        b.route_lane_chain = reference_route;
+                        b.on_missing = Some(*on_missing);
+                    }
+                    Some((ref_pose, _, _, _)) => {
                         let wanted_k = ref_pose.k + d_lane;
                         let resolved =
                             resolve_lane_offset(frame, wanted_k, *on_missing, &mut b.notes);
@@ -950,8 +961,8 @@ mod tests {
             role("clamp", MRoleKind::LaneOffset { k: 4, on_missing: OnMissing::Clamp, ds_m: 20.0, t_frac: 0.0 }),
             role("drop", MRoleKind::LaneOffset { k: -3, on_missing: OnMissing::Drop, ds_m: 20.0, t_frac: 0.0 }),
             role("fail", MRoleKind::LaneOffset { k: -3, on_missing: OnMissing::Fail, ds_m: 20.0, t_frac: 0.0 }),
-            role("relative", MRoleKind::RelativeTo { r#ref: "ego".into(), d_lane: 1, on_missing: OnMissing::Fail, ds_m: 7.0, t_frac: None }),
-            role("missing-ref", MRoleKind::RelativeTo { r#ref: "later".into(), d_lane: 0, on_missing: OnMissing::Fail, ds_m: 0.0, t_frac: None }),
+            role("relative", MRoleKind::RelativeTo { r#ref: "ego".into(), d_lane: 1, on_missing: OnMissing::Fail, ds_m: 7.0, t_frac: None, rigid_offset_m: None }),
+            role("missing-ref", MRoleKind::RelativeTo { r#ref: "later".into(), d_lane: 0, on_missing: OnMissing::Fail, ds_m: 0.0, t_frac: None, rigid_offset_m: None }),
             role("outside", MRoleKind::OnReference { ds_m: 999.0, t_frac: 0.0 }),
         ];
         let bindings = bind_roles(&index, &frame, &roles, &BTreeMap::new());
