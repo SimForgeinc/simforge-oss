@@ -61,6 +61,7 @@ import { simulate } from './commands/simulate.js';
 import { debugScenario } from './commands/debug.js';
 import { sitesMatch } from './commands/sites.js';
 import { templateNew, templateValidate } from './commands/template.js';
+import { variationFork, variationTransfer } from './commands/variation.js';
 import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
@@ -94,6 +95,8 @@ const COMMANDS = [
   { name: 'sites match', summary: 'anchor → ranked concrete sites on one map or --all-maps' },
   { name: 'instantiate', summary: 'template × site × draw → a concrete SimScenarioInput' },
   { name: 'simulate', summary: 'one engine pass over an instance, with an optional trace' },
+  { name: 'variation fork', summary: 'portable template × target site → an executable child variation with lineage' },
+  { name: 'variation transfer', summary: 'lift a map-bound template and transfer it to one target map/site' },
   { name: 'debug', summary: 'compile a template/instance, run native or SUMO, and emit complete paths + diagnostics' },
   { name: 'validate', summary: 'tier-1, or tier-2 (one engine pass + invariant residuals)' },
   { name: 'evaluate', summary: 'reject filters over a trace' },
@@ -629,6 +632,41 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         draw: optionalInt(args, 'draw'),
         out: optionalString(args, 'out'),
         pretty: boolFlag(args, 'pretty'),
+      });
+    }
+
+    case 'variation': {
+      const args = parseArgs(argv.slice(2), {
+        booleans: GLOBAL_BOOLEANS,
+        values: ['map', 'source-map', 'target-map', 'site', 'seed', 'draw', 'out'],
+      });
+      const file = positional(args, 0, 'template.json');
+      const operation = sub ?? 'fork';
+      if (operation === 'fork') {
+        return variationFork({
+          file,
+          mapId: requireString(args, 'map'),
+          siteId: requireString(args, 'site'),
+          seed: optionalString(args, 'seed'),
+          draw: optionalInt(args, 'draw'),
+          out: requireString(args, 'out'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
+      if (operation === 'transfer') {
+        return variationTransfer({
+          file,
+          sourceMapId: requireString(args, 'source-map'),
+          targetMapId: requireString(args, 'target-map'),
+          siteId: requireString(args, 'site'),
+          seed: optionalString(args, 'seed'),
+          draw: optionalInt(args, 'draw'),
+          out: requireString(args, 'out'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
+      throw new CliError('unknown_command', `simforge variation ${operation}`.trim(), {
+        detail: { known: ['fork', 'transfer'] },
       });
     }
 
