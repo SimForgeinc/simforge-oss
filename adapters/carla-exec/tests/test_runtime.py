@@ -1152,6 +1152,71 @@ def test_vehicle_fallback_fails_only_when_same_class_blueprint_is_absent() -> No
         worker_runner._apply_actor_fallbacks(plan, catalog)
 
 
+def test_uncooked_native_blueprint_is_substituted_within_its_class() -> None:
+    """A cook can register a blueprint it cannot place.
+
+    `blueprint_library.find()` resolves the id and `try_spawn_actor` then
+    returns None with no diagnostic, so trusting the authored id because it
+    looks native loses the actor at spawn. Given the set the runtime was
+    observed to place, the actor must move to the nearest body of its own
+    class.
+    """
+    plan = compile_xosc14(XOSC)
+    catalog = {
+        "vehicle.sedan": {
+            "blueprintId": "vehicle.ambulance.ford",
+            "actorClass": "car",
+            "dims": {"l": 4.7, "w": 1.82, "h": 1.45},
+        },
+        "vehicle.honda_civic": {
+            "blueprintId": "vehicle.lincoln.mkz",
+            "actorClass": "car",
+            "dims": {"l": 4.67, "w": 1.8, "h": 1.42},
+        },
+        "vehicle.bus": {
+            "blueprintId": "vehicle.fuso.mitsubishi",
+            "actorClass": "bus",
+            "dims": {"l": 10.17, "w": 3.93, "h": 4.24},
+        },
+    }
+
+    # Without the observed set, the authored id is trusted and nothing moves.
+    kept, none_moved = worker_runner._apply_actor_fallbacks(plan, catalog)
+    assert kept.actors["ego"].catalog_name == "vehicle.sedan"
+    assert none_moved == ()
+
+    placeable = frozenset({"vehicle.lincoln.mkz", "vehicle.fuso.mitsubishi"})
+    substituted, fallbacks = worker_runner._apply_actor_fallbacks(
+        plan, catalog, spawnable=placeable,
+    )
+
+    assert substituted.actors["ego"].catalog_name == "vehicle.honda_civic"
+    assert [item["vehicleClass"] for item in fallbacks] == ["car"]
+    # The bus body is placeable and dimensionally far: a car must never take it.
+    assert all(item["fallbackCatalogId"] != "vehicle.bus" for item in fallbacks)
+
+
+def test_substitution_refuses_to_cross_actor_class() -> None:
+    """A bicycle may not become an ambulance, even when nothing else is placeable."""
+    plan = compile_xosc14(XOSC)
+    catalog = {
+        "vehicle.sedan": {
+            "blueprintId": "vehicle.diamondback.century",
+            "actorClass": "bicycle",
+            "dims": {"l": 1.75, "w": 0.5, "h": 1.71},
+        },
+        "vehicle.ambulance": {
+            "blueprintId": "vehicle.ambulance.ford",
+            "actorClass": "van",
+            "dims": {"l": 6.1, "w": 2.1, "h": 2.65},
+        },
+    }
+
+    with pytest.raises(ContractError, match="no same-class native CARLA fallback"):
+        worker_runner._apply_actor_fallbacks(
+            plan, catalog, spawnable=frozenset({"vehicle.ambulance.ford"}),
+        )
+
 def test_compiles_canonical_init_follow_trajectory_action():
     plan = compile_xosc14(trajectory_in_init())
     assert [frame.t for frame in plan.frames] == [0.0, 0.02, 0.04]

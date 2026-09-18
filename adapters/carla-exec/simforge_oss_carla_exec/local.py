@@ -35,13 +35,20 @@ from .runtime.contract import (
     canonical_sha256,
     _control_value,
     parse_lease,
+    HISTORICAL_SCHEMAS,
+    RENDER_INTENT_SCHEMA,
+    RENDER_SPEC_V3_SCHEMA,
 )
 from .runtime.executor import execute_lease, filesystem_validator
 
 # historical name retained for stored-data compat
 DEFAULT_XSD = Path(__file__).parent / "assets" / "OpenSCENARIO.xsd"
-INTENT_SCHEMA = "simforge.render-intent/v1"
-RENDER_SPEC_V3_SCHEMA = "simforge.render-spec/v3"
+# The deployed control plane still emits the pre-rename `uniscenario.` tags for
+# the intent and its render spec, so both are accepted through the same
+# HISTORICAL_SCHEMAS table the execution-package and asset-catalog checks use.
+INTENT_SCHEMA = RENDER_INTENT_SCHEMA
+INTENT_SCHEMAS = {RENDER_INTENT_SCHEMA, HISTORICAL_SCHEMAS[RENDER_INTENT_SCHEMA]}
+RENDER_SPEC_V3_SCHEMAS = {RENDER_SPEC_V3_SCHEMA, HISTORICAL_SCHEMAS[RENDER_SPEC_V3_SCHEMA]}
 INPUT_PACKAGE_SCHEMA_FIELDS = {"intentSha256", "executionPackageControlSha256", "inputs"}
 
 
@@ -302,7 +309,7 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
     if not isinstance(value, Mapping) or set(value) not in (
         {"schema", "sources", "clip", "artifacts", "capabilityIntent", "authoredEnvironment"},
         {"schema", "sources", "clip", "video", "artifacts", "capabilityIntent", "authoredEnvironment"},
-    ) or value.get("schema") != RENDER_SPEC_V3_SCHEMA:
+    ) or value.get("schema") not in RENDER_SPEC_V3_SCHEMAS:
         raise ContractError(f"renderSpec must be a strict {RENDER_SPEC_V3_SCHEMA}")
     sources, clip, artifacts = value["sources"], value["clip"], value["artifacts"]
     if not isinstance(sources, list) or not 1 <= len(sources) <= MAX_SENSOR_COUNT:
@@ -532,7 +539,7 @@ def _intent_lease(
     output_dir: Path,
 ) -> tuple[Any, dict[str, Path]]:
     expected_fields = {"schema", "intentId", "executionPackage", "scenarioRevision", "renderSpec", "sensorHosts", "assets", "seed"}
-    if set(intent) != expected_fields or intent.get("schema") != INTENT_SCHEMA:
+    if set(intent) != expected_fields or intent.get("schema") not in INTENT_SCHEMAS:
         raise ContractError(f"render intent must use strict {INTENT_SCHEMA} fields")
     intent_id = intent.get("intentId")
     revision = intent.get("scenarioRevision")

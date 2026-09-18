@@ -13,7 +13,7 @@ from math import atan2, cos, degrees, isfinite, radians, sin, sqrt
 import os
 from threading import Condition, Lock
 from time import monotonic, sleep
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Iterable, Mapping, Protocol
 
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
 from .contract import ASSET_CATALOG_SCHEMA, CAMERA_MODALITIES, ContractError, Environment, RenderSpec
@@ -619,6 +619,7 @@ class RenderBackend(Protocol):
     def configure_environment(self, environment: Environment) -> None: ...
     def load_opendrive(self, map_name: str, xodr: bytes, fixed_timestep_s: float) -> None: ...
     def bind_signals(self, signal_ids: tuple[str, ...], abort: Callable[[], None] | None = None) -> None: ...
+    def spawnable_blueprints(self, blueprint_ids: Iterable[str], abort: Callable[[], None] | None = None) -> frozenset[str]: ...
     def spawn(self, actors: Mapping[str, ActorBinding], first_frame: PlanFrame, catalog: Mapping[str, Any], abort: Callable[[], None] | None = None) -> None: ...
     def prepare_scenario(self, first_frame: PlanFrame, abort: Callable[[], None] | None = None) -> Mapping[str, Any] | None: ...
     def configure_sensors(self, spec: RenderSpec, output_dir: Path, max_capture_disk_bytes: int, abort: Callable[[], None] | None = None) -> None: ...
@@ -920,6 +921,43 @@ class CarlaBackend:
                 if abs(ground - authored_z) <= SPAWN_GROUND_MAX_DELTA_M:
                     return ground, "road-waypoint"
         return authored_z, "authored-z"
+
+    def spawnable_blueprints(
+        self,
+        blueprint_ids: Iterable[str],
+        abort: Callable[[], None] | None = None,
+    ) -> frozenset[str]:
+        """Which of these blueprints can this runtime actually place?
+
+        A cook registers the official superset blueprint registry while
+        shipping assets for only part of it, so `blueprint_library.find()`
+        resolving an id proves nothing: `try_spawn_actor` returns None with no
+        diagnostic when the asset is absent. The only reliable test is to spawn
+        one and destroy it, which is what this does — at map spawn points, so
+        an occupied authored pose cannot be mistaken for a missing asset.
+        """
+        assert self.world is not None
+        check = abort or (lambda: None)
+        library = self.world.get_blueprint_library()
+        points = self.world.get_map().get_spawn_points()
+        if not points:
+            return frozenset(blueprint_ids)
+        available: set[str] = set()
+        for index, blueprint_id in enumerate(sorted(set(blueprint_ids))):
+            check()
+            try:
+                blueprint = library.find(blueprint_id)
+            except RuntimeError:
+                continue
+            probe = self.world.try_spawn_actor(blueprint, points[index % len(points)])
+            if probe is None:
+                continue
+            available.add(blueprint_id)
+            try:
+                probe.destroy()
+            except RuntimeError:
+                pass
+        return frozenset(available)
 
     def spawn(self, actors: Mapping[str, ActorBinding], first_frame: PlanFrame, catalog: Mapping[str, Any], abort: Callable[[], None] | None = None) -> None:
         assert self.world is not None

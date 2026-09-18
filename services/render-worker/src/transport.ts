@@ -52,6 +52,24 @@ export type RenderControlTransportModule = {
  */
 const INTERNAL_CONTROL_PREFIX = 'api/simforge/internal/';
 
+/**
+ * The deployed control plane still tags its replies with the pre-rename
+ * `uniscenario.` namespace while this package emits and validates
+ * `simforge.render-worker-control/v2`. A reply that is otherwise exactly right
+ * would fail `schema.parse`, so the legacy tag is normalised to the canonical
+ * one before validation — the payload itself is untouched.
+ *
+ * Requests keep sending the canonical tag; the server accepts both. Delete this
+ * once the deployed plane emits the canonical namespace.
+ */
+const LEGACY_WORKER_CONTROL_V2_SCHEMA = 'uniscenario.render-worker-control/v2';
+function canonicalizeControlNamespace(payload: unknown): unknown {
+  if (typeof payload !== 'object' || payload === null) return payload;
+  const record = payload as Record<string, unknown>;
+  if (record.schema !== LEGACY_WORKER_CONTROL_V2_SCHEMA) return payload;
+  return { ...record, schema: RENDER_WORKER_CONTROL_V2_SCHEMA };
+}
+
 class HttpRenderControlTransport implements RenderControlTransport {
   private readonly root: URL;
   /**
@@ -92,7 +110,7 @@ class HttpRenderControlTransport implements RenderControlTransport {
       const text = await response.text();
       throw new Error(`render control ${url.pathname} returned ${response.status}: ${text.slice(0, 2048)}`);
     }
-    return schema.parse(await response.json());
+    return schema.parse(canonicalizeControlNamespace(await response.json()));
   }
 
   private leasePath(leaseId: string, segment: string): string {

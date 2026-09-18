@@ -240,8 +240,22 @@ def _apply_actor_fallbacks(
     plan: ExecutionPlan,
     catalog: Mapping[str, Mapping[str, object]],
     abort: Callable[[], None] | None = None,
+    spawnable: frozenset[str] | None = None,
 ) -> tuple[ExecutionPlan, tuple[Mapping[str, object], ...]]:
-    """Resolve non-native road-user bindings to deterministic same-class CARLA bodies."""
+    """Resolve road-user bindings to deterministic same-class CARLA bodies.
+
+    `spawnable`, when given, is the set of blueprint ids the live runtime was
+    observed to actually place. A cook registers the official *superset*
+    blueprint registry while shipping assets for only part of it, so a
+    blueprint id can resolve through `blueprint_library.find()` and still be
+    refused by `try_spawn_actor` with no error. Without this set the authored
+    id is trusted purely because it looks native, and every actor bound to an
+    uncooked body is dropped at spawn.
+
+    Substitution never crosses `actorClass`: a car cannot become a bus and a
+    bicycle cannot become an ambulance. Within the class the dimensionally
+    nearest body wins, with the catalog id as a deterministic tie-break.
+    """
     vehicle_kinds = {"vehicle", "car", "truck", "bus", "van", "motorcycle", "bicycle", "scooter"}
     substitutions: dict[str, str] = {}
     diagnostics: list[Mapping[str, object]] = []
@@ -255,7 +269,11 @@ def _apply_actor_fallbacks(
             raise ContractError(f"asset catalog has no CARLA binding for road user {actor_id}")
         native_prefixes = ("vehicle.", "bike.") if is_vehicle else ("walker.",)
         authored_blueprint = authored_entry.get("blueprintId")
-        if isinstance(authored_blueprint, str) and authored_blueprint.startswith(native_prefixes):
+        if (
+            isinstance(authored_blueprint, str)
+            and authored_blueprint.startswith(native_prefixes)
+            and (spawnable is None or authored_blueprint in spawnable)
+        ):
             continue
         authored_class = authored_entry.get("actorClass")
         if not isinstance(authored_class, str) or not authored_class:
@@ -270,6 +288,8 @@ def _apply_actor_fallbacks(
                 continue
             if not blueprint.startswith(native_prefixes):
                 continue
+            if spawnable is not None and blueprint not in spawnable:
+                continue
             dims = _catalog_dims(entry)
             distance = (
                 abs(dims["l"] - authored_dims["l"])
@@ -280,7 +300,7 @@ def _apply_actor_fallbacks(
             candidates.append((distance, catalog_id, dims))
         if not candidates:
             raise ContractError(
-                "road user has no same-class native CARLA fallback: "
+                "road user has no same-class native CARLA fallback the runtime can place: "
                 f'actor={actor_id} catalog="{binding.catalog_name}" class="{authored_class}"'
             )
         _, fallback_id, fallback_dims = min(candidates, key=lambda item: (item[0], item[1]))
@@ -1387,6 +1407,51 @@ def execute_lease(
             backend_fence("configure_environment")
             backend.configure_environment(lease.render_spec.environment)
             check_abort("configure_environment")
+            # The blueprint registry is a superset of what the cook shipped, so
+            # availability is only knowable once a world is loaded. Re-resolve
+            # any road user whose body this runtime cannot place onto the
+            # nearest same-class body it can, rather than losing the actor at
+            # spawn with no explanation.
+            required_blueprints = {
+                str(entry.get("blueprintId"))
+                for binding in plan.actors.values()
+                for entry in (catalog.get(binding.catalog_name) or {},)
+                if isinstance(entry.get("blueprintId"), str)
+            }
+            spawnable = _optional_backend_call(
+                backend,
+                "spawnable_blueprints",
+                required_blueprints,
+                abort=lambda: backend_fence("verify_blueprints"),
+            )
+            if spawnable is not None:
+                missing = sorted(required_blueprints - set(spawnable))
+                if missing:
+                    emit("blueprints_unavailable", {"blueprintIds": missing})
+                    plan, availability_fallbacks = _apply_actor_fallbacks(
+                        plan,
+                        catalog,
+                        lambda: backend_fence("verify_blueprints"),
+                        spawnable=frozenset(spawnable),
+                    )
+                    if availability_fallbacks:
+                        carla_vehicle_fallbacks = (
+                            *carla_vehicle_fallbacks,
+                            *availability_fallbacks,
+                        )
+                        emit("actor_bodies_substituted", {
+                            "count": len(availability_fallbacks),
+                            "substitutions": [
+                                {
+                                    "actorId": item["actorId"],
+                                    "authored": item["authoredCatalogId"],
+                                    "substitute": item["fallbackCatalogId"],
+                                    "class": item["vehicleClass"],
+                                }
+                                for item in availability_fallbacks
+                            ],
+                        })
+                check_abort("verify_blueprints")
             if execution_drops:
                 # Knockdown-posed actors are dropped from execution before any
                 # CARLA body exists; spawn records them in the placement report

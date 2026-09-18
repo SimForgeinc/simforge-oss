@@ -16,6 +16,8 @@ RUNTIME_REQUIREMENTS_SCHEMA = "simforge.runtime-requirements/v1"
 RENDER_RESOURCE_REQUEST_SCHEMA = "simforge.render-resource-request/v1"
 INTERACTION_SPEC_SCHEMA = "simforge.interaction-spec/v1"
 RENDER_SPEC_SCHEMA = "simforge.render-spec/v1"
+RENDER_SPEC_V3_SCHEMA = "simforge.render-spec/v3"
+RENDER_INTENT_SCHEMA = "simforge.render-intent/v1"
 # historical name retained for stored-data compat
 HISTORICAL_SCHEMAS = {
     SCHEMA: "uniscenario.execution-package/v1",
@@ -24,6 +26,8 @@ HISTORICAL_SCHEMAS = {
     RENDER_RESOURCE_REQUEST_SCHEMA: "uniscenario.render-resource-request/v1",
     INTERACTION_SPEC_SCHEMA: "uniscenario.interaction-spec/v1",
     RENDER_SPEC_SCHEMA: "uniscenario.render-spec/v1",
+    RENDER_SPEC_V3_SCHEMA: "uniscenario.render-spec/v3",
+    RENDER_INTENT_SCHEMA: "uniscenario.render-intent/v1",
 }
 OFFICIAL_XSD_SHA256 = "949fe2bcebd1f3fdb941a2cc56641482737ab48e3c5b0eed0ee5294b2355c0e9"
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
