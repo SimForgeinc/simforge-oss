@@ -464,7 +464,6 @@ export function ScenarioWorldHost({
           initialOptions={{
             maxPixelRatio: quality.maxPixelRatio,
             antialias: quality.antialias,
-            ultraLowFidelity: quality.ultraLow,
             cinematicLighting: quality.cinematicLighting,
             vegetationMaxDistance: quality.live.vegetationMaxDistance,
             byteBudget: quality.live.byteBudget,

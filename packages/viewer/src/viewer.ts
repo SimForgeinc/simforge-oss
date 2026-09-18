@@ -41,13 +41,11 @@ import {
 } from './lighting-calibration';
 import { LuminaireLightingController, type LuminaireLightingStats } from './luminaire-lighting';
 import { GroundIndex, type GroundIndexOptions } from './ground-index';
-import { isLowFidelityHiddenHelper } from './low-fidelity';
 import { boundsToBox3, normalizeLods, resolveUrl } from './manifest';
 import { patchTree, setBakedSuppression, type ShadowPatchOptions } from './materials';
 import { SurfaceMaterialRegistry, type SurfaceMaterialProfile } from './surface-materials';
 import { SnowCoverController } from './snow-cover';
 import { WeatherController, type CityWeatherAppearance } from './weather';
-import { UltraLowMaterialCache, type UltraLowLayer } from './ultra-low-materials';
 import { ShadowAtlas } from './shadow-atlas';
 import { allowsSourceAssetFallback, isCityAssetVariantManifest, resolveSnowCoverVariant, selectAssetVariant, type CityAssetVariantManifest } from './asset-variants';
 import {
@@ -165,7 +163,6 @@ const DEFAULTS = {
   shadowRadiusM: 120,
   cameraBoundsInset: 2,
   assetVariant: 'auto' as const,
-  ultraLowFidelity: false,
   variantManifestUrl: '',
   ktx2TranscoderPath: '',
 };
@@ -253,25 +250,6 @@ export function admitSnowWithinBudget(
   return Number.isFinite(bytes) && bytes > 0 && bytes <= byteBudget
     ? admit(bytes)
     : false;
-}
-
-/** Reduced renderer modes keep static snow while shedding animated/reflective weather cost. */
-export function weatherAppearanceForFidelity(
-  appearance: CityWeatherAppearance,
-  lowFidelity: boolean,
-): CityWeatherAppearance {
-  if (!lowFidelity) return appearance;
-  return {
-    ...appearance,
-    clouds: null,
-    fog: appearance.fog
-      ? { ...appearance.fog, haze: Math.min(appearance.fog.haze, 0.12) }
-      : null,
-    precipitation: appearance.precipitation
-      ? { ...appearance.precipitation, budget: 'off' }
-      : null,
-    surface: { ...appearance.surface, wetness: 0 },
-  };
 }
 
 function smoothStep(value: number): number {
@@ -398,11 +376,6 @@ export class CityViewer {
   private renderingSuspended = false;
   private canvasVisibility = '';
   private benchmarkFrameHook: (() => void) | null = null;
-  private ultraLowFidelity = false;
-  private readonly originalMaterials = new Map<Object3D, Material | Material[]>();
-  private readonly ultraLowVisibility = new Map<Object3D, boolean>();
-  private readonly ultraLowMaterials = new UltraLowMaterialCache();
-  private ultraRefreshCounter = 0;
   private readonly surfaceMaterials = new SurfaceMaterialRegistry();
   private readonly snowCover: SnowCoverController;
   private readonly weather: WeatherController;
@@ -453,7 +426,6 @@ export class CityViewer {
     ) as CityViewerOptions;
     this.options = { ...DEFAULTS, baseUrl: '', ...provided };
     this.effectiveTextureMaxDimension = this.options.textureMaxDimension;
-    this.ultraLowFidelity = this.options.ultraLowFidelity;
 
     this.renderer = new WebGLRenderer({
       canvas,
@@ -470,7 +442,7 @@ export class CityViewer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.options.maxPixelRatio));
     this.renderer.toneMapping = AgXToneMapping;
     this.renderer.toneMappingExposure = this.options.exposure;
-    this.cinematicLighting = this.options.cinematicLighting && !this.ultraLowFidelity;
+    this.cinematicLighting = this.options.cinematicLighting;
     this.realtimeShadows = this.cinematicLighting && this.options.realtimeShadows;
     this.renderer.shadowMap.enabled = this.realtimeShadows;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
@@ -659,11 +631,11 @@ export class CityViewer {
     this.atlas = new ShadowAtlas(manifest, this.options.shadowAtlasCellSize);
     this.snowCover.setShadowOptions(this.shadowOptions(this.sceneBox, 20, 40));
 
-    const visualResourcesPromise = this.ultraLowFidelity ? Promise.resolve() : this.ensureVisualResources();
-    if (this.sun) this.sun.visible = !this.ultraLowFidelity;
-    // A zero vegetation distance is the preset-level contract for Minimal and
-    // Ultra Low. Do not download every instance sidecar merely to hide the
-    // resulting layer after the React settings effect runs.
+    const visualResourcesPromise = this.ensureVisualResources();
+    if (this.sun) this.sun.visible = true;
+    // A zero vegetation distance is the preset-level contract for Balanced. Do
+    // not download every instance sidecar merely to hide the resulting layer
+    // after the React settings effect runs.
     const vegetationPromise = this.options.vegetationMaxDistance <= 0
       ? Promise.resolve()
       : this.loadVegetationInstances(manifest);
@@ -733,7 +705,6 @@ export class CityViewer {
     if (!manifest || !atlas) return Promise.resolve();
     this.visualResourcesStarted = true;
     this.refreshSkyEnvironment();
-    if (this.ultraLowFidelity) this.disableEnvironment();
     this.visualResourcesPromise = atlas
       .load(manifest, this.assetBase, this.abort.signal, this.downloadTracker)
       .then(() => undefined);
@@ -1018,16 +989,11 @@ export class CityViewer {
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
     const selected = selectAssetVariant(this.variantManifest, sourceFile, this.options.assetVariant, {
-      ultraLow: this.ultraLowFidelity,
       ktx2Ready: true,
     });
     const selectedBytes = selected.variant === 'original'
       ? sourceBytes
       : this.variantManifest?.variants[selected.variant]?.files[sourceFile]?.bytes;
-    if (this.ultraLowFidelity && selected.variant !== 'geometry-only') {
-      this.canvas.dataset.assetVariant = 'geometry-only-unavailable';
-      throw new Error(`Ultra Low requires a geometry-only derivative for ${sourceFile}`);
-    }
     const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
@@ -1037,7 +1003,7 @@ export class CityViewer {
       this.canvas.dataset.assetVariant = selected.variant;
       return parsed;
     } catch (error) {
-      if (!allowsSourceAssetFallback(selected.variant, this.ultraLowFidelity)
+      if (!allowsSourceAssetFallback(selected.variant)
         || (error as { name?: string } | null)?.name === 'AbortError') throw error;
       this.variantFallbacks++;
       const sourceUrl = resolveUrl(this.assetBase, sourceFile);
@@ -1113,7 +1079,7 @@ export class CityViewer {
     const road = manifest.staticLayers?.find((layer) => layer.id === 'road');
     if (!road) return;
     const geometryBootstrap = selectAssetVariant(this.variantManifest, road.file, 'geometry-only', {
-      ultraLow: false, ktx2Ready: false,
+      ktx2Ready: false,
     });
     const geometryVariantFile = geometryBootstrap?.variant === 'geometry-only'
       ? this.variantManifest?.variants['geometry-only']?.files[road.file]
@@ -1158,9 +1124,9 @@ export class CityViewer {
       pinCoarsest: true,
       essentialCoarsest: true,
       essentialAll: true,
-      maxDesiredIndex: () => this.ultraLowFidelity ? 0 : progressiveRoad.length - 1,
+      maxDesiredIndex: () => progressiveRoad.length - 1,
       build: async (tileDef, lod, signal) => {
-        const gltf = lod.level === -1 && !this.ultraLowFidelity
+        const gltf = lod.level === -1
           ? await this.parseResolvedAsset(lod.file, signal, 'geometry-only', lod.fileSize)
           : await this.parseAsset(road.file, signal, road.fileSize);
         const root = gltf.scene;
@@ -1170,13 +1136,12 @@ export class CityViewer {
         const box = new Box3().setFromObject(root);
         // The road is the ground: it takes the shadow term everywhere, and only
         // the electric towers reaching above ~20 m fade out of it.
-        if (this.visualResourcesStarted && !this.ultraLowFidelity) patchTree(root, this.shadowOptions(box, 20, 40));
+        if (this.visualResourcesStarted) patchTree(root, this.shadowOptions(box, 20, 40));
         this.surfaceMaterials.registerTree(root, 'road');
         // Street-light props ship in the road static layer on Datasmith-derived
         // maps, so practical-light discovery must see these trees too.
         this.luminaires.registerTree(root);
         const resources = collectResources(root);
-        if (this.ultraLowFidelity) this.simplifyTree(root, 'road');
         this.snowCover.registerTree(
           root,
           'road',
@@ -1187,12 +1152,11 @@ export class CityViewer {
           object: root,
           resources,
           bytes: estimateResourceBytes(resources),
-          pendingTextures: this.ultraLowFidelity ? [] : [...resources.textures],
+          pendingTextures: [...resources.textures],
           dispose: () => {
             this.snowCover.unregisterTree(root);
             this.surfaceMaterials.unregisterTree(root);
             this.luminaires.unregisterTree(root);
-            this.releaseSimplifiedTree(root);
           },
         } satisfies PreparedAsset;
       },
@@ -1236,11 +1200,10 @@ export class CityViewer {
         root.name = `${def.id}.lod${lod.level}`;
         this.prepareTree(root);
         const box = new Box3().setFromObject(root);
-        if (this.visualResourcesStarted && !this.ultraLowFidelity) patchTree(root, this.shadowOptions(box, 20, 40));
+        if (this.visualResourcesStarted) patchTree(root, this.shadowOptions(box, 20, 40));
         this.surfaceMaterials.registerTree(root, 'city');
         this.luminaires.registerTree(root);
         const resources = collectResources(root);
-        if (this.ultraLowFidelity) this.simplifyTree(root, 'city');
         this.snowCover.registerTree(
           root,
           'city',
@@ -1251,12 +1214,11 @@ export class CityViewer {
           object: root,
           resources,
           bytes: estimateResourceBytes(resources),
-          pendingTextures: this.ultraLowFidelity ? [] : [...resources.textures],
+          pendingTextures: [...resources.textures],
           dispose: () => {
             this.snowCover.unregisterTree(root);
             this.surfaceMaterials.unregisterTree(root);
             this.luminaires.unregisterTree(root);
-            this.releaseSimplifiedTree(root);
           },
         } satisfies PreparedAsset;
       },
@@ -1321,18 +1283,16 @@ export class CityViewer {
         applyStaticSemantics(built.object, this.staticSemantics);
         built.object.name = `${def.id}.lod${lod.level}`;
         built.object.userData.prototypes = data ? built.prototypes : null;
-        if (this.visualResourcesStarted && !this.ultraLowFidelity) patchTree(built.object, this.shadowOptions(def.box, 6, 14));
+        if (this.visualResourcesStarted) patchTree(built.object, this.shadowOptions(def.box, 6, 14));
         this.surfaceMaterials.registerTree(built.object, 'vegetation');
         const resources = collectResources(built.object);
-        if (this.ultraLowFidelity) this.simplifyTree(built.object, 'vegetation');
         return {
           object: built.object,
           resources,
           bytes: estimateResourceBytes(resources),
-          pendingTextures: this.ultraLowFidelity ? [] : [...resources.textures],
+          pendingTextures: [...resources.textures],
           dispose: () => {
             this.surfaceMaterials.unregisterTree(built.object);
-            this.releaseSimplifiedTree(built.object);
             if (data) {
               for (const proto of built.prototypes) for (const mesh of proto.meshes) mesh.dispose();
               built.object.clear();
@@ -1375,15 +1335,6 @@ export class CityViewer {
     if (!this.cameraGroundIndex && ++this.cameraConstraintRefresh % 60 === 0 && this.roadReady) {
       this.cameraGroundIndex = this.buildGroundIndex();
       this.localEnvelopeBounds = null;
-    }
-
-    if (this.ultraLowFidelity && ++this.ultraRefreshCounter % 60 === 0) {
-      for (const child of this.scene.children) {
-        if (child !== this.cityGroup && child !== this.roadGroup && child !== this.vegetationGroup
-          && !isRendererOwnedVisualRoot(child)) {
-          this.simplifyTree(child, 'actor');
-        }
-      }
     }
 
     let phaseStart = performance.now();
@@ -1613,7 +1564,6 @@ export class CityViewer {
       jsHeapMB: jsHeapMB(),
       cameraMode: this.controls.mode,
       renderingSuspended: this.renderingSuspended,
-      ultraLowFidelity: this.ultraLowFidelity,
       roadVisible: this.roadReady && this.roadGroup.visible,
       streamingError,
       requiredError: streamingError,
@@ -1689,21 +1639,15 @@ export class CityViewer {
     };
   }
 
-  /** Swap expensive PBR/textured materials for shared unlit colors, reversibly. */
-  setUltraLowFidelity(enabled: boolean): void {
-    this.setFidelityModes(enabled);
-  }
-
   /** Atomically change related modes so one preference switch causes one asset reset. */
   setAuthoringFidelity(modes: {
-    ultraLow: boolean;
     cinematicLighting?: boolean;
     textureMaxDimension?: number;
   }): void {
     if (modes.cinematicLighting !== undefined) {
       this.setCinematicLighting(modes.cinematicLighting);
     }
-    this.setFidelityModes(modes.ultraLow, modes.textureMaxDimension);
+    if (modes.textureMaxDimension !== undefined) this.setTextureMaxDimension(modes.textureMaxDimension);
   }
 
   /**
@@ -1715,7 +1659,7 @@ export class CityViewer {
    * switches presets on a live viewer, so this has to be reversible.
    */
   setCinematicLighting(enabled: boolean): void {
-    const next = enabled && !this.ultraLowFidelity;
+    const next = enabled;
     if (next === this.cinematicLighting) return;
     this.cinematicLighting = next;
     this.sky.mesh.visible = next;
@@ -1730,72 +1674,27 @@ export class CityViewer {
     this.configureSunShadow();
   }
 
-  private setFidelityModes(enabled: boolean, requestedTextureDimension = this.options.textureMaxDimension): void {
-    const ultraChanged = enabled !== this.ultraLowFidelity;
-    const textureDimension = Number.isFinite(requestedTextureDimension)
-      ? Math.max(128, Math.floor(requestedTextureDimension)) : Infinity;
-    const textureChanged = textureDimension !== this.options.textureMaxDimension;
-    if (!ultraChanged && !textureChanged) return;
+  /**
+   * A texture-budget change is the one preset move that still rebuilds resident
+   * assets: the streamed derivatives themselves depend on it.
+   */
+  private setTextureMaxDimension(requested: number): void {
+    const textureDimension = Number.isFinite(requested)
+      ? Math.max(128, Math.floor(requested)) : Infinity;
+    if (textureDimension === this.options.textureMaxDimension) return;
     this.options.textureMaxDimension = textureDimension;
     this.effectiveTextureMaxDimension = textureDimension;
-    // Restore the unweathered scene before swapping renderer-owned materials or
-    // environment resources. The desired appearance is reapplied atomically at
-    // the end of the transition.
+    // Restore the unweathered scene before renderer-owned resources are
+    // swapped. The desired appearance is reapplied at the end of the
+    // transition.
     this.weather.clear();
     if (this.weatherAppearance) {
       this.surfaceMaterials.setWeatherAppearance({ wetness: 0, snowCoverage: 0 });
     }
-    this.ultraLowFidelity = enabled;
     this.streamingError = null;
     this.detailFailures = 0;
     this.detailError = null;
-    if (ultraChanged && enabled) {
-      this.simplifyTree(this.cityGroup, 'city');
-      this.simplifyTree(this.roadGroup, 'road');
-      // Actors and editor helpers are scene children outside the map groups.
-      for (const child of this.scene.children) {
-        if (child !== this.cityGroup && child !== this.roadGroup && child !== this.vegetationGroup
-          && !isRendererOwnedVisualRoot(child)) {
-          this.simplifyTree(child, 'actor');
-        }
-      }
-      this.disableEnvironment();
-      if (this.sun) this.sun.visible = false;
-      this.vegetationGroup.visible = false;
-    } else if (ultraChanged) {
-      for (const [object, material] of this.originalMaterials) {
-        const mesh = object as Mesh;
-        if (mesh.isMesh) mesh.material = material;
-      }
-      this.originalMaterials.clear();
-      for (const [object, visible] of this.ultraLowVisibility) object.visible = visible;
-      this.ultraLowVisibility.clear();
-      // Leaving Ultra Low restores whatever the preset asked for, which is not
-      // necessarily the cinematic path.
-      this.cinematicLighting = this.options.cinematicLighting;
-      this.sky.mesh.visible = this.cinematicLighting;
-      this.realtimeShadows = this.cinematicLighting && this.options.realtimeShadows;
-      this.renderer.shadowMap.enabled = this.realtimeShadows;
-      this.scene.background = new Color(0x14181e);
-      if (this.sun) this.sun.visible = true;
-      this.refreshSkyEnvironment();
-      this.configureSunShadow();
-      if (!this.visualResourcesStarted) {
-        void this.ensureVisualResources().then(() => {
-          this.refreshWeatherAppearance();
-          if (!this.disposed && !this.ultraLowFidelity && (textureChanged || this.variantManifest?.variants['geometry-only'])) {
-            void this.runPresetTransition(() => this.reloadAssetVariant());
-          }
-        });
-        // The pending visual-resource callback performs the variant reload.
-        this.restoreFullSceneLayers();
-        return;
-      }
-    }
-    this.restoreFullSceneLayers();
-    if (textureChanged || (ultraChanged && this.variantManifest?.variants['geometry-only'])) {
-      void this.runPresetTransition(() => this.reloadAssetVariant());
-    }
+    void this.runPresetTransition(() => this.reloadAssetVariant());
     this.refreshWeatherAppearance();
   }
 
@@ -1839,7 +1738,7 @@ export class CityViewer {
       return;
     }
     const activeTextureLimit = Math.min(this.effectiveTextureMaxDimension, trackedTextureDimension(this.downloadTracker));
-    if (error instanceof RequiredAssetBudgetError && !this.ultraLowFidelity && activeTextureLimit > 128) {
+    if (error instanceof RequiredAssetBudgetError && activeTextureLimit > 128) {
       const city = this.cityLayer?.stats();
       const residentTiles = Math.max(1, city?.residentAssets ?? 0);
       const totalTiles = residentTiles + (city?.requiredPendingAssets ?? 0);
@@ -1861,12 +1760,6 @@ export class CityViewer {
     }
     this.streamingError = error instanceof Error ? error.message : String(error);
     console.error('[city-renderer] streaming failed', error);
-  }
-
-  /** A fidelity change never leaves the optional layers switched off. */
-  private restoreFullSceneLayers(): void {
-    this.cityGroup.visible = true;
-    void this.ensureVegetationLayer();
   }
 
   private async ensureVegetationLayer(): Promise<void> {
@@ -1899,10 +1792,6 @@ export class CityViewer {
     this.updateStreaming(_cameraPos);
   }
 
-  get isUltraLowFidelity(): boolean {
-    return this.ultraLowFidelity;
-  }
-
   /** Select a reversible, visual-only material treatment for streamed map surfaces. */
   setSurfaceMaterialProfile(profile: SurfaceMaterialProfile): ReturnType<SurfaceMaterialRegistry['report']> {
     return this.surfaceMaterials.apply(profile);
@@ -1914,7 +1803,7 @@ export class CityViewer {
 
   /** Enable practical street lighting discovered from semantic map-furniture nodes. */
   setStreetLightsEnabled(enabled: boolean): void {
-    this.luminaires.setEnabled(enabled && !this.ultraLowFidelity);
+    this.luminaires.setEnabled(enabled);
     this.luminaires.update(this.camera);
   }
 
@@ -1956,11 +1845,7 @@ export class CityViewer {
       this.applySkyWeather(null);
       return;
     }
-    const lowFidelity = this.ultraLowFidelity;
-    // Physical snow remains part of the authored scene in low modes; staged
-    // admission keeps it within the byte budget while wet film and animated
-    // atmosphere stay disabled.
-    const effective = weatherAppearanceForFidelity(appearance, lowFidelity);
+    const effective = appearance;
     this.surfaceMaterials.setWeatherAppearance(effective.surface);
     this.snowCover.setAppearance({
       coverage: effective.surface.snowCoverage,
@@ -2007,38 +1892,6 @@ export class CityViewer {
     if (!force && this.sky.sunDirection().angleTo(previous) <= SUN_SYNC_TOLERANCE_RAD) return;
     if (this.environmentFromSky) this.refreshSkyEnvironment();
     this.configureSunShadow();
-  }
-
-  private simplifyTree(root: Object3D, layer: UltraLowLayer): void {
-    if (layer === 'actor') {
-      root.traverse((object) => {
-        if (!isLowFidelityHiddenHelper(object)) return;
-        if (!this.ultraLowVisibility.has(object)) this.ultraLowVisibility.set(object, object.visible);
-        object.visible = false;
-      });
-    }
-    this.ultraLowMaterials.apply(root, layer, this.originalMaterials);
-  }
-
-  private releaseSimplifiedTree(root: Object3D): void {
-    root.traverse((object) => {
-      this.originalMaterials.delete(object);
-      this.ultraLowVisibility.delete(object);
-    });
-  }
-
-  /**
-   * Ultra Low is a texture-free authoring view: it drops the image-based light
-   * and the atmosphere, leaving a flat clear colour and the direct sun.
-   */
-  private disableEnvironment(): void {
-    this.scene.environment = null;
-    this.environmentFromSky = false;
-    this.sky.mesh.visible = false;
-    this.realtimeShadows = false;
-    this.renderer.shadowMap.enabled = false;
-    if (this.sun) this.sun.castShadow = false;
-    this.scene.background = new Color(0x171c22);
   }
 
   /** Apply authoring quality without rebuilding the renderer or reloading the map. */
@@ -2279,7 +2132,6 @@ export class CityViewer {
       uiFrameP95Ms: stats.percentile(0.95),
       simulationTicksPerSecond: null,
       cpuUtilizationProxy: Math.min(100, 100 * phaseMs / Math.max(0.001, stats.avg())),
-      ultraLowFidelity: this.ultraLowFidelity,
     };
   }
 
@@ -2317,7 +2169,6 @@ export class CityViewer {
     void Promise.all(layers.map((layer) => layer.whenCompilationIdle())).then(() => {
       this.renderer.dispose();
       this.renderer.forceContextLoss();
-      this.ultraLowMaterials.dispose();
       // The one observable proof that leaving a 3D surface actually gave the GPU
       // resources back, rather than leaving a detached context alive behind the
       // next screen. Logged after the renderer is gone, not when dispose starts.

@@ -87,7 +87,6 @@ function metrics(avgFps: number, p95FrameMs: number): BenchResult {
     uiFrameP95Ms: p95FrameMs,
     simulationTicksPerSecond: null,
     cpuUtilizationProxy: 50,
-    ultraLowFidelity: false,
   };
 }
 

@@ -19,30 +19,39 @@ const manifest: CityAssetVariantManifest = {
 };
 
 describe('city asset variants', () => {
-  it('selects geometry-only for Ultra Low and otherwise fails back to originals', () => {
-    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'auto', { ultraLow: true, ktx2Ready: false }).variant).toBe('geometry-only');
-    expect(selectAssetVariant(manifest, 'tiles/missing.glb', 'auto', { ultraLow: true, ktx2Ready: false })).toEqual({ variant: 'original', file: 'tiles/missing.glb' });
-    expect(selectAssetVariant(null, 'tiles/road.glb', 'geometry-only', { ultraLow: true, ktx2Ready: false }).variant).toBe('original');
+  it('serves the source asset when nothing better is asked for or available', () => {
+    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'auto', { ktx2Ready: false }).variant).toBe('original');
+    expect(selectAssetVariant(manifest, 'tiles/missing.glb', 'geometry-only', { ktx2Ready: false })).toEqual({ variant: 'original', file: 'tiles/missing.glb' });
+    expect(selectAssetVariant(null, 'tiles/road.glb', 'geometry-only', { ktx2Ready: false }).variant).toBe('original');
+  });
+
+  it('honours an explicit geometry-only request, which the progressive road bootstrap makes', () => {
+    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'geometry-only', { ktx2Ready: false })).toEqual({
+      variant: 'geometry-only',
+      file: 'variants/geometry-only/road.glb',
+      fallbackFile: undefined,
+      sha256: 'b',
+    });
   });
 
   it('never selects KTX2 without an initialized transcoder', () => {
-    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'ktx2', { ultraLow: false, ktx2Ready: false }).variant).toBe('original');
-    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'auto', { ultraLow: false, ktx2Ready: true }).variant).toBe('ktx2');
+    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'ktx2', { ktx2Ready: false }).variant).toBe('original');
+    expect(selectAssetVariant(manifest, 'tiles/road.glb', 'auto', { ktx2Ready: true }).variant).toBe('ktx2');
   });
 
-  it('fails closed instead of fetching textured source in Ultra Low', () => {
-    expect(allowsSourceAssetFallback('geometry-only', true)).toBe(false);
-    expect(allowsSourceAssetFallback('geometry-only', false)).toBe(true);
-    expect(allowsSourceAssetFallback('original', false)).toBe(false);
+  it('falls back to the source asset only when a derivative was the thing that failed', () => {
+    expect(allowsSourceAssetFallback('geometry-only')).toBe(true);
+    expect(allowsSourceAssetFallback('ktx2')).toBe(true);
+    expect(allowsSourceAssetFallback('original')).toBe(false);
   });
 
   it('rejects derivative paths that escape the map asset root', () => {
     const unsafe = structuredClone(manifest);
     unsafe.variants['geometry-only']!.files['tiles/road.glb']!.file = '../source/road.glb';
-    expect(selectAssetVariant(unsafe, 'tiles/road.glb', 'geometry-only', { ultraLow: true, ktx2Ready: false }).variant).toBe('original');
+    expect(selectAssetVariant(unsafe, 'tiles/road.glb', 'geometry-only', { ktx2Ready: false }).variant).toBe('original');
     const unsafeFallback = structuredClone(manifest);
     unsafeFallback.variants['geometry-only']!.files['tiles/road.glb']!.fallbackFile = 'https://example.invalid/road.glb';
-    expect(selectAssetVariant(unsafeFallback, 'tiles/road.glb', 'auto', { ultraLow: true, ktx2Ready: false })).toEqual({
+    expect(selectAssetVariant(unsafeFallback, 'tiles/road.glb', 'geometry-only', { ktx2Ready: false })).toEqual({
       variant: 'geometry-only',
       file: 'variants/geometry-only/road.glb',
       fallbackFile: undefined,

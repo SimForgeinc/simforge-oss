@@ -162,8 +162,6 @@ export interface CityViewerOptions {
   cameraBoundsInset?: number;
   /** Local optimized asset preference. Ultra Low fails closed rather than fetching textured source. */
   assetVariant?: import('./asset-variants').CityAssetVariantPreference;
-  /** Start texture-free before map loading; unlike a later toggle this also skips visual texture setup. */
-  ultraLowFidelity?: boolean;
   /** Variant manifest URL; defaults to `variants/manifest.json` beside the source manifest. */
   variantManifestUrl?: string;
   /** Required before KTX2 variants can be selected (for example `/basis/`). */
@@ -266,7 +264,6 @@ export interface CityViewerStats {
   cameraMode: 'orbit' | 'fly';
   /** True when GPU rendering and scene streaming are bypassed but integrations still tick. */
   renderingSuspended: boolean;
-  ultraLowFidelity: boolean;
   /** Road/ground geometry is resident and its layer is visible. */
   roadVisible: boolean;
   /** Latest map/preset streaming failure, including asynchronous mode switches. */
@@ -343,7 +340,6 @@ export interface BenchResult {
   /** Supplied by an integration benchmark; renderer-only benchmarks leave this null. */
   simulationTicksPerSecond: number | null;
   cpuUtilizationProxy: number;
-  ultraLowFidelity: boolean;
 }
 
 export interface RendererCapability {

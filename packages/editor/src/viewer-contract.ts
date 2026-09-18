@@ -16,19 +16,6 @@
 
 import type { PerspectiveCamera, Scene, Vector3 } from 'three';
 
-/**
- * Role tag stamped on editor-owned helper objects (drop shadows, gizmos) that
- * must disappear when the viewer drops to a low-fidelity preset.
- *
- * **This value is duplicated on purpose.** The renderer owns the read side
- * (`isLowFidelityHiddenHelper` in `../renderer/low-fidelity`); the core owns the
- * write side. Duplicating one string literal is cheaper than a module edge
- * between them. The two are pinned together by
- * `test/scenario/editor/core/viewer-contract.test.ts`, which fails if they
- * ever drift.
- */
-export const LOW_FIDELITY_HIDDEN_ROLE = 'low-fidelity-hidden';
-
 /** Camera pose as the viewer reports it. Mirrors the renderer's `CameraView`. */
 export interface EditorViewerCameraView {
   readonly position: readonly [number, number, number];

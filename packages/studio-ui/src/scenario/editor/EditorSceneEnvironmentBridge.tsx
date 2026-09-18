@@ -35,7 +35,6 @@ export function applySceneFidelity(
   viewer.setLiveQuality(live);
   viewer.setRenderingSuspended(false);
   viewer.setAuthoringFidelity({
-    ultraLow: preset.ultraLow,
     cinematicLighting: preset.cinematicLighting,
   });
   viewer.setLayerVisible("vegetation", preset.vegetation);

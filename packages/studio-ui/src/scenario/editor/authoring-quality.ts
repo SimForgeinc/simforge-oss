@@ -20,7 +20,6 @@ export const AUTHORING_QUALITY = {
   minimal: {
     maxPixelRatio: 0.75,
     antialias: false,
-    ultraLow: false,
     vegetation: false,
     cinematicLighting: false,
     live: {
@@ -37,7 +36,6 @@ export const AUTHORING_QUALITY = {
   high: {
     maxPixelRatio: 2,
     antialias: true,
-    ultraLow: false,
     vegetation: true,
     /**
      * Generated sky, its image-based light and the sun's real shadow map. High

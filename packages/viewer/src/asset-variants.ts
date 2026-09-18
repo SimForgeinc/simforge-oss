@@ -118,8 +118,8 @@ export function resolveSnowCoverVariant(
   };
 }
 
-export function allowsSourceAssetFallback(selected: CityAssetVariantId | 'original', ultraLow: boolean): boolean {
-  return selected !== 'original' && !ultraLow;
+export function allowsSourceAssetFallback(selected: CityAssetVariantId | 'original'): boolean {
+  return selected !== 'original';
 }
 
 export function isCityAssetVariantManifest(value: unknown): value is CityAssetVariantManifest {
@@ -134,11 +134,11 @@ export function selectAssetVariant(
   manifest: CityAssetVariantManifest | null,
   sourceFile: string,
   preference: CityAssetVariantPreference,
-  options: { ultraLow: boolean; ktx2Ready: boolean },
+  options: { ktx2Ready: boolean },
 ): { variant: CityAssetVariantId | 'original'; file: string; fallbackFile?: string; sha256?: string } {
   if (!manifest || preference === 'original') return { variant: 'original', file: sourceFile };
   const requested: CityAssetVariantId | null = preference === 'auto'
-    ? (options.ultraLow ? 'geometry-only' : options.ktx2Ready ? 'ktx2' : null)
+    ? (options.ktx2Ready ? 'ktx2' : null)
     : preference;
   if (!requested || (requested === 'ktx2' && !options.ktx2Ready)) {
     return { variant: 'original', file: sourceFile };

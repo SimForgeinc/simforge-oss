@@ -52,7 +52,6 @@ const metrics: BenchResult = {
   uiFrameP95Ms: 24.2,
   simulationTicksPerSecond: null,
   cpuUtilizationProxy: 68,
-  ultraLowFidelity: false,
 };
 
 const hardware: RenderingBenchmarkHardware = {

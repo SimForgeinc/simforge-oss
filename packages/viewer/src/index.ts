@@ -53,7 +53,6 @@ export {
   twilightRamp,
 } from './lighting-calibration';
 export type { GroundHeightSampler } from './indexed-height-sampler';
-export { isLowFidelityHiddenHelper, LOW_FIDELITY_HIDDEN_ROLE } from './low-fidelity';
 export { ShadowAtlas } from './shadow-atlas';
 export { ATMOSPHERE_LAYER, CLEAR_SKY, SkyDome, skyAppearanceForWeather, sunElevationFalloff } from './sky';
 export type { SkyAppearance } from './sky';

@@ -268,7 +268,6 @@ function BenchmarkCanvas({
         initialOptions={{
           maxPixelRatio: preset.maxPixelRatio,
           antialias: preset.antialias,
-          ultraLowFidelity: preset.ultraLow,
           vegetationMaxDistance: preset.live.vegetationMaxDistance,
           byteBudget: preset.live.byteBudget,
           maxScreenSpaceError: preset.live.maxScreenSpaceError,
