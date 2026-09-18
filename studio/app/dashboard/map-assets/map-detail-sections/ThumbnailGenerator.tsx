@@ -12,6 +12,7 @@ import {
   DEFAULT_BASEMAP,
   fetchMonochromeBasemapStyle,
 } from "@simforge-oss/studio-ui/lib/maps/basemaps";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 type Props = {
   asset: MapAsset;
@@ -37,15 +38,6 @@ const STATUS_LABELS: Record<Status, string> = {
   done: "Thumbnail generated",
   error: "Failed",
 };
-
-/** Compute SHA-256 hash of a blob in the browser; returns hex string. */
-async function sha256HexBlob(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 /**
  * Button + offscreen renderer that generates a map thumbnail for an existing map asset.
@@ -81,7 +73,7 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
 
       // 3. Upload to S3 via presigned URL
       setStatus("uploading");
-      const sha256 = await sha256HexBlob(blob);
+      const sha256 = await sha256Blob(blob);
 
       const urlRes = await fetch("/api/map-assets/upload-url", {
         method: "POST",

@@ -1,4 +1,4 @@
-import { sha256Bytes, type StaticColliderClass, type StaticMapCollider } from '@simforge-oss/engine';
+import { sha256BytesAsync, type StaticColliderClass, type StaticMapCollider } from '@simforge-oss/engine';
 
 const SCHEMA = 'simforge.static-map-colliders/v1';
 const CLASSES = new Set<StaticColliderClass>(['building', 'wall', 'barrier', 'prop', 'road-boundary']);
@@ -99,7 +99,7 @@ async function loadArtifact(manifestUrl: string, fetcher: typeof fetch): Promise
   if (!manifestResponse.ok) throw new Error(`Static collision derivative manifest unavailable (${manifestResponse.status})`);
   const sourceBytes = await sourceResponse.arrayBuffer();
   const manifest = await manifestResponse.json() as DerivativeManifest;
-  if (!isSha256(manifest.sourceManifestSha256) || await sha256Hex(sourceBytes) !== manifest.sourceManifestSha256) {
+  if (!isSha256(manifest.sourceManifestSha256) || await sha256BytesAsync(sourceBytes) !== manifest.sourceManifestSha256) {
     throw new Error('Static collision derivative targets a stale map bundle');
   }
   const variant = manifest.variants?.['static-colliders'];
@@ -110,7 +110,7 @@ async function loadArtifact(manifestUrl: string, fetcher: typeof fetch): Promise
   const artifactResponse = await fetcher(artifactUrl);
   if (!artifactResponse.ok) throw new Error(`Static collision artifact unavailable (${artifactResponse.status})`);
   const bytes = await artifactResponse.arrayBuffer();
-  if (await sha256Hex(bytes) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
+  if (await sha256BytesAsync(bytes) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
   const artifact = JSON.parse(new TextDecoder().decode(bytes)) as StaticColliderArtifact;
   validateArtifact(artifact, manifest, variant.digest);
   const colliders = artifact.colliders.filter(
@@ -166,23 +166,6 @@ function validObb(obb: StaticMapCollider['obb'] | undefined): boolean {
     && Number.isFinite(obb.lengthM) && obb.lengthM > 0
     && Number.isFinite(obb.widthM) && obb.widthM > 0
     && Number.isFinite(obb.headingRad));
-}
-
-/**
- * Digest collider bytes with the engine's pure-TS SHA-256, never `crypto.subtle`.
- *
- * `crypto.subtle` exists only in a secure context, so on a plain-HTTP origin
- * that is not `localhost` — any LAN address or tunnelled host — it is
- * `undefined` and this threw "Cannot read properties of undefined (reading
- * 'digest')". The loader then reported the collider bundle as unavailable, the
- * compile failed closed, and the editor could never start a world. Serving over
- * HTTPS would also fix it, but requiring TLS to open a dev map is the wrong
- * constraint, and `packages/engine/src/core/hash.ts` was written for exactly
- * this reason: identical digests in the browser and in headless Node with no
- * platform branch.
- */
-async function sha256Hex(data: ArrayBuffer): Promise<string> {
-  return sha256Bytes(new Uint8Array(data));
 }
 
 function absoluteUrl(url: string): string {

@@ -1,4 +1,6 @@
 import type { GalleryReferenceImageMediaType } from "@/app/lib/asset-gallery/generation-contracts";
+import { sha256Blob } from "@simforge-oss/engine/hash";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export interface PreparedReferenceImage {
   id: string;
@@ -45,10 +47,9 @@ export async function prepareReferenceImage(file: File): Promise<PreparedReferen
   bitmap.close();
 
   const blob = await canvasBlob(canvas);
-  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-  const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const sha256 = await sha256Blob(blob);
   return {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     name: file.name,
     blob,
     mediaType: "image/jpeg",

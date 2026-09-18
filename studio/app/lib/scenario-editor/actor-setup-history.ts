@@ -2,6 +2,7 @@ import {
   ScenarioEditorActorDraftSchema,
   type ScenarioEditorActorDraft,
 } from "@simforge-oss/studio-shared";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export const ACTOR_SETUP_HISTORY_VERSION = 1;
 export const DEFAULT_ACTOR_SETUP_HISTORY_MAX_ENTRIES = 100;
@@ -80,7 +81,7 @@ function makeSnapshot(
   actors: ScenarioEditorActorDraft[],
 ): ActorSetupHistorySnapshot {
   return {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     label,
     createdAt: new Date().toISOString(),
     actors: cloneActors(actors),
@@ -96,7 +97,7 @@ function normalizeSnapshot(value: unknown): ActorSetupHistorySnapshot | null {
   const checksum = actorSetupDocumentChecksum(actors);
   if (record.checksum !== checksum) return null;
   return {
-    id: typeof record.id === "string" && record.id ? record.id : crypto.randomUUID(),
+    id: typeof record.id === "string" && record.id ? record.id : randomUuid(),
     label: typeof record.label === "string" && record.label ? record.label : "Edit actor",
     createdAt:
       typeof record.createdAt === "string" && record.createdAt

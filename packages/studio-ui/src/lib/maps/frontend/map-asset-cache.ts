@@ -5,6 +5,8 @@ import {
   type DesktopMapCacheBridge,
   type DesktopMapCacheStatus,
 } from "@simforge-oss/studio-host";
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 /**
  * Persistent cache for immutable map bytes.
@@ -153,21 +155,6 @@ function contentRequest(sha256: string) {
   return new Request(`${window.location.origin}${CONTENT_PREFIX}${sha256}`);
 }
 
-async function digest(bytes: ArrayBuffer) {
-  const value = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(value)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export async function sha256Hex(bytes: ArrayBuffer): Promise<string | null> {
-  try {
-    return await digest(bytes);
-  } catch {
-    return null;
-  }
-}
-
 function networkFetch(input: RequestInfo | URL, init?: RequestInit) {
   return (nativeFetch ?? window.fetch)(input, init);
 }
@@ -235,10 +222,7 @@ function isCacheableMapUrl(url: URL, expectedSha256?: string) {
 
 function nextRequestId() {
   requestSequence += 1;
-  const random = typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
-  return `${requestSequence}-${random}`;
+  return `${requestSequence}-${randomUuid()}`;
 }
 
 /** Ask the disk service for a verified asset; cancellation follows `signal`. */
@@ -374,7 +358,7 @@ export async function fetchMapAsset(
   }
   const persist = async (response: Response) => {
     const bytes = await response.arrayBuffer();
-    const actualSha = await digest(bytes);
+    const actualSha = await sha256BytesAsync(bytes);
     if (expectedSha256 && actualSha !== expectedSha256) {
       throw new Error(`Asset integrity check failed for ${canonicalUrl}`);
     }

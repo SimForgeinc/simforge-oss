@@ -18,6 +18,9 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium, type BrowserContext, type Page } from "playwright-core";
 import { verifyWorldNavigation } from "./verify-world-navigation";
+import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
+import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
+import { checksumBoundPutRequiredHeaders, getPresignedGetUrl, getPresignedPutUrl } from "../app/lib/s3/s3-presign";
 
 const gateStarted = performance.now();
 const args = new Map(process.argv.slice(2).map((arg) => {
@@ -144,6 +147,87 @@ async function verifyServing() {
     assert.equal(sha256(new Uint8Array(await restored.arrayBuffer())), guard.sha256);
   }));
   pass("integrity: missing member refused; same-size corrupt member refused even with ETag; 8 concurrent repaired reads verified");
+}
+
+/**
+ * A local-object grant must be origin-agnostic, and must resolve from the
+ * origin the browser actually used.
+ *
+ * `s3-presign.ts` used to build an ABSOLUTE URL from
+ * `SIMFORGE_API_BASE_URL ?? NEXT_PUBLIC_APP_URL ?? http://127.0.0.1:$PORT`.
+ * On this machine that reads back perfectly — the loopback authority is the
+ * server's own — which is exactly why it shipped. For any browser that reached
+ * Studio over a LAN address or a tunnel, `127.0.0.1` is the CLIENT's machine,
+ * so every presigned URL was dead on arrival: a high-fidelity preview frame
+ * that never painted, a download link that refused to connect. No single
+ * configured base could fix it either, because this host is reachable as
+ * loopback, as a tailnet address and as an HTTPS tailnet name at once.
+ *
+ * Grants are therefore signed root-relative (`local-object-auth.ts` signs
+ * method, path and query, never the authority). This asserts both halves: the
+ * reference carries no authority, and one grant is redeemed from two different
+ * authorities with identical bytes. The half that matters most — redemption
+ * from the non-loopback origin a real client uses — runs in the browser, in
+ * `redeemObjectGrantInBrowser`, because Chromium is the only realm where
+ * `asset-host.test` resolves.
+ */
+async function verifyObjectGrantsAreOriginAgnostic() {
+  process.env[LOCAL_HOST_TOKEN_ENV] = host.controlToken;
+  const bytes = Buffer.from(`verify-asset-loading object grant ${Date.now()}\n`);
+  const digest = sha256(bytes);
+  const key = `smoke/object-grant-${digest.slice(0, 16)}.txt`;
+  const put = await getPresignedPutUrl(key, "text/plain", LOCAL_ARTIFACT_BUCKET, 300, digest);
+  const get = await getPresignedGetUrl(key, LOCAL_ARTIFACT_BUCKET, 300);
+  for (const [label, grant] of [["PUT", put], ["GET", get]] as const) {
+    assert(!/^[a-z][a-z0-9+.-]*:/i.test(grant), `${label} grant must carry no scheme or authority: ${grant}`);
+    assert(grant.startsWith("/api/local-objects/"), `${label} grant must be a root-relative object reference: ${grant}`);
+  }
+  const stored = await fetch(new URL(put, base), {
+    method: "PUT",
+    headers: checksumBoundPutRequiredHeaders("text/plain", digest),
+    body: bytes,
+  });
+  assert(stored.ok, `object PUT answered ${stored.status}`);
+  // `localhost` and `127.0.0.1` are different authorities and different Host
+  // headers, so redeeming one grant on both proves the authority is not part of
+  // the grant, without needing Chromium's DNS alias.
+  const authorities = [base, new URL(base)];
+  authorities[1]!.hostname = "localhost";
+  for (const origin of authorities) {
+    const response = await fetch(new URL(get, origin));
+    assert.equal(response.status, 200, `object GET from ${origin.origin} answered ${response.status}`);
+    assert.equal(sha256(new Uint8Array(await response.arrayBuffer())), digest, `object GET from ${origin.origin} bytes`);
+  }
+  pass(`object grants: authority-free, redeemed from ${authorities.map((url) => url.origin).join(" and ")} with identical bytes`);
+  return { get, digest };
+}
+
+/**
+ * The grant, redeemed by a real client on the non-loopback origin it reached.
+ *
+ * This is the assertion the old absolute URL could never have passed: the page
+ * resolves the reference against `asset-host.test`, not against whatever
+ * authority the server might have invented for itself.
+ */
+async function redeemObjectGrantInBrowser(context: BrowserContext, grant: { get: string; digest: string }) {
+  const page = await context.newPage();
+  try {
+    await page.goto(new URL("/smoke", browserOrigin).href, { waitUntil: "domcontentloaded" });
+    const observed = await page.evaluate(async (reference) => {
+      const response = await fetch(reference);
+      const buffer = await response.arrayBuffer();
+      const digest = [...new Uint8Array(await crypto.subtle?.digest("SHA-256", buffer) ?? new ArrayBuffer(0))]
+        .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      return { status: response.status, bytes: buffer.byteLength, origin: location.origin, resolved: new URL(reference, location.href).origin, digest };
+    }, grant.get);
+    assert.equal(observed.status, 200, `browser object GET from ${observed.origin} answered ${observed.status}`);
+    assert.equal(observed.resolved, browserOrigin.origin, "the grant must resolve against the origin the page loaded from");
+    // `crypto.subtle` is absent here, so the digest comes back empty: the bytes
+    // are checked by length, and the digest helpers are covered by
+    // `packages/engine/src/core/hash.test.ts`.
+    assert.equal(observed.digest, "", "this origin must not be a secure context");
+    pass(`object grant redeemed by a real client on ${observed.origin}: ${observed.bytes} bytes, resolved same-origin`);
+  } finally { await page.close(); }
 }
 
 type NetworkRow = { url: string; start: number; status?: number; wireStatus?: number; wireBodyBytes?: number; ms?: number; bytes?: number; failed?: string; asset: boolean };
@@ -315,7 +399,7 @@ async function verifyViewer(context: BrowserContext, name: string, path: string)
     await cdp.send("Network.disable");
     const stability = await measureReadyScene(page);
     const progress = await page.evaluate(() => window.__assetLoadingProgress ?? []);
-    const security = await page.evaluate(() => ({ secureContext: isSecureContext, cacheStorage: "caches" in window }));
+    const security = await page.evaluate(() => ({ secureContext: isSecureContext, cacheStorage: "caches" in window, subtle: Boolean(globalThis.crypto?.subtle) }));
     const result = { name, ms, latencyMs: LATENCY_MS, mounts, errors, progress, security, responses304, requests: network.length,
       redirects: network.filter((row) => row.asset && row.status && row.status >= 300 && row.status < 400).length,
       assetBytes: network.filter((row) => row.asset).reduce((n, row) => n + (row.bytes ?? 0), 0), peakAssetConcurrency, stability, network };
@@ -324,6 +408,11 @@ async function verifyViewer(context: BrowserContext, name: string, path: string)
     if (failure) throw failure;
     assert.equal(security.secureContext, false);
     assert.equal(security.cacheStorage, false, "Cache Storage must not hide HTTP-cache failures");
+    // `crypto.subtle` is absent here, as on the user's origin. Every digest the
+    // product computes must come from `@simforge-oss/engine/hash`, which falls
+    // back to its own SHA-256; a reintroduced bare `crypto.subtle.digest` on a
+    // browser-reachable path throws, and the zero-error assertion below fails.
+    assert.equal(security.subtle, false, "this origin must not be a secure context: SubtleCrypto must be absent");
     assert(ms < MAX_LOAD_MS, `${name}: ${ms} ms >= ${MAX_LOAD_MS}`);
     assert.equal(mounts, development ? 2 : 1, `${name}: renderer constructions (one lifetime${development ? " plus StrictMode probe" : ""})`);
     assert(!errors.some((error) => error.includes("Maximum update depth exceeded")), `${name}: React update loop`);
@@ -385,6 +474,7 @@ async function verifySetupGate() {
 await api("/api/simforge/host/setup", { method: "PUT", ...jsonBody({ mode: "local", quality: "high" }) });
 const closure = await verifyClosure();
 await verifyServing();
+const objectGrant = await verifyObjectGrantsAreOriginAgnostic();
 const profile = join(out, "browser-profile");
 // A repeat gate must start cold too. This directory is owned exclusively by
 // this script under its output directory, never the user's Chromium profile.
@@ -396,6 +486,7 @@ const context = await chromium.launchPersistentContext(profile, { executablePath
   headless: true, viewport: { width: 1600, height: 1000 }, args: ["--no-sandbox", "--disk-cache-size=4294967296", "--use-gl=angle", "--use-angle=vulkan", "--enable-features=Vulkan", "--disable-vulkan-surface", "--host-resolver-rules=MAP asset-host.test 127.0.0.1", "--no-proxy-server"] });
 try {
   await verifySetupGate();
+  await redeemObjectGrantInBrowser(context, objectGrant);
   const cold = await verifyViewer(context, "gallery-cold", "/dashboard/map-assets");
   const warm = await verifyViewer(context, "gallery-warm", "/dashboard/map-assets");
   assert(warm.responses304 >= 30, "warm map must revalidate stable URLs rather than download new signed URLs");

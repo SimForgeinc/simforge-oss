@@ -23,6 +23,7 @@ import {
   sensorsFromPreset,
 } from "@/app/lib/scenario-editor/sensor-rigs";
 import type { ActorPaletteItem } from "@/app/lib/scenario-editor/types";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 // Pure helpers for semantic road actor authoring (M4 Pass 2B1). A new road
 // vehicle exists only as a complete in-memory draft until the semantic
@@ -63,7 +64,7 @@ export function buildSemanticRoadActorDraft({
     tool.blueprint,
   );
   return normalizeActorBaseClip({
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     label: buildActorLabel(
       {
         kind: tool.kind,

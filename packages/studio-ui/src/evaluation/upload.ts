@@ -14,7 +14,7 @@
 import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
 import { ComputeApiError } from "@simforge-oss/evaluation/client";
 import type { UploadPurpose } from "@simforge-oss/evaluation/client";
-import { hashFileSha256 } from "./sha256";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 export type UploadPhase = "hashing" | "reserving" | "uploading" | "completing" | "done";
 
@@ -112,7 +112,7 @@ export async function uploadEvaluationInput(
     options.onProgress?.({ phase, bytesDone, bytesTotal: total, parts });
 
   report("hashing", 0);
-  const sha256 = await hashFileSha256(file, (hashed) => report("hashing", hashed));
+  const sha256 = await sha256Blob(file, (hashed) => report("hashing", hashed));
 
   report("reserving", 0);
   const reservation = await gateway.reserveUpload(

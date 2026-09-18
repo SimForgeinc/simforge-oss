@@ -9,14 +9,17 @@ const key = "smoke/roundtrip.txt";
 const context = {
   params: Promise.resolve({ bucket: LOCAL_ARTIFACT_BUCKET, key: key.split("/") }),
 };
-const putUrl = await getPresignedPutUrl(key, "text/plain", LOCAL_ARTIFACT_BUCKET, 60, sha256);
+// Grants are signed root-relative; `new Request` needs an authority, and any
+// authority works because the signature deliberately does not cover it.
+const origin = "http://local-object-smoke.invalid";
+const putUrl = new URL(await getPresignedPutUrl(key, "text/plain", LOCAL_ARTIFACT_BUCKET, 60, sha256), origin);
 const putResponse = await PUT(new Request(putUrl, {
   method: "PUT",
   body: bytes,
   headers: { "content-type": "text/plain", "content-length": String(bytes.byteLength) },
 }), context);
 if (!putResponse.ok) throw new Error(`PUT failed: ${putResponse.status}`);
-const getUrl = await getPresignedGetUrl(key, LOCAL_ARTIFACT_BUCKET);
+const getUrl = new URL(await getPresignedGetUrl(key, LOCAL_ARTIFACT_BUCKET), origin);
 const getResponse = await GET(new Request(getUrl), context);
 const received = new Uint8Array(await getResponse.arrayBuffer());
 const receivedSha256 = createHash("sha256").update(received).digest("hex");

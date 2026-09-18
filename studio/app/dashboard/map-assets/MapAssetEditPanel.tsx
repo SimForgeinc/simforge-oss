@@ -20,9 +20,9 @@ import {
   buildPlaceContextPayload,
   displayTag,
   newEntry,
-  sha256Hex,
   type MediaEntry,
 } from "./MapAssetEditPanelUtils";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -362,7 +362,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         const manifestEntry = filesWithPaths.find((f) => f.relativePath === "manifest.json");
         const manifestUpload = threeDUploads.find((u) => u.key.endsWith("/manifest.json"));
         if (manifestEntry && manifestUpload) {
-          const manifestSha = await sha256Hex(manifestEntry.file);
+          const manifestSha = await sha256Blob(manifestEntry.file);
           newArtifacts.push({
             key: manifestUpload.key,
             artifact_type: "3d_manifest",
@@ -399,7 +399,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         }
         const { uploads } = (await urlsRes.json()) as { uploads: { id: string; url: string; key: string }[] };
 
-        const sha256s = await Promise.all(allMedia.map((e) => sha256Hex(e.file)));
+        const sha256s = await Promise.all(allMedia.map((e) => sha256Blob(e.file)));
 
         for (let i = 0; i < uploads.length; i++) {
           const { url } = uploads[i]!;

@@ -24,6 +24,7 @@ import type {
   StudioRuntimeService,
 } from "./services";
 import { SharedReads } from "./shared-read";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export type HttpStudioHostOptions = {
   /** Origin the `/api/simforge/*` routes live on. Defaults to same-origin relative paths. */
@@ -172,10 +173,11 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
 
 
   /**
-   * Resolve a reserved upload target. Local-object reservations are handed
-   * out same-origin relative (`sameOriginWhenLocal`), because the host the
-   * browser reached is the host that serves the object store and no absolute
-   * authority the server could invent would match every way of reaching it.
+   * Resolve a reserved upload target. Local-object reservations are signed
+   * root-relative (`studio/app/lib/s3/local-object-auth.ts`), because the host
+   * the browser reached is the host that serves the object store and no
+   * absolute authority the server could invent would match every way of
+   * reaching it.
    * A browser resolves that against the page; a non-browser caller has to be
    * given the base it is already talking to, exactly like `call()`.
    */
@@ -292,7 +294,7 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     createRevision(document, evidence, opts = {}) {
       return call(documents.createRevision, {
         params: { documentId: document.id },
-        body: { expectedVersion: document.draftVersion, idempotencyKey: opts.idempotencyKey ?? crypto.randomUUID(), ...evidence },
+        body: { expectedVersion: document.draftVersion, idempotencyKey: opts.idempotencyKey ?? randomUuid(), ...evidence },
         signal: opts.signal,
       });
     },

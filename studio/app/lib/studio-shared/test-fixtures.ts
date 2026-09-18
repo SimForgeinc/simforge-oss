@@ -8,6 +8,7 @@ import { ScenarioEditorDraftSchema } from "./scenario-editor";
 import { SCENARIO_TIMING } from "@simforge-oss/scenario/contracts";
 import type { SimulationArtifact, Sensor } from "@simforge-oss/scenario/contracts";
 import type { ScenarioEditorDraft } from "./scenario-editor";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 // ---------------------------------------------------------------------------
 // SimulationJobPayload
@@ -34,11 +35,11 @@ export function createSimulationJobPayload(
   overrides?: Partial<SimulationJobPayload>,
 ): SimulationJobPayload {
   const base: SimulationJobPayload = {
-    scenarioId: crypto.randomUUID(),
+    scenarioId: randomUuid(),
     mapName: "Town10HD_Opt",
     actors: [
       {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         blueprint: "vehicle.tesla.model3",
         spawnRoadId: "road_42",
         speedKph: 50,
@@ -72,7 +73,7 @@ export interface WebhookCompletionPayload {
 export function createWebhookCompletionPayload(
   overrides?: Partial<WebhookCompletionPayload>,
 ): WebhookCompletionPayload {
-  const jobId = crypto.randomUUID();
+  const jobId = randomUuid();
   const base: WebhookCompletionPayload = {
     jobId,
     status: "COMPLETED",
@@ -96,8 +97,8 @@ export function createScenarioDraft(
   overrides?: Partial<ScenarioEditorDraft>,
 ): ScenarioEditorDraft {
   const now = new Date().toISOString();
-  const actorId = crypto.randomUUID();
-  const sourceScenarioId = crypto.randomUUID();
+  const actorId = randomUuid();
+  const sourceScenarioId = randomUuid();
 
   const base = {
     version: 2 as const,
@@ -156,8 +157,8 @@ export function createScenarioDraft(
 export function createArtifactRecord(
   overrides?: Partial<SimulationArtifact>,
 ): SimulationArtifact {
-  const id = crypto.randomUUID();
-  const simulationId = crypto.randomUUID();
+  const id = randomUuid();
+  const simulationId = randomUuid();
   const now = new Date().toISOString();
 
   const base = {
@@ -185,7 +186,7 @@ export function createArtifactRecord(
 
 export function createSensor(overrides?: Partial<Sensor>): Sensor {
   const base = {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     label: "Trailing",
     sensorCategory: "camera" as const,
     outputModality: "rgb" as const,

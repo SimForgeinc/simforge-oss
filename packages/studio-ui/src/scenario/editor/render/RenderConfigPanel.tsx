@@ -43,6 +43,7 @@ import { authoredRenderSensors, buildCanonicalRenderSpec, defaultModalities, ren
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderConfigPanel.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 type RenderBackend = ScenarioRendererEngine | "esmini";
 
 const ESMINI_VALIDATOR_VERSION = "3.6.0";
@@ -525,7 +526,7 @@ export function RenderConfigPanel({
       ?? null;
     record ??= await studioHost.jobs.prepareExport(
       revisionId,
-      `render-tab-export:${revisionId}:${crypto.randomUUID()}`,
+      `render-tab-export:${revisionId}:${randomUuid()}`,
     );
     const waitStartedMs = Date.now();
     let unclaimedSinceMs: number | null = null;
@@ -594,7 +595,7 @@ export function RenderConfigPanel({
         revisionId,
         executionPackageId,
         renderSpec,
-        idempotencyKey: `render-intent:${revisionId}:${crypto.randomUUID()}`,
+        idempotencyKey: `render-intent:${revisionId}:${randomUuid()}`,
       });
       onManagedJobCreated(job.id);
     } catch (cause) {
@@ -618,7 +619,7 @@ export function RenderConfigPanel({
         revisionId,
         validatorKind: "esmini",
         validatorVersion: ESMINI_VALIDATOR_VERSION,
-        idempotencyKey: `esmini:${revisionId}:${crypto.randomUUID()}`,
+        idempotencyKey: `esmini:${revisionId}:${randomUuid()}`,
       });
       onEsminiRunCreated();
     } catch (cause) {

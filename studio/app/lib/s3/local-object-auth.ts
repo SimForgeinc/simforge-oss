@@ -21,6 +21,22 @@ function payload(url: URL, method: "GET" | "PUT"): string {
   return `${method}\n${url.pathname}\n${query.toString()}`;
 }
 
+/**
+ * Grant one method/path/query until expiry, as a ROOT-RELATIVE reference.
+ *
+ * The authority is not signed (see `payload`), so it is not part of the grant
+ * and there is no correct value for the server to invent: this host is reached
+ * on a loopback port, a LAN address and a tunnelled HTTPS name at the same
+ * time, and any single absolute origin is wrong for the other two. A browser
+ * resolves a relative reference against the page it actually loaded, which is
+ * right for all of them with no configuration.
+ *
+ * A non-browser caller resolves it against the base it is already talking to —
+ * `studio/worker/http-client.ts` and `packages/studio-host/src/http-client.ts`
+ * both already do exactly that. So the failure mode for a missed resolution is
+ * a loud throw in a server fetch instead of a silently dead image in every
+ * remote browser, which is the way round we want it.
+ */
 export async function signLocalObjectUrl(url: URL, method: "GET" | "PUT", expiresIn: number): Promise<string> {
   const expires = Math.floor(Date.now() / 1000) + expiresIn;
   if (!Number.isSafeInteger(expiresIn) || expiresIn <= 0 || !Number.isSafeInteger(expires)) {
@@ -28,10 +44,9 @@ export async function signLocalObjectUrl(url: URL, method: "GET" | "PUT", expire
   }
   url.searchParams.set(EXPIRY, String(expires));
   url.searchParams.set(SIGNATURE, createHmac("sha256", await signingKey()).update(payload(url, method)).digest("hex"));
-  return url.toString();
+  return `${url.pathname}${url.search}`;
 }
 
-/** Grants exactly one method/path/query until expiry, never general host access. */
 export async function verifyLocalObjectRequest(request: Request): Promise<boolean> {
   const method = request.method === "HEAD" ? "GET" : request.method;
   if (method !== "GET" && method !== "PUT") return false;

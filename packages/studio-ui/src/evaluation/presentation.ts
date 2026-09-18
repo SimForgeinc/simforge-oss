@@ -24,6 +24,7 @@ import type {
 } from "./model-catalog";
 import { MODEL_CATALOG } from "./model-catalog";
 import type { ComputeJobKind, ComputeJobStatus } from "@simforge-oss/evaluation/client";
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 
 /** Highest precision first: what a user would pick if the hardware allowed it. */
 const PRECISION_PREFERENCE: readonly ModelQuant[] = ["bf16", "fp8", "nf4"] as const;
@@ -390,8 +391,5 @@ export async function submissionIdempotencyKey(parts: {
     parts.artifactIds,
     parts.attempt,
   ]);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity)));
-  let hex = "";
-  for (const byte of digest) hex += byte.toString(16).padStart(2, "0");
-  return `evaluation:${hex}`;
+  return `evaluation:${await sha256BytesAsync(new TextEncoder().encode(identity))}`;
 }

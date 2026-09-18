@@ -1,6 +1,7 @@
 "use client";
 
 import { availableStorageBytes } from "../maps/frontend/map-asset-cache";
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 
 /**
  * Browser cache for scenario artifacts that are addressed by their own digest.
@@ -64,12 +65,6 @@ function contentRequest(sha256: string): Request {
   return new Request(`${origin}${CONTENT_PREFIX}${sha256}`);
 }
 
-async function digestHex(bytes: Uint8Array): Promise<string> {
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
-  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
-}
-
 /**
  * A cached entry is only trusted when it still hashes to the key it is filed
  * under. Cache Storage can be evicted or truncated by the browser between
@@ -89,7 +84,7 @@ async function readVerified(
       await cache.delete(contentRequest(descriptor.sha256));
       return null;
     }
-    if (await digestHex(bytes) !== descriptor.sha256) {
+    if (await sha256BytesAsync(bytes) !== descriptor.sha256) {
       await cache.delete(contentRequest(descriptor.sha256));
       return null;
     }
@@ -143,7 +138,7 @@ export async function fetchContentAddressedArtifact(
   if (!response.ok) throw new Error(`${label} download failed (${response.status})`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength !== descriptor.sizeBytes) throw new Error(`${label} download is incomplete`);
-  if (await digestHex(bytes) !== descriptor.sha256) throw new Error(`${label} checksum does not match`);
+  if (await sha256BytesAsync(bytes) !== descriptor.sha256) throw new Error(`${label} checksum does not match`);
 
   if (storage) {
     await persist(storage, descriptor, bytes);

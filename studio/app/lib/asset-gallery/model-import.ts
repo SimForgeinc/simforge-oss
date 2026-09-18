@@ -22,6 +22,7 @@ import {
   GALLERY_MAX_TRIANGLES,
   type GallerySourceFormat,
 } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 const THUMBNAIL_SIZE = 512;
 const MAX_TEXTURE_SIZE = 2048;
@@ -648,11 +649,6 @@ function dropUnusableTextures(root: Object3D) {
   return dropped;
 }
 
-async function sha256(blob: Blob) {
-  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 export async function importModelFile(file: File, options: ImportOptions = {}) {
   const sourceFormat = extensionOf(file.name);
   if (!(sourceFormat in SUPPORTED_FORMATS)) {
@@ -712,8 +708,8 @@ export async function importModelFile(file: File, options: ImportOptions = {}) {
     parsed.resources.dispose();
   }
   const [glbSha256, thumbnailSha256] = await Promise.all([
-    sha256(glbBlob),
-    sha256(thumbnailBlob),
+    sha256Blob(glbBlob),
+    sha256Blob(thumbnailBlob),
   ]);
   const clips = parsed.clips.map((clip, index) => clip.name.trim() || `Clip ${index + 1}`);
 

@@ -1,3 +1,4 @@
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 import type { ScenarioSimulationPreviewDto } from "../contracts";
 import { fetchContentAddressedArtifact } from "../artifact-cache";
 import { parsePlaybackPair, type PlaybackBundle } from "@simforge-oss/playback";
@@ -9,7 +10,7 @@ export async function encodeSimulationPreview(bundle: PlaybackBundle, draftVersi
   const value = storedSimulationPreview(bundle, draftVersion, runtime);
   const compressed = await new Response(new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
   const bytes = new Uint8Array(compressed);
-  return { bytes, sha256: await sha256Hex(bytes) };
+  return { bytes, sha256: await sha256BytesAsync(bytes) };
 }
 
 export async function downloadSimulationPreview(
@@ -25,9 +26,4 @@ export async function downloadSimulationPreview(
   const json = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   const value: unknown = JSON.parse(json);
   return admitSimulationPreview(value, { draftVersion: descriptor.draftVersion, runtime });
-}
-
-async function sha256Hex(bytes: Uint8Array) {
-  const digest = await crypto.subtle.digest("SHA-256", bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
-  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }

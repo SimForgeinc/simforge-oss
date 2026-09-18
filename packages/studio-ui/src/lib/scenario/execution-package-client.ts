@@ -1,3 +1,4 @@
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 import {
   ExecutionPackageMembersSchema,
   type ExecutionPackageMemberDto,
@@ -54,9 +55,7 @@ async function verifyMember(
   if (buffer.byteLength !== member.byteLength) {
     throw new ExecutionPackageMemberVerificationError("byte_length_mismatch", member.role);
   }
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", buffer));
-  let actualSha256 = "";
-  for (const byte of digest) actualSha256 += byte.toString(16).padStart(2, "0");
+  const actualSha256 = await sha256BytesAsync(buffer);
   if (actualSha256 !== member.sha256) {
     throw new ExecutionPackageMemberVerificationError("sha256_mismatch", member.role);
   }

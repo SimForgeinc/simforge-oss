@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getFinalizedArtifact } from "@/app/lib/scenario/control-plane-store";
-import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ artifactId: string }> };
@@ -14,7 +13,7 @@ export async function GET(request: Request, route: Context) {
     : "inline";
   const artifact = await getFinalizedArtifact(auth.context, artifactId, disposition);
   const body = artifact
-    ? { ...artifact, downloadUrl: sameOriginWhenLocal(artifact.downloadUrl) }
+    ? artifact
     : null;
   return body
     ? NextResponse.json(body, {

@@ -5,7 +5,6 @@ import {
   getPresignedPutUrl,
   headS3Object,
 } from "@/app/lib/s3/s3-presign";
-import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import type { ScenarioMaterializedTrafficReference } from "./contracts";
 import { scenarioId } from "./core";
 import {
@@ -132,7 +131,7 @@ export async function reserveMaterializedTraffic(
     uploadUrl:
       row.artifact_state === "available"
         ? null
-        : sameOriginWhenLocal(await getPresignedPutUrl(row.storage_key, MATERIALIZED_TRAFFIC_MEDIA_TYPE, row.storage_bucket, 900, input.sha256)),
+        : await getPresignedPutUrl(row.storage_key, MATERIALIZED_TRAFFIC_MEDIA_TYPE, row.storage_bucket, 900, input.sha256),
     headers: checksumBoundPutRequiredHeaders(MATERIALIZED_TRAFFIC_MEDIA_TYPE, input.sha256),
   };
 }

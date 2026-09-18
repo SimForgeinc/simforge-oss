@@ -9,9 +9,9 @@ import {
   hasCacheReceipt,
   installMapAssetFetchGateway,
   prepareMapAssetCache,
-  sha256Hex,
   writeCacheReceipt,
 } from "../../../src/lib/maps/frontend/map-asset-cache";
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 
 function fakeCacheStorage() {
   const stores = new Map<string, Map<string, Response>>();
@@ -45,15 +45,15 @@ describe("unified map asset cache", () => {
 
   it("stores identical bytes once by SHA across different map URLs", async () => {
     const bytes = new TextEncoder().encode("shared geometry");
-    const sha = await sha256Hex(bytes.buffer);
+    const sha = await sha256BytesAsync(bytes.buffer);
     const network = vi.fn(async () => new Response(bytes));
     vi.stubGlobal("fetch", network);
 
-    await (await fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/a.glb", {}, sha!)).arrayBuffer();
-    await (await fetchMapAsset("/api/simforge/maps/b/browser-assets/3d/b.glb", {}, sha!)).arrayBuffer();
+    await (await fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/a.glb", {}, sha)).arrayBuffer();
+    await (await fetchMapAsset("/api/simforge/maps/b/browser-assets/3d/b.glb", {}, sha)).arrayBuffer();
 
     expect(network).toHaveBeenCalledOnce();
-    expect(await hasCachedMapAsset("/api/simforge/maps/b/browser-assets/3d/b.glb", sha!)).toBe(true);
+    expect(await hasCachedMapAsset("/api/simforge/maps/b/browser-assets/3d/b.glb", sha)).toBe(true);
   });
 
   it("serves a warmed runtime request with the network completely unavailable", async () => {
@@ -147,11 +147,11 @@ describe("unified map asset cache", () => {
     vi.stubGlobal("caches", storage);
     Object.defineProperty(window, "caches", { configurable: true, value: storage });
     const bytes = new TextEncoder().encode("road lod0 geometry");
-    const sha = await sha256Hex(bytes.buffer);
+    const sha = await sha256BytesAsync(bytes.buffer);
     vi.stubGlobal("fetch", vi.fn(async () => new Response(bytes)));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const response = await fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/tiles/road.glb", {}, sha!);
+    const response = await fetchMapAsset("/api/simforge/maps/a/browser-assets/3d/tiles/road.glb", {}, sha);
 
     expect(response.ok).toBe(true);
     expect([...new Uint8Array(await response.arrayBuffer())]).toEqual([...bytes]);
@@ -181,7 +181,7 @@ describe("unified map asset cache", () => {
     const canonical = "/api/simforge/maps/a/browser-assets/3d/direct.glb";
     const direct = "https://optimized-assets.s3.amazonaws.com/direct.glb?signed=1";
     const bytes = new TextEncoder().encode("direct optimized bytes");
-    const sha = await sha256Hex(bytes.buffer);
+    const sha = await sha256BytesAsync(bytes.buffer);
     const network = vi.fn(async () => new Response(bytes));
     vi.stubGlobal("fetch", network);
 
@@ -194,7 +194,7 @@ describe("unified map asset cache", () => {
     expect(localStorage.getItem("simforge-map-assets-index-v4")).toBeNull();
     flushMapAssetCacheIndex();
     expect(localStorage.getItem("simforge-map-assets-index-v4")).not.toBeNull();
-    expect(await hasCachedMapAsset(canonical, sha!)).toBe(true);
+    expect(await hasCachedMapAsset(canonical, sha)).toBe(true);
   });
 
   it("automatically caches assets fetched during normal app use", async () => {

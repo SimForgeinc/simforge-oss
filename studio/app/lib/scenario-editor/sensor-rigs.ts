@@ -1,6 +1,7 @@
 import {
   type Sensor,
 } from "@simforge-oss/scenario/contracts";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export type SensorRig = {
   id: string;
@@ -426,17 +427,17 @@ export function identifyRigPreset(sensors: Sensor[]): SensorRig | null {
 
 /** Create fresh sensor instances from a preset rig (new UUIDs for each sensor). */
 export function sensorsFromPreset(rig: SensorRig): Sensor[] {
-  return rig.sensors.map((sensor) => ({ ...sensor, id: crypto.randomUUID() }));
+  return rig.sensors.map((sensor) => ({ ...sensor, id: randomUuid() }));
 }
 
 export function cloneRigWithNewIds(rig: SensorRig, newRigId?: string): SensorRig {
   return {
-    id: newRigId ?? crypto.randomUUID(),
+    id: newRigId ?? randomUuid(),
     name: rig.name,
     isBuiltIn: false,
     sensors: rig.sensors.map((sensor) => ({
       ...sensor,
-      id: crypto.randomUUID(),
+      id: randomUuid(),
     })),
   };
 }

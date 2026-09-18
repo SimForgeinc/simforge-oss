@@ -217,7 +217,16 @@ export { SimEngineError, issue } from './errors.js';
 export type { SimIssue, SimIssueCode, SimIssueSeverity } from './errors.js';
 
 /* -------------------------------------------------------------------- util */
-export { canonicalJson, contentHash, sha256, sha256Bytes } from './core/hash.js';
+export {
+  canonicalJson,
+  contentHash,
+  sha256,
+  sha256Blob,
+  sha256Bytes,
+  sha256BytesAsync,
+  Sha256Stream,
+} from './core/hash.js';
+export { randomUuid } from './core/uuid.js';
 export {
   captureHashFromSensors,
   captureVersionFromSensors,

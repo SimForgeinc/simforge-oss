@@ -1,4 +1,5 @@
 import type { MapAssetArtifactType, MapCoordinateRef, MapPlaceContext } from "@simforge-oss/studio-shared";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 /** Display a tag ID with underscores replaced by spaces for readability. */
 export function displayTag(tagId: string): string {
@@ -8,7 +9,7 @@ export function displayTag(tagId: string): string {
 export type MediaEntry = { id: string; file: File; label: string };
 
 export function newEntry(file: File): MediaEntry {
-  return { id: crypto.randomUUID(), file, label: "" };
+  return { id: randomUuid(), file, label: "" };
 }
 
 export function artifactTypeFromFilename(filename: string): MapAssetArtifactType {
@@ -16,14 +17,6 @@ export function artifactTypeFromFilename(filename: string): MapAssetArtifactType
   if (ext === "mp4") return "mp4";
   if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "webp") return "image";
   return "image";
-}
-
-export async function sha256Hex(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 /**

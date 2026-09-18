@@ -23,6 +23,7 @@ import {
 } from "@/app/lib/map-ingest/contracts";
 import type { MapLayerId, MapPreflight } from "@/app/lib/map-ingest/contracts";
 import { runMapPreflight } from "@/app/lib/map-ingest/preflight";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 const THUMBNAIL_SIZE = 512;
 const BYTES_PER_MB = 1024 * 1024;
@@ -145,14 +146,6 @@ function disposeModel(root: Object3D): void {
   for (const texture of textures) texture.dispose();
 }
 
-async function sha256(blob: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-  return Array.from(
-    new Uint8Array(digest),
-    (byte) => byte.toString(16).padStart(2, "0"),
-  ).join("");
-}
-
 function vectorTuple(vector: Vector3): [number, number, number] {
   return [vector.x, vector.y, vector.z];
 }
@@ -256,9 +249,9 @@ export async function importMapFiles(files: File[]): Promise<ImportedMap> {
     );
 
     const [xodrSha256, thumbnailSha256, layerSha256s] = await Promise.all([
-      sha256(xodrFile),
-      sha256(thumbnailBlob),
-      Promise.all(parsedLayers.map((layer) => sha256(layer.file))),
+      sha256Blob(xodrFile),
+      sha256Blob(thumbnailBlob),
+      Promise.all(parsedLayers.map((layer) => sha256Blob(layer.file))),
     ]);
 
     return {

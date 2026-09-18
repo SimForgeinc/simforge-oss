@@ -15,6 +15,7 @@ import {
   type NormalizedScenarioDraft,
   type PersistedScenarioDraft,
 } from "./draft-normalization";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export type EditorScenarioListRow = {
   id: string;
@@ -420,7 +421,7 @@ export async function createEditorScenario(
     runtime?: CarlaRuntime;
   },
 ) {
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   const now = new Date().toISOString();
   const runtime = normalizeCarlaRuntime(input.runtime);
   const mapReference = await resolveScenarioMapReference({
@@ -506,7 +507,7 @@ export async function createCrossMapVariationScenarios(
   options: { datasetId?: string } = {},
 ) {
   const prepared = await Promise.all(inputs.map(async (input) => {
-    const id = crypto.randomUUID();
+    const id = randomUuid();
     const now = new Date().toISOString();
     const runtime = normalizeCarlaRuntime(input.runtime);
     const mapReference = await resolveScenarioMapReference({
@@ -764,7 +765,7 @@ export async function duplicateEditorScenarioForWorkspace(
   scenarioId: string,
   options: { displayName?: string | null } = {},
 ) {
-  const id = crypto.randomUUID();
+  const id = randomUuid();
 
   await execute(
     `

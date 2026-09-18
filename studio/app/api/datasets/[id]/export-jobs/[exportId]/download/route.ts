@@ -8,7 +8,6 @@ import {
   getDefaultDatasetExportPublication,
 } from "@/app/lib/db/dataset-export-v2-store";
 import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
-import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import { getPresignedGetUrl, MEDIA_URL_TTL_SECONDS } from "@/app/lib/s3/s3-presign";
 
 type RouteContext = { params: Promise<{ id: string; exportId: string }> };
@@ -47,7 +46,7 @@ async function publicationUrl(
     MEDIA_URL_TTL_SECONDS,
     fileName ? `attachment; filename="${fileName}"` : undefined,
   );
-  return { url: sameOriginWhenLocal(url), artifact };
+  return { url: url, artifact };
 }
 
 /**

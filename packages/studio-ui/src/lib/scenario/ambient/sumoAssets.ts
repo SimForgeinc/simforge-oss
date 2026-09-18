@@ -27,6 +27,7 @@ import {
   SUMO_RUNTIME_MODULE_URL,
   SUMO_RUNTIME_WASM_URL,
 } from "../sumo-runtime";
+import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 
 export {
   SUMO_RUNTIME_MANIFEST_URL,
@@ -159,7 +160,7 @@ export async function loadSumoAssets(
     const rawNetwork = await networkResponse.arrayBuffer();
     if (rawNetwork.byteLength === 0)
       throw new Error(`SUMO network is empty for ${map.label}`);
-    if ((await sha256Hex(rawNetwork)) !== map.sumoNetworkSha256) {
+    if ((await sha256BytesAsync(rawNetwork)) !== map.sumoNetworkSha256) {
       throw new Error(`SUMO network checksum mismatch for ${map.label}`);
     }
     const networkXml = new TextDecoder().decode(rawNetwork);
@@ -271,13 +272,6 @@ export function validateSumoRuntimeBinary(
     );
   }
   return binary;
-}
-
-async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 const SUMO_REPLENISHMENT_PERIOD_SECONDS = 40;

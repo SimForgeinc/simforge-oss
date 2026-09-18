@@ -27,7 +27,6 @@ import {
   generateMapAssetId,
   parseGeoJson,
   artifactTypeFromExtension,
-  sha256Hex,
   buildDefaultMapName,
   mapLaneCountsLocal,
   type ComputedGeo,
@@ -39,6 +38,7 @@ import { LocationOverrideFields } from "./LocationOverrideFields";
 import { ScenarioTagsPanel } from "./ScenarioTagsPanel";
 import { AdditionalArtifactsPanel } from "./AdditionalArtifactsPanel";
 import { buildDebugPayload } from "./AddMapDebugPayload";
+import { sha256Blob } from "@simforge-oss/engine/hash";
 
 const CRS_OPTIONS = [{ value: "EPSG:4326", label: "EPSG:4326 — WGS84 (lat, long)" }];
 
@@ -97,7 +97,7 @@ const initialState: FormState = {
 const initialParsedMeta: ParsedMetaState = { xodr: null, geojson: null, rrdata_xml: null };
 
 // Pure utilities (slugify, formatTimestamp, generateMapAssetId, collectCoordinates,
-// parseGeoJson, artifactTypeFromExtension, sha256Hex, displayTag, buildDefaultMapName,
+// parseGeoJson, artifactTypeFromExtension, displayTag, buildDefaultMapName,
 // mapLaneCountsLocal) extracted to @/app/lib/maps/frontend/add-map-utils.ts
 
 // FieldLabel + UploadStatusBadge extracted to ./FieldLabel.tsx and ./UploadStatusBadge.tsx
@@ -166,7 +166,7 @@ export default function AddMapForm() {
       const promise = (async (): Promise<{ sha256: string; key: string }> => {
         // 1. Hash
         setUploads((prev) => ({ ...prev, [fileId]: { status: "hashing", sha256: null, key: null, error: null } }));
-        const hash = await sha256Hex(file);
+        const hash = await sha256Blob(file);
 
         // 2. Get presigned URL
         setUploads((prev) => ({ ...prev, [fileId]: { status: "uploading", sha256: hash, key: null, error: null } }));

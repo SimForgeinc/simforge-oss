@@ -25,6 +25,7 @@ import {
   type SignalPlanMode,
   type SignalTurn,
 } from "@simforge-oss/studio-shared";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 // ---------------------------------------------------------------------------
 // Colour
@@ -568,7 +569,7 @@ export function nextSceneClipId(): string {
   sceneClipCounter += 1;
   const unique =
     typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
+      ? randomUuid()
       : `${Date.now()}_${sceneClipCounter}`;
   return `sig_${unique}`;
 }

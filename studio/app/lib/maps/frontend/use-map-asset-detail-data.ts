@@ -53,6 +53,7 @@ import {
   buildScenarioCandidateFamilyLayers,
   type ScenarioCandidateFamilyLayer,
 } from "@/app/lib/maps/frontend/scenario-candidate-layers";
+import { randomUuid } from "@simforge-oss/engine/uuid";
 
 export interface MapDetailData {
   // GeoJSON
@@ -715,12 +716,8 @@ export function useMapAssetDetailData(
 
   function addUserGeoJsonLayer(name: string, data: object, featureCount: number) {
     setUserGeoJsonLayers((current) => {
-      const id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `ug-${current.length}-${name}`;
       const layer: UserGeoJsonLayer = {
-        id,
+        id: randomUuid(),
         name,
         data,
         featureCount,

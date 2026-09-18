@@ -9,6 +9,7 @@ import {
   type ScenarioDatasetAccess,
   type ScenarioDatasetAction,
 } from "./dataset-store";
+import { sha256 } from "@simforge-oss/engine/hash";
 
 export async function requireScenarioContext(): Promise<
   { context: AppContext; response?: never } | { context?: never; response: NextResponse }
@@ -176,12 +177,6 @@ export const SCENARIO_IMMUTABLE_CACHE_HEADERS = {
   "Cache-Control": "private, max-age=31536000, immutable",
 } as const;
 
-async function weakEtag(body: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
-  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `"${hex.slice(0, 32)}"`;
-}
-
 /**
  * JSON response that a client can revalidate instead of re-downloading.
  *
@@ -196,7 +191,8 @@ export async function scenarioJsonWithEtag(
   headers: Record<string, string> = SCENARIO_REVALIDATE_CACHE_HEADERS,
 ): Promise<Response> {
   const body = JSON.stringify(payload);
-  const etag = await weakEtag(body);
+  // Half a SHA-256 is ample for a validator and keeps the header short.
+  const etag = `"${sha256(body).slice(0, 32)}"`;
   const inm = request.headers.get("if-none-match");
   // A client may echo several validators; a match on any of them is unchanged.
   if (inm && inm.split(",").some((candidate) => candidate.trim() === etag)) {

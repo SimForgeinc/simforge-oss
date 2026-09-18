@@ -24,12 +24,20 @@ export function checksumBoundPutRequiredHeaders(
   };
 }
 
+/**
+ * The object endpoint for one key, as a path plus query to be signed.
+ *
+ * `LOCAL_OBJECT_ORIGIN` is a placeholder that never leaves this module:
+ * `signLocalObjectUrl` returns only the pathname and query, so no origin the
+ * server could guess is ever handed to a client. That is deliberate — see the
+ * comment there. Reintroducing a configured base here would resurrect the bug
+ * where every presigned URL pointed a remote browser at its own loopback.
+ */
+const LOCAL_OBJECT_ORIGIN = "http://local-objects.invalid";
+
 function objectUrl(bucket: string, key: string): URL {
-  const base = process.env.SIMFORGE_API_BASE_URL?.trim()
-    ?? process.env.NEXT_PUBLIC_APP_URL?.trim()
-    ?? `http://127.0.0.1:${process.env.PORT?.trim() || "5199"}`;
   const encoded = key.split("/").map(encodeURIComponent).join("/");
-  return new URL(`/api/local-objects/${encodeURIComponent(bucket)}/${encoded}`, base);
+  return new URL(`/api/local-objects/${encodeURIComponent(bucket)}/${encoded}`, LOCAL_OBJECT_ORIGIN);
 }
 
 export async function getPresignedGetUrl(
