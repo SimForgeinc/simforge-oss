@@ -199,11 +199,13 @@ const READY_STABILITY_WINDOW_MS = 8_000;
  * steady frame. Both are read from the viewer's own diagnostics probe.
  */
 async function measureReadyScene(page: Page) {
+  // The evaluated body must contain no named function expressions: tsx's
+  // esbuild transform adds a `__name` helper to them that does not exist in
+  // the browser realm.
   return await page.evaluate(async (windowMs: number) => {
     const probe = window.__simforgeViewerProbe;
-    const inView = () => probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
-    const missingInViewAtReady = inView();
-    let maxMissingInView = missingInViewAtReady;
+    const missingAtReady = probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
+    let maxMissingInView = missingAtReady;
     let samples = 1;
     const deltas: number[] = [];
     let last = performance.now();
@@ -213,20 +215,22 @@ async function measureReadyScene(page: Page) {
       const now = performance.now();
       deltas.push(now - last);
       last = now;
-      maxMissingInView = Math.max(maxMissingInView, inView());
+      const missing = probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
+      if (missing > maxMissingInView) maxMissingInView = missing;
       samples++;
     }
     const sorted = [...deltas].sort((a, b) => a - b);
-    const at = (fraction: number) => sorted[Math.min(sorted.length - 1, Math.round(fraction * (sorted.length - 1)))] ?? 0;
+    const p50 = sorted[Math.min(sorted.length - 1, Math.round(0.5 * (sorted.length - 1)))] ?? 0;
+    const p95 = sorted[Math.min(sorted.length - 1, Math.round(0.95 * (sorted.length - 1)))] ?? 0;
     return {
       probed: probe !== undefined,
       windowMs,
       samples,
       frames: deltas.length,
-      missingInViewAtReady,
+      missingInViewAtReady: missingAtReady,
       maxMissingInView,
-      frameMsP50: at(0.5),
-      frameMsP95: at(0.95),
+      frameMsP50: p50,
+      frameMsP95: p95,
       frameMsMax: sorted[sorted.length - 1] ?? 0,
     };
   }, READY_STABILITY_WINDOW_MS);
