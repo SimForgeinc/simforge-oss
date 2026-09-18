@@ -1,6 +1,6 @@
 //! Final-video sink, shared with the harness-side implementation.
 //! Flights may complete out of order; only dense sequence indices reach ffmpeg.
-use super::CaptureArgs;
+use super::CaptureConfig;
 use bevy::prelude::Resource;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
@@ -35,22 +35,22 @@ impl VideoSink {
         frames.push((sensor, rgba));
     }
 
-    fn encoder_for(&mut self, sensor: &str, args: &CaptureArgs, out_dir: &Path) -> &mut Encoder {
+    fn encoder_for(&mut self, sensor: &str, args: &CaptureConfig, out_dir: &Path) -> &mut Encoder {
         self.encoders.entry(sensor.to_string()).or_insert_with(|| {
             let path = out_dir.join(format!("{sensor}.mp4"));
             let mut cmd = Command::new("ffmpeg");
             cmd.args(["-hide_banner", "-loglevel", "error", "-y"])
                 .args(["-f", "rawvideo", "-pix_fmt", "rgba"])
-                .args(["-s", &format!("{}x{}", args.width, args.height)])
+                .args(["-s", &format!("{}x{}", args.consumer.width, args.consumer.height)])
                 .args(["-r", &args.video_fps.unwrap_or(50.0).to_string()]).args(["-i", "-"]);
-            match args.video_encoder.as_str() {
+            match args.consumer.video_encoder() {
                 "nvenc" => {
                     cmd.args(["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr"])
-                        .args(["-cq", &args.video_crf.to_string()]);
+                        .args(["-cq", &args.consumer.video_quality().to_string()]);
                 }
                 "x264" => {
                     cmd.args(["-c:v", "libx264", "-preset", "medium"])
-                        .args(["-crf", &args.video_crf.to_string()])
+                        .args(["-crf", &args.consumer.video_quality().to_string()])
                         .args(["-g", "50", "-x264-params", "threads=4:sliced-threads=0:sync-lookahead=0:deterministic=1"]);
                 }
                 _ => unreachable!("video encoder is validated by clap"),
@@ -61,13 +61,13 @@ impl VideoSink {
         })
     }
 
-    pub(super) fn drain(&mut self, args: &CaptureArgs, out_dir: &Path) {
+    pub(super) fn drain(&mut self, args: &CaptureConfig, out_dir: &Path) {
         while let Some(frames) = self.pending.remove(&self.next_index) {
             assert_eq!(frames.len(), self.cameras, "incomplete video tick");
             for (sensor, rgba) in frames {
-                let row = args.width as usize * 4;
-                let padded = super::aligned_row(args.width as usize, 4);
-                assert_eq!(rgba.len(), padded * args.height as usize, "video readback size");
+                let row = args.consumer.width as usize * 4;
+                let padded = super::aligned_row(args.consumer.width as usize, 4);
+                assert_eq!(rgba.len(), padded * args.consumer.height as usize, "video readback size");
                 let encoder = self.encoder_for(&sensor, args, out_dir);
                 let stdin = encoder.child.stdin.as_mut().expect("encoder stdin");
                 if row == padded {
@@ -121,10 +121,10 @@ mod tests {
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos(),
         ));
         std::fs::create_dir_all(&directory).unwrap();
-        let args = CaptureArgs::parse_from([
+        let args = CaptureConfig::resolve(super::super::CaptureArgs::parse_from([
             "sensor-capture", "--rig-program", "unused", "--glbs", "/unused.gltf",
-            "--out", directory.to_str().unwrap(), "--width", "66", "--height", "32", "--video",
-        ]);
+            "--out", directory.to_str().unwrap(), "--width", "66", "--height", "32", "--profile", "showcase",
+        ])).unwrap();
         let frame = |color: [u8; 4]| {
             let padded = super::super::aligned_row(66, 4);
             let mut pixels = vec![197; padded * 32];

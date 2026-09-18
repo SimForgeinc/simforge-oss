@@ -16,11 +16,11 @@ use crate::proto::{
 };
 use crate::scene::{ActorState, SceneState};
 use crate::shm::{
-    BundleEntry, ShmRing, FORMAT_DEPTH32F, FORMAT_JPEG, FORMAT_LIDAR_PLY, FORMAT_RADAR_CSV,
+    BundleEntry, ShmRing, FORMAT_DEPTH32F, FORMAT_JPEG, FORMAT_LIDAR_PLY, FORMAT_LIDAR_BINARY, FORMAT_RADAR_CSV,
     FORMAT_RGBA8,
 };
 use anyhow::{Context, Result};
-use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::math::{Quat, Vec3};
 use render_core::engine::{
     CameraSpec, CapturedFrame, LegendEntry, Lighting, PassSet, Profile, SceneApp, SensorTriangle,
 };
@@ -213,6 +213,7 @@ pub struct ServiceState {
     scene: Vec<SceneState>,
     /// Index of the most recently applied scene frame.
     current_tick: Option<u32>,
+    episode: Option<crate::episode::Episode>,
     /// Pass payloads from the last render (V2 `encode_jpeg` source).
     cache: HashMap<String, CachedPass>,
     /// Retained camera rig in registration order.
@@ -222,6 +223,7 @@ pub struct ServiceState {
     radars: Vec<ServiceRadar>,
     /// Static map BVH, built once after prewarm and reused for every tick.
     static_sensor_scene: RaycastScene,
+    road_sensor_scene: RaycastScene,
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
@@ -260,7 +262,10 @@ impl ServiceState {
             .into_iter()
             .map(|LegendEntry { id, name }| (id, name))
             .collect();
-        let static_sensor_scene = build_sensor_scene(app.sensor_triangles(false));
+        let triangles = app.sensor_triangles(false);
+        let road_sensor_scene=build_sensor_scene(triangles.iter().filter(|tri| legend.get(&tri.instance_id)
+            .is_some_and(|name| sensors::taxonomy::SemanticClass::from_mesh_name(name)==sensors::taxonomy::SemanticClass::Road)).copied().collect());
+        let static_sensor_scene = build_sensor_scene(triangles);
         Ok(Self {
             app,
             profile: spec.profile,
@@ -272,11 +277,13 @@ impl ServiceState {
             legend,
             scene: Vec::new(),
             current_tick: None,
+            episode: None,
             cache: HashMap::new(),
             rig: Vec::new(),
             lidars: Vec::new(),
             radars: Vec::new(),
             static_sensor_scene,
+            road_sensor_scene,
             vehicle_models,
             pedestrian_models,
             actor_model_refs: spec
@@ -440,7 +447,89 @@ fn handle_connection(
 /// acknowledgement the caller must drain [`ServiceState::take_export`].
 pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse {
     let i = request.i;
+    if state.episode.as_ref().is_some_and(|episode|episode.termination.is_none())
+        && matches!(&request.body,RequestBody::Render {..}|RequestBody::RenderBundle {..}
+            |RequestBody::Load {..}|RequestBody::LoadSceneState {..}|RequestBody::SetLighting {..}) {
+        return WireResponse::error(i,"an active episode owns scene and rig state; step/reset it, or reset_cameras to leave episode mode");
+    }
     match request.body {
+        RequestBody::DescribeProducts {profile} => WireResponse {i,body:ResponseBody::DescribeProducts {ok:true,consumer:profile.consumer()}},
+        RequestBody::ResetEpisode { scenario, ego_id, mut cameras, lidars, limits, consumer } => {
+            let mut episode = match crate::episode::Episode::reset(scenario, ego_id, limits) {
+                Ok(episode) => episode,
+                Err(error) => return WireResponse::error(i, error),
+            };
+            if let Some(consumer)=consumer {
+                if let Err(error)=episode.configure_consumer(consumer) {return WireResponse::error(i,error);}
+            }
+            if episode.consumer.video() || episode.consumer.labels {
+                return WireResponse::error(i,"policy episodes require image products without labels; showcase video uses sensor-capture");
+            }
+            if episode.consumer.depth.is_some_and(|depth| !matches!(depth,render_core::products::DepthProduct::MetricAxial {..})) {
+                return WireResponse::error(i,"policy depth requires metric_axial; raw reverse-Z is available through render_bundle");
+            }
+            if episode.consumer.occupancy && lidars.is_empty() {
+                return WireResponse::error(i,"declared occupancy requires at least one lidar");
+            }
+            for camera in &mut cameras {
+                camera.width=episode.consumer.width;
+                camera.height=episode.consumer.height;
+                camera.profile=Some(Profile::Cinematic);
+                camera.semantic=false;
+                camera.depth_encoding=None;
+                if camera.attach.as_ref().is_some_and(|mount| mount.roll_deg!=0.0) {
+                    return WireResponse::error(i,"SceneApp eye/target cameras do not support calibrated roll");
+                }
+            }
+            let history_indices=match episode.warm_start() {
+                Ok(indices)=>indices,Err(error)=>return WireResponse::error(i,error),
+            };
+            episode.evaluate(&|pose| on_road(&state.road_sensor_scene,pose));
+            for frame in &state.scene {
+                for actor in &frame.actors { state.app.remove_actor(&actor.id); }
+            }
+            state.scene.clear();
+            state.app.clear_cameras();
+            state.cache.clear();
+            state.rig = cameras;
+            state.lidars.clear();
+            state.radars.clear();
+            state.episode=None;
+            state.current_tick = None;
+            let start_cursor=state.shm.cursor_total();
+            let mut history=Vec::new();
+            for &index in history_indices.iter().take(history_indices.len()-1) {
+                let frame=episode.authored[index].clone();
+                let tick=frame.tick;
+                let time_seconds=tick as f64/frame.tick_hz as f64;
+                replace_episode_frame(state,frame);
+                let response=render_bundle_op(state,i,tick as u64,None,None,None,Some(0),Some(vec!["rgb".into()]),Vec::new());
+                match response.body {
+                    ResponseBody::RenderBundle {frame,frames,..}=>history.push(crate::proto::EpisodeImageHistory {time_seconds,frame,frames}),
+                    body=>return WireResponse {i,body},
+                }
+            }
+            state.lidars=if episode.consumer.lidar.is_some() {lidars} else {Vec::new()};
+            replace_episode_frame(state,episode.authored[episode.index].clone());
+            state.episode = Some(episode);
+            let mut response=render_episode(state, i);
+            if state.shm.cursor_total()-start_cursor>state.shm.usable_bytes() {
+                state.episode=None;
+                return WireResponse::error(i,"reset history exceeds shared-memory capacity; enlarge --shm-size-mb");
+            }
+            if let ResponseBody::Episode {history:rows,..}=&mut response.body {*rows=history;}
+            response
+        }
+        RequestBody::StepEpisode { action } => {
+            let Some(episode) = state.episode.as_mut() else {
+                return WireResponse::error(i, "reset_episode is required before step_episode");
+            };
+            match episode.advance(action, |pose| on_road(&state.road_sensor_scene,pose)) {
+                Ok(frame) => replace_episode_frame(state,frame),
+                Err(error) => return WireResponse::error(i, error),
+            }
+            render_episode(state, i)
+        }
         RequestBody::Hello => {
             let (size_bytes, meta_bytes, _) = state.shm.path_size_meta();
             WireResponse {
@@ -474,10 +563,12 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             let ticks = states.len();
             let map_id = states.first().map(|s| s.map_id.clone()).unwrap_or_default();
             state.scene = states;
+            state.episode=None;
             state.current_tick = None;
             WireResponse { i, body: ResponseBody::LoadSceneState { ok: true, ticks, map_id } }
         }
         RequestBody::ResetCameras => {
+            state.episode=None;
             state.app.clear_cameras();
             state.cache.clear();
             state.rig.clear();
@@ -565,6 +656,45 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
     }
 }
 
+/// Compiled frames are complete snapshots. A despawn between sampled image
+/// times must not leave an invisible-to-metrics actor in RGB or lidar.
+fn replace_episode_frame(state:&mut ServiceState, frame:SceneState) {
+    {
+        let live:std::collections::HashSet<&str>=frame.actors.iter()
+            .filter(|actor|actor.kind!="despawn").map(|actor|actor.id.as_str()).collect();
+        for previous in &state.scene {
+            for actor in &previous.actors {
+                if !live.contains(actor.id.as_str()) {state.app.remove_actor(&actor.id);}
+            }
+        }
+    }
+    state.scene.clear();
+    state.scene.push(frame);
+    state.current_tick=None;
+}
+
+fn on_road(roads: &RaycastScene, footprint: crate::traffic::Footprint) -> bool {
+    footprint.corners().iter().all(|p| roads.cast(Vec3::new(p[0] as f32,10000.0,p[1] as f32),Vec3::NEG_Y,20000.0).is_some())
+}
+
+fn render_episode(state: &mut ServiceState, i: u64) -> WireResponse {
+    let tick = state.scene[0].tick;
+    let consumer=state.episode.as_ref().unwrap().consumer.clone();
+    let mut passes=vec!["rgb".into()];
+    if consumer.depth.is_some() {passes.push("depth".into());}
+    let response = render_bundle_op(state, i, tick as u64, None, None, None,
+        Some(0), Some(passes), Vec::new());
+    match response.body {
+        ResponseBody::RenderBundle { frame, frames, bundle_offset, bundle_len, server_ms, sensor_to_policy, .. } => {
+            WireResponse { i, body: ResponseBody::Episode {
+                ok: true, observation: state.episode.as_ref().unwrap().observe(&state.scene[0]),
+                frame, frames, bundle_offset, bundle_len, server_ms, consumer, near_m:state.near_m, sensor_to_policy, history:Vec::new(),
+            } }
+        }
+        body => {state.episode=None; WireResponse { i, body }},
+    }
+}
+
 fn resolve_actor_model(state: &ServiceState, actor: &ActorState) -> Option<VehicleModelEntry> {
     if let Some(path) = state.actor_model_refs.get(&actor.id) {
         return Some(VehicleModelEntry {
@@ -606,11 +736,11 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                     .catalog_id
                     .as_deref()
                     .is_some_and(render_core::catalog::body_centred_origin);
-                let dims = if body_centred {
-                    actor.dims.map(|d| [d.l, d.h, d.w]).unwrap_or_else(|| actor_dims(&class))
-                } else {
-                    actor_dims(&class)
-                };
+                let dims = actor.dims.map(|d| {
+                    use render_core::coordinates::{source_to_bevy,LengthWidthHeight,SourceRotation,FrameBasis};
+                    source_to_bevy(LengthWidthHeight {length:d.l,width:d.w,height:d.h},
+                        SourceRotation::WorldQuaternion(actor.transform.rotation),FrameBasis::Rig).size_xyz.to_array()
+                }).unwrap_or_else(|| actor_dims(&class));
                 // Body-centred catalog entries (articulated robot components)
                 // are placed verbatim with their full rotation and never get
                 // a GLB or a ground fallback.
@@ -626,14 +756,14 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                         state.app.ground_at(position[0], position[2]),
                     );
                 }
-                if let Some(model) = &model {
-                    rotation = Quat::from_rotation_y(model.yaw_offset_rad) * rotation;
-                    position[1] += model.ground_offset_m;
-                }
+                // Source vehicle positions are ground origins; cuboids are
+                // centre-origin. Asset calibration never touches this body pose.
+                let mut body_position=position;
+                if !body_centred {body_position[1]+=dims[1]*0.5;}
                 state.app.upsert_actor(
                     &actor.id,
                     &class,
-                    position,
+                    body_position,
                     rotation,
                     dims,
                     color,
@@ -688,6 +818,13 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                         let _ = state
                             .app
                             .set_actor_animation_time(&actor.id, animation_time_s);
+                    }
+                    if state.app.actor_has_model(&actor.id) {
+                        let mut asset_position=position;
+                        asset_position[1]+=model.ground_offset_m;
+                        let asset_rotation=Quat::from_rotation_y(model.yaw_offset_rad)*rotation;
+                        state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
+                            .map_err(|error|format!("catalog pose: {error:#}"))?;
                     }
                 }
             }
@@ -750,13 +887,6 @@ fn actor_color(actor: &ActorState, class: &str) -> Result<[f32; 3], String> {
     Ok([color.red, color.green, color.blue])
 }
 
-fn resolved_actor_y(position_y: f32, authored_ground_y: Option<f32>, sampled_ground_y: f32) -> f32 {
-    if position_y.abs() < 1e-4 && authored_ground_y.is_none() {
-        sampled_ground_y
-    } else {
-        position_y
-    }
-}
 
 /// Resolve a camera pose: explicit eye/target, or rigid attachment against
 /// the current scene frame.
@@ -767,54 +897,20 @@ fn resolve_pose(
     let Some(attach) = &cam.attach else {
         return Ok((cam.eye, cam.target));
     };
-    let index = state
-        .current_tick
-        .ok_or_else(|| "attach requested but no scene tick applied yet".to_string())?;
-    let frame = &state.scene[index as usize];
-    let actor = frame
-        .actors
-        .iter()
-        .find(|a| a.id == attach.actor_id && a.kind != "despawn")
-        .ok_or_else(|| format!("attach actor {:?} not present in tick {index}", attach.actor_id))?;
-    let yaw = quat_yaw(&actor.transform.rotation);
-    let pos = actor.transform.position;
-    let base_y = actor_base_y(
-        pos[1],
-        frame.ground_y,
-        state.app.ground_at(pos[0], pos[2]),
-    );
-    // Actor-local mount (x fwd, y right, z up) -> world (y-up, yaw about +Y).
-    let (sy, cy) = yaw.sin_cos();
-    let off = attach.offset_m;
-    let eye = [
-        pos[0] + cy * off[0] + sy * off[1],
-        base_y + off[2],
-        pos[2] - sy * off[0] + cy * off[1],
-    ];
-    if attach.look_at_actor {
-        return Ok((eye, [pos[0], base_y + 1.0, pos[2]]));
-    }
-    // CARLA yaw is left-handed (clockwise from above); Uni yaw is CCW, so a
-    // CARLA-relative mount yaw subtracts. Pitch passes through (negative =
-    // down, matching CARLA semantics).
-    let total_yaw = yaw - attach.yaw_deg.to_radians();
-    let pitch = attach.pitch_deg.to_radians();
-    let (ty, tyc) = total_yaw.sin_cos();
-    let (sp, cp) = pitch.sin_cos();
-    let dir = [cp * tyc, sp, -cp * ty];
-    const TARGET_DIST: f32 = 50.0;
-    let target = [
-        eye[0] + TARGET_DIST * dir[0],
-        eye[1] + TARGET_DIST * dir[1],
-        eye[2] + TARGET_DIST * dir[2],
-    ];
-    Ok((eye, target))
+    let mount=resolve_sensor_mount(state,attach)?;
+    let target=if attach.look_at_actor {
+        mount.host_origin+Vec3::Y
+    } else {
+        mount.origin+50.0*(mount.rotation*Vec3::X)
+    };
+    Ok((mount.origin.to_array(),target.to_array()))
 }
 
 struct ResolvedSensorMount {
     origin: Vec3,
     rotation: Quat,
     host_velocity: Vec3,
+    host_origin: Vec3,
 }
 
 fn resolve_sensor_mount(
@@ -837,31 +933,30 @@ fn resolve_sensor_mount(
         })?;
     let yaw = quat_yaw(&actor.transform.rotation);
     let position = actor.transform.position;
-    let actor_y = resolved_actor_y(
+    let actor_y = actor_base_y(
         position[1],
         frame.ground_y,
         state.app.ground_at(position[0], position[2]),
     );
     let actor_rotation = Quat::from_rotation_y(yaw);
-    // Wire mount coordinates are x-forward, y-right, z-up. The deterministic
-    // sensor model's canonical local frame is x-forward, y-up, z-left.
+    // Wire mount: forward/right/up. Canonical sensor: forward/up/right.
     let local_offset = Vec3::new(
         attach.offset_m[0],
         attach.offset_m[2],
-        -attach.offset_m[1],
+        attach.offset_m[1],
     );
     let origin = Vec3::new(position[0], actor_y, position[2])
         + actor_rotation.mul_vec3(local_offset);
-    let mount_rotation = Quat::from_euler(
-        EulerRot::YXZ,
-        attach.yaw_deg.to_radians(),
-        attach.pitch_deg.to_radians(),
-        attach.roll_deg.to_radians(),
-    );
+    use render_core::coordinates::{source_to_bevy, LengthWidthHeight, SourceRotation, FrameBasis};
+    let mount_rotation = source_to_bevy(LengthWidthHeight::UNIT,
+        SourceRotation::MountYawPitchRoll { parent_rotation: actor_rotation,
+            yaw: attach.yaw_deg.to_radians(), pitch: attach.pitch_deg.to_radians(),
+            roll: attach.roll_deg.to_radians() }, FrameBasis::Rig).rotation;
     Ok(ResolvedSensorMount {
         origin,
-        rotation: actor_rotation * mount_rotation,
+        rotation: mount_rotation,
         host_velocity: Vec3::from_array(actor.velocity),
+        host_origin: Vec3::new(position[0],actor_y,position[2]),
     })
 }
 
@@ -1451,6 +1546,15 @@ fn render_bundle_op(
 
     let start_cursor = state.shm.cursor_total();
     let mut frames: Vec<FrameRecord> = Vec::new();
+    let mut sensor_to_policy=std::collections::BTreeMap::new();
+    let policy_host=state.episode.as_ref().and_then(|episode| {
+        let frame=state.scene.get(state.current_tick? as usize)?;
+        let actor=frame.actors.iter().find(|actor|actor.id==episode.ego_id)?;
+        let p=actor.transform.position;
+        let origin=Vec3::new(p[0],actor_base_y(p[1],frame.ground_y,state.app.ground_at(p[0],p[2])),p[2]);
+        Some(render_core::coordinates::SensorFrame::from_bevy_pose(origin,
+            Quat::from_rotation_y(quat_yaw(&actor.transform.rotation))))
+    });
     let mut entries: Vec<BundleEntry> = Vec::new();
     let published = PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth };
     for cam in &rig {
@@ -1546,6 +1650,10 @@ fn render_bundle_op(
                 Ok(mount) => mount,
                 Err(error) => return WireResponse::error(i, error),
             };
+            if let Some(host)=policy_host {
+                let pose=render_core::coordinates::SensorFrame::from_bevy_pose(mount.origin,mount.rotation);
+                sensor_to_policy.insert(sensor.sensor_id.clone(),pose.policy_relative_to(host));
+            }
             let config = sensors::lidar::LidarConfig {
                 channels: sensor.channels,
                 rotation_frequency_hz: sensor.rotation_frequency_hz,
@@ -1562,13 +1670,15 @@ fn render_bundle_op(
                 &instance_class,
             );
             let count = points.len() as u32;
+            let binary=state.episode.as_ref().is_some_and(|episode|
+                matches!(episode.consumer.lidar,Some(render_core::products::PointEncoding::Binary)));
             sensor_payloads.push((
                 sensor.sensor_id.clone(),
                 "lidar",
-                FORMAT_LIDAR_PLY,
-                "ply-ascii",
+                if binary {FORMAT_LIDAR_BINARY} else {FORMAT_LIDAR_PLY},
+                if binary {"ply-binary"} else {"ply-ascii"},
                 count,
-                sensors::formats::encode_lidar_ply(&points),
+                if binary {sensors::formats::encode_lidar_ply_binary(&points)} else {sensors::formats::encode_lidar_ply(&points)},
             ));
         }
         for sensor in &radar_rig {
@@ -1638,6 +1748,7 @@ fn render_bundle_op(
                 bundle_len,
                 frames,
                 device: captured.device,
+                sensor_to_policy,
                 server_ms: t0.elapsed().as_secs_f64() * 1000.0,
             },
         },

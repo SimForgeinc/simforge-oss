@@ -44,8 +44,8 @@ pub struct ActorState {
     /// deterministic class palette.
     #[serde(default)]
     pub color: Option<String>,
-    /// Authored extents (metres), as in `ActorDesc.dims`; body-centred
-    /// catalog entries size their proxy from these.
+    /// Authored L/W/H extents in metres, shared by sensor proxies and the
+    /// episode's collision/replay footprint (required for episode actors).
     #[serde(default)]
     pub dims: Option<ActorDims>,
     pub transform: ActorTransform,

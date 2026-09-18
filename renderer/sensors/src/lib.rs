@@ -17,6 +17,7 @@ pub mod capture;
 pub mod formats;
 pub mod imu_gnss;
 pub mod lidar;
+pub mod occupancy;
 pub mod radar;
 pub mod rig;
 pub mod scene_state;

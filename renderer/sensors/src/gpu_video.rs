@@ -1,7 +1,7 @@
 //! Vulkan texture -> exportable device buffer -> CUDA -> NVENC. Only compressed
 //! H.264 packets cross host memory. Slot leases remain held through encoding.
 //! This is a device-local COPY, not an assertion of zero copies or codec parity.
-use super::{CaptureArgs, Copiers, RenderSender, SentPass};
+use super::{CaptureConfig, Copiers, RenderSender, SentPass};
 use bevy::prelude::*;
 use bevy::render::{RenderApp, render_asset::RenderAssets, renderer::{RenderDevice, RenderQueue}, texture::GpuImage};
 use render_core::gpu_interop::{ExportedStream, GpuInterop, PlaneDescriptor, PlaneFormat, ReadyFrame, StreamDescriptor, StreamId};
@@ -56,13 +56,13 @@ impl Completion {
 
 #[derive(Resource)]
 pub(super) struct DeviceVideo {
-    args: CaptureArgs,
+    args: CaptureConfig,
     cameras: Vec<(String, String)>,
     completion: Completion,
     stream: Option<(GpuInterop, StreamId, crossbeam_channel::Sender<Work>)>,
 }
 
-pub(super) fn install(app: &mut App, args: &CaptureArgs, cameras: Vec<(String, String)>) {
+pub(super) fn install(app: &mut App, args: &CaptureConfig, cameras: Vec<(String, String)>) {
     let completion = Completion::default();
     app.insert_resource(completion.clone());
     app.sub_app_mut(RenderApp).insert_resource(DeviceVideo {
@@ -78,7 +78,7 @@ impl DeviceVideo {
             let stream = interop.create_stream(&StreamDescriptor {
                 label: "sensor video".into(), slots: self.args.readback_slots.max(2) as usize,
                 planes: self.cameras.iter().map(|(key, _)| PlaneDescriptor {
-                    name: key.clone(), width: self.args.width, height: self.args.height, format: PlaneFormat::Rgba8UnormSrgb,
+                    name: key.clone(), width: self.args.consumer.width, height: self.args.consumer.height, format: PlaneFormat::Rgba8UnormSrgb,
                 }).collect(),
             }).expect("allocate device video ring");
             let export = interop.export_stream(stream).expect("export device video ring");
@@ -107,7 +107,7 @@ impl DeviceVideo {
     }
 }
 
-fn encode(export: ExportedStream, args: CaptureArgs, cameras: Vec<(String, String)>,
+fn encode(export: ExportedStream, args: CaptureConfig, cameras: Vec<(String, String)>,
     sender: crossbeam_channel::Sender<SentPass>, rx: crossbeam_channel::Receiver<Work>,
     ready: crossbeam_channel::Sender<Result<(), String>>) -> Result<u64, String> {
     let (manifest, handles) = export.into_parts();
@@ -121,7 +121,7 @@ fn encode(export: ExportedStream, args: CaptureArgs, cameras: Vec<(String, Strin
     // C takes ownership of every fd, including closing unimported fds on error.
     let pointer = unsafe { sensor_nvenc_create(uuid.as_ptr(), manifest.slots, cameras.len() as u32,
         fds.as_mut_ptr(), manifest.allocation_bytes, manifest.slot_bytes, offsets.as_ptr(),
-        args.width, args.height, manifest.planes[0].row_stride, fps_num, 1000, args.video_crf,
+        args.consumer.width, args.consumer.height, manifest.planes[0].row_stride, fps_num, 1000, args.consumer.video_quality(),
         error.as_mut_ptr(), error.len()) };
     if pointer.is_null() {
         let error = unsafe { CStr::from_ptr(error.as_ptr()) }.to_string_lossy().into_owned();

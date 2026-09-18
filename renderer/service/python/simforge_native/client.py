@@ -79,6 +79,23 @@ class NativeRenderClient:
     def reset_cameras(self) -> dict:
         return self._rpc({"i": self._next(), "op": "reset_cameras"})
 
+    def reset_episode(self, scenario: dict, ego_id: str, cameras: list[dict],
+                      lidars: list[dict] | None = None, limits: dict | None = None,
+                      consumer: dict | None = None) -> dict:
+        """Start a caller-clocked episode; payload records use the existing ring."""
+        request = {"i": self._next(), "op": "reset_episode", "scenario": scenario,
+                   "ego_id": ego_id, "cameras": cameras, "lidars": lidars or []}
+        if limits is not None: request["limits"] = limits
+        if consumer is not None: request["consumer"] = consumer
+        return self._rpc(request)
+
+    def step_episode(self, action: dict) -> dict:
+        """Advance one declared consumer interval. Caller waiting never advances time."""
+        return self._rpc({"i": self._next(), "op": "step_episode", "action": action})
+
+    def describe_products(self, profile: str = "training") -> dict:
+        return self._rpc({"i":self._next(),"op":"describe_products","profile":profile})
+
     def encode_jpeg(self, items: list[dict]) -> dict:
         """JPEG-encode cached pass payloads from the last rendered tick.
         items: [{"sensorId": ..., "pass": "rgb", "quality": 70}]"""
@@ -169,7 +186,7 @@ class NativeRenderClient:
         return -(-row // 256) * 256
 
     def step(self, tick_id: int, cameras: list[dict], tick_index: int | None = None) -> tuple[dict, float]:
-        """One env step: send tick -> receive frame records -> numpy views.
+        """Replay-camera convenience, NOT a dynamics step; use step_episode to drive.
 
         Returns (observations, server_ms). Each observation value is a numpy
         array VIEW into the shared-memory ring with the 256-byte GPU row

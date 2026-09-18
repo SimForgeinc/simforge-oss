@@ -8,7 +8,7 @@ version = "0.1.0rc65"
 description = "SimForge resident renderer client, embedded C ABI adapter, and leased CUDA output transport"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-dependencies = ["msgpack>=1.1", "numpy>=1.26"]
+dependencies = ["msgpack>=1.1", "numpy>=1.26", "Pillow>=9"]
 
 [project.optional-dependencies]
 torch = ["torch>=2.0"]

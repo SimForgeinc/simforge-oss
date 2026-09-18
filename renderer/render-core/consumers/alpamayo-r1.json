@@ -1,0 +1,15 @@
+{
+  "name": "alpamayo-r1-10hz",
+  "cameraHz": 10.0,
+  "cameraHistoryFrames": 4,
+  "egoHistory": {"points": 16, "hz": 10.0},
+  "futureTarget": {"points": 64, "hz": 10.0},
+  "width": 1920,
+  "height": 1080,
+  "rgb": {"kind": "jpeg", "quality": 90},
+  "depth": null,
+  "labels": false,
+  "lidar": null,
+  "radar": null,
+  "occupancy": false
+}

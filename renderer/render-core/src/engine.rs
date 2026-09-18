@@ -3217,10 +3217,11 @@ impl SceneApp {
     /// `actor:<id>` and carries an instance id above the static legend range
     /// so ID-pass pixels resolve to the actor class.
     ///
-    /// `position` is the actor origin; when `snap_ground` is set the y
-    /// coordinate is replaced by the sampled ground height (traces without a
-    /// height channel). `rotation` is applied in full: articulated bodies
-    /// carry pitch and wheel spin in it, planar traffic a yaw about +Y.
+    /// `position` is the cuboid centre; callers with ground-origin vehicle
+    /// poses add half the height. `snap_ground` explicitly replaces Y.
+    /// `rotation` is the body orientation.
+    /// Catalog asset calibration is applied separately with
+    /// [`Self::set_actor_asset_pose`], never to the sensor/ID cuboid.
     pub fn upsert_actor(
         &mut self,
         id: &str,
@@ -3237,19 +3238,11 @@ impl SceneApp {
             rotation,
             scale: Vec3::ONE,
         };
-        let model = self.actor_models.get(id).copied();
         self.scene_revision += 1;
         let world = self.app.world_mut();
         if let Some((entity, _)) = self.actors.get(id) {
             if let Some(mut t) = world.get_mut::<Transform>(*entity) {
                 *t = transform;
-            }
-            if let Some((model_entity, scale, _)) = model {
-                if let Some(mut t) = world.get_mut::<Transform>(model_entity) {
-                    t.translation = transform.translation;
-                    t.rotation = transform.rotation;
-                    t.scale = Vec3::splat(scale);
-                }
             }
             return;
         }
@@ -3295,6 +3288,20 @@ impl SceneApp {
         self.actors.insert(id.to_string(), (e, instance_id));
         self.actor_classes.insert(instance_id, class.to_string());
         self.apply_actor_layers(id);
+    }
+
+    /// Pose visible catalog geometry independently of the canonical cuboid.
+    /// Asset yaw/origin corrections must not rotate or bury sensor geometry.
+    pub fn set_actor_asset_pose(&mut self, actor_id:&str, position:[f32;3], rotation:Quat)->Result<()> {
+        let Some(&(entity,_,_))=self.actor_models.get(actor_id) else {
+            bail!("actor {actor_id} has no attached catalog asset");
+        };
+        let mut transform=self.app.world_mut().get_mut::<Transform>(entity)
+            .ok_or_else(||anyhow::anyhow!("actor {actor_id} asset entity disappeared"))?;
+        transform.translation=Vec3::from_array(position);
+        transform.rotation=rotation;
+        self.scene_revision+=1;
+        Ok(())
     }
 
     /// Replace a spawned actor's visible cuboid with a catalog GLB while

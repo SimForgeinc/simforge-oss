@@ -144,6 +144,22 @@ fn default_radar_range() -> f32 { 100.0 }
 pub enum RequestBody {
     /// Handshake: protocol version, prewarmed scene info, shm location.
     Hello,
+    DescribeProducts { profile: render_core::products::OutputMode },
+    /// Reset a caller-clocked episode with the declared consumer's cadence/history.
+    /// Returns the initial observation through the existing shared-memory ring.
+    ResetEpisode {
+        scenario: render_core::scene_state::SceneState,
+        ego_id: String,
+        cameras: Vec<ServiceCamera>,
+        #[serde(default)]
+        lidars: Vec<ServiceLidar>,
+        #[serde(default)]
+        limits: crate::episode::EpisodeLimits,
+        #[serde(default)]
+        consumer: Option<render_core::products::ConsumerSpec>,
+    },
+    /// Advance exactly one policy interval, then block until the next request.
+    StepEpisode { action: crate::episode::Action },
     /// Add more tiles before first render (map prewarm extension).
     Load { glbs: Vec<String> },
     /// Render one tick for the given cameras (rgb + id + depth, plus
@@ -269,6 +285,21 @@ pub struct WireResponse {
 #[derive(Debug, Serialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum ResponseBody {
+    DescribeProducts { ok: bool, consumer: render_core::products::ConsumerSpec },
+    Episode {
+        ok: bool,
+        observation: crate::episode::EpisodeObservation,
+        frame: FrameIdentity,
+        frames: Vec<FrameRecord>,
+        bundle_offset: u64,
+        bundle_len: u64,
+        server_ms: f64,
+        consumer: render_core::products::ConsumerSpec,
+        near_m: f32,
+        sensor_to_policy: std::collections::BTreeMap<String,render_core::coordinates::PolicyFromSensor>,
+        /// Authored pre-roll only on reset; each row retains its own submission.
+        history: Vec<EpisodeImageHistory>,
+    },
     Hello {
         ok: bool,
         protocol: u32,
@@ -342,6 +373,7 @@ pub enum ResponseBody {
         device: std::collections::HashMap<String, DeviceReady>,
         /// Server-side render+publish wall time, milliseconds.
         server_ms: f64,
+        sensor_to_policy: std::collections::BTreeMap<String,render_core::coordinates::PolicyFromSensor>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {
@@ -389,6 +421,14 @@ pub enum ResponseBody {
         ok: bool,
         error: String,
     },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct EpisodeImageHistory {
+    pub time_seconds: f64,
+    pub frame: FrameIdentity,
+    pub frames: Vec<FrameRecord>,
 }
 
 /// Shared-memory ring descriptor handed out at hello.

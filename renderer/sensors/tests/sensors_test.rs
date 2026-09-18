@@ -418,6 +418,12 @@ fn rendered_aux_labels_are_discrete() {
                 {"id":"late","kind":"spawn","position":[3,0,5]}]}
         ]
     }).to_string()).unwrap();
+    fs::write(fixture.0.join("products.json"),json!({
+        "name":"label-qualification","cameraHistoryFrames":1,
+        "egoHistory":{"points":16,"hz":10},"futureTarget":{"points":50,"hz":10},
+        "cameraHz":50,"width":64,"height":64,"rgb":{"kind":"png"},
+        "depth":null,"labels":true,"lidar":null,"radar":null,"occupancy":false,
+    }).to_string()).unwrap();
     let binary = std::env::var_os("SENSOR_CAPTURE_TEST_BIN")
         .unwrap_or_else(|| env!("CARGO_BIN_EXE_sensor-capture").into());
     for batched in [false, true] {
@@ -427,7 +433,8 @@ fn rendered_aux_labels_are_discrete() {
             .args(["--rig-program"]).arg(fixture.0.join("rig.json"))
             .args(["--glbs"]).arg(fixture.0.join("fixture.gltf"))
             .args(["--scene-state"]).arg(fixture.0.join("scene.json"))
-            .args(["--profile","showcase","--products","rgb,labels","--tick-count","2"])
+            .args(["--profile","showcase","--product-spec"]).arg(fixture.0.join("products.json"))
+            .args(["--tick-count","2"])
             .args(["--sensors","fixture-cam","--width","64","--height","64",
                 "--warmup","3","--settle-ticks","0","--no-shadows","--out"]).arg(&output)
             .env("XDG_RUNTIME_DIR","/tmp").env("WGPU_BACKEND","vulkan");

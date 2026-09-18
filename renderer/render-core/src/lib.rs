@@ -46,6 +46,7 @@ pub mod road_detail;
 pub mod platform;
 pub mod post_grain;
 pub mod profiles;
+pub mod products;
 pub mod sky_texture;
 pub mod veg;
 pub mod vehicle_model;

@@ -53,6 +53,8 @@ use std::time::{Duration, Instant};
 pub const ACTOR_ID_BASE: u32 = 1_000_000;
 
 #[derive(Parser, Debug, Clone)]
+#[command(about="Authored trace playback using SceneApp and vehicle model catalogs",
+    after_help="This is playback, not the optimized sensor-capture engine. Use sensor-capture --profile training|showcase for declared batch products and qualified sensor throughput; use python -m simforge_native.closed_loop for caller-clocked driving through native-render-service. These engines have different actor geometry/performance; do not compare timings as the same workload.")]
 pub struct PlaybackArgs {
     /// Corpus GLB tiles (absolute paths), comma-separated. May be empty for
     /// tile-less runs (see `--ground-plane`).

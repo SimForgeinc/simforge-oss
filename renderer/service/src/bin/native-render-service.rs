@@ -30,6 +30,15 @@ fn main() -> Result<()> {
     let mut ready_file: Option<PathBuf> = None;
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--help" | "-h" => {
+                println!("native-render-service --scene SCENE.json --socket ENDPOINT [--shm PATH] [--shm-size-mb 256] [--ready-file PATH]\n\
+                    Synchronous v5 MessagePack request/response with shared-memory frames; no background simulation clock.\n\
+                    Closed loop: python -m simforge_native.closed_loop --help. reset_episode/step_episode use typed ConsumerSpec products.\n\
+                    Two output modes: sensor-capture --profile training|showcase; describe_products exposes their typed defaults.\n\
+                    This resident SceneApp engine supports model catalogs but is not sensor-capture's qualified shared-shadow/ring backend.\n\
+                    Scene lighting 'sensor|cinematic' is a legacy visual control, NOT an output mode; policy cameras always use cinematic.");
+                return Ok(());
+            }
             "--socket" => socket = Some(args.next().context("--socket requires an endpoint")?),
             "--shm" => shm_path = Some(args.next().context("--shm requires a path")?.into()),
             "--shm-size-mb" => {

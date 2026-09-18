@@ -11,8 +11,8 @@
 //!
 //! Strict draws are the default; `--fast-gpu` enables an explicitly
 //! non-byte-stable indirect path. Shared shadows are an accepted quality trade
-//! by default (`--per-view-shadows` opts out); hardware lidar stays opt-in. `--video` feeds
-//! final encoders directly and joins them before the capture summary/manifest.
+//! by default (`--per-view-shadows` opts out); hardware lidar stays opt-in.
+//! Video products feed final encoders and join them before summary/manifest.
 
 use crate::bvh::{InstancedScene, Raycast, RaycastScene, Tri};
 use crate::formats;
@@ -77,32 +77,28 @@ use video::VideoSink;
 // CLI
 // ---------------------------------------------------------------------------
 
-#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CaptureProfile { Training, Showcase }
+use render_core::products::{ConsumerSpec, OutputMode, PointEncoding};
 
-#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Product { Rgb, Depth, Labels, Lidar, Radar }
-
-#[derive(clap::Parser, Debug, Clone, bevy::prelude::Resource, serde::Serialize)]
+#[derive(clap::Parser, Debug, Clone, serde::Serialize)]
+#[command(about="Qualified batched sensor capture: --profile training|showcase",
+    after_help="This batch engine uses proxy actors and the qualified shared-shadow/readback-ring sensor path. scen-play and native-render-service use SceneApp/model catalogs instead; their look and latency are not interchangeable. Closed-loop policies: python -m simforge_native.closed_loop --help (same native-render-service socket, no job queue).")]
 pub struct CaptureArgs {
     /// Profiles change cadence/products and approved resolution defaults,
     /// never silently disable postprocessing or alter lighting/codec quality.
     #[arg(long, value_enum, default_value = "training")]
-    pub profile: CaptureProfile,
-    /// Override profile products. Labels are exact instance+semantic images.
-    #[arg(long, value_enum, value_delimiter = ',')]
-    pub products: Vec<Product>,
+    pub profile: OutputMode,
+    /// Typed ConsumerSpec JSON file, replacing individual product/codec flags.
+    #[arg(long)]
+    pub product_spec: Option<PathBuf>,
     /// RGB sampling rate within the bounded source interval (training 2 Hz,
-    /// showcase scene rate). Mutually exclusive with explicit timestamps.
+    /// showcase 50 Hz). Mutually exclusive with explicit timestamps.
     #[arg(long, conflicts_with_all = ["timestamps_seconds", "keyframes_seconds"])]
     pub capture_hz: Option<f64>,
     /// Absolute scene timestamps, in seconds; must name existing source ticks.
     #[arg(long, value_delimiter = ',', conflicts_with = "keyframes_seconds")]
     pub timestamps_seconds: Vec<f64>,
-    /// Current-keyframe times. RGB is the union of each t0+[-1.5,-1,-0.5,0];
-    /// depth/lidar/radar are emitted only at the named current keyframes.
+    /// Current-keyframe times. RGB windows derive from the consumer's history
+    /// length and cadence; depth/lidar/radar are current-keyframe-only.
     #[arg(long, value_delimiter = ',')]
     pub keyframes_seconds: Vec<f64>,
     /// qualification/render-qualification-program.v1.json (prontoRig source).
@@ -130,11 +126,11 @@ pub struct CaptureArgs {
     /// 921600-pixel current-frame cap/grid sees 1280x704: 720p computes 1.02x
     /// those pixels, versus 2.30x for 1080p. Supersampling fidelity is a
     /// separate measured trade; --width 960 --height 540 is an explicit dial.
-    #[arg(long, default_value = "1920", default_value_if("profile", "training", "1280"))]
-    pub width: u32,
-    /// Paired profile height; postprocessing/lighting stay enabled in both.
-    #[arg(long, default_value = "1080", default_value_if("profile", "training", "720"))]
-    pub height: u32,
+    #[arg(long)]
+    pub width: Option<u32>,
+    /// Override the declared consumer raster height, without changing lighting.
+    #[arg(long)]
+    pub height: Option<u32>,
     /// Lock the physical camera aspect independently of the pixel grid.
     /// For model-ready 1280x704 or 544x288, use 1.7777778 (16:9) to reproduce
     /// the real-data vertical squash without changing the physical field of view.
@@ -155,40 +151,6 @@ pub struct CaptureArgs {
     /// raycast sensors. Empty means the whole rig.
     #[arg(long, value_delimiter = ',')]
     pub sensors: Vec<String>,
-    /// RGB artifact codec. `jpeg` is ~10x smaller and ~5x cheaper to encode
-    /// than PNG; instance and semantic passes are never lossy, whatever this
-    /// says, because their pixels are ids rather than colours.
-    #[arg(long, default_value = "jpeg", value_parser = ["png", "jpeg"])]
-    pub rgb_format: String,
-    /// JPEG quality when `--rgb-format jpeg`.
-    #[arg(long, default_value_t = 90)]
-    pub jpeg_quality: u8,
-    /// `f32`/`f16`: legacy reverse-Z. `metric-f16`: reduced axial metres +
-    /// validity mask, 1..120m, invalid=0. Profile default: training metric-f16,
-    /// showcase f32 (only when depth was explicitly requested).
-    #[arg(long, default_value = "profile", value_parser = ["profile", "f32", "f16", "metric-f16"])]
-    pub depth_format: String,
-    /// Metric depth reduction per dimension; nearest foreground wins a cell.
-    #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..=16))]
-    pub depth_scale: u32,
-    /// Lidar/radar artifact encoding: `ascii` (CARLA-parity text) or `binary`
-    /// (little-endian PLY / packed f32 rows).
-    #[arg(long, default_value = "binary", value_parser = ["ascii", "binary"])]
-    pub point_format: String,
-    /// Stream RGB directly to final MP4 containers instead of per-frame files.
-    #[arg(long)]
-    pub video: bool,
-    /// x264 pins thread/GOP settings; NVENC is an explicit hardware-encoder option.
-    #[arg(long, default_value = "x264", value_parser = ["x264", "nvenc", "gpu-nvenc"])]
-    pub video_encoder: String,
-    #[arg(long, default_value_t = 18)]
-    pub video_crf: u32,
-    /// Optional assertion of container cadence; otherwise derived from samples.
-    #[arg(long)]
-    pub video_fps: Option<f64>,
-    /// Only RGB products for selected cameras (no depth or ID view).
-    #[arg(long)]
-    pub rgb_only: bool,
     /// Emit device timestamp timings per view, shadows and readback transfer.
     #[arg(long)]
     pub profile_gpu: bool,
@@ -228,6 +190,35 @@ pub struct CaptureArgs {
     /// Output directory.
     #[arg(long)]
     pub out: String,
+}
+
+/// Immutable resolved intent. All rendering/writing reads this resource, not
+/// CLI flags. Raw input arguments are provenance; `consumer` is authoritative.
+#[derive(Debug, Clone, Resource, serde::Serialize)]
+pub struct CaptureConfig {
+    pub arguments: CaptureArgs,
+    pub consumer: ConsumerSpec,
+    pub video_fps: Option<f64>,
+}
+impl std::ops::Deref for CaptureConfig {
+    type Target=CaptureArgs;
+    fn deref(&self)->&Self::Target {&self.arguments}
+}
+impl CaptureConfig {
+    fn resolve(arguments: CaptureArgs)->Result<Self> {
+        let mut consumer=match &arguments.product_spec {
+            Some(path)=>serde_json::from_slice::<ConsumerSpec>(&std::fs::read(path)?)?,
+            None=>arguments.profile.consumer(),
+        };
+        if let Some(width)=arguments.width {consumer.width=width;}
+        if let Some(height)=arguments.height {consumer.height=height;}
+        if let Some(hz)=arguments.capture_hz {consumer.camera_hz=hz;}
+        consumer.validate().map_err(anyhow::Error::msg)?;
+        if arguments.profile==OutputMode::Training && consumer.labels {
+            bail!("training has no label PNG consumer; use showcase for label qualification");
+        }
+        Ok(Self {arguments,consumer,video_fps:None})
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -622,12 +613,13 @@ fn select_sensors(
     Ok(kept)
 }
 
-pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
+pub fn run_capture(args: CaptureArgs) -> Result<()> {
+    let mut args=CaptureConfig::resolve(args)?;
 
     if args.glbs.iter().any(|g| !Path::new(g).is_absolute()) {
         bail!("glb paths must be absolute");
     }
-    if args.width == 0 || args.height == 0 || args.tick_count == 0 || args.tick_stride == 0 {
+    if args.consumer.width == 0 || args.consumer.height == 0 || args.tick_count == 0 || args.tick_stride == 0 {
         bail!("capture dimensions, source count and source stride must be positive");
     }
     if args.scene_state.is_none() && args.tick_count != 1 {
@@ -639,16 +631,14 @@ pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
     if args.profile_gpu && args.readback_slots != 1 {
         bail!("--profile-gpu requires --readback-slots 1 (one timestamp staging slot)");
     }
-    if args.video_encoder == "gpu-nvenc" {
+    if args.consumer.video_encoder() == "gpu-nvenc" {
         if !cfg!(feature = "gpu-video") { bail!("gpu-nvenc requires building sensors with --features gpu-video"); }
-        if !args.video { bail!("gpu-nvenc requires --video"); }
         if args.profile_gpu { bail!("GPU timestamps currently cover host readback, not the device encoder copy"); }
-        if args.video_crf > 51 { bail!("NVENC quality must be within 0..51"); }
     }
     std::env::set_var("BEVY_ASSET_ROOT", render_core::platform::ASSET_ROOT);
     let rig_text = std::fs::read_to_string(&args.rig_program)
         .with_context(|| format!("read {}", args.rig_program))?;
-    let mut rig: RigSpec = crate::rig::parse_pronto_rig(&rig_text, args.width, args.height)?;
+    let mut rig: RigSpec = crate::rig::parse_pronto_rig(&rig_text, args.consumer.width, args.consumer.height)?;
     if let Some(aspect) = args.projection_aspect {
         for camera in rig.sensors.iter_mut().filter(|sensor| sensor.kind == SensorKind::Camera) {
             camera.vertical_fov_deg = Some(crate::rig::vertical_fov_deg(camera.horizontal_fov_deg, aspect));
@@ -685,8 +675,8 @@ pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
     let (mut plan, sequence) = capture_plan::prepare(&mut args, &source)?;
     rig.sensors.retain(|sensor| match sensor.kind {
         SensorKind::Camera => true,
-        SensorKind::Lidar => args.products.contains(&Product::Lidar),
-        SensorKind::Radar => args.products.contains(&Product::Radar),
+        SensorKind::Lidar => args.consumer.lidar.is_some(),
+        SensorKind::Radar => args.consumer.radar.is_some(),
     });
     plan.metadata["rig"] = serde_json::to_value(&rig)?;
     let planned_ticks = sequence.ticks.len();
@@ -716,7 +706,7 @@ pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
 
     let mut app = App::new();
     #[cfg(feature = "gpu-video")]
-    if args.video_encoder == "gpu-nvenc" { app.insert_resource(render_core::gpu_interop::raw_vulkan_init_settings()); }
+    if args.consumer.video_encoder() == "gpu-nvenc" { app.insert_resource(render_core::gpu_interop::raw_vulkan_init_settings()); }
     app.insert_resource(ClearColor(Color::srgb(0.53, 0.74, 0.92)))
         .add_plugins((
             DefaultPlugins
@@ -815,7 +805,7 @@ pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
         gpu_profile::install(&mut app);
     }
     #[cfg(feature = "gpu-video")]
-    if args.video_encoder == "gpu-nvenc" {
+    if args.consumer.video_encoder() == "gpu-nvenc" {
         let cameras = app.world().resource::<RigSpec>().cameras().enumerate()
             .map(|(index, camera)| (format!("rgb{index}"), camera.id.clone())).collect();
         gpu_video::install(&mut app, &args, cameras);
@@ -852,7 +842,7 @@ fn sun_direction(elev_deg: f32, azim_deg: f32) -> Dir3 {
     Dir3::new(dir.normalize()).unwrap()
 }
 
-fn startup_setup(mut commands: Commands, args: Res<CaptureArgs>, server: Res<AssetServer>,
+fn startup_setup(mut commands: Commands, args: Res<CaptureConfig>, server: Res<AssetServer>,
     mut clusters: ResMut<bevy::light::cluster::GlobalClusterSettings>) {
     if !args.fast_gpu {
         clusters.gpu_clustering = None;
@@ -1039,7 +1029,7 @@ fn build_tile_bvh(
 fn build_id_and_semantic_passes(
     mut commands: Commands,
     tick: Res<AppTick>,
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut aux_materials: ResMut<Assets<aux_material::AuxMaterial>>,
     meshes: Res<Assets<Mesh>>,
@@ -1140,7 +1130,7 @@ fn build_id_and_semantic_passes(
     let mut legend_classes: Vec<(u32, u8)> = Vec::new();
     let mut ray_scene = InstancedScene::new();
     let mut mesh_cache = HashMap::new();
-    let shared_aux = (args.batch_ids && args.products.contains(&Product::Labels)).then(|| aux_materials.add(aux_material::AuxMaterial::default()));
+    let shared_aux = (args.batch_ids && args.consumer.labels).then(|| aux_materials.add(aux_material::AuxMaterial::default()));
 
     let mut ordered_meshes: Vec<_> = meshes_q.iter().collect();
     ordered_meshes.sort_unstable_by_key(|row| state.entity_ids.get(&row.0).copied().unwrap_or(0));
@@ -1153,7 +1143,7 @@ fn build_id_and_semantic_passes(
             .find(|c| c.id() == instance_class_lookup(&instance_classes, id))
             .unwrap_or(SemanticClass::Prop);
 
-        if args.products.contains(&Product::Labels) {
+        if args.consumer.labels {
             let mut cmd = commands.spawn((
                 IdClone, Mesh3d(mesh3d.0.clone()), RenderLayers::layer(1),
                 bevy::mesh::MeshTag((id & 0xffff) | (u32::from(class.id()) << 16)),
@@ -1340,7 +1330,7 @@ fn push_mesh_triangles_matrix(
 #[allow(clippy::too_many_arguments)]
 fn spawn_sensors(
     mut commands: Commands,
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     rig: Res<RigSpec>,
     source: Res<CaptureSource>,
     scene_state: Option<Res<crate::scene_state::SceneState>>,
@@ -1363,7 +1353,7 @@ fn spawn_sensors(
         "EGO pose x={} y={} z={} (ground-snapped)",
         ego.translation.x, ego.translation.y, ego.translation.z
     );
-    let rgba_buf = aligned_row(args.width as usize, 4) * args.height as usize;
+    let rgba_buf = aligned_row(args.consumer.width as usize, 4) * args.consumer.height as usize;
     let mut cam_order: isize = 0;
 
     let cam_index_of: HashMap<String, usize> =
@@ -1380,10 +1370,10 @@ fn spawn_sensors(
 
         // RGB pass (AgX tonemapping, default clear).
         let rgb_image =
-            setup_target_image(&mut images, args.width, args.height, TextureFormat::Rgba8UnormSrgb);
+            setup_target_image(&mut images, args.consumer.width, args.consumer.height, TextureFormat::Rgba8UnormSrgb);
         let rgb_handle = rgb_image.clone();
         commands.spawn(ImageCopier {
-            buffers: if args.video_encoder == "gpu-nvenc" { Vec::new() } else {
+            buffers: if args.consumer.video_encoder() == "gpu-nvenc" { Vec::new() } else {
                 (0..args.readback_slots).map(|_| make_buffer(&device, rgba_buf)).collect()
             },
             src_image: rgb_image.clone(),
@@ -1405,17 +1395,17 @@ fn spawn_sensors(
         );
         cam_order += 1;
 
-        if !is_chase && args.products.contains(&Product::Depth) {
+        if !is_chase && args.consumer.depth.is_some() {
             // Raw reverse-Z Depth32Float readback rides the RGB view. The chase
             // camera is a review view, not a measurement: no depth artifact is
             // written for it, so no staging buffer is allocated or mapped.
-            let bytes = if args.depth_format == "metric-f16" {
-                (args.width / args.depth_scale * (args.height / args.depth_scale) * 4) as usize
+            let bytes = if args.consumer.depth_format() == "metric-f16" {
+                (args.consumer.width / args.consumer.depth_scale() * (args.consumer.height / args.consumer.depth_scale()) * 4) as usize
             } else { rgba_buf };
             commands.spawn(DepthCopier {
                 src_image: rgb_handle,
                 buffers: (0..args.readback_slots).map(|_| make_buffer(&device, bytes)).collect(),
-                reduced: (args.depth_format == "metric-f16").then(|| device.create_buffer(&BufferDescriptor {
+                reduced: (args.consumer.depth_format() == "metric-f16").then(|| device.create_buffer(&BufferDescriptor {
                     label: Some("reduced metric depth"), size: bytes as u64,
                     usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC, mapped_at_creation: false,
                 })),
@@ -1423,7 +1413,7 @@ fn spawn_sensors(
             });
         }
 
-        if !is_chase && args.products.contains(&Product::Labels) {
+        if !is_chase && args.consumer.labels {
             // Aux pass: instance id in R/G + semantic class in B, unlit on
             // render-layer 1, black clear, neutral exposure.
             spawn_pass_camera(
@@ -1442,7 +1432,7 @@ fn spawn_pass_camera(
     commands: &mut Commands,
     images: &mut Assets<Image>,
     device: &RenderDevice,
-    args: &CaptureArgs,
+    args: &CaptureConfig,
     key: &str,
     transform: Transform,
     vfov_rad: f32,
@@ -1452,8 +1442,8 @@ fn spawn_pass_camera(
     order: isize,
     mount: Mount,
 ) {
-    let image = setup_target_image(images, args.width, args.height, TextureFormat::Rgba8UnormSrgb);
-    let rgba_buf = aligned_row(args.width as usize, 4) * args.height as usize;
+    let image = setup_target_image(images, args.consumer.width, args.consumer.height, TextureFormat::Rgba8UnormSrgb);
+    let rgba_buf = aligned_row(args.consumer.width as usize, 4) * args.consumer.height as usize;
     commands.spawn(ImageCopier {
         buffers: (0..args.readback_slots).map(|_| make_buffer(device, rgba_buf)).collect(),
         src_image: image.clone(),
@@ -1580,7 +1570,7 @@ fn tick_frames(mut frame: ResMut<GlobalFrame>, mut state: ResMut<HarnessState>, 
 /// and need no per-tick snapshot of the actor tree.
 #[allow(clippy::too_many_arguments)]
 fn pose_next_tick(
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     rig: Res<RigSpec>,
     plan: Res<CapturePlan>,
     source: Res<CaptureSource>,
@@ -1692,7 +1682,9 @@ fn pose_next_tick(
     // and the geometry, so they proceed while the GPU renders this tick's 17
     // camera views. Measured serially this was 1.2 s of raycasting waiting on
     // 0.6 s of GPU work, one after the other.
-    let point_format = PointFormat::from_flag(&args.point_format);
+    let consumer=args.consumer.clone();
+    let host_size=source.0.rig_host_at(&tick).map(|actor|actor_shape(actor).half_size*2.0)
+        .unwrap_or(Vec3::new(4.8,1.6,1.9));
     let task = {
         let out_dir = PathBuf::from(&args.out);
         let mut rig = rig.clone();
@@ -1721,7 +1713,8 @@ fn pose_next_tick(
                 &classes,
                 &instance_names,
                 tick_number,
-                point_format,
+                &consumer,
+                host_size,
                 ego,
                 ego_vel,
                 index == 0,
@@ -1770,7 +1763,7 @@ fn strip_padding(data: &[u8], width: usize, height: usize, pixel: usize) -> Vec<
 #[allow(clippy::too_many_arguments)]
 fn collect_passes(
     receiver: Res<MainReceiver>,
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     rig: Res<RigSpec>,
     plan: Res<CapturePlan>,
     mut state: ResMut<HarnessState>,
@@ -1800,11 +1793,11 @@ fn collect_passes(
         rig.cameras().enumerate().map(|(i, s)| (s.id.clone(), i)).collect();
     let rgb_passes = rig.cameras().count();
     let measurement_cameras = rig.cameras().filter(|sensor| sensor.id != crate::rig::CHASE_CAMERA_SENSOR_ID).count();
-    let label_passes = if args.products.contains(&Product::Labels) { measurement_cameras } else { 0 };
+    let label_passes = if args.consumer.labels { measurement_cameras } else { 0 };
 
     let out_dir = PathBuf::from(&args.out);
-    let w = args.width as usize;
-    let h = args.height as usize;
+    let w = args.consumer.width as usize;
+    let h = args.consumer.height as usize;
     let mut completed: Vec<u64> = Vec::new();
 
     // Snapshot the ready flights, taking each one's raycast task with it so
@@ -1812,7 +1805,7 @@ fn collect_passes(
     let mut ready: Vec<(u64, u32, usize, Option<bevy::tasks::Task<CpuSensorTiming>>)> = Vec::new();
     for flight in progress.in_flight.iter_mut() {
         let expected = rgb_passes + label_passes
-            + if flight.targets && args.products.contains(&Product::Depth) { measurement_cameras } else { 0 };
+            + if flight.targets && args.consumer.depth.is_some() { measurement_cameras } else { 0 };
         let have = arrived.keys().filter(|(frame, _)| *frame == flight.frame).count();
         if have >= expected {
             ready.push((flight.frame, flight.tick, flight.sequence_index, flight.cpu_sensors.take()));
@@ -1841,14 +1834,14 @@ fn collect_passes(
             // RGB may be lossy: it is imagery. The aux passes never are — their
             // pixels are instance ids and class ids, and a JPEG of an id map is
             // garbage.
-            if args.video {
+            if args.consumer.video() {
                 let rgba = take(format!("rgb{i}"));
-                if args.video_encoder != "gpu-nvenc" { video.push(sequence_index, sensor.id.clone(), rgba); }
+                if args.consumer.video_encoder() != "gpu-nvenc" { video.push(sequence_index, sensor.id.clone(), rgba); }
             } else {
-                let (rgb_name, rgb_pass) = match args.rgb_format.as_str() {
-                    "jpeg" | "jpg" => (
+                let (rgb_name, rgb_pass) = match args.consumer.rgb_format() {
+                    "jpeg" => (
                         format!("{tick:08}.rgb.jpg"),
-                        WritePass::Jpeg(take(format!("rgb{i}")), args.jpeg_quality),
+                        WritePass::Jpeg(take(format!("rgb{i}")), args.consumer.jpeg_quality()),
                     ),
                     _ => (
                         format!("{tick:08}.rgb.png"),
@@ -1857,7 +1850,7 @@ fn collect_passes(
                 };
                 jobs.push((dir.join(rgb_name), rgb_pass));
             }
-            if !is_chase && args.products.contains(&Product::Labels) {
+            if !is_chase && args.consumer.labels {
                 let instance = take(format!("inst{i}"));
                 jobs.push((
                     dir.join(format!("{tick:08}.semantic.png")),
@@ -1868,9 +1861,9 @@ fn collect_passes(
                     WritePass::Png(instance),
                 ));
             }
-            if !is_chase && plan.target_ticks.contains(&tick) && args.products.contains(&Product::Depth) {
+            if !is_chase && plan.target_ticks.contains(&tick) && args.consumer.depth.is_some() {
                 let depth = take(format!("depth{i}"));
-                let (depth_name, depth_pass) = match args.depth_format.as_str() {
+                let (depth_name, depth_pass) = match args.consumer.depth_format() {
                     "metric-f16" => (
                         format!("{tick:08}.depth.axial.f16.bin"),
                         WritePass::MetricDepth(depth),
@@ -1890,7 +1883,7 @@ fn collect_passes(
                 scope.spawn(async move { pass.write(path, w, h) });
             }
         });
-        if args.video {
+        if args.consumer.video() {
             video.drain(&args, &out_dir);
         }
         let written = Instant::now();
@@ -1940,7 +1933,7 @@ fn collect_passes(
         // live encoders here, before AppExit, never by looking up resources
         // after run() returns. The capture clock includes the trailer flush.
         let drain_start = Instant::now();
-        let encoded = video.finish(args.video && args.video_encoder != "gpu-nvenc");
+        let encoded = video.finish(args.consumer.video() && args.consumer.video_encoder() != "gpu-nvenc");
         #[cfg(feature = "gpu-video")]
         let encoded = if let Some(encoder) = &device_video {
             let frames = encoder.finish();
@@ -2092,23 +2085,6 @@ pub fn f32_to_f16_bits(value: f32) -> u16 {
     sign | out
 }
 
-/// Point-cloud artifact encoding.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum PointFormat {
-    /// CARLA-parity ASCII: readable, and ~2.6x the bytes of binary.
-    Ascii,
-    /// Little-endian packed rows: 20 bytes per lidar point, 16 per detection.
-    Binary,
-}
-
-impl PointFormat {
-    fn from_flag(flag: &str) -> Self {
-        match flag {
-            "binary" | "bin" => PointFormat::Binary,
-            _ => PointFormat::Ascii,
-        }
-    }
-}
 
 /// Wall-clock cost of one tick's CPU sensors.
 struct CpuSensorTiming {
@@ -2136,8 +2112,8 @@ fn run_cpu_sensors(
     classes: &HashMap<u32, u8>,
     instance_names: &[(u32, String)],
     tick: u32,
-    // `ascii` for CARLA-parity text, `binary` for little-endian packed rows.
-    point_format: PointFormat,
+    consumer: &ConsumerSpec,
+    host_size: Vec3,
     // Ground-snapped rig host pose, identical to the one the cameras use.
     // Deriving it again from the document would put the mounts at the
     // document's y (0 m for compiled traces) and bury every lidar.
@@ -2198,17 +2174,21 @@ fn run_cpu_sensors(
         };
         let dir = out_dir.join(&sensor.id);
         std::fs::create_dir_all(&dir).expect("mkdir lidar");
-        match point_format {
-            PointFormat::Ascii => std::fs::write(
+        match consumer.lidar.expect("selected lidar product") {
+            PointEncoding::Ascii => std::fs::write(
                 dir.join(format!("{tick:08}.ply")),
                 formats::encode_lidar_ply(&points),
             ),
-            PointFormat::Binary => std::fs::write(
+            PointEncoding::Binary => std::fs::write(
                 dir.join(format!("{tick:08}.bin.ply")),
                 formats::encode_lidar_ply_binary(&points),
             ),
         }
         .expect("write lidar");
+        if consumer.occupancy {
+            crate::occupancy::write(&dir,tick,&points,request.origin,request.rotation,
+                ego.translation,ego.rotation,host_size.x,host_size.z).expect("write lidar-derived BEV");
+        }
     }
     let lidar_done = Instant::now();
 
@@ -2233,12 +2213,12 @@ fn run_cpu_sensors(
         );
         let dir = out_dir.join(&sensor.id);
         std::fs::create_dir_all(&dir).expect("mkdir radar");
-        match point_format {
-            PointFormat::Ascii => std::fs::write(
+        match consumer.radar.expect("selected radar product") {
+            PointEncoding::Ascii => std::fs::write(
                 dir.join(format!("{tick:08}.csv")),
                 formats::encode_radar_csv(&detections),
             ),
-            PointFormat::Binary => std::fs::write(
+            PointEncoding::Binary => std::fs::write(
                 dir.join(format!("{tick:08}.f32x4.bin")),
                 formats::encode_radar_binary(&detections),
             ),
@@ -2414,7 +2394,7 @@ fn copy_passes(
     depth_views: Query<(Entity, &ExtractedCamera, &ViewDepthTexture)>,
     armed: Res<ArmedFrames>,
     targets: Res<ArmedTargets>,
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     mut reducer: Local<Option<depth_reduce::Reducer>>,
     stamp: Res<FrameStamp>,
     profile: Option<Res<gpu_profile::GpuProfile>>,
@@ -2464,9 +2444,9 @@ fn copy_passes(
         };
         let tex = &view.texture;
         if let Some(output) = &d.reduced {
-            let pipeline = reducer.get_or_insert_with(|| depth_reduce::Reducer::new(ctx.render_device(), args.depth_scale));
+            let pipeline = reducer.get_or_insert_with(|| depth_reduce::Reducer::new(ctx.render_device(), args.consumer.depth_scale()));
             pipeline.encode(ctx.render_device(), &mut encoder, tex, output,
-                &d.buffers[stamp.0 as usize % d.buffers.len()], args.depth_scale);
+                &d.buffers[stamp.0 as usize % d.buffers.len()], args.consumer.depth_scale());
             continue;
         }
         let width = tex.size().width as usize;
@@ -2502,7 +2482,7 @@ fn receive_passes(
     targets: Res<ArmedTargets>,
     profile: Option<ResMut<gpu_profile::GpuProfile>>,
     fence: Res<CaptureFence>,
-    args: Res<CaptureArgs>,
+    args: Res<CaptureConfig>,
     mut ring: ResMut<ReadbackRing>,
 ) {
     let capturing = armed.0.contains(&stamp.0);

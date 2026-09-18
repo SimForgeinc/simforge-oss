@@ -1,0 +1,15 @@
+{
+  "name": "qwen-drive-2hz",
+  "cameraHz": 2.0,
+  "cameraHistoryFrames": 4,
+  "egoHistory": {"points": 16, "hz": 10.0},
+  "futureTarget": {"points": 50, "hz": 10.0},
+  "width": 1280,
+  "height": 720,
+  "rgb": {"kind": "jpeg", "quality": 90},
+  "depth": {"kind": "metric_axial", "scale": 4},
+  "labels": false,
+  "lidar": "binary",
+  "radar": "binary",
+  "occupancy": true
+}

@@ -1,6 +1,6 @@
 //! Bounded source interval and explicit sampled timestamps. Profiles select
 //! cadence/products only; the RGB renderer and encoder quality are shared.
-use super::{CaptureArgs, CaptureProfile, Product};
+use super::CaptureConfig;
 use crate::scene_state::SceneSequence;
 use anyhow::{bail, Result};
 use bevy::prelude::Resource;
@@ -14,32 +14,11 @@ pub(super) struct CapturePlan {
     pub metadata: serde_json::Value,
 }
 
-pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<(CapturePlan, SceneSequence)> {
+pub(super) fn prepare(args: &mut CaptureConfig, source: &SceneSequence) -> Result<(CapturePlan, SceneSequence)> {
     let cadence_flags = usize::from(args.capture_hz.is_some())
         + usize::from(!args.timestamps_seconds.is_empty()) + usize::from(!args.keyframes_seconds.is_empty());
     if cadence_flags > 1 { bail!("choose exactly one cadence control: rate, timestamps, or keyframes"); }
-    if args.products.is_empty() {
-        args.products = match args.profile {
-            CaptureProfile::Training => vec![Product::Rgb, Product::Depth, Product::Lidar, Product::Radar],
-            CaptureProfile::Showcase => vec![Product::Rgb, Product::Lidar, Product::Radar],
-        };
-    }
-    if args.rgb_only { args.products.retain(|p| !matches!(p, Product::Depth | Product::Labels)); }
-    if !args.products.contains(&Product::Rgb) {
-        bail!("the selected products must include rgb");
-    }
-    if args.depth_format == "profile" {
-        args.depth_format = if args.profile == CaptureProfile::Training { "metric-f16" } else { "f32" }.into();
-    }
-    if args.depth_format != "metric-f16" && args.depth_scale != 4 {
-        bail!("--depth-scale applies only to --depth-format metric-f16");
-    }
-    if args.products.contains(&Product::Depth) && args.depth_format == "metric-f16" && (args.width % args.depth_scale != 0 || args.height % args.depth_scale != 0) {
-        bail!("metric depth extent must be divisible by --depth-scale");
-    }
-    if args.video && (args.width % 2 != 0 || args.height % 2 != 0) {
-        bail!("yuv420p video requires even RGB dimensions");
-    }
+    args.consumer.validate().map_err(anyhow::Error::msg)?;
     let hz = source.ticks[0].tick_hz as f64;
     if !hz.is_finite() || hz <= 0.0 || source.ticks.iter().any(|s| s.tick_hz as f64 != hz) {
         bail!("capture requires one finite, positive scene tick rate");
@@ -55,10 +34,7 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
     let source_ticks = source.ticks.len();
     let first = source.ticks[0].tick;
     let last = source.ticks.last().unwrap().tick;
-    let capture_hz = args.capture_hz.unwrap_or(match args.profile {
-        CaptureProfile::Training => 2.0,
-        CaptureProfile::Showcase => hz / f64::from(args.tick_stride),
-    });
+    let capture_hz = args.consumer.camera_hz;
     if !capture_hz.is_finite() || capture_hz <= 0.0 || capture_hz > hz {
         bail!("capture rate must be positive and no greater than scene tick rate {hz}");
     }
@@ -79,7 +55,8 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
             let current = index_at(t0)?;
             targets.insert(source.ticks[current].tick);
             let mut history = Vec::new();
-            for offset in [-1.5, -1.0, -0.5, 0.0] {
+            for frame in 0..args.consumer.camera_history_frames {
+                let offset=(frame as f64+1.0-args.consumer.camera_history_frames as f64)/args.consumer.camera_hz;
                 let index = index_at(t0 + offset)?;
                 selected.insert(index);
                 history.push(source.ticks[index].tick);
@@ -92,8 +69,10 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
         let step = hz / capture_hz;
         if (step - step.round()).abs() > 1e-6 { bail!("capture rate must divide the scene tick rate exactly; use --timestamps-seconds for irregular sampling"); }
         let step = step.round() as u32;
-        for (index, scene) in source.ticks.iter().enumerate() {
-            if (scene.tick - first) % step == 0 { selected.insert(index); }
+        for tick in (first..=last).step_by(step as usize) {
+            let index=source.ticks.binary_search_by_key(&tick,|scene|scene.tick)
+                .map_err(|_|anyhow::anyhow!("declared camera cadence requires tick {tick}, excluded by the source stride"))?;
+            selected.insert(index);
         }
     }
     if selected.is_empty() { bail!("capture schedule selected no frames"); }
@@ -102,15 +81,10 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
     }
     let sampled_ticks: Vec<u32> = selected.iter().map(|&index| source.ticks[index].tick).collect();
     let cadence: Vec<u32> = sampled_ticks.windows(2).map(|pair| pair[1] - pair[0]).collect();
-    if args.video && cadence.windows(2).any(|pair| pair[0] != pair[1]) {
+    if args.consumer.video() && cadence.windows(2).any(|pair| pair[0] != pair[1]) {
         bail!("irregular timestamps require image artifacts, not constant-frame-rate video");
     }
     let inferred_fps = cadence.first().map(|&step| hz / step as f64).unwrap_or(capture_hz);
-    if let Some(fps) = args.video_fps {
-        if !fps.is_finite() || fps <= 0.0 || (fps - inferred_fps).abs() > 1e-6 {
-            bail!("video fps {fps} disagrees with sampled timestamp cadence {inferred_fps}");
-        }
-    }
     args.video_fps = Some(inferred_fps);
     let sampled: Vec<_> = selected.into_iter().map(|index| source.ticks[index].clone()).collect();
     let metadata = json!({
@@ -118,20 +92,20 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
         "sceneTickHz":hz, "sourceFrames":source_ticks, "sourceFirstTick":first, "sourceLastTick":last,
         "sourceDurationSeconds":(last as f64 - first as f64 + args.tick_stride as f64) / hz,
         "requestedCameraHz":capture_hz, "requestedTimestampsSeconds":args.timestamps_seconds,
-        "requestedKeyframesSeconds":args.keyframes_seconds, "products":args.products,
-        "rgbWidth":args.width,"rgbHeight":args.height,"rgbFormat":if args.video {"video"} else {&args.rgb_format},
-        "videoFps":args.video_fps, "jpegQuality":args.jpeg_quality,
+        "requestedKeyframesSeconds":args.keyframes_seconds, "consumer":args.consumer,
+        "rgbWidth":args.consumer.width,"rgbHeight":args.consumer.height,"rgbFormat":args.consumer.rgb_format(),
+        "videoFps":args.video_fps, "jpegQuality":args.consumer.jpeg_quality(),
         "visualSettings":{"tonemapping":"AgX","msaa":1,"taa":false,"sharedShadows":!args.per_view_shadows,
             "noShadows":args.no_shadows,"shadowCascades":args.shadow_cascades,"fastGpu":args.fast_gpu,
-            "videoEncoder":args.video_encoder,"videoQualityParameter":args.video_crf},
+            "videoEncoder":args.consumer.video_encoder(),"videoQualityParameter":args.consumer.video_quality()},
         "sceneState":args.scene_state, "rigHostId":source.rig_host_id,
         "arguments":args,
-        "projection":"pinhole", "cameraForward":"-Z", "depthFormat":args.depth_format,
-        "physicalProjectionAspect":args.projection_aspect.unwrap_or(args.width as f32/args.height as f32),
+        "projection":"pinhole", "cameraForward":"-Z", "depthFormat":args.consumer.depth_format(),
+        "physicalProjectionAspect":args.projection_aspect.unwrap_or(args.consumer.width as f32/args.consumer.height as f32),
         "projectionAspectLocked":args.projection_aspect.is_some(),
         "lidarFrame":"sensor-local metres: +X forward, +Y up, +Z camera-right at identity heading",
         "radarFrame":"sensor azimuth toward +Z, elevation toward +Y; relative radial velocity in metres/second",
-        "metricDepth":if args.products.contains(&Product::Depth) && args.depth_format == "metric-f16" {json!({"width":args.width/args.depth_scale,"height":args.height/args.depth_scale,"units":"metres","axis":"positive optical Z","reduction":"minimum axial depth per raster block; foreground-biased","nearMetres":0.5,"validRange":[1,120],"invalid":0,"mask":"uint8, 0 invalid / 1 valid","notPaiSubstitute":"dense pinhole raster, not sparse lidar/f-theta projection"})} else {serde_json::Value::Null},
+        "metricDepth":if args.consumer.depth_format()=="metric-f16" {json!({"width":args.consumer.width/args.consumer.depth_scale(),"height":args.consumer.height/args.consumer.depth_scale(),"units":"metres","axis":"positive optical Z","reduction":"minimum axial depth per raster block; foreground-biased","nearMetres":0.5,"validRange":[1,120],"invalid":0,"mask":"uint8, 0 invalid / 1 valid","notPaiSubstitute":"dense pinhole raster, not sparse lidar/f-theta projection"})} else {serde_json::Value::Null},
         "samples":sampled.iter().enumerate().map(|(index,s)|json!({"frameIndex":index,"tick":s.tick,"timestampSeconds":s.tick as f64/hz,"targets":targets.contains(&s.tick)})).collect::<Vec<_>>(),
         "windows":windows,
     });
@@ -142,6 +116,7 @@ pub(super) fn prepare(args: &mut CaptureArgs, source: &SceneSequence) -> Result<
 mod tests {
     use super::*;
     use clap::Parser;
+    use super::super::CaptureArgs;
     use crate::scene_state::{SceneState, SCENE_STATE_SCHEMA};
 
     fn source() -> SceneSequence {
@@ -151,16 +126,16 @@ mod tests {
         }).collect(), rig_host_id: None }
     }
 
-    fn args(extra: &[&str]) -> CaptureArgs {
+    fn args(extra: &[&str]) -> CaptureConfig {
         let mut argv = vec!["capture", "--rig-program", "unused", "--glbs", "/unused.gltf", "--out", "/unused"];
         argv.extend_from_slice(extra);
-        CaptureArgs::parse_from(argv)
+        CaptureConfig::resolve(CaptureArgs::parse_from(argv)).unwrap()
     }
 
     #[test]
     fn sparse_schedule_stops_at_source_boundary_and_preserves_time() {
         let source = source();
-        let mut options = args(&["--capture-hz", "2", "--video"]);
+        let mut options = args(&["--profile","showcase","--capture-hz","2"]);
         let (plan, scene) = prepare(&mut options, &source).unwrap();
         assert_eq!(scene.ticks.iter().map(|s| s.tick).collect::<Vec<_>>(), (0..=1000).step_by(25).collect::<Vec<_>>());
         assert_eq!(plan.source_ticks, 1001);
@@ -185,12 +160,15 @@ mod tests {
         for extra in [
             vec!["--timestamps-seconds", "20.02"],
             vec!["--timestamps-seconds", "0.01"],
-            vec!["--timestamps-seconds", "0,0.5,2", "--video"],
-            vec!["--capture-hz", "2", "--video-fps", "50", "--video"],
+            vec!["--profile","showcase","--timestamps-seconds","0,0.5,2"],
         ] {
             assert!(prepare(&mut args(&extra), &source()).is_err(), "{extra:?}");
         }
         assert!(CaptureArgs::try_parse_from(["capture","--rig-program","unused","--glbs","/unused","--out","/unused",
             "--capture-hz","2","--timestamps-seconds","0,1"]).is_err());
+        let mut strided=source();
+        strided.ticks.retain(|state|state.tick%2==0);
+        assert!(prepare(&mut args(&[]),&strided).is_err(),
+            "a source stride must not silently turn the declared 2 Hz consumer into 1 Hz");
     }
 }

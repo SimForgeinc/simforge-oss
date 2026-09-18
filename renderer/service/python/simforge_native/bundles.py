@@ -52,6 +52,7 @@ FORMAT_NAMES = {
     4: "bundle",
     5: "ply-ascii",
     6: "radar-csv",
+    7: "ply-binary",
 }
 
 

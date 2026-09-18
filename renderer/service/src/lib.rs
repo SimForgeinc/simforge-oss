@@ -8,7 +8,10 @@
 //! through a memory-mapped ring file ([`shm`]) on every OS.
 pub mod carla;
 pub mod endpoint;
+pub mod dynamics;
+pub mod episode;
 pub mod proto;
 pub mod scene;
+pub mod traffic;
 pub mod server;
 pub mod shm;

@@ -1,6 +1,6 @@
 //! The source/Bevy frame boundary. Imported glTF geometry is already in the
 //! scene frame and must NOT be rotated to compensate for a sensor convention.
-use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::math::{EulerRot, Mat4, Quat, Vec3, Vec4};
 
 #[derive(Clone, Copy, Debug)]
 pub struct LengthWidthHeight {
@@ -58,6 +58,19 @@ pub fn source_to_bevy(dimensions: LengthWidthHeight, rotation: SourceRotation, b
     BevyFrame { size_xyz: Vec3::new(dimensions.length, dimensions.height, dimensions.width), rotation }
 }
 
+/// Row-major affine map from native sensor coordinates into policy
+/// forward/left/up coordinates at the host actor origin (not a PAI axle).
+#[derive(Clone, Copy, Debug, serde::Serialize)]
+#[serde(transparent)]
+pub struct PolicyFromSensor(pub [[f32;4];4]);
+impl PolicyFromSensor {
+    #[inline]
+    pub fn point(&self, p:Vec3)->Vec3 {
+        let row=|i:usize|self.0[i][0]*p.x+self.0[i][1]*p.y+self.0[i][2]*p.z+self.0[i][3];
+        Vec3::new(row(0),row(1),row(2))
+    }
+}
+
 /// A rigid sensor pose, with its inverse cached once per scan rather than once
 /// per return. World offsets alone are NOT sensor coordinates when it rotates.
 #[derive(Clone, Copy, Debug)]
@@ -75,4 +88,30 @@ impl SensorFrame {
     pub fn direction_to_world(self, direction: Vec3) -> Vec3 { self.world_from_sensor * direction }
     #[inline]
     pub fn point_to_sensor(self, world_point: Vec3) -> Vec3 { self.sensor_from_world * (world_point - self.origin) }
+    /// Resolve once per scan, then publish this exact transform to consumers.
+    /// They must not independently re-derive the mount's yaw/pitch/roll.
+    pub fn policy_relative_to(self, host:Self)->PolicyFromSensor {
+        let relative=Mat4::from_rotation_translation(
+            host.sensor_from_world*self.world_from_sensor,host.point_to_sensor(self.origin));
+        let policy_from_rig=Mat4::from_cols(Vec4::X,Vec4::Z,-Vec4::Y,Vec4::W);
+        PolicyFromSensor((policy_from_rig*relative).transpose().to_cols_array_2d())
+    }
+}
+
+#[cfg(test)]
+mod policy_tests {
+    use super::*;
+    #[test]
+    fn published_matrix_preserves_offset_and_turning_sensor_direction() {
+        for yaw in [0.7,-1.2] {
+            let rotation=Quat::from_rotation_y(yaw);
+            let origin=Vec3::new(31.0,4.0,-17.0);
+            let host=SensorFrame::from_bevy_pose(origin,rotation);
+            let mount=source_to_bevy(LengthWidthHeight::UNIT,
+                SourceRotation::MountYawPitchRoll {parent_rotation:rotation,yaw:std::f32::consts::FRAC_PI_2,pitch:0.0,roll:0.0},FrameBasis::Rig);
+            let sensor=SensorFrame::from_bevy_pose(origin+rotation*Vec3::new(0.0,1.0,2.0),mount.rotation);
+            let point=sensor.policy_relative_to(host).point(Vec3::new(10.0,0.0,0.0));
+            assert!(point.abs_diff_eq(Vec3::new(0.0,-12.0,1.0),2e-5),"{point:?}");
+        }
+    }
 }
