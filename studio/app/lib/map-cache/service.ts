@@ -54,6 +54,15 @@ export async function resolveCachedMapAsset(sha256: string): Promise<{ path: str
   return (await getMapCacheService()).resolveCached(sha256);
 }
 
+/**
+ * Server-only: whether the cache index holds every member of a closure at
+ * its registered byte length. The honest, process-independent answer to
+ * "is this map installed here", cheap enough for every catalog read.
+ */
+export async function mapCacheHoldsAll(members: Iterable<{ sha256: string; byteLength: number }>): Promise<boolean> {
+  return (await getMapCacheService()).holdsAll(members);
+}
+
 /** Lay verified members out under `directory` for a native job (hardlink or bounded copy). */
 export async function materializeMapAssets(input: MaterializeMapAssetsInput, signal?: AbortSignal): Promise<void> {
   return (await getMapCacheService()).materialize(input, signal);

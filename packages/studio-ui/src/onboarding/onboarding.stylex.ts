@@ -601,8 +601,8 @@ export const installRows = stylex.create({
 
 /**
  * The hero layer. Everything here is decoration behind the copy: the gradient
- * the server paints and the two scrims that hold it down far enough for body
- * text to stay readable.
+ * the server paints, the vendored scene over it, and the two scrims that hold
+ * both down far enough for body text to stay readable.
  */
 export const hero = stylex.create({
   root: {
@@ -617,6 +617,16 @@ export const hero = stylex.create({
     position: "absolute",
     inset: 0,
   },
+  /**
+   * The poster and the video: one crop of the scene, covering the layer at
+   * any window shape. Both carry it, so swapping one for the other when the
+   * motion preference is known changes nothing about the framing.
+   */
+  scene: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
   verticalScrim: {
     backgroundImage:
       "linear-gradient(180deg, rgba(5,6,7,0.5) 0%, rgba(5,6,7,0.18) 38%, rgba(5,6,7,0.94) 100%)",
@@ -624,5 +634,131 @@ export const hero = stylex.create({
   copyScrim: {
     backgroundImage:
       "linear-gradient(90deg, rgba(5,6,7,0.9) 0%, rgba(5,6,7,0.78) 38%, rgba(5,6,7,0.3) 72%, rgba(5,6,7,0.42) 100%)",
+  },
+});
+
+/**
+ * The shell every screen of the hero flow renders into: one canvas with the
+ * hero behind it and one centred column the screens fill. `#050607` is the
+ * canvas the hero gradient fades to, so the area outside a short screen
+ * matches rather than falling back to the dashboard background.
+ *
+ * The shell owns the space it is given rather than growing past it: a screen
+ * that scrolls hides the very button it is asking the user to press.
+ * `height` (not `minHeight`) with `overflow: hidden` makes it unscrollable by
+ * construction, which in turn makes the column's height *definite* — that is
+ * what lets a screen hand its flexible region (the map grid) the space left
+ * over from its heading and its actions instead of measuring anything.
+ */
+export const flow = stylex.create({
+  shell: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "#050607",
+    paddingInline: space.xxl,
+    paddingBlock: "2rem",
+    color: "#ffffff",
+  },
+  /** First-run onboarding has no chrome: the flow is the whole window. */
+  shellViewport: {
+    height: "100svh",
+  },
+  /**
+   * The map library is reached from the app switcher, so it renders inside
+   * the dashboard's main area — already the viewport minus the top bar, and
+   * already a definite height.
+   */
+  shellFill: {
+    height: "100%",
+  },
+  /**
+   * Full height so a screen that wants the whole viewport (the map grid) can
+   * take it, and `justifyContent: center` so a screen that does not (welcome,
+   * native render) still reads as centred rather than pinned to the top.
+   */
+  column: {
+    position: "relative",
+    zIndex: 10,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    width: "100%",
+    maxWidth: "48rem",
+    height: "100%",
+    minHeight: 0,
+  },
+});
+
+/**
+ * The map library: the same column, the same contact sheet and the same type
+ * as the setup step, with the per-map actions that a persistent surface needs
+ * and the setup step does not. Everything it does not restate here it takes
+ * from {@link onboarding}, which is the point — the library is the same page
+ * of the same flow, reached at any time instead of once.
+ */
+export const library = stylex.create({
+  /** The caption's right-hand end: the size, the progress, or the action. */
+  cardStatus: {
+    display: "flex",
+    flexShrink: 0,
+    alignItems: "center",
+    gap: space.xs,
+    fontFamily: text.fontMono,
+    fontSize: "10px",
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  /**
+   * A card-sized action. The product's button heights are written for a
+   * toolbar; here the whole card is 4.5rem tall at its smallest, so the
+   * install control is a chip in the caption rather than a control the
+   * caption has to make room for.
+   */
+  cardAction: {
+    height: "1.375rem",
+    paddingInline: space.sm,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: {
+      default: "rgba(255, 255, 255, 0.35)",
+      ":hover": colors.accent,
+    },
+    backgroundColor: {
+      default: "rgba(5, 6, 7, 0.65)",
+      ":hover": "rgba(255, 255, 255, 0.12)",
+    },
+    fontFamily: text.fontMeta,
+    fontSize: "9px",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMeta,
+    color: "#ffffff",
+  },
+  /** Progress of one card's install, pinned under its caption. */
+  cardTrack: {
+    position: "absolute",
+    insetInline: 0,
+    bottom: 0,
+    zIndex: 2,
+    height: "0.1875rem",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  },
+  tagAvailable: {
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  tagFailed: {
+    color: colors.danger,
+  },
+  /** The failure of one map, under the grid rather than inside a card. */
+  failure: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.md,
+    marginTop: space.lg,
+    fontSize: "0.75rem",
+    lineHeight: "1rem",
+    color: colors.danger,
   },
 });

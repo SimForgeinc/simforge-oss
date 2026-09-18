@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { SCENARIO_AUTHORING_QUALITY_CHOICES, type ScenarioAuthoringQuality } from "../lib/scenario/contracts";
 import { formatBytes } from "../scenario/scene/map-load-progress";
 import { evaluateMapDownloadGuard } from "./disk-guard";
+import { MapCard, MapGrid, type MapGridMap } from "./MapGrid";
 import { installRows, onboarding, PROGRESS_VAR } from "./onboarding.stylex";
 
 /**
@@ -17,13 +18,7 @@ import { installRows, onboarding, PROGRESS_VAR } from "./onboarding.stylex";
  * the disk status, the install loop and the navigation that follows.
  */
 
-export type OnboardingMapOption = {
-  mapVersionId: string;
-  label: string;
-  locality: string | null;
-  thumbnailUrl: string | null;
-  /** Download size of the closure, or null while the plan is unknown. */
-  bytes: number | null;
+export type OnboardingMapOption = MapGridMap & {
   /** An account map without a signed-in session: shown, not selectable. */
   locked: boolean;
   /**
@@ -32,6 +27,13 @@ export type OnboardingMapOption = {
    * ends with at least one map to open.
    */
   required: boolean;
+  /**
+   * The complete verified closure is already on this computer. Shown as
+   * installed and left out of the download rather than offered again: the
+   * bytes are here, and asking for them a second time is the whole complaint
+   * this state answers.
+   */
+  installed: boolean;
 };
 
 /** The rows {@link useMapPreparation} exposes while a download is running. */
@@ -108,15 +110,23 @@ export function MapSelectionScreen({
    */
   onCancelSignIn?: () => void;
 }) {
+  // An installed map is not a download: its closure is on this computer
+  // already, so it is left out of what "Download and continue" transfers.
   const selectedMaps = maps.filter(
-    (map) => !map.locked && (map.required || selection.includes(map.mapVersionId)),
+    (map) => !map.locked && !map.installed && (map.required || selection.includes(map.mapVersionId)),
   );
   const selectedBytes = selectedMaps.reduce((total, map) => total + (map.bytes ?? 0), 0);
-  const guard = evaluateMapDownloadGuard({
-    selectedBytes,
-    selectedCount: selectedMaps.length,
-    freeBytes,
-  });
+  // Nothing left to download is not a blocked selection: everything this
+  // installation offers is already here, so the step continues instead of
+  // asking for bytes it has.
+  const nothingToDownload = selectedMaps.length === 0 && maps.some((map) => map.installed && !map.locked);
+  const guard = nothingToDownload
+    ? { blocked: false, reason: null }
+    : evaluateMapDownloadGuard({
+      selectedBytes,
+      selectedCount: selectedMaps.length,
+      freeBytes,
+    });
   const lockedCount = maps.filter((map) => map.locked).length;
   const downloading = preparation.phase === "installing" || preparation.phase === "blocked";
   // A started download owns the list it began with, so the picker has
@@ -159,80 +169,54 @@ export function MapSelectionScreen({
               : "SimCloud published no maps for this installation."}
           </p>
         ) : (
-          <ul {...stylex.props(onboarding.mapList)} data-testid="onboarding-map-list">
+          <MapGrid testId="onboarding-map-list">
             {maps.map((map) => {
-              const checked = !map.locked && (map.required || selection.includes(map.mapVersionId));
-              const Row = map.required ? "div" : "label";
+              const checked = !map.locked && !map.installed
+                && (map.required || selection.includes(map.mapVersionId));
               return (
-                <li key={map.mapVersionId} {...stylex.props(onboarding.mapListItem)}>
-                  <Row
-                    {...stylex.props(
-                      onboarding.mapCard,
-                      map.locked
-                        ? onboarding.mapCardLocked
-                        : map.required
-                          ? onboarding.mapCardIncluded
-                          : checked
-                            ? onboarding.mapCardSelected
-                            : onboarding.mapCardIdle,
-                    )}
-                    data-testid="onboarding-map-card"
-                    data-map-version-id={map.mapVersionId}
-                    data-locked={map.locked || undefined}
-                    data-required={map.required || undefined}
-                    data-selected={checked || undefined}
-                  >
-                    {/* The card *is* the thumbnail: the image fills a box the
-                        grid has already sized, so it cannot reflow the row as
-                        it decodes, and the caption rides over it on a scrim
-                        rather than taking height away from it. */}
-                    <span {...stylex.props(onboarding.mapCardThumbnail)}>
-                      {map.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- host-served thumbnail, no loader needed
-                        <img alt="" {...stylex.props(onboarding.thumbnailImage)} src={map.thumbnailUrl} />
-                      ) : null}
-                    </span>
-                    <span {...stylex.props(onboarding.mapCardScrim)} aria-hidden="true" />
-                    <span {...stylex.props(onboarding.mapCardControl)}>
-                      {map.required ? (
-                        <Check {...stylex.props(onboarding.iconSmall, onboarding.iconAccent)} aria-hidden="true" />
-                      ) : map.locked ? (
-                        <Lock {...stylex.props(onboarding.iconSmall, onboarding.iconMuted)} aria-hidden="true" />
-                      ) : (
-                        <input
-                          checked={checked}
-                          {...stylex.props(onboarding.checkbox)}
-                          disabled={downloading}
-                          onChange={() => onToggle(map.mapVersionId)}
-                          type="checkbox"
-                        />
-                      )}
-                    </span>
-                    {map.required ? (
+                <MapCard
+                  as={map.locked || map.installed || map.required ? "div" : "label"}
+                  control={
+                    map.locked ? (
+                      <Lock {...stylex.props(onboarding.iconSmall, onboarding.iconMuted)} aria-hidden="true" />
+                    ) : map.installed || map.required ? (
+                      <Check {...stylex.props(onboarding.iconSmall, onboarding.iconAccent)} aria-hidden="true" />
+                    ) : (
+                      <input
+                        checked={checked}
+                        {...stylex.props(onboarding.checkbox)}
+                        disabled={downloading}
+                        onChange={() => onToggle(map.mapVersionId)}
+                        type="checkbox"
+                      />
+                    )
+                  }
+                  installed={map.installed}
+                  key={map.mapVersionId}
+                  locked={map.locked}
+                  map={map}
+                  required={map.required}
+                  selected={checked}
+                  tag={
+                    map.installed ? (
                       <span {...stylex.props(onboarding.mapCardTag, onboarding.includedTag)}>
-                        Included
+                        Installed
                       </span>
                     ) : map.locked ? (
                       <span {...stylex.props(onboarding.mapCardTag, onboarding.lockedTag)}>
                         Sign in to unlock
                       </span>
-                    ) : null}
-                    <span {...stylex.props(onboarding.mapCardText)}>
-                      <span {...stylex.props(onboarding.mapCardLabel)}>{map.label}</span>
-                      <span {...stylex.props(onboarding.mapCardFooter)}>
-                        <span {...stylex.props(onboarding.mapCardLocality)}>
-                          {map.locality ?? "Unknown locality"}
-                        </span>
-                        <span {...stylex.props(onboarding.mapCardSize)}>
-                          {map.bytes === null ? "—" : formatBytes(map.bytes)}
-                        </span>
+                    ) : map.required ? (
+                      <span {...stylex.props(onboarding.mapCardTag, onboarding.includedTag)}>
+                        Included
                       </span>
-                    </span>
-                  </Row>
-                </li>
+                    ) : null
+                  }
+                  testId="onboarding-map-card"
+                />
               );
             })}
-          </ul>
+          </MapGrid>
         )}
 
         {started ? (
@@ -374,6 +358,11 @@ export function MapSelectionScreen({
               <>
                 <LoaderCircle {...stylex.props(onboarding.icon, onboarding.iconWithLabel, onboarding.spinner)} aria-hidden="true" />
                 Downloading…
+              </>
+            ) : nothingToDownload ? (
+              <>
+                <Check {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
+                Continue
               </>
             ) : (
               <>

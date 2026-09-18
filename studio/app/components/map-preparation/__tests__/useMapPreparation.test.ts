@@ -13,7 +13,7 @@ import type { MapPreparation } from "../useMapPreparation";
 type InstallState = {
   mapVersionId: string;
   profile: string;
-  state: "idle" | "materializing" | "ready" | "error";
+  state: "idle" | "installed" | "materializing" | "ready" | "error";
   progress: { members: number; completedMembers: number; bytes: number; completedBytes: number } | null;
   directory: string | null;
   message: string | null;
@@ -29,6 +29,8 @@ const CATALOG = {
 
 /** Installs that answer `ready`, except the ids in `failing`, which answer `error`. */
 const failing = new Set<string>();
+/** Closures the host already holds: a GET reports them `installed`. */
+const installedIds = new Set<string>();
 const started: string[] = [];
 
 function installResponse(mapVersionId: string, method: string): InstallState {
@@ -37,7 +39,9 @@ function installResponse(mapVersionId: string, method: string): InstallState {
   return {
     mapVersionId,
     profile: "semantic",
-    state: method === "POST" ? (broken ? "error" : "ready") : "idle",
+    state: method === "POST"
+      ? (broken ? "error" : "ready")
+      : installedIds.has(mapVersionId) ? "installed" : "idle",
     progress: broken ? null : { members: 2, completedMembers: 2, bytes: 100, completedBytes: 100 },
     directory: null,
     message: broken ? `${mapVersionId} failed to install` : null,
@@ -85,6 +89,7 @@ after(() => dom.window.close());
 
 beforeEach(() => {
   failing.clear();
+  installedIds.clear();
   started.length = 0;
 });
 
@@ -167,7 +172,7 @@ describe("useMapPreparation", () => {
     await settle();
 
     failing.clear();
-    await React.act(async () => harness.current.retry("map-b"));
+    await React.act(async () => harness.current.install("map-b"));
     await settle();
 
     assert.equal(harness.current.phase, "complete");
@@ -190,6 +195,23 @@ describe("useMapPreparation", () => {
     assert.equal(harness.current.phase, "complete");
     assert.deepEqual(harness.current.maps.map((row) => row.state), ["ready", "skipped", "ready"]);
     assert.deepEqual(started, ["map-a", "map-b", "map-c"]);
+    await harness.unmount();
+  });
+
+  it("shows a closure the host already holds as ready and never downloads it again", async () => {
+    installedIds.add("map-b");
+    const harness = await mount(["map-a", "map-b", "map-c"]);
+    await settle();
+    assert.deepEqual(harness.current.maps.map((row) => row.state), ["pending", "ready", "pending"]);
+
+    await React.act(async () => harness.current.start());
+    await settle();
+
+    assert.equal(harness.current.phase, "complete");
+    assert.deepEqual(harness.current.maps.map((row) => row.state), ["ready", "ready", "ready"]);
+    // The installed map is never asked for: this is the download the user was
+    // offered for bytes already on the disk.
+    assert.deepEqual(started, ["map-a", "map-c"]);
     await harness.unmount();
   });
 });

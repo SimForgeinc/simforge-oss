@@ -4,6 +4,7 @@ import {
   Cloud,
   Database,
   FlaskConical,
+  HardDriveDownload,
   Map,
   MonitorCog,
   PackageCheck,
@@ -77,6 +78,22 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     description: "3D models and maps for scenarios",
     icon: Boxes,
     match: (p) => p.startsWith("/dashboard/assets"),
+  },
+  {
+    // The only surface that installs maps outside first-run onboarding, and
+    // the one place that says what this computer already holds. It is a
+    // utility rather than a fourth app tab for the same reason Models is:
+    // the product is three pages, and this one prepares what they open.
+    href: "/dashboard/map-library",
+    label: "Map Library",
+    description: "Install maps on this computer, and see what is already installed",
+    icon: HardDriveDownload,
+    highlights: [
+      "Every map this installation can use",
+      "Download size before you download",
+      "Repair an installed map",
+    ],
+    match: (p) => p.startsWith("/dashboard/map-library"),
   },
   {
     href: "/dashboard/models",

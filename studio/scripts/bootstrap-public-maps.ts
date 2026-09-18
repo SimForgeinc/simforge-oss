@@ -26,7 +26,8 @@ type CatalogMap = {
   ready: { browser: boolean; semantic: boolean };
 };
 type InstallState = {
-  state: "idle" | "materializing" | "ready" | "error";
+  /** `installed` is a complete closure with no job in the daemon's process. */
+  state: "idle" | "installed" | "materializing" | "ready" | "error";
   progress: { members: number; completedMembers: number; bytes: number; completedBytes: number } | null;
   directory: string | null;
   message: string | null;

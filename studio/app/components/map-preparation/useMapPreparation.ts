@@ -53,8 +53,14 @@ export type MapPreparationPhase = "idle" | "installing" | "blocked" | "complete"
 export type MapPreparation = {
   phase: MapPreparationPhase;
   maps: MapPreparationRow[];
+  /** Install every row that is not ready yet, one after another. */
   start: () => void;
-  retry: (mapVersionId: string) => void;
+  /**
+   * Install exactly one map now: the first attempt from a surface that
+   * offers maps one at a time, the retry of a failed row, and the repair of
+   * an installed one are the same host job asked for the same way.
+   */
+  install: (mapVersionId: string) => void;
   skip: (mapVersionId: string) => void;
 };
 
@@ -179,7 +185,10 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
   }, [key, commit]);
 
   // Resume probe: a host install still running from a previous window (or an
-  // earlier mount of this page) is joined and shown live rather than ignored.
+  // earlier mount of this page) is joined and shown live rather than ignored,
+  // and a closure this computer already holds is shown as ready rather than
+  // offered for download again — the host reports that in any process, not
+  // only in the one that installed it.
   useEffect(() => {
     if (phase !== "idle") return;
     const ids = key === "" ? [] : key.split("\u0000");
@@ -192,13 +201,23 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
         ),
       );
       if (controller.signal.aborted) return;
+      const installed = new Set(ids.filter((_, index) => states[index]?.state === "installed"));
+      if (installed.size > 0) {
+        commit(
+          rows.current.map((row) =>
+            installed.has(row.mapVersionId) && row.state === "pending"
+              ? { ...row, state: "ready", message: null }
+              : row,
+          ),
+        );
+      }
       const running = ids.filter((_, index) => states[index]?.state === "materializing");
       if (running.length === 0) return;
       queue.current = new Set(running);
       run();
     })();
     return () => controller.abort();
-  }, [key, phase, run]);
+  }, [key, phase, run, commit]);
 
   useEffect(() => () => runner.current?.abort(), []);
 
@@ -210,7 +229,7 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
     run();
   }, [commit, run]);
 
-  const retry = useCallback(
+  const install = useCallback(
     (mapVersionId: string) => {
       queue.current.add(mapVersionId);
       patch(mapVersionId, { state: "pending", message: null, completedBytes: 0 });
@@ -228,5 +247,5 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
     [patch, run],
   );
 
-  return { phase, maps, start, retry, skip };
+  return { phase, maps, start, install, skip };
 }

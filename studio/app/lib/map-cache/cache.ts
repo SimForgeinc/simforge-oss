@@ -651,6 +651,39 @@ export class MapCacheService {
   }
 
   /**
+   * Whether the index records every one of `members` at exactly the byte
+   * length given — the cheap answer to "is this whole closure on this
+   * computer".
+   *
+   * The index is the cache's own record of what it holds: rebuilt from the
+   * objects directory whenever the store opens (one readdir per shard,
+   * dropping every record whose object is gone) and maintained on every
+   * publish and forget. Answering from it costs one map lookup per member
+   * instead of one stat, which is the difference between a catalog read that
+   * checks 47,000 members in milliseconds and one that makes 47,000
+   * syscalls to say the same thing.
+   *
+   * This is a display verdict, deliberately not a licence to read bytes:
+   * every consumer that actually opens a member still goes through
+   * {@link resolveCached} or {@link ensure}, which stat and re-verify.
+   */
+  async holdsAll(members: Iterable<{ sha256: string; byteLength: number }>): Promise<boolean> {
+    let target: CacheStore;
+    try {
+      target = await this.activeStore();
+    } catch {
+      return false;
+    }
+    let counted = false;
+    for (const member of members) {
+      counted = true;
+      if (target.content.get(member.sha256)?.bytes !== member.byteLength) return false;
+    }
+    // An empty closure is not a held one: there is nothing here to hold.
+    return counted;
+  }
+
+  /**
    * Lay out verified members under `directory` for a native job: hardlinks
    * from the store where the filesystem allows, bounded streaming copies
    * otherwise; missing members are downloaded through the same authorized

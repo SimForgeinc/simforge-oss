@@ -30,6 +30,7 @@ const CatalogSchema = z.object({
       browserManifestUrl: z.string().nullable(),
       access: z.enum(["public", "local", "cloud"]),
       locked: z.boolean(),
+      installed: z.object({ browser: z.boolean(), semantic: z.boolean() }),
       closureBytes: z.object({ browser: z.number(), semantic: z.number() }).nullable(),
     }),
   ),
@@ -97,6 +98,10 @@ export function OnboardingMapsClient() {
           // rather than a number half the size of the download it starts.
           bytes: map.closureBytes ? map.closureBytes.browser + map.closureBytes.semantic : null,
           locked: map.locked,
+          // Both closures, because a `semantic` install transfers both: a map
+          // counts as installed when everything the button would download is
+          // already on this computer.
+          installed: map.installed.browser && map.installed.semantic,
           // The Cloud's public map (Richmond Field Station) is part of every
           // installation: listed as included, never offered as a choice.
           required: map.access === "public",
@@ -167,7 +172,7 @@ export function OnboardingMapsClient() {
         preparation.start();
       }}
       onQualityChange={setQuality}
-      onRetry={preparation.retry}
+      onRetry={preparation.install}
       onSignIn={() => setRevealSignIn(true)}
       onSkip={preparation.skip}
       onToggle={(mapVersionId) =>

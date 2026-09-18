@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { MapAccessError } from "@/app/lib/cloud/access";
-import { assertLocalMapAccess, getMapInstallState, startMapInstall } from "@/app/lib/cloud/maps";
+import { assertLocalMapAccess, readMapInstallState, startMapInstall } from "@/app/lib/cloud/maps";
 import type { MapProfile } from "@/app/lib/cloud/map-registry";
 import {
   readJson,
@@ -20,14 +20,18 @@ function accessErrorResponse(error: unknown) {
   return NextResponse.json({ error: error.code }, { status, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
 }
 
-/** Current install state of one map profile; idempotent and free of side effects. */
+/**
+ * Current install state of one map profile; idempotent and free of side
+ * effects. An already-installed closure reports `installed` in every
+ * process, not only in the one that happened to install it.
+ */
 export async function GET(request: Request, route: Context) {
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { mapVersionId } = await route.params;
   const profile = parseProfile(new URL(request.url).searchParams.get("profile") ?? "browser");
   if (!profile) return NextResponse.json({ error: "invalid_map_profile" }, { status: 400 });
-  return NextResponse.json(getMapInstallState(mapVersionId, profile), { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  return NextResponse.json(await readMapInstallState(mapVersionId, profile), { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
 }
 
 /**

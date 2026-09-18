@@ -118,7 +118,7 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
           </div>
         ) : null}
         {cloud.error ? <p {...stylex.props(setup.error)} role="alert">{cloud.error}</p> : null}
-        {preparation.phase !== "idle" ? <div {...stylex.props(setup.preparation)}><MapPreparationProgress phase={preparation.phase} maps={preparation.maps} onRetry={preparation.retry} onSkip={preparation.skip} /></div> : null}
+        {preparation.phase !== "idle" ? <div {...stylex.props(setup.preparation)}><MapPreparationProgress phase={preparation.phase} maps={preparation.maps} onRetry={preparation.install} onSkip={preparation.skip} /></div> : null}
         {error ? <p role="alert" {...stylex.props(setup.errorBox)}>{error}</p> : null}
         <div {...stylex.props(setup.footer)}>
           {complete ? <Button xstyle={setup.primaryButton} onClick={onContinue}>Open map gallery</Button>

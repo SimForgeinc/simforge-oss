@@ -104,7 +104,6 @@ function ProfileRow({
   label,
   detail,
   install,
-  installed,
   locked,
   actionLabel,
 }: {
@@ -112,13 +111,15 @@ function ProfileRow({
   label: string;
   detail: string;
   install: MapInstall;
-  installed: boolean;
   locked: boolean;
   actionLabel: string;
 }) {
   const { status, error, starting, start } = install;
   const remoteHost = useRemoteHostOrigin();
-  const ready = status?.state === "ready" || (status?.state === "idle" && installed);
+  // `installed` is the service's own verdict on the closure — every member in
+  // the map cache — so this row no longer has to guess from the catalog's
+  // entry-point flag whether an `idle` profile is actually here.
+  const ready = status?.state === "ready" || status?.state === "installed";
   const running = status?.state === "materializing";
   const requiresConnection = status?.state === "error" && status.message === REQUIRES_CONNECTION;
   const progress = status?.progress;
@@ -196,8 +197,8 @@ export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescrip
         </div>
       ) : (
         <div {...stylex.props(setup.rows)}>
-          <ProfileRow actionLabel="Download for preview" detail="Viewport assets for browsing and authoring on this map." icon={<Globe {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={browser} installed={map.ready.browser} label="Browser preview" locked={locked} />
-          <ProfileRow actionLabel="Prepare for local render" detail="Full semantic closure the local Bevy renderer reads directly from disk." icon={<Cpu {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={semantic} installed={map.ready.semantic} label="Local render" locked={locked} />
+          <ProfileRow actionLabel="Download for preview" detail="Viewport assets for browsing and authoring on this map." icon={<Globe {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={browser} label="Browser preview" locked={locked} />
+          <ProfileRow actionLabel="Prepare for local render" detail="Full semantic closure the local Bevy renderer reads directly from disk." icon={<Cpu {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={semantic} label="Local render" locked={locked} />
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ import {
   type DevAssetMap,
   type StoredMember,
 } from "@/app/lib/map-ingest/server/dev-asset-publication";
-import { ensureMapAsset, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
+import { ensureMapAsset, mapCacheHoldsAll, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
 import { localObjectPath } from "@/app/lib/s3/s3-object";
 import { assertMapUsable, MapAccessError } from "./access";
@@ -59,8 +59,22 @@ const MAPS_ROOT = resolve(LOCAL_CLOUD_ROOT, "maps");
 export type LocalMapDescriptor = ScenarioMapDescriptorDto & {
   access: MapAccess;
   locked: boolean;
-  /** A registered account map while this installation has no active session. */
+  /**
+   * Whether each profile's ENTRY POINT is on this computer. True from the
+   * moment an owner-installed map is registered, which is what several
+   * surfaces want (the map is listed, the editor may open it) and is not what
+   * "installed" means — see {@link LocalMapDescriptor.installed}.
+   */
   ready: { browser: boolean; semantic: boolean };
+  /**
+   * Whether the COMPLETE verified closure of each profile is on this
+   * computer: every member, at its registered digest and byte length, in the
+   * map cache. This is the fact an installer offer must be made from — a
+   * registered map whose members were never materialized reads `ready` but
+   * not `installed`, and an installed map reads `installed` in every process,
+   * because nothing about it is remembered in one process's job table.
+   */
+  installed: { browser: boolean; semantic: boolean };
   /** Download size of each profile's closure, or null while the upstream plan is unknown. */
   closureBytes: { browser: number; semantic: number } | null;
 };
@@ -68,7 +82,13 @@ export type LocalMapDescriptor = ScenarioMapDescriptorDto & {
 export type LocalMapInstallState = {
   mapVersionId: string;
   profile: MapProfile;
-  state: "idle" | "materializing" | "ready" | "error";
+  /**
+   * `idle` means no job and not installed. `installed` is the closure being
+   * complete on this computer with no job in this process — the state a
+   * relaunch must still report, and the one a client must not offer a
+   * download for.
+   */
+  state: "idle" | "installed" | "materializing" | "ready" | "error";
   progress: { members: number; completedMembers: number; bytes: number; completedBytes: number } | null;
   directory: string | null;
   message: string | null;
@@ -397,6 +417,29 @@ export type LocalMapCatalog = {
 };
 
 /**
+ * Whether each profile's complete verified closure is on this computer, from
+ * the map cache's own index of what it holds.
+ *
+ * This is the same question {@link closureCached} answers for the installer,
+ * asked the cheap way: the installer is about to open every member anyway, so
+ * it stats them, while a catalog read only has to *say* whether they are here
+ * and must do it for every map on every read. A 47,000-member cache answers
+ * from the index in milliseconds.
+ *
+ * It is deliberately not derived from the install job table: a job is one
+ * process's memory, so before this the whole installation forgot what it had
+ * installed every time the daemon restarted, and offered the user a download
+ * for 33 GB of maps already on the disk.
+ */
+async function installedClosures(registered: RegisteredMap | null): Promise<{ browser: boolean; semantic: boolean }> {
+  if (!registered) return { browser: false, semantic: false };
+  return {
+    browser: await mapCacheHoldsAll(registered.browser.values()),
+    semantic: await mapCacheHoldsAll(registered.semantic.values()),
+  };
+}
+
+/**
  * Every map this installation can show: registered local maps first, then
  * upstream maps not yet installed. Upstream unreachable is not an error here —
  * the local catalog stands on its own — but it is reported, because a fresh
@@ -440,6 +483,7 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access,
       locked: access === "cloud" && !session.active,
       ready,
+      installed: await installedClosures(registered),
       closureBytes: installedBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
@@ -469,6 +513,8 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access: accessOf(map),
       locked: false,
       ready: { browser: false, semantic: false },
+      // Not registered here, so no closure of it is here either.
+      installed: { browser: false, semantic: false },
       closureBytes: upstreamBytes?.get(map.mapVersionId) ?? null,
     });
   }
@@ -953,14 +999,43 @@ export async function ensureLocalMap(
   return promise;
 }
 
-/** Start (or join) an install without waiting for it; the state is read back through {@link getMapInstallState}. */
+/** Start (or join) an install without waiting for it; the state is read back through {@link readMapInstallState}. */
 export function startMapInstall(mapVersionId: string, profile: MapProfile): LocalMapInstallState {
   ensureLocalMap(mapVersionId, profile).catch(() => undefined);
   return getMapInstallState(mapVersionId, profile);
 }
 
+/** The install job of this process, or `idle` when it has none. */
 export function getMapInstallState(mapVersionId: string, profile: MapProfile): LocalMapInstallState {
   const job = state.installs.get(`${mapVersionId}\0${profile}`);
   if (job) return { ...job.state, progress: job.state.progress ? { ...job.state.progress } : null };
   return { mapVersionId, profile, state: "idle", progress: null, directory: null, message: null };
+}
+
+/**
+ * What this installation can say about one map profile: the job, when this
+ * process has one, and otherwise whether the closure is on this computer.
+ *
+ * The job table alone was a lie by omission. A profile installed by an
+ * earlier run of the daemon reported `idle` — indistinguishable from never
+ * installed — so the UI offered a fresh download of gigabytes already on the
+ * disk. `idle` now means what it says: no job, and nothing installed either.
+ */
+export async function readMapInstallState(mapVersionId: string, profile: MapProfile): Promise<LocalMapInstallState> {
+  const job = state.installs.get(`${mapVersionId}\0${profile}`);
+  if (job) return { ...job.state, progress: job.state.progress ? { ...job.state.progress } : null };
+  const registered = await getRegisteredMap(mapVersionId);
+  if (!registered || !(await mapCacheHoldsAll(registered[profile].values()))) {
+    return { mapVersionId, profile, state: "idle", progress: null, directory: null, message: null };
+  }
+  return {
+    mapVersionId,
+    profile,
+    state: "installed",
+    progress: null,
+    // The closure is here; where it was last laid out for a native job is a
+    // fact of that job, not of the install, so it is not claimed here.
+    directory: null,
+    message: null,
+  };
 }
