@@ -1,16 +1,13 @@
-import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
+import { authorizeLocalMapAssetUrl, MapAccessError } from "@/app/lib/cloud/access";
 import { type NextRequest, NextResponse } from "next/server";
 import { AssetUrlServiceError, normalizeAssetKey } from "@/app/lib/assets/asset-url-service";
 import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
-import { simforgeEnv } from "@/lib/simforge-env";
-import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
+import { mapAccessErrorResponse, streamCachedObject } from "@/app/lib/cloud/asset-response";
+import { MapCacheError } from "@/app/lib/map-cache/service";
 
 type Context = { params: Promise<{ assetPath: string[] }> };
 
-const SIGNED_URL_TTL_SECONDS = 15 * 60;
-const IMMUTABLE_ASSET_CACHE_CONTROL = "private, max-age=31536000, immutable";
-const SUMO_RUNTIME_S3_PREFIX = `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/`;
 const ASSET_MEDIA_TYPES = {
   "sumo.mjs": "text/javascript",
   "sumo.wasm": "application/wasm",
@@ -18,18 +15,6 @@ const ASSET_MEDIA_TYPES = {
   "THIRD_PARTY_NOTICES.md": "text/markdown",
 } as const;
 
-function artifactBucket() {
-  return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts";
-}
-
-function requestedRange(request: NextRequest) {
-  const range = request.headers.get("range");
-  if (!range) return undefined;
-  if (!/^bytes=(?:\d+-\d*|\d*-\d+)$/.test(range)) {
-    throw new AssetUrlServiceError("asset_range_invalid", "Only one byte range is supported.", 416);
-  }
-  return range;
-}
 
 function resolveRuntimeAsset(assetPath: string[]) {
   const relativePath = normalizeAssetKey(assetPath.join("/"));
@@ -43,30 +28,31 @@ function resolveRuntimeAsset(assetPath: string[]) {
     throw new AssetUrlServiceError("sumo_runtime_asset_not_found", "SUMO runtime asset not found.", 404);
   }
   return {
-    key: `${SUMO_RUNTIME_S3_PREFIX}${fileName}`,
     mediaType,
   };
 }
 
-async function redirectAsset(request: NextRequest, route: Context, headOnly: boolean) {
+async function serveRuntimeAsset(request: NextRequest, route: Context, headOnly: boolean) {
   try {
     const auth = await requireScenarioContext();
     if (auth.response) return auth.response;
 
     const { assetPath } = await route.params;
     const asset = resolveRuntimeAsset(assetPath);
-    const bucket = artifactBucket();
-    requestedRange(request);
-    const url = await getPresignedGetUrl(asset.key, bucket, SIGNED_URL_TTL_SECONDS);
-    const response = objectRedirect(url, 307);
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
+    const url = new URL(request.url);
+    const canonicalUrl = `${url.pathname}${url.search}`;
+    const identity = await authorizeLocalMapAssetUrl(canonicalUrl);
+    if (!identity.sha256 || identity.sizeBytes === undefined) throw new Error("sumo_runtime_identity_missing");
+    return await streamCachedObject(request, {
+      sha256: identity.sha256, byteLength: identity.sizeBytes, mediaType: asset.mediaType,
+    }, canonicalUrl, headOnly);
   } catch (error) {
+    if (error instanceof MapAccessError || error instanceof MapCacheError) return mapAccessErrorResponse(error);
     if (error instanceof AssetUrlServiceError) {
       return NextResponse.json({ error: error.code }, { status: error.status });
     }
     const detail = error as { name?: string; message?: string };
-    console.error("SUMO runtime asset redirect failed", {
+    console.error("SUMO runtime asset delivery failed", {
       name: detail?.name,
       message: detail?.message,
     });
@@ -74,11 +60,11 @@ async function redirectAsset(request: NextRequest, route: Context, headOnly: boo
   }
 }
 
-/** Authenticate the immutable runtime identity, then let the browser fetch its bytes directly from S3. */
+/** The same authorized, verified, revalidating delivery as map members. */
 export async function GET(request: NextRequest, route: Context) {
-  return redirectAsset(request, route, false);
+  return serveRuntimeAsset(request, route, false);
 }
 
 export async function HEAD(request: NextRequest, route: Context) {
-  return redirectAsset(request, route, true);
+  return serveRuntimeAsset(request, route, true);
 }

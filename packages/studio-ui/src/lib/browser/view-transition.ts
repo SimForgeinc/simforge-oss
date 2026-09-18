@@ -1,5 +1,6 @@
 export type ViewTransitionResult = {
   finished?: Promise<void>;
+  ready?: Promise<void>;
 };
 
 function isExpectedViewTransitionAbort(error: unknown): boolean {
@@ -12,19 +13,18 @@ function isExpectedViewTransitionAbort(error: unknown): boolean {
 }
 
 /**
- * Observe a browser View Transition without turning an expected skipped
- * transition into an unhandled rejection. Browsers reject `finished` with an
- * AbortError when a newer transition supersedes the current one; the DOM
- * mutation has already completed and no recovery is required.
+ * Observe both browser View Transition promises. A superseded transition
+ * rejects `ready` with AbortError even when its DOM mutation and `finished`
+ * succeed. Every rejection still needs an owner; real failures stay visible.
  */
 export function observeViewTransitionCompletion(
   transition: ViewTransitionResult | undefined,
   label: string,
 ): void {
-  if (!transition?.finished) return;
-
-  void transition.finished.catch((error: unknown) => {
+  const onError = (error: unknown) => {
     if (isExpectedViewTransitionAbort(error)) return;
     console.error(`${label} view transition failed`, error);
-  });
+  };
+  void transition?.ready?.catch(onError);
+  void transition?.finished?.catch(onError);
 }

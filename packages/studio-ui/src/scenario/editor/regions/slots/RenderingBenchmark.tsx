@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CityView } from "@simforge-oss/viewer/react";
 import type { CityViewer } from "@simforge-oss/viewer";
 import {
-  SCENARIO_AUTHORING_QUALITY_IDS,
   type ScenarioAuthoringQuality,
 } from "../../../../lib/scenario/contracts";
 import { AUTHORING_QUALITY } from "../../authoring-quality";
@@ -52,7 +51,7 @@ type Running = Extract<BenchmarkState, { phase: "loading" | "measuring" }>;
  * snapshot, and hands the caller a `runner` element to mount alongside its
  * own UI. The UI never leaves the page: progress is data, not an overlay.
  */
-export function useRenderingBenchmark(manifestUrl: string) {
+export function useRenderingBenchmark(manifestUrl: string, qualities: readonly ScenarioAuthoringQuality[]) {
   const [state, setState] = useState<BenchmarkState>(() => ({
     phase: "idle",
     snapshot: loadRenderingBenchmark(manifestUrl),
@@ -87,7 +86,7 @@ export function useRenderingBenchmark(manifestUrl: string) {
 
   const active = state.phase === "loading" || state.phase === "measuring";
   const quality = active
-    ? SCENARIO_AUTHORING_QUALITY_IDS[state.candidateIndex]!
+    ? qualities[state.candidateIndex]!
     : null;
 
   /** Advance to the next profile, or close out the run with a snapshot. */
@@ -99,7 +98,7 @@ export function useRenderingBenchmark(manifestUrl: string) {
       emptyMessage: string,
     ): BenchmarkState => {
       const nextIndex = current.candidateIndex + 1;
-      if (nextIndex < SCENARIO_AUTHORING_QUALITY_IDS.length) {
+      if (nextIndex < qualities.length) {
         return {
           phase: "loading",
           candidateIndex: nextIndex,
@@ -132,7 +131,7 @@ export function useRenderingBenchmark(manifestUrl: string) {
       saveRenderingBenchmark(snapshot);
       return { phase: "complete", snapshot };
     },
-    [manifestUrl],
+    [manifestUrl, qualities],
   );
 
   const finishCandidate = useCallback(
@@ -152,7 +151,7 @@ export function useRenderingBenchmark(manifestUrl: string) {
       setState((current) => {
         if (current.phase !== "loading" && current.phase !== "measuring") return current;
         const failure = {
-          quality: SCENARIO_AUTHORING_QUALITY_IDS[current.candidateIndex]!,
+          quality: qualities[current.candidateIndex]!,
           message: reason instanceof Error ? reason.message : String(reason),
         };
         return advance(
@@ -163,7 +162,7 @@ export function useRenderingBenchmark(manifestUrl: string) {
         );
       });
     },
-    [advance],
+    [advance, qualities],
   );
 
   const runner = quality ? (

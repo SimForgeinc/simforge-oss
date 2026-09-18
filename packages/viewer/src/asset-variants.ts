@@ -130,6 +130,23 @@ export function isCityAssetVariantManifest(value: unknown): value is CityAssetVa
     && Boolean(candidate.variants && typeof candidate.variants === 'object');
 }
 
+/** A named derivative is usable only if it covers every source this mode draws. */
+export function supportsCityAssetVariant(
+  source: {
+    staticLayers?: readonly { id: string; file: string }[];
+    tiles: readonly { lods: readonly { file: string }[] }[];
+  },
+  variants: CityAssetVariantManifest | null,
+  variant: 'roads-only' | 'geometry-only',
+): boolean {
+  const road = source.staticLayers?.find((layer) => layer.id === 'road');
+  if (!road) return false;
+  const options = { ultraLow: true, roadsOnly: variant === 'roads-only', ktx2Ready: false };
+  const supported = (file: string) => selectAssetVariant(variants, file, variant, options).variant === variant;
+  return supported(road.file) && (variant === 'roads-only'
+    || source.tiles.every((tile) => tile.lods.every((lod) => supported(lod.file))));
+}
+
 export function selectAssetVariant(
   manifest: CityAssetVariantManifest | null,
   sourceFile: string,

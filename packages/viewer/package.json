@@ -17,6 +17,10 @@
       "./react": {
         "types": "./dist/react.d.ts",
         "default": "./dist/react.js"
+      },
+      "./asset-variants": {
+        "types": "./dist/asset-variants.d.ts",
+        "default": "./dist/asset-variants.js"
       }
     }
   },
@@ -34,6 +38,11 @@
       "development": "./src/react.tsx",
       "types": "./dist/react.d.ts",
       "default": "./dist/react.js"
+    },
+    "./asset-variants": {
+      "development": "./src/asset-variants.ts",
+      "types": "./dist/asset-variants.d.ts",
+      "default": "./dist/asset-variants.js"
     }
   },
   "files": [
@@ -63,7 +72,7 @@
     "vitest": "^3.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/react.tsx --format esm --dts --sourcemap --clean --out-dir dist",
+    "build": "tsup src/index.ts src/react.tsx src/asset-variants.ts --format esm --dts --sourcemap --clean --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dev": "vite dev --config dev/vite.config.ts"

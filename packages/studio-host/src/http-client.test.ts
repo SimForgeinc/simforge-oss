@@ -170,13 +170,17 @@ describe("response validation", () => {
     await expect(host(fetchMock).projects.getDocument("doc-1")).resolves.toMatchObject({ id: "doc-1", addedInV2: "kept" });
   });
 
-  it("treats a 404 on the saved simulation as 'nothing saved', not a failure", async () => {
+  it("distinguishes an absent saved simulation from access and generation failures", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ error: "simulation_preview_not_found" }, 404))
-      .mockResolvedValueOnce(jsonResponse({ error: "authentication_required" }, 401));
+      .mockResolvedValueOnce(jsonResponse(null))
+      .mockResolvedValueOnce(jsonResponse({ error: "authentication_required" }, 401))
+      .mockResolvedValueOnce(jsonResponse({ error: "document_not_found" }, 404))
+      .mockResolvedValueOnce(jsonResponse({ error: "simulation_preview_failed" }, 502));
     const studio = host(fetchMock);
     await expect(studio.projects.getSimulationPreview("doc-1")).resolves.toBeNull();
     await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 401 });
+    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 404 });
+    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 502 });
   });
 });
 

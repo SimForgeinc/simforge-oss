@@ -11,11 +11,10 @@ import {
  *
  * Two backends, chosen once per page from the environment and never mixed:
  *
- * - `filesystem` — the installed desktop app. Bytes live on disk in the local
- *   service's store behind the preload bridge; the renderer only ever sees
- *   metadata over IPC and streams verified content through same-origin
- *   `/api/simforge/map-cache/stream/...` capability URLs. A bridge failure is
- *   surfaced, never papered over with browser storage.
+ * - `filesystem` — the installed desktop app. Explicit installs and cache
+ *   management use the preload bridge to the host's verified store. Normal
+ *   reads use the stable asset route, which serves that same store and allows
+ *   the GUI's HTTP cache to revalidate without transferring the bytes again.
  * - `browser` — ordinary web mode. Bytes live in Cache Storage under their
  *   content hash with a small localStorage index for URL aliases and receipts.
  */
@@ -267,44 +266,6 @@ async function desktopEnsure(
   }
 }
 
-async function desktopFetch(
-  bridge: DesktopMapCacheBridge,
-  canonicalUrl: string,
-  init: RequestInit,
-  options: MapAssetEnsureOptions,
-): Promise<Response> {
-  const ensured = await desktopEnsure(bridge, canonicalUrl, { ...options, signal: init.signal ?? undefined });
-  const headers = new Headers();
-  const range = requestedRange(init);
-  if (range) headers.set("range", range);
-  // The capability URL is same-origin on the local host: the local session
-  // cookie authorizes it and the service re-checks map access on every read.
-  // The file IS the cache, so Chromium's HTTP cache must not copy it.
-  return networkFetch(ensured.url, {
-    method: "GET",
-    headers,
-    signal: init.signal,
-    credentials: "same-origin",
-    cache: "no-store",
-  });
-}
-
-/**
- * The URL a context without this module's fetch gateway (a worker) should
- * fetch for a map asset. On the filesystem backend a cacheable asset is made
- * resident first and its same-origin capability URL is returned, so worker
- * loads stream from disk like main-thread ones; anything else, and the browser
- * backend, keeps the canonical URL.
- */
-export async function resolveMapAssetUrl(
-  url: string,
-  options: Pick<MapAssetEnsureOptions, "sha256" | "signal"> = {},
-): Promise<string> {
-  const canonicalUrl = absoluteUrl(url);
-  const bridge = desktopMapCacheBridge();
-  if (!bridge || !isCacheableMapUrl(new URL(canonicalUrl), options.sha256)) return canonicalUrl;
-  return (await desktopEnsure(bridge, canonicalUrl, options)).url;
-}
 
 export async function hasCachedMapAsset(url: string, expectedSha256?: string) {
   const bridge = desktopMapCacheBridge();
@@ -374,13 +335,17 @@ export async function fetchMapAsset(
   deferIndexWrite = false,
 ): Promise<Response> {
   if (init.method && init.method !== "GET") return networkFetch(url, init);
-  const bridge = desktopMapCacheBridge();
-  if (bridge) {
-    const canonicalUrl = absoluteUrl(url);
-    if (!isCacheableMapUrl(new URL(canonicalUrl), expectedSha256)) return networkFetch(url, init);
-    return desktopFetch(bridge, canonicalUrl, init, { sha256: expectedSha256, networkUrl });
+  // The host route already authorizes, verifies and materializes each member.
+  // An ensure IPC plus no-store capability fetch duplicated that work and
+  // forced every remote desktop load to transfer the complete map again.
+  if (desktopMapCacheBridge() || !("caches" in window)) {
+    const response = await networkFetch(url, init);
+    if (response.ok && expectedSha256 && response.headers.get("x-content-sha256") !== expectedSha256) {
+      void response.body?.cancel().catch(() => undefined);
+      throw new Error(`Asset integrity check failed for ${url}`);
+    }
+    return response;
   }
-  if (!("caches" in window)) return networkFetch(url, init);
   const canonicalUrl = absoluteUrl(url);
   const index = readIndex();
   const knownSha = expectedSha256 ?? index.urls[canonicalUrl];

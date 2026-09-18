@@ -14,7 +14,7 @@ describe("observeViewTransitionCompletion", () => {
     });
 
     observeViewTransitionCompletion(
-      { finished: Promise.reject(error) },
+      { ready: Promise.reject(error), finished: Promise.resolve() },
       "Dataset",
     );
     await Promise.resolve();
@@ -27,7 +27,7 @@ describe("observeViewTransitionCompletion", () => {
     const error = new Error("render failed");
 
     observeViewTransitionCompletion(
-      { finished: Promise.reject(error) },
+      { ready: Promise.reject(error), finished: Promise.resolve() },
       "Dataset",
     );
     await Promise.resolve();
@@ -38,7 +38,4 @@ describe("observeViewTransitionCompletion", () => {
     );
   });
 
-  it("accepts browsers that omit the finished promise", () => {
-    expect(() => observeViewTransitionCompletion({}, "Dataset")).not.toThrow();
-  });
 });

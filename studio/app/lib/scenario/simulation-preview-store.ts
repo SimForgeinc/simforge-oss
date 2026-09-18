@@ -19,6 +19,7 @@ const COMPRESSED_PLAYBACK_MEDIA_TYPE = "application/vnd.simforge.uniscenario-pla
 
 const KIND = "browser-simulation-preview-v1";
 class StaleSimulationPreviewCompletion extends Error {}
+export class SimulationPreviewFailed extends Error {}
 
 type PreviewArtifactMetadata = { contentSha256: string; mapVersionId: string };
 
@@ -277,15 +278,28 @@ export async function getCurrentSimulationPreview(
     { document_id: documentId, workspace_id: context.workspaceId },
   );
   const row = rows[0];
-  return row
-    ? {
-        artifactId: row.artifact_id,
-        draftVersion: Number(row.source_draft_version),
-        sha256: row.sha256,
-        sizeBytes: Number(row.byte_length),
-        mediaType: row.media_type,
-        downloadUrl: sameOriginWhenLocal(await getPresignedGetUrl(row.storage_key, row.storage_bucket)),
-        createdAt: row.created_at,
-      }
-    : null;
+  if (!row) {
+    const [producer] = await queryRows<{ state: string }>(
+      `SELECT j.state FROM simforge.artifact_postprocess_jobs j
+       JOIN simforge.drafts dr ON dr.document_id=:document_id AND dr.workspace_id=j.workspace_id
+       WHERE j.workspace_id=:workspace_id AND j.postprocess_kind='browser_simulation_preview'
+         AND j.request_payload->>'documentId'=:document_id
+         AND j.request_payload->>'contentSha256'=dr.content_sha256
+         AND j.request_payload->>'draftVersion'=dr.draft_version::text
+         AND j.request_payload->>'mapVersionId'=dr.map_version_id
+       ORDER BY j.created_at DESC LIMIT 1`,
+      { document_id: documentId, workspace_id: context.workspaceId },
+    );
+    if (producer?.state === "failed") throw new SimulationPreviewFailed("simulation_preview_failed");
+    return null;
+  }
+  return {
+    artifactId: row.artifact_id,
+    draftVersion: Number(row.source_draft_version),
+    sha256: row.sha256,
+    sizeBytes: Number(row.byte_length),
+    mediaType: row.media_type,
+    downloadUrl: sameOriginWhenLocal(await getPresignedGetUrl(row.storage_key, row.storage_bucket)),
+    createdAt: row.created_at,
+  };
 }

@@ -6,6 +6,7 @@ import { ActorRenderer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { cn } from "../../lib/utils";
 import { readRenderingPreference,
+saveRenderingPreference, useRenderingAvailability,
 RENDERING_PREFERENCE_CHANGE_EVENT,
 type RenderingPreference, } from "../../components/rendering-preference"
 import { useRegisterRenderingBenchmarkTarget } from "../../components/rendering-benchmark-target"
@@ -111,10 +112,11 @@ export function ScenarioWorldHost({
   onStateChange: (state: ScenarioWorldState) => void;
   className?: string;
 }) {
-  const [retainedTarget, setRetainedTarget] = useState(target);
+  const [retainedTarget, setRetainedTarget] = useState<ScenarioWorldTarget | null>(null);
   const [loadedMapVersionId, setLoadedMapVersionId] = useState<string | null>(
     null,
   );
+  const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null);
   const [error, setError] = useState<unknown | null>(null);
   const [transitionPhase, setTransitionPhase] =
     useState<MapTransitionPhase>(target || pendingTarget ? "loading" : "idle");
@@ -126,6 +128,7 @@ export function ScenarioWorldHost({
     () => readRenderingPreference() ?? "high",
   );
   const quality = AUTHORING_QUALITY[preference];
+  const availability = useRenderingAvailability(target?.manifestUrl ?? retainedTarget?.manifestUrl);
   const uploadBudget = transitionPhase === "idle" ? null : BOOT_UPLOAD_BUDGET;
   const uploadBudgetRef = useRef(uploadBudget);
   uploadBudgetRef.current = uploadBudget;
@@ -377,6 +380,14 @@ export function ScenarioWorldHost({
   // does remain is the one into the loaded map, below.
   useEffect(() => {
     if (!stableTarget) return;
+    const unavailable = availability.unavailable[preference];
+    if (unavailable) {
+      if (!availability.checking) {
+        saveRenderingPreference("high");
+        setPreferenceNotice(`${unavailable} The saved graphics setting was reset to High.`);
+      }
+      return;
+    }
     if (retainedTargetRef.current?.mapVersionId === stableTarget.mapVersionId) return;
 
     transitionGenerationRef.current += 1;
@@ -391,7 +402,7 @@ export function ScenarioWorldHost({
     setRetainedTarget(stableTarget);
     setLoadProgress(initialSceneLoadProgress(stableTarget.label));
     updateTransitionPhase("loading");
-  }, [stableTarget]);
+  }, [stableTarget, availability, preference]);
 
   useEffect(
     () => () => {
@@ -642,6 +653,7 @@ export function ScenarioWorldHost({
           tabIndex={interactive ? 0 : -1}
         />
       ) : null}
+      {preferenceNotice ? <p role="status" className="absolute bottom-4 left-4 z-10 rounded bg-background p-3 text-sm">{preferenceNotice}</p> : null}
       <div
         aria-hidden="true"
         className={cn(

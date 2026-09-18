@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import { ReserveScenarioSimulationPreviewSchema } from "@/app/lib/scenario/contracts";
-import { getCurrentSimulationPreview, reserveSimulationPreview } from "@/app/lib/scenario/simulation-preview-store";
+import { getCurrentSimulationPreview, reserveSimulationPreview, SimulationPreviewFailed } from "@/app/lib/scenario/simulation-preview-store";
 import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
+import { getScenarioDocument } from "@/app/lib/scenario/document-store";
 type Context = { params: Promise<{ documentId: string }> };
-export async function GET(_request: Request, route: Context) { const auth=await requireScenarioContext(); if(auth.response)return auth.response; const {documentId}=await route.params; const value=await getCurrentSimulationPreview(auth.context,documentId); return value?NextResponse.json(value,{headers:SCENARIO_PRIVATE_CACHE_HEADERS}):NextResponse.json({error:"simulation_preview_not_found"},{status:404}); }
+export async function GET(_request: Request, route: Context) {
+  const auth = await requireScenarioContext();
+  if (auth.response) return auth.response;
+  const { documentId } = await route.params;
+  if (!(await getScenarioDocument(auth.context, documentId))) {
+    return NextResponse.json({ error: "document_not_found" }, { status: 404, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  }
+  try {
+    return NextResponse.json(await getCurrentSimulationPreview(auth.context, documentId), { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  } catch (error) {
+    if (!(error instanceof SimulationPreviewFailed)) throw error;
+    return NextResponse.json({ error: "simulation_preview_failed" }, { status: 502, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+  }
+}
 export async function POST(request: Request, route: Context) {
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;

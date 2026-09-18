@@ -170,15 +170,6 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     );
   }
 
-  /** For reads where the host's 404 is a state ("nothing saved yet"), not a failure. */
-  async function callOrNull<E extends AnyEndpoint>(endpoint: E, opts: CallOptions<E>): Promise<EndpointResponse<E> | null> {
-    try {
-      return await call(endpoint, opts);
-    } catch (error) {
-      if (error instanceof StudioHostRequestError && error.status === 404) return null;
-      throw error;
-    }
-  }
 
   /**
    * Resolve a reserved upload target. Local-object reservations are handed
@@ -336,7 +327,7 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     },
 
     getSimulationPreview(documentId, signal) {
-      return callOrNull(documents.getSimulationPreview, { params: { documentId }, signal });
+      return call(documents.getSimulationPreview, { params: { documentId }, signal });
     },
     async saveSimulationPreview(document, bytes, sha256, signal) {
       const params = { documentId: document.id };

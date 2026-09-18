@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
+import { MapCacheError } from "@/app/lib/map-cache/service";
 import { assertMapUsable, MapAccessError } from "@/app/lib/cloud/access";
 import { bundledMap, bundledMemberUrl } from "@/app/lib/cloud/bundled-maps";
 import { mapAccessErrorResponse, streamCachedObject } from "@/app/lib/cloud/asset-response";
 import { CloudConnectionError, primeCloudSession } from "@/app/lib/cloud/connection";
-import { getRegisteredMap, MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
+import { getRegisteredMap } from "@/app/lib/cloud/map-registry";
 import { assertLocalMapAccess, upstreamGet } from "@/app/lib/cloud/maps";
 import { getScenarioMapThumbnail } from "@/app/lib/scenario/map-thumbnail-store";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
-import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
 import { discardResponseBody } from "@/app/lib/cloud/drain";
 
 type Context = { params: Promise<{ mapVersionId: string }> };
@@ -26,16 +25,11 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
       assertMapUsable(registered);
       const stored = await getScenarioMapThumbnail(auth.context, mapVersionId);
       if (!stored) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-      if (stored.bucket === MAP_CACHE_BUCKET) {
-        const member = [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === stored.sha256);
-        if (!member) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-        const ensureUrl = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${
-          member[0].split("/").map(encodeURIComponent).join("/")}`;
-        return await streamCachedObject(request, stored, ensureUrl, headOnly);
-      }
-      const response = objectRedirect(await getPresignedGetUrl(stored.key, stored.bucket, 60 * 60), 307);
-      response.headers.set("Cache-Control", "private, no-store");
-      return response;
+      const member = [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === stored.sha256);
+      if (!member) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
+      const ensureUrl = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${
+        member[0].split("/").map(encodeURIComponent).join("/")}`;
+      return await streamCachedObject(request, stored, ensureUrl, headOnly);
     }
     // Not yet installed: the preview comes from the publishing Cloud under this
     // installation's access (anonymous RFS or the active account), never a
@@ -66,7 +60,7 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     }
     return new Response(upstream.body, { headers });
   } catch (error) {
-    if (error instanceof MapAccessError) return mapAccessErrorResponse(error);
+    if (error instanceof MapAccessError || error instanceof MapCacheError) return mapAccessErrorResponse(error);
     if (error instanceof CloudConnectionError) {
       return NextResponse.json({ error: error.code }, { status: 502, headers: NO_STORE });
     }

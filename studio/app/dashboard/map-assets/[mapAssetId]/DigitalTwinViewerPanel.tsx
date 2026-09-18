@@ -18,6 +18,7 @@ import type {
 } from "@simforge-oss/viewer";
 import { useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { useRegisterRenderingBenchmarkTarget } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
 
@@ -65,6 +66,8 @@ export function DigitalTwinViewerPanel({
   proximityArrows,
 }: Props) {
   const manifestUrl = `/api/map-assets/${asset.map_asset_id}/3d-asset/manifest.json`;
+  const graphicsTarget = useMemo(() => ({ manifestUrl, label: asset.name }), [manifestUrl, asset.name]);
+  useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const hasArtifact = asset.artifacts?.some(
     (artifact) => (artifact.artifact_type as string) === "3d_manifest",
   );

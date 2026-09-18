@@ -382,6 +382,7 @@ export function useScenarioSession({
     }).catch((reason) => {
       if (!prepareFenceRef.current.accepts(generation, simulationKey)
           || (reason as { name?: string } | null)?.name === "AbortError") return;
+      setSavedSimulationError(reason instanceof Error ? reason.message : String(reason));
       compileScenarioPreview();
     });
     return () => abort.abort();

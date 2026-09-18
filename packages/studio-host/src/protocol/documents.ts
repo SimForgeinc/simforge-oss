@@ -445,11 +445,11 @@ export const documentsProtocol = {
     response: CreateScenarioRevisionResultSchema,
   }),
 
-  /** 404 means "no saved preview yet", which the transport surfaces as `null`. */
-  getSimulationPreview: endpoint<{ documentId: string }, void, void, ScenarioSimulationPreviewDto>({
+  /** A readable document with no current generated preview answers JSON null. */
+  getSimulationPreview: endpoint<{ documentId: string }, void, void, ScenarioSimulationPreviewDto | null>({
     method: "GET",
     path: (params) => `${document(params)}/simulation-preview`,
-    response: ScenarioSimulationPreviewSchema,
+    response: nullable(ScenarioSimulationPreviewSchema),
   }),
   reserveSimulationPreview: endpoint<{ documentId: string }, void, ReserveSimulationPreviewRequest, UploadReservationDto>({
     method: "POST",

@@ -46,10 +46,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
     const url = await getBrowserAssetUrl({ key, allowedPrefix });
     const response = objectRedirect(url, 302);
-    // Same policy as the scenario browser-assets route: development reuses
-    // the redirect for most of the presign TTL so cold loads skip the
-    // per-asset presign hop; shared environments keep the authenticated
-    // no-store boundary (the map-asset-cache gateway is the caching layer).
+    // Legacy map-asset delivery retains its presigned capability. Published
+    // scenario members use the verified, revalidating browser-assets route.
     response.headers.set("Cache-Control", browserAssetRedirectCacheControl());
     return response;
   } catch (e) {

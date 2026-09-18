@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Check,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
+import { useRenderingAvailability, type RenderingAvailability } from "../components/rendering-preference";
 import {
   SCENARIO_AUTHORING_QUALITY_CHOICES,
   SCENARIO_AUTHORING_QUALITY_IDS,
@@ -68,7 +69,9 @@ export function RenderSelectionPanel({
   descriptionId?: string;
   footer?: ReactNode;
 }) {
-  const { state, start, cancel, runner } = useRenderingBenchmark(manifestUrl ?? "");
+  const availability = useRenderingAvailability(manifestUrl);
+  const qualities = useMemo(() => SCENARIO_AUTHORING_QUALITY_IDS.filter((quality) => !availability.unavailable[quality]), [availability]);
+  const { state, start, cancel, runner } = useRenderingBenchmark(manifestUrl ?? "", qualities);
   return (
     <div {...stylex.props(styles.page)}>
       <div {...stylex.props(styles.content)} data-testid="render-selection-content">
@@ -85,6 +88,8 @@ export function RenderSelectionPanel({
         {manifestUrl ? (
           <>
             <RenderDiagnostics
+              qualities={qualities}
+              availability={availability}
               state={state}
               currentQuality={currentQuality}
               mapLabel={mapLabel}
@@ -129,6 +134,8 @@ export function RenderSelectionPanel({
                   type="button"
                   onClick={() => onChoose(choice.id)}
                   aria-label={`Use ${choice.label}`}
+                  disabled={Boolean(availability.unavailable[choice.id])}
+                  title={availability.unavailable[choice.id]}
                   aria-pressed={current}
                   {...stylex.props(styles.choice, current && styles.choiceCurrent)}
                 >
@@ -141,7 +148,7 @@ export function RenderSelectionPanel({
                     ) : null}
                   </span>
                   <span {...stylex.props(styles.choiceCopy)}>{SUMMARY[choice.id]}</span>
-                  <span {...stylex.props(styles.choiceMeta)}>{choice.downloadGuidance}</span>
+                  <span {...stylex.props(styles.choiceMeta)}>{availability.unavailable[choice.id] ?? choice.downloadGuidance}</span>
                   <span {...stylex.props(styles.choiceMeta)}>{choice.gpuMemoryGuidance}</span>
                 </button>
               );
@@ -166,6 +173,8 @@ export function RenderDiagnostics({
   onStart,
   onCancel,
   onApply,
+  qualities,
+  availability,
 }: {
   state: BenchmarkState;
   currentQuality: ScenarioAuthoringQuality;
@@ -173,6 +182,8 @@ export function RenderDiagnostics({
   onStart: () => void;
   onCancel: () => void;
   onApply: (quality: ScenarioAuthoringQuality) => void;
+  qualities: readonly ScenarioAuthoringQuality[];
+  availability: RenderingAvailability;
 }) {
   const active = state.phase === "loading" || state.phase === "measuring";
   const snapshot =
@@ -236,6 +247,7 @@ export function RenderDiagnostics({
             size="sm"
             type="button"
             onClick={onStart}
+            disabled={availability.checking}
             aria-label={`Start benchmark on ${mapLabel}`}
           >
             {snapshot ? <RotateCcw aria-hidden="true" /> : <Gauge aria-hidden="true" />}
@@ -247,19 +259,19 @@ export function RenderDiagnostics({
       <div {...stylex.props(styles.reveal, open && styles.revealOpen)} aria-hidden={!open}>
         <div {...stylex.props(styles.revealClip)}>
           <div {...stylex.props(styles.body)}>
-            <Progress state={state} completedCount={completedCount} />
+            <Progress state={state} completedCount={completedCount} total={qualities.length} />
 
             {active ? (
               <p {...stylex.props(styles.status)} role="status" aria-live="polite">
                 <span>
                   <span {...stylex.props(styles.statusStrong)}>
-                    Testing {LABELS[SCENARIO_AUTHORING_QUALITY_IDS[state.candidateIndex]!]}
+                    Testing {LABELS[qualities[state.candidateIndex]!]}
                   </span>
                   {" · "}
                   {state.phase === "loading" ? "loading map" : "orbiting camera"}
                 </span>
                 <span>
-                  {completedCount} of {SCENARIO_AUTHORING_QUALITY_IDS.length} complete
+                  {completedCount} of {qualities.length} complete
                 </span>
               </p>
             ) : null}
@@ -277,7 +289,7 @@ export function RenderDiagnostics({
             </ul>
 
             <div {...stylex.props(styles.lanes)}>
-              {SCENARIO_AUTHORING_QUALITY_IDS.map((quality, index) => (
+              {qualities.map((quality, index) => (
                 <Lane
                   key={quality}
                   quality={quality}
@@ -338,6 +350,8 @@ export function RenderDiagnostics({
                   type="button"
                   onClick={() => onApply(snapshot.recommended)}
                   aria-label={`Use recommended ${LABELS[snapshot.recommended]}`}
+                  disabled={Boolean(availability.unavailable[snapshot.recommended])}
+                  title={availability.unavailable[snapshot.recommended]}
                 >
                   <Check aria-hidden="true" />
                   Use {LABELS[snapshot.recommended]}
@@ -351,8 +365,7 @@ export function RenderDiagnostics({
   );
 }
 
-function Progress({ state, completedCount }: { state: BenchmarkState; completedCount: number }) {
-  const total = SCENARIO_AUTHORING_QUALITY_IDS.length;
+function Progress({ state, completedCount, total }: { state: BenchmarkState; completedCount: number; total: number }) {
   const active = state.phase === "loading" || state.phase === "measuring";
   const fraction = state.phase === "complete" ? 1 : completedCount / total;
   return (

@@ -6,11 +6,8 @@ import type { MapEntry } from '../maps';
 import { parsePlaybackPair, type PlaybackBundle } from '@simforge-oss/playback';
 import type {
   AmbientRobustnessSummary,
-  ScenarioWorkerAssetRequest,
-  ScenarioWorkerAssetResponse,
   ScenarioWorkerEngineIdentity,
   ScenarioWorkerEngineRequest,
-  ScenarioWorkerOutbound,
   ScenarioWorkerRequest,
   ScenarioWorkerResponse,
 } from './scenario-worker';
@@ -19,7 +16,6 @@ import { RevisionGate } from '@simforge-oss/playback';
 import { primeGalleryEntriesForDocument } from '../../asset-gallery/editor-bridge';
 import { primeCarlaObjectsForDocument } from '../carla-objects';
 import { listExternalCatalogEntries } from '@simforge-oss/asset-catalog';
-import { resolveMapAssetUrl } from '../../maps/frontend/map-asset-cache';
 
 export interface LivePlaybackCounters {
   readonly startupMs: number | null;
@@ -270,11 +266,7 @@ export class ScenarioWorkerClient {
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
     const worker = new Worker(new URL('./scenario-worker.js', import.meta.url), { type: 'module' });
-    worker.onmessage = (event: MessageEvent<ScenarioWorkerOutbound>) => {
-      if ('resolveId' in event.data) {
-        serveAssetResolution(worker, event.data);
-        return;
-      }
+    worker.onmessage = (event: MessageEvent<ScenarioWorkerResponse>) => {
       this.pending.get(event.data.id)?.onMessage(event.data);
     };
     worker.onerror = (event) => {
@@ -289,22 +281,6 @@ export class ScenarioWorkerClient {
   }
 }
 
-/**
- * Answer a worker's map-asset lookup from the page's cache backend. A failure
- * (integrity, authorization, network) is returned as the worker's fetch error
- * rather than a silent network fallback, so a desktop install never quietly
- * bypasses its verified disk store.
- */
-function serveAssetResolution(worker: Worker, request: ScenarioWorkerAssetRequest): void {
-  void resolveMapAssetUrl(request.url, { sha256: request.sha256 }).then(
-    (url) => worker.postMessage({ kind: 'asset', resolveId: request.resolveId, url } satisfies ScenarioWorkerAssetResponse),
-    (reason: unknown) => worker.postMessage({
-      kind: 'asset',
-      resolveId: request.resolveId,
-      error: reason instanceof Error ? reason.message : String(reason),
-    } satisfies ScenarioWorkerAssetResponse),
-  );
-}
 
 function deepFreeze<T>(value: T): T {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -344,11 +320,7 @@ export function evaluateAuthoredAmbientRobustness(
   const id = Date.now() + Math.floor(Math.random() * 10_000);
   const revision = contentHash({ template, filters, intentRubric: intentRubric ?? null });
   return new Promise((resolve, reject) => {
-    worker.onmessage = (event: MessageEvent<ScenarioWorkerOutbound>) => {
-      if ('resolveId' in event.data) {
-        serveAssetResolution(worker, event.data);
-        return;
-      }
+    worker.onmessage = (event: MessageEvent<ScenarioWorkerResponse>) => {
       if (event.data.id !== id || event.data.revision !== revision) return;
       worker.terminate();
       if (!event.data.ok) { reject(new Error(event.data.error)); return; }

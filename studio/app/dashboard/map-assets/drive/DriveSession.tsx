@@ -19,6 +19,7 @@ import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/e
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { useRegisterRenderingBenchmarkTarget } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import {
   DriveCameraRig,
   DriveHud,
@@ -105,6 +106,8 @@ export function DriveSession({
   onSaved: () => void;
   onExit: () => void;
 }) {
+  const graphicsTarget = useMemo(() => ({ manifestUrl: map.browserManifestUrl, label: map.label }), [map.browserManifestUrl, map.label]);
+  useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const [startError, setStartError] = useState<string | null>(null);
   const [document, setDocument] = useState<EditorDocument | null>(null);
   const [source, setSource] = useState<AuthoredWorldSource | null>(null);

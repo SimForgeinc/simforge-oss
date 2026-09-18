@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   readRenderingPreference,
   saveRenderingPreference,
+  useRenderingAvailability,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapSelectionScreen, type OnboardingMapOption } from "@simforge-oss/studio-ui/onboarding";
 import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
@@ -58,6 +59,7 @@ export function OnboardingMapsClient() {
   const [quality, setQuality] = useState<ScenarioAuthoringQuality>(
     DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
   );
+  const availability = useRenderingAvailability();
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +160,7 @@ export function OnboardingMapsClient() {
   return (
     <MapSelectionScreen
       catalogError={catalogError}
+      availability={availability}
       // The revealed flow reports its own failures, so only this page's
       // catalog and setup errors go to the screen while it is open.
       error={error ?? (signingIn ? null : cloud.error)}

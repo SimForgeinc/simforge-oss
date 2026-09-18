@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   saveRenderingPreference,
   useRenderingPreference,
+  useRenderingAvailability,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import {
   SCENARIO_AUTHORING_QUALITY_CHOICES,
@@ -33,10 +34,11 @@ const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
  */
 export function AppSwitcherGraphicsLevel() {
   const preference = useRenderingPreference() ?? "high";
-  const levels = SCENARIO_AUTHORING_QUALITY_CHOICES;
+  const availability = useRenderingAvailability();
+  const levels = SCENARIO_AUTHORING_QUALITY_CHOICES.filter((choice) => !availability.unavailable[choice.id]);
   const at = levels.findIndex((choice) => choice.id === preference);
-  const current = levels[at] ?? levels[0];
-  const next = levels[(Math.max(at, 0) + 1) % levels.length] ?? levels[0];
+  const current = SCENARIO_AUTHORING_QUALITY_CHOICES.find((choice) => choice.id === preference)!;
+  const next = levels[(Math.max(at, 0) + 1) % levels.length] ?? SCENARIO_AUTHORING_QUALITY_CHOICES[3];
   const Icon = LEVEL_ICONS[current.id];
 
   return (

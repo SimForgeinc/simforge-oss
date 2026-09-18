@@ -7,11 +7,13 @@ import { TopBarSlotProvider } from "@simforge-oss/studio-ui/components/TopBarSlo
 import { OnboardingGate } from "@/app/components/OnboardingGate";
 import { CloudLoadingHost } from "@simforge-oss/studio-ui/components/CloudLoadingHost";
 import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
+import { RenderingBenchmarkTargetProvider } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import DashboardLoading from "./loading";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <StudioHostBoundary>
+      <RenderingBenchmarkTargetProvider>
       <TopBarSlotProvider>
         <CloudLoadingHost>
           <div {...stylex.props(styles.divFlex)}>
@@ -32,6 +34,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </CloudLoadingHost>
       </TopBarSlotProvider>
+      </RenderingBenchmarkTargetProvider>
     </StudioHostBoundary>
   );
 }

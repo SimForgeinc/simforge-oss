@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderView, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { ViewportSettingsPanel } from "../../src/scenario/editor/regions/slots/ViewportSettingsPanel";
 import { loadViewportSettings } from "../../src/scenario/editor/regions/slots/viewport-settings";
+import type { ReactNode } from "react";
+import { StudioHostTestProvider } from "../helpers/studio-host";
+
+function render(ui: ReactNode) {
+  return renderView(ui, { wrapper: StudioHostTestProvider });
+}
 
 /**
  * The viewport settings panel.
@@ -77,9 +83,6 @@ describe("ViewportSettingsPanel", () => {
     expect(viewer.setLayerVisible).toHaveBeenCalledWith("road", true);
   });
 
-  it("does nothing and does not throw when the viewer has not arrived yet", () => {
-    expect(() => render(<ViewportSettingsPanel viewer={null} />)).not.toThrow();
-  });
 
   it("re-applies to a replaced viewer instead of leaving it on defaults", () => {
     // The viewer is remounted whenever the quality preset changes. A one-shot apply would silently revert

@@ -41,6 +41,10 @@
         "types": "./dist/components/CarlaCompatibilityPill.d.ts",
         "default": "./dist/components/CarlaCompatibilityPill.js"
       },
+      "./components/rendering-benchmark-target": {
+        "types": "./dist/components/rendering-benchmark-target.d.ts",
+        "default": "./dist/components/rendering-benchmark-target.js"
+      },
       "./components/CloudLoadingHost": {
         "types": "./dist/components/CloudLoadingHost.d.ts",
         "default": "./dist/components/CloudLoadingHost.js"
@@ -489,6 +493,11 @@
       "development": "./src/components/VideoPreviewTile.tsx",
       "types": "./dist/components/VideoPreviewTile.d.ts",
       "default": "./dist/components/VideoPreviewTile.js"
+    },
+    "./components/rendering-benchmark-target": {
+      "development": "./src/components/rendering-benchmark-target.tsx",
+      "types": "./dist/components/rendering-benchmark-target.d.ts",
+      "default": "./dist/components/rendering-benchmark-target.js"
     },
     "./components/rendering-preference": {
       "development": "./src/components/rendering-preference.ts",

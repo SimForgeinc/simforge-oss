@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowsSourceAssetFallback, isCityAssetVariantManifest, selectAssetVariant, type CityAssetVariantManifest } from './asset-variants';
+import { allowsSourceAssetFallback, isCityAssetVariantManifest, selectAssetVariant, supportsCityAssetVariant, type CityAssetVariantManifest } from './asset-variants';
 
 const manifest: CityAssetVariantManifest = {
   schemaVersion: 1,
@@ -24,6 +24,18 @@ const manifest: CityAssetVariantManifest = {
 };
 
 describe('city asset variants', () => {
+  it('offers a lightweight mode only when its derivatives cover the required source members', () => {
+    const source = { staticLayers: [{ id: 'road', file: 'tiles/road.glb' }], tiles: [{ lods: [{ file: 'tiles/city.glb' }] }] };
+    expect(supportsCityAssetVariant(source, null, 'roads-only')).toBe(false);
+    expect(supportsCityAssetVariant(source, manifest, 'roads-only')).toBe(true);
+    expect(supportsCityAssetVariant(source, manifest, 'geometry-only')).toBe(false);
+    const complete = structuredClone(manifest);
+    complete.variants['geometry-only']!.files['tiles/city.glb'] = {
+      file: 'variants/geometry-only/city.glb', sourceSha256: 'city', outputSha256: 'flat', bytes: 12,
+    };
+    expect(supportsCityAssetVariant(source, complete, 'geometry-only')).toBe(true);
+  });
+
   it('selects geometry-only for Ultra Low and otherwise fails back to originals', () => {
     expect(selectAssetVariant(manifest, 'tiles/road.glb', 'auto', { ultraLow: true, ktx2Ready: false }).variant).toBe('geometry-only');
     expect(selectAssetVariant(manifest, 'tiles/missing.glb', 'auto', { ultraLow: true, ktx2Ready: false })).toEqual({ variant: 'original', file: 'tiles/missing.glb' });

@@ -1,26 +1,28 @@
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
-import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
-import { browserAssetRedirectCacheControl, objectRedirect } from "@/app/lib/s3/local-object-redirect";
-import { ensureMapAsset, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
+import { ensureMapAsset, MapCacheError, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { MapAccessError, parseLocalMapAssetUrl, resolveAuthorizedMapMember } from "./access";
 import { primeCloudSession } from "./connection";
-import { MAP_CACHE_BUCKET, type RegistryMember } from "./map-registry";
+import type { RegistryMember } from "./map-registry";
 
 /**
- * Serve one immutable map member over the local first-party route. Members
- * that live in the local service's map cache stream from the verified object
- * (fetching it through the cache on a miss); members installed on this machine
- * redirect to the local object store exactly as before. Compressed members
- * are delivered as stored — `application/gzip`, no `Content-Encoding` — so
- * the client decompresses once, as it always has.
+ * One authorized URL for installed and downloaded members alike. Admission
+ * into the shared store verifies the digest; delivery never mints a second,
+ * expiring URL. Revalidation rechecks map access but reuses the client's bytes.
+ * Compressed members are delivered as stored, without Content-Encoding, so
+ * the client decompresses once.
  */
 
 const RANGE = /^bytes=(\d*)-(\d*)$/;
-const IMMUTABLE = "private, max-age=31536000, immutable";
+const REVALIDATE = "private, no-cache";
 
 export function mapAccessErrorResponse(error: unknown): NextResponse {
+  if (error instanceof MapCacheError) {
+    if (error.name === "IntegrityError") error = new MapAccessError("MapCacheError", "map_member_integrity");
+    else if (error.name === "NotFoundError") error = new MapAccessError("NotFound", "map_member_missing");
+  }
   if (!(error instanceof MapAccessError)) throw error;
   const status = error.name === "NotAuthorized"
     ? 403
@@ -65,24 +67,32 @@ export async function streamCachedObject(
   let cached = await resolveCachedMapAsset(member.sha256);
   if (!cached) {
     await ensureMapAsset({
-      requestId: `route:${member.sha256}:${Date.now()}`,
+      requestId: `route:${randomUUID()}`,
       url: ensureUrl,
       sha256: member.sha256,
       sizeBytes: member.byteLength,
     }, request.signal);
     cached = await resolveCachedMapAsset(member.sha256);
   }
-  if (!cached || cached.sizeBytes !== member.byteLength) {
-    return NextResponse.json({ error: "map_asset_unavailable" }, { status: 502, headers: { "Cache-Control": "private, no-store" } });
-  }
+  if (!cached) throw new MapAccessError("NotFound", "map_member_missing");
+  if (cached.sizeBytes !== member.byteLength) throw new MapAccessError("MapCacheError", "map_member_integrity");
   const headers = new Headers({
     "content-type": member.mediaType,
     "accept-ranges": "bytes",
     etag: `"${member.sha256}"`,
     "x-content-sha256": member.sha256,
-    "cache-control": IMMUTABLE,
+    "cache-control": REVALIDATE,
+    "x-content-type-options": "nosniff",
+    "content-security-policy": "sandbox",
   });
-  const range = parseRange(request.headers.get("range"), cached.sizeBytes);
+  const etag = headers.get("etag")!;
+  const matches = request.headers.get("if-none-match")?.split(",").some((candidate) => {
+    const value = candidate.trim().replace(/^W\//, "");
+    return value === "*" || value === etag;
+  });
+  if (matches) return new Response(null, { status: 304, headers });
+  const ifRange = request.headers.get("if-range");
+  const range = parseRange(ifRange && ifRange !== etag ? null : request.headers.get("range"), cached.sizeBytes);
   if (range === "invalid") {
     headers.set("content-range", `bytes */${cached.sizeBytes}`);
     return new Response(null, { status: 416, headers });
@@ -91,7 +101,7 @@ export async function streamCachedObject(
   const end = range?.end ?? cached.sizeBytes - 1;
   headers.set("content-length", String(end - start + 1));
   if (range) headers.set("content-range", `bytes ${start}-${end}/${cached.sizeBytes}`);
-  if (headOnly) return new Response(null, { status: range ? 206 : 200, headers });
+  if (headOnly || cached.sizeBytes === 0) return new Response(null, { status: range ? 206 : 200, headers });
   const stream = createReadStream(cached.path, { start, end });
   return new Response(Readable.toWeb(stream) as ReadableStream, { status: range ? 206 : 200, headers });
 }
@@ -104,11 +114,6 @@ export async function serveLocalMapAsset(request: Request, headOnly: boolean): P
     if (ref.kind !== "map") throw new MapAccessError("MapCacheError", "invalid_map_asset_url");
     await primeCloudSession();
     const { member } = await resolveAuthorizedMapMember(ref);
-    if (member.bucket !== MAP_CACHE_BUCKET) {
-      const response = objectRedirect(await getPresignedGetUrl(member.key, member.bucket, 60 * 60), 307);
-      response.headers.set("Cache-Control", browserAssetRedirectCacheControl());
-      return response;
-    }
     return await streamCachedObject(request, member, url.pathname, headOnly);
   } catch (error) {
     return mapAccessErrorResponse(error);

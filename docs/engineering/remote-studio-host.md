@@ -199,6 +199,44 @@ So one of these is required:
    pass `Host` through unchanged and set `X-Forwarded-Proto: https`; the host
    derives both the ticket URL and the mutation origin check from those.
 
+**Recommended for a browser over a tailnet: terminate HTTPS.** A private
+WireGuard link protects transport, but Chromium still treats a plaintext
+non-loopback origin such as `http://100.72.252.40:5455` as an insecure context.
+Cache Storage and service workers are unavailable there. `localhost` is a
+browser-policy exception, so a localhost test does not exercise that setup.
+Where Tailscale HTTPS is enabled for the tailnet, for example:
+
+```bash
+tailscale serve --bg --https 8443 http://100.72.252.40:5455
+```
+
+Open the HTTPS `*.ts.net:8443` URL reported by Tailscale. For another TLS
+terminator, retain the `Host` and `X-Forwarded-Proto` requirements above.
+Confirm in the browser that `isSecureContext` is true and `"caches" in window`
+is true. The origin change creates a separate browser storage namespace; its
+first map load is still cold.
+
+There are two different clients:
+
+- **Ordinary web browser:** on HTTPS (and localhost), the map fetch gateway
+  can retain verified bodies in Cache Storage. On plaintext tailnet HTTP it
+  cannot. Stable, authorized asset URLs still support private HTTP
+  revalidation using a strong digest ETag; a 304 reuses the body without
+  bypassing the current map-access check.
+- **Electron desktop shell:** the exposed map-cache bridge selects the host
+  filesystem backend even when the host is remote. Automatic asset reads use
+  those same revalidating HTTP URLs, not an ensure-IPC plus no-store
+  capability fetch. HTTPS does not switch this client to GUI Cache Storage.
+  Cache-management and explicit installation IPC still operate on the host.
+
+HTTP caching is bounded by Chromium's own resource-size and eviction limits.
+In the Belmont High profile measurement, plaintext repeat traffic fell from
+about 1.4 GB to 0.65–0.70 GB after stable URLs and conditional reads, but large
+GLB/KTX2 resources still transferred. A secure-context **web** repeat used no
+asset network bytes. Neither cache avoids decoding, shader work or GPU
+uploads; do not promise that web result for Electron or blame a metadata
+stall on link speed without profiling the renderer lifetime.
+
 The refusal is in the type: `HostOrigin.fromConfigured(value, "packaged")`
 throws `host_origin_plaintext_network` for plain `http://` on a non-loopback
 address unless the caller passes `{ plaintextNetworkAcknowledged: true }`
@@ -231,7 +269,8 @@ vault and the OS keyring entry). What cannot cross this boundary is an
 operation that assumes the host's filesystem is the GUI machine's filesystem.
 
 **The persistent map cache belongs to the host, not the GUI.** The desktop
-map-cache bridge calls that host's `has`/`ensure`/`stream` endpoints; it does not
+map-cache bridge controls that host's `has`/`ensure` and management endpoints;
+normal reads go directly to the authorized asset routes. It does not
 maintain a second on-disk map store on the laptop. Absolute asset URLs are
 accepted when they match the request-scoped `HostOrigin` supplied by the
 `has`/`ensure` routes. `parseCanonicalUrl` reduces them to a path, so loopback,
@@ -239,7 +278,8 @@ LAN and tailnet spellings share the same cache identity. Foreign origins are
 refused rather than added to an allowlist. This works in remote mode; it is
 not a reason for the renderer to restart or for asset requests to fail.
 
-The GUI additionally has its ordinary private HTTP response cache. That is
+The GUI additionally has its ordinary private HTTP response cache, and a
+secure-context web client can use Cache Storage as described above. Those are
 separate from the host's verified content-addressed store: the host cannot
 choose a cache directory on the laptop, and a laptop directory chooser cannot
 move the host's cache. Unsupported filesystem operations are refused with a

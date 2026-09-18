@@ -3,8 +3,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { studioHost } from "@/app/lib/host";
 import {
   readRenderingPreference,
+  readRenderingAvailability,
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference"
 import { installMapAssetFetchGateway } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
@@ -53,6 +56,16 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
           await completeStudioSetup({ mode: "local", quality: decision.quality }, controller.signal);
         }
       }
+      const saved = readRenderingPreference();
+      if (saved === "roads-only" || saved === "ultra-low-3d") {
+        const availability = await readRenderingAvailability(await studioHost.artifacts.listMaps(controller.signal), controller.signal);
+        if (controller.signal.aborted) return;
+        const reason = availability.unavailable[saved];
+        if (reason) {
+          saveRenderingPreference("high");
+          toast.warning(`${reason} The saved graphics setting was reset to High.`);
+        }
+      }
       if (!controller.signal.aborted) setReady(true);
     };
     void decide().catch(() => {
@@ -70,7 +83,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
       data-testid="onboarding-gate-content"
       inert={!ready || undefined}
     >
-      {children}
+      {ready ? children : null}
     </div>
   );
 }

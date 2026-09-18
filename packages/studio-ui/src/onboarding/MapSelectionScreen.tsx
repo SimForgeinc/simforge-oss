@@ -5,6 +5,7 @@ import { Check, CircleAlert, Download, LoaderCircle, Lock, LogIn, RotateCcw, Ski
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
 import { SCENARIO_AUTHORING_QUALITY_CHOICES, type ScenarioAuthoringQuality } from "../lib/scenario/contracts";
+import type { RenderingAvailability } from "../components/rendering-preference";
 import { formatBytes } from "../scenario/scene/map-load-progress";
 import { evaluateMapDownloadGuard } from "./disk-guard";
 import { MapCard, MapGrid, type MapGridMap } from "./MapGrid";
@@ -63,6 +64,7 @@ export function MapSelectionScreen({
   onToggle,
   quality,
   onQualityChange,
+  availability,
   freeBytes,
   loading,
   error,
@@ -81,6 +83,7 @@ export function MapSelectionScreen({
   onToggle: (mapVersionId: string) => void;
   quality: ScenarioAuthoringQuality;
   onQualityChange: (quality: ScenarioAuthoringQuality) => void;
+  availability: RenderingAvailability;
   freeBytes: number | null;
   loading: boolean;
   error: string | null;
@@ -299,18 +302,22 @@ export function MapSelectionScreen({
                   onboarding.qualitySegment,
                   quality === choice.id ? onboarding.qualitySegmentSelected : onboarding.qualitySegmentIdle,
                 )}
+                aria-disabled={Boolean(availability.unavailable[choice.id])}
+                title={availability.unavailable[choice.id]}
                 data-testid="onboarding-quality-option"
                 data-quality={choice.id}
                 data-selected={quality === choice.id || undefined}
               >
                 <input
                   checked={quality === choice.id}
+                  disabled={Boolean(availability.unavailable[choice.id])}
                   {...stylex.props(onboarding.srOnly)}
                   name="onboarding-quality"
                   onChange={() => onQualityChange(choice.id)}
                   type="radio"
                 />
                 {choice.label}
+                {availability.unavailable[choice.id] ? <span>Unavailable</span> : null}
                 {choice.recommended ? (
                   <span {...stylex.props(onboarding.recommendedTag)}>Recommended</span>
                 ) : null}
@@ -318,8 +325,9 @@ export function MapSelectionScreen({
             ))}
           </div>
           <p {...stylex.props(onboarding.qualityGuidance)}>
-            {selectedChoice?.gpuMemoryGuidance} The level changes what the viewer keeps in memory, not
-            what is downloaded; change it any time in Settings.
+            {selectedChoice?.gpuMemoryGuidance} The installed release is the same at every level;
+            the assets the viewer downloads and its GPU memory use can differ.
+            {Object.values(availability.unavailable).map((reason) => <span key={reason}> {reason}</span>)}
           </p>
         </fieldset>
 
@@ -350,7 +358,7 @@ export function MapSelectionScreen({
             autoFocus
             xstyle={onboarding.primaryAction}
             data-testid="onboarding-download"
-            disabled={loading || downloading || guard.blocked}
+            disabled={loading || downloading || guard.blocked || Boolean(availability.unavailable[quality])}
             onClick={onDownload}
             type="button"
           >
