@@ -16,6 +16,11 @@ sha2 = "0.10"
 hex = "0.4"
 # Already pinned and vendored in the renderer dependency graph; used for timestamp queries.
 wgpu = { version = "29.0.4", default-features = false }
+parking_lot = { version = "0.12.5", optional = true }
+
+[features]
+# Driver-loaded CUDA/NVENC, with pinned C ABI headers; no CUDA SDK dependency.
+gpu-video = ["render-core/gpu-interop", "dep:parking_lot"]
 
 [[bin]]
 name = "sensor-capture"

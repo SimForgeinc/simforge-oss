@@ -19,6 +19,7 @@
 use crate::bvh::Raycast;
 use bevy::math::{Quat, Vec3};
 use crate::RAY_POOL;
+use render_core::coordinates::SensorFrame;
 
 #[derive(Debug, Clone)]
 pub struct RadarConfig {
@@ -51,7 +52,7 @@ impl RadarConfig {
 
 pub struct RadarDetection {
     pub depth: f32,
-    /// Positive = to the left of forward (canonical +z).
+    /// Positive azimuth points toward sensor +Z (camera-right at zero heading).
     pub azimuth: f32,
     /// Positive = up.
     pub altitude: f32,
@@ -77,6 +78,7 @@ pub fn scan(
     if config.azimuth_rays == 0 || config.elevation_rows == 0 {
         return Vec::new();
     }
+    let frame = SensorFrame::from_bevy_pose(origin, rot);
     let azimuth_rays = config.azimuth_rays;
     let elevation_rows = config.elevation_rows;
     let hfov_rad = config.hfov_deg.to_radians();
@@ -99,10 +101,10 @@ pub fn scan(
                     } else {
                         0.0
                     };
-                    // Sensor-frame direction: az positive toward +z (left), el up.
+                    // Rig basis: azimuth toward +Z, elevation toward +Y.
                     let cos_e = el.cos();
                     let dir_sensor = Vec3::new(cos_e * az.cos(), el.sin(), cos_e * az.sin());
-                    let dir_world = rot.mul_vec3(dir_sensor);
+                    let dir_world = frame.direction_to_world(dir_sensor);
                     if let Some(hit) = scene.cast(origin, dir_world, range_m) {
                         let rel = instance_velocity(hit.instance_id) - host_velocity;
                         let beam_unit = dir_world.normalize_or_zero();

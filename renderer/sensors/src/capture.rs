@@ -10,8 +10,8 @@
 //!   hardware-ray lidar backend. Actor cuboids are posed from scene-state.
 //!
 //! Strict draws are the default; `--fast-gpu` enables an explicitly
-//! non-byte-stable indirect path. Shared shadows and hardware lidar are also
-//! opt-in because their fidelity differs from the reference. `--video` feeds
+//! non-byte-stable indirect path. Shared shadows are an accepted quality trade
+//! by default (`--per-view-shadows` opts out); hardware lidar stays opt-in. `--video` feeds
 //! final encoders directly and joins them before the capture summary/manifest.
 
 use crate::bvh::{InstancedScene, Raycast, RaycastScene, Tri};
@@ -45,8 +45,9 @@ use bevy::render::view::ViewDepthTexture;
 use bevy::render::{Extract, RenderApp, RenderSystems};
 use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
 use bevy::window::ExitCondition;
+use render_core::coordinates::{source_to_bevy, FrameBasis, LengthWidthHeight, SourceRotation};
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -60,14 +61,50 @@ mod shared_shadows;
 mod aux_material;
 #[path = "video.rs"]
 mod video;
+#[path = "capture_plan.rs"]
+mod capture_plan;
+#[path = "depth_reduce.rs"]
+mod depth_reduce;
+#[path = "projection.rs"]
+mod projection;
+#[cfg(feature = "gpu-video")]
+#[path = "gpu_video.rs"]
+mod gpu_video;
+use capture_plan::CapturePlan;
 use video::VideoSink;
 
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
-#[derive(clap::Parser, Debug, Clone, bevy::prelude::Resource)]
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CaptureProfile { Training, Showcase }
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Product { Rgb, Depth, Labels, Lidar, Radar }
+
+#[derive(clap::Parser, Debug, Clone, bevy::prelude::Resource, serde::Serialize)]
 pub struct CaptureArgs {
+    /// Profiles change cadence/products and approved resolution defaults,
+    /// never silently disable postprocessing or alter lighting/codec quality.
+    #[arg(long, value_enum, default_value = "training")]
+    pub profile: CaptureProfile,
+    /// Override profile products. Labels are exact instance+semantic images.
+    #[arg(long, value_enum, value_delimiter = ',')]
+    pub products: Vec<Product>,
+    /// RGB sampling rate within the bounded source interval (training 2 Hz,
+    /// showcase scene rate). Mutually exclusive with explicit timestamps.
+    #[arg(long, conflicts_with_all = ["timestamps_seconds", "keyframes_seconds"])]
+    pub capture_hz: Option<f64>,
+    /// Absolute scene timestamps, in seconds; must name existing source ticks.
+    #[arg(long, value_delimiter = ',', conflicts_with = "keyframes_seconds")]
+    pub timestamps_seconds: Vec<f64>,
+    /// Current-keyframe times. RGB is the union of each t0+[-1.5,-1,-0.5,0];
+    /// depth/lidar/radar are emitted only at the named current keyframes.
+    #[arg(long, value_delimiter = ',')]
+    pub keyframes_seconds: Vec<f64>,
     /// qualification/render-qualification-program.v1.json (prontoRig source).
     #[arg(long)]
     pub rig_program: String,
@@ -83,18 +120,26 @@ pub struct CaptureArgs {
     /// First scene-state tick index to capture (default 0).
     #[arg(long, default_value_t = 0)]
     pub tick: u32,
-    /// Number of ticks to capture in this process. One process loads the map
-    /// once and captures every tick, which is the difference between paying
-    /// the ~10-minute bring-up per tick and paying it per clip.
+    /// Number of source ticks in the bounded interval, before output sampling.
     #[arg(long, default_value_t = 1)]
     pub tick_count: u32,
-    /// Stride between captured ticks in the scene-state document.
+    /// Source-document stride (not the output cadence). No tail clamping.
     #[arg(long, default_value_t = 1)]
     pub tick_stride: u32,
-    #[arg(long, default_value_t = 736)]
+    /// Training defaults to 1280x720; showcase to 1920x1080. Qwen-Drive's
+    /// 921600-pixel current-frame cap/grid sees 1280x704: 720p computes 1.02x
+    /// those pixels, versus 2.30x for 1080p. Supersampling fidelity is a
+    /// separate measured trade; --width 960 --height 540 is an explicit dial.
+    #[arg(long, default_value = "1920", default_value_if("profile", "training", "1280"))]
     pub width: u32,
-    #[arg(long, default_value_t = 416)]
+    /// Paired profile height; postprocessing/lighting stay enabled in both.
+    #[arg(long, default_value = "1080", default_value_if("profile", "training", "720"))]
     pub height: u32,
+    /// Lock the physical camera aspect independently of the pixel grid.
+    /// For model-ready 1280x704 or 544x288, use 1.7777778 (16:9) to reproduce
+    /// the real-data vertical squash without changing the physical field of view.
+    #[arg(long)]
+    pub projection_aspect: Option<f32>,
     #[arg(long, default_value_t = 20)]
     pub warmup: u32,
     /// App ticks of stable mesh-entity count required before the instance
@@ -113,36 +158,45 @@ pub struct CaptureArgs {
     /// RGB artifact codec. `jpeg` is ~10x smaller and ~5x cheaper to encode
     /// than PNG; instance and semantic passes are never lossy, whatever this
     /// says, because their pixels are ids rather than colours.
-    #[arg(long, default_value = "png")]
+    #[arg(long, default_value = "jpeg", value_parser = ["png", "jpeg"])]
     pub rgb_format: String,
     /// JPEG quality when `--rgb-format jpeg`.
-    #[arg(long, default_value_t = 92)]
+    #[arg(long, default_value_t = 90)]
     pub jpeg_quality: u8,
-    /// Depth artifact format: `f32` (raw, 4 bytes/px) or `f16` (half, 2
-    /// bytes/px). Reverse-Z depth in [0,1] keeps ~3 decimal digits in f16,
-    /// which is 1 cm at 10 m and 1 m at 300 m.
-    #[arg(long, default_value = "f32")]
+    /// `f32`/`f16`: legacy reverse-Z. `metric-f16`: reduced axial metres +
+    /// validity mask, 1..120m, invalid=0. Profile default: training metric-f16,
+    /// showcase f32 (only when depth was explicitly requested).
+    #[arg(long, default_value = "profile", value_parser = ["profile", "f32", "f16", "metric-f16"])]
     pub depth_format: String,
+    /// Metric depth reduction per dimension; nearest foreground wins a cell.
+    #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..=16))]
+    pub depth_scale: u32,
     /// Lidar/radar artifact encoding: `ascii` (CARLA-parity text) or `binary`
     /// (little-endian PLY / packed f32 rows).
-    #[arg(long, default_value = "ascii")]
+    #[arg(long, default_value = "binary", value_parser = ["ascii", "binary"])]
     pub point_format: String,
     /// Stream RGB directly to final MP4 containers instead of per-frame files.
     #[arg(long)]
     pub video: bool,
     /// x264 pins thread/GOP settings; NVENC is an explicit hardware-encoder option.
-    #[arg(long, default_value = "x264", value_parser = ["x264", "nvenc"])]
+    #[arg(long, default_value = "x264", value_parser = ["x264", "nvenc", "gpu-nvenc"])]
     pub video_encoder: String,
     #[arg(long, default_value_t = 18)]
     pub video_crf: u32,
-    #[arg(long, default_value_t = 50.0)]
-    pub video_fps: f64,
+    /// Optional assertion of container cadence; otherwise derived from samples.
+    #[arg(long)]
+    pub video_fps: Option<f64>,
     /// Only RGB products for selected cameras (no depth or ID view).
     #[arg(long)]
     pub rgb_only: bool,
     /// Emit device timestamp timings per view, shadows and readback transfer.
     #[arg(long)]
     pub profile_gpu: bool,
+    /// Bounded staging ring depth. Values above one overlap GPU rendering
+    /// with older readbacks; they add one staging allocation per product/slot.
+    /// Timestamp profiling uses the single-slot reference path.
+    #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u32).range(1..=8))]
+    pub readback_slots: u32,
     /// Disable directional shadows for a quality/performance ablation.
     #[arg(long)]
     pub no_shadows: bool,
@@ -157,9 +211,13 @@ pub struct CaptureArgs {
     /// Compare every GPU beam with the CPU reference; expensive, not a timing mode.
     #[arg(long)]
     pub verify_gpu_lidar: bool,
-    /// Share directional shadows across the union of camera frusta; lower texel density.
+    /// Opt out of the shared-shadow default for both profiles. Shared atlases
+    /// lower texel density: the measured front view changed 9.80% of pixels,
+    /// 3.93% by >16/255 (max 250), concentrated on road/shadow boundaries.
+    /// A prior matched comparison saved about 23% tick time; this is an accepted
+    /// fidelity-for-speed trade, not pixel equivalence.
     #[arg(long)]
-    pub shared_shadows: bool,
+    pub per_view_shadows: bool,
     /// Batch ID clones with a single material and per-instance tags.
     #[arg(long)]
     pub batch_ids: bool,
@@ -189,14 +247,15 @@ struct RenderSender(crossbeam_channel::Sender<SentPass>);
 
 #[derive(Component, Clone)]
 struct ImageCopier {
-    buffer: Buffer,
+    buffers: Vec<Buffer>,
     src_image: Handle<Image>,
     key: String,
 }
 
 #[derive(Component, Clone)]
 struct DepthCopier {
-    buffer: Buffer,
+    buffers: Vec<Buffer>,
+    reduced: Option<Buffer>,
     src_image: Handle<Image>,
     key: String,
 }
@@ -219,9 +278,27 @@ struct FrameStamp(u64);
 /// running unconditionally.
 #[derive(Resource, Default, Clone)]
 struct ArmedFrames(Vec<u64>);
+#[derive(Resource, Default)]
+struct ArmedTargets(Vec<u64>);
 
 #[derive(Resource, Default)]
 struct CaptureFence(Option<wgpu::SubmissionIndex>);
+
+struct PendingPass {
+    key: String,
+    buffer: Buffer,
+}
+
+struct PendingReadback {
+    frame: u64,
+    passes: Vec<PendingPass>,
+    ready: crossbeam_channel::Receiver<()>,
+    submission: wgpu::SubmissionIndex,
+    started: Instant,
+}
+
+#[derive(Resource, Default)]
+struct ReadbackRing(VecDeque<PendingReadback>);
 
 /// Per-stage profile clock. Every stage of bring-up and every per-tick stage
 /// prints one `PROF` line, so a run is attributable without a profiler.
@@ -270,10 +347,16 @@ struct InFlight {
     sequence_index: usize,
     /// Scene-state tick number, used for output file names.
     tick: u32,
+    targets: bool,
     /// This tick's lidar/radar work, running while the GPU renders its
     /// cameras. Joined when the tick's camera passes are written.
     cpu_sensors: Option<bevy::tasks::Task<CpuSensorTiming>>,
 }
+
+/// The unfiltered interval owns actor identity and dense IMU/GNSS history even
+/// when only a sparse subset of its camera/target timestamps is captured.
+#[derive(Resource, Deref)]
+struct CaptureSource(std::sync::Arc<crate::scene_state::SceneSequence>);
 
 /// Capture cursor across the batched ticks.
 #[derive(Resource, Default)]
@@ -286,8 +369,7 @@ struct CaptureProgress {
     written: usize,
     /// Wall clock of the first armed frame, for the steady-state rate.
     first_armed: Option<Instant>,
-    /// Ticks this process will capture: the parsed sequence length, which a
-    /// single-tick stream input caps at 1 regardless of `--tick-count`.
+    /// Number of scheduled output samples, distinct from source coverage.
     planned: usize,
 }
 
@@ -353,21 +435,16 @@ struct HarnessState {
     entity_ids: HashMap<Entity, u32>,
 }
 
-fn mount_world_transform(ego: Transform, m: &Mount) -> Transform {
-    let rot_ego = ego.rotation;
-    let pos = ego.translation + rot_ego.mul_vec3(Vec3::new(m.x, m.y, m.z));
-    // CARLA lowering maps (x,y,z) to (x,z,y), passing source yaw through:
-    // positive yaw aims +X toward +Z. Pitch is +Z (nose up), roll is +X.
-    let rot = rot_ego * Quat::from_euler(EulerRot::YZX, -m.yaw, m.pitch, m.roll);
-    Transform { translation: pos, rotation: rot, scale: Vec3::ONE }
+fn mount_transform(ego: Transform, mount: &Mount, basis: FrameBasis) -> Transform {
+    let frame = source_to_bevy(LengthWidthHeight::UNIT, SourceRotation::MountYawPitchRoll {
+        parent_rotation: ego.rotation, yaw: mount.yaw, pitch: mount.pitch, roll: mount.roll,
+    }, basis);
+    Transform {
+        translation: ego.translation + ego.rotation * Vec3::new(mount.x, mount.y, mount.z),
+        rotation: frame.rotation, scale: Vec3::ONE,
+    }
 }
 
-fn mount_camera_transform(ego: Transform, mount: &Mount) -> Transform {
-    let mut transform = mount_world_transform(ego, mount);
-    // Bevy's optical axis is -Z; the rig's optical/beam axis is +X.
-    transform.rotation *= Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
-    transform
-}
 
 #[cfg(test)]
 mod mount_tests {
@@ -378,7 +455,7 @@ mod mount_tests {
         let ego = Transform::from_xyz(7.0, 2.0, -3.0)
             .with_rotation(Quat::from_rotation_y(0.8));
         let mount = crate::rig::chase_camera(1920, 1080).mount;
-        let camera = mount_camera_transform(ego, &mount);
+        let camera = mount_transform(ego, &mount, FrameBasis::Camera);
         let forward = *camera.forward();
         let heading = ego.rotation * Vec3::X;
         assert!(Vec3::new(forward.x, 0.0, forward.z).normalize().abs_diff_eq(heading, 1e-5));
@@ -390,17 +467,116 @@ mod mount_tests {
     #[test]
     fn mount_pitch_moves_optical_axis_up_and_roll_keeps_it_forward() {
         let mut mount = Mount { x: 0.0, y: 0.0, z: 0.0, yaw: 0.0, pitch: 30.0f32.to_radians(), roll: 0.0 };
-        let pitched = mount_camera_transform(Transform::IDENTITY, &mount);
+        let pitched = mount_transform(Transform::IDENTITY, &mount, FrameBasis::Camera);
         assert!((*pitched.forward()).abs_diff_eq(Vec3::new(30.0f32.to_radians().cos(), 0.5, 0.0), 1e-5));
         mount.pitch = 0.0;
         mount.roll = std::f32::consts::FRAC_PI_2;
-        let rolled = mount_camera_transform(Transform::IDENTITY, &mount);
+        let rolled = mount_transform(Transform::IDENTITY, &mount, FrameBasis::Camera);
         assert!((*rolled.forward()).abs_diff_eq(Vec3::X, 1e-5));
         assert!((*rolled.up()).abs_diff_eq(Vec3::Z, 1e-5));
         mount.roll = 0.0;
         mount.yaw = std::f32::consts::FRAC_PI_2;
-        let yawed = mount_camera_transform(Transform::IDENTITY, &mount);
+        let yawed = mount_transform(Transform::IDENTITY, &mount, FrameBasis::Camera);
         assert!((*yawed.forward()).abs_diff_eq(Vec3::Z, 1e-5), "source +90 yaw must match CARLA +Y");
+    }
+
+    #[test]
+    fn reordered_actors_do_not_change_imu_host() {
+        let sequence = crate::scene_state::SceneSequence::from_json(r#"{
+            "version":"simforge.scene-state.v1","mapId":"reordered","tickHz":50,
+            "actors":[{"id":"host","actorClass":"car"},{"id":"other","actorClass":"car"}],
+            "frames":[
+                {"tick":0,"actors":[
+                    {"id":"host","kind":"spawn","position":[0,0,0],"velocity":[5,0,0]},
+                    {"id":"other","kind":"spawn","position":[30,0,0],"velocity":[0,0,0]}]},
+                {"tick":1,"actors":[
+                    {"id":"other","kind":"update","position":[30,0,0],"velocity":[0,0,0]},
+                    {"id":"host","kind":"update","position":[0.1,0,0],"velocity":[5,0,0]}]}
+            ]}"#, 0, 2, 1).unwrap();
+        let (imu, _) = derive_imu_gnss(Some(&sequence), None);
+        assert_eq!(imu[1].accel, [0.0,0.0,0.0], "a constant-speed host must not inherit another actor's velocity");
+    }
+
+    #[test]
+    fn late_actor_keeps_its_class_in_the_frozen_registry() {
+        let source = crate::scene_state::SceneSequence::from_json(r#"{
+            "version":"simforge.scene-state.v1","mapId":"late-actor","tickHz":50,
+            "actors":[{"id":"host","actorClass":"car"},{"id":"late","actorClass":"pedestrian"}],
+            "frames":[
+                {"tick":0,"actors":[{"id":"host","kind":"spawn","position":[0,0,0]}]},
+                {"tick":1,"actors":[{"id":"host","kind":"update","position":[0,0,0]},
+                    {"id":"late","kind":"spawn","position":[10,0,0]}]}
+            ]}"#, 0, 2, 1).unwrap();
+        assert_eq!(actor_class_of(&source, "late"), SemanticClass::Pedestrian);
+    }
+
+    #[test]
+    fn actor_proxy_extents_follow_source_heading() {
+        let angle = 0.63f32;
+        let actor: crate::scene_state::ActorState = serde_json::from_value(json!({
+            "id":"other-car","kind":"spawn","actorClass":"car",
+            "transform":{"position":[3,0,7],"rotation":[0.0,(angle*0.5).sin(),0.0,(angle*0.5).cos()]},
+            "velocity":[angle.cos(),0.0,-angle.sin()]
+        })).unwrap();
+        let transform = actor_world_transform(Some(&actor));
+        let mesh: Mesh = actor_shape(&actor).into();
+        let mut scene = RaycastScene::new();
+        push_mesh_triangles_matrix(&mesh, transform.to_matrix(), &mut scene, 7);
+        scene.build();
+        // Expected heading comes from declared motion, NOT from the converted
+        // quaternion, so mirroring both the shape and its test ray cannot pass.
+        let heading = Vec3::from_slice(&actor.velocity).normalize();
+        let side = heading.cross(Vec3::Y);
+        let along = scene.cast(transform.translation + heading*10.0 + Vec3::Y*0.2 + side*0.1, -heading, 20.0).unwrap();
+        let across = scene.cast(transform.translation + side*10.0 + Vec3::Y*0.2 + heading*0.1, -side, 20.0).unwrap();
+        let length_half = 10.0 - along.distance;
+        let width_half = 10.0 - across.distance;
+        assert!((length_half-2.4).abs() < 1e-4, "longitudinal half-extent {length_half}m");
+        assert!((width_half-0.95).abs() < 1e-4, "lateral half-extent {width_half}m");
+        assert!(length_half > width_half);
+    }
+
+    fn turning_ray_scene() -> RaycastScene {
+        let mut scene = RaycastScene::new();
+        for [a,b,c] in [
+            [Vec3::new(-4.0,-4.0,10.0),Vec3::new(4.0,-4.0,10.0),Vec3::new(4.0,4.0,10.0)],
+            [Vec3::new(-4.0,-4.0,10.0),Vec3::new(4.0,4.0,10.0),Vec3::new(-4.0,4.0,10.0)],
+            [Vec3::new(20.0,-4.0,-4.0),Vec3::new(20.0,4.0,-4.0),Vec3::new(20.0,4.0,4.0)],
+            [Vec3::new(20.0,-4.0,-4.0),Vec3::new(20.0,4.0,4.0),Vec3::new(20.0,-4.0,4.0)],
+        ] { scene.push_tri(Tri { a,b,c,instance_id:9 }); }
+        scene.build();
+        scene
+    }
+
+    #[test]
+    fn turning_lidar_returns_sensor_local_points() {
+        let scene = turning_ray_scene();
+        let mount = Mount { x:0.0,y:0.0,z:0.0,yaw:0.0,pitch:0.0,roll:0.0 };
+        let config = lidar::LidarConfig { channels:1,rotation_frequency_hz:1.0,points_per_second:64,
+            vfov_deg:0.0,hfov_deg:1.0,range_m:50.0 };
+        for (pose, range) in [
+            (Transform::from_xyz(0.0,0.3,0.2).with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),9.8),
+            (Transform::from_xyz(0.4,0.3,0.0),19.6),
+        ] {
+            let sensor = mount_transform(pose, &mount, FrameBasis::Rig);
+            let points = lidar::scan(&scene,&config,sensor.translation,sensor.rotation,&|_|SemanticClass::Prop);
+            assert_eq!(points.len(),64);
+            let center = &points[32];
+            assert!(Vec3::new(center.x,center.y,center.z).abs_diff_eq(Vec3::new(range,0.0,0.0),1e-4),
+                "forward return must be +sensor-X after the turn, got [{},{},{}]",center.x,center.y,center.z);
+        }
+    }
+
+    #[test]
+    fn radar_forward_mount_and_velocity_follow_the_same_frame() {
+        let scene = turning_ray_scene();
+        let mount = Mount { x:0.0,y:0.3,z:0.2,yaw:std::f32::consts::FRAC_PI_2,pitch:0.0,roll:0.0 };
+        let sensor = mount_transform(Transform::IDENTITY, &mount, FrameBasis::Rig);
+        let config = radar::RadarConfig { hfov_deg:0.0,vfov_deg:0.0,range_m:50.0,azimuth_rays:1,elevation_rows:1 };
+        let detections = radar::scan(&scene,&config,sensor.translation,sensor.rotation,Vec3::Z*5.0,&|_|Vec3::ZERO);
+        assert_eq!(detections.len(),1);
+        assert!((detections[0].depth-9.8).abs()<1e-4);
+        assert!((detections[0].velocity+5.0).abs()<1e-4, "approaching a static wall must have negative relative radial velocity");
     }
 }
 
@@ -446,15 +622,38 @@ fn select_sensors(
     Ok(kept)
 }
 
-pub fn run_capture(args: CaptureArgs) -> Result<()> {
+pub fn run_capture(mut args: CaptureArgs) -> Result<()> {
 
     if args.glbs.iter().any(|g| !Path::new(g).is_absolute()) {
         bail!("glb paths must be absolute");
+    }
+    if args.width == 0 || args.height == 0 || args.tick_count == 0 || args.tick_stride == 0 {
+        bail!("capture dimensions, source count and source stride must be positive");
+    }
+    if args.scene_state.is_none() && args.tick_count != 1 {
+        bail!("multi-tick capture requires a scene-state source document");
+    }
+    if args.projection_aspect.is_some_and(|aspect| !aspect.is_finite() || aspect <= 0.0) {
+        bail!("physical projection aspect must be finite and positive");
+    }
+    if args.profile_gpu && args.readback_slots != 1 {
+        bail!("--profile-gpu requires --readback-slots 1 (one timestamp staging slot)");
+    }
+    if args.video_encoder == "gpu-nvenc" {
+        if !cfg!(feature = "gpu-video") { bail!("gpu-nvenc requires building sensors with --features gpu-video"); }
+        if !args.video { bail!("gpu-nvenc requires --video"); }
+        if args.profile_gpu { bail!("GPU timestamps currently cover host readback, not the device encoder copy"); }
+        if args.video_crf > 51 { bail!("NVENC quality must be within 0..51"); }
     }
     std::env::set_var("BEVY_ASSET_ROOT", render_core::platform::ASSET_ROOT);
     let rig_text = std::fs::read_to_string(&args.rig_program)
         .with_context(|| format!("read {}", args.rig_program))?;
     let mut rig: RigSpec = crate::rig::parse_pronto_rig(&rig_text, args.width, args.height)?;
+    if let Some(aspect) = args.projection_aspect {
+        for camera in rig.sensors.iter_mut().filter(|sensor| sensor.kind == SensorKind::Camera) {
+            camera.vertical_fov_deg = Some(crate::rig::vertical_fov_deg(camera.horizontal_fov_deg, aspect));
+        }
+    }
     if !args.sensors.is_empty() {
         let before = rig.sensors.len();
         rig.sensors = select_sensors(rig.sensors, &args.sensors)?;
@@ -469,8 +668,8 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
     println!("RIG {} cameras={} lidars={} radars={} (+chase)",
         rig.rig_id, n_cams, rig.lidars().count(), rig.radars().count());
 
-    let sequence: Option<crate::scene_state::SceneSequence> = match &args.scene_state {
-        Some(p) => Some(
+    let source: crate::scene_state::SceneSequence = match &args.scene_state {
+        Some(p) =>
             crate::scene_state::SceneSequence::from_json(
                 &std::fs::read_to_string(p)?,
                 args.tick,
@@ -478,10 +677,19 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
                 args.tick_stride,
             )
             .with_context(|| format!("parse {}", p))?,
-        ),
-        None => None,
+        None => crate::scene_state::SceneSequence { ticks: vec![SceneState {
+            version: crate::scene_state::SCENE_STATE_SCHEMA.into(), map_id: "static".into(),
+            tick: args.tick, tick_hz: 50.0, weather: None, time_of_day: None, actors: Vec::new(),
+        }], rig_host_id: None },
     };
-    let planned_ticks = sequence.as_ref().map(|s| s.ticks.len()).unwrap_or(1);
+    let (mut plan, sequence) = capture_plan::prepare(&mut args, &source)?;
+    rig.sensors.retain(|sensor| match sensor.kind {
+        SensorKind::Camera => true,
+        SensorKind::Lidar => args.products.contains(&Product::Lidar),
+        SensorKind::Radar => args.products.contains(&Product::Radar),
+    });
+    plan.metadata["rig"] = serde_json::to_value(&rig)?;
+    let planned_ticks = sequence.ticks.len();
     println!(
         "BATCH ticks={planned_ticks} start={} stride={}",
         args.tick, args.tick_stride
@@ -496,11 +704,19 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
     });
 
     let out_dir = PathBuf::from(&args.out);
+    if out_dir.exists() {
+        if let Some(entry) = std::fs::read_dir(&out_dir)?.next() {
+            bail!("output directory is not empty ({}); choose a fresh --out path to avoid mixing clips", entry?.path().display());
+        }
+    }
     std::fs::create_dir_all(&out_dir)?;
+    std::fs::write(out_dir.join("capture-samples.json"), serde_json::to_vec_pretty(&plan.metadata)?)?;
 
     let (tx, rx) = crossbeam_channel::unbounded::<SentPass>();
 
     let mut app = App::new();
+    #[cfg(feature = "gpu-video")]
+    if args.video_encoder == "gpu-nvenc" { app.insert_resource(render_core::gpu_interop::raw_vulkan_init_settings()); }
     app.insert_resource(ClearColor(Color::srgb(0.53, 0.74, 0.92)))
         .add_plugins((
             DefaultPlugins
@@ -525,6 +741,8 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
         .insert_resource(DirectionalLightShadowMap { size: 2048 })
         .insert_resource(MainReceiver(rx))
         .insert_resource(args.clone())
+        .insert_resource(plan)
+        .insert_resource(CaptureSource(std::sync::Arc::new(source)))
         .insert_resource(rig)
         .insert_resource(HarnessState {
             total_glbs: args.glbs.len() as u32,
@@ -566,16 +784,14 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
         .add_systems(PreUpdate, collect_passes)
         .add_plugins(render_core::readiness::GpuReadinessPlugin);
     aux_material::install(&mut app);
-    if args.shared_shadows {
+    if !args.per_view_shadows {
         shared_shadows::install(&mut app);
     }
 
-    if let Some(sequence) = sequence {
-        // The first tick doubles as the bring-up scene state (actor cuboids,
-        // ground snapping, instance registry).
-        app.insert_resource(sequence.ticks[0].clone());
-        app.insert_resource(sequence);
-    }
+    // The first sampled tick is also the bring-up pose; metadata retains the
+    // full bounded source interval independently of the output sample count.
+    app.insert_resource(sequence.ticks[0].clone());
+    app.insert_resource(sequence);
     if let Some(tm) = tmerc {
         app.insert_resource(tm);
     }
@@ -588,12 +804,21 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
         .init_resource::<DepthCopiers>()
         .init_resource::<FrameStamp>()
         .init_resource::<ArmedFrames>()
+        .init_resource::<ArmedTargets>()
         .init_resource::<CaptureFence>()
+        .init_resource::<ReadbackRing>()
+        .insert_resource(args.clone())
         .add_systems(ExtractSchedule, (extract_copiers, extract_frame, extract_armed))
         .add_systems(RenderGraph, copy_passes.after(bevy::render::renderer::RenderGraphSystems::Submit))
         .add_systems(bevy::render::Render, receive_passes.after(RenderSystems::Render));
     if args.profile_gpu {
         gpu_profile::install(&mut app);
+    }
+    #[cfg(feature = "gpu-video")]
+    if args.video_encoder == "gpu-nvenc" {
+        let cameras = app.world().resource::<RigSpec>().cameras().enumerate()
+            .map(|(index, camera)| (format!("rgb{index}"), camera.id.clone())).collect();
+        gpu_video::install(&mut app, &args, cameras);
     }
 
     app.run();
@@ -680,7 +905,7 @@ fn spawn_actor_boxes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    sequence: Option<Res<crate::scene_state::SceneSequence>>,
+    sequence: Option<Res<CaptureSource>>,
     sensor_scene: Option<Res<SensorScene>>,
     mut state: ResMut<HarnessState>,
 ) {
@@ -693,7 +918,7 @@ fn spawn_actor_boxes(
 
     // The rig host gets no cuboid: the sensors are mounted on it, and a box
     // around them would occlude every scan.
-    let ego_id = sequence.ticks[0].ego().map(|a| a.id.clone()).unwrap_or_default();
+    let ego_id = sequence.rig_host_id.clone().unwrap_or_default();
     // First appearance wins for dims and initial pose; ids stay in first-seen
     // order so the registry sort below is fed a stable set.
     let mut seen: Vec<&crate::scene_state::ActorState> = Vec::new();
@@ -709,29 +934,21 @@ fn spawn_actor_boxes(
     }
 
     for a in seen {
-        let (l, w, h) = actor_dims(a);
+        let shape = actor_shape(a);
         let pos = Vec3::from_slice(&a.transform.position);
-        let quat = Quat::from_xyzw(
-            a.transform.rotation[0],
-            a.transform.rotation[1],
-            a.transform.rotation[2],
-            a.transform.rotation[3],
-        );
         let ground = ground_y(&sensor_scene.scene, pos);
+        let mut transform = actor_world_transform(Some(a));
+        transform.translation.y = ground + shape.half_size.y;
         commands.spawn((
             ActorBox,
             ActorBoxOf(a.id.clone()),
             Name::new(format!("actor:{}", a.id)),
-            Mesh3d(meshes.add(Cuboid::new(w, h, l))),
+            Mesh3d(meshes.add(shape)),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.85, 0.85, 0.88),
                 ..default()
             })),
-            Transform {
-                translation: Vec3::new(pos.x, ground + h * 0.5, pos.z),
-                rotation: quat,
-                scale: Vec3::ONE,
-            },
+            transform,
             RenderLayers::layer(0),
         ));
     }
@@ -753,14 +970,17 @@ fn setup_ready_for_boxes(state: &HarnessState) -> bool {
 
 /// Catalog dims lookup is WSB2 territory; until then dims come from the
 /// scene-state catalogId convention `vehicle.*`/`walker.*` with sane defaults.
-fn actor_dims(a: &crate::scene_state::ActorState) -> (f32, f32, f32) {
-    match a.actor_class.as_deref().unwrap_or("prop") {
+fn actor_shape(a: &crate::scene_state::ActorState) -> Cuboid {
+    let (length, width, height) = match a.actor_class.as_deref().unwrap_or("prop") {
         "car" => (4.8, 1.9, 1.5),
         "truck" => (8.0, 2.5, 3.2),
         "pedestrian" => (0.6, 0.6, 1.75),
         "cyclist" => (1.7, 0.6, 1.7),
         _ => (1.0, 1.0, 1.0),
-    }
+    };
+    let shape = source_to_bevy(LengthWidthHeight { length, width, height },
+        SourceRotation::WorldQuaternion([0.0,0.0,0.0,1.0]), FrameBasis::Rig).size_xyz;
+    Cuboid::new(shape.x, shape.y, shape.z)
 }
 
 fn poll_roots(
@@ -823,7 +1043,7 @@ fn build_id_and_semantic_passes(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut aux_materials: ResMut<Assets<aux_material::AuxMaterial>>,
     meshes: Res<Assets<Mesh>>,
-    scene_state: Option<Res<crate::scene_state::SceneState>>,
+    source: Res<CaptureSource>,
     sensor_scene: Option<ResMut<SensorScene>>,
     meshes_q: Query<
         (
@@ -903,7 +1123,7 @@ fn build_id_and_semantic_passes(
         entity_ids.insert(e, id);
         instance_names.push((id, name.clone()));
         let class = if let Some(actor) = name.strip_prefix("actor:") {
-            actor_class_of(scene_state.as_deref(), actor)
+            actor_class_of(&source, actor)
         } else {
             SemanticClass::from_mesh_name(&name)
         };
@@ -920,7 +1140,7 @@ fn build_id_and_semantic_passes(
     let mut legend_classes: Vec<(u32, u8)> = Vec::new();
     let mut ray_scene = InstancedScene::new();
     let mut mesh_cache = HashMap::new();
-    let shared_aux = (args.batch_ids && !args.rgb_only).then(|| aux_materials.add(aux_material::AuxMaterial::default()));
+    let shared_aux = (args.batch_ids && args.products.contains(&Product::Labels)).then(|| aux_materials.add(aux_material::AuxMaterial::default()));
 
     let mut ordered_meshes: Vec<_> = meshes_q.iter().collect();
     ordered_meshes.sort_unstable_by_key(|row| state.entity_ids.get(&row.0).copied().unwrap_or(0));
@@ -933,7 +1153,7 @@ fn build_id_and_semantic_passes(
             .find(|c| c.id() == instance_class_lookup(&instance_classes, id))
             .unwrap_or(SemanticClass::Prop);
 
-        if !args.rgb_only {
+        if args.products.contains(&Product::Labels) {
             let mut cmd = commands.spawn((
                 IdClone, Mesh3d(mesh3d.0.clone()), RenderLayers::layer(1),
                 bevy::mesh::MeshTag((id & 0xffff) | (u32::from(class.id()) << 16)),
@@ -1027,8 +1247,8 @@ fn instance_class_lookup(classes: &[(u32, u8)], id: u32) -> u8 {
         .unwrap_or(0)
 }
 
-fn actor_class_of(ss: Option<&crate::scene_state::SceneState>, actor_id: &str) -> SemanticClass {
-    ss.and_then(|s| s.actors.iter().find(|a| a.id == actor_id))
+fn actor_class_of(source: &crate::scene_state::SceneSequence, actor_id: &str) -> SemanticClass {
+    source.ticks.iter().find_map(|state| state.actors.iter().find(|actor| actor.id == actor_id))
         .and_then(|a| a.actor_class.as_deref())
         .map(SemanticClass::from_actor_class)
         .unwrap_or(SemanticClass::Prop)
@@ -1122,6 +1342,7 @@ fn spawn_sensors(
     mut commands: Commands,
     args: Res<CaptureArgs>,
     rig: Res<RigSpec>,
+    source: Res<CaptureSource>,
     scene_state: Option<Res<crate::scene_state::SceneState>>,
     sensor_scene: Option<Res<SensorScene>>,
     setup: Res<HarnessSetup>,
@@ -1134,7 +1355,7 @@ fn spawn_sensors(
     if state.sensors_spawned || !setup.sensor_scene_ready {
         return;
     }
-    let mut ego = ego_transform(scene_state.as_deref(), args.tick);
+    let mut ego = actor_world_transform(scene_state.as_deref().and_then(|tick| source.rig_host_at(tick)));
     // Sensors mount relative to the ground plane: drop the ego origin onto
     // the static surface under it.
     ego.translation.y = ground_y(&sensor_scene.scene, ego.translation);
@@ -1149,7 +1370,7 @@ fn spawn_sensors(
         rig.cameras().enumerate().map(|(i, s)| (s.id.clone(), i)).collect();
 
     for sensor in rig.sensors.iter() {
-        let tf = mount_camera_transform(ego, &sensor.mount);
+        let tf = mount_transform(ego, &sensor.mount, FrameBasis::Camera);
         if sensor.kind != SensorKind::Camera {
             continue; // lidar/radar are CPU-side; handled in collect_passes
         }
@@ -1162,7 +1383,9 @@ fn spawn_sensors(
             setup_target_image(&mut images, args.width, args.height, TextureFormat::Rgba8UnormSrgb);
         let rgb_handle = rgb_image.clone();
         commands.spawn(ImageCopier {
-            buffer: make_buffer(&device, rgba_buf),
+            buffers: if args.video_encoder == "gpu-nvenc" { Vec::new() } else {
+                (0..args.readback_slots).map(|_| make_buffer(&device, rgba_buf)).collect()
+            },
             src_image: rgb_image.clone(),
             key: format!("rgb{i}"),
         });
@@ -1178,19 +1401,29 @@ fn spawn_sensors(
             None,
             sensor.mount,
             args.fast_gpu,
+            args.projection_aspect,
         );
         cam_order += 1;
 
-        if !is_chase && !args.rgb_only {
+        if !is_chase && args.products.contains(&Product::Depth) {
             // Raw reverse-Z Depth32Float readback rides the RGB view. The chase
             // camera is a review view, not a measurement: no depth artifact is
             // written for it, so no staging buffer is allocated or mapped.
+            let bytes = if args.depth_format == "metric-f16" {
+                (args.width / args.depth_scale * (args.height / args.depth_scale) * 4) as usize
+            } else { rgba_buf };
             commands.spawn(DepthCopier {
                 src_image: rgb_handle,
-                buffer: make_buffer(&device, rgba_buf),
+                buffers: (0..args.readback_slots).map(|_| make_buffer(&device, bytes)).collect(),
+                reduced: (args.depth_format == "metric-f16").then(|| device.create_buffer(&BufferDescriptor {
+                    label: Some("reduced metric depth"), size: bytes as u64,
+                    usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC, mapped_at_creation: false,
+                })),
                 key: format!("depth{i}"),
             });
+        }
 
+        if !is_chase && args.products.contains(&Product::Labels) {
             // Aux pass: instance id in R/G + semantic class in B, unlit on
             // render-layer 1, black clear, neutral exposure.
             spawn_pass_camera(
@@ -1222,7 +1455,7 @@ fn spawn_pass_camera(
     let image = setup_target_image(images, args.width, args.height, TextureFormat::Rgba8UnormSrgb);
     let rgba_buf = aligned_row(args.width as usize, 4) * args.height as usize;
     commands.spawn(ImageCopier {
-        buffer: make_buffer(device, rgba_buf),
+        buffers: (0..args.readback_slots).map(|_| make_buffer(device, rgba_buf)).collect(),
         src_image: image.clone(),
         key: key.to_string(),
     });
@@ -1235,7 +1468,7 @@ fn spawn_pass_camera(
     };
     spawn_camera_entity(
         commands, transform, vfov_rad, layer, clear_black, tonemap, order, image.into(), exposure,
-        mount, args.fast_gpu,
+        mount, args.fast_gpu, args.projection_aspect,
     );
 }
 
@@ -1252,10 +1485,11 @@ fn spawn_camera_entity(
     exposure: Option<bevy::camera::Exposure>,
     mount: Mount,
     fast_gpu: bool,
+    projection_aspect: Option<f32>,
 ) {
     let mut e = commands.spawn((
         Camera3d {
-            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC).into(),
+            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING).into(),
             ..default()
         },
         Camera {
@@ -1267,7 +1501,7 @@ fn spawn_camera_entity(
             },
             ..default()
         },
-        Projection::from(PerspectiveProjection { fov: vfov_rad, near: 0.5, far: 900.0, ..default() }),
+        projection::camera_projection(vfov_rad, projection_aspect),
         Msaa::Off,
         tonemap,
         transform,
@@ -1289,22 +1523,15 @@ fn spawn_camera_entity(
     }
 }
 
-fn ego_transform(ss: Option<&crate::scene_state::SceneState>, tick_index: u32) -> Transform {
-    match ss.and_then(|s| s.ego()) {
-        Some(ego) => Transform {
-            translation: Vec3::from_slice(&ego.transform.position),
-            rotation: Quat::from_xyzw(
-                ego.transform.rotation[0],
-                ego.transform.rotation[1],
-                ego.transform.rotation[2],
-                ego.transform.rotation[3],
-            ),
+fn actor_world_transform(actor: Option<&crate::scene_state::ActorState>) -> Transform {
+    match actor {
+        Some(actor) => Transform {
+            translation: Vec3::from_slice(&actor.transform.position),
+            rotation: source_to_bevy(LengthWidthHeight::UNIT,
+                SourceRotation::WorldQuaternion(actor.transform.rotation), FrameBasis::Rig).rotation,
             scale: Vec3::ONE,
         },
-        None => {
-            let _ = tick_index;
-            Transform::IDENTITY
-        }
+        None => Transform::IDENTITY,
     }
 }
 
@@ -1355,6 +1582,8 @@ fn tick_frames(mut frame: ResMut<GlobalFrame>, mut state: ResMut<HarnessState>, 
 fn pose_next_tick(
     args: Res<CaptureArgs>,
     rig: Res<RigSpec>,
+    plan: Res<CapturePlan>,
+    source: Res<CaptureSource>,
     frame: Res<GlobalFrame>,
     sequence: Option<Res<crate::scene_state::SceneSequence>>,
     tmerc: Option<Res<TmercOrigin>>,
@@ -1383,23 +1612,26 @@ fn pose_next_tick(
     if frame.0 < args.warmup as u64 {
         return;
     }
-    // At most two ticks in flight: the frame being rendered and the frame
-    // whose readback is landing next Update.
-    if progress.next >= sequence.ticks.len() || progress.in_flight.len() >= 2 {
+    // The render world owns a bounded staging ring; one additional main-world
+    // tick may be posed while the previous render finishes.
+    if progress.next >= sequence.ticks.len() || progress.in_flight.len() >= args.readback_slots as usize + 1 {
         return;
     }
     let started = Instant::now();
     let index = progress.next;
     let tick = &sequence.ticks[index];
+    let targets = plan.target_ticks.contains(&tick.tick);
 
     // ---- ego + camera poses ----
     // The rig host is the same actor for the whole batch: resolved once from
     // the first tick so the mount never hops between vehicles mid-clip.
-    let ego_host = sequence.ticks[0].ego().map(|a| a.id.as_str());
-    let mut ego = ego_transform(Some(tick), tick.tick);
+    let ego_host = source.rig_host_id.as_deref();
+    let host_state = source.rig_host_at(tick);
+    let mut ego = actor_world_transform(host_state);
+    let ego_vel = host_state.map(|actor| Vec3::from_slice(&actor.velocity)).unwrap_or(Vec3::ZERO);
     ego.translation.y = ground_y(&sensor_scene.scene, ego.translation);
     for (cam, mut transform) in &mut cams {
-        *transform = mount_camera_transform(ego, &cam.mount);
+        *transform = mount_transform(ego, &cam.mount, FrameBasis::Camera);
     }
 
     // ---- actor poses ----
@@ -1413,19 +1645,11 @@ fn pose_next_tick(
     for (entity, owner, _, mut transform, mut visibility) in &mut boxes {
         match pose_of.get(owner.0.as_str()) {
             Some(actor) => {
-                let (_, _, h) = actor_dims(actor);
+                let shape = actor_shape(actor);
                 let pos = Vec3::from_slice(&actor.transform.position);
                 let ground = ground_y(&sensor_scene.scene, pos);
-                *transform = Transform {
-                    translation: Vec3::new(pos.x, ground + h * 0.5, pos.z),
-                    rotation: Quat::from_xyzw(
-                        actor.transform.rotation[0],
-                        actor.transform.rotation[1],
-                        actor.transform.rotation[2],
-                        actor.transform.rotation[3],
-                    ),
-                    scale: Vec3::ONE,
-                };
+                *transform = actor_world_transform(Some(actor));
+                transform.translation.y = ground + shape.half_size.y;
                 *visibility = Visibility::Inherited;
                 actor_transform.insert(entity, *transform);
             }
@@ -1471,7 +1695,8 @@ fn pose_next_tick(
     let point_format = PointFormat::from_flag(&args.point_format);
     let task = {
         let out_dir = PathBuf::from(&args.out);
-        let rig = rig.clone();
+        let mut rig = rig.clone();
+        if !targets { rig.sensors.retain(|sensor| sensor.kind == SensorKind::Camera); }
         let statics = std::sync::Arc::clone(&sensor_scene.scene);
         let gpu_lidar = sensor_scene.gpu_lidar.clone();
         let verify_gpu_lidar = args.verify_gpu_lidar;
@@ -1479,7 +1704,7 @@ fn pose_next_tick(
         let classes = sensor_scene.classes.clone();
         let instance_names = state.instance_names.clone();
         let scene_tick = tick.clone();
-        let sequence_for_track = if index == 0 { Some((*sequence).clone()) } else { None };
+        let sequence_for_track = if index == 0 { Some(std::sync::Arc::clone(&source.0)) } else { None };
         let tmerc = tmerc.as_deref().copied();
         let tick_number = tick.tick;
         crate::RAY_POOL.spawn(async move {
@@ -1487,7 +1712,7 @@ fn pose_next_tick(
                 &out_dir,
                 &rig,
                 Some(&scene_tick),
-                sequence_for_track.as_ref(),
+                sequence_for_track.as_deref(),
                 tmerc.as_ref(),
                 &statics,
                 gpu_lidar.as_deref(),
@@ -1498,6 +1723,7 @@ fn pose_next_tick(
                 tick_number,
                 point_format,
                 ego,
+                ego_vel,
                 index == 0,
             )
         })
@@ -1507,6 +1733,7 @@ fn pose_next_tick(
         frame: frame.0,
         sequence_index: index,
         tick: tick.tick,
+        targets,
         cpu_sensors: Some(task),
     });
     progress.next += 1;
@@ -1545,13 +1772,18 @@ fn collect_passes(
     receiver: Res<MainReceiver>,
     args: Res<CaptureArgs>,
     rig: Res<RigSpec>,
+    plan: Res<CapturePlan>,
     mut state: ResMut<HarnessState>,
     mut progress: ResMut<CaptureProgress>,
     mut prof: ResMut<Prof>,
     mut video: ResMut<VideoSink>,
     mut arrived: Local<HashMap<(u64, String), SentPass>>,
     mut exit: MessageWriter<AppExit>,
+    #[cfg(feature = "gpu-video")]
+    device_video: Option<Res<gpu_video::Completion>>,
 ) {
+    #[cfg(feature = "gpu-video")]
+    if let Some(encoder) = &device_video { encoder.check(); }
     // Keyed by (frame, pass key) and RETAINED across calls: a frame's 25 passes
     // can be sent across more than one Update, and a per-call map would drop the
     // early ones, so that frame would never reach its expected count, the
@@ -1566,14 +1798,9 @@ fn collect_passes(
 
     let cam_index_of: HashMap<String, usize> =
         rig.cameras().enumerate().map(|(i, s)| (s.id.clone(), i)).collect();
-    let mut expected = 0usize;
-    for sensor in rig.sensors.iter() {
-        if sensor.kind != SensorKind::Camera {
-            continue;
-        }
-        // Chase: RGB only. Measurement cameras: RGB + depth + aux.
-        expected += if args.rgb_only || sensor.id == crate::rig::CHASE_CAMERA_SENSOR_ID { 1 } else { 3 };
-    }
+    let rgb_passes = rig.cameras().count();
+    let measurement_cameras = rig.cameras().filter(|sensor| sensor.id != crate::rig::CHASE_CAMERA_SENSOR_ID).count();
+    let label_passes = if args.products.contains(&Product::Labels) { measurement_cameras } else { 0 };
 
     let out_dir = PathBuf::from(&args.out);
     let w = args.width as usize;
@@ -1584,6 +1811,8 @@ fn collect_passes(
     // `progress` is free to mutate below.
     let mut ready: Vec<(u64, u32, usize, Option<bevy::tasks::Task<CpuSensorTiming>>)> = Vec::new();
     for flight in progress.in_flight.iter_mut() {
+        let expected = rgb_passes + label_passes
+            + if flight.targets && args.products.contains(&Product::Depth) { measurement_cameras } else { 0 };
         let have = arrived.keys().filter(|(frame, _)| *frame == flight.frame).count();
         if have >= expected {
             ready.push((flight.frame, flight.tick, flight.sequence_index, flight.cpu_sensors.take()));
@@ -1613,7 +1842,8 @@ fn collect_passes(
             // pixels are instance ids and class ids, and a JPEG of an id map is
             // garbage.
             if args.video {
-                video.push(sequence_index, sensor.id.clone(), take(format!("rgb{i}")));
+                let rgba = take(format!("rgb{i}"));
+                if args.video_encoder != "gpu-nvenc" { video.push(sequence_index, sensor.id.clone(), rgba); }
             } else {
                 let (rgb_name, rgb_pass) = match args.rgb_format.as_str() {
                     "jpeg" | "jpg" => (
@@ -1627,7 +1857,7 @@ fn collect_passes(
                 };
                 jobs.push((dir.join(rgb_name), rgb_pass));
             }
-            if !is_chase && !args.rgb_only {
+            if !is_chase && args.products.contains(&Product::Labels) {
                 let instance = take(format!("inst{i}"));
                 jobs.push((
                     dir.join(format!("{tick:08}.semantic.png")),
@@ -1637,8 +1867,14 @@ fn collect_passes(
                     dir.join(format!("{tick:08}.instance.png")),
                     WritePass::Png(instance),
                 ));
+            }
+            if !is_chase && plan.target_ticks.contains(&tick) && args.products.contains(&Product::Depth) {
                 let depth = take(format!("depth{i}"));
                 let (depth_name, depth_pass) = match args.depth_format.as_str() {
+                    "metric-f16" => (
+                        format!("{tick:08}.depth.axial.f16.bin"),
+                        WritePass::MetricDepth(depth),
+                    ),
                     "f16" | "half" => (
                         format!("{tick:08}.depth.f16.bin"),
                         WritePass::DepthHalf(depth),
@@ -1669,7 +1905,7 @@ fn collect_passes(
         println!(
             "PROF tick={tick} index={sequence_index} writeMs={:.1} files={} lidarMs={:.1} radarMs={:.1} imuMs={:.1} joinMs={:.1} sinceStart={:.3}",
             written.duration_since(started).as_secs_f64() * 1e3,
-            jobs.len(),
+            jobs.len() + jobs.iter().filter(|(_, pass)| matches!(pass, WritePass::MetricDepth(_))).count(),
             cpu.lidar_ms,
             cpu.radar_ms,
             cpu.imu_ms,
@@ -1704,7 +1940,13 @@ fn collect_passes(
         // live encoders here, before AppExit, never by looking up resources
         // after run() returns. The capture clock includes the trailer flush.
         let drain_start = Instant::now();
-        let encoded = video.finish(args.video);
+        let encoded = video.finish(args.video && args.video_encoder != "gpu-nvenc");
+        #[cfg(feature = "gpu-video")]
+        let encoded = if let Some(encoder) = &device_video {
+            let frames = encoder.finish();
+            assert_eq!(frames, (progress.planned * rgb_passes) as u64, "GPU video frame count");
+            frames
+        } else { encoded };
         if encoded > 0 {
             println!("PROF stage=encoder_drain seconds={:.3} frames={encoded}", drain_start.elapsed().as_secs_f64());
         }
@@ -1721,6 +1963,9 @@ fn collect_passes(
             steady / captured.max(1.0),
             prof.since_start(),
         );
+        println!("PROF delivery sourceTicks={} sampledTicks={} perSourceTickSeconds={:.6} rgbFrames={} rgbFramesPerSecond={:.3}",
+            plan.source_ticks, progress.written, steady / plan.source_ticks as f64,
+            progress.written * rgb_passes, progress.written as f64 * rgb_passes as f64 / steady);
         prof.stage("capture");
         exit.write(AppExit::Success);
     }
@@ -1740,11 +1985,24 @@ enum WritePass {
     /// Reverse-Z depth narrowed to IEEE half precision: half the bytes, and
     /// reverse-Z puts the precision where the geometry is (near the camera).
     DepthHalf(Vec<u8>),
+    /// Tight GPU-packed f16 axial metres + one uint8 validity mask byte/pixel.
+    MetricDepth(Vec<u8>),
 }
 
 impl WritePass {
     fn write(&self, path: &Path, w: usize, h: usize) {
         match self {
+            WritePass::MetricDepth(data) => {
+                let mut depth = Vec::with_capacity(data.len() / 2);
+                let mut mask = Vec::with_capacity(data.len() / 4);
+                for pixel in data.chunks_exact(4) {
+                    depth.extend_from_slice(&pixel[..2]);
+                    mask.push(pixel[2]);
+                }
+                std::fs::write(path, depth).expect("write metric depth");
+                let mask_path = path.with_file_name(path.file_name().unwrap().to_str().unwrap().replace(".depth.axial.f16.bin", ".depth.valid.u8.bin"));
+                std::fs::write(mask_path, mask).expect("write depth validity");
+            }
             WritePass::Png(data) => {
                 let raw = strip_padding(data, w, h, 4);
                 image::RgbaImage::from_raw(w as u32, h as u32, raw)
@@ -1884,6 +2142,7 @@ fn run_cpu_sensors(
     // Deriving it again from the document would put the mounts at the
     // document's y (0 m for compiled traces) and bury every lidar.
     ego: Transform,
+    ego_vel: Vec3,
     write_track: bool,
 ) -> CpuSensorTiming {
     use crate::taxonomy::SemanticClass;
@@ -1897,10 +2156,6 @@ fn run_cpu_sensors(
 
     // Sensor mounts hang off the ground-snapped host pose; only the velocity
     // comes from the document.
-    let ego_vel = scene_state
-        .and_then(|s| s.ego())
-        .map(|ego| Vec3::from_slice(&ego.velocity))
-        .unwrap_or(Vec3::ZERO);
     // instance id -> scene-state actor velocity (statics = zero). Resolved
     // once per tick into a map: the radar asks per hit, and a linear scan of
     // the instance registry per hit is quadratic in scene size.
@@ -1917,7 +2172,7 @@ fn run_cpu_sensors(
     // ---- lidars ----
     let lidar_start = Instant::now();
     let requests: Vec<_> = rig.lidars().map(|sensor| {
-        let mount_tf = mount_world_transform(ego, &sensor.mount);
+        let mount_tf = mount_transform(ego, &sensor.mount, FrameBasis::Rig);
         gpu_lidar::Request {
             config: lidar::LidarConfig {
                 channels: sensor.lidar_channels,
@@ -1967,7 +2222,7 @@ fn run_cpu_sensors(
             sensor.vertical_fov_deg.unwrap_or(30.0),
             sensor.range_m,
         );
-        let mount_tf = mount_world_transform(ego, &sensor.mount);
+        let mount_tf = mount_transform(ego, &sensor.mount, FrameBasis::Rig);
         let detections = radar::scan(
             &world,
             &cfg,
@@ -2029,7 +2284,7 @@ fn derive_imu_gnss(
     let mut previous: Option<(f64, Vec3, f32)> = None;
 
     for state in &sequence.ticks {
-        let Some(ego) = state.ego() else { continue };
+        let Some(ego) = sequence.rig_host_at(state) else { continue };
         let hz = f64::from(state.tick_hz.max(1e-6));
         let t = f64::from(state.tick) / hz;
         let velocity = Vec3::from_slice(&ego.velocity);
@@ -2116,9 +2371,13 @@ fn write_manifest(out_dir: &Path) -> Result<usize> {
     });
     files.sort();
     let count = files.len();
+    let capture_metadata: serde_json::Value = serde_json::from_slice(&std::fs::read(out_dir.join("capture-samples.json"))?)?;
     let manifest = json!({
         "schema": "uniscenarios.sensor-capture-manifest/v1",
         "profile": "sensor",
+        "captureProfile": capture_metadata["profile"],
+        "configuration": capture_metadata["arguments"],
+        "captureMetadata": "capture-samples.json",
         "files": files.into_iter().map(|(p, h)| json!({"path": p, "sha256": h})).collect::<Vec<_>>(),
     });
     std::fs::write(out_dir.join("manifest.json"), serde_json::to_string_pretty(&manifest)?)?;
@@ -2139,9 +2398,11 @@ fn extract_frame(frame: Extract<Res<GlobalFrame>>, mut stamp: ResMut<FrameStamp>
 }
 
 /// Publish the frames whose passes the main world is waiting for.
-fn extract_armed(progress: Extract<Res<CaptureProgress>>, mut armed: ResMut<ArmedFrames>) {
+fn extract_armed(progress: Extract<Res<CaptureProgress>>, mut armed: ResMut<ArmedFrames>, mut targets: ResMut<ArmedTargets>) {
     armed.0.clear();
     armed.0.extend(progress.in_flight.iter().map(|f| f.frame));
+    targets.0.clear();
+    targets.0.extend(progress.in_flight.iter().filter(|f| f.targets).map(|f| f.frame));
 }
 
 fn copy_passes(
@@ -2152,9 +2413,16 @@ fn copy_passes(
     gpu_images: Res<RenderAssets<GpuImage>>,
     depth_views: Query<(Entity, &ExtractedCamera, &ViewDepthTexture)>,
     armed: Res<ArmedFrames>,
+    targets: Res<ArmedTargets>,
+    args: Res<CaptureArgs>,
+    mut reducer: Local<Option<depth_reduce::Reducer>>,
     stamp: Res<FrameStamp>,
     profile: Option<Res<gpu_profile::GpuProfile>>,
     mut fence: ResMut<CaptureFence>,
+    #[cfg(feature = "gpu-video")]
+    mut device_video: Option<ResMut<gpu_video::DeviceVideo>>,
+    #[cfg(feature = "gpu-video")]
+    sender: Res<RenderSender>,
 ) {
     // Bring-up and warmup frames have nothing worth copying out of VRAM.
     if !armed.0.contains(&stamp.0) {
@@ -2165,6 +2433,7 @@ fn copy_passes(
             .create_command_encoder(&CommandEncoderDescriptor::default());
     if let Some(profile) = &profile { profile.copy_start(&mut encoder); }
     for c in copiers.0.iter() {
+        if c.buffers.is_empty() { continue; }
         let Some(src) = gpu_images.get(&c.src_image) else { continue };
         let width = src.texture_descriptor.size.width as usize;
         let pixel = src.texture_descriptor.format.block_copy_size(None).unwrap_or(4);
@@ -2172,7 +2441,7 @@ fn copy_passes(
         encoder.copy_texture_to_buffer(
             src.texture.as_image_copy(),
             TexelCopyBufferInfo {
-                buffer: &c.buffer,
+                buffer: &c.buffers[stamp.0 as usize % c.buffers.len()],
                 layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(std::num::NonZero::<u32>::new(padded as u32).unwrap().into()),
@@ -2183,6 +2452,7 @@ fn copy_passes(
         );
     }
     for d in depths.0.iter() {
+        if !targets.0.contains(&stamp.0) { continue; }
         let Some((_, _, view)) = depth_views.iter().find(|(_, cam, _)| {
             matches!(
                 cam.target,
@@ -2193,12 +2463,18 @@ fn copy_passes(
             continue;
         };
         let tex = &view.texture;
+        if let Some(output) = &d.reduced {
+            let pipeline = reducer.get_or_insert_with(|| depth_reduce::Reducer::new(ctx.render_device(), args.depth_scale));
+            pipeline.encode(ctx.render_device(), &mut encoder, tex, output,
+                &d.buffers[stamp.0 as usize % d.buffers.len()], args.depth_scale);
+            continue;
+        }
         let width = tex.size().width as usize;
         let padded = aligned_row(width, 4);
         encoder.copy_texture_to_buffer(
             tex.as_image_copy(),
             TexelCopyBufferInfo {
-                buffer: &d.buffer,
+                buffer: &d.buffers[stamp.0 as usize % d.buffers.len()],
                 layout: TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(std::num::NonZero::<u32>::new(padded as u32).unwrap().into()),
@@ -2210,6 +2486,10 @@ fn copy_passes(
     }
     if let Some(profile) = &profile { profile.copy_end(&mut encoder); }
     fence.0 = Some(queue.submit(std::iter::once(encoder.finish())));
+    #[cfg(feature = "gpu-video")]
+    if let Some(encoder) = device_video.as_mut() {
+        encoder.copy(ctx.render_device(), &queue, &copiers, &gpu_images, &sender, stamp.0);
+    }
 }
 
 fn receive_passes(
@@ -2219,64 +2499,78 @@ fn receive_passes(
     depths: Res<DepthCopiers>,
     stamp: Res<FrameStamp>,
     armed: Res<ArmedFrames>,
+    targets: Res<ArmedTargets>,
     profile: Option<ResMut<gpu_profile::GpuProfile>>,
     fence: Res<CaptureFence>,
+    args: Res<CaptureArgs>,
+    mut ring: ResMut<ReadbackRing>,
 ) {
-    // Only armed frames were copied, so only armed frames have anything to map.
-    if !armed.0.contains(&stamp.0) {
-        // Warmup must not build an unbounded queue of old frames that then
-        // gets charged to the first captured tick. Captured frames below use
-        // their own submission fence instead of this startup-only drain.
-        if stamp.0 > 0 {
-            device.poll(PollType::wait_indefinitely()).expect("drain warmup");
+    let capturing = armed.0.contains(&stamp.0);
+    let mut profile_ready = None;
+    if capturing {
+        let mut passes = Vec::with_capacity(copiers.0.len() + depths.0.len());
+        for c in &copiers.0 {
+            if c.buffers.is_empty() { continue; }
+            passes.push(PendingPass {
+                key: c.key.clone(), buffer: c.buffers[stamp.0 as usize % c.buffers.len()].clone(),
+            });
         }
-        return;
-    }
-    struct Pending {
-        key: String,
-        buffer: Buffer,
-    }
-    let mut pending: Vec<Pending> = Vec::new();
-    for c in copiers.0.iter().cloned() {
-        pending.push(Pending { key: c.key.clone(), buffer: c.buffer.clone() });
-    }
-    for d in depths.0.iter().cloned() {
-        pending.push(Pending { key: d.key.clone(), buffer: d.buffer.clone() });
-    }
-    if pending.is_empty() {
-        return;
-    }
-    let started = Instant::now();
-    let (s, r) = crossbeam_channel::bounded::<()>(pending.len());
-    for p in &pending {
-        let tx = s.clone();
-        p.buffer.slice(..).map_async(MapMode::Read, move |res| {
-            if res.is_err() {
-                panic!("map buffer failed");
+        for d in &depths.0 {
+            if !targets.0.contains(&stamp.0) { continue; }
+            passes.push(PendingPass {
+                key: d.key.clone(), buffer: d.buffers[stamp.0 as usize % d.buffers.len()].clone(),
+            });
+        }
+        if !passes.is_empty() {
+            assert!(ring.0.iter().all(|p| p.frame % u64::from(args.readback_slots) != stamp.0 % u64::from(args.readback_slots)),
+                "readback staging slot reused before completion");
+            let started = Instant::now();
+            let (tx, ready) = crossbeam_channel::bounded(passes.len());
+            for p in &passes {
+                let tx = tx.clone();
+                p.buffer.slice(..).map_async(MapMode::Read, move |result| {
+                    result.expect("map sensor readback");
+                    tx.send(()).expect("readback receiver");
+                });
             }
-            let _ = tx.send(());
-        });
+            profile_ready = profile.as_ref().map(|p| p.map());
+            ring.0.push_back(PendingReadback {
+                frame: stamp.0, passes, ready,
+                submission: fence.0.clone().expect("capture submission"),
+                started,
+            });
+        }
     }
-    let profile_ready = profile.as_ref().map(|p| p.map());
-    device.poll(PollType::Wait { submission_index: fence.0.clone(), timeout: None }).expect("poll capture fence");
-    for _ in &pending {
-        r.recv().expect("map_async result");
+
+    // Wait only when the ring needs its oldest slot, or when flushing the
+    // tail. A mapped slot is never written by the GPU. Map callbacks alone do
+    // not imply ordering across products: publish a frame only when all maps
+    // succeeded. Waiting on its submission never waits for newer frames.
+    if !capturing && stamp.0 > 0 {
+        device.poll(PollType::wait_indefinitely()).expect("drain warmup/tail");
+    } else if ring.0.len() >= args.readback_slots as usize {
+        let submission = ring.0.front().unwrap().submission.clone();
+        device.poll(PollType::Wait { submission_index: Some(submission), timeout: None }).expect("poll oldest capture");
+    } else {
+        device.poll(PollType::Poll).expect("poll capture progress");
     }
-    let mapped = Instant::now();
-    let mut bytes = 0usize;
-    for p in &pending {
-        let data = p.buffer.slice(..).get_mapped_range().to_vec();
-        bytes += data.len();
-        let _ = sender.send(SentPass { key: p.key.clone(), frame: stamp.0, data });
-        p.buffer.unmap();
+    while ring.0.front().is_some_and(|p| p.ready.len() == p.passes.len()) {
+        let pending = ring.0.pop_front().unwrap();
+        let mapped = Instant::now();
+        let mut bytes = 0usize;
+        for p in pending.passes.iter() {
+            let data = p.buffer.slice(..).get_mapped_range().to_vec();
+            bytes += data.len();
+            p.buffer.unmap();
+            sender.send(SentPass { key: p.key.clone(), frame: pending.frame, data }).expect("capture receiver");
+        }
+        println!(
+            "PROF readback frame={} passes={} mapMs={:.1} copyMs={:.1} bytes={bytes}",
+            pending.frame, pending.passes.len(),
+            mapped.duration_since(pending.started).as_secs_f64() * 1e3,
+            mapped.elapsed().as_secs_f64() * 1e3,
+        );
     }
-    println!(
-        "PROF readback frame={} passes={} mapMs={:.1} copyMs={:.1} bytes={bytes}",
-        stamp.0,
-        pending.len(),
-        mapped.duration_since(started).as_secs_f64() * 1e3,
-        mapped.elapsed().as_secs_f64() * 1e3,
-    );
     if let (Some(mut profile), Some(ready)) = (profile, profile_ready) {
         ready.recv().expect("timestamp readback");
         profile.report(stamp.0);

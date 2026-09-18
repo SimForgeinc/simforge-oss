@@ -42,7 +42,7 @@ impl VideoSink {
             cmd.args(["-hide_banner", "-loglevel", "error", "-y"])
                 .args(["-f", "rawvideo", "-pix_fmt", "rgba"])
                 .args(["-s", &format!("{}x{}", args.width, args.height)])
-                .args(["-r", &args.video_fps.to_string()]).args(["-i", "-"]);
+                .args(["-r", &args.video_fps.unwrap_or(50.0).to_string()]).args(["-i", "-"]);
             match args.video_encoder.as_str() {
                 "nvenc" => {
                     cmd.args(["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr"])

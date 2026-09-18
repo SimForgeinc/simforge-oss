@@ -200,6 +200,21 @@ fn rig_host_falls_back_to_the_first_actor_when_no_ego_id_exists() {
 }
 
 #[test]
+fn scene_sampling_rejects_repeated_tail_frames() {
+    let document = r#"{
+        "version":"simforge.scene-state.v1", "mapId":"fixture", "tickHz":50,
+        "frames":[{"tick":0,"actors":[]},{"tick":1,"actors":[]},{"tick":2,"actors":[]}]
+    }"#;
+    let read = sensors::scene_state::SceneSequence::from_json;
+    let exact = read(document, 0, 2, 2).unwrap();
+    assert_eq!(exact.ticks.iter().map(|s| s.tick).collect::<Vec<_>>(), [0, 2]);
+    assert!(read(document, 0, 3, 2).is_err(), "never duplicate the final pose to fill a request");
+    assert!(read(document, 3, 1, 1).is_err(), "an invalid start must not select the final frame");
+    assert!(read(document, 0, 2, 0).is_err(), "zero stride would repeat one frame");
+    assert!(read(document, 0, 0, 1).is_err(), "an empty request must not manufacture a frame");
+}
+
+#[test]
 fn bvh_nearest_hit_and_normal() {
     let s = ground_scene();
     let hit = s.cast(Vec3::new(1.0, 3.0, 2.0), Vec3::NEG_Y, 100.0).expect("hit");
@@ -389,12 +404,19 @@ fn rendered_aux_labels_are_discrete() {
     fs::write(fixture.0.join("rig.json"), json!({"prontoRig":{
         "id":"label-regression", "sensors":[{
             "id":"fixture-cam","label":"fixture","type":"dash_camera","horizontalFovDeg":60.0,
-            "sourceMountMm":{"longitudinal":-850.0,"lateralRight":-5000.0,"up":-1780.0},
+            "sourceMountMm":{"longitudinal":-850.0,"lateralRight":-5000.0,"up":-1280.0},
             "rotationDeg":{"yaw":0.0,"pitch":0.0,"roll":0.0}
         }]
     }}).to_string()).unwrap();
     fs::write(fixture.0.join("scene.json"), json!({
-        "version":sensors::scene_state::SCENE_STATE_SCHEMA,"mapId":"fixture","tick":0,"tickHz":50,"actors":[]
+        "version":sensors::scene_state::SCENE_STATE_SCHEMA,"mapId":"fixture","tickHz":50,
+        "actors":[{"id":"ego","actorClass":"car"},{"id":"late","actorClass":"car"}],
+        "frames":[
+            {"tick":0,"actors":[{"id":"ego","kind":"spawn","position":[0,0,0]}]},
+            {"tick":1,"actors":[
+                {"id":"ego","kind":"update","position":[0,0,0]},
+                {"id":"late","kind":"spawn","position":[3,0,5]}]}
+        ]
     }).to_string()).unwrap();
     let binary = std::env::var_os("SENSOR_CAPTURE_TEST_BIN")
         .unwrap_or_else(|| env!("CARGO_BIN_EXE_sensor-capture").into());
@@ -405,6 +427,7 @@ fn rendered_aux_labels_are_discrete() {
             .args(["--rig-program"]).arg(fixture.0.join("rig.json"))
             .args(["--glbs"]).arg(fixture.0.join("fixture.gltf"))
             .args(["--scene-state"]).arg(fixture.0.join("scene.json"))
+            .args(["--profile","showcase","--products","rgb,labels","--tick-count","2"])
             .args(["--sensors","fixture-cam","--width","64","--height","64",
                 "--warmup","3","--settle-ticks","0","--no-shadows","--out"]).arg(&output)
             .env("XDG_RUNTIME_DIR","/tmp").env("WGPU_BACKEND","vulkan");
@@ -416,12 +439,24 @@ fn rendered_aux_labels_are_discrete() {
         let semantic = image::open(output.join("fixture-cam/00000000.semantic.png")).unwrap().into_rgba8();
         // Class 8 exposes gamma-domain dither rounding to invalid class 9;
         // the very darkest labels can coincidentally round back unchanged.
-        let label = [1, 0, SemanticClass::Prop.id(), 255];
+        let legend: serde_json::Value = serde_json::from_slice(&fs::read(output.join("legend.json")).unwrap()).unwrap();
+        let id_of = |name: &str| {
+            legend["instances"].as_array().unwrap().iter()
+                .find(|entry| entry[1].as_str() == Some(name)).unwrap()[0].as_u64().unwrap() as u16
+        };
+        let [lo, hi] = id_of("prop-wall").to_le_bytes();
+        let label = [lo, hi, SemanticClass::Prop.id(), 255];
         assert_eq!(instance.get_pixel(32, 32).0, label, "the fixture wall must occupy the center");
         for (pixel, class) in instance.pixels().zip(semantic.pixels()) {
             assert!(pixel.0 == [0,0,0,255] || pixel.0 == label,
                 "integer label was altered: {:?} (batched={batched})", pixel.0);
             assert_eq!(class.0, [pixel[2],0,0,255]);
         }
+        let late = image::open(output.join("fixture-cam/00000001.instance.png")).unwrap().into_rgba8();
+        let late_semantic = image::open(output.join("fixture-cam/00000001.semantic.png")).unwrap().into_rgba8();
+        let [lo, hi] = id_of("actor:late").to_le_bytes();
+        assert_eq!(late.get_pixel(32,32).0, [lo,hi,SemanticClass::Car.id(),255],
+            "a car first appearing after tick0 must not be labelled Prop");
+        assert_eq!(late_semantic.get_pixel(32,32).0, [SemanticClass::Car.id(),0,0,255]);
     }
 }

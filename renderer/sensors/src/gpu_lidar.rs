@@ -13,6 +13,7 @@ use bevy::math::{Quat, Vec3};
 use bevy::render::renderer::{RenderDevice, RenderQueue};
 use std::time::Instant;
 use wgpu::util::DeviceExt;
+use render_core::coordinates::SensorFrame;
 
 pub(crate) struct Request {
     pub config: LidarConfig,
@@ -190,7 +191,11 @@ impl GpuLidar {
             encoder.copy_buffer_to_buffer(buffer, 0, &staging, bytes, 16);
         }
         let submitted_at = Instant::now();
-        let submission = self.queue.submit([encoder.finish()]);
+        let submission = {
+            #[cfg(feature = "gpu-video")]
+            let _gate = super::gpu_video::SUBMIT_GATE.lock();
+            self.queue.submit([encoder.finish()])
+        };
         let (tx, rx) = crossbeam_channel::bounded(1);
         staging.slice(..).map_async(wgpu::MapMode::Read, move |result| { tx.send(result).expect("lidar readback receiver"); });
         self.device.poll(wgpu::PollType::Wait { submission_index: Some(submission), timeout: None }).expect("lidar frame fence");
@@ -214,6 +219,7 @@ impl GpuLidar {
         let mut distance_threshold_counts = [0usize; 4];
         let mut matched = 0usize;
         for (request, range) in requests.iter().zip(ranges) {
+            let frame = SensorFrame::from_bevy_pose(request.origin, request.rotation);
             let mut points = Vec::with_capacity(range.len());
             for index in range {
                 let raw = &mapped[index * 32..index * 32 + 32];
@@ -281,8 +287,8 @@ impl GpuLidar {
                 if let Some(hit) = hit {
                     let cosine = hit.normal.dot(-dir.normalize_or_zero()).abs();
                     let intensity = lidar_albedo(class_of(hit.instance_id)).mul_add(0.25 + 0.75*cosine, 0.0).clamp(0.0,1.0);
-                    points.push(LidarPoint { x: hit.point.x-request.origin.x, y: hit.point.y-request.origin.y,
-                        z: hit.point.z-request.origin.z, intensity, instance_id: hit.instance_id });
+                    let local = frame.point_to_sensor(hit.point);
+                    points.push(LidarPoint { x: local.x, y: local.y, z: local.z, intensity, instance_id: hit.instance_id });
                 }
             }
             scans.push(points);

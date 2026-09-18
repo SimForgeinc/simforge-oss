@@ -142,6 +142,11 @@ fn mount_from_sheet(m: &RawMountMm, r: &RawRotationDeg) -> Mount {
     }
 }
 
+/// Preserve the declared horizontal FOV at a physical sensor aspect ratio.
+pub fn vertical_fov_deg(horizontal_fov_deg: f32, aspect: f32) -> f32 {
+    (2.0 * ((horizontal_fov_deg.to_radians() / 2.0).tan() / aspect).atan()).to_degrees()
+}
+
 /// Parse the Pronto rig out of a `render-qualification-program/v1` document.
 ///
 /// `render_width`/`render_height` fix the camera aspect used to derive each
@@ -171,7 +176,7 @@ pub fn parse_pronto_rig(program_json: &str, render_width: u32, render_height: u3
                     kind: SensorKind::Camera,
                     mount,
                     horizontal_fov_deg: hfov,
-                    vertical_fov_deg: Some((2.0 * ((hfov.to_radians() / 2.0).tan() / aspect).atan()).to_degrees()),
+                    vertical_fov_deg: Some(vertical_fov_deg(hfov, aspect)),
                     range_m: 1000.0,
                     lidar_channels: 0,
                     rotation_frequency_hz: 0.0,
@@ -229,7 +234,7 @@ pub fn chase_camera(render_width: u32, render_height: u32) -> RigSensor {
         kind: SensorKind::Camera,
         mount: Mount { x: -9.0, y: 3.4, z: 0.0, yaw: 0.0, pitch: (-11.3f32).to_radians(), roll: 0.0 },
         horizontal_fov_deg: hfov,
-        vertical_fov_deg: Some((2.0 * ((hfov.to_radians() / 2.0).tan() / aspect).atan()).to_degrees()),
+        vertical_fov_deg: Some(vertical_fov_deg(hfov, aspect)),
         range_m: 1000.0,
         lidar_channels: 0,
         rotation_frequency_hz: 0.0,

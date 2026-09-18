@@ -149,19 +149,33 @@ struct DocumentPose {
 #[derive(Debug, Clone, Resource)]
 pub struct SceneSequence {
     pub ticks: Vec<SceneState>,
+    /// Resolved once from the document's first frame, before interval selection.
+    pub rig_host_id: Option<String>,
 }
 
 impl SceneSequence {
+    /// Find this sequence's fixed rig host in a frame. A missing/despawned host
+    /// is not replaced by another actor; callers must reject an invalid pose.
+    pub fn rig_host_at<'a>(&self, state: &'a SceneState) -> Option<&'a ActorState> {
+        let id = self.rig_host_id.as_deref()?;
+        state.actors.iter().find(|actor| actor.id == id && actor.kind != "despawn")
+    }
+
     /// Parse either shape: a single-tick stream record, or a compiled document
-    /// projected into `start`, `start + stride`, ... for `count` ticks. Indices
-    /// past the last frame clamp to the last frame, so a short document still
-    /// yields the requested tick count rather than failing mid-capture.
+    /// projected into `start`, `start + stride`, ... for `count` ticks.
+    /// Reject an out-of-range request: repeating the last pose would silently
+    /// pad videos and overwrite artifacts bearing the same scene tick.
     pub fn from_json(text: &str, start: u32, count: u32, stride: u32) -> Result<SceneSequence> {
+        if count == 0 || stride == 0 {
+            bail!("scene sampling requires a positive count and stride");
+        }
         let value: serde_json::Value =
             serde_json::from_str(text).context("parse scene-state json")?;
         if !value.get("frames").is_some_and(|f| f.is_array()) {
+            if count != 1 { bail!("a single-tick scene cannot supply {count} source frames"); }
             let single = SceneState::from_json(text)?;
-            return Ok(SceneSequence { ticks: vec![single] });
+            let rig_host_id = single.ego().map(|actor| actor.id.clone());
+            return Ok(SceneSequence { ticks: vec![single], rig_host_id });
         }
         let doc: Document =
             serde_json::from_value(value).context("parse scene-state document")?;
@@ -174,13 +188,19 @@ impl SceneSequence {
         if doc.frames.is_empty() {
             bail!("scene-state document has no frames");
         }
+        let rig_host_id = doc.frames[0].actors.iter().find(|actor| actor.id == "ego")
+            .or_else(|| doc.frames[0].actors.iter().find(|actor| actor.kind != "despawn"))
+            .map(|actor| actor.id.clone());
         let describe: std::collections::HashMap<&str, &DocumentActor> =
             doc.actors.iter().map(|a| (a.id.as_str(), a)).collect();
-        let stride = stride.max(1) as usize;
-        let last = doc.frames.len() - 1;
-        let ticks = (0..count.max(1) as usize)
+        let requested_last = u64::from(start) + u64::from(count - 1) * u64::from(stride);
+        if requested_last >= doc.frames.len() as u64 {
+            bail!("requested scene frame index {requested_last}, but document has {} frames", doc.frames.len());
+        }
+        let stride = stride as usize;
+        let ticks: Vec<SceneState> = (0..count as usize)
             .map(|i| {
-                let index = (start as usize + i * stride).min(last);
+                let index = start as usize + i * stride;
                 let frame = &doc.frames[index];
                 SceneState {
                     version: doc.version.clone(),
@@ -211,6 +231,6 @@ impl SceneSequence {
                 }
             })
             .collect();
-        Ok(SceneSequence { ticks })
+        Ok(SceneSequence { ticks, rig_host_id })
     }
 }
