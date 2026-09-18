@@ -179,12 +179,17 @@ const DEFAULTS = {
 /**
  * Readiness and prefetch policy.
  *
- * A scene is ready when everything the camera can see is on screen: the road,
- * and every city tile the frustum touches or that stands within
- * `READY_RADIUS_M` of the viewpoint (so a vehicle is never sitting inside an
- * empty block, whatever way it is facing). It is deliberately NOT "every tile
- * in the map": preloading a whole city before showing anything is the wait
- * this replaces.
+ * A scene is ready when everything the camera can see NEARBY is on screen: the
+ * road, every city tile within `READY_DISTANCE_M` that the frustum touches,
+ * and every tile within `READY_RADIUS_M` of the viewpoint (so a vehicle is
+ * never sitting inside an empty block, whatever way it is facing).
+ *
+ * The frustum alone is unbounded in depth — a camera looking down a street
+ * intersects tiles kilometres away — and a block resolving 800 m off across
+ * the skyline is not what a driver notices; a building appearing 40 m ahead
+ * is. So readiness is bounded by distance as well, and the far field keeps
+ * filling behind it. It is deliberately NOT "every tile in the map":
+ * preloading a whole city before showing anything is the wait this replaces.
  *
  * Streaming continues after that, but invisibly. Tiles are wanted while they
  * are within `PREFETCH_MARGIN_M` of the view frustum or `PREFETCH_RADIUS_M` of
@@ -192,6 +197,7 @@ const DEFAULTS = {
  * a tile is resident well before it can enter the frame.
  */
 const READY_RADIUS_M = 150;
+const READY_DISTANCE_M = 350;
 /**
  * How long readiness may wait for the view to fill before reporting anyway. A
  * tile that will never arrive (failed, or refused by the byte budget) must not
@@ -199,6 +205,11 @@ const READY_RADIUS_M = 150;
  * either way.
  */
 const VIEW_RESIDENT_TIMEOUT_MS = 60_000;
+/**
+ * How much more texture upload per frame is allowed while the first view is
+ * still being assembled, when no interactive frame is at stake.
+ */
+const LOAD_UPLOAD_BUDGET_FACTOR = 8;
 const PREFETCH_MARGIN_M = 250;
 const PREFETCH_RADIUS_M = 400;
 
@@ -1235,7 +1246,8 @@ export class CityViewer {
       // What "ready" is judged on: what is actually on screen, plus the block
       // the viewpoint stands in.
       required: (def, distance) => !this.roadsOnlyFidelity
-        && (distance <= READY_RADIUS_M || this.cityFrustum.intersectsBox(def.box)),
+        && (distance <= READY_RADIUS_M
+          || (distance <= READY_DISTANCE_M && this.cityFrustum.intersectsBox(def.box))),
       build: async (def, lod, signal) => {
         const gltf = await this.parseAsset(lod.file, signal, lod.fileSize);
         const root = gltf.scene;
@@ -1423,13 +1435,27 @@ export class CityViewer {
     // The counter guarantees forward progress if frames stay heavy.
     const ceiling = Math.max(14, this.frameStats.percentile(0.5) * 2);
     phaseStart = performance.now();
-    if (!this.renderingSuspended && (dt * 1000 <= ceiling || this.uploadSkips >= 4)) {
+    // While the first view is still being assembled there is no interactive
+    // frame to protect, so the adaptive backoff below does not apply either.
+    const assembling = this.viewResidentWaiters.length > 0;
+    if (!this.renderingSuspended && (assembling || dt * 1000 <= ceiling || this.uploadSkips >= 4)) {
       this.uploadSkips = 0;
       // Budget the upload phase, not the whole frame. Controls and streaming
       // can already have spent this budget; using `now` then starves every
       // queued asset even on the forced-progress frame after upload backoff.
-      const deadline = phaseStart + this.options.uploadBudgetMs;
-      const pixelBudget = { remaining: this.options.uploadPixelsPerFrame };
+      // The upload pacer exists so a 140 MB tile cannot stall an interactive
+      // frame. While the first view is still being assembled there is no
+      // interactive frame to protect — the viewer is showing a loading state —
+      // and pacing one 2048px texture per frame is what turned a 269 MB first
+      // view into a minute of waiting. Open it up until the view is resident,
+      // then return to the interactive budget.
+      const deadline = phaseStart
+        + (assembling ? this.options.uploadBudgetMs * LOAD_UPLOAD_BUDGET_FACTOR : this.options.uploadBudgetMs);
+      const pixelBudget = {
+        remaining: assembling
+          ? this.options.uploadPixelsPerFrame * LOAD_UPLOAD_BUDGET_FACTOR
+          : this.options.uploadPixelsPerFrame,
+      };
       this.roadLayer?.pumpUploads(deadline, pixelBudget, this.camera);
       this.cityLayer?.pumpUploads(deadline, pixelBudget, this.camera);
       this.vegLayer?.pumpUploads(deadline, pixelBudget, this.camera);
