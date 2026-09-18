@@ -6,6 +6,8 @@
 
 import { pointOf, type TopologyIndex, type TopologyLane } from '@simforge-oss/engine';
 
+import { laneSectionWidthSamples } from '@simforge-oss/maps/topology';
+
 import { nearestLane, OFF_NETWORK_BOUND_M } from './off-network.js';
 
 interface LaneGeometry {
@@ -23,12 +25,12 @@ function laneGeometry(lane: TopologyLane): LaneGeometry | null {
   return { lane, points, cum, lengthM: cum[cum.length - 1]! };
 }
 
-function widthAt(lane: TopologyLane, s: number): number {
-  const samples = lane.widthSamples;
-  if (!samples || samples.length === 0) return lane.representativeWidthM ?? 3.5;
-  let before = samples[0]!;
-  let after = samples[samples.length - 1]!;
-  for (const sample of samples) {
+
+function widthAt(widths: readonly { readonly s: number; readonly widthM: number }[], s: number, fallbackM: number): number {
+  if (widths.length === 0) return fallbackM;
+  let before = widths[0]!;
+  let after = widths[widths.length - 1]!;
+  for (const sample of widths) {
     if (sample.s <= s) before = sample;
     if (sample.s >= s) { after = sample; break; }
   }
@@ -147,6 +149,9 @@ export function buildXodrElevationResolver(
     sectionEnd: number;
     driving: boolean;
     roadId: number;
+    /** Width samples inside the lane's own section; see `sectionWidths`. */
+    widths: readonly { readonly s: number; readonly widthM: number }[];
+    fallbackWidthM: number;
   }>();
   const roadNeighbors = new Map<number, Set<number>>();
   const linkRoads = (a: number, b: number) => {
@@ -168,27 +173,42 @@ export function buildXodrElevationResolver(
     if (!road || sectionStart === undefined) throw new Error(`xodr_elevation_topology_mismatch:${rsl}`);
     const sectionEnd = road.sectionStarts[geometry.lane.section + 1] ?? road.length;
     if (!(sectionEnd > sectionStart) || !(geometry.lengthM > 0)) throw new Error(`xodr_elevation_degenerate_lane:${rsl}`);
-    laneRecords.set(rsl, { geometry, road, sectionStart, sectionEnd, driving, roadId: geometry.lane.roadId });
+    const widths = laneSectionWidthSamples(geometry.lane.widthSamples, sectionEnd - sectionStart, LANE_EDGE_TOLERANCE_M);
+    const fallbackWidthM = widths.length === 0 ? geometry.lane.representativeWidthM ?? 3.5 : widths[0]!.widthM;
+    laneRecords.set(rsl, { geometry, road, sectionStart, sectionEnd, driving, roadId: geometry.lane.roadId, widths, fallbackWidthM });
     for (const linked of [...(geometry.lane.predecessors ?? []), ...(geometry.lane.successors ?? [])]) {
       const linkedRoad = Number(linked.split(':')[0]);
       if (Number.isFinite(linkedRoad)) linkRoads(geometry.lane.roadId, linkedRoad);
     }
-    const halfWidth = Math.max(
-      geometry.lane.representativeWidthM ?? 0,
-      ...(geometry.lane.widthSamples ?? []).map((sample) => sample.widthM),
-    ) / 2 + LANE_EDGE_TOLERANCE_M;
-    const xs = geometry.points.map((point) => point.x);
-    const ys = geometry.points.map((point) => point.y);
-    const minX = Math.floor((Math.min(...xs) - halfWidth) / SPATIAL_CELL_M);
-    const maxX = Math.floor((Math.max(...xs) + halfWidth) / SPATIAL_CELL_M);
-    const minY = Math.floor((Math.min(...ys) - halfWidth) / SPATIAL_CELL_M);
-    const maxY = Math.floor((Math.max(...ys) + halfWidth) / SPATIAL_CELL_M);
-    for (let cellX = minX; cellX <= maxX; cellX += 1) {
-      for (let cellY = minY; cellY <= maxY; cellY += 1) {
-        const key = `${cellX},${cellY}`;
-        const members = cells.get(key) ?? new Set<string>();
-        members.add(rsl);
-        cells.set(key, members);
+    const halfWidth = Math.max(fallbackWidthM, ...widths.map((sample) => sample.widthM)) / 2 + LANE_EDGE_TOLERANCE_M;
+    /**
+     * Stamp the index along the lane's polyline, one short segment at a time.
+     *
+     * This used to rasterize the lane's axis-aligned bounding box. A bounding
+     * box is the area a lane *could* occupy; a long diagonal, curving or ramp
+     * lane occupies a sliver of it, and summed over a city-sized map those
+     * boxes ran to tens of millions of cells — at which point `Map.set` throws
+     * V8's `RangeError: Map maximum size exceeded` and takes the scenario's
+     * whole OpenSCENARIO export, and therefore every render of it, with it.
+     *
+     * The cell set is the same one queries can reach: a position within
+     * `halfWidth` of the ribbon is within `halfWidth` of one of these segments,
+     * so it falls inside that segment's inflated box.
+     */
+    for (let index = 1; index < geometry.points.length; index += 1) {
+      const from = geometry.points[index - 1]!;
+      const to = geometry.points[index]!;
+      const minX = Math.floor((Math.min(from.x, to.x) - halfWidth) / SPATIAL_CELL_M);
+      const maxX = Math.floor((Math.max(from.x, to.x) + halfWidth) / SPATIAL_CELL_M);
+      const minY = Math.floor((Math.min(from.y, to.y) - halfWidth) / SPATIAL_CELL_M);
+      const maxY = Math.floor((Math.max(from.y, to.y) + halfWidth) / SPATIAL_CELL_M);
+      for (let cellX = minX; cellX <= maxX; cellX += 1) {
+        for (let cellY = minY; cellY <= maxY; cellY += 1) {
+          const key = `${cellX},${cellY}`;
+          const members = cells.get(key) ?? new Set<string>();
+          members.add(rsl);
+          cells.set(key, members);
+        }
       }
     }
   }
@@ -207,9 +227,9 @@ export function buildXodrElevationResolver(
     const candidates: Array<{ rsl: string; d: number; elevation: number; driving: boolean; roadId: number }> = [];
     const nearby = cells.get(`${Math.floor(x / SPATIAL_CELL_M)},${Math.floor(y / SPATIAL_CELL_M)}`) ?? [];
     for (const rsl of nearby) {
-      const { geometry, road, sectionStart, sectionEnd, driving, roadId } = laneRecords.get(rsl)!;
+      const { geometry, road, sectionStart, sectionEnd, driving, roadId, widths, fallbackWidthM } = laneRecords.get(rsl)!;
       const projected = projectSampledLane(geometry.points, geometry.cum, x, y);
-      if (!projected || projected.d > widthAt(geometry.lane, projected.arcS) / 2 + LANE_EDGE_TOLERANCE_M) continue;
+      if (!projected || projected.d > widthAt(widths, projected.arcS, fallbackWidthM) / 2 + LANE_EDGE_TOLERANCE_M) continue;
       const roadS = sectionStart + projected.sampleFraction * (sectionEnd - sectionStart);
       candidates.push({ rsl, d: projected.d, elevation: evaluate(road.elevations, roadS), driving, roadId });
     }

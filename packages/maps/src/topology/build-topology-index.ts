@@ -459,7 +459,7 @@ function pointOnGeom(g: XGeom, t: number): { x: number; y: number; hdg: number }
 }
 
 /** Point on the road's reference line at absolute road `s`. */
-function refLineAt(road: XRoad, s: number): { x: number; y: number; hdg: number } | null {
+export function refLineAt(road: XRoad, s: number): { x: number; y: number; hdg: number } | null {
   if (road.geom.length === 0) return null;
   // Bracket: find the geometry block containing `s`.
   let g = road.geom[0]!;
@@ -493,8 +493,21 @@ function laneWidthAt(lane: XLane, sectionLocalS: number): number {
   return evalPoly3(lane.widths, sectionLocalS);
 }
 
-function laneWidthSamples(section: XSection, lane: XLane, roadLength: number) {
-  const nextSectionS = Number.POSITIVE_INFINITY;
+/**
+ * Width samples across the lane's own section.
+ *
+ * `nextSectionS` is where the next `<laneSection>` begins, and it matters: a
+ * lane width is a cubic polynomial (`a + b·ds + c·ds² + d·ds³`) valid only
+ * inside its own section, and a cubic evaluated past its domain diverges. This
+ * used to hardcode `Number.POSITIVE_INFINITY` here, so every lane of a
+ * multi-section road was sampled out to the end of the whole ROAD. On Di Rosa
+ * SF that reported lane `95:0:-3` as 14,079,733 m wide — 14,000 km — which then
+ * claimed the entire map as its own road surface and rasterized a spatial index
+ * of hundreds of millions of cells, failing the scenario's OpenSCENARIO export
+ * (and therefore every render of it) with V8's `RangeError: Map maximum size
+ * exceeded`.
+ */
+function laneWidthSamples(section: XSection, lane: XLane, roadLength: number, nextSectionS: number) {
   const sectionEndS = Math.min(roadLength, nextSectionS);
   const length = Math.max(0, sectionEndS - section.s);
   const sampleOffsets = Array.from(new Set([0, length / 2, length]))
@@ -505,10 +518,35 @@ function laneWidthSamples(section: XSection, lane: XLane, roadLength: number) {
     .filter((sample) => Number.isFinite(sample.widthM) && sample.widthM > 0);
 }
 
-function representativeLaneWidthM(section: XSection, lane: XLane, roadLength: number) {
-  const samples = laneWidthSamples(section, lane, roadLength);
+function representativeLaneWidthM(section: XSection, lane: XLane, roadLength: number, nextSectionS: number) {
+  const samples = laneWidthSamples(section, lane, roadLength, nextSectionS);
   if (samples.length === 0) return null;
   return samples.reduce((sum, sample) => sum + sample.widthM, 0) / samples.length;
+}
+
+/**
+ * The width samples of a lane that describe the lane's own section.
+ *
+ * The producer's rule, in the form a CONSUMER needs it: a sample's `s` is an
+ * offset inside the lane section, so a sample past the section's length
+ * describes nothing — it is the width cubic evaluated outside its domain, where
+ * it diverges. `laneWidthSamples` above no longer emits such a sample, but every
+ * map artifact built before it learned where the next `<laneSection>` starts
+ * carries them, and those artifacts are immutable: all ten installed maps have
+ * some (1,051 lanes of 22,337), up to a lane reported as 14,079,733 m wide.
+ * Republishing 32 GB of maps is not a precondition for reading one, so a
+ * consumer that knows the section's length drops what cannot be true.
+ *
+ * This is the one implementation. Do not inline it: the same rule is needed
+ * wherever stored widths are read, and this bug already exists twice because a
+ * sampler was copied instead of shared.
+ */
+export function laneSectionWidthSamples<S extends { readonly s: number }>(
+  samples: readonly S[] | undefined,
+  sectionLengthM: number,
+  toleranceM = 0.15,
+): readonly S[] {
+  return (samples ?? []).filter((sample) => sample.s <= sectionLengthM + toleranceM);
 }
 
 /**
@@ -966,8 +1004,9 @@ export function buildMapTopologyIndex(args: BuildTopologyArgs): MapTopologyIndex
         if (ln.id === 0) continue; // centre reference lane, not drivable
         const rsl = rslOf(road.id, sIdx, ln.id);
         if (ln.type === "driving") drivingLanes += 1;
-        const widthSamples = laneWidthSamples(sec, ln, road.length);
-        const representativeWidth = representativeLaneWidthM(sec, ln, road.length);
+        const nextSectionS = road.sections[sIdx + 1]?.s ?? Number.POSITIVE_INFINITY;
+        const widthSamples = laneWidthSamples(sec, ln, road.length, nextSectionS);
+        const representativeWidth = representativeLaneWidthM(sec, ln, road.length, nextSectionS);
         lanes[rsl] = {
           rsl,
           roadId: road.id,

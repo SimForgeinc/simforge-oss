@@ -179,6 +179,16 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     SIMFORGE_NATIVE_RUNTIME_STATE_ROOT: process.env.SIMFORGE_NATIVE_RUNTIME_STATE_ROOT?.trim()
       || resolve(stateDir, "native-runtime"),
   };
+  /**
+   * One answer to "where is this host". It is published in the host record, it
+   * is what the CLI and the app talk to, and it is what the server and the CPU
+   * worker are told to use for absolute self-URLs (`SIMFORGE_API_BASE_URL`).
+   *
+   * The worker used to be handed `http://127.0.0.1:${port}` instead. A host
+   * bound to a network address — `--hostname 100.72.252.40`, which is how a
+   * daemon reachable from another machine is started — is not listening on
+   * loopback at all, so that spelling made every worker fetch fail.
+   */
   const baseUrl = `http://${hostname}:${port}`;
   const children: ChildProcess[] = [];
   let stopping = false;
@@ -242,7 +252,7 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
       const worker = spawnHostCommand(plan.worker, {
         ...runtimeEnv,
         ...accessEnv,
-        SIMFORGE_API_BASE_URL: process.env.SIMFORGE_API_BASE_URL ?? `http://127.0.0.1:${port}`,
+        SIMFORGE_API_BASE_URL: process.env.SIMFORGE_API_BASE_URL?.trim() || baseUrl,
       });
       children.push(worker);
       // A host that claims a worker and has none turns every queued export and

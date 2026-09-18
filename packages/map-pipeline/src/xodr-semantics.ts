@@ -1,6 +1,5 @@
 import { CoordinateFrame } from '@simforge-oss/maps/coordinate-frame';
-import { parseXodr, refLineAt } from './ported/map-topology/build-topology-index.js';
-import type { MapTopologyIndex } from './ported/map-topology/types.js';
+import { parseXodr, refLineAt, type MapTopologyIndex } from '@simforge-oss/maps/topology';
 
 export type SemanticFeature = { type: 'Feature'; geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> };
 export type SemanticCollection = { type: 'FeatureCollection'; features: SemanticFeature[] };

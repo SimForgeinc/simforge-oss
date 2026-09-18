@@ -2,45 +2,44 @@
 
 import { useStudioHost } from "../../../host";
 import { useCallback } from "react";
+import type { ScenarioDocumentDto } from "@simforge-oss/studio-host";
 import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/recording-client";
 import { RenderWorkspace } from "./RenderWorkspace";
 import { useOptionalScenarioSession } from "../../scene/ScenarioSessionContext";
-import * as stylex from "@stylexjs/stylex";
-import { styles } from "./DocumentRenderWorkspace.stylex";
 
 /**
  * The one entry point into the render workspace, for every route that opens it.
  *
  * There is no freeze step. Opening this pane is a read: it lists the document's renders across every
- * snapshot and configures the next one against the draft the author is looking at. The snapshot is
- * taken by the render itself, at submit time, through `ensureSnapshot` — which is the only moment
- * the scenario actually needs to be immutable, because that is what the worker executes and what the
- * author later reverts to.
+ * snapshot and configures the next one against the record it is given. The snapshot is taken by the
+ * render itself, at submit time, through `ensureSnapshot` — which is the only moment the scenario
+ * actually needs to be immutable, because that is what the worker executes and what the author
+ * later reverts to.
  *
  * This used to gate the whole pane behind a "Freeze revision for recording" button. That existed
  * because freezing needs deterministic traffic evidence (`prepareRevisionEvidence`) which only a
  * live browser session can produce — a real precondition, but one that belongs to submitting a
  * render, not to looking at the ones that already exist.
  *
+ * It takes the whole `document`, not four fields off it. Every render decision — which sensors are
+ * offered, the clip length, the authored capture format, which draft version is frozen, which
+ * snapshot is reused — comes from that one record, so splitting it into `documentTitle`,
+ * `expectedDraftVersion` and `latestRevisionId` props only created places for the content to go
+ * missing. It did: the pane used to read the content out of the open editor session instead, and
+ * every route that opens the pane without an editor got `null`. See `useRenderDocument`.
+ *
  * `initialRevisionId` still pins the pane to one immutable snapshot when history is opened directly.
  */
 export function DocumentRenderWorkspace({
-  documentId,
-  documentTitle,
-  expectedDraftVersion,
+  document,
   initialRevisionId = null,
-  latestRevisionId = null,
   onClose,
   onRenderActivityChange,
   onImmersiveChange,
 }: {
-  documentId: string | null;
-  documentTitle: string | null;
-  expectedDraftVersion?: number | null;
+  document: ScenarioDocumentDto;
   /** Known immutable history target. When present, the pane shows that snapshot's renders. */
   initialRevisionId?: string | null;
-  /** Current immutable snapshot, reused when it already represents the open draft. */
-  latestRevisionId?: string | null;
   onClose: () => void;
   onRenderActivityChange?: (activityKey: string, live: boolean) => void;
   /** True while one render or the create form is open, which claim the pane's full width. */
@@ -61,17 +60,11 @@ export function DocumentRenderWorkspace({
    */
   const ensureSnapshot = useCallback(
     async (signal?: AbortSignal) => {
-      if (!documentId) {
-        throw new Error("Open a saved scenario before creating a render.");
-      }
-      const openDocument =
-        scenarioSession?.document?.id === documentId ? scenarioSession.document : null;
-      const currentDraftVersion = openDocument?.draftVersion ?? expectedDraftVersion;
-      if (latestRevisionId && currentDraftVersion != null) {
-        const latestRevision = await getBrowserRecordingRevisionInputClient(latestRevisionId, signal);
+      if (document.latestRevisionId) {
+        const latestRevision = await getBrowserRecordingRevisionInputClient(document.latestRevisionId, signal);
         if (
-          latestRevision.documentId === documentId &&
-          latestRevision.sourceDraftVersion === currentDraftVersion
+          latestRevision.documentId === document.id &&
+          latestRevision.sourceDraftVersion === document.draftVersion
         ) {
           return latestRevision.id;
         }
@@ -79,16 +72,16 @@ export function DocumentRenderWorkspace({
       if (!scenarioSession) {
         throw new Error("Open this scenario from its dataset before creating a render.");
       }
-      const evidence = await scenarioSession.prepareRevisionEvidence(documentId);
+      const evidence = await scenarioSession.prepareRevisionEvidence(document.id);
       const result = await studioHost.projects.ensureRevision({
-        documentId,
-        expectedDraftVersion: currentDraftVersion,
+        documentId: document.id,
+        expectedDraftVersion: document.draftVersion,
         evidence,
         signal,
       });
       return result.revisionId;
     },
-    [documentId, expectedDraftVersion, latestRevisionId, scenarioSession, studioHost],
+    [document.draftVersion, document.id, document.latestRevisionId, scenarioSession, studioHost],
   );
 
   /**
@@ -113,20 +106,13 @@ export function DocumentRenderWorkspace({
     [scenarioSession, studioHost],
   );
 
-  if (!documentId) {
-    return (
-      <div {...stylex.props(styles.flexCenterMid)}>
-        Select a saved scenario to open its render workspace.
-      </div>
-    );
-  }
   return (
     <RenderWorkspace
       revisionId={initialRevisionId}
-      documentId={documentId}
-      documentTitle={documentTitle}
-      currentContent={scenarioSession?.document?.content ?? null}
-      currentContentSha256={scenarioSession?.document?.contentSha256 ?? null}
+      documentId={document.id}
+      documentTitle={document.title}
+      currentContent={document.content}
+      currentContentSha256={document.contentSha256}
       onRestoreSnapshot={restoreSnapshot}
       ensureSnapshot={ensureSnapshot}
       onClose={onClose}

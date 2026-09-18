@@ -4,6 +4,7 @@ import { setTimeout as wait } from "node:timers/promises";
 import { simforgeEnv } from "../lib/simforge-env";
 
 import { COMPILER_VERSION, compileClaim, type CompileResult, type CompilerArtifact, type CompilerArtifactKind, type CompilerClaim } from "./compiler-core.js";
+import { hostObjectUrl } from "./object-url.js";
 
 const LEASE_SECONDS = 900;
 const HEARTBEAT_MS = 30_000;
@@ -35,7 +36,7 @@ class CompilerClient {
     if (!value) return null;
     const claim = parseClaim(value);
     for (const artifact of claim.map.artifacts) {
-      const url = new URL(artifact.downloadUrl, this.baseUrl);
+      const url = new URL(hostObjectUrl(artifact.downloadUrl, this.baseUrl));
       artifact.downloadUrl = url.href;
       if (url.origin === this.baseUrl.origin) {
         artifact.downloadHeaders = { authorization: `Bearer ${this.token}` };
@@ -64,7 +65,7 @@ class CompilerClient {
   async upload(artifact: CompilerArtifact, reservation: Reservation, signal: AbortSignal): Promise<void> {
     if (!reservation.uploadRequired) return;
     if (!reservation.uploadUrl) throw new Error("compiler_upload_url_missing");
-    const response = await fetch(reservation.uploadUrl, {
+    const response = await fetch(hostObjectUrl(reservation.uploadUrl, this.baseUrl), {
       method: "PUT",
       headers: {
         "content-type": artifact.mediaType,
@@ -141,7 +142,17 @@ async function runClaim(client: CompilerClient, claim: CompilerClaim, xsdPath: s
     job.abort(error); await heartbeat.catch(() => undefined);
     if (workerSignal.aborted) throw workerSignal.reason;
     await client.fail(claim, error).catch((failure) => process.stderr.write(`${JSON.stringify({ component: "simforge-local-compiler", event: "failure_callback.failed", exportId: claim.exportId, error: failure instanceof Error ? failure.message : String(failure) })}\n`));
-    process.stderr.write(`${JSON.stringify({ component: "simforge-local-compiler", event: "job.failed", exportId: claim.exportId, error: error instanceof Error ? error.message : String(error) })}\n`);
+    // An expected compiler rejection names itself in its code; an unexpected
+    // runtime fault (`RangeError`, `TypeError`) carries its only diagnosis in
+    // the stack, and without it the export's `errorCode` is a single word with
+    // nothing behind it.
+    process.stderr.write(`${JSON.stringify({
+      component: "simforge-local-compiler",
+      event: "job.failed",
+      exportId: claim.exportId,
+      error: error instanceof Error ? error.message : String(error),
+      ...(error instanceof Error && error.stack ? { stack: error.stack.split("\n").slice(0, 8) } : {}),
+    })}\n`);
   }
 }
 

@@ -6,7 +6,7 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { fileURLToPath } from "node:url";
-import { simforgeEnv } from "../lib/simforge-env";
+import { hostObjectUrl } from "./object-url.js";
 import { HostOrigin, checkHostProtocolVersion, hostPath } from "@simforge-oss/studio-host";
 
 import type { RenderInputFile } from "@simforge-oss/render";
@@ -159,7 +159,7 @@ export class CpuJobsClient {
   ): Promise<void> {
     if (reservation.reused) return;
     if (!reservation.uploadUrl) throw new Error(`new ${reservation.key} reservation is missing an upload URL`);
-    const response = await fetch(workerObjectUrl(reservation.uploadUrl), {
+    const response = await fetch(hostObjectUrl(reservation.uploadUrl, this.baseUrl), {
       method: "PUT",
       headers: reservation.headers,
       body: createReadStream(artifact.path),
@@ -280,7 +280,7 @@ export class CpuJobsClient {
   }
 
   async uploadNativeArtifact(reservation: NativeArtifactReservation, path: string, signal: AbortSignal): Promise<void> {
-    const response = await fetch(workerObjectUrl(reservation.upload.url), {
+    const response = await fetch(hostObjectUrl(reservation.upload.url, this.baseUrl), {
       method: reservation.upload.method,
       headers: reservation.upload.headers,
       body: createReadStream(path),
@@ -415,7 +415,7 @@ export async function downloadInputs(
 
 async function openInputSource(input: RemoteInput, signal: AbortSignal): Promise<Readable> {
   if (input.download.url.startsWith("file:")) return createReadStream(fileURLToPath(input.download.url));
-  const response = await fetch(workerObjectUrl(input.download.url), { headers: input.download.headers, redirect: "error", signal });
+  const response = await fetch(input.download.url, { headers: input.download.headers, redirect: "error", signal });
   if (!response.ok || !response.body) throw new Error(`input ${input.inputId} download returned ${response.status}`);
   return Readable.fromWeb(response.body as NodeReadableStream);
 }
@@ -497,7 +497,7 @@ function parseRemoteInput(value: unknown, baseUrl: URL, token: string): RemoteIn
   if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0) {
     throw new Error("CPU render input has invalid immutable metadata.");
   }
-  const url = new URL(stringField(download, "url"), baseUrl);
+  const url = new URL(hostObjectUrl(stringField(download, "url"), baseUrl));
   const headers = stringRecord(download.headers);
   return {
     inputId: stringField(row, "inputId"),
@@ -584,19 +584,3 @@ function stringRecord(value: unknown): Readonly<Record<string, string>> {
   return row as Record<string, string>;
 }
 
-/**
- * Browser-facing presigned URLs retain the HTTPS tailnet origin. A colocated
- * worker may explicitly route only the local object-store endpoint over
- * loopback; all non-local-object URLs remain byte-for-byte unchanged.
- */
-function workerObjectUrl(value: string): string {
-  const override = simforgeEnv("WORKER_OBJECT_BASE_URL")?.trim();
-  if (!override) return value;
-  const source = new URL(value);
-  if (!source.pathname.startsWith("/api/local-objects/")) return value;
-  const local = new URL(override);
-  local.pathname = source.pathname;
-  local.search = source.search;
-  local.hash = source.hash;
-  return local.toString();
-}
