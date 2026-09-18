@@ -150,6 +150,26 @@ class SharedTextureCache {
 export const sharedTextures = new SharedTextureCache();
 
 /**
+ * Texture concurrency for a map's first view.
+ *
+ * A city tile in this dataset references ~80 separate KTX2 images, so the first
+ * 350 m of Belmont is ~2100 texture files and 1.4 GB of container bytes — of
+ * which `selectKtx2MipLevels` discards 97.5% unread, because only the mip
+ * levels at or below the per-asset dimension budget are transcoded. What
+ * time-to-ready is actually paid in is therefore the *width* of these two
+ * stages, not the tile byte volume: measured on Belmont at the 350 m bound,
+ * 95% of every texture's life was spent queued for a download slot, and the
+ * transcoder pool was the next wall behind it.
+ *
+ * Neither width can run away with memory, because `maxConcurrentLoads` already
+ * bounds the demand upstream: at most two tiles decode at once, so the
+ * in-flight texture set is at most those tiles' images no matter how many
+ * slots exist here. Measured JS heap before ready moved 530 MB -> 546 MB.
+ */
+const MAP_TEXTURE_DOWNLOADS = 48;
+const MAP_TRANSCODER_WORKERS = Math.min(8, Math.max(2, (navigator.hardwareConcurrency ?? 4) - 2));
+
+/**
  * Drop authored mip levels larger than `maxDimension` without decompressing or
  * resampling pixels: the first retained level becomes the new base.
  *
@@ -263,7 +283,7 @@ class SharedKTX2Loader extends KTX2Loader {
     const sessionId = tracker.sessionId;
     const decoded = tracker.trackDecode();
     const signal = this.signal;
-    if (this.activeDownloads >= 16) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    if (this.activeDownloads >= MAP_TEXTURE_DOWNLOADS) await new Promise<void>((resolve) => this.waiting.push(resolve));
     else this.activeDownloads++;
     try {
       signal?.throwIfAborted();
@@ -376,7 +396,7 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
     let tracked = trackedLoaders.get(tracker);
     if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension || tracked.resolver !== resolver || tracked.textureBudgetPerAsset !== textureBudgetPerAsset) {
       tracked?.ktx2.dispose();
-      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(3).detectSupport(renderer) as SharedKTX2Loader;
+      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(MAP_TRANSCODER_WORKERS).detectSupport(renderer) as SharedKTX2Loader;
       ktx2.tracker = tracker;
       ktx2.signal = signal;
       ktx2.maxTextureDimension = maxTextureDimension;
