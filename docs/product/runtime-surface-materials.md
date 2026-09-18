@@ -49,12 +49,21 @@ The build writes only under the selected map's ignored `3d/variants/` folder:
 - Road tiles are emitted only when every complete road node fits a spatial cell.
   Any hierarchy or boundary-crossing sheet blocks tiling rather than cutting
   geometry, lane markings, or ground continuity heuristically.
-- `static-colliders-v1.json` contains compact scene-frame OBBs for buildings,
-  walls, fences, barriers, bollards, guardrails, and explicitly named curbs.
-  The builder reads only each lowest-detail GLB's JSON chunk, normalizes
-  quantized accessor bounds, and rejects travel-lane overlaps using the map
-  topology. The timestamp-free artifact is byte-for-byte deterministic and is
-  bound to the source map manifest by SHA-256.
+- `static-colliders-v1.json` contains compact scene-frame OBBs for every static
+  mesh with real volume. Admission is solid-by-default, because the authored
+  exports name mesh nodes after the component that emitted them
+  (`InstancedStaticMeshComponent_0:7`) rather than after what they are: a name
+  list admitted 27 of Belmont's 4869 mesh nodes and no building at all.
+  Geometry is excluded only for a stated reason — road and ground surface
+  layers (`Roads_Road`, `Roads_Marking`, `Roads_Sidewalk`, `Terrain_Ground`, …),
+  foliage subtrees (canopy and trunk share one mesh), anything under 0.15 m
+  tall or 0.08 m wide, and kerb or guardrail networks merged into one map-wide
+  mesh. Class comes from the node's own name, else its ancestors, else its
+  size. The builder reads only each lowest-detail GLB's JSON chunk, normalizes
+  quantized accessor bounds, and rejects footprints that a travel lane's
+  centreline crosses using the map topology. The timestamp-free artifact is
+  byte-for-byte deterministic and is bound to the source map manifest by
+  SHA-256.
 - `manifest.json` contains source/output SHA-256 values, generator versions,
   runtime dependencies, and optional validated static-layer tiles. A new
   generation is written to its own directory and becomes visible only through

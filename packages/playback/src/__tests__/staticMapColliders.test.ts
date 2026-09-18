@@ -78,14 +78,18 @@ describe('precomputed static map colliders', () => {
       obb: { center: { x: 40, z: -20 }, lengthM: 12, widthM: 0.2, headingRad: 0.3 },
     };
     const building = { id: 'canonical-master/2518', class: 'building', obb: { center: { x: 259, z: -252 }, lengthM: 5.5, widthM: 4.8, headingRad: 0.58 } };
+    // Props are the bulk of every artifact now that unnamed static geometry is
+    // solid by default (Garching: 6159 of 6206). Only the slab may be dropped
+    // here: a class-wide filter would silently empty the map again.
+    const hydrant = { id: 'canonical-master/3001', class: 'prop', obb: { center: { x: 41, z: -22 }, lengthM: 0.4, widthM: 0.4, headingRad: 0 } };
     const fetcher = fixtureFetcher(artifact({
       sources: [{ id: 'canonical-master', file: 'master.gltf', declaredBytes: 1 }],
-      colliders: [slab, building, kerb],
-      statistics: { sourceTiles: 1, accepted: 3, rejectedRoadOverlap: 0, ignored: 981, classes: { building: 1, wall: 0, barrier: 0, prop: 0, 'road-boundary': 2 } },
+      colliders: [slab, building, hydrant, kerb],
+      statistics: { sourceTiles: 1, accepted: 4, rejectedRoadOverlap: 0, ignored: 981, classes: { building: 1, wall: 0, barrier: 0, prop: 1, 'road-boundary': 2 } },
     }), []);
     const result = await loadStaticMapColliders('/dev-assets/rfs/3d/manifest.json', fetcher);
-    expect(result.colliders).toEqual([building, kerb]);
-    expect(result.diagnostics).toMatchObject({ status: 'ready', accepted: 2, ignored: 982, classes: { building: 1, 'road-boundary': 1 } });
+    expect(result.colliders).toEqual([building, hydrant, kerb]);
+    expect(result.diagnostics).toMatchObject({ status: 'ready', accepted: 3, ignored: 982, classes: { building: 1, prop: 1, 'road-boundary': 1 } });
   });
 
   it('fails immediately with diagnostics when the derivative is absent', async () => {
