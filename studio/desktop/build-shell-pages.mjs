@@ -11,7 +11,7 @@
 // compiled with the same StyleX Babel options the app compiles with
 // (studio/stylex.config.mjs), server-rendered to static markup for the first
 // paint, and bundled for the browser so the page hydrates into the live
-// component - the WebGL sky and all - the moment the script runs. The pages
+// component - the locally baked cloud animation included - when the script runs. The pages
 // are literally the component's output, not a second design tracking it by
 // hand, and they ship as plain files with relative hrefs, which is all
 // `loadFile` can serve. Barlow, the product's body face, ships beside them
@@ -51,6 +51,8 @@ export const GENERATED_PAGES = [
   "cloud-loading.css",
   "cloud-loading.js",
   ...BARLOW.map(([, file]) => file),
+  "smoke.webm",
+  "smoke.png",
   "starting.html",
   "host-exited.html",
 ];
@@ -122,6 +124,7 @@ const PAGE_ELEMENT = `
       CloudLoadingSurface,
       {
         scope: "screen",
+        backdropAssetBase: ".",
         eyebrow: "SimForge",
         ...page.surface,
         icon: page.alertIcon
@@ -133,21 +136,6 @@ const PAGE_ELEMENT = `
   }
 `;
 
-/**
- * `three` is only reachable through the animated backdrop, and the server
- * render never runs its effect: the canvas is SSR'd empty and the browser
- * bundle, which does include `three`, drives it.
- */
-const THREE_STUB = {
-  name: "three-stub",
-  setup(esbuild) {
-    esbuild.onResolve({ filter: /^three$/ }, () => ({ path: "three", namespace: "three-stub" }));
-    esbuild.onLoad({ filter: /.*/, namespace: "three-stub" }, () => ({
-      contents: "export default {};",
-      loader: "js",
-    }));
-  },
-};
 
 /**
  * Compile StyleX exactly as the app does, and keep every rule the compiler
@@ -206,10 +194,8 @@ export async function renderShellPages() {
       // Bundled CommonJS (react-dom/server) calls `require`; ESM has none.
       banner: { js: "import { createRequire as __req } from 'node:module';\nconst require = __req(import.meta.url);" },
       conditions: ["development"],
-      // Errors only: stubbing `three` makes esbuild warn about every symbol
-      // the animated backdrop imports from it.
       logLevel: "error",
-      plugins: [THREE_STUB, stylexLoader(rules)],
+      plugins: [stylexLoader(rules)],
     });
     const { pageElement, renderToStaticMarkup } = await import(pathToFileURL(join(outDir, "surface.mjs")).href);
     // The browser bundle: the same tree, hydrated over the static markup. The
@@ -241,6 +227,9 @@ export async function renderShellPages() {
       "cloud-loading.css": `${await themeVariables()}\n${css.trim()}\n`,
       "cloud-loading.js": await readFile(join(outDir, "cloud-loading.js")),
     };
+    for (const file of ["smoke.webm", "smoke.png"]) {
+      pages[file] = await readFile(join(desktopDir, "../public/clouds", file));
+    }
     const barlowDir = join(dirname(require.resolve("@fontsource/barlow/package.json")), "files");
     for (const [weight, file] of BARLOW) {
       pages[file] = await readFile(join(barlowDir, `barlow-latin-${weight}-normal.woff2`));

@@ -74,8 +74,6 @@ import {
 export interface MapOverlayUrls {
   /** `.xodr` road network. Only the first 16 KB is fetched. */
   xodr: string;
-  /** The 3D tile manifest (also used by the viewer). */
-  manifest: string;
   /** `lane-polygons.geojson(.gz)`. */
   lanePolygons: string;
   /** `signals.geojson(.gz)`. */
@@ -242,14 +240,9 @@ export async function loadMapOverlays(
 
   // --- 1. sidecar fetches (a few hundred KB, all in parallel) -------------
   const tFetch = now();
-  const fetchOpts = signal ? { signal } : {};
-  const [header, manifest] = await Promise.all([
-    fetchXodrHeader(urls.xodr),
-    fetch(urls.manifest, fetchOpts).then((r) => {
-      if (!r.ok) throw new Error(`overlay manifest ${r.status}`);
-      return r.json() as Promise<SceneManifestLike>;
-    }),
-  ]);
+  const manifest = viewer.getMapManifest();
+  if (!manifest) throw new Error('[overlays] the viewer has no loaded map');
+  const header = await fetchXodrHeader(urls.xodr);
   // `fetchXodrHeader` Range-requests 16 KB and returns a *parsed* header rather
   // than the 6 MB of text `fromMapAssets` wants, so this is the header-shaped
   // half of the same factory. It carries `sceneBounds` across, which is what

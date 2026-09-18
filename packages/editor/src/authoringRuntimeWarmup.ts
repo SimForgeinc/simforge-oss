@@ -10,7 +10,9 @@ type Warmup = {
 const warmups = new Map<string, Warmup>();
 const simulationWarms = new Set<string>();
 
-function assetRoot(map: ScenarioMapEntry): string {
+type SimulationMap = Pick<ScenarioMapEntry, 'mapVersionId' | 'browserAssetRootUrl' | 'browserManifestUrl' | 'sumoNetworkSha256'>;
+
+function assetRoot(map: SimulationMap): string {
   const root = map.browserAssetRootUrl.replace(/\/+$/, '');
   if (map.browserManifestUrl !== `${root}/3d/manifest.json`) {
     throw new Error(`Map ${map.mapVersionId} has a browser manifest outside its declared asset root`);
@@ -19,7 +21,7 @@ function assetRoot(map: ScenarioMapEntry): string {
 }
 
 /** Browser assets consumed by the scenario worker, excluding visual tiles. */
-export function simulationRuntimeAssetUrls(map: ScenarioMapEntry): readonly string[] {
+export function simulationRuntimeAssetUrls(map: SimulationMap): readonly string[] {
   const root = assetRoot(map);
   return [
     `${root}/map.xodr`,
@@ -41,11 +43,10 @@ async function prefetch(url: string): Promise<void> {
 }
 
 /** Begin loading the lane index over the host's native runtime, keyed by the immutable map version. */
-export function warmAuthoringRuntime(map: ScenarioMapEntry, engine: Promise<Pick<EngineRuntime, 'laneGraph'>> | Pick<EngineRuntime, 'laneGraph'>): Promise<LaneIndex> {
+export function warmAuthoringRuntime(map: Pick<ScenarioMapEntry, 'mapVersionId' | 'topologyUrl'>, engine: Promise<Pick<EngineRuntime, 'laneGraph'>> | Pick<EngineRuntime, 'laneGraph'>): Promise<LaneIndex> {
   const existing = warmups.get(map.mapVersionId);
   if (existing) return existing.promise;
 
-  assetRoot(map);
   const promise = Promise.resolve(engine).then((runtime) => LaneIndex.load(map.topologyUrl, { engine: runtime })).then((laneIndex) => {
     const record = warmups.get(map.mapVersionId);
     if (record) record.ready = true;
@@ -64,7 +65,7 @@ export function authoringRuntimeReady(mapVersionId: string | null | undefined): 
 }
 
 /** Warm scenario-worker map assets after visual scene loading has completed. */
-export function warmSimulationAssets(map: ScenarioMapEntry): void {
+export function warmSimulationAssets(map: SimulationMap): void {
   if (simulationWarms.has(map.mapVersionId)) return;
   const urls = simulationRuntimeAssetUrls(map);
   simulationWarms.add(map.mapVersionId);

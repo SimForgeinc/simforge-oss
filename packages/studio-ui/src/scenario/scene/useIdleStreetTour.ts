@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CameraView, CityViewer } from "@simforge-oss/viewer";
 import { loadEngine } from "@simforge-oss/engine/browser";
-import { LaneIndex } from "@simforge-oss/editor";
+import { warmAuthoringRuntime, type LaneIndex } from "@simforge-oss/editor";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { interpolateMapView } from "./map-camera-transition";
 import {
@@ -57,10 +57,9 @@ export function useIdleStreetTour({
     if (!enabled || !map?.topologyUrl) return;
     const topologyUrl = map.topologyUrl;
     const abort = new AbortController();
-    // The native runtime decodes the lane graph the tour walks; `loadEngine()`
-    // is cached per thread, so this shares the editor's WASM instance.
-    void loadEngine()
-      .then((engine) => LaneIndex.load(topologyUrl, { engine, signal: abort.signal }))
+    // The tour and editor consume the same immutable lane index, not merely
+    // the same WASM module. Leaving the gallery must not fetch/decode it again.
+    void warmAuthoringRuntime({ mapVersionId: map.mapVersionId, topologyUrl }, loadEngine())
       .then((index) => {
         if (!abort.signal.aborted) setLaneIndex(index);
       })

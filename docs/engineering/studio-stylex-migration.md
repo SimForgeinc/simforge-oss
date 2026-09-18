@@ -118,17 +118,37 @@ StyleX compiles ahead of time, so something must transform the
   runtime — and they must be the product's loading screen, not a copy of it.
   So the script compiles `CloudLoadingSurface` with `stylexBabelConfig` and
   builds it twice from one element tree: server-rendered to static markup
-  for the first paint, and bundled for the browser (`cloud-loading.js`,
-  React, `three` and the animated `AppSwitcherSkyScene` included) so the
-  page hydrates into the live component. It writes `starting.html`,
+  for the first paint, and bundled for the browser (`cloud-loading.js` and
+  React) so the page hydrates into the live component. The smoke is the shared
+  shader baked to a local alpha video and exact PNG, not a second WebGL renderer.
+  It writes `starting.html`,
   `host-exited.html`, `cloud-loading.css` (the atomic rules plus the
   `:root`/`.dark` custom properties lifted from `styles.css`), the script,
-  and the Barlow faces (`barlow-*.woff2`, from `@fontsource/barlow`, since
-  next/font is not there to load them) into `studio/desktop`. The output is
+  the smoke assets (`smoke.webm`, `smoke.png`), and the Barlow faces
+  (`barlow-*.woff2`, from `@fontsource/barlow`, since next/font is not there to
+  load them) into `studio/desktop`. The output is
   committed, because unpackaged Studio loads those pages straight from that
   directory; re-run `pnpm -F @simforge-oss/studio desktop:pages` after
   changing the surface, its backdrop or the tokens they read, and
   `--check` reports a stale committed copy.
+
+The dashboard's `ScenarioWorldProvider` lives below the completed onboarding
+gate and above page Suspense. Pages declare a `ScenarioWorldSurface`; its lease
+moves one stable portal container into the page's viewport without replacing
+the canvas. Only immutable map identity changes call `loadMap`. A pending or
+different target cannot paint the retained map; non-world routes release it.
+The scenario list and editor do not keep each other's renderer hidden, and exit
+does not wait for a coverage-camera completion callback. Their existing View
+Transitions morph handles the visual handoff, independently of lifecycle.
+
+`studio/scripts/bake-cloud-backdrop.mjs` reproduces the smoke from its authored
+shader. The PNG paints immediately and for reduced motion. A video remains
+hidden until a decoded pixel proves alpha support; opaque/failed decodes keep
+the PNG, including browsers which advertise VP9 but discard alpha. Desktop
+pages use relative asset URLs copied by `stage-app.mjs`; web pages use `/clouds`.
+`verify:asset-loading` includes the real gallery/editor retention and bounded
+exit checks. It attaches to an existing isolated daemon; `verify:map-install`
+owns a separate daemon/root because it deliberately corrupts and repairs files.
 
 `packages/studio-ui/vitest.config.ts` compiles StyleX before tests import it,
 and it matches the way the app does rather than by filename: any `.ts`/`.tsx`

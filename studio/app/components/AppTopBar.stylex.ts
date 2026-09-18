@@ -6,10 +6,8 @@
  * produced, and Tailwind's own filter ordering inside the composite
  * `backdrop-filter`. Nothing here changes a pixel.
  *
- * The cloud layer's own paint is not restated here. It is shared with
- * `SkyCloudBackdrop`'s un-animated branch, so it lives beside that component
- * as `cloudPlate` and is re-exported below; `styles.clouds` is only the box it
- * is painted into.
+ * The top bar's painted cloud layer lives beside the shared full-screen
+ * backdrop as `cloudPlate`; `styles.clouds` only positions it here.
  */
 
 import * as stylex from "@stylexjs/stylex";

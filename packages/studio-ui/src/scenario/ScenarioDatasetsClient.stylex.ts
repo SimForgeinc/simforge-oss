@@ -37,22 +37,6 @@ export const styles = stylex.create({
     minWidth: 0,
     flex: "1 1 0%",
   },
-  /** Cross-fade surface between the coverage map and the 3D world. */
-  transitionCover: {
-    position: "absolute",
-    inset: "0",
-    zIndex: 30,
-    pointerEvents: "none",
-    transitionProperty: "opacity",
-    transitionDuration: "300ms",
-    transitionTimingFunction: "ease-out",
-  },
-  transitionCoverVisible: {
-    opacity: 1,
-  },
-  transitionCoverHidden: {
-    opacity: 0,
-  },
   // pointer-events-auto
   div: {
     pointerEvents: "auto",

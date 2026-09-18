@@ -2,7 +2,7 @@
 
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
-import { DirectionalLight, Scene } from "three";
+import { DirectionalLight, PerspectiveCamera, Scene, type WebGLRenderer } from "three";
 import type { CityViewer, CityWeatherAppearance } from "@simforge-oss/viewer";
 import type { EditorDocument } from "@simforge-oss/editor";
 import type { ActorRenderer } from "@simforge-oss/viewer";
@@ -14,6 +14,7 @@ import {
   type Environment,
 } from "@simforge-oss/scenario";
 import { EditorSceneEnvironmentBridge } from "../../src/scenario/editor/EditorSceneEnvironmentBridge";
+import { FRESH_SCENARIO_MINUTES, withFreshEditorEnvironmentDefaults } from "@simforge-oss/scenario/contracts";
 import {
   applyDefaultSceneEnvironment,
   applyEditorSceneEnvironment,
@@ -24,12 +25,13 @@ import {
 } from "../../src/scenario/editor/weather-controls";
 import { withSceneMinutes } from "../../src/scenario/editor/scene-time";
 
+import { WeatherController } from "../../../viewer/src/weather";
 afterEach(cleanup);
 
 describe("SimForge editor Three.js environment", () => {
   it("gives a viewer with no document the same sky a fresh scenario opens with", () => {
     // A document that authored no environment resolves through the schema.
-    const fresh = EnvironmentSchema.parse({});
+    const fresh = withFreshEditorEnvironmentDefaults(withSceneMinutes(EnvironmentSchema.parse({}), FRESH_SCENARIO_MINUTES));
     const { viewer, setWeatherAppearance } = fakeViewer();
 
     const restore = applyDefaultSceneEnvironment(viewer, "high");
@@ -38,7 +40,6 @@ describe("SimForge editor Three.js environment", () => {
     setWeatherAppearance.mockClear();
     applyEditorSceneEnvironment(viewer, fresh, { quality: "high" });
     expect(setWeatherAppearance.mock.calls[0]![0]).toEqual(browsing);
-    expect(fresh).toEqual(DEFAULT_ENVIRONMENT);
 
     restore();
     expect(setWeatherAppearance).toHaveBeenLastCalledWith(null);
@@ -72,13 +73,35 @@ describe("SimForge editor Three.js environment", () => {
     expect(authored.setAuthoringFidelity.mock.invocationCallOrder[0]!)
       .toBeLessThan(authored.setWeatherAppearance.mock.invocationCallOrder[0]!);
 
-    // A host-owned viewer gets neither fidelity nor a browsing sky from the bridge.
-    const hosted = fakeViewer();
-    render(
-      <EditorSceneEnvironmentBridge active document={null} ownsViewer={false} quality="high" viewer={hosted.viewer} />,
-    );
-    expect(hosted.setAuthoringFidelity).not.toHaveBeenCalled();
-    expect(hosted.setWeatherAppearance).not.toHaveBeenCalled();
+  });
+
+  it("lights a host-owned gallery after its sun exists, identically to a fresh editor", () => {
+    const { viewer, setWeatherAppearance } = fakeViewer();
+    const scene = new Scene();
+    const weather = new WeatherController(scene, new PerspectiveCamera(), { toneMappingExposure: 1 } as WebGLRenderer);
+    Object.assign(viewer, { scene });
+    setWeatherAppearance.mockImplementation((appearance) => {
+      weather.clear();
+      if (appearance) weather.apply(appearance, scene.getObjectByName("sun") as DirectionalLight ?? null);
+    });
+    const view = render(<EditorSceneEnvironmentBridge active={false} document={null} ownsViewer={false} quality="high" viewer={viewer} />);
+    const sun = new DirectionalLight(0xff0000, 2);
+    sun.name = "sun";
+    scene.add(sun);
+    view.rerender(<EditorSceneEnvironmentBridge active document={null} ownsViewer={false} quality="high" viewer={viewer} />);
+    const galleryColor = sun.color.getHex();
+    const galleryIntensity = sun.intensity;
+    const galleryPosition = sun.position.clone();
+    expect(galleryPosition.y).toBeGreaterThan(0);
+    expect(galleryColor).not.toBe(0xff0000);
+    expect(galleryIntensity).toBeGreaterThan(0);
+    const document = new FakeEditorDocument(withFreshEditorEnvironmentDefaults(withSceneMinutes(EnvironmentSchema.parse({}), FRESH_SCENARIO_MINUTES)));
+    view.rerender(<EditorSceneEnvironmentBridge active document={document as unknown as EditorDocument} ownsViewer={false} quality="high" viewer={viewer} />);
+    expect(sun.color.getHex()).toBe(galleryColor);
+    expect(sun.intensity).toBe(galleryIntensity);
+    expect(sun.position.distanceTo(galleryPosition)).toBeLessThan(0.000001);
+    view.unmount();
+    weather.dispose();
   });
 
   it("resolves every canonical weather and time preset into renderer-owned effects", () => {

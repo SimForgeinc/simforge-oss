@@ -7,6 +7,7 @@ import {
   useTopBarSlotContext,
 } from "../../src/components/TopBarSlot";
 
+import { StudioHostTestProvider } from "../helpers/studio-host";
 afterEach(cleanup);
 
 function TestTopBar() {
@@ -33,6 +34,7 @@ function renderHeader(props: Partial<React.ComponentProps<typeof EditorHeader>> 
         {...props}
       />
     </TopBarSlotProvider>,
+    { wrapper: StudioHostTestProvider },
   );
 }
 

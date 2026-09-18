@@ -1,10 +1,9 @@
 /**
  * StyleX styles for `SkyCloudBackdrop`, plus the cloud plate itself.
  *
- * `cloudPlate` is exported because two surfaces draw the same painted sky: the
- * backdrop's un-animated branch, and the dashboard top bar's own cloud layer.
- * It used to be the `app-topbar-clouds` global class; it lives here now, and
- * `AppTopBar.stylex.ts` re-exports it rather than restating the gradient.
+ * `cloudPlate` is the dashboard top bar's painted cloud layer. Full loading
+ * surfaces share the baked smoke and its exact still through CloudSmoke.
+ * The top bar re-exports its plate rather than restating the gradient.
  */
 
 import * as stylex from "@stylexjs/stylex";
@@ -84,6 +83,4 @@ export const styles = stylex.create({
         "radial-gradient(circle at 50% 46%, rgba(255,255,255,0.07) 0%, rgba(18,19,20,0.18) 38%, rgba(2,3,4,0.72) 100%)",
     },
   },
-  /** absolute inset-0 — the box the shared `cloudPlate` is painted into. */
-  staticClouds: { position: "absolute", inset: 0 },
 });

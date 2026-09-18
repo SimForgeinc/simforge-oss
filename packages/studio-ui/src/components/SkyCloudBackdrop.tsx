@@ -1,14 +1,15 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { AppSwitcherSkyScene } from "./AppSwitcherSkyScene";
+import { CloudSmoke } from "./CloudSmoke";
 import { mergeStyleProps, type XStyle } from "./stylex/surface";
-import { cloudPlate, styles } from "./SkyCloudBackdrop.stylex";
+import { styles } from "./SkyCloudBackdrop.stylex";
 
 export function SkyCloudBackdrop({
   className,
   xstyle,
   animated = true,
+  assetBase,
 }: {
   /**
    * Caller-supplied classes. Reserved for global class names the cascade
@@ -22,6 +23,7 @@ export function SkyCloudBackdrop({
   /** Caller StyleX styles, composed after this surface's own so they win. */
   xstyle?: XStyle;
   animated?: boolean;
+  assetBase?: string;
 }) {
   return (
     <div
@@ -29,14 +31,7 @@ export function SkyCloudBackdrop({
       {...mergeStyleProps(stylex.props(styles.root, xstyle), className)}
       data-testid="sky-cloud-backdrop"
     >
-      {animated ? (
-        <AppSwitcherSkyScene />
-      ) : (
-        <div
-          aria-hidden="true"
-          {...stylex.props(styles.staticClouds, cloudPlate.plate)}
-        />
-      )}
+      <CloudSmoke animated={animated} assetBase={assetBase} />
     </div>
   );
 }

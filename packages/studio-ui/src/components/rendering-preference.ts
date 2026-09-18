@@ -106,6 +106,41 @@ const RenderSources = z.object({
   tiles: z.array(z.object({ lods: z.array(z.object({ file: z.string().min(1) })) })),
 });
 
+
+type InstalledSupport = { verified: boolean; roads: boolean; low: boolean };
+// These URLs identify immutable installed map versions. Cache only successful
+// parses, not missing/unavailable releases: installing or reconnecting must be
+// able to repair a failed check. The small result is shared by toolbar, gallery,
+// editor and host; none needs to download/parse the same closure twice.
+const installedSupport = new Map<string, Promise<InstalledSupport>>();
+
+function readInstalledSupport(manifestUrl: URL): Promise<InstalledSupport> {
+  const key = manifestUrl.href;
+  const cached = installedSupport.get(key);
+  if (cached) return cached;
+  const pending = (async () => {
+    try {
+      const [sourceResponse, variantsResponse] = await Promise.all([
+        fetch(manifestUrl),
+        fetch(new URL("variants/manifest.json", manifestUrl)),
+      ]);
+      if (!sourceResponse.ok || !variantsResponse.ok) throw new Error("unavailable manifest");
+      const source = RenderSources.parse(await sourceResponse.json());
+      const value: unknown = await variantsResponse.json();
+      if (!isCityAssetVariantManifest(value)) throw new Error("invalid variant manifest");
+      return {
+        verified: true,
+        roads: supportsCityAssetVariant(source, value, "roads-only"),
+        low: supportsCityAssetVariant(source, value, "geometry-only"),
+      };
+    } catch {
+      installedSupport.delete(key);
+      return { roads: false, low: false, verified: false };
+    }
+  })();
+  installedSupport.set(key, pending);
+  return pending;
+}
 /** Intersection for a global preference; a current map is passed as a singleton. */
 export async function readRenderingAvailability(
   maps: readonly { manifestUrl: string; label: string }[],
@@ -119,26 +154,9 @@ export async function readRenderingAvailability(
     },
   };
   const checked = await Promise.all(maps.map(async (map) => {
-    const manifestUrl = new URL(map.manifestUrl, window.location.href);
-    try {
-      const [sourceResponse, variantsResponse] = await Promise.all([
-        fetch(manifestUrl, { signal }),
-        fetch(new URL("variants/manifest.json", manifestUrl), { signal }),
-      ]);
-      if (!sourceResponse.ok || !variantsResponse.ok) throw new Error("unavailable manifest");
-      const source = RenderSources.parse(await sourceResponse.json());
-      const value: unknown = await variantsResponse.json();
-      const variants = isCityAssetVariantManifest(value) ? value : null;
-      return {
-        label: map.label,
-        verified: true,
-        roads: supportsCityAssetVariant(source, variants, "roads-only"),
-        low: supportsCityAssetVariant(source, variants, "geometry-only"),
-      };
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      return { label: map.label, roads: false, low: false, verified: false };
-    }
+    const support = await readInstalledSupport(new URL(map.manifestUrl, window.location.href));
+    signal?.throwIfAborted();
+    return { label: map.label, ...support };
   }));
   const roads = checked.find((map) => !map.roads);
   const low = checked.find((map) => !map.low);

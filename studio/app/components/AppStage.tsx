@@ -9,8 +9,8 @@ import { styles } from "@/app/components/AppStage.stylex";
 /**
  * A utility route rendered as an app-switcher surface rather than a document.
  *
- * The switcher's own backdrop (`SkyCloudBackdrop`, which follows the graphics
- * level) and its centred hairline column, with one rule the switcher's dialog
+ * The switcher's own shared smoke backdrop and its centred hairline column,
+ * with one rule the switcher's dialog
  * did not need: the stage is exactly as tall as the dashboard's main area and
  * `children` is the only scroller. Settings, Render Settings and SimCloud are
  * therefore the same shape as a tab — you never scroll the page, you scroll a

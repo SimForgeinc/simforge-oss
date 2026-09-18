@@ -38,7 +38,6 @@ export function useMapSignalOverlays({
       viewer,
       {
         xodr: runtimeMap.xodr,
-        manifest: runtimeMap.manifest,
         lanePolygons: runtimeMap.lanePolygons,
         signals: runtimeMap.signals,
       },

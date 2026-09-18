@@ -28,12 +28,11 @@ export type { DatasetCloudHome } from "./rail/dataset-home";
 import { ScenarioCoverageMap } from "./coverage/ScenarioCoverageMap";
 import { useScenarioSession } from "./scene/useScenarioSession";
 import { ScenarioSessionProvider } from "./scene/ScenarioSessionContext";
-import { useEditorTransition } from "./scene/editor-transition";
 import {
-  ScenarioWorldHost,
   type ScenarioWorldState,
   type ScenarioWorldTarget,
 } from "./scene/ScenarioWorldHost";
+import { ScenarioWorldSurface } from "./scene/ScenarioWorldProvider";
 import type { ScenarioMapGroup } from "./list/document-map-groups";
 import { useStudioHost } from "../host";
 import { ScenarioNameConflict } from "@simforge-oss/studio-host";
@@ -138,7 +137,7 @@ export function ScenarioDatasetsClient({
    * lists. `null` only while the list is loading or empty; once datasets exist, the effect below
    * always resolves one.
    */
-  const [openDatasetId, setOpenDatasetId] = useState<string | null>(null);
+  const [openDatasetId, setOpenDatasetId] = useState<string | null>(() => searchParams.get("dataset"));
 
   /**
    * The document open in the editor, if any — the v2 equivalent of v1's `?pane=editor`.
@@ -146,7 +145,9 @@ export function ScenarioDatasetsClient({
    * v1 kept the list and the editor as two modes of one mounted surface. Holding this in state rather
    * than routing to `/scenario/editor` is what keeps the pencil a toggle instead of a one-way trip.
    */
-  const [openDocumentId, setOpenDocumentId] = useState<string | null>(null);
+  const [openDocumentId, setOpenDocumentId] = useState<string | null>(() =>
+    searchParams.get("dataset") && searchParams.get("pane") !== "render" ? searchParams.get("document") : null,
+  );
   /** Whether the open editor has resolved its record and map, which is when its chrome appears. */
   const [editorReady, setEditorReady] = useState(false);
   /** The selected row: what `?preview=` addresses, and what a render pane opens against. */
@@ -182,33 +183,23 @@ export function ScenarioDatasetsClient({
     : null;
   useSetPageTitle(openDocumentId ? "Editor" : openDataset?.name ?? "Dataset");
 
-  /**
-   * The map the open document authors on, read from the column's own groups.
-   *
-   * This is what the coverage map flies to before the world exists, so it has to be known from the
-   * list's data rather than from the document fetch the editor entry starts.
-   */
-  const editedMapVersionId = openDocumentId
-    ? (mapGroups.find((group) =>
-        group.documents.some((document) => document.id === openDocumentId),
-      )?.mapVersionId || null)
+  // Return to the edited map's group even on a gallery deep link: the hidden
+  // list deliberately defers its fetch, so it cannot be the identity authority.
+  const editedMapVersionId = scenarioSession.document?.id === openDocumentId
+    ? scenarioSession.map?.mapVersionId ?? null
     : null;
-  const transition = useEditorTransition({
-    editing: openDocumentId !== null,
-    requestedMapVersionId: editedMapVersionId,
-    worldReady: editorReady
-      && worldTarget !== null
-      && worldState.loadedMapVersionId === worldTarget.mapVersionId,
-  });
+  const editing = openDocumentId !== null;
 
-  // A released world takes its target and its published state with it. Otherwise the next entry
-  // mounts on the last scenario's map, or believes that map is already loaded and lifts the cover
-  // over a black canvas.
+  // The list does not need a city. Returning to it is a local state change,
+  // not a wait for an unrelated coverage-camera callback (null -> null never
+  // produces one on a gallery deep link).
   useEffect(() => {
-    if (transition.worldMounted) return;
+    if (editing) return;
     setWorldTarget(null);
     setWorldState(NO_WORLD_STATE);
-  }, [transition.worldMounted]);
+    setViewer(null);
+    setActorRenderer(null);
+  }, [editing]);
 
   // The editor is the only publisher of a world target, and it republishes whenever its resolved map
   // object changes identity. Holding the existing target for the same immutable map version keeps the
@@ -626,11 +617,10 @@ export function ScenarioDatasetsClient({
       data-testid="scenario-dataset-index"
       data-workspace-mode={openDocumentId ? "editor" : datasetRightPaneMode}
     >
-      {/* The 3D world exists for exactly as long as a scenario is being edited. Browsing a dataset
-          holds no WebGL context, no streamed city and no actor renderer: the coverage map below is
-          the browsing surface, and `transition` is what sequences the handover in both directions. */}
-      {transition.worldMounted ? (
-        <ScenarioWorldHost
+      {/* The surface leases the dashboard's world. The coverage renderer is
+          absent while editing, rather than rendering invisibly behind it. */}
+      {editing ? (
+        <ScenarioWorldSurface
           className="absolute inset-0 z-0"
           target={worldTarget}
           pendingTarget={worldTarget === null}
@@ -641,14 +631,12 @@ export function ScenarioDatasetsClient({
         />
       ) : null}
 
-      {/* Kept mounted throughout, and visible until the world actually owns the screen: the coverage
-          map has to stay on camera while it flies into the scenario's region, and again while it
-          flies back out under the loading cover on the way home. */}
+      {/* Keep the list's data and scroll position, not a second GPU scene. */}
       <div
         className={`pointer-events-none relative z-10 flex h-full min-h-0 w-full flex-row ${
-          transition.worldMounted ? "invisible pointer-events-none" : ""
+          editing ? "invisible pointer-events-none" : ""
         }`}
-        aria-hidden={transition.worldMounted ? "true" : undefined}
+        aria-hidden={editing ? "true" : undefined}
         data-testid="scenario-list-session"
       >
         <ResizablePanel
@@ -742,13 +730,13 @@ export function ScenarioDatasetsClient({
               renderPaneOpen ? "scale-[1.02] blur-[14px]" : ""
             }`}
           >
-            <ScenarioCoverageMap
-              maps={mapGroups}
-              selectedMapVersionId={selectedMapVersionId}
-              onSelectMap={selectMap}
-              focus={transition.focus}
-              onFocusSettled={transition.onFocusSettled}
-            />
+            {!editing ? (
+              <ScenarioCoverageMap
+                maps={mapGroups}
+                selectedMapVersionId={selectedMapVersionId}
+                onSelectMap={selectMap}
+              />
+            ) : null}
           </div>
           {renderPaneOpen && renderTarget ? (
             <div {...stylex.props(styles.div)}>
@@ -828,7 +816,7 @@ export function ScenarioDatasetsClient({
         />
       </div>
 
-      {transition.worldMounted
+      {editing
       && openDatasetId
       && openDocumentId
       && scenarioSession.document?.id === openDocumentId
@@ -860,34 +848,15 @@ export function ScenarioDatasetsClient({
         </div>
       ) : null}
 
-      {/* The one surface both handovers cross-fade through. It goes up over the focused coverage map,
-          stays up while the world streams — the world host publishes its own progress into the same
-          screen-scoped cover — and lifts once the editor reports its map fully loaded. */}
-      {transition.coverMounted ? (
-        <div
-          {...stylex.props(
-            styles.transitionCover,
-            transition.coverVisible ? styles.transitionCoverVisible : styles.transitionCoverHidden,
-          )}
-          aria-hidden={transition.coverVisible ? undefined : "true"}
-          data-testid="scenario-editor-transition-cover"
-          data-transition-phase={transition.phase}
+      {editing && !editorReady ? (
+        <CloudLoadingSurface
+          scope="screen"
+          title={scenarioSession.failed ? "The scenario could not be opened" : "Opening the scenario"}
+          detail={scenarioSession.message ?? "Reading the scenario and its map."}
+          role={scenarioSession.failed ? "alert" : "status"}
         >
-          <CloudLoadingSurface
-            scope="embedded"
-            backdropAnimated={false}
-            title={
-              transition.phase === "releasing" || transition.phase === "defocusing"
-                ? "Leaving the scenario"
-                : "Opening the scenario"
-            }
-            detail={
-              transition.phase === "releasing" || transition.phase === "defocusing"
-                ? "Releasing the world and returning to the coverage map…"
-                : "Preparing the authoring world for this map…"
-            }
-          />
-        </div>
+          {scenarioSession.failed ? <Button onClick={() => openDocument(null)}>Back to scenarios</Button> : null}
+        </CloudLoadingSurface>
       ) : null}
     </section>
     </ScenarioSessionProvider>

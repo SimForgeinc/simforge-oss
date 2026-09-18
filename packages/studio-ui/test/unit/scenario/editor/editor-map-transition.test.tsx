@@ -83,6 +83,7 @@ describe("ScenarioEditorSurface map transition", () => {
       setRenderingSuspended: vi.fn(),
       setAuthoringFidelity: vi.fn(),
       setLayerVisible: vi.fn(),
+      setWeatherAppearance: vi.fn(),
     };
     const props = {
       map: {
@@ -142,6 +143,7 @@ describe("ScenarioEditorSurface map transition", () => {
       setRenderingSuspended: vi.fn(),
       setAuthoringFidelity: vi.fn(),
       setLayerVisible: vi.fn(),
+      setWeatherAppearance: vi.fn(),
     };
     const props = {
       map: {

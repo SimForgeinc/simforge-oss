@@ -84,7 +84,11 @@ function result(quality: RenderingBenchmarkResult["quality"], missingTiles = 0):
   };
 }
 
-const noop = { onStart: vi.fn(), onCancel: vi.fn(), onApply: vi.fn() };
+const noop = {
+  onStart: vi.fn(), onCancel: vi.fn(), onApply: vi.fn(),
+  qualities: ["roads-only", "ultra-low-3d", "minimal", "high"] as const,
+  availability: { checking: false, unavailable: {} },
+};
 
 describe("RenderDiagnostics", () => {
   it("is one button until started, with the body collapsed", () => {

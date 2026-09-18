@@ -39,6 +39,8 @@ export const PAGES = [
   "connections.js",
   "cloud-loading.css",
   "cloud-loading.js",
+  "smoke.webm",
+  "smoke.png",
   "barlow-400.woff2",
   "barlow-500.woff2",
   "barlow-600.woff2",

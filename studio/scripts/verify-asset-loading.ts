@@ -4,9 +4,9 @@
  *     --maps-root=/tmp/maps --chromium=/path/to/chrome --out=/tmp/loading
  *
  * Default: 32 closure members, serving integrity/ranges/conditional requests,
- * and cold + warm High gallery loads at the user's measured 13 ms RTT.
- * --all: every closure member, 100 ms latency stress, plus the scenario editor
- * using the desktop bridge contract backed by the real host endpoints.
+ * and cold + warm High gallery loads at the user's measured 13 ms RTT, followed
+ * by same-map route retention, five editor exits and a genuine different-map load.
+ * --all also checks every closure member, 100 ms latency, and the desktop bridge.
  * Both tiers require 100%, a single renderer lifetime, and zero browser errors.
  * Chromium resolves asset-host.test to loopback: HTTP is deliberately NOT a
  * secure context, so Cache Storage cannot hide a broken HTTP caching policy.
@@ -17,6 +17,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium, type BrowserContext } from "playwright-core";
+import { verifyWorldNavigation } from "./verify-world-navigation";
 
 const gateStarted = performance.now();
 const args = new Map(process.argv.slice(2).map((arg) => {
@@ -328,8 +329,11 @@ const profile = join(out, "browser-profile");
 // A repeat gate must start cold too. This directory is owned exclusively by
 // this script under its output directory, never the user's Chromium profile.
 await rm(profile, { recursive: true, force: true });
+// The HTTP reuse contract requires room for Belmont's 1.8 GB closure; Chromium's
+// machine-dependent default quota evicts its largest textures during this test.
+// This does not affect the route-retention assertion: that forbids even a GET.
 const context = await chromium.launchPersistentContext(profile, { executablePath: args.get("chromium") ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-  headless: true, viewport: { width: 1600, height: 1000 }, args: ["--no-sandbox", "--use-gl=angle", "--use-angle=vulkan", "--enable-features=Vulkan", "--disable-vulkan-surface", "--host-resolver-rules=MAP asset-host.test 127.0.0.1", "--no-proxy-server"] });
+  headless: true, viewport: { width: 1600, height: 1000 }, args: ["--no-sandbox", "--disk-cache-size=4294967296", "--use-gl=angle", "--use-angle=vulkan", "--enable-features=Vulkan", "--disable-vulkan-surface", "--host-resolver-rules=MAP asset-host.test 127.0.0.1", "--no-proxy-server"] });
 try {
   await verifySetupGate();
   const cold = await verifyViewer(context, "gallery-cold", "/dashboard/map-assets");
@@ -337,6 +341,15 @@ try {
   assert(warm.responses304 >= 30, "warm map must revalidate stable URLs rather than download new signed URLs");
   assert(warm.assetBytes < cold.assetBytes / 2, "warm map must reuse most response bytes");
   pass(`warm reuse: ${(100 * (1 - warm.assetBytes / cold.assetBytes)).toFixed(2)}% fewer wire bytes; ${warm.responses304} authorized 304s, ${(warm.ms / 1000).toFixed(2)} s`);
+  const other = catalog.find((candidate) => candidate.sourceMapId === "richmond-field-station");
+  assert(other, "install Richmond for the different-map navigation assertion");
+  const navigationTicket = await api<{ url: string }>("/api/simforge/host/session", {
+    method: "POST", ...jsonBody({ next: "/dashboard/map-assets" }),
+    headers: { "content-type": "application/json", host: browserOrigin.host },
+  });
+  const navigationUrl = new URL(navigationTicket.url);
+  navigationUrl.hostname = browserOrigin.hostname;
+  const navigation = await verifyWorldNavigation({ context, ticketUrl: navigationUrl.href, map, other, out, latencyMs: LATENCY_MS });
   let editor;
   if (args.has("all")) {
     const created = await api<{ document: { id: string; datasetId: string } }>(`/api/simforge/maps/${map.mapVersionId}/documents/default`, { method: "POST" });
@@ -347,6 +360,6 @@ try {
     assert(!calls.includes("ensure"), "normal desktop reads must not add an ensure IPC before every asset GET");
     pass("desktop path: real host bridge available, no per-asset ensure IPC");
   }
-  await writeFile(join(out, "summary.json"), JSON.stringify({ closure, cold, warm, editor }, null, 2));
+  await writeFile(join(out, "summary.json"), JSON.stringify({ closure, cold, warm, navigation, editor }, null, 2));
   console.log(`verify-asset-loading: ${args.has("all") ? "exhaustive" : "sampled"} tier passed in ${((performance.now() - gateStarted) / 1000).toFixed(1)} s`);
 } finally { await context.close(); }

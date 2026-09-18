@@ -49,9 +49,9 @@ export function applySceneFidelity(
  * scenario editor, the drive game and the map viewer all mount this, so they
  * cannot drift apart.
  *
- * `ownsViewer` is false only inside the integrated datasets workspace, where
- * `ScenarioWorldHost` keeps one persistent viewer across modes and owns its
- * fidelity and browsing sky; there the bridge only follows the document.
+ * `ownsViewer` is false for dashboard surfaces: the persistent world owns
+ * fidelity, while this bridge applies the surface's environment only after
+ * its map (including the sun light) is ready.
  */
 export function EditorSceneEnvironmentBridge({
   active,
@@ -97,7 +97,7 @@ export function EditorSceneEnvironmentBridge({
   useEffect(() => {
     if (!viewer) return;
     if (!authored || !document) {
-      return ownsViewer ? applyDefaultSceneEnvironment(viewer, quality) : undefined;
+      return active ? applyDefaultSceneEnvironment(viewer, quality) : undefined;
     }
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
       ?? false;
@@ -113,7 +113,7 @@ export function EditorSceneEnvironmentBridge({
       viewer.setStreetLightsEnabled(false);
       actorRenderer?.setHeadlightsEnabled(false);
     };
-  }, [actorRenderer, authored, document, lighting, ownsViewer, quality, sceneTime, viewer, weatherControls]);
+  }, [active, actorRenderer, authored, document, lighting, ownsViewer, quality, sceneTime, viewer, weatherControls]);
 
   return null;
 }

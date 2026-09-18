@@ -10,10 +10,8 @@
  * region selects that map; clicking bare basemap clears the selection.
  *
  * This is the whole 2D surface: no measure tools, no satellite, no terrain, no
- * WebGL city. Opening a scenario for editing is what mounts the 3D world, and
- * the camera choreography that hands over to it is driven from outside through
- * `focus` / `onFocusSettled`: set `focus` to fly to one map's footprint, clear
- * it to fly back out to the whole coverage extent.
+ * WebGL city. It is absent while editing: returning to the list never waits
+ * for a camera callback or a basemap request to complete.
  */
 
 import * as stylex from "@stylexjs/stylex";
@@ -44,17 +42,11 @@ import { styles } from "./ScenarioCoverageMap.stylex";
  */
 const COVERAGE_RAMP = MONOCHROME_RAMPS[DEFAULT_BASEMAP];
 
-/** Fly duration for a focus change, matching the editor hand-off fade. */
-const FLY_MS = 1600;
 const FIT_PADDING_PX = 72;
 /** A single map is ~1 km across; without a ceiling `fitBounds` lands in rooftops. */
 const FOCUS_MAX_ZOOM = 15.5;
 const COVERAGE_FILL = "scenario-coverage-fill";
 
-/** `easeInOutQuad` — the camera leaves and arrives at rest. */
-function easeInOut(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-}
 
 type CoverageFeature = Feature<Polygon, { mapVersionId: string }>;
 
@@ -63,10 +55,6 @@ export type ScenarioCoverageMapProps = {
   maps: ScenarioMapGroup[];
   selectedMapVersionId: string | null;
   onSelectMap: (mapVersionId: string | null) => void;
-  /** Non-null flies the camera to that map's footprint; null flies back out to all coverage. */
-  focus: { mapVersionId: string } | null;
-  /** Fired once per completed fly, in both directions. */
-  onFocusSettled?: () => void;
   xstyle?: stylex.StyleXStyles;
 };
 
@@ -95,8 +83,6 @@ export function ScenarioCoverageMap({
   maps,
   selectedMapVersionId,
   onSelectMap,
-  focus,
-  onFocusSettled,
   xstyle,
 }: ScenarioCoverageMapProps) {
   const studioHost = useStudioHost();
@@ -180,50 +166,13 @@ export function ScenarioCoverageMap({
   }), [covered]);
 
   const allBounds = useMemo(() => boundsOf(covered.map((footprint) => footprint.polygon)), [covered]);
-  const boundsByMapVersionId = useMemo(() => {
-    const byId = new Map<string, LngLatBoundsLike>();
-    for (const footprint of covered) {
-      const bounds = boundsOf([footprint.polygon]);
-      if (bounds) byId.set(footprint.mapVersionId, bounds);
-    }
-    return byId;
-  }, [covered]);
-
-  const focusedMapVersionId = focus?.mapVersionId ?? null;
   const fittedRef = useRef(false);
-  // The focus the camera already stands at. Seeded with the mount value so a
-  // list that mounts unfocused frames all coverage without reporting a fly.
-  const appliedFocusRef = useRef<string | null>(focusedMapVersionId);
-
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !allBounds) return;
-    const first = !fittedRef.current;
-    if (!first && appliedFocusRef.current === focusedMapVersionId) return;
+    if (!map || !ready || !allBounds || fittedRef.current) return;
     fittedRef.current = true;
-    appliedFocusRef.current = focusedMapVersionId;
-
-    const target = focusedMapVersionId ? boundsByMapVersionId.get(focusedMapVersionId) : allBounds;
-    if (!target) {
-      // Focusing a map we cannot draw moves no camera, but the hand-off that
-      // is waiting on this fly must still proceed.
-      onFocusSettled?.();
-      return;
-    }
-    const duration = first ? 0 : FLY_MS;
-    map.fitBounds(target, {
-      padding: FIT_PADDING_PX,
-      duration,
-      easing: easeInOut,
-      maxZoom: FOCUS_MAX_ZOOM,
-    });
-    if (duration === 0) {
-      // The initial all-coverage framing is not a fly and settles nothing.
-      if (focusedMapVersionId) onFocusSettled?.();
-      return;
-    }
-    map.once("moveend", () => onFocusSettled?.());
-  }, [allBounds, boundsByMapVersionId, focusedMapVersionId, onFocusSettled, ready]);
+    map.fitBounds(allBounds, { padding: FIT_PADDING_PX, duration: 0, maxZoom: FOCUS_MAX_ZOOM });
+  }, [allBounds, ready]);
 
   // Hover and selection are separate rungs of the accent, so pointing at a
   // region never looks like having chosen it.

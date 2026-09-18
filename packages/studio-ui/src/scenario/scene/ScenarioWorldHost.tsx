@@ -85,13 +85,12 @@ export type MapTransitionPhase =
   | "error";
 
 /**
- * The one canvas and CityViewer owned by the integrated datasets workspace.
+ * The canvas and CityViewer owned by the dashboard's ScenarioWorldProvider.
  *
- * Mode surfaces are siblings layered above this host. Changing a manifest calls
- * `CityViewer.loadMap` through `CityView`; changing list/editor/render mode does
- * not change this component's identity and therefore cannot replace its WebGL
- * context. The last target is retained while the next mode resolves its data so
- * a transient `null` never tears down a usable world.
+ * Surfaces lease its stable viewport across page boundaries. Changing a map
+ * calls `CityViewer.loadMap` through `CityView`, never replaces the context.
+ * A transient null target retains the usable map while the next surface
+ * resolves; the provider fences visibility and releases non-world routes.
  */
 export function ScenarioWorldHost({
   target,
@@ -128,7 +127,11 @@ export function ScenarioWorldHost({
     () => readRenderingPreference() ?? "high",
   );
   const quality = AUTHORING_QUALITY[preference];
-  const availability = useRenderingAvailability(target?.manifestUrl ?? retainedTarget?.manifestUrl);
+  const availability = useRenderingAvailability(
+    retainedTarget?.mapVersionId === target?.mapVersionId
+      ? retainedTarget?.manifestUrl
+      : target?.manifestUrl ?? retainedTarget?.manifestUrl,
+  );
   const uploadBudget = transitionPhase === "idle" ? null : BOOT_UPLOAD_BUDGET;
   const uploadBudgetRef = useRef(uploadBudget);
   uploadBudgetRef.current = uploadBudget;
@@ -375,9 +378,8 @@ export function ScenarioWorldHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyEnvironment, preference, quality]);
 
-  // One host now lives for one editing session on one immutable map version, so this runs exactly
-  // once per mount: there is no previous world on screen to pull the camera away from. The zoom that
-  // does remain is the one into the loaded map, below.
+  // A new immutable map replaces the old map's resources through this one
+  // viewer. Page handoffs on the same identity do not replay loading or framing.
   useEffect(() => {
     if (!stableTarget) return;
     const unavailable = availability.unavailable[preference];
@@ -644,7 +646,7 @@ export function ScenarioWorldHost({
           className={cn(
             "h-full w-full transition-[opacity,filter] duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none",
             !interactive && "pointer-events-none",
-            transitionPhase === "loading" || transitionPhase === "error"
+            streaming || transitionPhase === "loading" || transitionPhase === "error"
               ? "opacity-0"
               : "opacity-100 saturate-100 blur-0",
           )}

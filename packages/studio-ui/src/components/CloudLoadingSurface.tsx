@@ -17,8 +17,8 @@ export type CloudLoadingTelemetry = { transferred: string; total?: string | null
  * spinner), never a page or pane state.
  *
  * A `scope="screen"` surface under a `CloudLoadingHost` does not paint: it
- * publishes itself to the host, which keeps exactly one viewport cover — and
- * one WebGL cloud field — across a route-to-scene handoff. See
+ * publishes itself to the host, which keeps exactly one viewport cover across
+ * a route-to-scene handoff. Its smoke is a local video, never another renderer. See
  * `cloud-loading-context.ts`.
  */
 export type CloudLoadingSurfaceProps = {
@@ -41,8 +41,10 @@ export type CloudLoadingSurfaceProps = {
   className?: string;
   xstyle?: stylex.StyleXStyles;
   style?: CSSProperties;
-  /** The animated WebGL sky; off for panes, and for a pre-rendered static page. */
+  /** The shared smoke animation; false uses its exact reduced-motion still. */
   backdropAnimated?: boolean;
+  /** The desktop file shell supplies a relative directory for bundled assets. */
+  backdropAssetBase?: string;
   backdropClassName?: string;
   contentWrapClassName?: string;
   contentClassName?: string;
@@ -55,7 +57,7 @@ export type CloudLoadingSurfaceProps = {
   dataTransitionState?: "covering" | "revealing";
 };
 
-export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, icon, children, className, xstyle, style, backdropAnimated = scope !== "pane", backdropClassName, contentWrapClassName, contentClassName, testId = "cloud-loading-surface", contentTestId = "cloud-loading-content", telemetryTestId = "cloud-loading-telemetry", role = "status", ariaBusy = role !== "alert", ariaHidden = false, dataTransitionState }: CloudLoadingSurfaceProps) {
+export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, icon, children, className, xstyle, style, backdropAnimated = scope !== "pane", backdropAssetBase, backdropClassName, contentWrapClassName, contentClassName, testId = "cloud-loading-surface", contentTestId = "cloud-loading-content", telemetryTestId = "cloud-loading-telemetry", role = "status", ariaBusy = role !== "alert", ariaHidden = false, dataTransitionState }: CloudLoadingSurfaceProps) {
   // Memoized because the host compares sources field by field: a fresh `icon`
   // or `actions` element every render would republish on every render.
   const published = useMemo<CloudLoadingSource | null>(
@@ -66,7 +68,7 @@ export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, 
   const normalizedProgress = normalizeProgress(progress); const hasProgress = progress !== undefined;
   if (hosted && scope === "screen") return null;
   return <div aria-busy={ariaBusy} aria-hidden={ariaHidden || undefined} aria-live={role === "alert" ? "assertive" : "polite"} {...mergeStyleProps(stylex.props(styles.root, scope === "screen" && styles.screen, scope === "pane" && styles.pane, scope === "embedded" && styles.embedded, xstyle), className, style)} data-cloud-loading-scope={scope} data-load-kind={kind} data-load-phase={phase} data-transition-state={dataTransitionState} data-testid={testId} role={role}>
-    <SkyCloudBackdrop animated={backdropAnimated} className={backdropClassName} />
+    <SkyCloudBackdrop animated={backdropAnimated} assetBase={backdropAssetBase} className={backdropClassName} />
     <div {...mergeStyleProps(stylex.props(styles.wrap), contentWrapClassName)}><div {...mergeStyleProps(stylex.props(scope === "pane" ? styles.paneContent : styles.fullContent), contentClassName)} data-testid={contentTestId}>
       <div {...stylex.props(styles.row)}><div {...stylex.props(styles.icon)}>{icon ?? <LoaderCircle aria-hidden="true" {...stylex.props(styles.spin)} />}</div><div {...stylex.props(styles.body)}><h2 {...stylex.props(styles.title, scope === "pane" ? styles.titlePane : styles.titleFull)}>{title}</h2>{detail ? <p {...stylex.props(styles.detail)}>{detail}</p> : null}{telemetry ? <CloudLoadingTelemetryPanel telemetry={telemetry} testId={telemetryTestId} /> : null}</div></div>
       {hasProgress ? <div {...stylex.props(styles.progressWrap)}><div aria-label={`${title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={normalizedProgress ?? undefined} {...stylex.props(styles.progressTrack)} role="progressbar">{normalizedProgress == null ? <div {...stylex.props(styles.shimmer)} /> : <div {...stylex.props(styles.progressFill)} style={{ width: `${normalizedProgress}%` }} />}</div><div {...stylex.props(styles.progressMeta)}><span>{progressValueLabel ?? (normalizedProgress == null ? "Working" : `${normalizedProgress}%`)}</span></div></div> : null}

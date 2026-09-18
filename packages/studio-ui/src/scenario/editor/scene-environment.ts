@@ -9,14 +9,19 @@ import {
   type TimeOfDay,
   type Weather,
 } from "@simforge-oss/scenario";
-import { resolveEditorLightingRenderScales } from "@simforge-oss/scenario/contracts";
+import { FRESH_SCENARIO_MINUTES, resolveEditorLightingRenderScales, withFreshEditorEnvironmentDefaults } from "@simforge-oss/scenario/contracts";
 import type { DirectionalLight } from "three";
 import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
 import { resolveEditorWeatherControls } from "./weather-controls";
 import {
   resolveExactSceneMinutes,
   sunAnglesForSceneMinutes,
+  withSceneMinutes,
 } from "./scene-time";
+
+const BROWSING_ENVIRONMENT = withFreshEditorEnvironmentDefaults(
+  withSceneMinutes(DEFAULT_ENVIRONMENT, FRESH_SCENARIO_MINUTES),
+);
 
 type PrecipitationKind = "rain" | "snow" | "sleet";
 
@@ -447,8 +452,8 @@ export function applyEditorSceneEnvironment(
 }
 
 /**
- * The sky for a viewer with no scenario document: the schema's default
- * environment, so browsing a map looks exactly like opening a fresh scenario on it.
+ * The sky for a viewer without an authored document uses the editor's fresh
+ * scenario contract, including clock time and lighting, not bare schema defaults.
  */
 export function applyDefaultSceneEnvironment(
   viewer: CityViewer,
@@ -456,7 +461,7 @@ export function applyDefaultSceneEnvironment(
 ): () => void {
   const reducedMotion = typeof window !== "undefined"
     && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
-  return applyEditorSceneEnvironment(viewer, DEFAULT_ENVIRONMENT, { quality, reducedMotion });
+  return applyEditorSceneEnvironment(viewer, BROWSING_ENVIRONMENT, { quality, reducedMotion });
 }
 
 /** Pin renderer-owned weather animation to fixed scenario time during capture. */

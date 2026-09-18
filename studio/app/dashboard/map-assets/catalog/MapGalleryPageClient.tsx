@@ -38,10 +38,12 @@ import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { ScenarioMapPickerDialog } from "@simforge-oss/studio-ui/scenario/list/ScenarioMapPickerDialog";
 import {
-  ScenarioWorldHost,
   type ScenarioWorldState,
   type ScenarioWorldTarget,
 } from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldHost";
+import { ScenarioWorldSurface } from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldProvider";
+import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
+import { useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
 import { LocalMapPreparationPanel } from "@/app/components/LocalMapPreparationPanel";
 import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
@@ -76,7 +78,7 @@ const EMPTY_WORLD_STATE: ScenarioWorldState = {
   error: null,
 };
 
-/** Reuses the persistent Datasets world and its topology-bound street tour. */
+/** A gallery viewport leases the dashboard world; its tour and traffic are page-owned. */
 function MapGalleryWorldPreview({
   map,
   sumoEnabled,
@@ -89,6 +91,7 @@ function MapGalleryWorldPreview({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [actorRenderer, setActorRenderer] = useState<ActorRenderer | null>(null);
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
+  const quality = useRenderingPreference() ?? "high";
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,
@@ -117,13 +120,21 @@ function MapGalleryWorldPreview({
 
   return (
     <>
-      <ScenarioWorldHost
+      <ScenarioWorldSurface
         className={stylex.props(styles.s_214).className}
         interactive
         onActorRendererChange={setActorRenderer}
         onStateChange={setWorldState}
         onViewerChange={setViewer}
         target={target}
+      />
+      <EditorSceneEnvironmentBridge
+        active={worldState.loadedMapVersionId === map.mapVersionId}
+        actorRenderer={actorRenderer}
+        document={null}
+        ownsViewer={false}
+        quality={quality}
+        viewer={viewer}
       />
       <MapGallerySumoTraffic
         actorRenderer={actorRenderer}

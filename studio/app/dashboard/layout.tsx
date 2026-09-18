@@ -9,6 +9,7 @@ import { CloudLoadingHost } from "@simforge-oss/studio-ui/components/CloudLoadin
 import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
 import { RenderingBenchmarkTargetProvider } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import DashboardLoading from "./loading";
+import { DashboardWorldBoundary } from "./DashboardWorldBoundary";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -26,7 +27,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div {...stylex.props(styles.div)}>
                 <Suspense fallback={<DashboardLoading />}>
                   <OnboardingGate>
-                    <Suspense fallback={<DashboardLoading />}>{children}</Suspense>
+                    <Suspense fallback={<DashboardLoading />}>
+                      <DashboardWorldBoundary>
+                        <Suspense fallback={<DashboardLoading />}>{children}</Suspense>
+                      </DashboardWorldBoundary>
+                    </Suspense>
                   </OnboardingGate>
                 </Suspense>
               </div>

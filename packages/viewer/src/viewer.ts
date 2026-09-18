@@ -570,6 +570,11 @@ export class CityViewer {
     return this.capabilities;
   }
 
+  /** Scene metadata already parsed by loadMap; consumers must not refetch it. */
+  getMapManifest(): Readonly<CityManifest> | null {
+    return this.manifest;
+  }
+
   /**
    * Whether the sun is currently casting a real shadow map.
    *
@@ -2266,6 +2271,7 @@ export class CityViewer {
     // the old renderer alive until the finite set of in-flight polls settles.
     void Promise.all(layers.map((layer) => layer.whenCompilationIdle())).then(() => {
       this.renderer.dispose();
+      this.renderer.forceContextLoss();
       this.ultraLowMaterials.dispose();
       // The one observable proof that leaving a 3D surface actually gave the GPU
       // resources back, rather than leaving a detached context alive behind the

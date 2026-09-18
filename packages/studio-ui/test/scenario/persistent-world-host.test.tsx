@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as Viewer from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { ScenarioWorldHost } from "../../src/scenario/scene/ScenarioWorldHost";
+import { ScenarioWorldProvider, ScenarioWorldSurface } from "../../src/scenario/scene/ScenarioWorldProvider";
 import { readRenderingPreference, saveRenderingPreference } from "../../src/components/rendering-preference";
 import { ScenarioWorkspaceStatusProvider } from "../../src/scenario/editor/status";
 import { CloudLoadingHost } from "../../src/components/CloudLoadingHost";
@@ -111,6 +112,41 @@ afterEach(() => {
 });
 
 describe("persistent SimForge world host", () => {
+  it("moves one loaded canvas between route viewports without loading the map again", async () => {
+    const callbacks = { onViewerChange: vi.fn(), onActorRendererChange: vi.fn(), onStateChange: vi.fn() };
+    const view = render(
+      <ScenarioWorldProvider keepAlive>
+        <ScenarioWorldSurface key="gallery" target={first} {...callbacks} />
+      </ScenarioWorldProvider>,
+    );
+    await waitFor(() => expect(callbacks.onStateChange.mock.calls.at(-1)?.[0].loadedMapVersionId).toBe(first.mapVersionId));
+    const canvas = view.container.querySelector("canvas");
+    view.rerender(<ScenarioWorldProvider keepAlive>{null}</ScenarioWorldProvider>);
+    expect(view.container.querySelector("canvas")).toBeNull();
+    view.rerender(
+      <ScenarioWorldProvider keepAlive>
+        <ScenarioWorldSurface key="editor" target={{ ...first, manifestUrl: "/another/url/for/the/same/version.json" }} {...callbacks} />
+      </ScenarioWorldProvider>,
+    );
+    expect(view.container.querySelector("canvas")).toBe(canvas);
+    expect(callbacks.onStateChange.mock.calls.at(-1)?.[0].loadedMapVersionId).toBe(first.mapVersionId);
+    expect(constructions).toHaveBeenCalledOnce();
+    expect(loads).toHaveBeenCalledOnce();
+    expect(disposals).not.toHaveBeenCalled();
+
+    view.rerender(
+      <ScenarioWorldProvider>
+        <ScenarioWorldSurface key="other-map" target={second} {...callbacks} />
+      </ScenarioWorldProvider>,
+    );
+    await waitFor(() => expect(loads).toHaveBeenLastCalledWith(second.manifestUrl));
+    expect(view.container.querySelector("canvas")).toBe(canvas);
+    expect(constructions).toHaveBeenCalledOnce();
+    view.rerender(<ScenarioWorldProvider>{null}</ScenarioWorldProvider>);
+    expect(disposals).toHaveBeenCalledOnce();
+    expect(view.container.querySelector("canvas")).toBeNull();
+  });
+
   it("repairs an unsupported saved level before loading the map", async () => {
     saveRenderingPreference("roads-only");
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => Response.json(String(input).includes("/variants/")

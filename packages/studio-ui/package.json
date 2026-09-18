@@ -401,6 +401,10 @@
         "types": "./dist/scenario/scene/ScenarioWorldHost.d.ts",
         "default": "./dist/scenario/scene/ScenarioWorldHost.js"
       },
+      "./scenario/scene/ScenarioWorldProvider": {
+        "types": "./dist/scenario/scene/ScenarioWorldProvider.d.ts",
+        "default": "./dist/scenario/scene/ScenarioWorldProvider.js"
+      },
       "./scenario/scene/previewPolicy": {
         "types": "./dist/scenario/scene/previewPolicy.d.ts",
         "default": "./dist/scenario/scene/previewPolicy.js"
@@ -908,6 +912,11 @@
       "development": "./src/scenario/scene/ScenarioWorldHost.tsx",
       "types": "./dist/scenario/scene/ScenarioWorldHost.d.ts",
       "default": "./dist/scenario/scene/ScenarioWorldHost.js"
+    },
+    "./scenario/scene/ScenarioWorldProvider": {
+      "development": "./src/scenario/scene/ScenarioWorldProvider.tsx",
+      "types": "./dist/scenario/scene/ScenarioWorldProvider.d.ts",
+      "default": "./dist/scenario/scene/ScenarioWorldProvider.js"
     },
     "./scenario/scene/previewPolicy": {
       "development": "./src/scenario/scene/previewPolicy.ts",
