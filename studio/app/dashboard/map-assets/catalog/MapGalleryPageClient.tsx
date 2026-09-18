@@ -82,10 +82,12 @@ const EMPTY_WORLD_STATE: ScenarioWorldState = {
 function MapGalleryWorldPreview({
   map,
   sumoEnabled,
+  touring,
   onSumoStatusChange,
 }: {
   map: ScenarioMapDescriptorDto;
   sumoEnabled: boolean;
+  touring: boolean;
   onSumoStatusChange: (status: SumoTrafficStatus) => void;
 }) {
   const [viewer, setViewer] = useState<CityViewer | null>(null);
@@ -108,7 +110,7 @@ function MapGalleryWorldPreview({
   }), [map]);
 
   useIdleStreetTour({
-    enabled: true,
+    enabled: touring,
     interruptible: false,
     map: tourMap,
     viewer,
@@ -334,6 +336,7 @@ export function MapGalleryPageClient({
               map={entry.map}
               onSumoStatusChange={setSumoStatus}
               sumoEnabled={sumoEnabled}
+              touring={!creating}
             />
           ) : (
             // Do not mount a viewer before its local closure is installed and authorized.
