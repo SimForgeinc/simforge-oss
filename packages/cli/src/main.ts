@@ -67,7 +67,7 @@ import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { scenarioCommand } from './commands/scenario.js';
 import { renderSubmitCommand } from './commands/render-submit.js';
-import { renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
+import { renderGroupUsage, renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
 import { drive } from './commands/drive.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
@@ -121,12 +121,13 @@ const COMMANDS = [
   { name: 'host stop', summary: 'ask the running local host to shut down cleanly (start one with `simforge daemon`)' },
   { name: 'host open', summary: 'open the running local host in the browser with a trusted one-use session (--next <path>)' },
   { name: 'host pair', summary: 'mint a one-use pairing code for a desktop shell on another machine (--origin <url> for a loopback or wildcard bind)' },
-  { name: 'render list', summary: 'list render jobs on the local host, optionally --scenario <documentId>' },
-  { name: 'render status', summary: 'print one render job' },
+  { name: 'render --help', summary: 'the render group: every verb, its flags, and the SIMFORGE_API_BASE_URL contract' },
+  { name: 'render list', summary: 'list render jobs on the target host: [--scenario <documentId>] [--revision <id>] [--job-mode <mode>] [--limit 50]' },
+  { name: 'render status', summary: 'one render job: state, attempts and progress' },
   { name: 'render wait', summary: 'block until a render job finishes; non-zero exit when it fails' },
   { name: 'render cancel', summary: 'request cancellation of a queued or running render job' },
-  { name: 'render artifacts', summary: 'list a finished render job\'s artifacts, or download them with --out <dir>' },
-  { name: 'render submit', summary: 'freeze a scenario and submit a render job to the local host: --scenario <id> --engine native --seconds 5' },
+  { name: 'render download', summary: 'the minted artifact URLs for a finished render job, or the bytes with --out <dir>' },
+  { name: 'render submit', summary: 'submit a render intent: --scenario <id> --engine carla --seconds 5, or --revision <id> --execution-package <id> --render-spec <file>' },
   { name: 'render run', summary: 'execute one immutable render intent with the browser, CARLA, or native engine' },
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
@@ -894,8 +895,9 @@ async function dispatch(argv: readonly string[]): Promise<number> {
     case 'scenario':
       return scenarioCommand(argv.slice(1));
     case 'render': {
+      if (sub === undefined || sub === '--help' || sub === 'help') return renderGroupUsage(argv.includes('--pretty'));
       if (sub === 'submit') return renderSubmitCommand(argv.slice(2));
-      if ((RENDER_JOB_COMMANDS as readonly string[]).includes(sub ?? '')) return renderJobsCommand(argv.slice(1));
+      if ((RENDER_JOB_COMMANDS as readonly string[]).includes(sub)) return renderJobsCommand(argv.slice(1));
       if (sub === 'hash') {
         const args = parseArgs(argv.slice(2), { booleans: GLOBAL_BOOLEANS });
         return renderHash(positional(args, 0, 'render-intent.json'), boolFlag(args, 'pretty'));

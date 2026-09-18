@@ -11,10 +11,18 @@ import { parseProgressJsonl } from './progress.js';
 
 export type BuiltinRenderEngineId = 'browser' | 'carla' | 'native';
 
-const CARLA_CAPABILITIES: EngineCapabilityDeclaration = {
+/**
+ * CARLA ships as a pinned container, so its engine version is the source
+ * revision that image was built from (`SOURCE_REVISION`,
+ * `services/render-worker/docker/carla.Dockerfile`) — the same 40-hex commit
+ * the control plane pins when it approves a CARLA node. The native and browser
+ * engines report their package version and are exempt from that check, so the
+ * only thing to copy from them is the resolution shape: an explicit
+ * `engineVersion` option first, then the environment.
+ */
+const CARLA_CAPABILITIES: Omit<EngineCapabilityDeclaration, 'engineVersion'> = {
   schema: ENGINE_CAPABILITIES_V1_SCHEMA,
   engineId: 'simforge-carla',
-  engineVersion: 'native-v1',
   backend: 'carla',
   protocolVersion: 1,
   capabilities: [
@@ -48,13 +56,16 @@ const CARLA_CAPABILITIES: EngineCapabilityDeclaration = {
 };
 
 class CarlaProcessEngine implements RenderEngineAdapter {
-  readonly capabilities = CARLA_CAPABILITIES;
+  readonly capabilities: EngineCapabilityDeclaration;
 
   constructor(
     private readonly binary: string,
     private readonly host: string,
     private readonly port: number,
-  ) {}
+    engineVersion: string,
+  ) {
+    this.capabilities = { ...CARLA_CAPABILITIES, engineVersion };
+  }
 
   async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
     await mkdir(context.workspace, { recursive: true });
@@ -163,5 +174,15 @@ export async function loadBuiltinRenderEngine(
   if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65_535) {
     throw new Error(`Invalid CARLA port: ${String(configuredPort)}`);
   }
-  return new CarlaProcessEngine(binary, host, configuredPort);
+  const engineVersion = typeof options.engineVersion === 'string'
+    ? options.engineVersion
+    : process.env.SIMFORGE_CARLA_SOURCE_REVISION ?? process.env.SIMFORGE_SOURCE_REVISION ?? '';
+  if (!/^[a-f0-9]{40}$/.test(engineVersion)) {
+    throw new Error(
+      'CARLA engine version must be the 40-hex source revision the worker image was built from'
+      + ' (SIMFORGE_SOURCE_REVISION, or the engineVersion option);'
+      + ` received ${engineVersion === '' ? 'nothing' : engineVersion}`,
+    );
+  }
+  return new CarlaProcessEngine(binary, host, configuredPort, engineVersion);
 }

@@ -502,19 +502,25 @@ refused by `pull`; re-ingest them.
 ## Local Studio and SimCloud operations
 
 Every verb below talks to the running local host over loopback with the
-control token from `host.json`; the CLI never stores or prints credentials.
-Output is JSON; add `--pretty` for humans. No host running → `host_unavailable`.
+control token from `host.json`, unless `SIMFORGE_API_BASE_URL` names another
+host (see "Rendering against a dev or cloud host"); the CLI never stores or
+prints credentials. Output is JSON; add `--pretty` for humans. No host running
+and no `SIMFORGE_API_BASE_URL` → `host_unavailable`.
 
 ```bash
 simforge daemon [--port 5199] [--data-root ~/.simforge/cloud] [--no-worker] [--dev]
 simforge host status | stop | open [--next /dashboard/scenario]
 
 simforge scenario list [--dataset <id>] | show <documentId>
+simforge render --help
 simforge render submit --scenario <documentId> --engine native|browser|carla --seconds <n> \
   [--start 0] [--fps 20] [--resolution 1280x720] [--quality preview|standard|high|cinematic] \
-  [--sensors actorId:sensorId,...] [--environment noon|dusk|night|dawn|...]
-simforge render list [--scenario <documentId>] | status <jobId> | wait <jobId> [--timeout 3600] \
-  | cancel <jobId> | artifacts <jobId> [--out <dir>]
+  [--sensors actorId:sensorId,...] [--environment noon|dusk|night|dawn|...] [--priority <-100..100>]
+simforge render submit --revision <revisionId> --execution-package <id> --engine carla \
+  --render-spec <render-spec.json> [--idempotency-key <key>] [--priority <-100..100>]
+simforge render list [--scenario <documentId>] [--revision <id>] [--job-mode <mode>] [--limit 50]
+simforge render status <jobId> | wait <jobId> [--timeout 3600] | cancel <jobId> \
+  | download <jobId> [--out <dir>]
 
 simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | organizations
 simforge cloud sign-in --email <address> [--password-stdin]
@@ -580,14 +586,56 @@ are refused in this mode with a message naming the host, instead of pointing
 the host at a path that exists only on the GUI machine. The full inventory and
 the deployment requirements are in `docs/engineering/remote-studio-host.md`.
 
-`render submit` freezes the draft the way the Studio wizard does (reuse a
-succeeded export of the current draft, else build revision evidence from the
-saved browser simulation and wait for the OpenSCENARIO export), then submits;
-`submit && wait && artifacts --out` is the whole agent loop. Two limits are
-deliberate: a draft with no saved simulation fails with
-`simulation_preview_missing` (open it in Studio once so the browser engine
-simulates it), and a draft whose ambient traffic runs through SUMO fails with
-`sumo_evidence_unsupported` (only the Studio session drives the SUMO bridge).
+`render submit` has two shapes, and both end in one `POST
+/api/simforge/render-jobs` with a `ScenarioRenderIntentSubmission`
+(`jobsProtocol.submitRenderIntent`). `--scenario` freezes the draft the way the
+Studio wizard does (reuse a succeeded export of the current draft, else build
+revision evidence from the saved browser simulation and wait for the
+OpenSCENARIO export), then submits; `submit && wait && download --out` is the
+whole agent loop. Two limits are deliberate: a draft with no saved simulation
+fails with `simulation_preview_missing` (open it in Studio once so the browser
+engine simulates it), and a draft whose ambient traffic runs through SUMO fails
+with `sumo_evidence_unsupported` (only the Studio session drives the SUMO
+bridge).
+
+`--revision <id> --execution-package <id> --render-spec <file>` is the same
+submission without the freeze: an already frozen revision, its execution
+package, and the sensor rig as a `render-spec/v3` document passed through
+byte-for-byte. The submission's fields are exactly the wire contract's —
+`schema`, `engine`, `revisionId`, `executionPackageId`, `renderSpec`,
+`idempotencyKey`, optional `priority` — and the immutable intent id is minted
+by the host, so it is never sent. A rig the host refuses comes back as the
+host's own error code, not a CLI opinion.
+
+`render status` joins the job row to its detail row, so one call reports state,
+progress, the worker's last published stage and every attempt.
+`render download` is the only caller of `[jobId]/downloads`, the only route
+that mints artifact URLs: it prints them (with their TTL) or, with `--out`,
+streams the bytes.
+
+### Rendering against a dev or cloud host
+
+`SIMFORGE_API_BASE_URL` is the only difference between rendering on the dev
+host on this machine and rendering on a remote SimCloud host — the command, its
+flags, the request bodies and the decoded responses are identical:
+
+```bash
+# The dev host on this machine (the default: unset, `host.json` answers).
+simforge render submit --scenario uscn_... --engine carla --seconds 20
+
+# The same invocation against a dev host elsewhere.
+SIMFORGE_API_BASE_URL=http://100.72.252.40:5421 \
+SIMFORGE_REMOTE_HOST_TOKEN=<that host's control token> \
+SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 \
+  simforge render submit --scenario uscn_... --engine carla --seconds 20
+```
+
+`SIMFORGE_REMOTE_HOST` is accepted as the same thing, so a shell already
+configured for the desktop shell's remote mode needs no second variable. Plain
+HTTP to a non-loopback address is refused unless
+`SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1` acknowledges that the bearer token
+crosses the network in the clear. An explicit `--data-root` always means this
+machine's local host, and is never overridden by the environment.
 
 `cloud eval submit` uploads each rendered camera whose sensor id is a dataset
 camera name (`camera_front_wide_120fov`, ...) as a `video` input at its

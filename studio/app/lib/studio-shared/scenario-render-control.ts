@@ -156,10 +156,13 @@ export function isScenarioParityEvidenceAccepted(
 export const SIMFORGE_RTX3080_HARDWARE_PROFILE = "rtx3080-10gb-v1" as const;
 export const SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE =
   "rtx5080-16gb-local-v1" as const;
+/** Rented 24 GiB cloud card; the fleet's only non-workstation profile. */
+export const SIMFORGE_RTX3090_HARDWARE_PROFILE = "rtx3090-24gb-v1" as const;
 
 export const ScenarioRenderHardwareProfileSchema = z.enum([
   SIMFORGE_RTX3080_HARDWARE_PROFILE,
   SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
+  SIMFORGE_RTX3090_HARDWARE_PROFILE,
 ]);
 export type ScenarioRenderHardwareProfile = z.infer<
   typeof ScenarioRenderHardwareProfileSchema

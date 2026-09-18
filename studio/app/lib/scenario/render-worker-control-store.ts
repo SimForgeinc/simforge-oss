@@ -22,6 +22,9 @@ import {
   isScenarioParityEvidenceAccepted,
   SCENARIO_PARITY_EVIDENCE_VERSION,
   ScenarioParityEvidenceV1Schema,
+  SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
+  SIMFORGE_RTX3080_HARDWARE_PROFILE,
+  SIMFORGE_RTX3090_HARDWARE_PROFILE,
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
@@ -40,6 +43,28 @@ const REQUIRED_CARLA_BASE_IMAGE_INDEX_DIGEST = "sha256:f17c639e5f86fd7458fe1d02d
 const REQUIRED_CARLA_BASE_IMAGE_AMD64_DIGEST = "sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64";
 const CONTROL_SCHEMA = "simforge.render-worker-control/v2";
 const LEASE_SECONDS = 900;
+/**
+ * Every hardware profile the fleet admits, with the nominal VRAM its name
+ * claims. Capability scheduling (`workerCanRun`) sizes a job against the
+ * memory a worker registered, so a profile name has to be backed by a card
+ * that really reports that much: a 20480 MiB board — vast.ai sells them as
+ * 3090s — cannot enter the fleet as `rtx3090-24gb-v1`. The tolerance covers the
+ * driver's reserved region and nothing more.
+ */
+export const RENDER_WORKER_GPU_PROFILES: Record<string, { gpuMemoryMiB: number }> = {
+  [SIMFORGE_RTX3080_HARDWARE_PROFILE]: { gpuMemoryMiB: 10_240 },
+  "rtx5080-16gb-v1": { gpuMemoryMiB: 16_384 },
+  [SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE]: { gpuMemoryMiB: 16_384 },
+  [SIMFORGE_RTX3090_HARDWARE_PROFILE]: { gpuMemoryMiB: 24_576 },
+};
+const GPU_MEMORY_PROFILE_TOLERANCE = 0.975;
+/**
+ * The full authored rig is 18 simultaneous sources. It was admitted on the
+ * 16 GiB 5080 class alone; keyed on the profile's memory instead of its name,
+ * the same rule now also admits the 24 GiB 3090.
+ */
+const FULL_SENSOR_RIG_SOURCES = 18;
+const FULL_SENSOR_RIG_MIN_GPU_MIB = 16_384;
 function runtimeEnvironment(): "dev" | "staging" | "prod" {
   const value = process.env.SIMFORGE_ENV?.trim();
   if (value !== "dev" && value !== "staging" && value !== "prod") {
@@ -109,11 +134,12 @@ export function renderWorkerIdentity(
   )) {
     throw new Error("worker_carla_base_image_provenance_invalid");
   }
-  if (!capability.requiresGpu || !Number.isInteger(gpuMemoryMiB) || gpuMemoryMiB < 10_000) {
+  const profile = RENDER_WORKER_GPU_PROFILES[hardwareProfile];
+  if (!profile) throw new Error("worker_hardware_profile_incompatible");
+  if (!capability.requiresGpu
+    || !Number.isInteger(gpuMemoryMiB)
+    || gpuMemoryMiB < Math.floor(profile.gpuMemoryMiB * GPU_MEMORY_PROFILE_TOLERANCE)) {
     throw new Error("worker_gpu_capability_invalid");
-  }
-  if (!hardwareProfile.startsWith("rtx3080-") && !hardwareProfile.startsWith("rtx5080-")) {
-    throw new Error("worker_hardware_profile_incompatible");
   }
   return {
     workerVersion: capability.engineVersion,
@@ -229,7 +255,9 @@ function workerCanRun(worker: WorkerRow, candidate: Candidate) {
   ) return false;
   const physicalSensors = new Set(sources.map((source) => `${source.actorId}\0${source.sensorId}`));
   if (physicalSensors.size > capability.data.limits.maxSimultaneousSensors) return false;
-  if (physicalSensors.size === 18 && !worker.hardware_profile.startsWith("rtx5080-")) return false;
+  if (physicalSensors.size === FULL_SENSOR_RIG_SOURCES
+    && (RENDER_WORKER_GPU_PROFILES[worker.hardware_profile]?.gpuMemoryMiB ?? 0) < FULL_SENSOR_RIG_MIN_GPU_MIB
+  ) return false;
   if (sources.some((source) => !capability.data.modalities.includes(source.modality))) return false;
   if (sources.some((source) => {
     const attributes = source.attributes;
