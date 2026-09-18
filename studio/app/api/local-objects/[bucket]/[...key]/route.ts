@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
+import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { readLocalObjectMetadata, streamLocalObject, writeLocalObjectStream } from "@/app/lib/s3/s3-object";
 import { writeMultipartPart } from "@/app/lib/s3/s3-presign";
 import { verifyLocalObjectRequest } from "@/app/lib/s3/local-object-auth";
-
 type RouteContext = { params: Promise<{ bucket: string; key: string[] }> };
 
 /** Map cache content is delivered only through the access-gated map routes; a digest is not a capability. */
@@ -20,12 +20,14 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const objectKey = key.join("/");
   try {
     const metadata = await readLocalObjectMetadata(bucket, objectKey);
+    const immutableMapAsset = bucket === LOCAL_ARTIFACT_BUCKET && objectKey.startsWith("maps/");
+    const cacheControl = immutableMapAsset ? "private, max-age=31536000, immutable" : "no-store";
     const headers = new Headers({
       "content-type": metadata.contentType,
       "content-length": String(metadata.sizeBytes),
       etag: `"${metadata.checksumSha256Hex}"`,
       "x-content-sha256": metadata.checksumSha256Hex,
-      "cache-control": "no-store",
+      "cache-control": cacheControl,
       "x-content-type-options": "nosniff",
       "content-security-policy": "sandbox",
     });
@@ -45,14 +47,16 @@ export async function HEAD(request: Request, context: RouteContext): Promise<Res
   const refused = refusesMapCache(bucket);
   if (refused) return refused;
   try {
-    const metadata = await readLocalObjectMetadata(bucket, key.join("/"));
+    const objectKey = key.join("/");
+    const metadata = await readLocalObjectMetadata(bucket, objectKey);
+    const immutableMapAsset = bucket === LOCAL_ARTIFACT_BUCKET && objectKey.startsWith("maps/");
     return new Response(null, {
       headers: {
         "content-type": metadata.contentType,
         "content-length": String(metadata.sizeBytes),
         etag: `"${metadata.checksumSha256Hex}"`,
         "x-content-sha256": metadata.checksumSha256Hex,
-        "cache-control": "no-store",
+        "cache-control": immutableMapAsset ? "private, max-age=31536000, immutable" : "no-store",
         "x-content-type-options": "nosniff",
       },
     });

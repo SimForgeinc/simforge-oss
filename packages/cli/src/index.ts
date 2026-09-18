@@ -131,6 +131,13 @@ export { renderHash, renderRun, type RenderRunOptions } from './commands/render.
 export { importOpenScenario, type ImportOptions } from './commands/import.js';
 export { templateNew, type TemplateNewOptions } from './commands/template.js';
 export {
+  variationFork,
+  variationTransfer,
+  type ScenarioVariationFile,
+  type VariationForkOptions,
+  type VariationTransferOptions,
+} from './commands/variation.js';
+export {
   loadBuiltinRenderEngine,
   loadRenderEngine,
   type BuiltinRenderEngineId,

@@ -21,6 +21,7 @@ pub mod calibration;
 pub mod catalog;
 pub mod cloud_noise;
 pub mod clouds;
+pub mod coordinates;
 pub mod facade_windows;
 pub mod fixture;
 #[cfg(all(feature = "gpu-interop", not(target_os = "linux")))]

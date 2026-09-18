@@ -248,6 +248,33 @@ export type DuplicateDocumentRequest = { title?: string; datasetId?: string };
 export type DriverInTheLoopRequest = { roleId?: string };
 export type DriverInTheLoopResponse = { document: ScenarioDocumentDto; roleId: string };
 
+export type TransferDocumentRequest = {
+  targetMapVersionId: string;
+  siteId: string;
+  title?: string;
+  signalPlanDecision?: "remove" | "accept-proposal";
+};
+export type TransferOptionsRequest = { targetMapVersionIds?: string[] };
+export type PortableLiftIssueDto = {
+  code: string;
+  severity: "error" | "warning" | "info";
+  path?: string;
+  message: string;
+};
+export type ScenarioTransferMapOptionDto = {
+  mapVersionId: string;
+  sourceMapId: string;
+  label: string;
+  locality: string | null;
+  siteIds: string[];
+};
+export type ScenarioTransferOptionsDto = {
+  sourceMapVersionId: string | null;
+  sourceSiteId: string | null;
+  lift: { ok: boolean; issues: PortableLiftIssueDto[] };
+  maps: ScenarioTransferMapOptionDto[];
+};
+
 export type CreateTagRequest = { label: string; color?: string | null };
 export type UpdateTagRequest = { label?: string; color?: string | null };
 export type SetDocumentTagsRequest = { tagIds: string[] };
@@ -319,6 +346,40 @@ export const documentsProtocol = {
     method: "POST",
     path: (params) => `${document(params)}/duplicate`,
     response: ScenarioDocumentSchema,
+  }),
+  transfer: endpoint<{ documentId: string }, void, TransferDocumentRequest, ScenarioDocumentDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/transfer`,
+    response: ScenarioDocumentSchema,
+  }),
+  transferOptions: endpoint<
+    { documentId: string },
+    void,
+    TransferOptionsRequest,
+    ScenarioTransferOptionsDto
+  >({
+    method: "POST",
+    path: (params) => `${document(params)}/transfer-options`,
+    response: object({
+      sourceMapVersionId: nullable(string()),
+      sourceSiteId: nullable(string()),
+      lift: object({
+        ok: boolean(),
+        issues: array(object({
+          code: string(),
+          severity: oneOf(["error", "warning", "info"] as const),
+          path: optional(string()),
+          message: string(),
+        })),
+      }),
+      maps: array(object({
+        mapVersionId: string(),
+        sourceMapId: string(),
+        label: string(),
+        locality: nullable(string()),
+        siteIds: array(string()),
+      })),
+    }),
   }),
   startDriverInTheLoop: endpoint<{ documentId: string }, void, DriverInTheLoopRequest, DriverInTheLoopResponse>({
     method: "POST",

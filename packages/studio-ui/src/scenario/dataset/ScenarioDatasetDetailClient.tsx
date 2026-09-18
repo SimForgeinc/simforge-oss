@@ -25,6 +25,7 @@ import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
 import { ScenarioMapPickerDialog } from "../list/ScenarioMapPickerDialog";
+import { ScenarioTransferDialog } from "../list/ScenarioTransferDialog";
 import { ScenarioTagFilterDropdown } from "../list/ScenarioTagFilterDropdown";
 import {
   documentCreatorKey,
@@ -124,6 +125,7 @@ export function ScenarioDatasetDetailClient({
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchRevealed, setSearchRevealed] = useState(false);
+  const [transferDocument, setTransferDocument] = useState<ScenarioDocumentSummaryDto | null>(null);
   // An active query keeps the field on screen: hiding it would filter the list
   // with nothing on screen saying why rows are missing.
   const searchOpen = searchRevealed || query.length > 0;
@@ -614,6 +616,7 @@ export function ScenarioDatasetDetailClient({
             onDuplicateDocument={(document) =>
               void actions.duplicateDocument(document)
             }
+            onTransferDocument={setTransferDocument}
             onEditDetails={actions.startEditDetails}
             onDeleteDocument={(document) =>
               void actions.deleteDocument(document)
@@ -664,6 +667,19 @@ export function ScenarioDatasetDetailClient({
         onSelectMap={(map) => void actions.createDocumentOnMap(map)}
       />
       {openScenarioImport.dialog}
+      <ScenarioTransferDialog
+        open={Boolean(transferDocument)}
+        document={transferDocument}
+        busy={Boolean(
+          transferDocument &&
+          actions.busyDocumentId === transferDocument.id,
+        )}
+        onClose={() => setTransferDocument(null)}
+        onTransfer={async (input) => {
+          if (!transferDocument) return false;
+          return actions.transferDocument(transferDocument, input);
+        }}
+      />
       <MetadataDetailsDialog
         open={Boolean(actions.detailsDraft)}
         title="Edit scenario details"

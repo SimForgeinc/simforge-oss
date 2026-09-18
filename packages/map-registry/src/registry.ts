@@ -389,6 +389,148 @@ export async function listMaps(backend: RegistryBackend): Promise<MapRegistryInd
   return readOptionalJson<MapRegistryIndex>(backend, 'index.json', {});
 }
 
+export interface PruneInput {
+  /** Map to prune. */
+  name: string;
+  /** Explicit versions to remove; omit with `keepLatest` to remove every superseded version. */
+  versions?: readonly MapVersion[];
+  /** Remove every version except the index's latest. */
+  keepLatest?: boolean;
+  /** Remove the whole map, including its ledgers and index entry. */
+  wholeMap?: boolean;
+  /** Also delete blobs no surviving closure in the registry references. */
+  collectGarbage?: boolean;
+  /** Report what would be deleted without writing. */
+  dryRun?: boolean;
+}
+
+export interface PruneResult {
+  name: string;
+  removedVersions: MapVersion[];
+  removedObjects: string[];
+  removedBlobs: string[];
+  retainedVersions: MapVersion[];
+}
+
+/** Every blob digest reachable from a closure descriptor under `maps/**`. */
+async function reachableDigests(backend: RegistryBackend, skip: (key: string) => boolean): Promise<Set<string>> {
+  const digests = new Set<string>();
+  for (const key of await backend.list('maps/')) {
+    if (!/\/(closure\.json|derived\/[^/]+\.json)$/.test(key) || skip(key)) continue;
+    const closure = parseJson<MapClosure>(await backend.get(key), key);
+    for (const member of Object.values(closure.members)) digests.add(member.sha256);
+  }
+  return digests;
+}
+
+/**
+ * Delete immutable releases from a registry: version subtrees first become
+ * unreferenced in the ledgers, then their objects go, then — with
+ * `collectGarbage` — blobs no surviving closure names. Ledgers are rewritten
+ * before objects are deleted so the registry never advertises a release whose
+ * bytes are gone.
+ */
+export async function pruneVersions(backend: RegistryBackend, input: PruneInput): Promise<PruneResult> {
+  validateMapName(input.name);
+  if (backend.remove === undefined) throw new Error(`registry backend is read-only: ${backend.url}`);
+  const remove = backend.remove.bind(backend);
+  const index = await listMaps(backend);
+  const entry = index[input.name];
+  if (entry === undefined) throw new Error(`unknown map: ${input.name}`);
+  const records = await readOptionalJson<MapVersionRecord[]>(backend, `maps/${input.name}/versions.json`, []);
+  const known = new Set(records.map((record) => record.version));
+
+  const doomed = new Set<MapVersion>();
+  if (input.wholeMap) for (const version of known) doomed.add(version);
+  for (const version of input.versions ?? []) {
+    if (!known.has(version)) throw new Error(`unknown map version: ${input.name}@${version}`);
+    doomed.add(version);
+  }
+  if (input.keepLatest) for (const version of known) if (version !== entry.latest) doomed.add(version);
+  const selected = input.wholeMap === true || input.keepLatest === true || (input.versions?.length ?? 0) > 0;
+  if (!selected) throw new Error('prune requires versions, keepLatest or wholeMap');
+  // A selector that matches nothing is already-consolidated, not an error.
+  if (doomed.size === 0) {
+    return {
+      name: input.name,
+      removedVersions: [],
+      removedObjects: [],
+      removedBlobs: [],
+      retainedVersions: records.map((record) => record.version),
+    };
+  }
+  if (!input.wholeMap && doomed.has(entry.latest)) {
+    throw new Error(`refusing to prune the latest version ${input.name}@${entry.latest}; pass --whole-map instead`);
+  }
+
+  const retained = records.filter((record) => !doomed.has(record.version));
+  const removedObjects: string[] = [];
+  for (const version of doomed) removedObjects.push(...await backend.list(`maps/${input.name}/${version}/`));
+  if (input.wholeMap) {
+    for (const ledger of ['versions.json', 'intents.json']) {
+      const key = `maps/${input.name}/${ledger}`;
+      if (await backend.exists(key)) removedObjects.push(key);
+    }
+  }
+
+  let removedBlobs: string[] = [];
+  if (input.collectGarbage) {
+    const doomedPrefixes = [...doomed].map((version) => `maps/${input.name}/${version}/`);
+    const live = await reachableDigests(backend, (key) =>
+      input.wholeMap
+        ? key.startsWith(`maps/${input.name}/`)
+        : doomedPrefixes.some((prefix) => key.startsWith(prefix)));
+    for (const key of await backend.list('blobs/sha256/')) {
+      const digest = key.slice(key.lastIndexOf('/') + 1);
+      if (/^[a-f0-9]{64}$/.test(digest) && !live.has(digest)) removedBlobs.push(key);
+    }
+  }
+
+  if (input.dryRun) {
+    return {
+      name: input.name,
+      removedVersions: [...doomed],
+      removedObjects,
+      removedBlobs,
+      retainedVersions: retained.map((record) => record.version),
+    };
+  }
+
+  // Ledgers first: a pruned version must stop resolving before its bytes go.
+  if (input.wholeMap) {
+    await updateJson<MapRegistryIndex>(backend, 'index.json', {}, (current) => {
+      const next = { ...current };
+      delete next[input.name];
+      return next;
+    });
+  } else {
+    const versions = retained.map((record) => record.version)
+      .sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
+    await updateJson<MapRegistryIndex>(backend, 'index.json', {}, (current) => ({
+      ...current,
+      [input.name]: { latest: versions.at(-1) ?? entry.latest, versions, summary: entry.summary },
+    }));
+    await updateJson<MapVersionRecord[]>(backend, `maps/${input.name}/versions.json`, [], () => retained);
+    await updateJson<Record<string, { version: MapVersion; createdAt: string }>>(
+      backend,
+      `maps/${input.name}/intents.json`,
+      {},
+      (current) => Object.fromEntries(
+        Object.entries(current).filter(([, intent]) => !doomed.has(intent.version)),
+      ),
+    );
+  }
+  for (const key of removedObjects) await remove(key);
+  for (const key of removedBlobs) await remove(key);
+  return {
+    name: input.name,
+    removedVersions: [...doomed],
+    removedObjects,
+    removedBlobs,
+    retainedVersions: retained.map((record) => record.version),
+  };
+}
+
 export interface ResolvedVersion {
   name: string;
   record: ReleasedMapVersionRecord;

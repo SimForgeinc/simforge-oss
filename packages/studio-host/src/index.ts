@@ -31,3 +31,4 @@ export {
   type HttpStudioCloudServiceOptions,
 } from "./cloud-client";
 export { ambientProvenanceForRevisionTraffic } from "./revision-evidence";
+export * from "./native-viewport-bridge";

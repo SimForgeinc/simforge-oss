@@ -19,6 +19,12 @@ export class VisibleClock {
     return this.visibleState ? this.sample(Date.now()) : this.elapsed;
   }
 
+  /** Restart the window; callers use this when fresh progress is observed. */
+  reset(): void {
+    this.elapsed = 0;
+    this.sampledAt = Date.now();
+  }
+
   dispose(): void {
     this.visibilityDocument?.removeEventListener("visibilitychange", this.handleVisibilityChange);
   }

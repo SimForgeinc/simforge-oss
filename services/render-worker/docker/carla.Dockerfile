@@ -37,8 +37,11 @@ COPY --from=node-toolchain /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-build --chown=carla:carla /out/worker /opt/simforge/worker
 COPY --from=python-build /wheels /tmp/wheels
 RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla-*.whl /tmp/wheels/*.whl && rm -rf /tmp/wheels
+# SIMFORGE_SOURCE_REVISION is the engine version a CARLA worker registers with;
+# the control plane only approves a CARLA node whose version is this commit.
 ENV NODE_ENV=production \
     PORT=8080 \
+    SIMFORGE_SOURCE_REVISION=$SOURCE_REVISION \
     SIMFORGE_CARLA_BINARY=/usr/local/bin/simforge-oss-carla-exec \
     SIMFORGE_SCRATCH_DIR=/scratch \
     SIMFORGE_CARLA_BLUEPRINT_ID=vehicle.kia.carnival \

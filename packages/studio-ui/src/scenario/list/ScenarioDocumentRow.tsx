@@ -9,6 +9,7 @@ import {
   Download,
   Gamepad2,
   GitBranch,
+  MapPinned,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -149,6 +150,7 @@ export type ScenarioDocumentRowProps = {
   onDriverInTheLoop?: (document: ScenarioDocumentSummaryDto) => void;
   onDownloadDocument: (document: ScenarioDocumentSummaryDto) => void;
   onDuplicateDocument: (document: ScenarioDocumentSummaryDto) => void;
+  onTransferDocument?: (document: ScenarioDocumentSummaryDto) => void;
   onEditDetails: (document: ScenarioDocumentSummaryDto) => void;
   onDeleteDocument: (document: ScenarioDocumentSummaryDto) => void;
   onSetRating: (rating: number) => void;
@@ -178,6 +180,7 @@ function DocumentActionCluster({
   onDriverInTheLoop,
   onDownloadDocument,
   onDuplicateDocument,
+  onTransferDocument,
   onEditDetails,
   onDeleteDocument,
   onToggleVariations,
@@ -205,6 +208,7 @@ function DocumentActionCluster({
   | "onDriverInTheLoop"
   | "onDownloadDocument"
   | "onDuplicateDocument"
+  | "onTransferDocument"
   | "onEditDetails"
   | "onDeleteDocument"
   | "onToggleVariations"
@@ -258,6 +262,12 @@ function DocumentActionCluster({
             <CopyPlus {...stylex.props(styles.duplicateCopyPlus)} aria-hidden="true" />
             Duplicate
           </DropdownMenuItem>
+          {onTransferDocument ? (
+            <DropdownMenuItem disabled={!mutable} onSelect={() => onTransferDocument(document)}>
+              <MapPinned {...stylex.props(styles.transferMapPin)} aria-hidden="true" />
+              Transfer to another map
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             xstyle={menu.destructiveItem}
             disabled={!mutable}
@@ -475,6 +485,7 @@ export function ScenarioDocumentRow({
   onDriverInTheLoop,
   onDownloadDocument,
   onDuplicateDocument,
+  onTransferDocument,
   onEditDetails,
   onDeleteDocument,
   onSetRating,
@@ -686,6 +697,7 @@ export function ScenarioDocumentRow({
         onDriverInTheLoop={onDriverInTheLoop}
         onDownloadDocument={onDownloadDocument}
         onDuplicateDocument={onDuplicateDocument}
+        onTransferDocument={onTransferDocument}
         onEditDetails={onEditDetails}
         onDeleteDocument={onDeleteDocument}
         onToggleVariations={onToggleVariations}

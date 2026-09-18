@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use simforge_core::math::dist;
 
 use super::{AnchorFrame, FrameOrigin, OriginKind, ReferenceSpan};
-use crate::geometry::{angle_diff, heading_at_s};
+use crate::geometry::{angle_diff, heading_at_s, project_point, Point2};
 use crate::map_index::{DerivedLane, DerivedMapIndex, LINK_TOLERANCE_M};
 use crate::template::TurnDirection;
 
@@ -18,6 +18,8 @@ use crate::template::TurnDirection;
 pub const AMBIGUITY_EPS_RAD: f64 = 10.0 * std::f64::consts::PI / 180.0;
 /// Hard cap on frames emitted per (junction, approach) candidate.
 pub const MAX_FRAMES_PER_CANDIDATE: usize = 4;
+/// Breadth retained while an authored path guides continuation selection.
+pub const MAX_GUIDED_CHAINS: usize = 8;
 /// Default walk distances when the anchor states no runway requirement.
 pub const DEFAULT_RUNWAY_UPSTREAM_M: f64 = 150.0;
 pub const DEFAULT_RUNWAY_DOWNSTREAM_M: f64 = 80.0;
@@ -118,6 +120,24 @@ pub fn link_contiguous(index: &DerivedMapIndex, from: &str, to: &str, dir: WalkD
 fn chain_key(lanes: &[String]) -> String {
     lanes.join(">")
 }
+fn chain_misfit_m(index: &DerivedMapIndex, lanes: &[String], prefer: &[Point2]) -> f64 {
+    if prefer.is_empty() || lanes.is_empty() {
+        return 0.0;
+    }
+    prefer
+        .iter()
+        .map(|point| {
+            lanes
+                .iter()
+                .filter_map(|rsl| index.lane(rsl))
+                .map(|lane| project_point(&lane.polyline, *point).distance)
+                .fold(f64::INFINITY, f64::min)
+        })
+        .filter(|distance| distance.is_finite())
+        .sum::<f64>()
+        / prefer.len() as f64
+}
+
 
 /// Enumerate lane chains away from `start_rsl`, preferring the straightest
 /// continuation and branching only where two continuations are genuinely
@@ -128,6 +148,17 @@ pub fn enumerate_chains(
     need_m: f64,
     dir: WalkDir,
     cap: usize,
+) -> Vec<Chain> {
+    enumerate_chains_guided(index, start_rsl, need_m, dir, cap, &[])
+}
+
+fn enumerate_chains_guided(
+    index: &DerivedMapIndex,
+    start_rsl: &str,
+    need_m: f64,
+    dir: WalkDir,
+    cap: usize,
+    prefer: &[Point2],
 ) -> Vec<Chain> {
     let mut open: Vec<OpenChain> = vec![OpenChain {
         lanes: Vec::new(),
@@ -165,12 +196,17 @@ pub fn enumerate_chains(
                 )
             };
             let best = candidates[0].clone();
-            let mut options = vec![best.clone()];
-            if let Some(second) = candidates.get(1) {
-                if (angle_of(second) - angle_of(&best)).abs() < AMBIGUITY_EPS_RAD {
-                    options.push(second.clone());
+            let options = if prefer.is_empty() {
+                let mut options = vec![best.clone()];
+                if let Some(second) = candidates.get(1) {
+                    if (angle_of(second) - angle_of(&best)).abs() < AMBIGUITY_EPS_RAD {
+                        options.push(second.clone());
+                    }
                 }
-            }
+                options
+            } else {
+                candidates
+            };
             for opt in options {
                 let opt_lane = index.lane(&opt).expect("option lane exists");
                 let contiguous_link = link_contiguous(index, &chain.last, &opt, dir);
@@ -201,11 +237,10 @@ pub fn enumerate_chains(
                 });
             }
         }
-        // Deterministic breadth cap: keep the longest, then lexicographically first.
         next.sort_by(|a, b| {
-            b.length_m
-                .partial_cmp(&a.length_m)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            chain_misfit_m(index, &a.lanes, prefer)
+                .total_cmp(&chain_misfit_m(index, &b.lanes, prefer))
+                .then_with(|| b.length_m.total_cmp(&a.length_m))
                 .then_with(|| chain_key(&a.lanes).cmp(&chain_key(&b.lanes)))
         });
         next.truncate(cap);
@@ -226,9 +261,9 @@ pub fn enumerate_chains(
     }
     let mut all: Vec<OpenChain> = unique.into_values().collect();
     all.sort_by(|a, b| {
-        b.length_m
-            .partial_cmp(&a.length_m)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        chain_misfit_m(index, &a.lanes, prefer)
+            .total_cmp(&chain_misfit_m(index, &b.lanes, prefer))
+            .then_with(|| b.length_m.total_cmp(&a.length_m))
             .then_with(|| chain_key(&a.lanes).cmp(&chain_key(&b.lanes)))
     });
     all.truncate(cap);
@@ -249,6 +284,8 @@ pub struct JunctionFrameOptions {
     /// Anchor feature id that the origin corresponds to.
     pub anchor_feature_id: String,
     pub mirrored: bool,
+    /// Authored route vertices used only by the lift to choose continuations.
+    pub prefer_path: Vec<Point2>,
 }
 
 struct Spans {
@@ -350,6 +387,15 @@ pub fn build_junction_frames(
             .copied()
             .filter(|g| g.turn_relation == turn)
             .collect(),
+        None if !options.prefer_path.is_empty() => {
+            let mut guided = gates.clone();
+            guided.sort_by(|a, b| {
+                chain_misfit_m(index, std::slice::from_ref(&a.connecting_lane_rsl), &options.prefer_path)
+                    .total_cmp(&chain_misfit_m(index, std::slice::from_ref(&b.connecting_lane_rsl), &options.prefer_path))
+                    .then_with(|| a.id.cmp(&b.id))
+            });
+            guided
+        }
         None => {
             let mut straight: Vec<(&crate::map_index::DerivedGate, f64)> = gates
                 .iter()
@@ -394,12 +440,13 @@ pub fn build_junction_frames(
         let Some(connecting) = index.lane(&gate.connecting_lane_rsl) else {
             continue;
         };
-        let exits = enumerate_chains(
+        let exits = enumerate_chains_guided(
             index,
             &gate.connecting_lane_rsl,
             (down_need - connecting.length_m).max(0.0),
             WalkDir::Forward,
-            2,
+            if options.prefer_path.is_empty() { 2 } else { MAX_GUIDED_CHAINS },
+            &options.prefer_path,
         );
         let exits = if exits.is_empty() {
             vec![Chain::empty()]
@@ -522,4 +569,51 @@ pub fn build_corridor_frame(
         runway_upstream_m: 0.0,
         runway_downstream_m: downstream.length_m + entry_lane.length_m,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::map_index::Handedness;
+
+    #[test]
+    fn corridor_frame_pins_station_orientation_and_right_handedness() {
+        let index = crate::test_support::index(Handedness::Right);
+        let frame = crate::test_support::frame(&index);
+        assert_eq!(frame.origin.kind, OriginKind::Corridor);
+        assert_eq!(frame.entry_lane_rsl, "main");
+        assert_eq!(frame.handedness, Handedness::Right);
+        assert!(!frame.mirrored);
+        assert_eq!(frame.s_range, (0.0, 180.0));
+        assert_eq!(frame.s_of_lane["main"], 0.0);
+        assert_eq!(frame.s_of_lane["next"], 100.0);
+        assert_eq!(
+            frame.reference_path.iter().map(|span| (span.lane_rsl.as_str(), span.s_start, span.s_end)).collect::<Vec<_>>(),
+            [("main", 0.0, 100.0), ("next", 100.0, 180.0)]
+        );
+    }
+
+    #[test]
+    fn corridor_frame_preserves_left_handed_map_and_mirror_flag_without_flipping_map_space() {
+        let index = crate::test_support::index(Handedness::Left);
+        let segment = index.segments.iter().find(|segment| segment.lane_rsls[0] == "main").unwrap();
+        let frame = build_corridor_frame(&index, &segment.id, &CorridorFrameOptions {
+            anchor_feature_id: "origin".into(),
+            runway_downstream_m: Some(150.0),
+            mirrored: true,
+        }).unwrap();
+        assert_eq!(frame.handedness, Handedness::Left);
+        assert!(frame.mirrored);
+        assert_eq!(frame.entry_lane_rsl, "main");
+        assert_eq!(frame.s_of_lane["next"], 100.0);
+    }
+
+    #[test]
+    fn enumerate_chains_marks_geometrically_disconnected_declared_link() {
+        let mut index = crate::test_support::index(Handedness::Right);
+        index.lanes.get_mut("next").unwrap().polyline[0].y = 20.0;
+        let chains = enumerate_chains(&index, "main", 50.0, WalkDir::Forward, 1);
+        assert_eq!(chains[0].lanes, ["next"]);
+        assert_eq!(chains[0].contiguous, [false]);
+    }
 }

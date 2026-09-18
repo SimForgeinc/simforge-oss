@@ -46,7 +46,6 @@ import {
   SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS,
   SCENARIO_RENDER_RESOURCE_REQUEST_VERSION,
   SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
-  SIMFORGE_RTX3080_HARDWARE_PROFILE,
   ScenarioParityEvidenceV1Schema,
   ScenarioRenderResourceRequestSchema,
   type ScenarioParityEvidenceV1,
@@ -55,7 +54,11 @@ import {
 } from "@simforge-oss/studio-shared";
 import { simforgeEnv } from "@/lib/simforge-env";
 import { RenderSpecV3Schema } from "@simforge-oss/scenario";
-import { renderWorkerIdentity, type RenderWorkerIdentity } from "./render-worker-control-store";
+import {
+  RENDER_WORKER_GPU_PROFILES,
+  renderWorkerIdentity,
+  type RenderWorkerIdentity,
+} from "./render-worker-control-store";
 import type { ScenarioRendererCapability } from "./render-wire-contracts";
 
 type RenderSpec = z.infer<typeof ScenarioRenderSpecSchema>;
@@ -165,13 +168,11 @@ export async function authorizeScenarioRenderWorker(request: Request) {
 const LOCAL_RENDER_WORKER_NODE_ID = "uniscenario-render-local-path-pc";
 /**
  * Hardware profiles the local schema admits
- * (`uniscenario_worker_nodes_hardware_profile_ck`, 20260820150000).
+ * (`uniscenario_worker_nodes_hardware_profile_ck`, 20260917130000). One source
+ * of truth with the registration gate, which also carries each profile's
+ * nominal VRAM.
  */
-export const RENDER_WORKER_HARDWARE_PROFILES = [
-  SIMFORGE_RTX3080_HARDWARE_PROFILE,
-  "rtx5080-16gb-v1",
-  SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
-] as const;
+export const RENDER_WORKER_HARDWARE_PROFILES: readonly string[] = Object.keys(RENDER_WORKER_GPU_PROFILES);
 /** v1 render-resource-request ceiling for the CARLA lane (`renderResourceAdmissionError`). */
 const REQUIRED_WORKER_LIMITS = {
   maxDurationS: 120,
@@ -219,7 +220,7 @@ export function renderWorkerApprovalError(input: {
   identity: RenderWorkerIdentity;
 }): string | null {
   const { identity } = input;
-  if (!(RENDER_WORKER_HARDWARE_PROFILES as readonly string[]).includes(identity.hardwareProfile)) {
+  if (!RENDER_WORKER_HARDWARE_PROFILES.includes(identity.hardwareProfile)) {
     return "worker_hardware_profile_incompatible";
   }
   const localProfile = identity.hardwareProfile === SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE;
@@ -260,7 +261,7 @@ export async function getScenarioControlPlaneHealth(workerNodeId?: string | null
            AND w.registration_state = 'active'
            AND w.last_heartbeat_at >= NOW() - INTERVAL '90 seconds'
            AND w.image_digest ~ '^sha256:[a-f0-9]{64}$'
-           AND w.hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1')
+           AND w.hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1', 'rtx3090-24gb-v1')
            AND w.approved_worker_version = w.worker_version
            AND w.approved_image_digest = w.image_digest
            AND w.approved_hardware_profile = w.hardware_profile
@@ -1429,7 +1430,7 @@ export async function provisionRenderWorkerCredential(
     const worker = await tx.queryOne<{ id: string }>(
       `SELECT id FROM simforge.worker_nodes
         WHERE id = :worker_node_id AND environment = :environment
-          AND hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1')
+          AND hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1', 'rtx3090-24gb-v1')
           AND (id = 'uniscenario-render-local-path-pc') = (hardware_profile = 'rtx5080-16gb-local-v1')
           AND (hardware_profile <> 'rtx5080-16gb-local-v1' OR :environment = 'dev')
         FOR UPDATE`,

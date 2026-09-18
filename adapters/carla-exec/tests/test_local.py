@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 from types import SimpleNamespace
 import pytest
@@ -74,6 +75,137 @@ def test_input_package_requires_claimed_execution_package_control_digest(tmp_pat
         local._read_input_package(package_path, intent)
 
 
+def test_run_local_writes_a_package_the_executor_accepts(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`run-local` used to emit a package without the control digest.
+
+    The offline front door built `{intentSha256, inputs}` while the executor requires
+    `{intentSha256, executionPackageControlSha256, inputs}`, so every offline render
+    died in `_read_input_package` before CARLA was contacted.
+    """
+    from simforge_oss_carla_exec import run_local
+
+    scenario = tmp_path / "scenario.xosc"
+    scenario.write_bytes(b"<OpenSCENARIO/>")
+    xodr = tmp_path / "map.xodr"
+    xodr.write_bytes(b"<OpenDRIVE/>")
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({"contractVersion": "simforge.asset-catalog/v1"}), "utf-8")
+    output = tmp_path / "out"
+
+    intent = {"schema": "simforge.render-intent/v1", "intentId": "usri_local_test"}
+    monkeypatch.setattr(run_local, "build_intent", lambda *_args, **_kwargs: intent)
+
+    captured: dict[str, object] = {}
+
+    def capture(args):
+        captured["package"] = json.loads(Path(args.package).read_text("utf-8"))
+        captured["intent"] = json.loads(Path(args.intent).read_text("utf-8"))
+        return {"ok": True}
+
+    # run_local_command imports the executor entry from .local at call time.
+    monkeypatch.setattr(local, "_run_intent", capture)
+    run_local.run_local_command(SimpleNamespace(
+        scenario=str(scenario), xodr=str(xodr), catalog=str(catalog), output=str(output),
+        map_label="Belmont_Office_Park_Belmont_CA", map_revision="authored",
+        start_seconds=0.0, end_seconds=20.0, seed=7, sdg_modalities=None,
+        annotations=False, host="127.0.0.1", port=2000,
+    ))
+
+    package = captured["package"]
+    assert set(package) == local.INPUT_PACKAGE_SCHEMA_FIELDS
+    # The executor recomputes both digests; a package it rejects is a failed render.
+    digest, control, inputs = local._read_input_package(
+        output / "input-package.json", captured["intent"],
+    )
+    assert digest == package["intentSha256"]
+    assert control == package["executionPackageControlSha256"]
+    assert set(inputs) == {"scenario.xosc", "local-map", "local-catalog"}
+
+def test_parity_front_rig_keeps_the_measurement_camera_identical() -> None:
+    """The measurement camera must be Port E's; the chase view may not be.
+
+    `pronto-cam3` is what a `parity-front` run is compared against, so its pose,
+    FOV and attributes have to be identical to the 19-source rig's or the two runs
+    are not comparable. The chase camera is presentation only: Port E aims it +15
+    deg (at the sky), while a side-by-side against another renderer needs it aimed
+    down at the vehicle, so that one is deliberately different.
+    """
+    from simforge_oss_carla_exec import run_local
+
+    port_e, port_e_counts = run_local.pronto_port_e_sources("ego")
+    parity, parity_counts = run_local.parity_front_sources("ego")
+
+    assert parity_counts == {"cameras": 1, "lidars": 0, "radars": 0}
+    assert port_e_counts == {"cameras": 8, "lidars": 6, "radars": 4}
+    assert {source["sensorId"] for source in parity} == {
+        "pronto-cam3", run_local.CHASE_CAMERA_SENSOR_ID,
+    }
+    by_id = {source["sensorId"]: source for source in port_e}
+    measurement = next(s for s in parity if s["sensorId"] == "pronto-cam3")
+    reference = by_id["pronto-cam3"]
+    assert measurement["transform"] == reference["transform"]
+    assert measurement["attributes"] == reference["attributes"]
+    assert measurement["modality"] == "rgb"
+
+    chase = next(s for s in parity if s["sensorId"] == run_local.CHASE_CAMERA_SENSOR_ID)
+    # Aimed below the horizon, at the ego, not above it.
+    assert chase["transform"]["rotation"]["pitchRad"] < 0.0
+    assert by_id[run_local.CHASE_CAMERA_SENSOR_ID]["transform"]["rotation"]["pitchRad"] > 0.0
+
+def test_nvidia_sdg_av_rig_matches_the_platform_preset() -> None:
+    """The NVIDIA surround rig must lower the platform's own preset.
+
+    `nvidia-sdg-av` in `packages/scenario/src/schema/v2/sensor-rigs.ts` authors
+    seven 120 deg cameras and a roof lidar in metres about the vehicle, with
+    lateral-right converted to the canonical left-handed `z`. A sign slip or a
+    dropped sensor would silently produce a rig that is not the published
+    configuration, which is the whole point of naming it.
+    """
+    from simforge_oss_carla_exec import run_local
+
+    sources, counts = run_local.nvidia_sdg_av_sources("ego")
+
+    assert counts == {"cameras": 7, "lidars": 1, "radars": 0}
+    by_id = {source["sensorId"]: source for source in sources}
+    assert set(by_id) == {
+        "camera_front_center", "camera_front_left", "camera_front_right",
+        "camera_left_side", "camera_right_side",
+        "camera_rear_left", "camera_rear_right",
+        "lidar_roof_center", run_local.CHASE_CAMERA_SENSOR_ID,
+    }
+
+    # Front centre: 2.1 m forward, 1.45 m up, on the centreline, facing ahead.
+    front = by_id["camera_front_center"]["transform"]
+    assert front["position"] == {"x": 2.1, "y": 1.45, "z": 0}
+    assert front["rotation"]["yawRad"] == 0
+
+    # A camera authored to the vehicle's right lands at negative z, and the left
+    # and right side cameras are mirror images of each other.
+    left = by_id["camera_left_side"]["transform"]
+    right = by_id["camera_right_side"]["transform"]
+    assert left["position"]["z"] == 0.95
+    assert right["position"]["z"] == -0.95
+    assert left["position"]["x"] == right["position"]["x"] == 0.2
+    assert left["rotation"]["yawRad"] == pytest.approx(-right["rotation"]["yawRad"])
+
+    # Rear cameras look backwards, not forwards.
+    for sensor_id in ("camera_rear_left", "camera_rear_right"):
+        transform = by_id[sensor_id]["transform"]
+        assert transform["position"]["x"] == -1
+        assert abs(transform["rotation"]["yawRad"]) > 2.0
+
+    lidar = by_id["lidar_roof_center"]
+    assert lidar["modality"] == "lidar"
+    assert lidar["transform"]["position"] == {"x": 0.15, "y": 1.85, "z": 0}
+
+    # Every measurement camera is a 120 deg surround view.
+    for sensor_id, source in by_id.items():
+        if source["modality"] != "rgb" or sensor_id == run_local.CHASE_CAMERA_SENSOR_ID:
+            continue
+        assert float(source["attributes"]["horizontalFovDeg"]) == 120.0
 
 def test_run_intent_records_named_preflight_failure_before_exit(
     tmp_path,
@@ -349,3 +481,24 @@ def test_artifact_manifest_accepts_sensor_data() -> None:
         "mediaType": "application/zip",
         "frameCount": None,
     }]
+
+
+def test_single_front_is_parity_front_minus_the_chase_camera():
+    """The two comparison rigs must differ by exactly one camera.
+
+    That is what makes `parity-front` minus `single-front` the per-source VRAM
+    cost rather than a mix of pose and count changes.
+    """
+    from simforge_oss_carla_exec.run_local import (
+        parity_front_sources,
+        single_front_sources,
+    )
+
+    single, single_counts = single_front_sources("ego")
+    parity, _ = parity_front_sources("ego")
+    assert len(single) == 1
+    assert len(parity) == 2
+    assert single_counts == {"cameras": 1, "lidars": 0, "radars": 0}
+    assert single[0]["sensorId"] == parity[0]["sensorId"] == "pronto-cam3"
+    assert single[0]["transform"] == parity[0]["transform"]
+    assert single[0]["attributes"] == parity[0]["attributes"]

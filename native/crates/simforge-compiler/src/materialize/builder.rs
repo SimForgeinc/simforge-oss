@@ -953,11 +953,9 @@ impl<'a> Materializer<'a> {
         let bounded_straight = json_str(role.base.extensions.as_ref(), "movementSemantics")
             == Some("same-approach-straight-kerb-edge");
 
-        let relative_parallel = self.relative_parallel_route_for(role, &scope, &path)?;
-        let spawn_polyline = match relative_parallel {
-            Some(r) => Some(r),
-            None => self.spawn_route_polyline_for(&role.base.id)?,
-        };
+        let spawn_polyline = self
+            .relative_parallel_route_for(role, &scope, &path)?
+            .or(self.spawn_route_polyline_for(&role.base.id)?);
         if let Some(polyline) = spawn_polyline {
             route = polyline;
         } else if let RoleKind::OnCrossing {
@@ -1326,6 +1324,7 @@ impl<'a> Materializer<'a> {
         Ok(())
     }
 
+
     /// A role-local path parallel to a concrete reference actor. Parking
     /// lanes are often not members of the corridor's integer lateral frame,
     /// so a `relative_to` bicycle beside a parked car derives its path from
@@ -1337,12 +1336,18 @@ impl<'a> Materializer<'a> {
         scope: &ExprScope,
         path: &str,
     ) -> CompileResult<Option<Route>> {
-        let RoleKind::RelativeTo { r#ref, ds_m, .. } = &role.kind else {
+        let RoleKind::RelativeTo {
+            r#ref,
+            ds_m,
+            heading_offset_rad,
+            rigid_offset_m,
+            ..
+        } = &role.kind else {
             return Ok(None);
         };
-        if json_str(role.base.extensions.as_ref(), "pathSemantics")
-            != Some("parallel_to_reference_actor")
-        {
+        let legacy_parallel = json_str(role.base.extensions.as_ref(), "pathSemantics")
+            == Some("parallel_to_reference_actor");
+        if rigid_offset_m.is_none() && !legacy_parallel {
             return Ok(None);
         }
         let Some(reference) = self.actor(r#ref).cloned() else {
@@ -1357,12 +1362,46 @@ impl<'a> Materializer<'a> {
             ]))
             .as_findings());
         };
-        let lateral_m = json_number(role.base.extensions.as_ref(), "lateralOffsetM").unwrap_or(0.0);
+        let lateral_m = rigid_offset_m
+            .map(|offset| offset.across_m)
+            .or_else(|| json_number(role.base.extensions.as_ref(), "lateralOffsetM"))
+            .unwrap_or(0.0);
+        let longitudinal_m = match rigid_offset_m {
+            Some(offset) => offset.along_m,
+            None => eval_num(Some(ds_m), scope, &format!("{path}.dsM"), Some(0.0))?,
+        };
         let path_length_m = json_number(role.base.extensions.as_ref(), "pathLengthM")
             .unwrap_or(120.0)
             .max(20.0);
-        let longitudinal_m = eval_num(Some(ds_m), scope, &format!("{path}.dsM"), Some(0.0))?;
         let reference_point = reference.initial.pose.position_local();
+        // A typed rigid pair is measured in the reference actor's initial pose
+        // frame and owns spawn placement exactly. The legacy extension branch
+        // below remains route-relative so it preserves road curvature.
+        if rigid_offset_m.is_some() {
+            let ref_heading = reference.initial.pose.heading_rad;
+            let forward = Vec2 { x: cos(ref_heading), y: sin(ref_heading) };
+            let left = Vec2 { x: -forward.y, y: forward.x };
+            let start = Vec2 {
+                x: reference_point.x + forward.x * longitudinal_m + left.x * lateral_m,
+                y: reference_point.y + forward.y * longitudinal_m + left.y * lateral_m,
+            };
+            let heading = ref_heading + heading_offset_rad;
+            let points = [
+                start,
+                Vec2 {
+                    x: start.x + cos(heading) * path_length_m,
+                    y: start.y + sin(heading) * path_length_m,
+                },
+            ];
+            let route = build_route_from_points(&points).ok_or_else(|| {
+                CompileError::at("route_unbuildable", path, format!("rigid formation route for \"{}\" is degenerate", role.base.id))
+            })?;
+            self.notes.push(Note::info(
+                format!("{path}.rigidOffsetM"),
+                format!("placed in {}'s initial pose frame at {longitudinal_m:.2} m along / {lateral_m:.2} m left; dLane/tFrac were not resolved", r#ref),
+            ));
+            return Ok(Some(route));
+        }
         let points: Vec<Vec2> = match (
             self.route_by_role.get(r#ref),
             self.spawn_s_by_role.get(r#ref),
@@ -1443,7 +1482,7 @@ impl<'a> Materializer<'a> {
                 ),
             )
         })?;
-        self.notes.push(Note::info(format!("{path}.extensions.pathSemantics"), format!("parallel path resolved in {}'s selected local frame ({longitudinal_m:.1} m longitudinal, {lateral_m:.2} m left)", r#ref)));
+        self.notes.push(Note::info(format!("{path}.extensions.pathSemantics"), format!("legacy parallel path resolved in {}'s selected local frame ({longitudinal_m:.1} m longitudinal, {lateral_m:.2} m left)", r#ref)));
         Ok(Some(route))
     }
 
@@ -1564,7 +1603,7 @@ impl<'a> Materializer<'a> {
         for it in &self.template.choreography.interactions {
             let (
                 t::Verb::Route {
-                    target: t::RouteTarget::Polyline { points },
+                    target: t::RouteTarget::Polyline { points, .. },
                 },
                 t::Trigger::At { t: at },
             ) = (&it.verb, &it.base.trigger)
@@ -2834,13 +2873,23 @@ impl<'a> Materializer<'a> {
                     )
                 })?;
                 if actor.initial.lane_ref.is_none() {
+                    let rigid = self.template.role(&it.base.actor).is_some_and(|role| {
+                        matches!(role.kind, RoleKind::RelativeTo { rigid_offset_m: Some(_), .. })
+                    });
                     return Err(CompileError::at(
                         "route_turn_unbindable",
                         format!("{path}.target"),
-                        format!(
-                            "next-junction route for \"{}\" needs a lane-bound actor",
-                            it.base.actor
-                        ),
+                        if rigid {
+                            format!(
+                                "next-junction route for \"{}\" contradicts rigidOffsetM: rigid placement intentionally has no lane from which to choose a junction",
+                                it.base.actor
+                            )
+                        } else {
+                            format!(
+                                "next-junction route for \"{}\" needs a lane-bound actor",
+                                it.base.actor
+                            )
+                        },
                     ));
                 }
                 let distance = (actor.initial.speed_mps
@@ -2864,7 +2913,7 @@ impl<'a> Materializer<'a> {
             t::RouteTarget::LanePath { lanes } => spec(sim::RouteSpec::LanePath {
                 lanes: lanes.clone(),
             }),
-            t::RouteTarget::Polyline { points } => {
+            t::RouteTarget::Polyline { points, join_from_current_pose, best_effort_world_path } => {
                 let mut out = Vec::with_capacity(points.len());
                 for (idx, p) in points.iter().enumerate() {
                     out.push(scene_point(
@@ -2877,7 +2926,70 @@ impl<'a> Materializer<'a> {
                         .point,
                     ));
                 }
-                spec(sim::RouteSpec::Polyline { points: out, stop_controls: Vec::new() })
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline { points: out, stop_controls: Vec::new() }),
+                    join_from_current_pose: *join_from_current_pose,
+                    best_effort_world_path: *best_effort_world_path,
+                }
+            }
+            t::RouteTarget::TimedPolyline { points, best_effort_world_path } => {
+                let mut out = Vec::with_capacity(points.len());
+                for (idx, p) in points.iter().enumerate() {
+                    let scene = scene_point(self.frame_pose_point(&p.pose, scope, &format!("{path}.target.points.{idx}"), 0.0)?.point);
+                    out.push(sim::TimedPoint { time_s: p.time_s, x: scene.x, z: scene.z });
+                }
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(sim::RouteSpec::TimedPolyline { points: out }),
+                    join_from_current_pose: None,
+                    best_effort_world_path: *best_effort_world_path,
+                }
+            }
+            t::RouteTarget::ActorPolyline { points, join_from_current_pose, best_effort_world_path } => {
+                let actor = self.actor(&it.base.actor).ok_or_else(|| CompileError::at(
+                    "route_disconnected", format!("{path}.target"),
+                    format!("actor-relative route for \"{}\" needs a materialized actor", it.base.actor),
+                ))?;
+                let origin = actor.initial.pose.position_local();
+                let h = actor.initial.pose.heading_rad;
+                let point = |p: &t::PortablePolylinePoint| {
+                    scene_point(Vec2 {
+                        x: origin.x + cos(h) * p.along_m - sin(h) * p.across_m,
+                        y: origin.y + sin(h) * p.along_m + cos(h) * p.across_m,
+                    })
+                };
+                let timed_count = points.iter().filter(|p| p.time_s.is_some()).count();
+                if timed_count != 0 && timed_count != points.len() {
+                    return Err(CompileError::at(
+                        "route_disconnected",
+                        format!("{path}.target.points"),
+                        "actorPolyline must be fully timed or fully untimed",
+                    ));
+                }
+                let target = if timed_count == points.len() {
+                    sim::RouteSpec::TimedPolyline {
+                        points: points
+                            .iter()
+                            .map(|p| {
+                                let scene = point(p);
+                                sim::TimedPoint {
+                                    time_s: p.time_s.expect("fully timed actorPolyline"),
+                                    x: scene.x,
+                                    z: scene.z,
+                                }
+                            })
+                            .collect(),
+                    }
+                } else {
+                    sim::RouteSpec::Polyline {
+                        points: points.iter().map(point).collect(),
+                        stop_controls: Vec::new(),
+                    }
+                };
+                sim::Verb::Route {
+                    target: sim::RouteActionTarget::Spec(target),
+                    join_from_current_pose: *join_from_current_pose,
+                    best_effort_world_path: *best_effort_world_path,
+                }
             }
             t::RouteTarget::CustomRoute { points } => sim::Verb::Route {
                 target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline {
@@ -4729,5 +4841,331 @@ impl<'a> Materializer<'a> {
             manifest,
             observations,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use serde_json::json;
+    use simforge_core::types::{
+        ActorBehavior, ActorInitial, ActorKind, ActorRules, Dims, LaneRef, Pose, RouteSpec,
+        SimActor,
+    };
+
+    use super::*;
+    use crate::anchor::{FeatureMatch, MFeatureKind};
+
+    fn template() -> ScenarioTemplate {
+        serde_json::from_str(include_str!(
+            "../../../../../examples/mechanisms/obstacle/curve-loss-control.template.json"
+        ))
+        .unwrap()
+    }
+
+    fn draw() -> ParamDraw {
+        ParamDraw {
+            values: BTreeMap::new(),
+            categorical: BTreeMap::new(),
+            param_seed: "fixture".into(),
+            rejected_constraints: vec![],
+        }
+    }
+
+    fn actor(id: &str, lane_bound: bool, lane_path: bool) -> SimActor {
+        SimActor {
+            id: id.into(),
+            kind: ActorKind::Car,
+            dims: Dims { l: 4.0, w: 2.0, h: 1.5 },
+            initial: ActorInitial {
+
+                lane_ref: lane_bound.then(|| LaneRef { rsl: "main".into(), s: 10.0, t_frac: 0.0 }),
+                pose: Pose { x: 10.0, z: 20.0, heading_rad: std::f64::consts::FRAC_PI_2 },
+                speed_mps: 5.0,
+            },
+            behavior: ActorBehavior {
+                rules: ActorRules::default(),
+                route: if lane_path {
+                    RouteSpec::LanePath { lanes: vec!["main".into()] }
+                } else {
+                    RouteSpec::Polyline { points: vec![], stop_controls: vec![] }
+                },
+                driving_profile: None,
+                cruise_speed_mps: None,
+            },
+            present_at_start: true,
+            is_static: false,
+            tags: vec![],
+            sensors: None,
+        }
+    }
+    fn rigid_role(id: &str, along_m: f64, across_m: f64) -> RoleBinding {
+        serde_json::from_value(json!({
+            "id": id,
+            "kind": "relative_to",
+            "ref": "ego",
+            "dLane": 7,
+            "dsM": 99,
+            "tFrac": 1,
+            "headingOffsetRad": 0,
+            "rigidOffsetM": { "alongM": along_m, "acrossM": across_m },
+            "actor": { "class": "car" },
+            "essentiality": "required",
+            "extensions": {
+                "pathSemantics": "parallel_to_reference_actor",
+                "lateralOffsetM": 88,
+                "pathLengthM": 60
+            }
+        }))
+        .unwrap()
+    }
+
+    fn interaction(actor: &str, target: Value) -> t::Interaction {
+        serde_json::from_value(json!({
+            "id": "route-action",
+            "actor": actor,
+            "verb": "route",
+            "trigger": { "kind": "at", "t": 0 },
+            "target": target
+        }))
+        .unwrap()
+    }
+
+    fn with_materializer(test: impl FnOnce(&mut Materializer<'_>)) {
+        let template = template();
+        let topology = crate::test_support::topology();
+        let bundle = MapBundle::from_topology("anchor-characterization", topology).unwrap();
+        let site = crate::test_support::site(bundle.index());
+        let options = MaterializeOptions::default();
+        let mut materializer = Materializer::new(&template, &bundle, &site, draw(), &options);
+        test(&mut materializer);
+    }
+
+    #[test]
+    fn relative_parallel_route_pins_extension_offsets_length_and_ds() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            let role = materializer.template.role("road-edge").unwrap();
+            let route = materializer
+                .relative_parallel_route_for(role, &ExprScope::default(), "roles.road-edge")
+                .unwrap()
+                .unwrap();
+            assert_eq!(route.length_m(), 60.0);
+            let start = route.pose_at(0.0);
+            let end = route.pose_at(route.length_m());
+            assert!((start.point.x - 7.2).abs() < 1e-12);
+            assert!((start.point.y - 125.0).abs() < 1e-12);
+            assert!((end.point.x - 7.2).abs() < 1e-12);
+            assert!((end.point.y - 185.0).abs() < 1e-12);
+            assert_eq!(materializer.notes.len(), 1);
+            assert_eq!(materializer.notes[0].path, "roles.road-edge.extensions.pathSemantics");
+        });
+    }
+
+    #[test]
+    fn relative_parallel_route_pins_route_backed_sampling_and_endpoint_extrapolation() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            materializer.route_by_role.insert(
+                "ego".into(),
+                Route::from_polyline([
+                    Vec2 { x: 0.0, y: 0.0 },
+                    Vec2 { x: 50.0, y: 0.0 },
+                ]),
+            );
+            materializer.spawn_s_by_role.insert("ego".into(), 10.0);
+            let role = materializer.template.role("road-edge").unwrap();
+            let route = materializer
+                .relative_parallel_route_for(role, &ExprScope::default(), "roles.road-edge")
+                .unwrap()
+                .unwrap();
+            assert_eq!(route.length_m(), 60.0);
+            let start = route.pose_at(0.0);
+            let end = route.pose_at(route.length_m());
+            assert!((start.point.x - 155.0).abs() < 1e-12);
+            assert!((start.point.y + 17.2).abs() < 1e-12);
+            assert!((end.point.x - 215.0).abs() < 1e-12);
+            assert!((end.point.y + 17.2).abs() < 1e-12);
+        });
+    }
+
+    #[test]
+    fn next_junction_route_refuses_an_unmaterialized_actor_at_first_emission_site() {
+        with_materializer(|materializer| {
+            let interaction = interaction("missing", json!({ "mode": "nextJunction", "turn": "left" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.0").unwrap_err();
+            assert_eq!((error.code.as_str(), error.path.as_deref(), error.reason.as_str()), (
+                "route_turn_unbindable",
+                Some("choreography.interactions.0.target"),
+                "next-junction route for \"missing\" needs a lane-bound actor",
+            ));
+        });
+    }
+
+    #[test]
+    fn next_junction_route_refuses_a_world_only_actor_at_second_emission_site() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, true));
+            let interaction = interaction("ego", json!({ "mode": "nextJunction", "turn": "right" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.1").unwrap_err();
+            assert_eq!(error.code, "route_turn_unbindable");
+            assert_eq!(error.reason, "next-junction route for \"ego\" needs a lane-bound actor");
+        });
+    }
+
+    #[test]
+    fn feature_turn_refuses_an_unmatched_feature_at_third_emission_site() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", true, true));
+            let interaction = interaction("ego", json!({ "mode": "turn", "feature": "jx", "turn": "left" }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.2").unwrap_err();
+            assert_eq!(error.code, "route_turn_unbindable");
+            assert_eq!(error.reason, "turn route for \"ego\" is not backed by a concrete lane path");
+            assert_eq!(error.detail.as_ref().unwrap()["feature"], "jx");
+            assert_eq!(error.detail.as_ref().unwrap()["turn"], "left");
+        });
+    }
+
+    #[test]
+    fn feature_turn_refuses_a_non_lane_path_at_fourth_emission_site() {
+        let template = template();
+        let topology = crate::test_support::topology();
+        let bundle = MapBundle::from_topology("anchor-characterization", topology).unwrap();
+        let mut site = crate::test_support::site(bundle.index());
+        site.feature_matches.insert("jx".into(), FeatureMatch {
+            map_feature_id: "junction:fixture".into(),
+            s: 0.0,
+            kind: MFeatureKind::Junction,
+        });
+        let options = MaterializeOptions::default();
+        let mut materializer = Materializer::new(&template, &bundle, &site, draw(), &options);
+        materializer.actors.push(actor("ego", true, false));
+        let interaction = interaction("ego", json!({ "mode": "turn", "feature": "jx", "turn": "left" }));
+        let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+        let error = materializer
+            .build_route_verb(
+                &interaction,
+                target,
+                &ExprScope::default(),
+                "choreography.interactions.3",
+
+            )
+            .unwrap_err();
+        assert_eq!(error.code, "route_turn_unbindable");
+        assert_eq!(
+            error.reason,
+            "turn route for \"ego\" is not backed by a concrete lane path"
+        );
+        assert_eq!(
+            error.path.as_deref(),
+            Some("choreography.interactions.3.target")
+        );
+    }
+    #[test]
+    fn rigid_offset_is_primary_and_owns_spawn_route_start() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            let role = rigid_role("partner", 5.0, 2.0);
+            let route = materializer
+                .relative_parallel_route_for(&role, &ExprScope::default(), "roles.partner")
+                .unwrap()
+                .unwrap();
+            let start = route.pose_at(0.0).point;
+            // ego is at internal (10,-20), heading +pi/2: ahead is +y and
+            // left is -x, so 5 m ahead / 2 m left is exactly (8,-15).
+            assert!((start.x - 8.0).abs() < 1e-12);
+            assert!((start.y + 15.0).abs() < 1e-12);
+            assert_eq!(route.length_m(), 60.0);
+            assert_eq!(materializer.notes[0].path, "roles.partner.rigidOffsetM");
+        });
+    }
+
+    #[test]
+    fn actor_polyline_lowers_left_positive_on_straight_and_curved_actor_headings() {
+        with_materializer(|materializer| {
+            let mut straight = actor("ego", false, false);
+            straight.initial.pose = Pose { x: 10.0, z: 20.0, heading_rad: 0.0 };
+            materializer.actors.push(straight);
+            let interaction = interaction("ego", json!({
+                "mode": "actorPolyline",
+                "points": [{"alongM": 5, "acrossM": 2}, {"alongM": 10, "acrossM": -3}]
+            }));
+            let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+            let lowered = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.4").unwrap().unwrap();
+            let sim::Verb::Route { target: sim::RouteActionTarget::Spec(RouteSpec::Polyline { points, .. }), .. } = lowered else { panic!("expected untimed polyline") };
+            assert_eq!((points[0].x, points[0].z), (15.0, 18.0));
+            assert_eq!((points[1].x, points[1].z), (20.0, 23.0));
+
+            materializer.actors.clear();
+            let heading = std::f64::consts::FRAC_PI_4;
+            let mut curved = actor("ego", false, false);
+            curved.initial.pose = Pose { x: 10.0, z: 20.0, heading_rad: heading };
+            materializer.actors.push(curved);
+            // The reference route may curve; actorPolyline is rigidly resolved
+            // from the actor's materialized initial tangent, not reprojected.
+            materializer.route_by_role.insert("ego".into(), Route::from_polyline([
+                Vec2 { x: 10.0, y: -20.0 },
+                Vec2 { x: 20.0, y: -10.0 },
+                Vec2 { x: 20.0, y: 10.0 },
+            ]));
+            let lowered = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.4").unwrap().unwrap();
+            let sim::Verb::Route { target: sim::RouteActionTarget::Spec(RouteSpec::Polyline { points, .. }), .. } = lowered else { panic!("expected curved untimed polyline") };
+            let expected_x = 10.0 + heading.cos() * 5.0 - heading.sin() * 2.0;
+            let expected_internal_y = -20.0 + heading.sin() * 5.0 + heading.cos() * 2.0;
+            assert!((points[0].x - expected_x).abs() < 1e-12);
+            assert!((points[0].z + expected_internal_y).abs() < 1e-12);
+        });
+    }
+
+    #[test]
+    fn actor_polyline_rejects_mixed_timing_and_timed_polyline_lowers() {
+        with_materializer(|materializer| {
+            materializer.actors.push(actor("ego", false, false));
+            let mixed = interaction("ego", json!({
+                "mode": "actorPolyline",
+                "points": [{"alongM": 0, "acrossM": 0, "timeS": 0}, {"alongM": 1, "acrossM": 0}]
+            }));
+            let t::Verb::Route { target } = &mixed.verb else { unreachable!() };
+            let error = materializer.build_route_verb(&mixed, target, &ExprScope::default(), "choreography.interactions.5").unwrap_err();
+            assert_eq!(error.reason, "actorPolyline must be fully timed or fully untimed");
+
+            materializer.build_reference_route().unwrap();
+            let timed = interaction("ego", json!({
+                "mode": "timedPolyline",
+                "points": [
+                    {"laneOffset": 0, "s": 5, "tFrac": 0, "headingOffsetRad": 0, "timeS": 0},
+                    {"laneOffset": 0, "s": 10, "tFrac": 0, "headingOffsetRad": 0, "timeS": 1}
+                ],
+                "bestEffortWorldPath": true
+            }));
+            let t::Verb::Route { target } = &timed.verb else { unreachable!() };
+            let lowered = materializer.build_route_verb(&timed, target, &ExprScope::default(), "choreography.interactions.6").unwrap().unwrap();
+            let sim::Verb::Route { target: sim::RouteActionTarget::Spec(RouteSpec::TimedPolyline { points }), best_effort_world_path, .. } = lowered else { panic!("expected timed polyline") };
+            assert_eq!(points.iter().map(|point| point.time_s).collect::<Vec<_>>(), [0.0, 1.0]);
+            assert_eq!(best_effort_world_path, Some(true));
+        });
+    }
+
+    #[test]
+    fn rigid_next_junction_is_an_explicit_authoring_contradiction() {
+        let mut template = template();
+        let index = template.role_index("road-edge").unwrap();
+        template.roles[index] = rigid_role("road-edge", 5.0, 2.0);
+        let topology = crate::test_support::topology();
+        let bundle = MapBundle::from_topology("anchor-characterization", topology).unwrap();
+        let site = crate::test_support::site(bundle.index());
+        let options = MaterializeOptions::default();
+        let mut materializer = Materializer::new(&template, &bundle, &site, draw(), &options);
+        materializer.actors.push(actor("road-edge", false, false));
+        let interaction = interaction("road-edge", json!({ "mode": "nextJunction", "turn": "left" }));
+        let t::Verb::Route { target } = &interaction.verb else { unreachable!() };
+        let error = materializer.build_route_verb(&interaction, target, &ExprScope::default(), "choreography.interactions.7").unwrap_err();
+        assert_eq!(error.code, "route_turn_unbindable");
+        assert!(error.reason.contains("contradicts rigidOffsetM"));
+        assert!(error.reason.contains("intentionally has no lane"));
     }
 }

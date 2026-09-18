@@ -8,6 +8,8 @@ import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {
   deleteMapAssetById,
   getMapAssetByIdFromDb,
+  mapVersionsBindingSourceAsset,
+  unreferencedStorageKeys,
   upsertMapAsset,
 } from "@/app/lib/db/map-asset-store";
 import { getMapAssetById } from "@/app/lib/map-assets";
@@ -304,7 +306,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 /**
- * Permanently delete a map asset: all S3 objects under `maps/{mapAssetId}/`, DB row (stats and artifact rows cascade).
+ * Permanently delete a map asset. Registered map versions bind the asset with a
+ * RESTRICT foreign key, so those are reported as blockers rather than deleted
+ * implicitly. The database row goes first (stats and artifact rows cascade) and
+ * only then are objects removed — and only objects no surviving row names,
+ * because map bytes are content-addressed and shared between releases.
  * Requires JSON body `{ confirmEmail }` matching the signed-in user's email (case-insensitive).
  */
 export async function DELETE(request: NextRequest, { params }: Params) {
@@ -358,14 +364,27 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 
   try {
-    const prefix = `maps/${mapAssetId}/`;
-    const keys = await listS3Keys(prefix);
-    await deleteS3Keys(keys);
+    const boundVersions = await mapVersionsBindingSourceAsset(mapAssetId);
+    if (boundVersions.length > 0) {
+      return NextResponse.json(
+        {
+          error: "map_asset_has_registered_versions",
+          detail:
+            "Registered map versions still bind this asset. Retire or consolidate them before deleting the source map.",
+          mapVersionIds: boundVersions,
+        },
+        { status: 409 },
+      );
+    }
     await deleteMapAssetById(mapAssetId);
+    const candidates = await listS3Keys(`maps/${mapAssetId}/`);
+    const deletable = await unreferencedStorageKeys(BUCKET, candidates);
+    await deleteS3Keys(deletable);
     return NextResponse.json({
       ok: true,
       mapAssetId,
-      deletedS3Objects: keys.length,
+      deletedS3Objects: deletable.length,
+      retainedS3Objects: candidates.length - deletable.length,
     });
   } catch (e) {
     const err = e as { name?: string };

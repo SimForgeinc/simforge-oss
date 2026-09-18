@@ -1,6 +1,6 @@
 import { discardResponseBody } from "@/app/lib/cloud/drain";
 import { randomBytes } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { revalidateTag } from "next/cache";
 import type { ScenarioMapDescriptorDto, StudioMapEntry } from "@simforge-oss/studio-host";
@@ -15,6 +15,7 @@ import {
 } from "@/app/lib/map-ingest/server/dev-asset-publication";
 import { ensureMapAsset, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
+import { localObjectPath } from "@/app/lib/s3/s3-object";
 import { assertMapUsable, MapAccessError } from "./access";
 import { BUNDLED_MAPS } from "./bundled-maps";
 import {
@@ -57,9 +58,9 @@ const MAPS_ROOT = resolve(LOCAL_CLOUD_ROOT, "maps");
 
 export type LocalMapDescriptor = ScenarioMapDescriptorDto & {
   access: MapAccess;
-  /** A registered account map while this installation has no active session. */
   locked: boolean;
-  installed: { browser: boolean; semantic: boolean };
+  /** A registered account map while this installation has no active session. */
+  ready: { browser: boolean; semantic: boolean };
   /** Download size of each profile's closure, or null while the upstream plan is unknown. */
   closureBytes: { browser: number; semantic: number } | null;
 };
@@ -123,6 +124,7 @@ function localContext() {
 function installDirectory(mapVersionId: string, profile: MapProfile) {
   return join(MAPS_ROOT, mapVersionId, profile);
 }
+
 
 /** Upstream reads use the account when it is active and the public catalog otherwise. */
 export async function upstreamGet(path: string, signal?: AbortSignal): Promise<Response> {
@@ -284,12 +286,28 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
   for (const descriptor of local) {
     const registered = await getRegisteredMap(descriptor.mapVersionId);
     const access = registered?.access ?? "local";
-    seen.add(descriptor.mapVersionId);
+    const ready = { browser: false, semantic: false };
+    for (const [profile, entryPoint] of [["browser", "3d/manifest.json"], ["semantic", "master.gltf"]] as const) {
+      const member = registered?.[profile].get(entryPoint);
+      if (!member) continue;
+      if (member.bucket === MAP_CACHE_BUCKET) {
+        const cached = await resolveCachedMapAsset(member.sha256);
+        ready[profile] = cached !== null && cached.sizeBytes === member.byteLength;
+      } else {
+        try {
+          const file = await stat(localObjectPath(member.bucket, member.key));
+          ready[profile] = file.isFile() && file.size === member.byteLength;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
+    }
+    seen.add(descriptor.sourceMapId);
     maps.push({
       ...descriptor,
       access,
       locked: access === "cloud" && !session.active,
-      installed: { browser: true, semantic: (registered?.semantic.size ?? 0) > 0 },
+      ready,
       closureBytes: closureBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
@@ -302,13 +320,13 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
     reachability = { reachable: false, message: error.message };
   }
   for (const map of upstream) {
-    if (seen.has(map.mapVersionId)) continue;
-    seen.add(map.mapVersionId);
+    if (seen.has(map.sourceMapId)) continue;
+    seen.add(map.sourceMapId);
     maps.push({
       ...localizeDescriptor(map),
       access: accessOf(map),
       locked: false,
-      installed: { browser: false, semantic: false },
+      ready: { browser: false, semantic: false },
       closureBytes: closureBytes.get(map.mapVersionId) ?? null,
     });
   }
@@ -326,7 +344,7 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
  * `ScenarioMapDescriptorDto` fields.
  */
 export async function listEditorMapCatalog(signal?: AbortSignal): Promise<LocalMapDescriptor[]> {
-  return (await listLocalMapCatalog(signal)).filter((map) => map.installed.browser && !map.locked);
+  return (await listLocalMapCatalog(signal)).filter((map) => map.ready.browser && !map.locked);
 }
 
 function studioMapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {

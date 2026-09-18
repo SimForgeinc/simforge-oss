@@ -66,6 +66,16 @@ let pendingBulkIndex: CacheIndex | null = null;
 let nativeFetch: typeof fetch | null = null;
 let gatewayInstalled = false;
 let requestSequence = 0;
+/**
+ * Set after the browser refuses a cache write for lack of quota.
+ *
+ * The cache is an optimization: everything in it also lives on the local host,
+ * one loopback request away. A `QuotaExceededError` from `cache.put` used to
+ * reject the fetch that had already delivered the bytes, so a full browser
+ * profile turned a good map into `[road-layer] downloading/decoding road lod0
+ * failed` — a decode failure reported for intact bytes.
+ */
+let cacheWritesUnavailable: string | null = null;
 
 export function mapAssetCacheBackend(): MapAssetCacheBackend {
   return desktopMapCacheBridge() ? "filesystem" : "browser";
@@ -406,8 +416,22 @@ export async function fetchMapAsset(
     // One Response is built from the bytes; its clone shares the body for the
     // cache write instead of copying the buffer a second time.
     const stored = responseFromBytes(bytes, response);
-    await cache.put(contentRequest(actualSha), stored.clone());
-    remember(readIndex(), canonicalUrl, actualSha, bytes.byteLength, deferIndexWrite);
+    // The integrity check above is the contract; the cache write is only an
+    // optimization, so a browser that refuses it (quota, eviction race,
+    // private mode) must not fail the asset whose bytes are already here.
+    try {
+      await cache.put(contentRequest(actualSha), stored.clone());
+      remember(readIndex(), canonicalUrl, actualSha, bytes.byteLength, deferIndexWrite);
+    } catch (error) {
+      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      if (cacheWritesUnavailable !== reason) {
+        cacheWritesUnavailable = reason;
+        console.warn(
+          `[map-asset-cache] keeping map assets out of browser storage for this session (${reason}). `
+          + "Loads continue from the local host; clear site data or raise the quota to cache them again.",
+        );
+      }
+    }
     return stored;
   };
   const pending = (async () => {

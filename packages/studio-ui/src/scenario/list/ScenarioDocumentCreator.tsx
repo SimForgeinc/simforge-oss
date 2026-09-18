@@ -38,6 +38,7 @@ type SharedRowHandlers = Pick<
   | "onDriverInTheLoop"
   | "onDownloadDocument"
   | "onDuplicateDocument"
+  | "onTransferDocument"
   | "onEditDetails"
   | "onDeleteDocument"
   | "onError"

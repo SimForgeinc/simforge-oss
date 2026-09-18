@@ -31,6 +31,11 @@ import type {
   ScenarioValidationRunDto,
   IndexedArtifact,
 } from "./contracts";
+import type {
+  ScenarioTransferOptionsDto,
+  TransferDocumentRequest,
+  TransferOptionsRequest,
+} from "./protocol/documents";
 
 /** A published map as both the editor (`ScenarioMapEntry`) and the list surfaces need it. */
 export type StudioMapEntry = ScenarioMapEntry & {
@@ -103,6 +108,11 @@ export interface StudioProjectService {
     input: { expectedVersion: number; title?: string; description?: string },
   ): Promise<ScenarioDocumentDto>;
   duplicateDocument(documentId: string, input?: { title?: string; datasetId?: string }): Promise<ScenarioDocumentDto>;
+  transferDocument(documentId: string, input: TransferDocumentRequest): Promise<ScenarioDocumentDto>;
+  getDocumentTransferOptions(
+    documentId: string,
+    input?: TransferOptionsRequest,
+  ): Promise<ScenarioTransferOptionsDto>;
   /**
    * Create the variation a human drives, and say which actor they take over.
    *

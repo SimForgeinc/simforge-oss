@@ -13,6 +13,8 @@
 use crate::bvh::{Hit, Raycast};
 use crate::taxonomy::{lidar_albedo, SemanticClass};
 use bevy::math::{Quat, Vec3};
+use crate::RAY_POOL;
+use render_core::coordinates::SensorFrame;
 
 #[derive(Debug, Clone)]
 pub struct LidarConfig {
@@ -38,7 +40,7 @@ impl LidarConfig {
 }
 
 pub struct LidarPoint {
-    /// Sensor-frame metres (x forward, y up, z left — canonical frame).
+    /// Sensor-local metres: +X forward, +Y up, +Z lateral (camera-right).
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -48,7 +50,7 @@ pub struct LidarPoint {
 }
 
 /// Beam direction in the sensor frame: azimuth 0 = forward, positive toward
-/// +z (left); elevation positive up.
+/// +z; elevation positive up. See render_core::coordinates for the basis.
 fn beam_dir(azimuth_rad: f32, elevation_rad: f32) -> Vec3 {
     let cos_e = elevation_rad.cos();
     Vec3::new(cos_e * azimuth_rad.cos(), elevation_rad.sin(), cos_e * azimuth_rad.sin())
@@ -58,38 +60,53 @@ fn beam_dir(azimuth_rad: f32, elevation_rad: f32) -> Vec3 {
 ///
 /// `instance_class` resolves a hit instance id to its semantic class for the
 /// intensity proxy.
+///
+/// Elevation rings are cast in parallel — one task per channel — and the
+/// per-channel point lists are concatenated in channel order, so the emitted
+/// order is the same strict `(channel, azimuth)` sequence a serial scan
+/// produces and scan hashes are unaffected by thread scheduling.
 pub fn scan(
     scene: &dyn Raycast,
     config: &LidarConfig,
     sensor_origin_world: Vec3,
     sensor_rot_world: Quat,
-    instance_class: &dyn Fn(u32) -> SemanticClass,
+    instance_class: &(dyn Fn(u32) -> SemanticClass + Sync),
 ) -> Vec<LidarPoint> {
+    let frame = SensorFrame::from_bevy_pose(sensor_origin_world, sensor_rot_world);
     let channels = config.channels.max(1);
     let az_steps = config.azimuth_steps();
-    let mut points = Vec::with_capacity((channels * az_steps) as usize);
     let hfov_span = if config.hfov_deg >= 359.999 { 360.0 } else { config.hfov_deg };
     let az_offset = if config.hfov_deg >= 359.999 { 0.0 } else { hfov_span.to_radians() * 0.5 };
-    for ch in 0..channels {
-        // Evenly spaced elevations across [-vfov/2, +vfov/2], top-down.
-        let frac = if channels > 1 { ch as f32 / (channels - 1) as f32 } else { 0.5 };
-        let elev = (config.vfov_deg * (0.5 - frac)).to_radians();
-        for step in 0..az_steps {
-            let az = (step as f32 / az_steps as f32) * hfov_span.to_radians() - az_offset;
-            let dir_sensor = beam_dir(az, elev);
-            let dir_world = sensor_rot_world.mul_vec3(dir_sensor);
-            if let Some(hit) = scene.cast(sensor_origin_world, dir_world, config.range_m) {
-                points.push(LidarPoint {
-                    x: hit.point.x - sensor_origin_world.x,
-                    y: hit.point.y - sensor_origin_world.y,
-                    z: hit.point.z - sensor_origin_world.z,
-                    intensity: intensity_proxy(&hit, dir_world, instance_class),
-                    instance_id: hit.instance_id,
-                });
-            }
+    let vfov_deg = config.vfov_deg;
+    let range_m = config.range_m;
+
+    let rings: Vec<Vec<LidarPoint>> = RAY_POOL.scope(|scope| {
+        for ch in 0..channels {
+            scope.spawn(async move {
+                // Evenly spaced elevations across [-vfov/2, +vfov/2], top-down.
+                let frac = if channels > 1 { ch as f32 / (channels - 1) as f32 } else { 0.5 };
+                let elev = (vfov_deg * (0.5 - frac)).to_radians();
+                let mut points = Vec::with_capacity(az_steps as usize);
+                for step in 0..az_steps {
+                    let az = (step as f32 / az_steps as f32) * hfov_span.to_radians() - az_offset;
+                    let dir_sensor = beam_dir(az, elev);
+                    let dir_world = frame.direction_to_world(dir_sensor);
+                    if let Some(hit) = scene.cast(sensor_origin_world, dir_world, range_m) {
+                        let local = frame.point_to_sensor(hit.point);
+                        points.push(LidarPoint {
+                            x: local.x,
+                            y: local.y,
+                            z: local.z,
+                            intensity: intensity_proxy(&hit, dir_world, instance_class),
+                            instance_id: hit.instance_id,
+                        });
+                    }
+                }
+                points
+            });
         }
-    }
-    points
+    });
+    rings.into_iter().flatten().collect()
 }
 
 /// Intensity proxy: albedo(class) x (0.25 + 0.75 x |cos incidence|), clamped

@@ -51,17 +51,33 @@ truck/bus 0.65, pedestrian/cyclist 0.60, prop 0.50, unlabeled 0.
 
 ## Beam / fan conventions
 
-- Sensor frame: x forward, y up, z left (canonical Pronto frame; mounts come
-  from `qualification/render-qualification-program.v1.json prontoRig`, lowered
-  via pod datum 0.85 m forward / plate 1.78 m up exactly like
-  `adapters/carla-exec .../run_local.py::_mount`).
-- Lidar azimuth 0 = sensor forward, positive toward +z (left); elevation
+- Sensor-local frame: **+X forward, +Y up, +Z lateral (camera-right at
+  identity heading)**. Source dimensions are length/width/height; Bevy XYZ
+  extents are length/height/width. The shared typed conversion is
+  `render_core::coordinates::source_to_bevy`. Bevy camera optical forward is
+  -Z, and only the camera basis adds that conversion.
+- Mounts still use the qualified `prontoRig` lowering (pod datum 0.85 m
+  forward / plate 1.78 m up). No mount signs or imported glTF geometry are
+  remirrored to match prose. Earlier versions of this document called +Z
+  “left”; that contradicted the actual camera basis.
+- Lidar XYZ is **local to the sensor**, not a world-oriented offset:
+  `sensor_from_world * (hit_world - sensor_origin)`. Both CPU and GPU outputs
+  now apply the inverse sensor rotation. Earlier artifacts omitted that
+  inverse: their ranges could agree while their XYZ orientation was wrong.
+- Lidar azimuth 0 = sensor forward, positive toward +Z; elevation
   positive up; channels span [-vfov/2, +vfov/2]; one scan = one revolution at
   azimuth step 0; steps/rev = points_per_second / (channels × rotation_hz).
-- Radar azimuth positive-left, altitude positive-up; velocity is the relative
+- Radar azimuth positive toward +Z, altitude positive-up; velocity is the relative
   radial component along the beam (target − host).
 - World frame = tile GLB frame: x = map x, z = −map y, y up. GNSS inverts the
   map's OpenDRIVE `+proj=tmerc geoReference` (local origin at lat_0/lon_0).
+- Actor identity is resolved from the first document frame before sampling.
+  The full bounded source interval, not only rendered timestamps, defines the
+  actor registry and dense IMU/GNSS history. Late actors retain their declared
+  class; changing row order never moves the rig to another actor.
+- Old outputs involving non-host vehicles or rotated lidar must be regenerated:
+  actor proxy length/width axes were swapped, and lidar XYZ was world-oriented.
+  A post-hoc point rotation cannot repair incorrect proxy geometry or classes.
 
 ## Output formats (CARLA-path parity)
 

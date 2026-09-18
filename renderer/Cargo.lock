@@ -5325,10 +5325,12 @@ dependencies = [
  "crossbeam-channel",
  "hex",
  "image",
+ "parking_lot",
  "render-core",
  "serde",
  "serde_json",
  "sha2",
+ "wgpu",
 ]
 
 [[package]]

@@ -25,7 +25,10 @@ export function sceneLoadProgressFromSnapshot(label: string, snapshot: MapModelL
   const percent = hasExactByteProgress ? Math.min(94, nextPercent) : Math.max(tracker.percent, Math.min(94, nextPercent));
   const trackerPercent = Math.max(tracker.percent, percent);
   if (snapshot.streamingError) return { tracker: { peakOutstanding, percent: trackerPercent }, progress: { phase: "error", percent: null, message: `${label} could not be loaded`, detail: snapshot.streamingError } };
-  if (outstanding === 0 && snapshot.roadReady && snapshot.roadVisible) return { tracker: { peakOutstanding, percent: trackerPercent }, progress: { phase: "stabilizing", percent, message: `Finishing ${label}`, detail: "Checking the completed scene and preparing the first frame…", download } };
+  const missingDetail = snapshot.detailFailures && snapshot.detailFailures > 0
+    ? ` ${snapshot.detailFailures} detail ${snapshot.detailFailures === 1 ? "tile" : "tiles"} could not be read and will be missing from the view.`
+    : "";
+  if (outstanding === 0 && snapshot.roadReady && snapshot.roadVisible) return { tracker: { peakOutstanding, percent: trackerPercent }, progress: { phase: "stabilizing", percent, message: `Finishing ${label}`, detail: `Checking the completed scene and preparing the first frame…${missingDetail}`, download } };
   const detail = download?.stalled
     ? `No map data has arrived for ${download.stalledFor}. The local host may be busy; the load resumes on its own when it answers.`
     : snapshot.loading === 0 && snapshot.queued === 0 && snapshot.uploading > 0

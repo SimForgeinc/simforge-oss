@@ -52,6 +52,15 @@ export type ScenarioDocumentActionsResult = {
     nextTitle: string,
   ) => Promise<void>;
   duplicateDocument: (document: ScenarioDocumentSummaryDto) => Promise<void>;
+  transferDocument: (
+    document: ScenarioDocumentSummaryDto,
+    input: {
+      targetMapVersionId: string;
+      siteId: string;
+      title?: string;
+      signalPlanDecision?: "remove" | "accept-proposal";
+    },
+  ) => Promise<boolean>;
   /** Create the variation to drive; resolves to the drive target, or null when it was refused. */
   startDriverInTheLoop: (
     document: ScenarioDocumentSummaryDto,
@@ -231,6 +240,38 @@ export function useScenarioDocumentActions({
         rememberScenarioSelection(created.datasetId, created.id);
       } catch (duplicateError) {
         reportError(duplicateError, "Failed to duplicate scenario.");
+      } finally {
+        setBusyDocumentId(null);
+      }
+    },
+    [reportError, spliceDocument, trackPending, studioHost],
+  );
+
+  const transferDocument = useCallback(
+    async (
+      document: ScenarioDocumentSummaryDto,
+      input: {
+        targetMapVersionId: string;
+        siteId: string;
+        title?: string;
+        signalPlanDecision?: "remove" | "accept-proposal";
+      },
+    ) => {
+      setBusyDocumentId(document.id);
+      try {
+        const created = await studioHost.projects.transferDocument(document.id, input);
+        const summary = {
+          ...documentSummaryFromDocument(created),
+          derivationKind: "cross_map_variation" as const,
+          derivedFromDocumentId: document.id,
+        };
+        trackPending(created.datasetId, summary);
+        spliceDocument(summary);
+        rememberScenarioSelection(created.datasetId, created.id);
+        return true;
+      } catch (transferError) {
+        reportError(transferError, "Failed to transfer scenario.");
+        return false;
       } finally {
         setBusyDocumentId(null);
       }
@@ -446,6 +487,7 @@ export function useScenarioDocumentActions({
     createDocumentOnMap,
     commitRename,
     duplicateDocument,
+    transferDocument,
     startDriverInTheLoop,
     deleteDocument,
     downloadDocument,

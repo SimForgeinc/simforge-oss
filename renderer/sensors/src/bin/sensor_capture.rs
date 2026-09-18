@@ -1,5 +1,5 @@
-//! sensor-capture: full-rig deterministic capture (8 cameras x RGB/depth/
-//! instance/semantic, 6 lidars, 4 radars, IMU/GNSS) on one scene.
+//! Profile-aware native sensor capture with explicit cadence and product controls.
+//! Fidelity and repeatability limits are measured in TICK-REALTIME-REPORT.md.
 
 use anyhow::Result;
 use clap::Parser;

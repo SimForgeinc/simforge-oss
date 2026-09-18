@@ -77,7 +77,160 @@ impl SceneState {
         Ok(s)
     }
 
+    /// The actor hosting the sensor rig.
+    ///
+    /// The schema's convention is the id `"ego"`, but compiled production
+    /// documents name actors after their draft entities (e.g.
+    /// `vehicle-mu3ls1vm-450kkb3c`) and carry no `"ego"` id at all. Playback
+    /// already falls back to the first actor in the frame; the sensor harness
+    /// must agree, or the rig sits at the map origin and every scan is taken
+    /// from nowhere.
     pub fn ego(&self) -> Option<&ActorState> {
-        self.actors.iter().find(|a| a.id == "ego")
+        self.actors
+            .iter()
+            .find(|a| a.id == "ego")
+            .or_else(|| self.actors.iter().find(|a| a.kind != "despawn"))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Multi-tick documents
+// ---------------------------------------------------------------------------
+
+/// The compiled `scene-state.v1` *document* shape: one header plus a frame per
+/// simulated tick (`{version, mapId, tickHz, actors: [desc], frames: [{tick,
+/// actors: [pose]}]}`). Playback consumes this directly; the sensor harness
+/// consumes the per-tick *stream* shape above, so the document is projected
+/// into one `SceneState` per captured tick, carrying each actor's catalog id
+/// and class down from the header.
+#[derive(Debug, Clone, Deserialize)]
+struct Document {
+    version: String,
+    #[serde(rename = "mapId")]
+    map_id: String,
+    #[serde(rename = "tickHz")]
+    tick_hz: f32,
+    #[serde(default)]
+    weather: Option<Weather>,
+    #[serde(rename = "timeOfDay", default)]
+    time_of_day: Option<f32>,
+    #[serde(default)]
+    actors: Vec<DocumentActor>,
+    frames: Vec<DocumentFrame>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct DocumentActor {
+    id: String,
+    #[serde(rename = "catalogId", default)]
+    catalog_id: Option<String>,
+    #[serde(rename = "actorClass", default)]
+    actor_class: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct DocumentFrame {
+    tick: u32,
+    actors: Vec<DocumentPose>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct DocumentPose {
+    id: String,
+    kind: String,
+    position: [f32; 3],
+    #[serde(default = "identity_quat")]
+    rotation: [f32; 4],
+    #[serde(default)]
+    velocity: [f32; 3],
+}
+
+/// One or more ticks of scene state, in capture order.
+#[derive(Debug, Clone, Resource)]
+pub struct SceneSequence {
+    pub ticks: Vec<SceneState>,
+    /// Resolved once from the document's first frame, before interval selection.
+    pub rig_host_id: Option<String>,
+}
+
+impl SceneSequence {
+    /// Find this sequence's fixed rig host in a frame. A missing/despawned host
+    /// is not replaced by another actor; callers must reject an invalid pose.
+    pub fn rig_host_at<'a>(&self, state: &'a SceneState) -> Option<&'a ActorState> {
+        let id = self.rig_host_id.as_deref()?;
+        state.actors.iter().find(|actor| actor.id == id && actor.kind != "despawn")
+    }
+
+    /// Parse either shape: a single-tick stream record, or a compiled document
+    /// projected into `start`, `start + stride`, ... for `count` ticks.
+    /// Reject an out-of-range request: repeating the last pose would silently
+    /// pad videos and overwrite artifacts bearing the same scene tick.
+    pub fn from_json(text: &str, start: u32, count: u32, stride: u32) -> Result<SceneSequence> {
+        if count == 0 || stride == 0 {
+            bail!("scene sampling requires a positive count and stride");
+        }
+        let value: serde_json::Value =
+            serde_json::from_str(text).context("parse scene-state json")?;
+        if !value.get("frames").is_some_and(|f| f.is_array()) {
+            if count != 1 { bail!("a single-tick scene cannot supply {count} source frames"); }
+            let single = SceneState::from_json(text)?;
+            let rig_host_id = single.ego().map(|actor| actor.id.clone());
+            return Ok(SceneSequence { ticks: vec![single], rig_host_id });
+        }
+        let doc: Document =
+            serde_json::from_value(value).context("parse scene-state document")?;
+        if doc.version != SCENE_STATE_SCHEMA {
+            bail!(
+                "scene-state schema mismatch: expected {SCENE_STATE_SCHEMA}, got {}",
+                doc.version
+            );
+        }
+        if doc.frames.is_empty() {
+            bail!("scene-state document has no frames");
+        }
+        let rig_host_id = doc.frames[0].actors.iter().find(|actor| actor.id == "ego")
+            .or_else(|| doc.frames[0].actors.iter().find(|actor| actor.kind != "despawn"))
+            .map(|actor| actor.id.clone());
+        let describe: std::collections::HashMap<&str, &DocumentActor> =
+            doc.actors.iter().map(|a| (a.id.as_str(), a)).collect();
+        let requested_last = u64::from(start) + u64::from(count - 1) * u64::from(stride);
+        if requested_last >= doc.frames.len() as u64 {
+            bail!("requested scene frame index {requested_last}, but document has {} frames", doc.frames.len());
+        }
+        let stride = stride as usize;
+        let ticks: Vec<SceneState> = (0..count as usize)
+            .map(|i| {
+                let index = start as usize + i * stride;
+                let frame = &doc.frames[index];
+                SceneState {
+                    version: doc.version.clone(),
+                    map_id: doc.map_id.clone(),
+                    tick: frame.tick,
+                    tick_hz: doc.tick_hz,
+                    weather: doc.weather.clone(),
+                    time_of_day: doc.time_of_day,
+                    actors: frame
+                        .actors
+                        .iter()
+                        .map(|pose| {
+                            let desc = describe.get(pose.id.as_str());
+                            ActorState {
+                                id: pose.id.clone(),
+                                kind: pose.kind.clone(),
+                                catalog_id: desc.and_then(|d| d.catalog_id.clone()),
+                                actor_class: desc.and_then(|d| d.actor_class.clone()),
+                                transform: ActorTransform {
+                                    position: pose.position,
+                                    rotation: pose.rotation,
+                                },
+                                velocity: pose.velocity,
+                                angular_velocity_y: None,
+                            }
+                        })
+                        .collect(),
+                }
+            })
+            .collect();
+        Ok(SceneSequence { ticks, rig_host_id })
     }
 }

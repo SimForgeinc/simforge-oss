@@ -6,9 +6,14 @@
 
 use std::path::Path;
 
+use serde::Serialize;
 use simforge_compiler::ambient::{
     apply_ambient_traffic, resolve_ambient_traffic_profile, AmbientReservation,
     AmbientTrafficOptions, AmbientTrafficProfile,
+};
+use simforge_compiler::anchor::lift::{
+    LiftOrigin, PortableLiftIssue, PortableLiftOptions, PortableLiftResult,
+    PortableSourceSignature,
 };
 use simforge_compiler::map_signals::{
     build_site_signal_plan, resolve_site_signal_program, SiteSignalRef,
@@ -21,7 +26,7 @@ use simforge_compiler::situation::{
     SituationRehearsalOptions, SituationSolveOptions, SituationTransaction,
     VerifiedStaticGeometryBinding,
 };
-use simforge_compiler::template::SignalApproach;
+use simforge_compiler::template::{ScenarioTemplate, SignalApproach};
 use simforge_compiler::{
     parse_template, ActorCatalog, CompileError, ExternalCatalogEntry, MapBundle, MapBundleSources,
     MatchedSite,
@@ -300,6 +305,77 @@ pub fn compile_template(
         manifest_json: serde_json::to_string(&result.manifest)?,
         observations_json: serde_json::to_string(&result.observations)?,
     })
+}
+
+/// Lift a map-bound template into its portable structural form. Refusals are
+/// serialized as a successful result so their structured issue codes survive
+/// every host boundary.
+pub fn lift_map_bound_template(
+    template_json: &str,
+    map: &MapAsset,
+    options_json: Option<&str>,
+) -> Result<String> {
+    #[derive(Default, serde::Deserialize)]
+    #[serde(rename_all = "camelCase", deny_unknown_fields)]
+    struct Options {
+        reference_role_id: Option<String>,
+        origin: Option<Origin>,
+        allow_mirror: Option<bool>,
+        max_projection_distance_m: Option<f64>,
+        corridor_extent_m: Option<f64>,
+        max_route_projection_error_m: Option<f64>,
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    enum Origin {
+        Auto,
+        Junction,
+        Corridor,
+    }
+
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct WireResult<'a> {
+        template: &'a Option<ScenarioTemplate>,
+        issues: &'a [PortableLiftIssue],
+        source_signature: &'a Option<PortableSourceSignature>,
+        source_site_id: Option<&'a str>,
+    }
+
+    let document: serde_json::Value = json_arg("template", template_json)?;
+    let template = parse_template(&document)?;
+    let input: Options = match options_json {
+        None => Options::default(),
+        Some(text) => json_arg("portable lift options", text)?,
+    };
+    let defaults = PortableLiftOptions::default();
+    let options = PortableLiftOptions {
+        reference_role_id: input.reference_role_id,
+        origin: match input.origin {
+            None | Some(Origin::Auto) => LiftOrigin::Auto,
+            Some(Origin::Junction) => LiftOrigin::Junction,
+            Some(Origin::Corridor) => LiftOrigin::Corridor,
+        },
+        allow_mirror: input.allow_mirror.unwrap_or(defaults.allow_mirror),
+        max_projection_distance_m: input
+            .max_projection_distance_m
+            .unwrap_or(defaults.max_projection_distance_m),
+        corridor_extent_m: input.corridor_extent_m,
+        max_route_projection_error_m: input.max_route_projection_error_m,
+    };
+    let result: PortableLiftResult =
+        simforge_compiler::lift_map_bound_template(&template, map.bundle().index(), &options);
+    serde_json::to_string(&WireResult {
+        template: &result.template,
+        issues: &result.issues,
+        source_signature: &result.source_signature,
+        source_site_id: result
+            .source_site
+            .as_ref()
+            .map(|site| site.site_id.as_str()),
+    })
+    .map_err(Into::into)
 }
 
 /// Rank sites for a template on one map; returns the `SiteMatch` JSON

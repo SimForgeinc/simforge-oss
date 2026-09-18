@@ -2,6 +2,7 @@ import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   ListPartsCommand,
@@ -41,6 +42,8 @@ export interface RegistryBackend {
   list(prefix: string): Promise<string[]>;
   put(key: string, bytes: Uint8Array, options?: PutOptions): Promise<void>;
   putFile(key: string, sourcePath: string, options?: PutOptions & MultipartOptions): Promise<void>;
+  /** Delete one key. Absent keys succeed; read-only backends reject. */
+  remove?(key: string): Promise<void>;
 }
 
 function safeFilePath(root: string, key: string): string {
@@ -131,6 +134,14 @@ export class FileRegistryBackend implements RegistryBackend {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
       throw error;
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      await unlink(safeFilePath(this.root, key));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
   }
 
@@ -271,6 +282,10 @@ export class S3RegistryBackend implements RegistryBackend {
       if (status === 404) return false;
       throw error;
     }
+  }
+
+  async remove(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.objectKey(key) }));
   }
 
   async list(prefix: string): Promise<string[]> {

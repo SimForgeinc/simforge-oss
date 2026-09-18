@@ -40,6 +40,7 @@ import {
   registryMapsIngest,
   registryMapsList,
   registryMapsPromote,
+  registryMapsPrune,
   registryMapsPull,
   registryMapsSourcePush,
 } from './commands/map-registry.js';
@@ -60,12 +61,13 @@ import { simulate } from './commands/simulate.js';
 import { debugScenario } from './commands/debug.js';
 import { sitesMatch } from './commands/sites.js';
 import { templateNew, templateValidate } from './commands/template.js';
+import { variationFork, variationTransfer } from './commands/variation.js';
 import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { scenarioCommand } from './commands/scenario.js';
 import { renderSubmitCommand } from './commands/render-submit.js';
-import { renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
+import { renderGroupUsage, renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
 import { drive } from './commands/drive.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
@@ -84,7 +86,7 @@ const COMMANDS = [
   { name: 'maps build', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export into a work directory (no publish)' },
   { name: 'maps ingest', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export and publish it, or publish a prebuilt master directory' },
   { name: 'maps promote', summary: 'copy one immutable version between registries' },
-  { name: 'maps sources push', summary: 'resumably multipart-upload a raw source archive' },
+  { name: 'maps prune', summary: 'delete immutable versions from a registry (--keep-latest/--whole-map, --gc, --apply)' },
   { name: 'locations find', summary: 'structured location query: --map --type --facts --near …' },
   { name: 'locations get', summary: 'one location by handle or id, optionally --describe' },
   { name: 'locations resolve', summary: 'free text → ranked handles' },
@@ -93,6 +95,8 @@ const COMMANDS = [
   { name: 'sites match', summary: 'anchor → ranked concrete sites on one map or --all-maps' },
   { name: 'instantiate', summary: 'template × site × draw → a concrete SimScenarioInput' },
   { name: 'simulate', summary: 'one engine pass over an instance, with an optional trace' },
+  { name: 'variation fork', summary: 'portable template × target site → an executable child variation with lineage' },
+  { name: 'variation transfer', summary: 'lift a map-bound template and transfer it to one target map/site' },
   { name: 'debug', summary: 'compile a template/instance, run native or SUMO, and emit complete paths + diagnostics' },
   { name: 'validate', summary: 'tier-1, or tier-2 (one engine pass + invariant residuals)' },
   { name: 'evaluate', summary: 'reject filters over a trace' },
@@ -117,12 +121,13 @@ const COMMANDS = [
   { name: 'host stop', summary: 'ask the running local host to shut down cleanly (start one with `simforge daemon`)' },
   { name: 'host open', summary: 'open the running local host in the browser with a trusted one-use session (--next <path>)' },
   { name: 'host pair', summary: 'mint a one-use pairing code for a desktop shell on another machine (--origin <url> for a loopback or wildcard bind)' },
-  { name: 'render list', summary: 'list render jobs on the local host, optionally --scenario <documentId>' },
-  { name: 'render status', summary: 'print one render job' },
+  { name: 'render --help', summary: 'the render group: every verb, its flags, and the SIMFORGE_API_BASE_URL contract' },
+  { name: 'render list', summary: 'list render jobs on the target host: [--scenario <documentId>] [--revision <id>] [--job-mode <mode>] [--limit 50]' },
+  { name: 'render status', summary: 'one render job: state, attempts and progress' },
   { name: 'render wait', summary: 'block until a render job finishes; non-zero exit when it fails' },
   { name: 'render cancel', summary: 'request cancellation of a queued or running render job' },
-  { name: 'render artifacts', summary: 'list a finished render job\'s artifacts, or download them with --out <dir>' },
-  { name: 'render submit', summary: 'freeze a scenario and submit a render job to the local host: --scenario <id> --engine native --seconds 5' },
+  { name: 'render download', summary: 'the minted artifact URLs for a finished render job, or the bytes with --out <dir>' },
+  { name: 'render submit', summary: 'submit a render intent: --scenario <id> --engine carla --seconds 5, or --revision <id> --execution-package <id> --render-spec <file>' },
   { name: 'render run', summary: 'execute one immutable render intent with the browser, CARLA, or native engine' },
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
@@ -317,7 +322,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
   switch (head) {
     case 'daemon': {
       const args = parseArgs(argv.slice(1), {
-        booleans: [...GLOBAL_BOOLEANS, 'dev', 'no-worker'],
+        booleans: [...GLOBAL_BOOLEANS, 'dev', 'no-worker', 'open-access'],
         values: ['port', 'data-root', 'cloud-origin', 'hostname'],
       });
       return daemonCommand({
@@ -325,6 +330,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         dataRoot: optionalString(args, 'data-root'),
         dev: boolFlag(args, 'dev'),
         noWorker: boolFlag(args, 'no-worker'),
+        openAccess: boolFlag(args, 'open-access'),
         cloudOrigin: optionalString(args, 'cloud-origin'),
         hostname: optionalString(args, 'hostname'),
       });
@@ -467,8 +473,23 @@ async function dispatch(argv: readonly string[]): Promise<number> {
           pretty: boolFlag(args, 'pretty'),
         });
       }
+      if (sub === 'prune') {
+        const args = parseArgs(argv.slice(2), {
+          booleans: [...GLOBAL_BOOLEANS, 'keep-latest', 'whole-map', 'gc', 'apply'],
+          values: ['registry'],
+        });
+        return registryMapsPrune({
+          reference: positional(args, 0, 'name[@version]'),
+          registry: optionalString(args, 'registry'),
+          keepLatest: boolFlag(args, 'keep-latest'),
+          wholeMap: boolFlag(args, 'whole-map'),
+          gc: boolFlag(args, 'gc'),
+          apply: boolFlag(args, 'apply'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
       throw new CliError('unknown_command', `simforge maps ${sub ?? ''}`.trim(), {
-        detail: { known: ['list', 'pull', 'ingest', 'promote', 'sources push'] },
+        detail: { known: ['list', 'pull', 'ingest', 'promote', 'prune', 'sources push'] },
       });
     }
 
@@ -612,6 +633,41 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         draw: optionalInt(args, 'draw'),
         out: optionalString(args, 'out'),
         pretty: boolFlag(args, 'pretty'),
+      });
+    }
+
+    case 'variation': {
+      const args = parseArgs(argv.slice(2), {
+        booleans: GLOBAL_BOOLEANS,
+        values: ['map', 'source-map', 'target-map', 'site', 'seed', 'draw', 'out'],
+      });
+      const file = positional(args, 0, 'template.json');
+      const operation = sub ?? 'fork';
+      if (operation === 'fork') {
+        return variationFork({
+          file,
+          mapId: requireString(args, 'map'),
+          siteId: requireString(args, 'site'),
+          seed: optionalString(args, 'seed'),
+          draw: optionalInt(args, 'draw'),
+          out: requireString(args, 'out'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
+      if (operation === 'transfer') {
+        return variationTransfer({
+          file,
+          sourceMapId: requireString(args, 'source-map'),
+          targetMapId: requireString(args, 'target-map'),
+          siteId: requireString(args, 'site'),
+          seed: optionalString(args, 'seed'),
+          draw: optionalInt(args, 'draw'),
+          out: requireString(args, 'out'),
+          pretty: boolFlag(args, 'pretty'),
+        });
+      }
+      throw new CliError('unknown_command', `simforge variation ${operation}`.trim(), {
+        detail: { known: ['fork', 'transfer'] },
       });
     }
 
@@ -839,8 +895,9 @@ async function dispatch(argv: readonly string[]): Promise<number> {
     case 'scenario':
       return scenarioCommand(argv.slice(1));
     case 'render': {
+      if (sub === undefined || sub === '--help' || sub === 'help') return renderGroupUsage(argv.includes('--pretty'));
       if (sub === 'submit') return renderSubmitCommand(argv.slice(2));
-      if ((RENDER_JOB_COMMANDS as readonly string[]).includes(sub ?? '')) return renderJobsCommand(argv.slice(1));
+      if ((RENDER_JOB_COMMANDS as readonly string[]).includes(sub)) return renderJobsCommand(argv.slice(1));
       if (sub === 'hash') {
         const args = parseArgs(argv.slice(2), { booleans: GLOBAL_BOOLEANS });
         return renderHash(positional(args, 0, 'render-intent.json'), boolFlag(args, 'pretty'));

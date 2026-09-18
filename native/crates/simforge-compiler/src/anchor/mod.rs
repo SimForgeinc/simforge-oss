@@ -16,6 +16,7 @@ pub mod adapt;
 pub mod bind;
 pub mod clauses;
 pub mod degrade;
+pub mod lift;
 pub mod frame;
 pub mod matcher;
 pub mod scoring;
@@ -399,6 +400,7 @@ pub enum MRoleKind {
         on_missing: OnMissing,
         ds_m: f64,
         t_frac: Option<f64>,
+        rigid_offset_m: Option<crate::template::RigidOffsetM>,
     },
 }
 
@@ -903,7 +905,12 @@ pub fn mirror_roles(roles: &[MRole]) -> Vec<MRole> {
             let mut out = r.clone();
             match &mut out.kind {
                 MRoleKind::LaneOffset { k, .. } => *k = -*k,
-                MRoleKind::RelativeTo { d_lane, .. } => *d_lane = -*d_lane,
+                MRoleKind::RelativeTo { d_lane, rigid_offset_m, .. } => {
+                    *d_lane = -*d_lane;
+                    if let Some(offset) = rigid_offset_m {
+                        offset.across_m = -offset.across_m;
+                    }
+                }
                 MRoleKind::ConflictingGate { from, turn, .. } => {
                     *from = flip_relation(*from);
                     *turn = flip_turn(*turn);

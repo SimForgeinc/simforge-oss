@@ -613,6 +613,39 @@ export function splitMapArtifactUri(uri: string) {
   return parseS3Uri(uri);
 }
 
+/**
+ * Registered map versions that still bind this source asset. The
+ * `simforge_map_versions_source_map_asset_fk` constraint is RESTRICT, so
+ * deleting the asset while any of these exist fails — callers must report the
+ * blockers instead of removing bytes first.
+ */
+export async function mapVersionsBindingSourceAsset(mapAssetId: string): Promise<string[]> {
+  const rows = await queryRows<{ id: string }>(
+    `SELECT id FROM simforge.map_versions WHERE source_map_asset_id = :id ORDER BY created_at`,
+    { id: mapAssetId },
+  );
+  return rows.map((row) => row.id);
+}
+
+/**
+ * Narrow `keys` to the objects no surviving row names. Map bytes are
+ * content-addressed and shared between releases, so prefix deletion would
+ * destroy bytes a retained map still needs.
+ */
+export async function unreferencedStorageKeys(bucket: string, keys: readonly string[]): Promise<string[]> {
+  if (keys.length === 0) return [];
+  const referenced = new Set<string>();
+  for (const sql of [
+    `SELECT storage_key AS key FROM simforge.browser_asset_blobs WHERE storage_bucket = :bucket`,
+    `SELECT storage_key AS key FROM simforge.native_map_asset_blobs WHERE storage_bucket = :bucket`,
+    `SELECT storage_key AS key FROM simforge.artifacts WHERE storage_bucket = :bucket`,
+    `SELECT s3_key AS key FROM public.map_asset_artifacts WHERE s3_bucket = :bucket`,
+  ]) {
+    for (const row of await queryRows<{ key: string }>(sql, { bucket })) referenced.add(row.key);
+  }
+  return keys.filter((key) => !referenced.has(key));
+}
+
 /** Hard-delete map row; `map_asset_artifacts` and `map_asset_stats` cascade. Caller must remove S3 objects. */
 export async function deleteMapAssetById(mapAssetId: string): Promise<void> {
   await execute(`DELETE FROM map_assets WHERE id = :id`, { id: mapAssetId });

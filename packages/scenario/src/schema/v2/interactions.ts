@@ -378,8 +378,76 @@ export const RouteTargetSchema = z.discriminatedUnion('mode', [
     fromFrac: z.number().min(0).max(1).default(0),
     toFrac: z.number().min(0).max(1).default(1),
   }),
-  /** Frame-relative polyline: jaywalking, work-zone weaves, parking manoeuvres. */
-  z.strictObject({ mode: z.literal('polyline'), points: z.array(FramePoseSchema).min(2).max(32) }),
+  /**
+   * Frame-relative polyline: jaywalking, work-zone weaves, parking manoeuvres,
+   * and the portable form of a scene-space `customRoute`. The point cap matches
+   * `customRoute` so converting one never has to drop a vertex.
+   *
+   * The two governor flags exist because a hand-authored frame polyline and a
+   * converted freehand route are the same geometry under different driving
+   * rules, and collapsing them would silently change what the actor obeys.
+   */
+  z.strictObject({
+    mode: z.literal('polyline'),
+    points: z.array(FramePoseSchema).min(2).max(128),
+    /**
+     * Connect the actor's live pose to the first waypoint when the route
+     * fires. Absent means the actor is re-projected onto the polyline, which
+     * is how a hand-authored frame polyline has always behaved.
+     */
+    joinFromCurrentPose: z.boolean().optional(),
+    /** Follow the points literally, without road, signal or avoidance governors. */
+    bestEffortWorldPath: z.boolean().optional(),
+  }),
+  /**
+   * Frame-relative keyframes: the portable form of `customTimedRoute`. Time
+   * owns motion exactly as it does there, but each position is stated in the
+   * anchor frame, so the same dwell/weave survives a move to another map.
+   */
+  z.strictObject({
+    mode: z.literal('timedPolyline'),
+    points: z.array(FramePoseSchema.extend({ timeS: z.number().finite().min(0) })).min(1).max(1024),
+    /** Follow the keyframes literally, without road, signal or avoidance governors. */
+    bestEffortWorldPath: z.boolean().optional(),
+  }),
+  /**
+   * A freehand route carried as a **shape**, rigidly anchored to the pose of
+   * the actor that drives it.
+   *
+   * This is the portable form of `customRoute`/`customTimedRoute`. The
+   * frame-relative `polyline` form cannot hold one: its lateral axis is
+   * `laneOffset` plus a clamped `tFrac`, so ±8 lane widths — about 30 m — is
+   * the widest offset it can name, and a freehand route that leaves the anchor
+   * corridor (measured: 38 m to 253 m on real authored documents) is folded
+   * back onto the corridor centreline, which re-derives the route against the
+   * road instead of preserving what the author drew.
+   *
+   * Here each vertex is stated as metres along and across the driving actor's
+   * own initial heading, so the conversion is a rigid transform: the route
+   * keeps its exact shape, its exact position relative to its actor, and
+   * therefore its exact relationship to whatever that actor is interacting
+   * with. What the target map has to supply is room, not a matching
+   * centreline — which is the same bargain `bestEffortWorldPath` already
+   * strikes.
+   */
+  z.strictObject({
+    mode: z.literal('actorPolyline'),
+    /**
+     * Offsets in the driving actor's own initial pose frame, metres.
+     * `alongM` is positive ahead of the actor, `acrossM` positive to its left.
+     * A point carrying `timeS` makes the route time-driven exactly as
+     * `customTimedRoute` is; one keyframe is a complete route.
+     */
+    points: z.array(z.strictObject({
+      alongM: z.number().finite(),
+      acrossM: z.number().finite(),
+      timeS: z.number().finite().min(0).optional(),
+    })).min(1).max(1024),
+    /** Connect the actor's live pose to the first waypoint when the route fires. */
+    joinFromCurrentPose: z.boolean().optional(),
+    /** Follow the points literally, without road, signal or avoidance governors. */
+    bestEffortWorldPath: z.boolean().optional(),
+  }),
   // Initial state and timeline routes share the exact same map-bound payloads.
   ...SceneAbsoluteMapBoundRouteSchemas,
   /**

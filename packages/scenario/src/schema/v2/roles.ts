@@ -330,7 +330,20 @@ export const InParkingZoneRoleSchema = z.strictObject({
   facing: z.enum(['with_traffic', 'against_traffic', 'perpendicular']).default('with_traffic'),
 });
 
-/** Positioned relative to another role: `dLane` lanes over, `dsM` metres along. */
+/**
+ * Positioned relative to another role: `dLane` lanes over, `dsM` metres along.
+ *
+ * `dLane`/`tFrac` name the position inside the anchor frame's cross-section,
+ * which is the right thing for a formation that fits on one road. It cannot
+ * describe a partner that does not: the widest lateral offset those two fields
+ * can name is about eight lane widths, and a whole-lane step only resolves
+ * where the site actually has that lane. An actor 71 m across the junction is
+ * therefore silently folded into the neighbouring lane, which is exactly how a
+ * measured 7.3 s crossing gap became a 0.0 s one after transfer.
+ *
+ * `rigidOffsetM` is the escape from that: the pairwise offset in metres,
+ * carried whole.
+ */
 export const RelativeToRoleSchema = z.strictObject({
   ...roleBase,
   kind: z.literal('relative_to'),
@@ -342,6 +355,27 @@ export const RelativeToRoleSchema = z.strictObject({
   /** Lateral offset within the resulting lane, fraction of width. */
   tFrac: z.number().min(-1).max(1).default(0),
   headingOffsetRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  /**
+   * The pairwise offset measured in `ref`'s own pose frame, metres: `alongM`
+   * positive ahead of it, `acrossM` positive to its left.
+   *
+   * Present when the formation is wider than the frame's cross-section can
+   * name. It then OWNS this actor's placement — the actor is put at that exact
+   * offset from `ref`'s materialized pose, `dLane`/`tFrac` are not resolved
+   * against the site's lanes, and `dsM` is left as the frame-station estimate
+   * the matcher scores with. The trade is deliberate: the interaction's
+   * geometry is preserved exactly, and whether a road happens to be under the
+   * actor becomes the reviewer's question rather than a silent relocation.
+   *
+   * This is the typed form of the offset the native materializer already
+   * applies through `extensions.lateralOffsetM` when
+   * `extensions.pathSemantics === 'parallel_to_reference_actor'`
+   * (`builder.rs:1360,1414-1426`). The typed field is preferred; that untyped
+   * extension remains honoured as a fallback.
+   */
+  rigidOffsetM: z
+    .strictObject({ alongM: NumberOrExprSchema, acrossM: NumberOrExprSchema })
+    .optional(),
 });
 
 /**

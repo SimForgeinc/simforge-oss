@@ -8,6 +8,7 @@ import {
   listMaps,
   loadDerivedClosure,
   promoteVersion,
+  pruneVersions,
   publishVersion,
   pullVersion,
   pushSourceArchive,
@@ -18,7 +19,7 @@ import {
   type RegistryBackend,
 } from '@simforge-oss/map-registry';
 import { basename, join, resolve } from 'node:path';
-import { EXIT } from '../errors.js';
+import { CliError, EXIT } from '../errors.js';
 import { emit, emitLines } from '../output.js';
 
 function defaultRegistryUrl(): string {
@@ -247,6 +248,52 @@ export async function registryMapsPromote(options: RegistryPromoteOptions): Prom
     target: options.target ?? 'public',
   });
   emit({ sourceRegistry: sourceUrl, destinationRegistry: destinationUrl, ...result }, options);
+  return EXIT.ok;
+}
+
+export interface RegistryPruneOptions {
+  /** `name` or `name@vN`. */
+  reference: string;
+  registry?: string;
+  keepLatest?: boolean;
+  wholeMap?: boolean;
+  gc?: boolean;
+  apply?: boolean;
+  pretty: boolean;
+}
+
+/**
+ * Remove immutable releases from a registry. Defaults to a dry run so the
+ * object and blob counts can be reviewed before anything is deleted.
+ */
+export async function registryMapsPrune(options: RegistryPruneOptions): Promise<number> {
+  const url = options.registry ?? process.env['SIMFORGE_MAPS_REGISTRY'] ?? internalRegistryUrl();
+  const separator = options.reference.lastIndexOf('@');
+  const name = separator === -1 ? options.reference : options.reference.slice(0, separator);
+  const version = separator === -1 ? undefined : options.reference.slice(separator + 1);
+  if (version !== undefined && !/^v[1-9][0-9]*$/.test(version)) {
+    throw new CliError('bad_value', `invalid map version: ${version}`, { path: 'name[@version]' });
+  }
+  if (version === undefined && options.keepLatest !== true && options.wholeMap !== true) {
+    throw new CliError('bad_value', 'prune needs name@vN, --keep-latest or --whole-map', { path: 'name[@version]' });
+  }
+  const result = await pruneVersions(writableBackend(url), {
+    name,
+    ...(version === undefined ? {} : { versions: [version as `v${number}`] }),
+    ...(options.keepLatest === true ? { keepLatest: true } : {}),
+    ...(options.wholeMap === true ? { wholeMap: true } : {}),
+    ...(options.gc === true ? { collectGarbage: true } : {}),
+    dryRun: options.apply !== true,
+  });
+  emit({
+    registry: url,
+    applied: options.apply === true,
+    name: result.name,
+    removedVersions: result.removedVersions,
+    retainedVersions: result.retainedVersions,
+    removedObjectCount: result.removedObjects.length,
+    removedBlobCount: result.removedBlobs.length,
+  }, options);
   return EXIT.ok;
 }
 

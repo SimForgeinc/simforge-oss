@@ -2,7 +2,7 @@
 
 The repository has two measurements for the same fixed, pinned corpus:
 
-- `scripts/benchmarks/cli-render-benchmark.mjs` measures the CLI `render submit → render wait → render artifacts` contract. It records cold and warm wall time, progress samples (including the time spent at or above 90% progress), frame throughput, simulated-seconds throughput, artifact bytes, process RSS, VRAM, GPU power/utilisation, and the render manifest's typed stage timings.
+- `scripts/benchmarks/cli-render-benchmark.mjs` measures the CLI `render submit → render wait → render download` contract. It records cold and warm wall time, progress samples (including the time spent at or above 90% progress), frame throughput, simulated-seconds throughput, artifact bytes, process RSS, VRAM, GPU power/utilisation, and the render manifest's typed stage timings.
 - `scripts/benchmarks/browser-app-benchmark.mjs` measures the three user-facing Studio surfaces (`/dashboard/map-assets`, `/dashboard/scenario`, and `/dashboard/simcloud`) with a new-context cold pass and a same-context warm pass. It records navigation TTI, scenario-world first 3D draw, frame-time p50/p95/p99, long tasks, WebGL draw calls, texture uploads, JavaScript resource bytes, network requests/bytes, pre-interactive assets, unused DOM-unreferenced assets, and duplicate fetches.
 
 The scripts are intentionally standalone Node programs. They do not add a package dependency or change the application flow.

@@ -270,18 +270,23 @@ function assertSourceHashesBound(
   }
 }
 
+/**
+ * Store one installed release member under a content-addressed key. A blob row
+ * is unique both by content (`sha256, byte_length, media_type`) and by storage
+ * location (`storage_bucket, storage_key, object_version_id`), so the location
+ * must be a function of the content: a relative-path key would collide with the
+ * blob row of an earlier release that published different bytes at that path.
+ */
 async function storeSourceMember(
   mapRoot: string,
   slug: string,
   relativePath: string,
-  keyPrefix = "",
   expected?: { sha256: string; bytes: number },
 ): Promise<StoredMember> {
   const sourcePath = resolve(mapRoot, relativePath);
-  const key = `maps/${slug}/${keyPrefix}${relativePath}`;
   const metadata = await registerLocalFile(
     LOCAL_ARTIFACT_BUCKET,
-    key,
+    (digest) => `maps/${slug}/objects/${digest}`,
     sourcePath,
     mapMemberMediaType(relativePath),
   );
@@ -297,7 +302,7 @@ async function storeSourceMember(
     byteLength: metadata.sizeBytes,
     mediaType: mapMemberMediaType(relativePath),
     bucket: LOCAL_ARTIFACT_BUCKET,
-    key,
+    key: metadata.key,
     sourcePath,
   };
 }
@@ -591,15 +596,15 @@ export async function publishRegistryInstallation({
   const browserMembers: StoredMember[] = [];
   for (const [relativePath, expected] of Object.entries(installation.webReceipt.members)
     .sort(([left], [right]) => left.localeCompare(right))) {
-    browserMembers.push(await storeSourceMember(installation.webRoot, slug, relativePath, "", expected));
+    browserMembers.push(await storeSourceMember(installation.webRoot, slug, relativePath, expected));
   }
   browserMembers.push(await storeSourceMember(installation.webRoot, slug, ".map-release.json"));
   const nativeMembers: StoredMember[] = [];
   for (const [relativePath, expected] of Object.entries(installation.nativeReceipt.members)
     .sort(([left], [right]) => left.localeCompare(right))) {
-    nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, relativePath, "native/", expected));
+    nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, relativePath, expected));
   }
-  nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, ".map-release.json", "native/"));
+  nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, ".map-release.json"));
   const receipt = installation.webReceipt;
   return publishMapClosure({
     map,

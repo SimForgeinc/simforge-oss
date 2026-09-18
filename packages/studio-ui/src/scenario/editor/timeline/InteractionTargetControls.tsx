@@ -23,8 +23,19 @@ type RouteTarget = RouteInteraction["target"];
 /**
  * A manual drive is recorded, never typed: it cannot be chosen as a mode here,
  * and an existing one is only ever replaced by another recorded take.
+ *
+ * `timedPolyline` and `actorPolyline` are the portable forms a cross-map
+ * transfer converts a scene-space custom route into. They are derived
+ * geometry, not authoring primitives: their vertices are metres in a frame or
+ * in the driving actor's own pose, chosen by the lift to preserve what the
+ * author originally drew. Offering them in this picker would invite hand-typing
+ * coordinates whose meaning depends on a conversion the editor did not perform,
+ * so they are summarised instead — exactly as a recorded take is.
  */
-type HandAuthoredRouteTarget = Exclude<RouteTarget, { mode: "manualDrive" }>;
+type HandAuthoredRouteTarget = Exclude<
+  RouteTarget,
+  { mode: "manualDrive" } | { mode: "timedPolyline" } | { mode: "actorPolyline" }
+>;
 type HandAuthoredRouteMode = HandAuthoredRouteTarget["mode"];
 
 const SPEED_MODES: readonly SpeedInteraction["target"]["mode"][] = [
@@ -349,6 +360,18 @@ function RouteTargetControls({
     return (
       <TargetSummary
         value={`Manual drive: ${recording.samples.length} recorded poses over ${recording.clipSeconds}s. Select the Manual drive on the timeline to record it again.`}
+      />
+    );
+  }
+  if (target.mode === "timedPolyline" || target.mode === "actorPolyline") {
+    const count = target.points.length;
+    const timed = target.mode === "timedPolyline"
+      || target.points.some((point) => point.timeS !== undefined);
+    return (
+      <TargetSummary
+        value={`${humanize(target.mode)}: ${count} ${timed ? "keyframe" : "waypoint"}${count === 1 ? "" : "s"}${
+          target.mode === "actorPolyline" ? ", held rigid to the driving actor's pose" : " in the anchor frame"
+        }. Converted by a cross-map transfer, so it is shown rather than typed.`}
       />
     );
   }

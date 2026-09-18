@@ -139,7 +139,7 @@ async function runIteration(config, index, kind) {
   const terminalAt = Date.now();
   const tailMs = ninetyAt === null ? null : Math.max(0, terminalAt - ninetyAt);
   const artifacts = jobId && wait.result.code === 0
-    ? await monitored(cliArgs(config.dataRoot, 'render', 'artifacts', jobId, '--out', output))
+    ? await monitored(cliArgs(config.dataRoot, 'render', 'download', jobId, '--out', output))
     : null;
   const manifest = artifacts ? await findManifest(output) : null;
   const outputBytes = await directoryBytes(output);

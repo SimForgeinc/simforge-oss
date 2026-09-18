@@ -2081,3 +2081,120 @@ pub fn origin_control(index: &DerivedMapIndex, frame: &AnchorFrame) -> Option<Ju
 pub fn point_kinds_present(index: &DerivedMapIndex) -> BTreeSet<PointFeatureKind> {
     index.point_features.iter().map(|p| p.kind).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::anchor::{MCorridor, MCrossingPredicate, MDiversity, MPolicy};
+    use crate::map_index::{Fact, Handedness, PointFeature};
+
+    fn anchor(corridor: MCorridor, features: Vec<MFeature>) -> MAnchor {
+        MAnchor {
+            id: "fixture".into(),
+            corridor: Some(corridor),
+            features,
+            policy: MPolicy {
+                diversity: MDiversity::None,
+                ..Default::default()
+            },
+            pin: None,
+        }
+    }
+
+    #[test]
+    fn clause_evaluation_pins_corridor_scores_and_worst_sample() {
+        let index = crate::test_support::index(Handedness::Right);
+        let frame = crate::test_support::frame(&index);
+        let evaluated = evaluate_anchor(
+            &index,
+            &frame,
+            &anchor(MCorridor {
+                through_lanes_same_dir: Some(MClause::new((2.0, 2.0), Essentiality::Required, None)),
+                lane_width_m: Some(MClause::new((3.6, 3.8), Essentiality::Preferred, Some(2.0))),
+                speed_limit_kph: Some(MClause::new((55.0, 60.0), Essentiality::Preferred, None)),
+                runway_upstream_m: Some(MClause::new(10.0, Essentiality::Required, None)),
+                runway_downstream_m: Some(MClause::new(200.0, Essentiality::Preferred, None)),
+                ..Default::default()
+            }, vec![]),
+        );
+        let by_path: BTreeMap<&str, &ClauseResult> = evaluated.clauses.iter().map(|result| (result.path.as_str(), result)).collect();
+        assert_eq!(by_path["corridor.throughLanesSameDir"].score, 1.0);
+        assert_eq!(by_path["corridor.throughLanesSameDir"].actual, json!(2.0));
+        assert!((by_path["corridor.laneWidthM"].score - 0.75).abs() < 1e-12);
+        assert!((by_path["corridor.laneWidthM"].slack - 0.1).abs() < 1e-12);
+        assert_eq!(by_path["corridor.speedLimitKph"].score, 0.5);
+        assert_eq!(by_path["corridor.runwayUpstreamM"].score, 0.0);
+        assert_eq!(by_path["corridor.runwayDownstreamM"].score, 0.6);
+        assert_eq!(by_path["corridor.speedLimitKph"].worst_at_s, Some(0.0));
+        let (score, failed) = aggregate_score(&evaluated.clauses);
+        assert_eq!(failed, ["corridor.runwayUpstreamM"]);
+        assert!((score - 0.65).abs() < 1e-12);
+    }
+
+    #[test]
+    fn clause_evaluation_pins_point_feature_selection_and_predicates() {
+        let mut index = crate::test_support::index(Handedness::Right);
+        index.capabilities.crossings = true;
+        index.point_features = vec![
+            PointFeature {
+                id: "cross-a".into(),
+                kind: PointFeatureKind::Crossing,
+                lane_rsl: "main".into(),
+                s: 30.0,
+                point: None,
+                side: Some("both".into()),
+                junction_id: None,
+                facts: BTreeMap::from([
+                    ("is_marked".into(), Fact::Bool(true)),
+                    ("is_controlled".into(), Fact::Bool(false)),
+                    ("crossing_length_m".into(), Fact::Number(8.0)),
+                    ("is_midblock".into(), Fact::Bool(true)),
+                ]),
+            },
+        ];
+        let feature = MFeature {
+            id: "cross".into(),
+            kind: MFeatureKind::Crossing,
+            at_m: MClause::new((25.0, 35.0), Essentiality::Required, None),
+            lateral_distance_m: None,
+            same_road: Some(MClause::new(true, Essentiality::Required, None)),
+            side: None,
+            supports_scenario: None,
+            junction: None,
+            crossing: Some(MCrossingPredicate {
+                marked: Some(MClause::new(true, Essentiality::Required, None)),
+                controlled: Some(MClause::new(true, Essentiality::Preferred, None)),
+                length_m: Some(MClause::new((6.0, 10.0), Essentiality::Preferred, None)),
+                placement: Some(MClause::new(CrossingPlacement::Midblock, Essentiality::Required, None)),
+            }),
+            parking: None,
+        };
+        let evaluated = evaluate_anchor(&index, &crate::test_support::frame(&index), &anchor(MCorridor::default(), vec![feature]));
+        assert_eq!(evaluated.feature_matches["cross"].map_feature_id, "cross-a");
+        let scores: BTreeMap<&str, f64> = evaluated.clauses.iter().map(|result| (result.path.as_str(), result.score)).collect();
+        assert_eq!(scores["features.cross.atM"], 1.0);
+        assert_eq!(scores["features.cross.marked"], 1.0);
+        assert_eq!(scores["features.cross.controlled"], 0.0);
+        assert_eq!(scores["features.cross.lengthM"], 1.0);
+        assert_eq!(scores["features.cross.placement"], 1.0);
+        assert_eq!(scores["features.cross.sameRoad"], 1.0);
+    }
+
+    #[test]
+    fn unsupported_required_clause_scores_zero_but_soft_clause_is_ignored() {
+        let index = crate::test_support::index(Handedness::Right);
+        let evaluated = evaluate_anchor(
+            &index,
+            &crate::test_support::frame(&index),
+            &anchor(MCorridor {
+                grade_pct: Some(MClause::new((-1.0, 1.0), Essentiality::Required, None)),
+                ..Default::default()
+            }, vec![]),
+        );
+        let result = &evaluated.clauses[0];
+        assert_eq!((result.supported, result.score, result.weight), (false, 0.0, 1.0));
+        assert_eq!(aggregate_score(&evaluated.clauses), (1.0, vec!["corridor.gradePct".into()]));
+    }
+}

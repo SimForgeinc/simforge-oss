@@ -80,7 +80,7 @@ async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): P
  * access gate's back.
  */
 export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioMapCoverageDto> {
-  const maps = (await listLocalMapCatalog(signal)).filter((map) => map.installed.browser);
+  const maps = (await listLocalMapCatalog(signal)).filter((map) => map.ready.browser);
   const footprints: ScenarioMapFootprintDto[] = [];
   const unprojected: ScenarioMapCoverageDto["unprojected"] = [];
   for (const map of maps) {

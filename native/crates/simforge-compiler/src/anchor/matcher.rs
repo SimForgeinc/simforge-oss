@@ -462,6 +462,7 @@ pub fn match_anchor_report(
                                 runway_downstream_m: downstream_need,
                                 anchor_feature_id: origin.id.clone(),
                                 mirrored,
+                                prefer_path: Vec::new(),
                             },
                         )
                     };

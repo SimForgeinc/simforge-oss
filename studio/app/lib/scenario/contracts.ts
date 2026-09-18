@@ -224,6 +224,23 @@ export const DuplicateScenarioDocumentSchema = z.object({
 });
 
 /**
+ * Local request validation for promoting one reviewed transfer candidate.
+ *
+ * The response DTO belongs in `@simforge-oss/studio-host`; this schema only describes the inbound
+ * body that the Studio route will eventually parse.
+ */
+export const TransferScenarioDocumentSchema = z.object({
+  targetMapVersionId: z.string().trim().min(1),
+  siteId: z.string().trim().min(1),
+  title: z.string().trim().min(1).max(200).optional(),
+  signalPlanDecision: z.enum(["remove", "accept-proposal"]).optional(),
+});
+
+export const TransferScenarioDocumentOptionsSchema = z.object({
+  targetMapVersionIds: z.array(z.string().trim().min(1)).max(100).optional(),
+});
+
+/**
  * Which actor the human takes over. Omitted, the server resolves the scenario's
  * ego (or its only drivable vehicle) and refuses an ambiguous scenario.
  */
@@ -577,6 +594,8 @@ export type ProtocolRequestConformance = [
   Assert<Accepts<protocol.CreateDocumentRequest, typeof CreateScenarioDocumentSchema>>,
   Assert<Accepts<protocol.UpdateDocumentRequest, typeof UpdateScenarioDocumentSchema>>,
   Assert<Accepts<protocol.DuplicateDocumentRequest, typeof DuplicateScenarioDocumentSchema>>,
+  Assert<Accepts<protocol.TransferDocumentRequest, typeof TransferScenarioDocumentSchema>>,
+  Assert<Accepts<protocol.TransferOptionsRequest, typeof TransferScenarioDocumentOptionsSchema>>,
   Assert<Accepts<protocol.DriverInTheLoopRequest, typeof DriverInTheLoopSchema>>,
   Assert<Accepts<protocol.CreateTagRequest, typeof CreateScenarioTagSchema>>,
   Assert<Accepts<protocol.UpdateTagRequest, typeof UpdateScenarioTagSchema>>,
