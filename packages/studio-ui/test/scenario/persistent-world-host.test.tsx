@@ -64,6 +64,7 @@ vi.mock("../../../viewer/src/viewer", () => ({
     setAuthoringFidelity = setAuthoringFidelity;
     setLayerVisible = setLayerVisible;
     setRenderingSuspended = vi.fn();
+    resetCamera = vi.fn();
     setWeatherAppearance = vi.fn();
   },
 }));

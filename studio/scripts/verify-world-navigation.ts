@@ -3,11 +3,66 @@ import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BrowserContext, Page } from "playwright-core";
+import type { CityViewer } from "@simforge-oss/viewer";
 
 type Descriptor = { mapVersionId: string; sourceMapId: string; label: string; browserAssetRootUrl: string };
 type RequestRow = { url: string; bytes: number; bodyBytes: number; status?: number; at: number };
 type Lifetime = { mounts: number; disposals: number; loads: number; created: number; live: number; worldContexts: number; wrongMapFrames: number };
 declare global { interface Window { __worldNavigation: () => Lifetime } }
+
+/** Observe real paint after two natural render frames, never suspend/hide the
+ * canvas to capture it. The geometry check also rejects an inherited tour pose
+ * buried below a building roof, even when its close-up has textured pixels. */
+export async function assertWorldPaint(page: Page) {
+  const sample = await page.evaluate(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="scenario-world-host"] canvas');
+    if (!canvas) throw new Error("The ready world has no canvas");
+    let visible = canvas.width > 0 && canvas.height > 0 && canvas.getBoundingClientRect().height > 0;
+    for (let node: HTMLElement | null = canvas; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) visible = false;
+    }
+    const probe = document.createElement("canvas");
+    probe.width = 32;
+    probe.height = 24;
+    const context = probe.getContext("2d")!;
+    context.drawImage(canvas, 0, 0, 32, 24);
+    const pixels = context.getImageData(0, 0, 32, 24).data;
+    let sum = 0, squares = 0, lit = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const value = (pixels[i]! + pixels[i + 1]! + pixels[i + 2]!) / 3;
+      sum += value;
+      squares += value * value;
+      if (value > 35 && pixels[i + 3]! > 0) lit++;
+    }
+    // Locate the live CityView ref, not a second renderer or a mocked scene.
+    type Hook = { memoizedState?: { current?: CityViewer }; next?: Hook };
+    type Fiber = { memoizedState?: Hook; return?: Fiber };
+    const key = Object.keys(canvas).find((name) => name.startsWith("__reactFiber$"))!;
+    let viewer: CityViewer | undefined;
+    for (let fiber = (canvas as unknown as Record<string, Fiber>)[key]; fiber; fiber = fiber.return) {
+      for (let hook = fiber.memoizedState; hook && typeof hook === "object"; hook = hook.next) {
+        const candidate = hook.memoizedState?.current;
+        if (candidate?.renderer?.domElement === canvas && typeof candidate.sampleGroundHeight === "function") viewer = candidate;
+      }
+    }
+    if (!viewer) throw new Error("The ready canvas has no live viewer");
+    const position = viewer.camera.getWorldPosition(viewer.camera.position.clone());
+    const surfaceY = viewer.sampleGroundHeight(position.x, position.z);
+    const count = pixels.length / 4;
+    return {
+      visible, litFraction: lit / count,
+      luminanceStdDev: Math.sqrt(Math.max(0, squares / count - (sum / count) ** 2)),
+      cameraClearanceM: surfaceY === null ? null : position.y - surfaceY,
+    };
+  });
+  assert(sample.cameraClearanceM === null || sample.cameraClearanceM > 1,
+    `ready camera must not be buried in rendered geometry: ${JSON.stringify(sample)}`);
+  assert(sample.visible && sample.litFraction > 0.05 && sample.luminanceStdDev > 8,
+    `ready world must visibly paint geometry, not a blank frame: ${JSON.stringify(sample)}`);
+  return sample;
+}
 
 async function ready(page: Page, id: string, editor = false) {
   await page.waitForFunction(({ id, editor }) => {
@@ -17,6 +72,8 @@ async function ready(page: Page, id: string, editor = false) {
       && (!editor || document.querySelector('[data-testid="scenario-editor-session"]')?.getAttribute("data-editor-ready") === "true");
   }, { id, editor }, { timeout: 120_000 });
   await page.locator('[data-testid="cloud-loading-surface"][data-cloud-loading-scope="screen"]').waitFor({ state: "hidden", timeout: 10_000 });
+  const paint = await assertWorldPaint(page);
+  console.log(`PASS ready world pixels: ${JSON.stringify(paint)}`);
 }
 
 /** Real route/DOM ownership, not a hook mock: moving the provider below a page

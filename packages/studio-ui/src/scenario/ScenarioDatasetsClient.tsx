@@ -624,6 +624,7 @@ export function ScenarioDatasetsClient({
           className="absolute inset-0 z-0"
           target={worldTarget}
           pendingTarget={worldTarget === null}
+          frameOnEnter
           interactive
           onViewerChange={setViewer}
           onActorRendererChange={setActorRenderer}

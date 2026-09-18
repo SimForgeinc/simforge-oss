@@ -11,8 +11,8 @@ const styles = stylex.create({
   hidden: { opacity: 0, pointerEvents: "none" },
 });
 
-type SurfaceProps = ComponentProps<typeof ScenarioWorldHost>;
-type Lease = { element: HTMLDivElement; props: () => SurfaceProps };
+type SurfaceProps = ComponentProps<typeof ScenarioWorldHost> & { frameOnEnter?: boolean };
+type Lease = { element: HTMLDivElement; props: () => SurfaceProps; framed: boolean };
 type WorldContext = {
   claim: (lease: Lease) => () => void;
   update: (lease: Lease) => void;
@@ -46,6 +46,13 @@ export function ScenarioWorldProvider({ children, keepAlive = false }: { childre
     // Readiness belongs to the destination's declared identity, never the
     // previously painted map while its record is still resolving.
     const matches = props.target?.mapVersionId === state.loadedMapVersionId;
+    // Map resources survive a handoff; the gallery's cinematic camera must not
+    // put a newly opened editor inside a wall. Do this once per editor lease,
+    // never on progress, quality updates or rerenders within that session.
+    if (matches && props.frameOnEnter && !lease.framed && viewerRef.current) {
+      lease.framed = true;
+      viewerRef.current.resetCamera();
+    }
     if (container) container.className = stylex.props(styles.viewport, !matches && styles.hidden).className ?? "";
     props.onViewerChange(viewerRef.current);
     props.onActorRendererChange(actorsRef.current);
@@ -126,12 +133,12 @@ export function ScenarioWorldSurface(props: SurfaceProps) {
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) return;
-    const lease = { element, props: () => propsRef.current };
+    const lease = { element, props: () => propsRef.current, framed: false };
     leaseRef.current = lease;
     return context.claim(lease);
   }, [context]);
   useLayoutEffect(() => {
     if (leaseRef.current) context.update(leaseRef.current);
-  }, [context, props.target, props.pendingTarget, props.interactive]);
+  }, [context, props.target, props.pendingTarget, props.interactive, props.frameOnEnter]);
   return <div ref={elementRef} className={props.className} data-testid="scenario-world-surface" />;
 }
