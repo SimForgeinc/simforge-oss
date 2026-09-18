@@ -1326,7 +1326,12 @@ export class CityViewer {
       maxConcurrent: 2,
       memory: this.memory,
       pinCoarsest: false,
-      want: (_def, distance) => !this.roadsOnlyFidelity && distance <= this.options.vegetationMaxDistance,
+      // Vegetation stands down while the first view is being assembled, for
+      // the same reason the upload pacer does: nothing here is promised by the
+      // readiness contract, and this layer is 32 tiles / 286 MB competing with
+      // the ~17 MB of road and city the view actually needs, through one
+      // 2-wide decode pipe and one byte ledger.
+      want: (_def, distance) => !this.roadsOnlyFidelity && this.viewResidentWaiters.length === 0 && distance <= this.options.vegetationMaxDistance,
       build: async (def, lod, signal) => {
         const data = this.vegetationData.get(def.id);
         const gltf = await this.parseAsset(lod.file, signal, lod.fileSize);
