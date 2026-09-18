@@ -5,7 +5,6 @@ import {
   type ActorKind,
   type LaneGraph,
   type SimScenarioInput,
-  type TopologyIndex,
 } from '@simforge-oss/engine';
 import {
   loadSessions,
@@ -14,6 +13,7 @@ import {
   type TruthSubscription,
   type WorldSession,
 } from '@simforge-oss/training-env/browser';
+import { loadMapGraph, type StaticColliderDiagnostics } from '@simforge-oss/playback';
 
 import type {
   LiveWorldWorkerRequest,
@@ -75,10 +75,6 @@ const AUTHORED_LAG_WARNING_INTERVAL_MS = 5_000;
 
 scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   const message = event.data;
-  if (message.type === 'init') {
-    void initialize(message).catch((error: unknown) => fail(error));
-    return;
-  }
   if (message.type === 'init-authored') {
     void initializeAuthored(message).catch((error: unknown) => fail(error));
     return;
@@ -240,50 +236,6 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   }
 };
 
-async function initialize(message: Extract<LiveWorldWorkerRequest, { type: 'init' }>): Promise<void> {
-  if (world || closed) throw new Error('live world worker can only be initialized once');
-  if (!Number.isFinite(message.tickHz) || message.tickHz <= 0) {
-    throw new Error(`tickHz must be positive, got ${String(message.tickHz)}`);
-  }
-
-  const manifestResponse = await fetch(message.mapManifestUrl);
-  if (!manifestResponse.ok) {
-    throw new Error(`map manifest request failed (${manifestResponse.status})`);
-  }
-  const manifest = await manifestResponse.json() as Record<string, unknown>;
-  const mapId = typeof manifest.mapId === 'string' ? manifest.mapId : message.mapManifestUrl;
-
-  const topology = message.laneGraphUrl
-    ? await fetchTopology(message.laneGraphUrl)
-    : emptyTopology();
-  sessions = await loadSessions();
-  const graph = sessions.engine.laneGraph(topology);
-  // A world with no lane graph starts and advances perfectly happily, but every
-  // road actor is then rejected with "no drivable lane", which reads as a
-  // placement bug rather than a missing input. Say so once, up front.
-  if (Object.keys(topology.lanes).length === 0) {
-    post({
-      type: 'warning',
-      message: message.laneGraphUrl
-        ? `lane graph at ${message.laneGraphUrl} contains no lanes; road actors cannot be placed`
-        : 'no lane graph was supplied; road actors cannot be placed',
-    });
-  }
-  const input = parseSimScenarioInput({
-    mapId,
-    clipSeconds: 120,
-    warmupSeconds: 0,
-    dt: 1 / message.tickHz,
-    actors: [],
-    physics: { mode: 'dynamic-v1' },
-  });
-
-  world = sessions.world({ input, graph, mode: 'live' });
-  truth = world.subscribeTruth();
-  timer = setInterval(tick, 1000 / message.tickHz);
-  post({ type: 'ready', heldDriverCommand: heldDriverCommandSupported(world) });
-}
-
 async function initializeAuthored(
   message: Extract<LiveWorldWorkerRequest, { type: 'init-authored' }>,
 ): Promise<void> {
@@ -293,7 +245,15 @@ async function initializeAuthored(
   }
   authoredInput = parseSimScenarioInput(message.input);
   sessions = await loadSessions();
-  authoredGraph = sessions.engine.laneGraph(await fetchTopology(message.laneGraphUrl));
+  // The drive is a simulation of the same world the editor previews, so its
+  // lane graph is built by the same shared builder and carries the same
+  // verified static colliders: a car must hit a building here too.
+  const mapGraph = await loadMapGraph({
+    module: sessions.engine.module,
+    sources: message.mapSources,
+  });
+  authoredGraph = mapGraph.graph;
+  postCollisionDiagnostics(mapGraph.collision.diagnostics);
   authoredTickHz = message.tickHz;
   endless = message.endless === true;
   playing = false;
@@ -534,33 +494,6 @@ function postTransport(): void {
   });
 }
 
-async function fetchTopology(url: string): Promise<TopologyIndex> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`lane graph request failed (${response.status})`);
-  const raw = new Uint8Array(await response.arrayBuffer());
-  // Map bundles ship sidecars gzipped. A static file server usually serves
-  // `.json.gz` as an opaque body with no `Content-Encoding`, so fetch does not
-  // decompress it and `response.json()` chokes on the 0x1f8b magic. Sniff the
-  // bytes rather than trusting the extension or the server's headers.
-  const gzipped = raw.length > 1 && raw[0] === 0x1f && raw[1] === 0x8b;
-  const bytes = gzipped ? await gunzip(raw) : raw;
-  return JSON.parse(new TextDecoder().decode(bytes)) as TopologyIndex;
-}
-
-async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-function emptyTopology(): TopologyIndex {
-  return {
-    source: { xodrSha256: '' },
-    lanes: {},
-    gates: [],
-    junctions: {},
-  };
-}
-
 function actorKind(blueprint: string): ActorKind {
   const normalized = blueprint.toLowerCase();
   if (normalized.includes('pedestrian') || normalized.startsWith('walker.')) return 'pedestrian';
@@ -576,6 +509,15 @@ function actorKind(blueprint: string): ActorKind {
 
 function assertOutcome(outcome: { ok: boolean; error?: string }): void {
   if (!outcome.ok) throw new Error(outcome.error ?? 'ego ownership command failed');
+}
+
+/**
+ * Report what the map's collision artifact actually contained, once per world.
+ * A map that publishes few colliders is a map whose structures are mostly not
+ * solid, and that is worth saying out loud rather than discovering at speed.
+ */
+function postCollisionDiagnostics(diagnostics: StaticColliderDiagnostics): void {
+  post({ type: 'map-collisions', diagnostics });
 }
 
 function post(message: LiveWorldWorkerResponse): void {

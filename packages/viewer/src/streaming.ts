@@ -43,6 +43,8 @@ interface Entry {
   displayed: number;
   /** The layer's `want` predicate accepted this tile on the last update. */
   wanted: boolean;
+  /** Within the subset readiness is judged on (what the camera can see). */
+  required: boolean;
   /** Wanted LOD index, or -1 when the tile should not be resident at all. */
   desired: number;
   loading: { index: number; controller: AbortController } | null;
@@ -82,6 +84,8 @@ export interface LayerStats {
   wantedTiles: number;
   /** Wanted tiles with no LOD resident at all: a visible hole in the layer. */
   missingTiles: number;
+  /** In-view tiles displaying nothing: what a ready scene must never have. */
+  missingInViewTiles: number;
   /** Wanted tiles whose desired LOD cannot be admitted under the byte budget. */
   budgetBlockedTiles: number;
   /** Wanted tiles that hit their terminal failure count and will not retry. */
@@ -122,6 +126,12 @@ export interface TileStreamLayerOptions {
   essentialAll?: boolean;
   /** Return false to keep a tile unloaded entirely (vegetation range limit). */
   want?: (def: StreamTileDef, distance: number) => boolean;
+  /**
+   * Subset of `want` that readiness is judged on. A layer prefetches a margin
+   * beyond what is on screen so continued streaming is invisible; readiness
+   * must not wait for that margin, only for what the viewer can actually see.
+   */
+  required?: (def: StreamTileDef, distance: number) => boolean;
   /** Dynamic upper LOD bound for runtime fidelity modes. */
   maxDesiredIndex?: (def: StreamTileDef) => number;
   /** Called after a new LOD becomes the displayed one. */
@@ -164,6 +174,13 @@ export class TileStreamLayer {
   private disposed = false;
   private generation = 0;
   private bootstrapped: boolean;
+  /**
+   * In-view tiles with nothing displayed, as of the last `update`. Unlike
+   * `bootstrapped` this is live: it rises again when the camera turns towards
+   * tiles that are not resident yet, which is exactly the popping-into-view a
+   * ready scene must never show.
+   */
+  private requiredMissing = 0;
   private decodedAssets = 0;
   private uploadedTextures = 0;
   private compiledAssets = 0;
@@ -178,6 +195,7 @@ export class TileStreamLayer {
         resident: new Map(),
         displayed: -1,
         wanted: false,
+        required: false,
         desired: 0,
         loading: null,
         preparing: null,
@@ -202,9 +220,14 @@ export class TileStreamLayer {
     return this.generation;
   }
 
-  /** True once every wanted tile has its coarsest LOD on screen. */
+  /** True once every in-view tile has its coarsest LOD on screen. */
   get ready(): boolean {
     return this.bootstrapped;
+  }
+
+  /** In-view tiles displaying nothing right now; 0 means the view is complete. */
+  get missingInView(): number {
+    return this.requiredMissing;
   }
 
   /** Retry optional detail after the caller changes the shared memory budget. */
@@ -259,6 +282,7 @@ export class TileStreamLayer {
       requiredPendingAssets,
       wantedTiles,
       missingTiles,
+      missingInViewTiles: this.requiredMissing,
       budgetBlockedTiles,
       failedTiles,
     };
@@ -278,6 +302,7 @@ export class TileStreamLayer {
     if (this.disposed) return;
 
     let bootstrapped = true;
+    let requiredMissing = 0;
     for (const entry of this.entries.values()) {
       const distance = Math.max(1e-3, entry.def.box.distanceToPoint(cameraPos));
       const previousDistance = entry.distance;
@@ -317,7 +342,13 @@ export class TileStreamLayer {
       entry.wanted = wanted;
       entry.desired = desired;
 
-      if (this.opts.pinCoarsest && wanted && !entry.resident.has(0)) {
+      // Readiness is judged on what the viewer can see, not on the prefetch
+      // margin around it: a tile is missing only if nothing of it is on screen.
+      const required = wanted
+        && (this.opts.required ? this.opts.required(entry.def, distance) : true);
+      entry.required = required;
+      if (required && entry.displayed < 0) {
+        requiredMissing++;
         bootstrapped = false;
       }
 
@@ -334,6 +365,7 @@ export class TileStreamLayer {
       }
     }
     this.bootstrapped = this.bootstrapped || bootstrapped;
+    this.requiredMissing = requiredMissing;
 
     this.pumpFetches();
   }

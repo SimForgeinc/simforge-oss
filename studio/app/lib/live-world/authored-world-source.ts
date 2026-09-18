@@ -3,6 +3,7 @@
 import type { SimScenarioInput } from '@simforge-oss/engine';
 import type { EditorDocument, ScenarioMapEntry } from '@simforge-oss/editor';
 import { ambientTrafficProviderFromExtensions } from '@simforge-oss/playback/traffic';
+import type { StaticColliderDiagnostics } from '@simforge-oss/playback';
 import { TruthStreamClient } from '@simforge-oss/training-env/browser';
 
 import { playbackMapEntry } from '@simforge-oss/studio-ui/lib/scenario/maps';
@@ -68,6 +69,11 @@ export interface AuthoredWorldSource extends WorldSource {
    * no separate handbrake.
    */
   readonly heldDriverCommand: boolean;
+  /**
+   * What the map's verified static collision artifact contained, once the
+   * world has been built. Null until the worker reports it.
+   */
+  readonly mapCollisions: StaticColliderDiagnostics | null;
   /**
    * Restart the world at t = 0 and record the designated ego through the clip
    * end. Requires an ego in `take` mode. The outcome arrives once through
@@ -141,6 +147,8 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   private readyTimeout: ReturnType<typeof setTimeout> | undefined;
   /** Reported by the worker when it comes up; see the interface. */
   heldDriverCommand = false;
+  /** Reported once by the worker after the map graph is built. */
+  mapCollisions: StaticColliderDiagnostics | null = null;
 
   constructor(
     input: SimScenarioInput,
@@ -190,10 +198,19 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
         `Authored world worker did not become ready within ${AUTHORED_WORKER_READY_TIMEOUT_MS} ms while loading the lane topology.`,
       );
     }, AUTHORED_WORKER_READY_TIMEOUT_MS);
+    const entry = playbackMapEntry(map);
     this.worker.postMessage({
       type: 'init-authored',
       input,
-      laneGraphUrl: map.topologyUrl,
+      mapSources: {
+        mapId: entry.sourceMapId,
+        manifest: entry.manifest,
+        topology: entry.topology,
+        derivedTopology: entry.derivedTopology,
+        locations: entry.locations,
+        xodr: entry.xodr,
+        signals: entry.signals,
+      },
       tickHz,
       endless,
     } satisfies LiveWorldWorkerRequest);
@@ -331,6 +348,11 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
       clearTimeout(this.readyTimeout);
       this.heldDriverCommand = message.heldDriverCommand;
       if (this.currentStatus !== 'error') this.setStatus('running', null);
+      return;
+    }
+    if (message.type === 'map-collisions') {
+      this.mapCollisions = message.diagnostics;
+      console.info('[drive] map static collision', message.diagnostics);
       return;
     }
     if (message.type === 'world-reset') {

@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { chromium, type BrowserContext } from "playwright-core";
+import { chromium, type BrowserContext, type Page } from "playwright-core";
 import { verifyWorldNavigation } from "./verify-world-navigation";
 
 const gateStarted = performance.now();
@@ -186,6 +186,52 @@ async function desktopContract(context: BrowserContext) {
   return calls;
 }
 
+/** Ceiling for p95 frame time on a settled scene in headless ANGLE, ms. */
+const READY_FRAME_MS_P95 = 120;
+const READY_STABILITY_WINDOW_MS = 8_000;
+
+/**
+ * Watch a scene that has just reported itself ready.
+ *
+ * Two regressions hide here and both are invisible to a load-time assertion:
+ * a readiness signal that fires before the view is resident (the user sees
+ * buildings pop in seconds later), and a settled scene that does not hold a
+ * steady frame. Both are read from the viewer's own diagnostics probe.
+ */
+async function measureReadyScene(page: Page) {
+  return await page.evaluate(async (windowMs: number) => {
+    const probe = window.__simforgeViewerProbe;
+    const inView = () => probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
+    const missingInViewAtReady = inView();
+    let maxMissingInView = missingInViewAtReady;
+    let samples = 1;
+    const deltas: number[] = [];
+    let last = performance.now();
+    const deadline = last + windowMs;
+    while (performance.now() < deadline) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const now = performance.now();
+      deltas.push(now - last);
+      last = now;
+      maxMissingInView = Math.max(maxMissingInView, inView());
+      samples++;
+    }
+    const sorted = [...deltas].sort((a, b) => a - b);
+    const at = (fraction: number) => sorted[Math.min(sorted.length - 1, Math.round(fraction * (sorted.length - 1)))] ?? 0;
+    return {
+      probed: probe !== undefined,
+      windowMs,
+      samples,
+      frames: deltas.length,
+      missingInViewAtReady,
+      maxMissingInView,
+      frameMsP50: at(0.5),
+      frameMsP95: at(0.95),
+      frameMsMax: sorted[sorted.length - 1] ?? 0,
+    };
+  }, READY_STABILITY_WINDOW_MS);
+}
+
 async function verifyViewer(context: BrowserContext, name: string, path: string) {
   const ticket = await api<{ url: string }>("/api/simforge/host/session", { method: "POST", ...jsonBody({ next: path }),
     headers: { "content-type": "application/json", host: browserOrigin.host } });
@@ -263,11 +309,12 @@ async function verifyViewer(context: BrowserContext, name: string, path: string)
     } catch (error) { failure = error; }
     const ms = performance.now() - started;
     await cdp.send("Network.disable");
+    const stability = await measureReadyScene(page);
     const progress = await page.evaluate(() => window.__assetLoadingProgress ?? []);
     const security = await page.evaluate(() => ({ secureContext: isSecureContext, cacheStorage: "caches" in window }));
     const result = { name, ms, latencyMs: LATENCY_MS, mounts, errors, progress, security, responses304, requests: network.length,
       redirects: network.filter((row) => row.asset && row.status && row.status >= 300 && row.status < 400).length,
-      assetBytes: network.filter((row) => row.asset).reduce((n, row) => n + (row.bytes ?? 0), 0), peakAssetConcurrency, network };
+      assetBytes: network.filter((row) => row.asset).reduce((n, row) => n + (row.bytes ?? 0), 0), peakAssetConcurrency, stability, network };
     await writeFile(join(out, `${name}.json`), JSON.stringify(result, null, 2));
     await page.screenshot({ path: join(out, `${name}.png`) });
     if (failure) throw failure;
@@ -280,6 +327,15 @@ async function verifyViewer(context: BrowserContext, name: string, path: string)
     assert.equal(progress.at(-1)?.percent, 100);
     assert(progress.every((sample, index) => index === 0 || sample.percent >= progress[index - 1]!.percent), `${name}: progress regressed`);
     assert(peakAssetConcurrency > 1, `${name}: asset loading became serial`);
+    // Readiness has to mean what it says: a scene that reports itself loaded
+    // shows every tile the camera can see, and nothing pops into the frame
+    // afterwards. Before this gate existed the map announced readiness with
+    // zero tiles resident and the buildings arrived up to 70 s later.
+    assert.equal(stability.missingInViewAtReady, 0, `${name}: tiles missing from the view at ready`);
+    assert.equal(stability.maxMissingInView, 0, `${name}: a tile appeared inside the view after ready`);
+    assert(stability.frameMsP95 <= READY_FRAME_MS_P95, `${name}: p95 frame ${stability.frameMsP95.toFixed(1)} ms > ${READY_FRAME_MS_P95} ms on a settled scene`);
+    pass(`${name}: ready means visible — 0 in-view tiles missing at ready and over ${(stability.windowMs / 1000).toFixed(0)} s after it (${stability.samples} samples)`);
+    pass(`${name}: settled-scene pacing p50 ${stability.frameMsP50.toFixed(1)} ms / p95 ${stability.frameMsP95.toFixed(1)} ms over ${stability.frames} frames`);
     assert.equal(result.redirects, 0, `${name}: map delivery must not mint expiring URLs`);
     pass(`${name}: 100% ready in ${ms.toFixed(0)} ms < ${MAX_LOAD_MS}, ${LATENCY_MS} ms latency, insecure HTTP (no Cache Storage)`);
     pass(`${name}: exactly ${mounts} renderer mount(s), monotonic ${progress.map((p) => p.percent).join(" -> ")}, 0 non-favicon errors`);

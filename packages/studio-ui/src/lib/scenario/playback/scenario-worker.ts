@@ -12,6 +12,7 @@ import {
   matchSitesWith,
   withParkedCarActors,
   withStudioBodyColorTags,
+  type MapBundleArtifacts,
   type MapControlPlan,
 } from '@simforge-oss/compiler';
 import { parkedCarsFromExtensions } from '../parking/extension';
@@ -38,10 +39,9 @@ import { ambientRobustnessGate, evaluateAmbientRobustness } from '@simforge-oss/
 import type { OpenScenarioSnapshot, OpenScenarioSourceMapping } from '@simforge-oss/openscenario';
 import {
   initialLiveTickBudget,
-  loadStaticMapColliders,
+  loadMapGraph,
   mapAssetDigest,
   planLiveRefill,
-  requireReadyStaticColliderBundle,
   runCanonicalPreview,
   runtimeDigest,
   selectPlayableSite,
@@ -170,6 +170,10 @@ export type ScenarioWorkerResponse =
   | { id: number; revision: string; ok: true; kind: 'engine'; engine: ScenarioWorkerEngineIdentity }
   | { id: number; revision: string; ok: false; error: string };
 
+
+/** The two map-intel artifacts the bundle wrapper caches alongside the native handle. */
+type MapIntelDerived = NonNullable<MapBundleArtifacts['derived']>;
+type MapIntelCatalog = NonNullable<MapBundleArtifacts['catalog']>;
 
 /**
  * One loaded map: the native bundle (lane graph, derived index, signal
@@ -497,29 +501,33 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
     return existing;
   }
   const pending = (async (): Promise<MapRuntime> => {
-    const [topology, derived, locations, xodr, signals] = await Promise.all([
-      fetchBytes(map.topology, map.digests?.topology),
-      fetchJson(map.derivedTopology, map.digests?.derivedTopology),
-      fetchJson(map.locations, map.digests?.locations),
-      fetchText(map.xodr, map.digests?.xodr),
-      fetchJson(map.signals, map.digests?.signals),
-    ]);
     // A rendered map is part of the simulated world, not decorative scenery.
-    // Fail closed when its immutable collider derivative is unavailable so an
-    // editor preview can never present cars passing through visible structures.
+    // `loadMapGraph` is the shared builder the drive session's live world uses
+    // too: it fails closed when the map's immutable collider derivative is
+    // unavailable, so no surface can present cars passing through structures.
     postPrepareProgress(request, 'map-collisions');
-    const staticCollision = requireReadyStaticColliderBundle(await loadStaticMapColliders(map.manifest, fetch));
+    const mapGraph = await loadMapGraph<MapIntelDerived, MapIntelCatalog>({
+      module: engine.module,
+      sources: {
+        mapId: map.sourceMapId,
+        manifest: map.manifest,
+        topology: map.topology,
+        derivedTopology: map.derivedTopology,
+        locations: map.locations,
+        xodr: map.xodr,
+        signals: map.signals,
+      },
+      digests: map.digests,
+    });
+    const staticCollision = mapGraph.collision;
+    const xodr = mapGraph.xodr;
     // The native bundle derives the signal catalog, map speed limits and the
     // matcher index exactly as the installed-map loader does, and its lane
     // graph carries the verified colliders into every simulation built on it.
-    const bundle = new MapBundle(engine.module.MapBundle.fromSources(JSON.stringify({
-      mapId: map.sourceMapId,
-      derived,
-      locations,
-      xodr,
-      signalsGeojson: signals,
-      staticColliders: staticCollision.colliders,
-    }), topology), { derived, catalog: locations });
+    const bundle = new MapBundle(mapGraph.bundle, {
+      derived: mapGraph.derived,
+      catalog: mapGraph.locations,
+    });
     const graph = bundle.graph;
     const controls = bundle.controlPlan();
     const identity: MapRuntimeIdentity = {
@@ -893,25 +901,4 @@ function ambientInstance(
     input,
     ambientTraffic: normalizedProvenance,
   };
-}
-
-async function fetchBytes(url: string, sha256?: string): Promise<Uint8Array> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not load ${url}: HTTP ${response.status}`);
-  if (sha256 && response.headers.get('x-content-sha256') !== sha256) {
-    throw new Error(`Map asset identity does not match the pinned digest: ${url}`);
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return bytes;
-  if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decode gzip map artifacts');
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function fetchJson(url: string, sha256?: string): Promise<any> {
-  return JSON.parse(new TextDecoder().decode(await fetchBytes(url, sha256)));
-}
-
-async function fetchText(url: string, sha256?: string): Promise<string> {
-  return new TextDecoder().decode(await fetchBytes(url, sha256));
 }

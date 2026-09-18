@@ -5,6 +5,12 @@
  * loss, unhandled browser errors, and memory-budget pressure. The watchdog is
  * installed by the shared React wrapper so Studio and every package consumer
  * receive the same observability without application-specific wiring.
+ *
+ * It also publishes the live viewer on `window.__simforgeViewerProbe` so an
+ * automated gate can read the renderer's own numbers — frame pacing, tile
+ * residency against the current frustum, the camera pose — instead of
+ * guessing at them from pixels. The probe is a read handle for the object the
+ * page already owns; nothing in the viewer's behaviour depends on it.
  */
 
 import type { CityViewer } from './viewer';
@@ -18,6 +24,20 @@ type ChromiumPerformanceMemory = {
   readonly usedJSHeapSize: number;
   readonly jsHeapSizeLimit: number;
 };
+
+/** Read handle an automated gate uses to interrogate the live viewer. */
+export interface ViewerProbe {
+  readonly viewer: CityViewer;
+  /** `performance.now()` at which the map load reported itself ready. */
+  readyAtMs: number | null;
+  manifestUrl: string | null;
+}
+
+declare global {
+  interface Window {
+    __simforgeViewerProbe?: ViewerProbe;
+  }
+}
 
 export interface ViewerRuntimeDiagnostics {
   mapLoadStarted(manifestUrl: string): void;
@@ -42,6 +62,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   let activeManifestUrl: string | null = null;
   let memoryWarned = false;
   let contextLossLogged = false;
+  const probe: ViewerProbe = { viewer, readyAtMs: null, manifestUrl: null };
+  if (typeof window !== 'undefined') window.__simforgeViewerProbe = probe;
 
   const clearMapLoadTimer = () => {
     if (mapLoadTimer === null) return;
@@ -113,6 +135,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   return {
     mapLoadStarted(manifestUrl) {
       activeManifestUrl = manifestUrl;
+      probe.manifestUrl = manifestUrl;
+      probe.readyAtMs = null;
       mapLoadTimer = window.setTimeout(() => {
         mapLoadTimer = null;
         console.warn(
@@ -124,6 +148,7 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
     },
     mapLoadSucceeded(manifestUrl) {
       clearMapLoadTimer();
+      probe.readyAtMs = performance.now();
       console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats: viewer.getStats() });
     },
     mapLoadFailed(manifestUrl, error) {
@@ -136,6 +161,9 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       });
     },
     dispose() {
+      if (typeof window !== 'undefined' && window.__simforgeViewerProbe === probe) {
+        delete window.__simforgeViewerProbe;
+      }
       clearMapLoadTimer();
       window.clearInterval(statsTimer);
       canvas.removeEventListener('webglcontextlost', onContextLost);

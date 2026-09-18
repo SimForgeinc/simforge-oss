@@ -106,6 +106,7 @@ function layerCoverage(stats: LayerStats | undefined): LayerCoverage | null {
   return {
     wantedTiles: stats.wantedTiles,
     missingTiles: stats.missingTiles,
+    missingInViewTiles: stats.missingInViewTiles,
     budgetBlockedTiles: stats.budgetBlockedTiles,
     failedTiles: stats.failedTiles,
   };
@@ -175,6 +176,32 @@ const DEFAULTS = {
  * uses. Row 1 is skipped on purpose: this dataset ships it identical to row 0,
  * so bands map to rows 0 / 2 / 3 to actually thin the instances out.
  */
+/**
+ * Readiness and prefetch policy.
+ *
+ * A scene is ready when everything the camera can see is on screen: the road,
+ * and every city tile the frustum touches or that stands within
+ * `READY_RADIUS_M` of the viewpoint (so a vehicle is never sitting inside an
+ * empty block, whatever way it is facing). It is deliberately NOT "every tile
+ * in the map": preloading a whole city before showing anything is the wait
+ * this replaces.
+ *
+ * Streaming continues after that, but invisibly. Tiles are wanted while they
+ * are within `PREFETCH_MARGIN_M` of the view frustum or `PREFETCH_RADIUS_M` of
+ * the viewpoint, which at city driving speeds is several seconds of travel, so
+ * a tile is resident well before it can enter the frame.
+ */
+const READY_RADIUS_M = 150;
+/**
+ * How long readiness may wait for the view to fill before reporting anyway. A
+ * tile that will never arrive (failed, or refused by the byte budget) must not
+ * hold the scene closed; the coverage numbers in `getStats` stay truthful
+ * either way.
+ */
+const VIEW_RESIDENT_TIMEOUT_MS = 60_000;
+const PREFETCH_MARGIN_M = 250;
+const PREFETCH_RADIUS_M = 400;
+
 const VEG_BAND_DISTANCES = [80, 170];
 const VEG_BAND_KEEP_ROW = [0, 2, 3];
 
@@ -306,6 +333,8 @@ export class CityViewer {
   private readonly abort = new AbortController();
   private mapLoadQueue: Promise<void> = Promise.resolve();
   private mapLoaded = false;
+  /** Callers waiting for the view to be on screen; see `whenViewResident`. */
+  private readonly viewResidentWaiters: { resolve: () => void; deadline: number }[] = [];
 
   private manifest: CityManifest | null = null;
   private variantManifest: CityAssetVariantManifest | null = null;
@@ -642,6 +671,52 @@ export class CityViewer {
       if (!this.disposed) this.recordStreamingError(error);
     });
     this.refreshWeatherAppearance();
+    // "Loaded" has to mean "on screen". Until this waited, `loadMap` resolved
+    // as soon as the layers existed, so every consumer announced a ready scene
+    // with nothing in it and the buildings appeared seconds later.
+    await this.whenViewResident();
+  }
+
+  /**
+   * Resolves once the road and every in-view city tile are displayed.
+   *
+   * The streaming pump runs in `tick`, so this only waits; it never drives the
+   * pipeline itself. It gives up waiting on a teardown, on a streaming error,
+   * on a suspended renderer (a scene that is not drawing cannot become
+   * visible) and after `VIEW_RESIDENT_TIMEOUT_MS`, so a map with a failed or
+   * budget-blocked tile still reports itself loaded rather than hanging.
+   */
+  private whenViewResident(): Promise<void> {
+    if (this.viewResidentNow()) return Promise.resolve();
+    // The viewer package targets a library without `Promise.withResolvers`.
+    let settle: () => void = () => undefined;
+    const promise = new Promise<void>((resolve) => { settle = resolve; });
+    this.viewResidentWaiters.push({
+      resolve: settle,
+      deadline: performance.now() + VIEW_RESIDENT_TIMEOUT_MS,
+    });
+    return promise;
+  }
+
+  private viewResidentNow(): boolean {
+    if (this.disposed || this.streamingError !== null || this.renderingSuspended) return true;
+    if (!this.roadLayer?.ready) return false;
+    const city = this.cityLayer;
+    if (!city) return true;
+    return city.ready && city.missingInView === 0;
+  }
+
+  /** Called from the frame loop, after streaming has had its turn. */
+  private settleViewResidentWaiters(now: number): void {
+    if (this.viewResidentWaiters.length === 0) return;
+    const resident = this.viewResidentNow();
+    for (let i = this.viewResidentWaiters.length - 1; i >= 0; i--) {
+      const waiter = this.viewResidentWaiters[i];
+      if (!waiter) continue;
+      if (!resident && now < waiter.deadline) continue;
+      this.viewResidentWaiters.splice(i, 1);
+      waiter.resolve();
+    }
   }
 
   private ensureVisualResources(): Promise<void> {
@@ -1138,6 +1213,12 @@ export class CityViewer {
       box: boxOf(tile.bounds.min, tile.bounds.max),
       lods: normalizeLods(tile.lods),
     }));
+    // One dilated copy per tile, built once: testing the frustum against a box
+    // grown by the prefetch margin is how tiles become resident before they
+    // are visible, and allocating it per frame would cost more than it saves.
+    const prefetchBoxes = new Map<string, Box3>(
+      defs.map((def) => [def.id, def.box.clone().expandByScalar(PREFETCH_MARGIN_M)]),
+    );
     this.cityLayer = new TileStreamLayer({
       name: 'city-layer',
       renderer: this.renderer,
@@ -1148,7 +1229,13 @@ export class CityViewer {
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
       pinCoarsest: true,
-      want: (def) => !this.roadsOnlyFidelity && this.cityFrustum.intersectsBox(def.box),
+      want: (def, distance) => !this.roadsOnlyFidelity
+        && (distance <= PREFETCH_RADIUS_M
+          || this.cityFrustum.intersectsBox(prefetchBoxes.get(def.id) ?? def.box)),
+      // What "ready" is judged on: what is actually on screen, plus the block
+      // the viewpoint stands in.
+      required: (def, distance) => !this.roadsOnlyFidelity
+        && (distance <= READY_RADIUS_M || this.cityFrustum.intersectsBox(def.box)),
       build: async (def, lod, signal) => {
         const gltf = await this.parseAsset(lod.file, signal, lod.fileSize);
         const root = gltf.scene;
@@ -1326,6 +1413,7 @@ export class CityViewer {
     } else {
       this.phaseStats.streaming.push(0);
     }
+    this.settleViewResidentWaiters(now);
     if (!this.renderingSuspended) this.vegLayer?.tickDisplayed();
     if (!this.renderingSuspended) this.snowCover.tick();
 

@@ -295,6 +295,12 @@ export interface LayerCoverage {
   wantedTiles: number;
   /** Wanted tiles with no LOD resident at all: visible holes. */
   missingTiles: number;
+  /**
+   * Tiles the camera can actually see that are displaying nothing. Zero is the
+   * readiness contract: a scene that reports itself loaded shows no holes, and
+   * nothing pops into the frame afterwards.
+   */
+  missingInViewTiles: number;
   /** Wanted tiles whose desired LOD is refused by the byte budget. */
   budgetBlockedTiles: number;
   /** Wanted tiles that failed terminally and will not retry. */

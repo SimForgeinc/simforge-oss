@@ -1,14 +1,19 @@
 import type { SimScenarioInput } from '@simforge-oss/engine';
+import type { MapGraphSources, StaticColliderDiagnostics } from '@simforge-oss/playback';
 
 import type { AuthoredDriveMode, ManualDriveRecording } from './authored-world-session';
 import type { ControlInput, DriverCommand, SpawnActorRequest } from './types';
 
 export type LiveWorldWorkerRequest =
-  | { type: 'init'; mapManifestUrl: string; laneGraphUrl?: string; tickHz: number }
   | {
       type: 'init-authored';
       input: SimScenarioInput;
-      laneGraphUrl: string;
+      /**
+       * Published artifact URLs the world's lane graph is built from. The
+       * graph carries the map's verified static colliders, so the drive
+       * collides with the same structures the editor's preview does.
+       */
+      mapSources: MapGraphSources;
       tickHz: number;
       /**
        * Run past the document's clip length and never park. A game session has
@@ -32,6 +37,8 @@ export type LiveWorldWorkerRequest =
 
 export type LiveWorldWorkerResponse =
   | { type: 'ready'; heldDriverCommand: boolean }
+  /** What the map's verified static collision artifact contained. */
+  | { type: 'map-collisions'; diagnostics: StaticColliderDiagnostics }
   | { type: 'take-complete'; recording: ManualDriveRecording }
   | { type: 'take-failed'; message: string }
   /** The world was rebuilt at t = 0; every following `frame` restarts from tick 0. */
