@@ -7,7 +7,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
 }
 const baseUrl = args.get('url') ?? 'http://127.0.0.1:5199/';
 const maps = (args.get('maps') ?? 'yale-street,belmont-research-center,el-camino-road,easterbrook-discovery-school,richmond-field-station').split(',');
-const presets = ['roads-only', 'ultra-low-3d', 'minimal', 'high'];
+const presets = ['minimal', 'high'];
 const software = args.get('software') === 'true';
 const browser = await chromium.launch({
   channel: 'chrome',
@@ -50,10 +50,6 @@ try {
         }));
         if (sample.preference?.preset !== preset) errors.push(`selected ${preset}, persisted ${sample.preference?.preset}`);
         if (sample.stats?.streamingError) errors.push(sample.stats.streamingError);
-        if (preset === 'roads-only') {
-          const excluded = requests.filter((path) => /\/tiles\/(?:tile_|veg_)|\.instances\.json$/.test(path));
-          if (excluded.length) errors.push(`Roads Only fetched excluded assets: ${excluded.join(', ')}`);
-        }
         results.push({ map, preset, usableMs, settledMs: performance.now() - started, requests: requests.length, errors });
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));

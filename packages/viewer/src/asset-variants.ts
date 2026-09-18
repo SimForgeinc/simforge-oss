@@ -1,4 +1,4 @@
-export type CityAssetVariantPreference = 'auto' | 'original' | 'ktx2' | 'geometry-only' | 'roads-only';
+export type CityAssetVariantPreference = 'auto' | 'original' | 'ktx2' | 'geometry-only';
 export type CityAssetVariantId = Exclude<CityAssetVariantPreference, 'auto' | 'original'>;
 
 export interface CityAssetVariantFile {
@@ -130,32 +130,15 @@ export function isCityAssetVariantManifest(value: unknown): value is CityAssetVa
     && Boolean(candidate.variants && typeof candidate.variants === 'object');
 }
 
-/** A named derivative is usable only if it covers every source this mode draws. */
-export function supportsCityAssetVariant(
-  source: {
-    staticLayers?: readonly { id: string; file: string }[];
-    tiles: readonly { lods: readonly { file: string }[] }[];
-  },
-  variants: CityAssetVariantManifest | null,
-  variant: 'roads-only' | 'geometry-only',
-): boolean {
-  const road = source.staticLayers?.find((layer) => layer.id === 'road');
-  if (!road) return false;
-  const options = { ultraLow: true, roadsOnly: variant === 'roads-only', ktx2Ready: false };
-  const supported = (file: string) => selectAssetVariant(variants, file, variant, options).variant === variant;
-  return supported(road.file) && (variant === 'roads-only'
-    || source.tiles.every((tile) => tile.lods.every((lod) => supported(lod.file))));
-}
-
 export function selectAssetVariant(
   manifest: CityAssetVariantManifest | null,
   sourceFile: string,
   preference: CityAssetVariantPreference,
-  options: { ultraLow: boolean; roadsOnly?: boolean; ktx2Ready: boolean },
+  options: { ultraLow: boolean; ktx2Ready: boolean },
 ): { variant: CityAssetVariantId | 'original'; file: string; fallbackFile?: string; sha256?: string } {
   if (!manifest || preference === 'original') return { variant: 'original', file: sourceFile };
   const requested: CityAssetVariantId | null = preference === 'auto'
-    ? (options.roadsOnly ? 'roads-only' : options.ultraLow ? 'geometry-only' : options.ktx2Ready ? 'ktx2' : null)
+    ? (options.ultraLow ? 'geometry-only' : options.ktx2Ready ? 'ktx2' : null)
     : preference;
   if (!requested || (requested === 'ktx2' && !options.ktx2Ready)) {
     return { variant: 'original', file: sourceFile };

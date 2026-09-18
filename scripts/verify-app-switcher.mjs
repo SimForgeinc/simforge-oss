@@ -100,14 +100,14 @@ for (const href of [
 const level = page.getByTestId("app-switcher-graphics-level");
 const buttons = await level.evaluateAll((nodes) => nodes.length);
 check(buttons === 1, `graphics level is one control, got ${buttons}`);
-const order = ["roads-only", "ultra-low-3d", "minimal", "high"];
+const order = ["minimal", "high"];
 const start = await level.getAttribute("data-quality");
 const seen = [start];
-for (let step = 0; step < 4; step += 1) {
+for (let step = 0; step < order.length; step += 1) {
   await level.click();
   seen.push(await level.getAttribute("data-quality"));
 }
-const expected = [...Array(5)].map(
+const expected = [...Array(order.length + 1)].map(
   (_unused, step) => order[(order.indexOf(start) + step) % order.length],
 );
 check(

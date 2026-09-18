@@ -49,10 +49,10 @@ describe("SimForge editor Three.js environment", () => {
     // The fidelity switch hides the sun and sky; a sky applied first is lost.
     const browsing = fakeViewer();
     const view = render(
-      <EditorSceneEnvironmentBridge active document={null} quality="ultra-low-3d" viewer={browsing.viewer} />,
+      <EditorSceneEnvironmentBridge active document={null} quality="minimal" viewer={browsing.viewer} />,
     );
     expect(browsing.setAuthoringFidelity).toHaveBeenCalledWith(
-      expect.objectContaining({ ultraLow: true }),
+      expect.objectContaining({ cinematicLighting: false }),
     );
     expect(browsing.setWeatherAppearance).toHaveBeenCalledTimes(1);
     expect(browsing.setAuthoringFidelity.mock.invocationCallOrder[0]!)
@@ -276,25 +276,6 @@ describe("SimForge editor Three.js environment", () => {
     expect(setHeadlightsEnabled).toHaveBeenLastCalledWith(false);
   });
 
-
-  it("keeps precipitation out of low graphics previews", () => {
-    const document = new FakeEditorDocument(environment("snow", "dusk"));
-    const low = fakeViewer();
-    const view = render(
-      <EditorSceneEnvironmentBridge
-        active
-        document={document as unknown as EditorDocument}
-        quality="ultra-low-3d"
-        viewer={low.viewer}
-        actorRenderer={null}
-      />,
-    );
-    expect(low.setWeatherAppearance).toHaveBeenCalledWith(expect.objectContaining({
-      clouds: expect.objectContaining({ budget: "off" }),
-      precipitation: expect.objectContaining({ budget: "off" }),
-    }));
-    view.unmount();
-  });
 
   it("retains physical snow surface values when reduced motion disables particles", () => {
     const { viewer, setWeatherAppearance } = fakeViewer();

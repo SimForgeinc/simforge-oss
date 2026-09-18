@@ -14,7 +14,7 @@ page.on('pageerror', (error) => consoleErrors.push(error.message.slice(0, 500)))
 try {
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   const chooser = page.getByTestId('first-run-graphics-chooser');
-  if (await chooser.isVisible().catch(() => false)) await page.getByTestId('graphics-choice-roads-only').click();
+  if (await chooser.isVisible().catch(() => false)) await page.getByTestId('graphics-choice-minimal').click();
   await page.getByRole('button', { name: 'Scenario Copilot' }).waitFor({ timeout: 180_000 });
   await page.getByRole('button', { name: 'Scenario Copilot' }).click();
   await page.getByRole('button', { name: /Upstream Chat2Scenic/ }).click();

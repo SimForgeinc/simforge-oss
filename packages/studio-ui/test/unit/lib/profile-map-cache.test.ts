@@ -115,7 +115,7 @@ describe("complete map closure cache planning", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(["roads-only", "ultra-low-3d", "minimal", "high"] as const)(
+  it.each(["minimal", "high"] as const)(
     "enumerates every published member for the %s profile",
     async (profile) => {
       const plan = await createProfileMapPlan([map], profile, new AbortController().signal);
@@ -138,7 +138,7 @@ describe("complete map closure cache planning", () => {
 
   it("persists completion per map closure and resumes with no pending assets", async () => {
     const controller = new AbortController();
-    const plan = await createProfileMapPlan([map], "roads-only", controller.signal);
+    const plan = await createProfileMapPlan([map], "minimal", controller.signal);
     const progress = vi.fn();
     const result = await cacheProfileMapPlan(plan, controller.signal, progress);
 

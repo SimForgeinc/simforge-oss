@@ -44,25 +44,25 @@ describe("first-run gate decision", () => {
   });
 
   it("treats an installation that predates onboarding as already set up", () => {
-    assert.deepEqual(decide({ preference: "ultra-low-3d" }), {
+    assert.deepEqual(decide({ preference: "minimal" }), {
       kind: "adopt",
-      quality: "ultra-low-3d",
+      quality: "minimal",
       savePreference: false,
       recordSetup: true,
     });
   });
 
   it("honours a level named by the incoming link instead of onboarding", () => {
-    assert.deepEqual(decide({ requestedQuality: "roads-only" }), {
+    assert.deepEqual(decide({ requestedQuality: "minimal" }), {
       kind: "adopt",
-      quality: "roads-only",
+      quality: "minimal",
       savePreference: true,
       recordSetup: true,
     });
   });
 
   it("prefers the stored preference over the link when both are present", () => {
-    assert.deepEqual(decide({ preference: "high", requestedQuality: "roads-only" }), {
+    assert.deepEqual(decide({ preference: "high", requestedQuality: "minimal" }), {
       kind: "adopt",
       quality: "high",
       savePreference: false,

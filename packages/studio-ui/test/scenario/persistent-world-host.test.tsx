@@ -148,17 +148,6 @@ describe("persistent SimForge world host", () => {
     expect(view.container.querySelector("canvas")).toBeNull();
   });
 
-  it("repairs an unsupported saved level before loading the map", async () => {
-    saveRenderingPreference("roads-only");
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => Response.json(String(input).includes("/variants/")
-      ? { schemaVersion: 1, sourceManifestSha256: "source", variants: {} }
-      : { staticLayers: [{ id: "road", file: "road.glb" }], tiles: [] })));
-    const view = render(<ScenarioWorldHost target={first} onViewerChange={vi.fn()} onActorRendererChange={vi.fn()} onStateChange={vi.fn()} />);
-    await waitFor(() => expect(view.getByTestId("scenario-world-host").getAttribute("data-world-loaded-map-version-id")).toBe(first.mapVersionId));
-    expect(readRenderingPreference()).toBe("high");
-    expect(constructions).toHaveBeenCalledOnce();
-  });
-
   it("does not publish a completed map from a released viewer", async () => {
     let complete!: () => void;
     loads.mockImplementation(() => new Promise<void>((resolve) => { complete = resolve; }));

@@ -164,8 +164,6 @@ export interface CityViewerOptions {
   assetVariant?: import('./asset-variants').CityAssetVariantPreference;
   /** Start texture-free before map loading; unlike a later toggle this also skips visual texture setup. */
   ultraLowFidelity?: boolean;
-  /** Authoring-only view: load roads but skip city and vegetation assets. Implies Ultra Low materials. */
-  roadsOnlyFidelity?: boolean;
   /** Variant manifest URL; defaults to `variants/manifest.json` beside the source manifest. */
   variantManifestUrl?: string;
   /** Required before KTX2 variants can be selected (for example `/basis/`). */
@@ -269,7 +267,6 @@ export interface CityViewerStats {
   /** True when GPU rendering and scene streaming are bypassed but integrations still tick. */
   renderingSuspended: boolean;
   ultraLowFidelity: boolean;
-  roadsOnlyFidelity: boolean;
   /** Road/ground geometry is resident and its layer is visible. */
   roadVisible: boolean;
   /** Latest map/preset streaming failure, including asynchronous mode switches. */
@@ -282,7 +279,7 @@ export interface CityViewerStats {
   snowCover: import('./snow-cover').SnowCoverStats;
   assetVariants: {
     manifest: boolean;
-    loaded: Record<'original' | 'geometry-only' | 'roads-only' | 'ktx2', number>;
+    loaded: Record<'original' | 'geometry-only' | 'ktx2', number>;
     fallbacks: number;
   };
   /** Per-layer residency against what the camera currently wants. */
@@ -347,7 +344,6 @@ export interface BenchResult {
   simulationTicksPerSecond: number | null;
   cpuUtilizationProxy: number;
   ultraLowFidelity: boolean;
-  roadsOnlyFidelity: boolean;
 }
 
 export interface RendererCapability {

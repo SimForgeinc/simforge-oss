@@ -18,7 +18,7 @@ const EMPTY_UNSUBSCRIBE = () => undefined;
  *
  * This is the one call that every Studio surface makes, and it must run before
  * any sky is applied: `setLiveQuality` clears the weather appearance,
- * `setAuthoringFidelity` hides the sun and sky for the low presets and drops
+ * `setAuthoringFidelity` can hide the sun and sky and drops
  * `scene.environment` when cinematic lighting is off. A surface that applied
  * its environment first had that environment silently undone, which is how the
  * drive and map views lost their sun while the editor kept it.
@@ -36,7 +36,6 @@ export function applySceneFidelity(
   viewer.setRenderingSuspended(false);
   viewer.setAuthoringFidelity({
     ultraLow: preset.ultraLow,
-    roadsOnly: preset.roadsOnly,
     cinematicLighting: preset.cinematicLighting,
   });
   viewer.setLayerVisible("vegetation", preset.vegetation);

@@ -269,7 +269,6 @@ function BenchmarkCanvas({
           maxPixelRatio: preset.maxPixelRatio,
           antialias: preset.antialias,
           ultraLowFidelity: preset.ultraLow,
-          roadsOnlyFidelity: preset.roadsOnly,
           vegetationMaxDistance: preset.live.vegetationMaxDistance,
           byteBudget: preset.live.byteBudget,
           maxScreenSpaceError: preset.live.maxScreenSpaceError,

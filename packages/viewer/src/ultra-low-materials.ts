@@ -7,7 +7,7 @@ import {
   MeshBasicMaterial,
   type Side,
 } from 'three';
-import { isLowFidelityHiddenHelper } from './roads-only';
+import { isLowFidelityHiddenHelper } from './low-fidelity';
 
 export type UltraLowLayer = 'road' | 'city' | 'vegetation' | 'actor';
 

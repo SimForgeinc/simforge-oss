@@ -53,7 +53,6 @@ const metrics: BenchResult = {
   simulationTicksPerSecond: null,
   cpuUtilizationProxy: 68,
   ultraLowFidelity: false,
-  roadsOnlyFidelity: false,
 };
 
 const hardware: RenderingBenchmarkHardware = {
@@ -72,7 +71,7 @@ const hardware: RenderingBenchmarkHardware = {
 const coverage = { wantedTiles: 96, missingTiles: 0, budgetBlockedTiles: 0, failedTiles: 0 };
 
 function result(quality: RenderingBenchmarkResult["quality"], missingTiles = 0): RenderingBenchmarkResult {
-  const city = quality === "roads-only" ? null : { ...coverage, missingTiles, budgetBlockedTiles: missingTiles };
+  const city = { ...coverage, missingTiles, budgetBlockedTiles: missingTiles };
   return {
     quality,
     metrics,
@@ -86,8 +85,7 @@ function result(quality: RenderingBenchmarkResult["quality"], missingTiles = 0):
 
 const noop = {
   onStart: vi.fn(), onCancel: vi.fn(), onApply: vi.fn(),
-  qualities: ["roads-only", "ultra-low-3d", "minimal", "high"] as const,
-  availability: { checking: false, unavailable: {} },
+  qualities: ["minimal", "high"] as const,
 };
 
 describe("RenderDiagnostics", () => {
@@ -109,8 +107,8 @@ describe("RenderDiagnostics", () => {
   it("shows live per-profile progress in place, never in an overlay", () => {
     const state: BenchmarkState = {
       phase: "measuring",
-      candidateIndex: 2,
-      results: [result("roads-only"), result("ultra-low-3d")],
+      candidateIndex: 1,
+      results: [result("minimal")],
       failures: [],
       hardware,
       startedAt: Date.now() - 2_000,
@@ -120,11 +118,10 @@ describe("RenderDiagnostics", () => {
     );
     expect(screen.queryByRole("dialog")).toBeNull();
     const status = screen.getByRole("status");
-    expect(status.textContent).toContain("Testing Balanced");
-    expect(status.textContent).toContain("2 of 4 complete");
-    expect(screen.getByTestId("benchmark-lane-roads-only").textContent).toContain("55");
-    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("Orbiting camera");
-    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Queued");
+    expect(status.textContent).toContain("Testing High");
+    expect(status.textContent).toContain("1 of 2 complete");
+    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("55");
+    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Orbiting camera");
     expect(screen.getByRole("button", { name: /Cancel/ })).toBeTruthy();
   });
 
@@ -136,7 +133,7 @@ describe("RenderDiagnostics", () => {
           message: "None of the renderers could be measured.",
           results: [],
           failures: [
-            { quality: "roads-only", message: "Map streaming did not settle" },
+            { quality: "minimal", message: "Map streaming did not settle" },
             { quality: "high", message: "WebGL context unavailable" },
           ],
           hardware,
@@ -148,7 +145,7 @@ describe("RenderDiagnostics", () => {
       />,
     );
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("Roads Only: Map streaming did not settle");
+    expect(alert.textContent).toContain("Balanced: Map streaming did not settle");
     expect(alert.textContent).toContain("High: WebGL context unavailable");
   });
 
@@ -189,7 +186,7 @@ describe("diagnosticChecks", () => {
   it("passes a hardware GPU with every building tile resident and an interactive profile", () => {
     const checks = diagnosticChecks({
       hardware,
-      results: [result("ultra-low-3d"), result("minimal")],
+      results: [result("high"), result("minimal")],
       failures: [],
       recommended: "minimal",
       running: false,
@@ -230,9 +227,9 @@ describe("diagnosticChecks", () => {
   it("flags missing buildings with the reason and keeps that profile off the recommendation", () => {
     const checks = diagnosticChecks({
       hardware,
-      results: [result("ultra-low-3d"), result("minimal", 5)],
+      results: [result("high"), result("minimal", 5)],
       failures: [],
-      recommended: "ultra-low-3d",
+      recommended: "high",
       running: false,
     });
     const buildings = checks.find((check) => check.id === "buildings")!;

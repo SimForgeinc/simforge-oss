@@ -206,7 +206,7 @@ async function ok<T>(studio: StudioLike, path: string, init: { method?: string; 
 async function completeFirstRunSetup(session: { api<T>(path: string, init?: RequestInit): Promise<T> }) {
   await session.api("/api/simforge/host/setup", {
     method: "PUT",
-    body: JSON.stringify({ mode: "local", quality: "roads-only" }),
+    body: JSON.stringify({ mode: "local", quality: "minimal" }),
   });
 }
 

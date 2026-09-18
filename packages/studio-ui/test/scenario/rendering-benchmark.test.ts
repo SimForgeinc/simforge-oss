@@ -88,7 +88,6 @@ function metrics(avgFps: number, p95FrameMs: number): BenchResult {
     simulationTicksPerSecond: null,
     cpuUtilizationProxy: 50,
     ultraLowFidelity: false,
-    roadsOnlyFidelity: false,
   };
 }
 
@@ -98,7 +97,7 @@ function result(
   p95FrameMs: number,
   missingTiles = 0,
 ): RenderingBenchmarkResult {
-  const city = quality === "roads-only" ? null : { ...fullCoverage, missingTiles, budgetBlockedTiles: missingTiles };
+  const city = { ...fullCoverage, missingTiles, budgetBlockedTiles: missingTiles };
   return {
     quality,
     metrics: metrics(avgFps, p95FrameMs),
@@ -114,8 +113,6 @@ describe("rendering benchmark recommendation", () => {
   it("chooses the highest-fidelity renderer that clears the interactive floor", () => {
     expect(
       recommendRenderingPreference([
-        result("roads-only", 60, 17),
-        result("ultra-low-3d", 60, 18),
         result("minimal", 55, 24),
         result("high", 30, 42),
       ]),
@@ -125,8 +122,6 @@ describe("rendering benchmark recommendation", () => {
   it("chooses high when every renderer performs well", () => {
     expect(
       recommendRenderingPreference([
-        result("roads-only", 60, 17),
-        result("ultra-low-3d", 60, 18),
         result("minimal", 60, 19),
         result("high", 58, 22),
       ]),
@@ -136,12 +131,10 @@ describe("rendering benchmark recommendation", () => {
   it("falls back to the most stable measured renderer when none clear the floor", () => {
     expect(
       recommendRenderingPreference([
-        result("roads-only", 32, 36),
-        result("ultra-low-3d", 29, 44),
         result("minimal", 25, 52),
         result("high", 18, 70),
       ]),
-    ).toBe("roads-only");
+    ).toBe("minimal");
   });
 
   it("rejects a renderer whose average looks healthy but orbiting stutters", () => {
@@ -150,8 +143,6 @@ describe("rendering benchmark recommendation", () => {
     high.metrics.orbit.p99FrameMs = 72;
     expect(
       recommendRenderingPreference([
-        result("roads-only", 60, 17),
-        result("ultra-low-3d", 58, 19),
         result("minimal", 52, 25),
         high,
       ]),
@@ -161,8 +152,6 @@ describe("rendering benchmark recommendation", () => {
   it("refuses a fast renderer that leaves building tiles missing", () => {
     expect(
       recommendRenderingPreference([
-        result("roads-only", 60, 17),
-        result("ultra-low-3d", 58, 19),
         result("minimal", 52, 25),
         result("high", 58, 22, 7),
       ]),
@@ -172,10 +161,10 @@ describe("rendering benchmark recommendation", () => {
   it("prefers complete coverage over a marginally smoother incomplete renderer when none clear the floor", () => {
     expect(
       recommendRenderingPreference([
-        result("ultra-low-3d", 30, 40),
+        result("high", 30, 40),
         result("minimal", 31, 38, 3),
       ]),
-    ).toBe("ultra-low-3d");
+    ).toBe("high");
   });
 });
 

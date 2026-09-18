@@ -57,8 +57,6 @@ export const DISABLED_AMBIENT_PROVENANCE = {
 } as const satisfies ScenarioAmbientProvenance;
 
 export const SCENARIO_AUTHORING_QUALITY_CHOICES = [
-  { id: "roads-only", label: "Roads Only", guidance: "CPU/software-rendering mode. Keeps 3D roads, every lane marking, signals and actors; city, vegetation and decorative street furniture are not downloaded.", downloadGuidance: "Requires the release's Roads Only derivatives", gpuMemoryGuidance: "Resident estimate: 1–6 MB · 0 GB dedicated GPU required", recommended: false },
-  { id: "ultra-low-3d", label: "Low", guidance: "Real navigable 3D roads, buildings and actors with flat unlit colors, no textures, lighting, environment, vegetation or nonessential overlays.", downloadGuidance: "Requires the release's texture-free geometry derivatives", gpuMemoryGuidance: "Resident estimate: 11–47 MB · 1 GB GPU recommended", recommended: false },
   { id: "minimal", label: "Balanced", guidance: "Road and coarse city context only: no vegetation, low resolution, and very restrained streaming.", downloadGuidance: "Download size varies with the map and visible detail", gpuMemoryGuidance: "Resident estimate: 370–640 MB · 2 GB GPU recommended", recommended: false },
   { id: "high", label: "High", guidance: "Sharper viewport with a larger resident scene.", downloadGuidance: "Full-detail assets can exceed 1 GB per map", gpuMemoryGuidance: "Resident estimate: 377–1,601 MB · 4 GB GPU recommended", recommended: true },
 ] as const satisfies ReadonlyArray<{ id: ScenarioAuthoringQuality; label: string; guidance: string; downloadGuidance: string; gpuMemoryGuidance: string; recommended: boolean }>;

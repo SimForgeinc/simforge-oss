@@ -12,8 +12,6 @@ import {
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 
 const QUALITY_OPTIONS: Array<{ value: RenderingPreference; label: string }> = [
-  { value: "roads-only", label: "Roads" },
-  { value: "ultra-low-3d", label: "Low" },
   { value: "minimal", label: "Balanced" },
   { value: "high", label: "High" },
 ];

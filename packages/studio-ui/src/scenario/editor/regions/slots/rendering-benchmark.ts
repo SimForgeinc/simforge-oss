@@ -90,19 +90,14 @@ export type RenderingBenchmarkSnapshot = {
   capturedAt: string;
 };
 
-const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = [
-  "roads-only",
-  "ultra-low-3d",
-  "minimal",
-  "high",
-];
+const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = ["minimal", "high"];
 
 /**
  * Pick the highest-fidelity renderer that stays comfortably interactive and
  * actually shows every building the camera asked for. A fast profile whose
  * city layer has holes is not a profile that "works". If none clear the
  * floor, prefer complete coverage first, then the lowest orbit p95 frame
- * time, instead of blindly choosing Roads Only from average FPS alone.
+ * time, instead of blindly choosing the cheapest level from average FPS alone.
  */
 export function recommendRenderingPreference(
   results: readonly RenderingBenchmarkResult[],

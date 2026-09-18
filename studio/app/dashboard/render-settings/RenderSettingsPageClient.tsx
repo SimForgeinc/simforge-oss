@@ -28,8 +28,6 @@ type Preparation = {
 };
 
 const PROFILE_LABELS: Record<RenderingPreference, string> = {
-  "roads-only": "Roads Only",
-  "ultra-low-3d": "Low",
   minimal: "Balanced",
   high: "High",
 };

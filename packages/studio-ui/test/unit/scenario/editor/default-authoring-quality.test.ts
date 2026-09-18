@@ -6,7 +6,7 @@ import { saveRenderingPreference } from "../../../../src/components/rendering-pr
 describe("default authoring quality", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it.each(["roads-only", "ultra-low-3d", "minimal", "high"] as const)(
+  it.each(["minimal", "high"] as const)(
     "starts new editor sessions with the saved %s quality",
     (quality) => {
       saveRenderingPreference(quality);

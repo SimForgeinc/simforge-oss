@@ -14,8 +14,6 @@ import type { RenderSpecV3, ScenarioTemplateV2 } from "@simforge-oss/scenario";
 // ── Enumerations shared by request validation and the UI ─────────────────────
 
 export const SCENARIO_AUTHORING_QUALITY_IDS = [
-  "roads-only",
-  "ultra-low-3d",
   "minimal",
   "high",
 ] as const;

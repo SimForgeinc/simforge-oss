@@ -8,7 +8,7 @@ export const MAP_MODEL_LOAD_TIMEOUT_MS = 90_000;
 export type MapModelLoadSnapshot = {
   roadReady: boolean;
   roadVisible: boolean;
-  /** At least one non-road scene tile is resident, or the active profile is Roads Only. */
+  /** At least one non-road scene tile is resident. */
   sceneAssetsReady?: boolean;
   loading: number;
   queued: number;

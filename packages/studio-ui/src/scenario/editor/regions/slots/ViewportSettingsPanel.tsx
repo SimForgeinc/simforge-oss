@@ -9,7 +9,6 @@ import {
 } from "../../../../lib/scenario/contracts";
 import type { CameraControlPreferences } from "@simforge-oss/viewer";
 import { Button } from "../../../../components/ui/button";
-import { useRenderingAvailability } from "../../../../components/rendering-preference";
 import {
   Sheet,
   SheetContent,
@@ -60,7 +59,6 @@ export function ViewportSettingsPanel({
   getDebugInformation?: () => string;
 }) {
   const [open, setOpen] = useState(false);
-  const availability = useRenderingAvailability();
   // Read from storage lazily so the first render already has the user's own settings and the camera never
   // briefly runs on defaults.
   const [settings, setSettings] = useState<ViewportSettings>(() => loadViewportSettings());
@@ -171,14 +169,12 @@ export function ViewportSettingsPanel({
               {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => (
                 <button
                   aria-pressed={quality === choice.id}
-                  disabled={Boolean(availability.unavailable[choice.id])}
-                  title={availability.unavailable[choice.id]}
                   {...stylex.props(quality === choice.id ? styles.capsMetaInk : styles.capsMetaMuted)}
                   key={choice.id}
                   onClick={() => onQualityChange(choice.id)}
                   type="button"
                 >
-                  {choice.label}{availability.unavailable[choice.id] ? " (unavailable)" : ""}
+                  {choice.label}
                 </button>
               ))}
             </div>

@@ -427,8 +427,6 @@ export function applyEditorSceneEnvironment(
 ): () => void {
   const appearance = resolveEditorSceneEnvironment(environment);
   const particleBudget: WeatherParticleBudget = options.reducedMotion
-    || options.quality === "roads-only"
-    || options.quality === "ultra-low-3d"
     ? "off"
     : options.quality === "high"
       ? "high"

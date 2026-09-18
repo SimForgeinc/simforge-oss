@@ -313,7 +313,7 @@ export function EditorTutorialGuide({
                     </SectionHeading>
                     <div {...stylex.props(styles.gridGap32)}>
                       <SettingCard icon={<Gauge aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Render quality">
-                        Choose Roads Only, Low, Balanced, or High. Start with Balanced, then raise
+                        Choose Balanced or High. Start with Balanced, then raise
                         quality for sharper scene context or lower it if navigation feels sluggish.
                       </SettingCard>
                       <SettingCard icon={<Camera aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Camera mode">

@@ -17,47 +17,10 @@ export function defaultAuthoringQuality(): ScenarioAuthoringQuality {
  * visibility), and the header's quality selector.
  */
 export const AUTHORING_QUALITY = {
-  "roads-only": {
-    maxPixelRatio: 0.5,
-    antialias: false,
-    ultraLow: true,
-    roadsOnly: true,
-    vegetation: false,
-    cinematicLighting: false,
-    live: {
-      maxPixelRatio: 0.5,
-      maxScreenSpaceError: 5000,
-      vegetationScreenSpaceError: 10000,
-      byteBudget: 512 * MB,
-      uploadBudgetMs: 0.35,
-      uploadPixelsPerFrame: 128e3,
-      vegetationMaxDistance: 0,
-      exposure: 1,
-    },
-  },
-  "ultra-low-3d": {
-    maxPixelRatio: 0.6,
-    antialias: false,
-    ultraLow: true,
-    roadsOnly: false,
-    vegetation: false,
-    cinematicLighting: false,
-    live: {
-      maxPixelRatio: 0.6,
-      maxScreenSpaceError: 2200,
-      vegetationScreenSpaceError: 10000,
-      byteBudget: 640 * MB,
-      uploadBudgetMs: 0.5,
-      uploadPixelsPerFrame: 256e3,
-      vegetationMaxDistance: 0,
-      exposure: 1,
-    },
-  },
   minimal: {
     maxPixelRatio: 0.75,
     antialias: false,
     ultraLow: false,
-    roadsOnly: false,
     vegetation: false,
     cinematicLighting: false,
     live: {
@@ -75,7 +38,6 @@ export const AUTHORING_QUALITY = {
     maxPixelRatio: 2,
     antialias: true,
     ultraLow: false,
-    roadsOnly: false,
     vegetation: true,
     /**
      * Generated sky, its image-based light and the sun's real shadow map. High

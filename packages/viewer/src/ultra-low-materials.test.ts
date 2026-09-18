@@ -1,7 +1,7 @@
 import { BoxGeometry, Color, DoubleSide, Mesh, MeshStandardMaterial } from 'three';
 import { describe, expect, it } from 'vitest';
 import { classifyUltraLowColor, UltraLowMaterialCache } from './ultra-low-materials';
-import { LOW_FIDELITY_HIDDEN_ROLE } from './roads-only';
+import { LOW_FIDELITY_HIDDEN_ROLE } from './low-fidelity';
 
 describe('UltraLowMaterialCache', () => {
   it('retains authored colors and caches equivalent unlit materials', () => {

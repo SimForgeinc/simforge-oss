@@ -319,7 +319,7 @@ export function ScenarioEditorSurface({
         return {
           roadReady: activeViewer.roadReady,
           roadVisible: stats.roadVisible,
-          sceneAssetsReady: stats.roadsOnlyFidelity || stats.residentTiles > 0,
+          sceneAssetsReady: stats.residentTiles > 0,
           loading: stats.loading,
           queued: stats.queued,
           uploading: stats.uploading,

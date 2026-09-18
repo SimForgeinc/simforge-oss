@@ -21,7 +21,7 @@ import type { PerspectiveCamera, Scene, Vector3 } from 'three';
  * must disappear when the viewer drops to a low-fidelity preset.
  *
  * **This value is duplicated on purpose.** The renderer owns the read side
- * (`isLowFidelityHiddenHelper` in `../renderer/roads-only`); the core owns the
+ * (`isLowFidelityHiddenHelper` in `../renderer/low-fidelity`); the core owns the
  * write side. Duplicating one string literal is cheaper than a module edge
  * between them. The two are pinned together by
  * `test/scenario/editor/core/viewer-contract.test.ts`, which fails if they

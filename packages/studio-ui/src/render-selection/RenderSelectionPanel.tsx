@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Check,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
-import { useRenderingAvailability, type RenderingAvailability } from "../components/rendering-preference";
 import {
   SCENARIO_AUTHORING_QUALITY_CHOICES,
   SCENARIO_AUTHORING_QUALITY_IDS,
@@ -37,8 +36,6 @@ const LABELS: Record<ScenarioAuthoringQuality, string> = Object.fromEntries(
 ) as Record<ScenarioAuthoringQuality, string>;
 
 const SUMMARY: Record<ScenarioAuthoringQuality, string> = {
-  "roads-only": "Roads, signals and actors. No 3D scenery.",
-  "ultra-low-3d": "Flat, unlit 3D for low-powered devices.",
   minimal: "Roads plus coarse city context.",
   high: "Full detail for capable GPUs.",
 };
@@ -69,8 +66,7 @@ export function RenderSelectionPanel({
   descriptionId?: string;
   footer?: ReactNode;
 }) {
-  const availability = useRenderingAvailability(manifestUrl);
-  const qualities = useMemo(() => SCENARIO_AUTHORING_QUALITY_IDS.filter((quality) => !availability.unavailable[quality]), [availability]);
+  const qualities = SCENARIO_AUTHORING_QUALITY_IDS;
   const { state, start, cancel, runner } = useRenderingBenchmark(manifestUrl ?? "", qualities);
   return (
     <div {...stylex.props(styles.page)}>
@@ -89,7 +85,6 @@ export function RenderSelectionPanel({
           <>
             <RenderDiagnostics
               qualities={qualities}
-              availability={availability}
               state={state}
               currentQuality={currentQuality}
               mapLabel={mapLabel}
@@ -134,8 +129,6 @@ export function RenderSelectionPanel({
                   type="button"
                   onClick={() => onChoose(choice.id)}
                   aria-label={`Use ${choice.label}`}
-                  disabled={Boolean(availability.unavailable[choice.id])}
-                  title={availability.unavailable[choice.id]}
                   aria-pressed={current}
                   {...stylex.props(styles.choice, current && styles.choiceCurrent)}
                 >
@@ -148,7 +141,7 @@ export function RenderSelectionPanel({
                     ) : null}
                   </span>
                   <span {...stylex.props(styles.choiceCopy)}>{SUMMARY[choice.id]}</span>
-                  <span {...stylex.props(styles.choiceMeta)}>{availability.unavailable[choice.id] ?? choice.downloadGuidance}</span>
+                  <span {...stylex.props(styles.choiceMeta)}>{choice.downloadGuidance}</span>
                   <span {...stylex.props(styles.choiceMeta)}>{choice.gpuMemoryGuidance}</span>
                 </button>
               );
@@ -174,7 +167,6 @@ export function RenderDiagnostics({
   onCancel,
   onApply,
   qualities,
-  availability,
 }: {
   state: BenchmarkState;
   currentQuality: ScenarioAuthoringQuality;
@@ -183,7 +175,6 @@ export function RenderDiagnostics({
   onCancel: () => void;
   onApply: (quality: ScenarioAuthoringQuality) => void;
   qualities: readonly ScenarioAuthoringQuality[];
-  availability: RenderingAvailability;
 }) {
   const active = state.phase === "loading" || state.phase === "measuring";
   const snapshot =
@@ -247,7 +238,6 @@ export function RenderDiagnostics({
             size="sm"
             type="button"
             onClick={onStart}
-            disabled={availability.checking}
             aria-label={`Start benchmark on ${mapLabel}`}
           >
             {snapshot ? <RotateCcw aria-hidden="true" /> : <Gauge aria-hidden="true" />}
@@ -350,8 +340,6 @@ export function RenderDiagnostics({
                   type="button"
                   onClick={() => onApply(snapshot.recommended)}
                   aria-label={`Use recommended ${LABELS[snapshot.recommended]}`}
-                  disabled={Boolean(availability.unavailable[snapshot.recommended])}
-                  title={availability.unavailable[snapshot.recommended]}
                 >
                   <Check aria-hidden="true" />
                   Use {LABELS[snapshot.recommended]}
@@ -519,7 +507,7 @@ function gpuCheck(hardware: RenderingBenchmarkHardware | null): DiagnosticCheck 
       id: "gpu",
       status: "fail",
       title: "Rendering on the CPU",
-      detail: `${name} is a software rasterizer. Enable hardware acceleration in the browser, or check that the app is allowed to use the GPU. Roads Only is the only setting that stays usable here.`,
+      detail: `${name} is a software rasterizer. Enable hardware acceleration in the browser, or check that the app is allowed to use the GPU. Balanced is the only setting likely to stay usable here.`,
     };
   }
   if (hardware.gpuClass === "integrated") {

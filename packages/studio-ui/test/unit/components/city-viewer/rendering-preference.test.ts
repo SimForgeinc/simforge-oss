@@ -14,7 +14,7 @@ describe("rendering preference storage", () => {
     expect(readRenderingPreference()).toBeNull();
   });
 
-  it.each(["roads-only", "ultra-low-3d", "minimal", "high"] as const)(
+  it.each(["minimal", "high"] as const)(
     "persists the %s model-quality preference",
     (preference) => {
       saveRenderingPreference(preference);
@@ -29,6 +29,14 @@ describe("rendering preference storage", () => {
     window.localStorage.setItem(RENDERING_PREFERENCE_STORAGE_KEY, "automatic");
     expect(readRenderingPreference()).toBeNull();
   });
+
+  it.each(["roads-only", "ultra-low-3d"])(
+    "migrates the removed %s level to the nearest surviving level",
+    (removed) => {
+      window.localStorage.setItem(RENDERING_PREFERENCE_STORAGE_KEY, removed);
+      expect(readRenderingPreference()).toBe("minimal");
+    },
+  );
 
   it("announces same-tab changes so the persistent world can update live", () => {
     const listener = vi.fn();
