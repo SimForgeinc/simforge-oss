@@ -233,7 +233,7 @@ export function DigitalTwinViewerPanel({
         nativeViewport={nativeViewport}
         nativeMapVersionId={nativeIdentity?.mapVersionId}
         nativeReleaseDigest={nativeIdentity?.releaseDigest}
-        options={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
+        initialOptions={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
         onReady={onReady}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}

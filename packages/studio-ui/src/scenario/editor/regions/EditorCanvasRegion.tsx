@@ -77,7 +77,7 @@ export function EditorCanvasRegion({
         <EditorCityViewInstance
           key={quality}
           manifestUrl={map.manifestUrl}
-          options={viewerOptions}
+          initialOptions={viewerOptions}
           onViewerReady={registerViewer}
           onViewerMapLoaded={reportMapLoaded}
           className={stylex.props(styles.wideTall).className}

@@ -19,6 +19,7 @@
     "seed": "tsx scripts/seed.ts",
     "bootstrap:maps": "tsx scripts/bootstrap-public-maps.ts",
     "verify:map-install": "tsx scripts/verify-map-install.ts",
+    "verify:asset-loading": "tsx scripts/verify-asset-loading.ts",
     "worker": "tsx worker/index.ts",
     "worker:harness": "tsx worker/harness.ts",
     "worker:model-run": "tsx scripts/model-run-worker.ts",

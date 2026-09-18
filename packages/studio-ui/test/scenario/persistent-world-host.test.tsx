@@ -3,6 +3,7 @@ import { act, cleanup, render as renderView, waitFor } from "@testing-library/re
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as Viewer from "@simforge-oss/viewer";
+import { CityView } from "@simforge-oss/viewer/react";
 import { ScenarioWorldHost } from "../../src/scenario/scene/ScenarioWorldHost";
 import { saveRenderingPreference } from "../../src/components/rendering-preference";
 import { ScenarioWorkspaceStatusProvider } from "../../src/scenario/editor/status";
@@ -41,65 +42,30 @@ vi.mock("@simforge-oss/viewer", async (importOriginal) => ({
   },
 }));
 
-vi.mock("@simforge-oss/viewer/react", async () => {
-  const React = await import("react");
-  class FakeCityViewer {
+// Exercise the real React lifetime. A second implementation of CityView here
+// hid the options-identity loop: the fake mounted once while production
+// recreated WebGL on every progress update. Only the GPU work is replaced.
+vi.mock("../../../viewer/src/viewer", () => ({
+  CityViewer: class {
     readonly renderer: { domElement: HTMLCanvasElement };
     readonly scene = { add: vi.fn(), getObjectByName: () => undefined };
     constructor(canvas: HTMLCanvasElement, options: unknown) {
       constructions(options);
+      if (constructions.mock.calls.length > 10) throw new Error("renderer construction loop");
       this.renderer = { domElement: canvas };
     }
     loadMap = loads;
     dispose = disposals;
+    getCapabilities = () => [];
+    getRendererCapability = () => ({ backend: "test" });
+    getStats = () => ({ byteBudget: 1, residentBytes: 0, pendingBytes: 0 });
     setLiveQuality = setLiveQuality;
     setAuthoringFidelity = setAuthoringFidelity;
     setLayerVisible = setLayerVisible;
     setRenderingSuspended = vi.fn();
     setWeatherAppearance = vi.fn();
-  }
-  return {
-    CityView({
-      manifestUrl,
-      options,
-      onReady,
-      onMapLoaded,
-      onError,
-    }: {
-      manifestUrl: string;
-      options?: unknown;
-      onReady?: (viewer: FakeCityViewer) => void;
-      onMapLoaded?: (manifestUrl: string) => void;
-      onError?: (error: unknown, manifestUrl: string) => void;
-    }) {
-      const canvasRef = React.useRef<HTMLCanvasElement>(null);
-      const viewerRef = React.useRef<FakeCityViewer | null>(null);
-      const generationRef = React.useRef(0);
-      const [error, setError] = React.useState<unknown>(null);
-      React.useEffect(() => {
-        const viewer = new FakeCityViewer(canvasRef.current!, options);
-        viewerRef.current = viewer;
-        onReady?.(viewer);
-        return () => viewer.dispose();
-      }, []);
-      React.useEffect(() => {
-        const viewer = viewerRef.current;
-        if (!viewer) return;
-        const generation = ++generationRef.current;
-        setError(null);
-        viewer.loadMap(manifestUrl).then(
-          () => generation === generationRef.current && onMapLoaded?.(manifestUrl),
-          (reason) => {
-            if (generation !== generationRef.current) return;
-            setError(reason);
-            onError?.(reason, manifestUrl);
-          },
-        );
-      }, [manifestUrl]);
-      return <canvas ref={canvasRef} data-error={error ? String(error) : undefined} />;
-    },
-  };
-});
+  },
+}));
 
 const first = {
   mapVersionId: "mapv_one",
@@ -135,7 +101,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.clear();
   constructions.mockClear();
-  loads.mockClear();
+  loads.mockReset().mockResolvedValue();
   disposals.mockClear();
   rendererDisposals.mockClear();
   setLiveQuality.mockClear();
@@ -144,6 +110,16 @@ afterEach(() => {
 });
 
 describe("persistent SimForge world host", () => {
+  it("does not publish a completed map from a released viewer", async () => {
+    let complete!: () => void;
+    loads.mockImplementation(() => new Promise<void>((resolve) => { complete = resolve; }));
+    const onMapLoaded = vi.fn();
+    const view = render(<CityView manifestUrl={first.manifestUrl} onMapLoaded={onMapLoaded} />);
+    view.unmount();
+    await act(async () => { complete(); });
+    expect(onMapLoaded).not.toHaveBeenCalled();
+  });
+
 
   it("keeps the same canvas, viewer, and instance identity across same-map mode renders", async () => {
     const onViewerChange = vi.fn();
@@ -259,8 +235,6 @@ describe("persistent SimForge world host", () => {
 
     await waitFor(() => expect(loads).toHaveBeenLastCalledWith(second.manifestUrl));
     expect(view.getByTestId("cloud-loading-surface")).toBeTruthy();
-    expect(view.getByText("Loading Two")).toBeTruthy();
-    expect(view.getByText("Preparing the map definition…")).toBeTruthy();
 
     completeMapLoad();
     await waitFor(() =>

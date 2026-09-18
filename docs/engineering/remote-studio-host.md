@@ -227,22 +227,23 @@ interface instead if the box has a public address.
 Most of what the host does is already remote-correct, because the host does it
 on its own machine: the database, artifacts, native runtime installation,
 render and evaluation jobs, SimCloud sign-in (the host owns the credential
-vault and the OS keyring entry). What breaks is anything that assumed the
-host's filesystem *is* the GUI machine's filesystem — and one thing that
-assumed the host's *origin* is loopback:
+vault and the OS keyring entry). What cannot cross this boundary is an
+operation that assumes the host's filesystem is the GUI machine's filesystem.
 
-**Storing map assets on the GUI machine is refused in remote mode.**
-`parseCanonicalUrl` (`studio/app/lib/map-cache/cache.ts`) accepts an absolute
-asset URL only for `localhost`, `127.0.0.1` or `[::1]` and otherwise throws
-"Only map assets served by this SimForge host can be stored on this device".
-It is a pure parser with no notion of the host's own origin, so a tailnet or
-LAN origin has no way to pass. This predates the connection chooser and
-affects the environment-variable path identically; the honest fix is a
-request-scoped `HostOrigin` in the host process, not a longer loopback list.
-Attaching, loading and everything else below work; only caching map assets
-locally does not. Each of
-those is refused with a message that names the host, rather than silently doing
-the wrong thing:
+**The persistent map cache belongs to the host, not the GUI.** The desktop
+map-cache bridge calls that host's `has`/`ensure`/`stream` endpoints; it does not
+maintain a second on-disk map store on the laptop. Absolute asset URLs are
+accepted when they match the request-scoped `HostOrigin` supplied by the
+`has`/`ensure` routes. `parseCanonicalUrl` reduces them to a path, so loopback,
+LAN and tailnet spellings share the same cache identity. Foreign origins are
+refused rather than added to an allowlist. This works in remote mode; it is
+not a reason for the renderer to restart or for asset requests to fail.
+
+The GUI additionally has its ordinary private HTTP response cache. That is
+separate from the host's verified content-addressed store: the host cannot
+choose a cache directory on the laptop, and a laptop directory chooser cannot
+move the host's cache. Unsupported filesystem operations are refused with a
+message naming the host, rather than silently doing the wrong thing:
 
 | Feature | Behaviour in remote mode |
 |---|---|

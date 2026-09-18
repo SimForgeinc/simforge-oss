@@ -19,7 +19,8 @@ export interface CityViewProps {
    * needs page coordinates translated into screen coordinates.
    */
   nativeScreenOffset?: { x: number; y: number };
-  options?: CityViewerOptions;
+  /** Constructor settings, sampled once per mounted view. Use viewer setters for live changes, or a new React key to recreate it. */
+  initialOptions?: CityViewerOptions;
   className?: string;
   style?: CSSProperties;
   onReady?: (viewer: CityViewer) => void;
@@ -42,7 +43,7 @@ export function CityView({
   nativeMapVersionId,
   nativeReleaseDigest,
   nativeScreenOffset,
-  options,
+  initialOptions,
   className,
   style,
   onReady,
@@ -73,6 +74,7 @@ export function CityView({
   const viewerRef = useRef<CityViewer | null>(null);
   const diagnosticsRef = useRef<ViewerRuntimeDiagnostics | null>(null);
   const generationRef = useRef(0);
+  const initialOptionsRef = useRef(initialOptions);
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const onMapLoadedRef = useRef(onMapLoaded);
@@ -89,7 +91,7 @@ export function CityView({
   useEffect(() => {
     if (useNative || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    const viewer = new CityViewer(canvas, options);
+    const viewer = new CityViewer(canvas, initialOptionsRef.current);
     diagnosticsRef.current = installViewerRuntimeDiagnostics(viewer);
     viewerRef.current = viewer;
     const onContextLost = () => {
@@ -106,7 +108,7 @@ export function CityView({
       viewerRef.current = null;
       viewer.dispose();
     };
-  }, [options, useNative]);
+  }, [useNative]);
 
   useEffect(() => {
     if (!useNative || !nativeViewport || !nativeMapVersionId || !nativeReleaseDigest) return;
@@ -204,6 +206,9 @@ export function CityView({
       setError(reason);
       onErrorRef.current?.(reason, manifestUrl);
     });
+    // Disposed loads may resolve after abort; neither completion nor failure
+    // belongs to a replacement renderer/map (including StrictMode remounts).
+    return () => { generationRef.current++; };
   }, [manifestUrl, useNative]);
 
   if (useNative) {

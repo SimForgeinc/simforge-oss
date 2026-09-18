@@ -455,6 +455,7 @@ export function ScenarioWorldHost({
       data-world-map-version-id={effectiveTarget?.mapVersionId ?? ""}
       data-world-manifest-url={effectiveTarget?.manifestUrl ?? ""}
       data-world-loaded-map-version-id={loadedMapVersionId ?? ""}
+      data-world-load-percent={loadProgress.percent ?? ""}
       data-world-transition={transitionPhase}
       data-world-interactive={String(interactive)}
     >
@@ -462,7 +463,7 @@ export function ScenarioWorldHost({
         <CityView
           key={`world-viewer:${retryNonce}`}
           manifestUrl={retainedTarget.manifestUrl}
-          options={{
+          initialOptions={{
             maxPixelRatio: quality.maxPixelRatio,
             antialias: quality.antialias,
             ultraLowFidelity: quality.ultraLow,

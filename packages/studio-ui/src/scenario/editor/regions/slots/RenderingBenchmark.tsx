@@ -266,7 +266,7 @@ function BenchmarkCanvas({
     >
       <CityView
         manifestUrl={manifestUrl}
-        options={{
+        initialOptions={{
           maxPixelRatio: preset.maxPixelRatio,
           antialias: preset.antialias,
           ultraLowFidelity: preset.ultraLow,

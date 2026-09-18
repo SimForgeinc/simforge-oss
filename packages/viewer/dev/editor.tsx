@@ -189,7 +189,7 @@ function Editor(): React.ReactElement {
       <div id="viewport" style={{ position: 'relative' }}>
         <CityView
           manifestUrl={manifestUrl}
-          options={VIEWER_OPTIONS}
+          initialOptions={VIEWER_OPTIONS}
           rendererMode={mode}
           nativeViewport={nativePort}
           nativeMapVersionId={mapVersionId}

@@ -611,7 +611,7 @@ export function DriveSession({
         }}
         onMapLoaded={() => setMapLoaded(true)}
         onReady={onViewerReady}
-        options={sceneViewerOptions(quality)}
+        initialOptions={sceneViewerOptions(quality)}
         role="application"
         tabIndex={0}
       />
