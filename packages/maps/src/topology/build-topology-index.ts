@@ -507,10 +507,8 @@ function laneWidthAt(lane: XLane, sectionLocalS: number): number {
  * (and therefore every render of it) with V8's `RangeError: Map maximum size
  * exceeded`.
  */
-function laneWidthSamples(section: XSection, lane: XLane, roadLength: number, nextSectionS: number) {
-  const sectionEndS = Math.min(roadLength, nextSectionS);
-  const length = Math.max(0, sectionEndS - section.s);
-  const sampleOffsets = Array.from(new Set([0, length / 2, length]))
+function laneWidthSamples(lane: XLane, sectionLengthM: number) {
+  const sampleOffsets = Array.from(new Set([0, sectionLengthM / 2, sectionLengthM]))
     .filter((s) => Number.isFinite(s) && s >= 0)
     .sort((a, b) => a - b);
   return sampleOffsets
@@ -518,8 +516,8 @@ function laneWidthSamples(section: XSection, lane: XLane, roadLength: number, ne
     .filter((sample) => Number.isFinite(sample.widthM) && sample.widthM > 0);
 }
 
-function representativeLaneWidthM(section: XSection, lane: XLane, roadLength: number, nextSectionS: number) {
-  const samples = laneWidthSamples(section, lane, roadLength, nextSectionS);
+function representativeLaneWidthM(lane: XLane, sectionLengthM: number) {
+  const samples = laneWidthSamples(lane, sectionLengthM);
   if (samples.length === 0) return null;
   return samples.reduce((sum, sample) => sum + sample.widthM, 0) / samples.length;
 }
@@ -540,6 +538,15 @@ function representativeLaneWidthM(section: XSection, lane: XLane, roadLength: nu
  * This is the one implementation. Do not inline it: the same rule is needed
  * wherever stored widths are read, and this bug already exists twice because a
  * sampler was copied instead of shared.
+ *
+ * A consumer needs the section's length to apply it, and the topology index did
+ * not carry one, which is why the export path (which parses the OpenDRIVE) was
+ * the only guarded reader. `TopologyLane.sectionLengthM` now publishes it — so
+ * REPUBLISHING A MAP is what activates this guard at the readers that hold only
+ * the index. An artifact without the field is read exactly as before: unguarded,
+ * and honestly so, because the only index-only substitute (polyline arc length)
+ * false-flags 3,179 valid samples across the installed corpus while missing 114
+ * genuinely diverged ones.
  */
 export function laneSectionWidthSamples<S extends { readonly s: number }>(
   samples: readonly S[] | undefined,
@@ -1005,8 +1012,11 @@ export function buildMapTopologyIndex(args: BuildTopologyArgs): MapTopologyIndex
         const rsl = rslOf(road.id, sIdx, ln.id);
         if (ln.type === "driving") drivingLanes += 1;
         const nextSectionS = road.sections[sIdx + 1]?.s ?? Number.POSITIVE_INFINITY;
-        const widthSamples = laneWidthSamples(sec, ln, road.length, nextSectionS);
-        const representativeWidth = representativeLaneWidthM(sec, ln, road.length, nextSectionS);
+        // The extent of this lane's own `<laneSection>`, published on the lane so a
+        // consumer holding only the index can apply `laneSectionWidthSamples`.
+        const sectionLengthM = Math.max(0, Math.min(road.length, nextSectionS) - sec.s);
+        const widthSamples = laneWidthSamples(ln, sectionLengthM);
+        const representativeWidth = representativeLaneWidthM(ln, sectionLengthM);
         lanes[rsl] = {
           rsl,
           roadId: road.id,
@@ -1020,6 +1030,7 @@ export function buildMapTopologyIndex(args: BuildTopologyArgs): MapTopologyIndex
           speedLimitKph: road.speedKph,
           representativeWidthM: representativeWidth,
           widthSamples,
+          ...(sectionLengthM > 0 ? { sectionLengthM } : {}),
           adjacentLanes: {
             left: {
               side: "left",

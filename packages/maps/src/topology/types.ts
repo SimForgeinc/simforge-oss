@@ -132,6 +132,15 @@ export const TopologyLaneSchema = z.object({
   successors: z.array(z.string()).default([]),
   speedLimitKph: z.number().nullable().default(null),
   representativeWidthM: z.number().positive().nullable().optional(),
+  /**
+   * Length of this lane's own `<laneSection>`, in metres.
+   *
+   * Absent in every artifact built before it existed. It is what lets a reader
+   * holding only this index apply `laneSectionWidthSamples` and discard width
+   * samples that fall outside the section — so republishing a map is what
+   * activates that guard for its consumers, not decoration.
+   */
+  sectionLengthM: z.number().positive().optional(),
   widthSamples: z
     .array(
       z.object({

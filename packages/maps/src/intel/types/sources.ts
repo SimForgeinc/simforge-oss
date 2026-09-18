@@ -44,6 +44,8 @@ export interface TopologyLane {
   // equivalent TopologyLane has always declared them optional. This
   // declaration was the outlier, and it rejected valid on-disk indexes.
   representativeWidthM?: number | null;
+  /** Length of the lane's own `<laneSection>`; absent in older artifacts. */
+  sectionLengthM?: number;
   widthSamples?: { s: number; widthM: number }[];
   adjacentLanes?: {
     left?: TopologyAdjacency;

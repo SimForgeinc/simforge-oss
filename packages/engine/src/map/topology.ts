@@ -44,6 +44,8 @@ export interface TopologyLane {
   successors: LaneRsl[];
   speedLimitKph: number | null;
   representativeWidthM?: number;
+  /** Length of the lane's own `<laneSection>`; absent in older artifacts. */
+  sectionLengthM?: number;
   widthSamples?: Array<{ s: number; widthM: number }>;
   adjacentLanes?: { left?: TopologyAdjacentLane | null; right?: TopologyAdjacentLane | null };
   laneChangePermissions?: TopologyLaneChangePermission[];

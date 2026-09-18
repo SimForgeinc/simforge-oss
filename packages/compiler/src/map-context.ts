@@ -31,6 +31,7 @@ import { guard } from '@simforge-oss/native-runtime/shared';
 
 import type { MatchedSite } from './anchor/index.js';
 import type { MapBundle } from './types.js';
+import { laneSectionWidthSamples } from '@simforge-oss/maps/topology';
 
 const LANE_TYPES = new Set<LaneType>([
   'driving',
@@ -64,11 +65,18 @@ export function createMapContext(bundle: MapBundle, template: ScenarioTemplateV2
   const laneFacts = (rsl: string, k: number, s: number): LaneFacts | undefined => {
     const lane = index.lanes[rsl];
     if (!lane) return undefined;
+    // Samples outside the lane's own section describe nothing (a width cubic
+    // past its domain), and picking the one nearest `s` selects them for
+    // queries near the section end. Guarded only when the artifact publishes
+    // `sectionLengthM`; an older artifact is read exactly as before.
+    const samples = lane.sectionLengthM === undefined
+      ? lane.widthSamples
+      : laneSectionWidthSamples(lane.widthSamples, lane.sectionLengthM);
     const width =
-      lane.widthSamples.length > 0
-        ? lane.widthSamples.reduce(
+      samples.length > 0
+        ? samples.reduce(
             (best, sample) => (Math.abs(sample.s - s) < Math.abs(best.s - s) ? sample : best),
-            lane.widthSamples[0]!,
+            samples[0]!,
           ).widthM
         : lane.representativeWidthM;
     return {

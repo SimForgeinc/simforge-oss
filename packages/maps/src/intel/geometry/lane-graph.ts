@@ -36,6 +36,7 @@
 
 import { asJunctionId, asLaneRef, type JunctionId, type LaneRef } from '../types/ids.js';
 import type { TopologyIndex, TopologyLane } from '../types/sources.js';
+import { laneSectionWidthSamples } from '../../topology/build-topology-index.js';
 import {
   cumulativeLengths,
   dist2,
@@ -420,7 +421,14 @@ export class LaneGraph {
    * check the value rather than assume it is positive.
    */
   widthAt(lane: LaneNode, s: number): number {
-    const samples = lane.raw.widthSamples;
+    // Samples outside the lane's own section are a width cubic evaluated past
+    // its domain, and this interpolation CLAMPS to the last sample — so one
+    // diverged sample would answer every query beyond it (14,079,733 m on
+    // di-rosa-sf lane 95:0:-3). Guarded only when the artifact publishes
+    // `sectionLengthM`; an older artifact is read exactly as before.
+    const samples = lane.raw.sectionLengthM === undefined
+      ? lane.raw.widthSamples
+      : laneSectionWidthSamples(lane.raw.widthSamples, lane.raw.sectionLengthM);
     if (!samples || samples.length === 0) return lane.widthM;
     // `widthSamples[].s` is OpenDRIVE `s`; the argument is travel-ordered.
     const query = this.toXodrS(lane, s);

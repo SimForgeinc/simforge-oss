@@ -60,6 +60,8 @@ export interface DerivedLane {
   lengthM: number;
   speedLimitKph: number;
   representativeWidthM: number;
+  /** Length of the lane's own `<laneSection>`; absent in older artifacts. */
+  sectionLengthM?: number;
   widthSamples: WidthSample[];
   adjacentLanes: { left: AdjacentLaneRef; right: AdjacentLaneRef };
   laneChangePermissions: LaneChangePermission[];
