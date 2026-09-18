@@ -71,11 +71,22 @@ aws_secret_key="$(aws_sf configure get aws_secret_access_key 2>/dev/null || true
 [ -n "$aws_access_key" ] && [ -n "$aws_secret_key" ] || \
   die "no static AWS keys for profile $AWS_PROFILE_NAME; the instance needs them as create-time env"
 
+# Access to the rented box needs a key vast will install. A *team* account
+# cannot hold account-level keys at all ("Team SSH keys are not supported. SSH
+# keys can only be created in personal context."), so for those accounts the
+# only route is attaching a key to the instance after it exists.
 ssh_keys="$(vast show ssh-keys --raw 2>/dev/null | jq 'length' 2>/dev/null || echo 0)"
+ssh_pubkey=""
 if [ "${ssh_keys:-0}" -eq 0 ]; then
-  log "warning: the vast account has no ssh key registered, so verify-instance.sh"
-  log "         will not be able to log in. Register one first:"
-  log "           $VAST_BIN create ssh-key \"\$(cat ~/.ssh/id_rsa.pub)\""
+  ssh_pubkey="$(cat "$SSH_PUBKEY_PATH" 2>/dev/null || true)"
+  case "$ssh_pubkey" in
+    ssh-*|ecdsa-*|sk-*) log "no account ssh key; will attach $SSH_PUBKEY_PATH to the instance after create" ;;
+    *) log "warning: the vast account has no ssh key registered and $SSH_PUBKEY_PATH"
+       log "         is not a public key, so nothing will be able to log in."
+       log "         Personal accounts can register one account-wide:"
+       log "           $VAST_BIN create ssh-key \"\$(cat ~/.ssh/id_rsa.pub)\""
+       ssh_pubkey="" ;;
+  esac
 fi
 
 credit="$(vast_credit)"
@@ -118,7 +129,41 @@ if [ "${CARLA_IMAGE%%/*}" = "$ECR_REGISTRY" ]; then
   image_digest="$(aws_sf --region "$ECR_REGION" ecr describe-images \
       --repository-name "$image_repo" --image-ids "imageTag=$image_tag" \
       --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)"
+elif [ "${CARLA_IMAGE%%/*}" = ghcr.io ]; then
+  # A CARLA cook published to ghcr is pulled by the instance directly, so the
+  # 22 GB never crosses this workstation. `crane` reads the same credentials
+  # docker uses, and reports the manifest digest and the summed layer sizes.
+  image_digest="$(crane digest "$CARLA_IMAGE" 2>/dev/null || true)"
+  image_bytes="$(crane manifest "$CARLA_IMAGE" 2>/dev/null \
+    | python3 -c 'import json,sys; m=json.load(sys.stdin); print(sum(l["size"] for l in m.get("layers",[])))' 2>/dev/null || true)"
 fi
+
+# --- 3b. cook identity, read from the image itself -------------------------
+# The instance registers baseImage/baseImageDigest as worker labels, so those
+# must describe the image that actually runs. Hard-coded constants produced a
+# registration that named a base the instance was not running.
+#
+# The same config carries the cook variant, and that is load-bearing: a
+# `*-kia-carnival` variant registers the official *superset* blueprint
+# registry while cooking only one vehicle's assets, so `find()` resolves
+# blueprints that `try_spawn_actor` then silently refuses. A production
+# scenario on such a cook loses every actor it cannot place, with no error
+# from CARLA. Read it here and say so before any money is spent.
+cook_variant=""; cook_blueprint=""; cook_binary=""
+if image_config="$(crane config "$CARLA_IMAGE" 2>/dev/null)"; then
+  read -r cook_variant cook_blueprint cook_binary <<EOF_COOK
+$(printf '%s' "$image_config" | python3 -c '
+import json, sys
+labels = (json.load(sys.stdin).get("config") or {}).get("Labels") or {}
+def field(key):
+    return (labels.get(key) or "-").replace(" ", "_")
+print(field("org.simforge.carla.variant"), field("org.simforge.carla.blueprint"), field("org.simforge.carla.binary"))
+' 2>/dev/null)
+EOF_COOK
+fi
+[ -n "${image_digest:-}" ] && [ "$image_digest" != unresolved ] && CARLA_BASE_INDEX_DIGEST="$image_digest"
+CARLA_BASE_IMAGE="$CARLA_IMAGE"
+CARLA_BASE_PLATFORM_DIGEST="${image_digest:-unresolved}"
 case "$image_bytes" in
   ''|None|null) log "warning: could not resolve $CARLA_IMAGE in ECR; using fallback size"
                 image_bytes="$CARLA_IMAGE_BYTES_FALLBACK"; image_digest="unresolved" ;;
@@ -346,6 +391,19 @@ printf '  %-26s %s\n' "gpuMemoryMiB floor" "$MIN_TOTAL_VRAM_MIB (24576 nominal m
 printf '  %-26s %s\n' "baseImage" "$CARLA_BASE_IMAGE"
 printf '  %-26s %s\n' "baseImageDigest" "$CARLA_BASE_INDEX_DIGEST"
 printf '  %-26s %s\n' "baseImagePlatformDigest" "$CARLA_BASE_PLATFORM_DIGEST"
+printf '  %-26s %s\n' "cook variant" "${cook_variant:-unreadable}"
+printf '  %-26s %s\n' "cook binary" "${cook_binary:-unreadable}"
+# A single-blueprint cook cannot place a production scenario's actors. Refuse
+# it rather than rendering a scene with two thirds of its traffic missing.
+case "${cook_variant:-}" in
+  full-local-cook|*official-faithful*|'')
+    ;;
+  *)
+    printf '  %-26s %s\n' "cook is PARTIAL" "variant '${cook_variant}' cooks assets for '${cook_blueprint}' only;"
+    printf '  %-26s %s\n' "" "other blueprints resolve but try_spawn_actor refuses them silently."
+    printf '  %-26s %s\n' "" "set ALLOW_PARTIAL_COOK=1 to rent it anyway (calibration scenarios only)."
+    [ "${ALLOW_PARTIAL_COOK:-0}" = 1 ] || reg_ready=0 ;;
+esac
 printf '  %-26s %s\n' "dev migration" "studio/migrations/20260917130000_simforge_rtx3090_render_worker_profile.sql must be applied on dev or the profile insert fails the hardware_profile check constraint"
 if image_can_drain "$CARLA_IMAGE"; then
   printf '  %-26s %s\n' "image can drain a job" "assumed yes (not a known pre-change tag)"
@@ -387,16 +445,40 @@ fi
 # --- 8. rent -------------------------------------------------------------
 [ -n "$API_BASE_URL" ] || die "SIMFORGE_API_BASE_URL must be set to the dev control plane for --confirm"
 [ "$reg_ready" -eq 1 ] || die "the dev registration contract is incomplete (see the MISSING rows above); the worker would fail to register"
-[ "${ssh_keys:-0}" -gt 0 ] || die "register an ssh key with vast before renting (see warning above)"
+[ "${ssh_keys:-0}" -gt 0 ] || [ -n "$ssh_pubkey" ] || \
+  die "no way to log in: register an account ssh key, or point SSH_PUBKEY_PATH at a public key to attach to the instance"
 
-info "requesting ECR login token ($ECR_REGION)"
-ecr_token="$(aws_sf --region "$ECR_REGION" ecr get-login-password)" || die "ECR login failed"
-[ -n "$ecr_token" ] || die "empty ECR token"
+# The instance pulls the image itself, so it needs credentials for whichever
+# registry hosts it: ECR for worker images we build, ghcr for a published CARLA
+# cook. ghcr credentials are read from the docker config rather than stored
+# here.
+image_host="${CARLA_IMAGE%%/*}"
+if [ "$image_host" = ghcr.io ]; then
+  info "reading ghcr credentials from the docker config"
+  ghcr_pair="$(python3 - <<'PY'
+import base64, json, os, sys
+path = os.path.expanduser("~/.docker/config.json")
+auth = (json.load(open(path)).get("auths") or {}).get("ghcr.io", {}).get("auth") if os.path.exists(path) else None
+if not auth:
+    sys.exit(1)
+user, _, secret = base64.b64decode(auth).decode().partition(":")
+print(f"{user}\t{secret}")
+PY
+)" || die "no ghcr credentials in ~/.docker/config.json; docker login ghcr.io first"
+  ghcr_user="${ghcr_pair%%	*}"; ghcr_secret="${ghcr_pair#*	}"
+  [ -n "$ghcr_user" ] && [ -n "$ghcr_secret" ] || die "ghcr credentials are incomplete"
+  registry_login="-u $ghcr_user -p $ghcr_secret ghcr.io"
+else
+  info "requesting ECR login token ($ECR_REGION)"
+  ecr_token="$(aws_sf --region "$ECR_REGION" ecr get-login-password)" || die "ECR login failed"
+  [ -n "$ecr_token" ] || die "empty ECR token"
+  registry_login="-u AWS -p $ecr_token $ECR_REGISTRY"
+fi
 
 info "creating instance from offer $offer_id"
 created="$(vast create instance "$offer_id" \
   --image "$CARLA_IMAGE" \
-  --login "-u AWS -p $ecr_token $ECR_REGISTRY" \
+  --login "$registry_login" \
   --disk "$DISK_GB" \
   --env "$create_env" \
   --ssh --direct \
@@ -410,6 +492,14 @@ new_id="$(jq -r '.new_contract // .id // empty' <<<"$created" 2>/dev/null || tru
 
 # Record before anything else can fail, so teardown always has the id.
 printf '%s\n' "$new_id" >> "$(created_ledger)"
+
+# Team accounts hold no account-level keys, so the key is attached per instance.
+# Verified here rather than assumed: a box nobody can log into is unusable.
+if [ -n "$ssh_pubkey" ]; then
+  info "attaching ssh key to instance $new_id"
+  vast attach ssh "$new_id" "$ssh_pubkey" >/dev/null 2>&1 || \
+    log "warning: attaching the ssh key failed; retry manually: $VAST_BIN attach ssh $new_id \"\$(cat $SSH_PUBKEY_PATH)\""
+fi
 jq -n --argjson offer "$offer" \
       --arg id "$new_id" --arg label "$VAST_LABEL" --arg image "$CARLA_IMAGE" \
       --arg digest "${image_digest:-unresolved}" --arg profile "$HARDWARE_PROFILE" \

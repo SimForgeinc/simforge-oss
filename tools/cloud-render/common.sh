@@ -88,6 +88,9 @@ HARDWARE_PROFILE="${HARDWARE_PROFILE:-rtx3090-24gb-v1}"
 # Label stamped on the instance. Teardown refuses any instance whose label does
 # not match, so this is a safety device as much as a name.
 VAST_LABEL="${VAST_LABEL:-simforge-render-${HARDWARE_PROFILE}-dev}"
+# Public key attached to the instance when the account cannot hold one (team
+# accounts cannot: vast rejects account-level keys outside personal context).
+SSH_PUBKEY_PATH="${SSH_PUBKEY_PATH:-$HOME/.ssh/id_rsa.pub}"
 
 # --- offer selection -------------------------------------------------------
 
@@ -223,9 +226,12 @@ assert_dev_target() {
     *staging*|*stage.*|*prod*|*production*)
       die "refusing non-dev control plane: $url" ;;
   esac
-  case "$CARLA_IMAGE" in
-    *-prod:*|*-staging:*|*prod-*|*staging-*)
-      die "refusing non-dev instance image: $CARLA_IMAGE" ;;
+  # Judge the repository, not the tag: a dev-repo image may legitimately record
+  # where its CARLA cook came from (`...-dev:carla-cook-from-prod-a457`), while
+  # a prod or staging *repository* is refused no matter how it is tagged.
+  case "${CARLA_IMAGE%%:*}" in
+    *-prod|*-staging|*prod*|*staging*)
+      die "refusing non-dev instance image repository: ${CARLA_IMAGE%%:*}" ;;
   esac
   case "$DEV_ARTIFACT_BUCKET" in
     *prod*|*staging*) die "refusing non-dev artifact bucket: $DEV_ARTIFACT_BUCKET" ;;
