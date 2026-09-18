@@ -7,13 +7,13 @@ import type { ScenarioMapDescriptorDto, StudioMapEntry } from "@simforge-oss/stu
 import { LOCAL_SESSION, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
 import { getAppContext } from "@/app/lib/db/app-context";
 import { LOCAL_CLOUD_ROOT } from "@/app/lib/db/config";
-import { queryOne } from "@/app/lib/db/data-api";
+import { queryOne, queryRows } from "@/app/lib/db/data-api";
 import {
   publishMapClosure,
   type DevAssetMap,
   type StoredMember,
 } from "@/app/lib/map-ingest/server/dev-asset-publication";
-import { ensureMapAsset, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
+import { ensureMapAsset, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
 import { localObjectPath } from "@/app/lib/s3/s3-object";
 import { assertMapUsable, MapAccessError } from "./access";
@@ -98,7 +98,12 @@ type UpstreamPlanMap = {
   visibility?: "public" | "private";
 };
 
-type Cached<T> = { scope: string | null; expiresAt: number; value: T };
+/**
+ * An upstream read shared by every reader of one scope: the in-flight request
+ * itself, so concurrent callers never open a second one, kept for
+ * {@link CATALOG_TTL_MS} once it answered.
+ */
+type Cached<T> = { scope: string | null; expiresAt: number; value: Promise<T> };
 
 type InstallJob = {
   state: LocalMapInstallState;
@@ -109,12 +114,15 @@ type MapsState = {
   catalog: Cached<UpstreamDescriptor[]> | null;
   plans: Map<MapProfile, Cached<UpstreamPlanMap[]>>;
   installs: Map<string, InstallJob>;
+  /** When the current catalog-read wait window opened; see {@link upstreamDeadline}. */
+  upstreamWaitOpenedAt: number | null;
 };
 const STATE_KEY = Symbol.for("simforge.local-maps");
 const state: MapsState = ((globalThis as Record<symbol, unknown>)[STATE_KEY] ??= {
   catalog: null,
   plans: new Map(),
   installs: new Map(),
+  upstreamWaitOpenedAt: null,
 } satisfies MapsState) as MapsState;
 
 function localContext() {
@@ -145,25 +153,59 @@ function withBundled<T extends { mapVersionId: string }>(upstream: T[], bundled:
   return [...upstream, ...bundled.filter((map) => !seen.has(map.mapVersionId))];
 }
 
+/**
+ * Join the upstream read of one scope, or start it. The entry holds the
+ * in-flight promise, so a hundred catalog readers during a slow answer cost
+ * one request; a read that failed is forgotten, so the next reader retries
+ * rather than inheriting the failure for the whole TTL. The read is not bound
+ * to the reader that started it: a reader that stops waiting (see
+ * {@link withinDeadline}) still leaves the answer warm for the next one.
+ */
+function sharedUpstreamRead<T>(
+  scope: string | null,
+  get: () => Cached<T> | null | undefined,
+  set: (entry: Cached<T> | null) => void,
+  read: () => Promise<T>,
+): Promise<T> {
+  const cached = get();
+  if (cached && cached.scope === scope && cached.expiresAt > Date.now()) return cached.value;
+  const entry: Cached<T> = { scope, expiresAt: Number.MAX_SAFE_INTEGER, value: read() };
+  set(entry);
+  entry.value.then(
+    () => {
+      entry.expiresAt = Date.now() + CATALOG_TTL_MS;
+    },
+    () => {
+      if (get() === entry) set(null);
+    },
+  );
+  return entry.value;
+}
+
 async function fetchUpstreamCatalog(signal?: AbortSignal): Promise<UpstreamDescriptor[]> {
   await primeCloudSession();
   const session = cloudSessionScope();
   const bundled = BUNDLED_MAPS.map((map) => map.descriptor);
   if (!session.active) return bundled;
-  const cached = state.catalog;
-  if (cached && cached.scope === session.scope && cached.expiresAt > Date.now()) return cached.value;
-  const response = await upstreamGet("/api/simforge/maps", signal);
-  if (!response.ok) {
-    await discardResponseBody(response);
-    throw new CloudConnectionError("cloud_unreachable", `SimCloud map catalog answered ${response.status}`);
-  }
-  const payload = await response.json() as { maps?: unknown };
-  const maps = Array.isArray(payload.maps) ? payload.maps as UpstreamDescriptor[] : [];
-  const value = withBundled(maps.filter((map) =>
-    typeof map?.mapVersionId === "string" && /^[A-Za-z0-9_-]{8,128}$/.test(map.mapVersionId)
-    && typeof map.label === "string" && typeof map.sourceMapId === "string"), bundled);
-  state.catalog = { scope: session.scope, expiresAt: Date.now() + CATALOG_TTL_MS, value };
-  return value;
+  return sharedUpstreamRead(
+    session.scope,
+    () => state.catalog,
+    (entry) => {
+      state.catalog = entry;
+    },
+    async () => {
+      const response = await upstreamGet("/api/simforge/maps", signal);
+      if (!response.ok) {
+        await discardResponseBody(response);
+        throw new CloudConnectionError("cloud_unreachable", `SimCloud map catalog answered ${response.status}`);
+      }
+      const payload = await response.json() as { maps?: unknown };
+      const maps = Array.isArray(payload.maps) ? payload.maps as UpstreamDescriptor[] : [];
+      return withBundled(maps.filter((map) =>
+        typeof map?.mapVersionId === "string" && /^[A-Za-z0-9_-]{8,128}$/.test(map.mapVersionId)
+        && typeof map.label === "string" && typeof map.sourceMapId === "string"), bundled);
+    },
+  );
 }
 
 async function fetchUpstreamPlan(profile: MapProfile, signal?: AbortSignal): Promise<UpstreamPlanMap[]> {
@@ -171,37 +213,90 @@ async function fetchUpstreamPlan(profile: MapProfile, signal?: AbortSignal): Pro
   const session = cloudSessionScope();
   const bundled = BUNDLED_MAPS.map((map) => map.plans[profile]);
   if (!session.active) return bundled;
-  const cached = state.plans.get(profile);
-  if (cached && cached.scope === session.scope && cached.expiresAt > Date.now()) return cached.value;
-  const response = await upstreamGet(`/api/simforge/maps/cache-plan?profile=${profile}`, signal);
-  if (!response.ok) {
-    await discardResponseBody(response);
-    throw new CloudConnectionError("cloud_unreachable", `SimCloud cache plan answered ${response.status}`);
-  }
-  const payload = await response.json() as { maps?: unknown };
-  const maps = Array.isArray(payload.maps) ? payload.maps as UpstreamPlanMap[] : [];
-  for (const map of maps) {
-    if (typeof map.mapVersionId !== "string" || !Array.isArray(map.assets)) {
-      throw new MapAccessError("MapCacheError", "map_plan_invalid", "malformed SimCloud cache plan");
-    }
-    for (const asset of map.assets) {
-      if (
-        typeof asset.relativePath !== "string" || !SHA256.test(asset.sha256)
-        || !Number.isSafeInteger(asset.byteLength) || asset.byteLength < 0 || typeof asset.mediaType !== "string"
-      ) {
-        throw new MapAccessError("MapCacheError", "map_plan_invalid", `malformed plan member for ${map.mapVersionId}`);
+  return sharedUpstreamRead(
+    session.scope,
+    () => state.plans.get(profile),
+    (entry) => {
+      if (entry) state.plans.set(profile, entry);
+      else state.plans.delete(profile);
+    },
+    async () => {
+      const response = await upstreamGet(`/api/simforge/maps/cache-plan?profile=${profile}`, signal);
+      if (!response.ok) {
+        await discardResponseBody(response);
+        throw new CloudConnectionError("cloud_unreachable", `SimCloud cache plan answered ${response.status}`);
       }
-    }
-  }
-  const value = withBundled(maps, bundled);
-  state.plans.set(profile, { scope: session.scope, expiresAt: Date.now() + CATALOG_TTL_MS, value });
-  return value;
+      const payload = await response.json() as { maps?: unknown };
+      const maps = Array.isArray(payload.maps) ? payload.maps as UpstreamPlanMap[] : [];
+      for (const map of maps) {
+        if (typeof map.mapVersionId !== "string" || !Array.isArray(map.assets)) {
+          throw new MapAccessError("MapCacheError", "map_plan_invalid", "malformed SimCloud cache plan");
+        }
+        for (const asset of map.assets) {
+          if (
+            typeof asset.relativePath !== "string" || !SHA256.test(asset.sha256)
+            || !Number.isSafeInteger(asset.byteLength) || asset.byteLength < 0 || typeof asset.mediaType !== "string"
+          ) {
+            throw new MapAccessError("MapCacheError", "map_plan_invalid", `malformed plan member for ${map.mapVersionId}`);
+          }
+        }
+      }
+      return withBundled(maps, bundled);
+    },
+  );
 }
 
 /** Forget cached upstream reads; the next catalog call reflects the current session. */
 export function invalidateUpstreamCatalog(): void {
   state.catalog = null;
   state.plans.clear();
+  state.upstreamWaitOpenedAt = null;
+}
+
+/**
+ * How long a catalog read may wait on SimCloud. Studio is a local-first
+ * application: the maps this machine has are local facts, and a Cloud that is
+ * merely slow (rather than down) must not hold them back.
+ */
+const UPSTREAM_CATALOG_BUDGET_MS = 500;
+
+/** Returned instead of an upstream value the reader stopped waiting for. */
+const BUDGET_EXPIRED = Symbol("upstream budget expired");
+
+/**
+ * The instant a catalog read must stop waiting for SimCloud. The budget
+ * belongs to the wait window, not to the request: the reader that opens one
+ * may spend it, the readers behind it inherit what is left and answer at
+ * local speed, because waiting longer would only mean waiting for a read that
+ * is already in flight — and which caches its answer for them anyway. A new
+ * window opens once the cached reads would have expired.
+ */
+function upstreamDeadline(): number {
+  const now = Date.now();
+  if (state.upstreamWaitOpenedAt === null || now - state.upstreamWaitOpenedAt > CATALOG_TTL_MS) {
+    state.upstreamWaitOpenedAt = now;
+  }
+  return state.upstreamWaitOpenedAt + UPSTREAM_CATALOG_BUDGET_MS;
+}
+
+/**
+ * Wait for an upstream read until `deadline`, no longer. The read is NOT
+ * cancelled when the deadline passes — it keeps running, and
+ * {@link sharedUpstreamRead} keeps its answer, so the next reader gets the
+ * real catalog while this one already answered with the local maps.
+ */
+async function withinDeadline<T>(read: Promise<T>, deadline: number): Promise<T | typeof BUDGET_EXPIRED> {
+  // Thunks, so the losing outcome of the race is never an unhandled rejection.
+  const settled = read.then<() => T, () => T>((value) => () => value, (error: unknown) => () => {
+    throw error;
+  });
+  const { promise: expiry, resolve: expire } = Promise.withResolvers<() => typeof BUDGET_EXPIRED>();
+  const timer = setTimeout(() => expire(() => BUDGET_EXPIRED), Math.max(0, deadline - Date.now()));
+  try {
+    return (await Promise.race([settled, expiry]))();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function accessOf(map: UpstreamDescriptor): MapAccess {
@@ -233,23 +328,54 @@ function localizeDescriptor(map: UpstreamDescriptor): ScenarioMapDescriptorDto {
 }
 
 /**
- * Total download size per profile, from the upstream cache plans this module
- * already fetches and caches for installs, so a selection screen can show
- * sizes before anything is downloaded.
+ * Closure sizes of the maps registered on this installation, read from the
+ * publication rows that recorded them. An installed map's download size is a
+ * local fact: asking SimCloud for it would make the whole local catalog wait
+ * on the network for a display detail.
+ *
+ * A map without an available native asset set has no semantic closure to
+ * install, which is a size of zero rather than an unknown one.
+ */
+async function installedClosureBytes(): Promise<Map<string, { browser: number; semantic: number }>> {
+  const rows = await queryRows<{ map_version_id: string; browser_bytes: number | string | null; semantic_bytes: number | string | null }>(
+    `SELECT mv.id AS map_version_id, bs.byte_length AS browser_bytes, ns.byte_length AS semantic_bytes
+     FROM simforge.map_versions mv
+     LEFT JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+       AND bs.workspace_id = mv.workspace_id AND bs.asset_set_state = 'available'
+     LEFT JOIN simforge.native_map_asset_sets ns ON ns.id = mv.native_map_asset_set_id
+       AND ns.workspace_id = mv.workspace_id AND ns.asset_set_state = 'available'
+     WHERE mv.workspace_id = :workspace_id AND mv.retired_at IS NULL`,
+    { workspace_id: LOCAL_WORKSPACE_ID },
+  );
+  const sizes = new Map<string, { browser: number; semantic: number }>();
+  for (const row of rows) {
+    if (row.browser_bytes === null) continue;
+    sizes.set(row.map_version_id, { browser: Number(row.browser_bytes), semantic: Number(row.semantic_bytes ?? 0) });
+  }
+  return sizes;
+}
+
+/**
+ * Total download size per profile of maps that are NOT installed here, from
+ * the upstream cache plans this module already fetches and caches for
+ * installs, so a selection screen can show sizes before anything is
+ * downloaded.
  *
  * A size is an annotation on the catalog, never a reason to fail it: offline,
- * an account map without a session, or a plan the upstream serves malformed
- * all leave the size unknown while the maps themselves still list.
+ * an account map without a session, an upstream that answers too slowly, or a
+ * plan the upstream serves malformed all leave the size unknown while the
+ * maps themselves still list.
  */
-async function closureBytesByMap(signal?: AbortSignal): Promise<Map<string, { browser: number; semantic: number }>> {
+async function upstreamClosureBytes(deadline: number, signal?: AbortSignal): Promise<Map<string, { browser: number; semantic: number }>> {
   const sizes = new Map<string, { browser: number; semantic: number }>();
   for (const profile of ["browser", "semantic"] as const) {
-    let plans: UpstreamPlanMap[];
+    let plans: UpstreamPlanMap[] | typeof BUDGET_EXPIRED;
     try {
-      plans = await fetchUpstreamPlan(profile, signal);
+      plans = await withinDeadline(fetchUpstreamPlan(profile, signal), deadline);
     } catch {
       continue;
     }
+    if (plans === BUDGET_EXPIRED) continue;
     for (const plan of plans) {
       const entry = sizes.get(plan.mapVersionId) ?? { browser: 0, semantic: 0 };
       entry[profile] = plan.assets.reduce((total, asset) => total + asset.byteLength, 0);
@@ -275,12 +401,18 @@ export type LocalMapCatalog = {
  * upstream maps not yet installed. Upstream unreachable is not an error here —
  * the local catalog stands on its own — but it is reported, because a fresh
  * installation has no local catalog to stand on.
+ *
+ * The local rows are produced from local data only, and the upstream reads
+ * that add the not-yet-installed ones run under {@link UPSTREAM_CATALOG_BUDGET_MS}:
+ * a SimCloud that is slow (not only one that is down) must not hold up the
+ * maps this machine already has. A budget that runs out is the same fact the
+ * UI already knows how to show — the Cloud was not reached.
  */
 export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapCatalog> {
   await primeCloudSession();
   const session = cloudSessionScope();
   const local = await listScenarioMapDescriptors(localContext());
-  const closureBytes = await closureBytesByMap(signal);
+  const installedBytes = await installedClosureBytes();
   const maps: LocalMapDescriptor[] = [];
   const seen = new Set<string>();
   for (const descriptor of local) {
@@ -308,18 +440,28 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access,
       locked: access === "cloud" && !session.active,
       ready,
-      closureBytes: closureBytes.get(descriptor.mapVersionId) ?? null,
+      closureBytes: installedBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
+  const deadline = upstreamDeadline();
   let upstream: UpstreamDescriptor[] = [];
   let reachability: LocalMapCatalog["upstream"] = { reachable: true };
   try {
-    upstream = await fetchUpstreamCatalog(signal);
+    const answered = await withinDeadline(fetchUpstreamCatalog(signal), deadline);
+    if (answered === BUDGET_EXPIRED) {
+      reachability = { reachable: false, message: "SimCloud has not answered yet; showing the maps installed on this computer" };
+    } else {
+      upstream = answered;
+    }
   } catch (error) {
     if (!(error instanceof CloudConnectionError)) throw error;
     reachability = { reachable: false, message: error.message };
   }
-  for (const map of upstream) {
+  const pending = upstream.filter((map) => !seen.has(map.sourceMapId));
+  // Cache plans are fetched for their sizes alone, so they are worth a request
+  // only when there is an uninstalled map to put a size on.
+  const upstreamBytes = pending.length > 0 ? await upstreamClosureBytes(deadline, signal) : null;
+  for (const map of pending) {
     if (seen.has(map.sourceMapId)) continue;
     seen.add(map.sourceMapId);
     maps.push({
@@ -327,7 +469,7 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access: accessOf(map),
       locked: false,
       ready: { browser: false, semantic: false },
-      closureBytes: closureBytes.get(map.mapVersionId) ?? null,
+      closureBytes: upstreamBytes?.get(map.mapVersionId) ?? null,
     });
   }
   return { maps, upstream: reachability };
@@ -447,8 +589,25 @@ function memberUrl(mapVersionId: string, profile: MapProfile, relativePath: stri
 
 type Progress = LocalMapInstallState["progress"] & object;
 
+/**
+ * One member's transfer failure in the install's own vocabulary: bytes that do
+ * not match the registered digest or size are an integrity failure, a source
+ * the cache could not find at all is a missing member. Anything else (a
+ * cancelled install, a full disk) keeps its own message.
+ */
+function memberTransferError(relativePath: string, error: unknown): unknown {
+  if (!(error instanceof MapCacheError)) return error;
+  if (error.name === "IntegrityError") {
+    return new MapAccessError("MapCacheError", "map_member_integrity", `${relativePath} did not verify: ${error.message}`);
+  }
+  if (error.name === "NotFoundError") {
+    return new MapAccessError("NotFound", "map_member_missing", `${relativePath} is not on this computer: ${error.message}`);
+  }
+  return error;
+}
+
 /** Pull every member of one closure into the cache, counting real completed members and bytes. */
-async function downloadClosure(
+async function transferClosure(
   mapVersionId: string,
   profile: MapProfile,
   members: Map<string, RegistryMember>,
@@ -463,12 +622,17 @@ async function downloadClosure(
       if (signal?.aborted) throw new MapAccessError("MapCacheError", "AbortError", "map install cancelled");
       const index = cursor++;
       const [relativePath, member] = entries[index]!;
-      const result = await ensureMapAsset({
-        requestId: `install:${jobId}:${index}`,
-        url: memberUrl(mapVersionId, profile, relativePath),
-        sha256: member.sha256,
-        sizeBytes: member.byteLength,
-      }, signal);
+      let result;
+      try {
+        result = await ensureMapAsset({
+          requestId: `install:${jobId}:${index}`,
+          url: memberUrl(mapVersionId, profile, relativePath),
+          sha256: member.sha256,
+          sizeBytes: member.byteLength,
+        }, signal);
+      } catch (error) {
+        throw memberTransferError(relativePath, error);
+      }
       if (result.sha256 !== member.sha256 || result.sizeBytes !== member.byteLength) {
         throw new MapAccessError("MapCacheError", "map_member_integrity", `${relativePath} did not verify`);
       }
@@ -490,6 +654,63 @@ async function closureCached(members: Map<string, RegistryMember>): Promise<bool
     if (!cached || cached.sizeBytes !== member.byteLength) return false;
   }
   return true;
+}
+
+/**
+ * The first member whose bytes are not on this computer, or null when the
+ * whole closure can be installed without an upstream. An owner-installed
+ * member is a file in the local object store — the very file the catalog
+ * stats to report the profile as installed; a member that names the map cache
+ * has no other home, so it is present only while the cache holds it.
+ */
+async function missingLocalMember(members: Map<string, RegistryMember>): Promise<string | null> {
+  for (const [relativePath, member] of members) {
+    if (member.bucket === MAP_CACHE_BUCKET) {
+      if (!(await resolveCachedMapAsset(member.sha256))) return relativePath;
+      continue;
+    }
+    try {
+      if (!(await stat(localObjectPath(member.bucket, member.key))).isFile()) return relativePath;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      return relativePath;
+    }
+  }
+  return null;
+}
+
+/**
+ * Install owner-installed closures from this machine: the members are already
+ * registered under their immutable identity, so nothing is published again and
+ * nothing is fetched. Every member still goes through the one map cache, which
+ * verifies it against the registered digest and size (and hardlinks rather
+ * than copies where the filesystem allows), so the result is exactly the
+ * verified closure a download produces.
+ */
+async function ingestInstalledClosures(
+  mapVersionId: string,
+  closures: Array<[MapProfile, Map<string, RegistryMember>]>,
+  progress: Progress,
+  signal?: AbortSignal,
+): Promise<void> {
+  for (const [profile, members] of closures) {
+    if (members.size === 0) {
+      throw new MapAccessError("NotFound", "map_profile_not_installed", `${mapVersionId} has no installed ${profile} closure`);
+    }
+    const missing = await missingLocalMember(members);
+    if (missing !== null) {
+      throw new MapAccessError(
+        "NotFound",
+        "map_profile_not_installed",
+        `${mapVersionId} was installed without its ${profile} member ${missing}`,
+      );
+    }
+    progress.members += members.size;
+    for (const member of members.values()) progress.bytes += member.byteLength;
+  }
+  for (const [profile, members] of closures) {
+    await transferClosure(mapVersionId, profile, members, progress, signal);
+  }
 }
 
 async function storedMembers(members: Map<string, RegistryMember>): Promise<StoredMember[]> {
@@ -621,35 +842,44 @@ async function ensureLocalMapUncounted(
     && (!registered || registered.semantic.size === 0 || !(await closureCached(registered.semantic)));
   if (needsBrowser || needsNative) {
     if (registered?.access === "local") {
-      // An owner-installed release is complete by construction; there is no upstream to fill a missing profile from.
-      throw new MapAccessError("NotFound", "map_profile_not_installed", `${mapVersionId} has no installed ${profile} closure`);
+      // An owner-installed release has no upstream to fill a profile from —
+      // but its members are on this computer: the local object store holds the
+      // very files the catalog stats to report the profile as installed. Only
+      // the sha-keyed map cache is empty (a fresh cache root, or one the user
+      // cleared), so installing means ingesting those bytes, verified, rather
+      // than looking for a release that was never published anywhere.
+      const closures: Array<[MapProfile, Map<string, RegistryMember>]> = [];
+      if (needsBrowser) closures.push(["browser", registered.browser]);
+      if (needsNative) closures.push(["semantic", registered.semantic]);
+      await ingestInstalledClosures(mapVersionId, closures, progress, signal);
+    } else {
+      const descriptor = await upstreamDescriptor(mapVersionId, signal);
+      if (accessOf(descriptor) === "cloud" && !cloudSessionScope().active) {
+        throw new MapAccessError("NotAuthorized", "map_requires_cloud_connection", "map_requires_cloud_connection");
+      }
+      const browserPlan = findPlan(await fetchUpstreamPlan("browser", signal), mapVersionId, "browser");
+      const browserUpstream = planToRegistered(descriptor, browserPlan, "browser");
+      rememberUpstreamMap(browserUpstream);
+      let nativeUpstream: RegisteredMap | null = null;
+      if (needsNative) {
+        const nativePlan = findPlan(await fetchUpstreamPlan("semantic", signal), mapVersionId, "semantic");
+        nativeUpstream = planToRegistered(descriptor, nativePlan, "semantic");
+        rememberUpstreamMap(nativeUpstream);
+      }
+      const browserMembers = registered?.browser.size ? registered.browser : browserUpstream.browser;
+      const toDownload: Array<[MapProfile, Map<string, RegistryMember>]> = [];
+      if (needsBrowser) toDownload.push(["browser", browserMembers]);
+      if (nativeUpstream) toDownload.push(["semantic", nativeUpstream.semantic]);
+      for (const [, members] of toDownload) {
+        progress.members += members.size;
+        for (const member of members.values()) progress.bytes += member.byteLength;
+      }
+      for (const [downloadProfile, members] of toDownload) {
+        await transferClosure(mapVersionId, downloadProfile, members, progress, signal);
+      }
+      await registerDownloadedMap(descriptor, browserPlan, browserMembers, nativeUpstream?.semantic ?? null);
+      registered = await getRegisteredMap(mapVersionId);
     }
-    const descriptor = await upstreamDescriptor(mapVersionId, signal);
-    if (accessOf(descriptor) === "cloud" && !cloudSessionScope().active) {
-      throw new MapAccessError("NotAuthorized", "map_requires_cloud_connection", "map_requires_cloud_connection");
-    }
-    const browserPlan = findPlan(await fetchUpstreamPlan("browser", signal), mapVersionId, "browser");
-    const browserUpstream = planToRegistered(descriptor, browserPlan, "browser");
-    rememberUpstreamMap(browserUpstream);
-    let nativeUpstream: RegisteredMap | null = null;
-    if (needsNative) {
-      const nativePlan = findPlan(await fetchUpstreamPlan("semantic", signal), mapVersionId, "semantic");
-      nativeUpstream = planToRegistered(descriptor, nativePlan, "semantic");
-      rememberUpstreamMap(nativeUpstream);
-    }
-    const browserMembers = registered?.browser.size ? registered.browser : browserUpstream.browser;
-    const toDownload: Array<[MapProfile, Map<string, RegistryMember>]> = [];
-    if (needsBrowser) toDownload.push(["browser", browserMembers]);
-    if (nativeUpstream) toDownload.push(["semantic", nativeUpstream.semantic]);
-    for (const [, members] of toDownload) {
-      progress.members += members.size;
-      for (const member of members.values()) progress.bytes += member.byteLength;
-    }
-    for (const [downloadProfile, members] of toDownload) {
-      await downloadClosure(mapVersionId, downloadProfile, members, progress, signal);
-    }
-    await registerDownloadedMap(descriptor, browserPlan, browserMembers, nativeUpstream?.semantic ?? null);
-    registered = await getRegisteredMap(mapVersionId);
   }
   if (!registered || registered.browser.size === 0 || (profile === "semantic" && registered.semantic.size === 0)) {
     throw new MapAccessError("MapCacheError", "map_registration_incomplete", `${mapVersionId} did not register completely`);

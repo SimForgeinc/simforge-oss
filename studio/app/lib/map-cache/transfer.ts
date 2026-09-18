@@ -8,7 +8,7 @@
 
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, open, rename } from "node:fs/promises";
+import { link, mkdir, open, rename } from "node:fs/promises";
 import { request as httpRequest, type IncomingHttpHeaders, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { extname, join } from "node:path";
@@ -17,6 +17,7 @@ import {
   abortError,
   availableBytes,
   type CacheStore,
+  COPY_INSTEAD_OF_LINK,
   DEFAULT_MEDIA_TYPE,
   errorCode,
   errorMessage,
@@ -224,15 +225,79 @@ export async function transferIntoStore(args: TransferArgs): Promise<Transferred
   }
 }
 
-async function copyFileIntoStore({ store, canonicalUrl, expectedSha256, partKey, sizeBytes, signal }: TransferArgs, sourcePath: string): Promise<Transferred> {
+/**
+ * Ingest a member that already exists on this machine (a registry release
+ * installed by the owner, whose blob rows name the local object store).
+ *
+ * The file is hashed and then HARDLINKED into `objects/` under its digest, so
+ * a 10 GB closure costs one verifying read and no second copy on disk. The
+ * link deliberately goes to the final object path and never to a `.part`:
+ * `objects/` is only ever read, unlinked, or replaced by `rename` (a new
+ * inode), whereas a part is opened for writing and appended to by a resumed
+ * download — which would write straight through the shared inode into the
+ * canonical installed store. A filesystem that refuses the link falls back to
+ * a bounded streaming copy through a part of its own.
+ */
+async function copyFileIntoStore(args: TransferArgs, sourcePath: string): Promise<Transferred> {
+  const { store, canonicalUrl, expectedSha256, sizeBytes, signal } = args;
   const name = assetName(canonicalUrl);
   if (signal.aborted) throw abortError(`Download of ${name} was cancelled`);
   const info = await statOrNull(sourcePath);
-  if (!info?.isFile()) throw new MapCacheError(`${name} is not available in the local map store`);
+  if (!info?.isFile()) throw new MapCacheError(`${name} is not available in the local map store`, "NotFoundError");
   if (sizeBytes !== null && info.size !== sizeBytes) {
     throw new MapCacheError(`${name} is ${formatBytes(info.size)} in the local map store but the map manifest declares ${formatBytes(sizeBytes)}`, "IntegrityError");
   }
-  await assertFreeSpace(store, name, info.size);
+  // The digest of the very inode the link would publish; a source that
+  // disagrees with the manifest is never linked in the first place.
+  const sha256 = await hashFile(args, sourcePath, name);
+  if (expectedSha256 && sha256 !== expectedSha256) {
+    throw new MapCacheError(`Integrity check failed for ${name}: the local map store bytes do not match the map manifest`, "IntegrityError");
+  }
+  const lower = name.toLowerCase();
+  const mediaType = lower.endsWith(".gz") ? "application/gzip" : MEDIA_TYPE_BY_EXTENSION[extname(lower)] ?? DEFAULT_MEDIA_TYPE;
+  const final = store.objectPath(sha256);
+  await mkdir(join(store.objectsDir, sha256.slice(0, 2)), { recursive: true });
+  // Two rounds at most: an object already at the path is either verified (keep
+  // those bytes) or discarded by `verified()`, which frees the name once.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const kept = await store.verified(sha256);
+    if (kept) return { sha256, sizeBytes: kept.bytes, mediaType: kept.mediaType };
+    try {
+      await link(sourcePath, final);
+    } catch (error) {
+      const code = errorCode(error) ?? "";
+      if (code === "EEXIST") continue;
+      if (COPY_INSTEAD_OF_LINK.includes(code)) break;
+      throw new MapCacheError(`Linking ${name} into the map cache failed: ${errorMessage(error)}`, "NetworkError");
+    }
+    await store.published(sha256, mediaType, null, null);
+    return { sha256, sizeBytes: info.size, mediaType };
+  }
+  return copyFileThroughPart(args, sourcePath, name, mediaType, info.size);
+}
+
+/** Digest of a local file, cancellable, since a closure member can be gigabytes. */
+async function hashFile({ signal }: TransferArgs, path: string, name: string): Promise<string> {
+  const hash = createHash("sha256");
+  try {
+    for await (const chunk of createReadStream(path, { signal })) hash.update(chunk as Buffer);
+  } catch (error) {
+    if (signal.aborted) throw abortError(`Download of ${name} was cancelled`);
+    throw new MapCacheError(`Reading ${name} from the local map store failed: ${errorMessage(error)}`, "NetworkError");
+  }
+  return hash.digest("hex");
+}
+
+/** Cross-device (or link-refusing) fallback: a real copy, published like a download. */
+async function copyFileThroughPart(
+  args: TransferArgs,
+  sourcePath: string,
+  name: string,
+  mediaType: string,
+  size: number,
+): Promise<Transferred> {
+  const { store, expectedSha256, partKey, signal } = args;
+  await assertFreeSpace(store, name, size);
   const part = store.partPath(partKey);
   await store.discardPart(part);
   const hash = createHash("sha256");
@@ -259,8 +324,6 @@ async function copyFileIntoStore({ store, canonicalUrl, expectedSha256, partKey,
     await store.discardPart(part);
     throw new MapCacheError(`Integrity check failed for ${name}: the local map store bytes do not match the map manifest`, "IntegrityError");
   }
-  const lower = name.toLowerCase();
-  const mediaType = lower.endsWith(".gz") ? "application/gzip" : MEDIA_TYPE_BY_EXTENSION[extname(lower)] ?? DEFAULT_MEDIA_TYPE;
   return publishPart({ store, part, sha256, written, mediaType, etag: null, contentEncoding: null });
 }
 

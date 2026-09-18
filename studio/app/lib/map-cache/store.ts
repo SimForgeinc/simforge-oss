@@ -41,6 +41,8 @@ const DURABLE_PART_FILE = /^[a-f0-9]{64}\.part$/;
 /** Journal lines before the index snapshot is rewritten (amortizes the O(N) rewrite). */
 const COMPACT_AFTER = 4096;
 export const DEFAULT_MEDIA_TYPE = "application/octet-stream";
+/** `link(2)` failures that mean "copy instead", not "give up". */
+export const COPY_INSTEAD_OF_LINK = ["EXDEV", "EPERM", "EMLINK", "ENOTSUP", "EOPNOTSUPP", "EACCES", "ENOSYS"];
 
 /** Errors whose messages are shown to the user verbatim by the renderer. */
 export class MapCacheError extends Error {

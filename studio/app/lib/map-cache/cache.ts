@@ -29,6 +29,7 @@ import {
   assertWritable,
   availableBytes,
   CacheStore,
+  COPY_INSTEAD_OF_LINK,
   errorCode,
   errorMessage,
   isReceipt,
@@ -48,8 +49,6 @@ export const MAP_CACHE_STREAM_PATH = "/api/simforge/map-cache/stream";
 export const MATERIALIZED_SIDECAR = ".simforge-materialized.json";
 const MAX_RECEIPT_KEY_LENGTH = 1024;
 const MATERIALIZE_CONCURRENCY = 4;
-/** `link(2)` failures that mean "copy instead", not "give up". */
-const COPY_INSTEAD_OF_LINK = ["EXDEV", "EPERM", "EMLINK", "ENOTSUP", "EOPNOTSUPP", "EACCES", "ENOSYS"];
 
 /** The map access policy the service defers to (owned by LocalCloudMaps). */
 export type MapCacheAccess = {
