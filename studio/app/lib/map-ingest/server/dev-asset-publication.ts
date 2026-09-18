@@ -578,6 +578,127 @@ export async function publishMapClosure({
 }
 
 /**
+ * What a completed publication of one installed release looks like, read back
+ * from the catalog instead of recomputed from the installed bytes.
+ */
+export type PublishedRegistryInstallation = {
+  mapVersionId: string;
+  objectCount: number;
+  byteLength: number;
+  sumoNetworkSha256: string | null;
+  thumbnailBytes: number;
+};
+
+type PublishedInstallationRow = {
+  map_version_id: string;
+  sumo_network_sha256: string | null;
+  browser_asset_set_id: string;
+  object_count: number | string;
+  byte_length: number | string;
+  native_map_asset_set_id: string;
+  native_object_count: number | string;
+  native_byte_length: number | string;
+  thumbnail_byte_length: number | string;
+};
+
+type ClosureCountRow = { object_count: number | string; byte_length: number | string };
+
+/**
+ * The publication this catalog already holds for exactly the release that is
+ * installed, or null when that release must be published.
+ *
+ * The release digest is the content identity: the registry installer writes it
+ * only after every member verified, `resolveRegistryMapInstallation` requires
+ * all three installed profiles to name the same release, and publication binds
+ * it to the map version (`derivative_release_id`, descriptor
+ * `registryReleaseDigest`) and to the native asset set. A rebuilt or upgraded
+ * bundle therefore presents a digest this catalog holds no publication for and
+ * is published; keying on the map alone would serve its old geometry forever.
+ *
+ * Completeness is read the way publication established it - a live row bound
+ * to its available browser and native asset sets under this asset catalog
+ * binding, carrying an available thumbnail artifact, with both closures still
+ * counting out to the members they recorded. Anything less is a partial
+ * publication and is published again.
+ */
+export async function findPublishedRegistryInstallation({
+  map,
+  installation,
+  assetCatalogVersionId,
+}: {
+  map: DevAssetMap;
+  installation: RegistryMapInstallation;
+  assetCatalogVersionId: string;
+}): Promise<PublishedRegistryInstallation | null> {
+  const [slug] = map;
+  const receipt = installation.webReceipt;
+  const published = await queryOne<PublishedInstallationRow>(
+    `SELECT mv.id AS map_version_id, mv.sumo_network_sha256,
+            bs.id AS browser_asset_set_id, bs.object_count, bs.byte_length,
+            ns.id AS native_map_asset_set_id,
+            ns.object_count AS native_object_count, ns.byte_length AS native_byte_length,
+            ta.byte_length AS thumbnail_byte_length
+       FROM simforge.map_versions mv
+       JOIN simforge.browser_asset_sets bs
+         ON bs.id = mv.browser_asset_set_id AND bs.workspace_id = mv.workspace_id
+        AND bs.asset_set_state = 'available'
+        AND bs.closure_sha256 = mv.descriptor->>'browserClosureSha256'
+       JOIN simforge.native_map_asset_sets ns
+         ON ns.id = mv.native_map_asset_set_id AND ns.workspace_id = mv.workspace_id
+        AND ns.asset_set_state = 'available'
+        AND ns.registry_release_digest = :release_digest
+        AND ns.canonical_digest = :canonical_digest
+       JOIN simforge.artifacts ta
+         ON ta.id = mv.thumbnail_artifact_id AND ta.workspace_id = mv.workspace_id
+        AND ta.artifact_state = 'available' AND ta.deleted_at IS NULL
+      WHERE mv.workspace_id = :workspace_id
+        AND mv.source_map_asset_id = :source_map_asset_id
+        AND mv.derivative_release_id = :release_digest
+        AND mv.descriptor->>'registryReleaseDigest' = :release_digest
+        AND mv.asset_catalog_version_id = :asset_catalog_version_id
+        AND mv.retired_at IS NULL
+      LIMIT 1`,
+    {
+      workspace_id: LOCAL_WORKSPACE_ID,
+      source_map_asset_id: slug,
+      release_digest: receipt.releaseDigest,
+      canonical_digest: receipt.canonicalDigest,
+      asset_catalog_version_id: assetCatalogVersionId,
+    },
+  );
+  if (!published) return null;
+  const browserMembers = await queryOne<ClosureCountRow>(
+    `SELECT COUNT(*)::int AS object_count, COALESCE(SUM(b.byte_length), 0)::bigint AS byte_length
+       FROM simforge.browser_asset_members m
+       JOIN simforge.browser_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
+      WHERE m.asset_set_id = :asset_set_id`,
+    { asset_set_id: published.browser_asset_set_id },
+  );
+  const nativeMembers = await queryOne<ClosureCountRow>(
+    `SELECT COUNT(*)::int AS object_count, COALESCE(SUM(b.byte_length), 0)::bigint AS byte_length
+       FROM simforge.native_map_asset_members m
+       JOIN simforge.native_map_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
+      WHERE m.asset_set_id = :asset_set_id`,
+    { asset_set_id: published.native_map_asset_set_id },
+  );
+  if (
+    Number(browserMembers?.object_count) !== Number(published.object_count) ||
+    Number(browserMembers?.byte_length) !== Number(published.byte_length) ||
+    Number(nativeMembers?.object_count) !== Number(published.native_object_count) ||
+    Number(nativeMembers?.byte_length) !== Number(published.native_byte_length)
+  ) {
+    return null;
+  }
+  return {
+    mapVersionId: published.map_version_id,
+    objectCount: Number(published.object_count),
+    byteLength: Number(published.byte_length),
+    sumoNetworkSha256: published.sumo_network_sha256,
+    thumbnailBytes: Number(published.thumbnail_byte_length),
+  };
+}
+
+/**
  * Publish a registry release installed on this machine (a development input:
  * the three verified profile directories of one release). An installed web
  * profile is self-contained, so it alone is the browser closure; every member

@@ -13,6 +13,7 @@ import {
 import { queryRows, shutdownDatabase, withTransaction } from "../app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import {
+  findPublishedRegistryInstallation,
   publishRegistryInstallation,
   resolveRegistryMapInstallation,
   type DevAssetMap,
@@ -284,9 +285,27 @@ export async function seed(): Promise<void> {
   await seedIdentity();
   await seedPublicationBinding();
   await seedSumoRuntime(semanticProfilesRoot);
-  let skipped = 0;
+  // Publication is idempotent: an installed release already published
+  // unchanged costs one catalog read instead of re-hashing its whole closure,
+  // which is what made every boot republish tens of gigabytes of members.
+  let upToDate = 0;
+  let failed = 0;
   for (const publication of installedMaps) {
     try {
+      const already = await findPublishedRegistryInstallation({
+        map: publication.map,
+        installation: publication.installation,
+        assetCatalogVersionId: catalogVersionId,
+      });
+      if (already) {
+        upToDate += 1;
+        console.log(
+          `up to date ${publication.map[0]}: ${already.objectCount} browser members, `
+          + `${already.byteLength} bytes, SUMO ${already.sumoNetworkSha256 ? "ready" : "unavailable"}, `
+          + `thumbnail ${already.thumbnailBytes} bytes`,
+        );
+        continue;
+      }
       const result = await publishRegistryInstallation({
         map: publication.map,
         installation: publication.installation,
@@ -298,14 +317,17 @@ export async function seed(): Promise<void> {
         + `thumbnail ${result.thumbnailBytes} bytes`,
       );
     } catch (error) {
-      skipped += 1;
+      failed += 1;
       console.warn(`skipped ${publication.map[0]}: ${
         error instanceof Error ? error.message : String(error)
       }`);
     }
   }
-  if (skipped > 0) {
-    console.warn(`${skipped}/${installedMaps.length} installed maps skipped`);
+  if (upToDate > 0) {
+    console.log(`${upToDate}/${installedMaps.length} installed maps already published`);
+  }
+  if (failed > 0) {
+    console.warn(`${failed}/${installedMaps.length} installed maps skipped`);
   }
   const maps = await queryRows<{ id: string; label: string }>(
     "SELECT id, label FROM simforge.map_versions WHERE retired_at IS NULL ORDER BY label",
