@@ -26,7 +26,6 @@ export function DatasetRenderPane({
   documentId,
   initialDocumentTitle,
   initialRevisionId,
-  resolveDocument,
   onClose,
   onRenderActivityChange,
   onImmersiveChange,
@@ -35,12 +34,6 @@ export function DatasetRenderPane({
   /** Shown while the record is in flight, so a warm list does not flash an empty title. */
   initialDocumentTitle: string | null;
   initialRevisionId: string | null;
-  /**
-   * Unused: the pane always reads its own record now. Still accepted so the dataset client on
-   * `main` keeps typechecking while the branches land; its deletion, here and at the call site, is
-   * a single post-merge cleanup.
-   */
-  resolveDocument?: boolean;
   onClose: () => void;
   onRenderActivityChange?: (activityKey: string, live: boolean) => void;
   /** True while the pane shows one render or the create form, which claim the full width. */

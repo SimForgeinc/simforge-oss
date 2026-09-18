@@ -745,7 +745,6 @@ export function ScenarioDatasetsClient({
                 documentId={renderTarget.id}
                 initialDocumentTitle={renderTarget.title || null}
                 initialRevisionId={renderTarget.latestRevisionId}
-                resolveDocument={!renderTarget.title}
                 onClose={closeRenderPane}
                 onRenderActivityChange={handleRenderActivityChange}
                 onImmersiveChange={setRenderImmersive}
