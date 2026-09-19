@@ -1,3 +1,4 @@
+import { sha256BytesAsync } from '@simforge-oss/engine/hash';
 import {
   AgXToneMapping,
   Box3,
@@ -23,13 +24,15 @@ import type { CameraControlPreferences } from './camera-drag';
 import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose, initialEditorFocus } from './camera-envelope';
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
+import { disposeAlbedoInspection, registerAlbedoTexture } from './albedo-color';
 import {
   collectResources,
   disposeResources,
   estimateResourceBytes,
   getGLTFLoader,
   parseMapGLTF,
-  trackedTextureDimension,
+  trackedTextureStats,
+  type MapTextureSource,
   resourceDirectory,
   disposeTrackedLoader,
 } from './gltf';
@@ -47,7 +50,8 @@ import { SurfaceMaterialRegistry, type SurfaceMaterialProfile } from './surface-
 import { SnowCoverController } from './snow-cover';
 import { WeatherController, type CityWeatherAppearance } from './weather';
 import { ShadowAtlas } from './shadow-atlas';
-import { allowsSourceAssetFallback, isCityAssetVariantManifest, resolveSnowCoverVariant, selectAssetVariant, type CityAssetVariantManifest } from './asset-variants';
+import { allowsSourceAssetFallback, isCityAssetVariantManifest, probeTextureCapabilities, resolveSnowCoverVariant, selectAssetVariant, selectTextureTier } from './asset-variants';
+import type { CityAssetVariant, CityAssetVariantId, CityAssetVariantManifest, TextureTierIndex, TextureVariantId } from './asset-variants';
 import {
   ATMOSPHERE_LAYER,
   CLEAR_SKY,
@@ -92,6 +96,8 @@ import type {
   LayerCoverage,
   RendererCapability,
   VegetationInstanceFile,
+  MapTextureTier,
+  TierSelection,
 } from './types';
 
 export interface CityViewerLayers {
@@ -135,6 +141,7 @@ const DEFAULTS = {
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
   textureMaxDimension: Infinity,
+  mapTextureTier: 'medium' as MapTextureTier,
   resolveAssetUrls: null,
   maxConcurrentLoads: 2,
   uploadBudgetMs: 5,
@@ -215,6 +222,11 @@ const VEG_BAND_KEEP_ROW = [0, 2, 3];
 const _rayOrigin = new Vector3();
 const _down = new Vector3(0, -1, 0);
 const _cameraPos = new Vector3();
+// React StrictMode reuses the canvas across effect teardown/setup. Its new
+// renderer gets the SAME WebGL context while the old compile polls drain.
+const canvasRendererOwners = new WeakMap<HTMLCanvasElement, WebGLRenderer>();
+const releasedCanvasContexts = new WeakMap<HTMLCanvasElement, WebGLRenderingContext | WebGL2RenderingContext>();
+
 const _sunTravel = new Vector3();
 
 /**
@@ -308,6 +320,10 @@ export class CityViewer {
   private readonly cityViewProjection = new Matrix4();
   private textureLoadAbort = new AbortController();
   private effectiveTextureMaxDimension = Infinity;
+  private tierSelection!: TierSelection;
+  private textureTierIndex: TextureTierIndex | null = null;
+  private textureSources: ReadonlyMap<string, MapTextureSource> = new Map();
+  private sourceManifestSha256 = '';
   private textureBudgetRecovery: Promise<void> | null = null;
   private pendingTextureBudgetError: RequiredAssetBudgetError | null = null;
   private readonly phaseStats = {
@@ -380,7 +396,11 @@ export class CityViewer {
   private readonly snowCover: SnowCoverController;
   private readonly weather: WeatherController;
   private weatherAppearance: CityWeatherAppearance | null = null;
-  private readonly variantLoads = { original: 0, 'geometry-only': 0, ktx2: 0 };
+  private activityHeld = false;
+  private readonly variantLoads: Record<CityAssetVariantId | 'original', number> = {
+    original: 0, 'geometry-only': 0, ktx2: 0, 'textures-256-uastc': 0,
+    'textures-512-uastc': 0, 'textures-512-bc7': 0, 'textures-512-astc': 0,
+  };
   private variantFallbacks = 0;
   private assetVariantReloadGeneration = 0;
   private streamingError: string | null = null;
@@ -418,6 +438,12 @@ export class CityViewer {
   }
 
   constructor(canvas: HTMLCanvasElement, options: CityViewerOptions = {}) {
+    if (releasedCanvasContexts.get(canvas)?.isContextLost()) {
+      const error = new Error("This canvas's WebGL context was released by a previous renderer; create a new canvas");
+      error.name = 'CanvasContextReleasedError';
+      throw error;
+    }
+    releasedCanvasContexts.delete(canvas);
     this.canvas = canvas;
     // Explicit undefined must not clobber a default (callers routinely spread
     // partially-filled option objects).
@@ -434,6 +460,8 @@ export class CityViewer {
       alpha: false,
       stencil: false,
     });
+    canvasRendererOwners.set(canvas, this.renderer);
+    this.tierSelection = selectTextureTier(this.options.mapTextureTier, probeTextureCapabilities(this.renderer.getContext()));
     this.renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
       const error = new Error(`WebGL shader compilation/linking failed: ${gl.getProgramInfoLog(program) || 'no program log'}\nVertex: ${gl.getShaderInfoLog(vertexShader) || ''}\nFragment: ${gl.getShaderInfoLog(fragmentShader) || ''}`);
       console.error(error);
@@ -482,7 +510,7 @@ export class CityViewer {
       ),
       maxConcurrentDerivatives: 2,
       loadDerivative: async (derivative, signal) => {
-        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
+        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
         const gltf = await parseMapGLTF(loader, buffer, resourceDirectory(derivativeUrl));
@@ -596,10 +624,9 @@ export class CityViewer {
   private async loadMapInner(manifestUrl: string): Promise<void> {
     const url = this.options.baseUrl ? resolveUrl(this.options.baseUrl, manifestUrl) : manifestUrl;
     this.assetBase = url.replace(/[^/]*$/, '');
-    const manifest = (await fetch(url, { signal: this.abort.signal }).then((r) => {
-      if (!r.ok) throw new Error(`manifest ${r.status} ${url}`);
-      return this.readJsonResponse(r);
-    })) as CityManifest;
+    const manifestBuffer = await this.fetchBuffer(url, this.abort.signal);
+    const manifest = JSON.parse(new TextDecoder().decode(manifestBuffer)) as CityManifest;
+    this.sourceManifestSha256 = await sha256BytesAsync(manifestBuffer);
     if (this.disposed) return;
     this.manifest = manifest;
     const [staticSemantics, variantManifest] = await Promise.all([
@@ -615,6 +642,7 @@ export class CityViewer {
     const center = this.sceneBox.getCenter(new Vector3());
     const size = this.sceneBox.getSize(new Vector3());
     this.frameCamera(initialEditorFocus(center, manifest.tiles), size);
+    await this.configureTextureTier();
 
     const sunDir = manifest.shadowLightmap?.sunDirection ?? [-0.5, -0.6, -0.6];
     const sunTravel = new Vector3(sunDir[0] ?? -0.5, sunDir[1] ?? -0.6, sunDir[2] ?? -0.6);
@@ -654,6 +682,7 @@ export class CityViewer {
     // as soon as the layers existed, so every consumer announced a ready scene
     // with nothing in it and the buildings appeared seconds later.
     await this.whenViewResident();
+    if (this.streamingError) throw new Error(this.streamingError);
   }
 
   /**
@@ -680,6 +709,7 @@ export class CityViewer {
   private viewResidentNow(): boolean {
     if (this.disposed || this.streamingError !== null || this.renderingSuspended) return true;
     if (!this.roadLayer?.ready) return false;
+    if (this.roadLayer.stats().requiredPendingAssets > 0) return false;
     const city = this.cityLayer;
     if (!city) return true;
     return city.ready && city.missingInView === 0;
@@ -693,6 +723,7 @@ export class CityViewer {
       const waiter = this.viewResidentWaiters[i];
       if (!waiter) continue;
       if (!resident && now < waiter.deadline) continue;
+      if (!resident) this.streamingError = 'Required geometry and selected texture tier did not become resident before the readiness deadline';
       this.viewResidentWaiters.splice(i, 1);
       waiter.resolve();
     }
@@ -929,6 +960,7 @@ export class CityViewer {
       debug: this.options.debugShadowProjection,
       fadeStartY: box.min.y + fadeFrom,
       fadeEndY: box.min.y + fadeTo,
+      maskOnlyAlbedo: true,
     };
   }
 
@@ -983,18 +1015,115 @@ export class CityViewer {
     }
   }
 
-  /** Parse an optimized local derivative, then retry source unless Ultra Low forbids textures. */
+  private async configureTextureTier(forceLowReason?: string): Promise<void> {
+    const capabilities = probeTextureCapabilities(this.renderer.getContext());
+    capabilities.maxTextureSize = Math.min(capabilities.maxTextureSize, this.options.textureMaxDimension);
+    let selection = selectTextureTier(this.options.mapTextureTier, capabilities);
+    if (forceLowReason) {
+      selection = { ...selectTextureTier('low', capabilities), requested: this.options.mapTextureTier, downgradeReason: forceLowReason };
+    }
+    for (;;) {
+      let id = selection.variantId as TextureVariantId;
+      let reference = this.variantManifest?.variants[id];
+      if (!reference && selection.actual === 'medium' && selection.codec !== 'uastc') {
+        id = 'textures-512-uastc';
+        selection = { ...selection, codec: 'uastc', variantId: id, downgradeReason: `Published ${selection.codec} derivative unavailable; using portable UASTC` };
+        reference = this.variantManifest?.variants[id];
+      }
+      if (!reference) throw new Error(`Map lacks published ${id}; publish texture-tiers before loading this map`);
+      if (this.variantManifest?.sourceManifestSha256 !== this.sourceManifestSha256
+        || reference.sourceManifestSha256 !== this.sourceManifestSha256 || reference.schemaVersion !== 1
+        || !/^[a-z0-9-]+\.json$/.test(reference.file)) throw new Error('Texture derivative is not bound to this source manifest');
+      const bytes = await this.fetchBuffer(resolveUrl(this.assetBase, `variants/${reference.file}`), this.abort.signal, reference.bytes);
+      const digest = await sha256BytesAsync(bytes);
+      if (digest !== reference.outputSha256 || reference.digest !== `sha256-${digest}`) throw new Error(`Texture index digest mismatch: ${id}`);
+      const index = JSON.parse(new TextDecoder().decode(bytes)) as TextureTierIndex;
+      if (index.schemaVersion !== 1 || index.id !== id || index.codec !== selection.codec
+        || index.longestEdgePx !== selection.longestEdgePx || index.sourceManifestSha256 !== this.sourceManifestSha256
+        || !index.images || !index.assets) throw new Error(`Invalid texture index: ${id}`);
+      const sources = new Map<string, MapTextureSource>();
+      for (const [source, image] of Object.entries(index.images)) {
+        if (!/^\.\.\/images\/[^/]+\.ktx2$/.test(source)
+          || !/^variants\/objects\/[a-f0-9]{64}\.ktx2$/.test(image.file)
+          || !/^[a-f0-9]{64}$/.test(image.outputSha256)
+          || !Number.isFinite(image.residentBytes) || image.residentBytes < 0
+          || !(image.width > 0 && image.height > 0) || Math.max(image.width, image.height) > index.longestEdgePx
+          || image.width > image.sourceWidth || image.height > image.sourceHeight
+          || ![selection.codec, 'rgba'].includes(image.codec)) throw new Error(`Invalid texture index image: ${source}`);
+        sources.set(new URL(source, new URL(this.assetBase, document.baseURI)).href, {
+          url: new URL(image.file, new URL(this.assetBase, document.baseURI)).href, digest: image.outputSha256, codec: image.codec,
+          authoredWidth: image.sourceWidth, authoredHeight: image.sourceHeight,
+        });
+      }
+      // Demand is the union of images used by the actual readiness footprint,
+      // not an equal slice of budget for every tile anywhere in the map.
+      this.updateCityFrustum();
+      const requiredImages = new Set<string>();
+      const add = (file: string): void => {
+        const asset = index.assets[file];
+        if (!asset) throw new Error(`Texture index omits required asset ${file}`);
+        for (const source of asset.images) {
+          if (!index.images[source]) throw new Error(`Texture index omits image ${source}`);
+          requiredImages.add(source);
+        }
+      };
+      for (const layer of this.manifest?.staticLayers ?? []) if (layer.file.endsWith('.glb')) add(layer.file);
+      for (const tile of this.manifest?.tiles ?? []) {
+        const box = boxOf(tile.bounds.min, tile.bounds.max);
+        const distance = box.distanceToPoint(this.camera.position);
+        if (distance <= READY_RADIUS_M || (distance <= READY_DISTANCE_M && this.cityFrustum.intersectsBox(box))) {
+          for (const lod of tile.lods) add(lod.file);
+        }
+      }
+      const gl = this.renderer.getContext();
+      const rgbaOnly = selection.codec === 'uastc' && !capabilities.bc7 && !capabilities.astc
+        && !gl.getExtension('WEBGL_compressed_texture_s3tc') && !gl.getExtension('WEBGL_compressed_texture_etc');
+      let requiredBytes = 0;
+      for (const source of requiredImages) {
+        const image = index.images[source]!;
+        const needsRgba = rgbaOnly && image.width % 4 === 0 && image.height % 4 === 0;
+        requiredBytes += image.residentBytes * (needsRgba ? 4 : 1);
+      }
+      if (requiredBytes > this.options.byteBudget * 0.5) {
+        if (selection.actual === 'low') throw new Error(`Low texture working set (${requiredBytes} bytes) exceeds the resident texture budget`);
+        selection = { ...selectTextureTier('low', capabilities), requested: this.options.mapTextureTier,
+          downgradeReason: `Visible unique-image demand (${requiredBytes} bytes) exceeds the Medium texture budget (${this.options.byteBudget * 0.5} bytes)` };
+        continue;
+      }
+      this.tierSelection = selection;
+      this.textureTierIndex = index;
+      this.textureSources = sources;
+      this.effectiveTextureMaxDimension = selection.longestEdgePx ?? Infinity;
+      return;
+    }
+  }
+
+  /** Switch representations without changing the editor camera or geometry. */
+  async setMapTextureTier(tier: MapTextureTier): Promise<void> {
+    if (tier === this.options.mapTextureTier) return;
+    this.options.mapTextureTier = tier;
+    await this.mapLoadQueue;
+    if (!this.manifest || this.disposed) return;
+    await this.runPresetTransition(async () => {
+      await this.configureTextureTier();
+      await this.reloadAssetVariant();
+    });
+    await this.whenViewResident();
+  }
+
+  /** Tier image bindings are immutable; failed texture tiers never fall back to full downloads. */
   private async parseAsset(sourceFile: string, signal: AbortSignal, sourceBytes?: number | null) {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const selected = selectAssetVariant(this.variantManifest, sourceFile, this.options.assetVariant, {
+    const preference = this.options.assetVariant === 'geometry-only' ? 'geometry-only' : this.tierSelection.variantId as TextureVariantId;
+    const selected = selectAssetVariant(this.variantManifest, sourceFile, preference, {
       ktx2Ready: true,
     });
     const selectedBytes = selected.variant === 'original'
       ? sourceBytes
-      : this.variantManifest?.variants[selected.variant]?.files[sourceFile]?.bytes;
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
+      : (this.variantManifest?.variants[selected.variant] as CityAssetVariant | undefined)?.files?.[sourceFile]?.bytes ?? sourceBytes;
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
@@ -1025,7 +1154,7 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(fileUrl));
@@ -1064,6 +1193,8 @@ export class CityViewer {
       }
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       for (const mat of mats) {
+        const albedo = (mat as Material & { map?: Texture | null }).map;
+        if (albedo?.isTexture) registerAlbedoTexture(albedo);
         for (const value of Object.values(mat as unknown as Record<string, unknown>)) {
           const tex = value as Texture | null;
           if (tex && (tex as unknown as { isTexture?: boolean }).isTexture) {
@@ -1530,7 +1661,28 @@ export class CityViewer {
       : sum((s) => s.compiling) > 0 ? 'compiling'
       : sum((s) => s.loading + s.queued + s.uploading) + auxiliaryPending > 0 ? 'decoding'
       : 'ready';
+    const dimensions: Record<string, number> = {};
+    const sources = new Set<object>();
+    for (const layer of [this.roadLayer, this.cityLayer, this.vegLayer]) {
+      for (const entry of layer?.entries.values() ?? []) for (const asset of entry.resident.values()) {
+        for (const texture of asset.resources.textures) {
+          if (sources.has(texture.source) || !texture.userData.mapTexture) continue;
+          sources.add(texture.source);
+          const image = texture.image as { width: number; height: number };
+          const key = `${image.width}x${image.height}`;
+          dimensions[key] = (dimensions[key] ?? 0) + 1;
+        }
+      }
+    }
+    const usable = this.mapLoaded && !this.disposed && !this.renderingSuspended && !streamingError && this.roadReady
+      && (city?.missingInViewTiles ?? 0) === 0;
+    const targetQualityReady = usable && Boolean(this.textureTierIndex) && this.viewResidentNow()
+      && this.presetTransitions === 0;
     return {
+      tierSelection: this.tierSelection,
+      usable,
+      targetQualityReady,
+      mapTextures: { dimensions, ...trackedTextureStats(this.downloadTracker) },
       fps: this.fps,
       frameMsAvg: this.frameStats.avg(),
       frameMsP50: this.frameStats.percentile(0.5),
@@ -1559,7 +1711,7 @@ export class CityViewer {
         uploadedTextures: sum((s) => s.uploadedTextures),
         compiledAssets: sum((s) => s.compiledAssets),
         stage,
-        ...(Number.isFinite(this.effectiveTextureMaxDimension) ? { textureMaxDimension: Math.min(this.effectiveTextureMaxDimension, trackedTextureDimension(this.downloadTracker)) } : {}),
+        textureMaxDimension: this.effectiveTextureMaxDimension,
       },
       jsHeapMB: jsHeapMB(),
       cameraMode: this.controls.mode,
@@ -1602,6 +1754,17 @@ export class CityViewer {
     return this.renderingSuspended;
   }
 
+  /** Activity owns no simulation while hidden; unlike visual suspension, stop RAF and onFrame too. */
+  setActivityHeld(held: boolean): void {
+    if (held === this.activityHeld || this.disposed) return;
+    this.activityHeld = held;
+    this.setRenderingSuspended(held);
+    if (held) cancelAnimationFrame(this.rafHandle);
+    else {
+      this.lastFrameTime = performance.now();
+      this.rafHandle = requestAnimationFrame(this.tick);
+    }
+  }
   getLiveQuality(): CityViewerLiveQuality {
     const {
       maxPixelRatio,
@@ -1683,7 +1846,7 @@ export class CityViewer {
       ? Math.max(128, Math.floor(requested)) : Infinity;
     if (textureDimension === this.options.textureMaxDimension) return;
     this.options.textureMaxDimension = textureDimension;
-    this.effectiveTextureMaxDimension = textureDimension;
+    // Explicit limits are device constraints, never a silent quality ratchet.
     // Restore the unweathered scene before renderer-owned resources are
     // swapped. The desired appearance is reapplied at the end of the
     // transition.
@@ -1694,7 +1857,7 @@ export class CityViewer {
     this.streamingError = null;
     this.detailFailures = 0;
     this.detailError = null;
-    void this.runPresetTransition(() => this.reloadAssetVariant());
+    void this.runPresetTransition(async () => { await this.configureTextureTier(); await this.reloadAssetVariant(); });
     this.refreshWeatherAppearance();
   }
 
@@ -1709,10 +1872,6 @@ export class CityViewer {
     }
   }
 
-  private mapTextureBudgetPerAsset(): number {
-    // Reserve half the budget for geometry, environment resources and work in flight.
-    return this.options.byteBudget * 0.5 / Math.max(1, (this.manifest?.tiles.length ?? 0) + 1);
-  }
 
   /**
    * A detail tile gave up after its retries. The map stays usable, so this is
@@ -1737,17 +1896,11 @@ export class CityViewer {
       this.pendingTextureBudgetError = error;
       return;
     }
-    const activeTextureLimit = Math.min(this.effectiveTextureMaxDimension, trackedTextureDimension(this.downloadTracker));
-    if (error instanceof RequiredAssetBudgetError && activeTextureLimit > 128) {
-      const city = this.cityLayer?.stats();
-      const residentTiles = Math.max(1, city?.residentAssets ?? 0);
-      const totalTiles = residentTiles + (city?.requiredPendingAssets ?? 0);
-      const projectedBytes = Math.max(this.options.byteBudget, this.residentBytes() * totalTiles / residentTiles);
-      const currentDimension = Number.isFinite(activeTextureLimit)
-        ? activeTextureLimit : this.renderer.capabilities.maxTextureSize;
-      const fittedDimension = 2 ** Math.floor(Math.log2(currentDimension * Math.sqrt(this.options.byteBudget / projectedBytes)));
-      this.effectiveTextureMaxDimension = Math.max(128, Math.min(currentDimension / 2, fittedDimension));
-      const recovery = this.runPresetTransition(() => this.reloadAssetVariant());
+    if (error instanceof RequiredAssetBudgetError && this.tierSelection.actual === 'medium') {
+      const recovery = this.runPresetTransition(async () => {
+        await this.configureTextureTier('Required geometry and Medium textures exceed the resident budget; selected Low');
+        await this.reloadAssetVariant();
+      });
       this.textureBudgetRecovery = recovery;
       void recovery.then(() => {
         if (this.textureBudgetRecovery !== recovery) return;
@@ -2158,6 +2311,7 @@ export class CityViewer {
     this.overlays.dispose();
     this.vegetationData.clear();
     this.surfaceMaterials.dispose();
+    disposeAlbedoInspection(this.renderer);
     if (this.sun) this.scene.remove(this.sun, this.sun.target);
     this.scene.clear();
     // Three's compileAsync() owns an internal requestAnimationFrame readiness
@@ -2168,7 +2322,17 @@ export class CityViewer {
     // the old renderer alive until the finite set of in-flight polls settles.
     void Promise.all(layers.map((layer) => layer.whenCompilationIdle())).then(() => {
       this.renderer.dispose();
-      this.renderer.forceContextLoss();
+      if (canvasRendererOwners.get(this.canvas) === this.renderer) {
+        canvasRendererOwners.delete(this.canvas);
+        // Activity keeps hidden DOM connected and later runs effects again on
+        // that very canvas. Losing its context now makes the next renderer
+        // constructor fail before it can report an error or draw a frame.
+        // Renderer/map resources above are disposed in either case.
+        if (!this.canvas.isConnected) {
+          releasedCanvasContexts.set(this.canvas, this.renderer.getContext());
+          this.renderer.forceContextLoss();
+        }
+      }
       // The one observable proof that leaving a 3D surface actually gave the GPU
       // resources back, rather than leaving a detached context alive behind the
       // next screen. Logged after the renderer is gone, not when dispose starts.

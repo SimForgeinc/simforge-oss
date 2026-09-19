@@ -30,6 +30,17 @@ const NativeRunLineageSchema = z.strictObject({
   actorAssetsSha256: Sha256Schema,
   /** Rendered ticks: the union of every RGB source's frame timestamps. */
   frameCount: z.number().int().positive(),
+  textureProfile: z.strictObject({
+    renderTextures: z.enum(['uastc-full', 'bc7-512']),
+    memberCount: z.number().int().positive(),
+    textureBytes: z.number().int().nonnegative(),
+    geometryBytes: z.number().int().nonnegative(),
+    estimatedBytes: z.number().int().nonnegative(),
+    budgetBytes: z.number().int().positive(),
+    capacityBytes: z.number().int().positive(),
+    capacitySource: z.enum(['assumed', 'explicit']),
+    cacheKey: Sha256Schema,
+  }).optional(),
 });
 
 export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
@@ -112,6 +123,9 @@ export interface NativeRunExpectations {
   readonly executionPackageControlSha256: string;
   readonly sourceXoscSha256: string;
   readonly actorAssetsSha256: string;
+  readonly renderTextures?: 'uastc-full' | 'bc7-512';
+  readonly nativeVramBudgetBytes?: number;
+  readonly nativeVramCapacityBytes?: number;
   /** Union tick count of every RGB schedule (`unionFrameMicros`). */
   readonly frameCount: number;
   /** Per RGB source, keyed by `${actorId}\0${sensorId}`. */
@@ -184,6 +198,9 @@ export function nativeRunExpectations(
     executionPackageControlSha256: lease.executionPackageControlSha256,
     sourceXoscSha256: intent.scenarioRevision.openScenario.sha256,
     actorAssetsSha256: actorAssets.sha256,
+    renderTextures: intent.renderTextures,
+    nativeVramBudgetBytes: intent.nativeVramBudgetBytes,
+    nativeVramCapacityBytes: intent.nativeVramCapacityBytes,
     frameCount: unionFrameMicros(schedules).length,
     videos,
   };
@@ -224,6 +241,9 @@ export function nativeEvidenceFailure(
     || document.executionPackageControlSha256 !== expectations.executionPackageControlSha256
     || document.sourceXoscSha256 !== expectations.sourceXoscSha256
     || document.actorAssetsSha256 !== expectations.actorAssetsSha256
+    || (expectations.renderTextures !== undefined && document.textureProfile?.renderTextures !== expectations.renderTextures)
+    || (expectations.nativeVramBudgetBytes !== undefined && (document.textureProfile?.budgetBytes !== expectations.nativeVramBudgetBytes || document.textureProfile.estimatedBytes > expectations.nativeVramBudgetBytes))
+    || (expectations.nativeVramCapacityBytes !== undefined && (document.textureProfile?.capacityBytes !== (expectations.nativeVramBudgetBytes ?? expectations.nativeVramCapacityBytes) || document.textureProfile.estimatedBytes > document.textureProfile.capacityBytes))
     || document.frameCount !== expectations.frameCount;
   const mismatch =
     lineageMismatch(manifest)

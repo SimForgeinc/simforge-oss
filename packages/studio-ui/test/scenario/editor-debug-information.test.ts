@@ -16,7 +16,7 @@ describe("editor support debug information", () => {
         content: { meta: { name: "saved configuration" } },
         mapVersionId: "map-version-1",
         datasetId: "dataset-1",
-        authoringQualityId: "minimal",
+        authoringQualityId: "low",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
         latestRevisionId: "revision-1",
@@ -29,7 +29,7 @@ describe("editor support debug information", () => {
         coordinateSystemId: "local",
         browserManifestUrl: "https://signed.example/secret",
       } as never,
-      quality: "minimal",
+      quality: "low",
       scenarioConfiguration: { meta: { name: "live configuration" } } as never,
       selectedActor: { id: "actor-1", catalogId: "vehicle.ambulance" } as never,
       state: {

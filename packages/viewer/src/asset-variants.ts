@@ -1,4 +1,7 @@
-export type CityAssetVariantPreference = 'auto' | 'original' | 'ktx2' | 'geometry-only';
+import type { MapTextureTier, TierSelection } from './types';
+
+export type TextureVariantId = 'textures-256-uastc' | 'textures-512-uastc' | 'textures-512-bc7' | 'textures-512-astc';
+export type CityAssetVariantPreference = 'auto' | 'original' | 'ktx2' | 'geometry-only' | TextureVariantId;
 export type CityAssetVariantId = Exclude<CityAssetVariantPreference, 'auto' | 'original'>;
 
 export interface CityAssetVariantFile {
@@ -58,9 +61,72 @@ export interface CitySnowCoverVariant {
 export interface CityAssetVariantManifest {
   schemaVersion: 1;
   sourceManifestSha256: string;
-  variants: Partial<Record<CityAssetVariantId, CityAssetVariant>> & {
+  variants: Partial<Record<Exclude<CityAssetVariantId, TextureVariantId>, CityAssetVariant>>
+    & Partial<Record<TextureVariantId, TextureTierReference>> & {
     snowCover?: CitySnowCoverVariant;
   };
+}
+export interface TextureTierImage {
+  file: string;
+  sourceSha256: string;
+  outputSha256: string;
+  bytes: number;
+  width: number;
+  height: number;
+  sourceWidth: number;
+  sourceHeight: number;
+  levels: number;
+  residentBytes: number;
+  codec: 'uastc' | 'bc7' | 'astc' | 'rgba';
+}
+
+export interface TextureTierIndex {
+  schemaVersion: 1;
+  id: TextureVariantId;
+  sourceManifestSha256: string;
+  codec: 'uastc' | 'bc7' | 'astc';
+  longestEdgePx: 256 | 512;
+  images: Record<string, TextureTierImage>;
+  assets: Record<string, { images: string[] }>;
+}
+
+export interface TextureTierReference {
+  id: TextureVariantId;
+  schemaVersion: 1;
+  file: string;
+  outputSha256: string;
+  digest: string;
+  sourceManifestSha256: string;
+  bytes: number;
+}
+
+export interface TextureCapabilities { bc7: boolean; astc: boolean; maxTextureSize: number }
+
+/** Probe the context that will actually upload the textures; no platform guessing. */
+export function probeTextureCapabilities(gl: WebGLRenderingContext | WebGL2RenderingContext): TextureCapabilities {
+  return {
+    bc7: Boolean(gl.getExtension('EXT_texture_compression_bptc')),
+    astc: Boolean(gl.getExtension('WEBGL_compressed_texture_astc')),
+    maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,
+  };
+}
+
+export function selectTextureTier(requested: MapTextureTier, capabilities: TextureCapabilities): TierSelection {
+  if (capabilities.maxTextureSize < 256) throw new Error('This GPU cannot allocate the minimum Low texture tier (256 px)');
+  const reasons: string[] = [];
+  let actual = requested;
+  if (actual === 'render' || actual === 'ml') {
+    reasons.push(`${actual} requires the native renderer; browser selects Medium`);
+    actual = 'medium';
+  }
+  if (actual === 'medium' && capabilities.maxTextureSize < 512) {
+    actual = 'low';
+    reasons.push('GPU MAX_TEXTURE_SIZE is below the Medium 512 px target');
+  }
+  const codec = actual === 'low' ? 'uastc' : capabilities.bc7 ? 'bc7' : capabilities.astc ? 'astc' : 'uastc';
+  if (actual === 'medium' && codec === 'uastc') reasons.push('BC7 and ASTC unavailable on this WebGL context; using portable UASTC');
+  const longestEdgePx = actual === 'low' ? 256 : 512;
+  return { requested, actual, codec, longestEdgePx, variantId: `textures-${longestEdgePx}-${codec}`, downgradeReason: reasons.join('; ') || null };
 }
 
 export interface ResolvedSnowCoverVariant {
@@ -119,7 +185,7 @@ export function resolveSnowCoverVariant(
 }
 
 export function allowsSourceAssetFallback(selected: CityAssetVariantId | 'original'): boolean {
-  return selected !== 'original';
+  return selected === 'ktx2' || selected === 'geometry-only';
 }
 
 export function isCityAssetVariantManifest(value: unknown): value is CityAssetVariantManifest {
@@ -143,7 +209,8 @@ export function selectAssetVariant(
   if (!requested || (requested === 'ktx2' && !options.ktx2Ready)) {
     return { variant: 'original', file: sourceFile };
   }
-  const candidate = manifest.variants[requested]?.files[sourceFile];
+  if (requested.startsWith('textures-')) return { variant: requested, file: sourceFile };
+  const candidate = (manifest.variants[requested] as CityAssetVariant | undefined)?.files[sourceFile];
   const unsafePath = (file: string): boolean => /^(?:[a-z]+:|\/)/i.test(file) || /(?:^|\/)\.\.(?:\/|$)/.test(file);
   const unsafe = candidate && unsafePath(candidate.file);
   const fallbackFile = candidate?.fallbackFile && !unsafePath(candidate.fallbackFile) ? candidate.fallbackFile : undefined;

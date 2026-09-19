@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CityViewer } from "@simforge-oss/viewer";
+import type { CityViewer, TierSelection } from "@simforge-oss/viewer";
 import { ActorRenderer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { cn } from "../../lib/utils";
@@ -10,7 +10,7 @@ RENDERING_PREFERENCE_CHANGE_EVENT,
 type RenderingPreference, } from "../../components/rendering-preference"
 import { useRegisterRenderingBenchmarkTarget } from "../../components/rendering-benchmark-target"
 import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
-import { AUTHORING_QUALITY } from "../editor/authoring-quality";
+import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
   animateMapCamera,
@@ -40,7 +40,7 @@ import { authoringRuntimeReady } from "@simforge-oss/editor";
  * smoothness of a scene nobody can see: the scene's `CloudLoadingSurface` is an
  * opaque cover until the transition reaches `idle`.
  *
- * Measured on Belmont at the `minimal` preset (0.5 ms / 256k pixels per frame),
+ * Measured on Belmont with the former reduced pacing (0.5 ms / 256k pixels per frame),
  * a warm reload finished downloading and decoding every tile 4.5 s in, then sat
  * on "1 uploading" for a further 16 s feeding one asset to the GPU. Half a
  * millisecond is less than a single large `texImage2D`, so the budget was spent
@@ -121,8 +121,9 @@ export function ScenarioWorldHost({
     initialSceneLoadProgress(target?.label ?? "scene"),
   );
   const [retryNonce, setRetryNonce] = useState(0);
+  const [tierSelection, setTierSelection] = useState<TierSelection | null>(null);
   const [preference, setPreference] = useState<RenderingPreference>(
-    () => readRenderingPreference() ?? "high",
+    () => readRenderingPreference() ?? "medium",
   );
   const quality = AUTHORING_QUALITY[preference];
   const uploadBudget = transitionPhase === "idle" ? null : BOOT_UPLOAD_BUDGET;
@@ -158,6 +159,15 @@ export function ScenarioWorldHost({
       ? retainedTarget
       : target;
   targetRef.current = stableTarget;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const viewer = viewerRef.current;
+      if (!viewer || !supportsMapModelReadiness(viewer)) return;
+      const selection = viewer.getStats().tierSelection;
+      setTierSelection((previous) => previous?.requested === selection.requested && previous.actual === selection.actual && previous.codec === selection.codec && previous.longestEdgePx === selection.longestEdgePx && previous.variantId === selection.variantId && previous.downgradeReason === selection.downgradeReason ? previous : selection);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   retainedTargetRef.current = retainedTarget;
   loadedMapVersionIdRef.current = loadedMapVersionId;
   interactiveRef.current = interactive;
@@ -287,6 +297,7 @@ export function ScenarioWorldHost({
       actorRendererRef.current.setContactShadows(!viewer.castsRealtimeShadows());
     }
     const current = targetRef.current ?? retainedTargetRef.current;
+    const tierChange = changed && supportsMapModelReadiness(viewer) ? viewer.setMapTextureTier(preference) : null;
     if (
       !changed ||
       !current ||
@@ -294,6 +305,12 @@ export function ScenarioWorldHost({
       transitionPhaseRef.current !== "idle" ||
       !supportsMapModelReadiness(viewer)
     ) {
+      void tierChange?.catch((reason: unknown) => {
+        if (viewerRef.current !== viewer) return;
+        setError(reason);
+        if (current) updateLoadProgress(failedSceneLoadProgress(current.label, reason));
+        updateTransitionPhase("error");
+      });
       return;
     }
 
@@ -310,6 +327,8 @@ export function ScenarioWorldHost({
     updateTransitionPhase("loading");
     viewer.controls.setEnabled(false);
     cancelModelSettleRef.current?.();
+    void tierChange!.then(() => {
+      if (generation !== transitionGenerationRef.current) return;
     cancelModelSettleRef.current = waitForMapModelsFullyLoaded(
       () => {
         const stats = viewer.getStats();
@@ -367,6 +386,12 @@ export function ScenarioWorldHost({
         },
       },
     );
+    }).catch((reason: unknown) => {
+      if (generation !== transitionGenerationRef.current) return;
+      setError(reason);
+      updateLoadProgress(failedSceneLoadProgress(current.label, reason));
+      updateTransitionPhase("error");
+    });
     // This effect owns the imperative renderer response to a saved profile.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyEnvironment, preference, quality]);
@@ -457,17 +482,16 @@ export function ScenarioWorldHost({
       data-world-transition={transitionPhase}
       data-world-interactive={String(interactive)}
     >
+      {tierSelection?.downgradeReason ? (
+        <div role="status" className="absolute bottom-3 left-3 z-10 rounded bg-background/90 px-3 py-2 text-xs">
+          Actual texture tier: {tierSelection.actual}. {tierSelection.downgradeReason}
+        </div>
+      ) : null}
       {retainedTarget ? (
         <CityView
           key={`world-viewer:${retryNonce}`}
           manifestUrl={retainedTarget.manifestUrl}
-          initialOptions={{
-            maxPixelRatio: quality.maxPixelRatio,
-            antialias: quality.antialias,
-            cinematicLighting: quality.cinematicLighting,
-            vegetationMaxDistance: quality.live.vegetationMaxDistance,
-            byteBudget: quality.live.byteBudget,
-          }}
+          initialOptions={sceneViewerOptions(preference)}
           onReady={(viewer) => {
             viewerRef.current = viewer;
             startMetadataProgress(viewer, retainedTarget.label);
@@ -485,6 +509,22 @@ export function ScenarioWorldHost({
             actorRendererRef.current = actorRenderer;
             onViewerChange(viewer);
             onActorRendererChange(actorRenderer);
+          }}
+          onDisposed={(disposed) => {
+            if (viewerRef.current !== disposed) return;
+            viewerRef.current = null;
+            ++transitionGenerationRef.current;
+            cancelCameraAnimationRef.current?.();
+            cancelCameraAnimationRef.current = null;
+            cancelModelSettleRef.current?.();
+            cancelModelSettleRef.current = null;
+            cancelMetadataProgressRef.current?.();
+            loadedMapVersionIdRef.current = null;
+            setLoadedMapVersionId(null);
+            setTierSelection(null);
+            actorRendererRef.current = null;
+            onViewerChangeRef.current(null);
+            onActorRendererChangeRef.current(null);
           }}
           onMapLoaded={(manifestUrl) => {
             const current = targetRef.current ?? retainedTarget;
@@ -662,8 +702,8 @@ function waitForPaintFrames(onComplete: () => void): void {
 
 function renderingPreferenceLabel(preference: RenderingPreference): string {
   switch (preference) {
-    case "minimal": return "Balanced";
-    case "high": return "High";
+    case "low": return "Low";
+    case "medium": return "Medium";
   }
 }
 

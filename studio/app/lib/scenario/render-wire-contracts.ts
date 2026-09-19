@@ -1,4 +1,4 @@
-import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -40,12 +40,15 @@ export const ScenarioRenderIntentSchema = z.strictObject({
   }),
   sensorHosts: z.array(SensorSourceHostSchema).min(1).max(64),
   renderSpec: LocalRenderSpecV3Schema,
+  renderTextures: z.enum(["uastc-full", "bc7-512"]).optional(),
+  nativeVramBudgetBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  nativeVramCapacityBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   assets: z.array(z.strictObject({
     assetId: PublicIdSchema,
     kind: z.enum(["map", "catalog", "texture", "mesh", "other"]),
     sha256: Sha256Schema,
     sizeBytes: z.number().int().nonnegative(),
-  })).max(4096),
+  })).max(RENDER_INTENT_MAX_ASSETS),
   seed: z.number().int().nonnegative(),
 }).superRefine((intent, context) => {
   const hostBySourceId = new Map(intent.sensorHosts.map((host) => [host.sourceId, host]));
@@ -86,11 +89,17 @@ export type ScenarioRenderIntent = z.infer<typeof ScenarioRenderIntentSchema>;
 export const SubmitScenarioRenderIntentSchema = z.strictObject({
   schema: z.literal("uniscenario.render-intent-submission/v1"),
   engine: ScenarioRendererEngineSchema,
+  renderProfile: z.enum(["render", "ml"]).optional(),
+  nativeVramBudgetBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   revisionId: PublicIdSchema,
   executionPackageId: PublicIdSchema,
   renderSpec: LocalRenderSpecV3Schema,
   idempotencyKey: z.string().trim().min(1).max(200),
   priority: z.number().int().min(-100).max(100).optional(),
+}).superRefine((input, context) => {
+  if (input.engine !== "native" && (input.renderProfile !== undefined || input.nativeVramBudgetBytes !== undefined)) {
+    context.addIssue({ code: "custom", path: ["renderProfile"], message: "Render and ML profiles require the native engine." });
+  }
 });
 export type SubmitScenarioRenderIntent = z.infer<typeof SubmitScenarioRenderIntentSchema>;
 

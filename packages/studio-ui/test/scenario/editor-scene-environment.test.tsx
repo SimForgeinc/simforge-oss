@@ -34,11 +34,11 @@ describe("SimForge editor Three.js environment", () => {
     const fresh = withFreshEditorEnvironmentDefaults(withSceneMinutes(EnvironmentSchema.parse({}), FRESH_SCENARIO_MINUTES));
     const { viewer, setWeatherAppearance } = fakeViewer();
 
-    const restore = applyDefaultSceneEnvironment(viewer, "high");
+    const restore = applyDefaultSceneEnvironment(viewer, "medium");
     expect(setWeatherAppearance).toHaveBeenCalledTimes(1);
     const browsing = setWeatherAppearance.mock.calls[0]![0];
     setWeatherAppearance.mockClear();
-    applyEditorSceneEnvironment(viewer, fresh, { quality: "high" });
+    applyEditorSceneEnvironment(viewer, fresh, { quality: "medium" });
     expect(setWeatherAppearance.mock.calls[0]![0]).toEqual(browsing);
 
     restore();
@@ -49,10 +49,7 @@ describe("SimForge editor Three.js environment", () => {
     // The fidelity switch hides the sun and sky; a sky applied first is lost.
     const browsing = fakeViewer();
     const view = render(
-      <EditorSceneEnvironmentBridge active document={null} quality="minimal" viewer={browsing.viewer} />,
-    );
-    expect(browsing.setAuthoringFidelity).toHaveBeenCalledWith(
-      expect.objectContaining({ cinematicLighting: false }),
+      <EditorSceneEnvironmentBridge active document={null} quality="low" viewer={browsing.viewer} />,
     );
     expect(browsing.setWeatherAppearance).toHaveBeenCalledTimes(1);
     expect(browsing.setAuthoringFidelity.mock.invocationCallOrder[0]!)
@@ -66,7 +63,7 @@ describe("SimForge editor Three.js environment", () => {
       <EditorSceneEnvironmentBridge
         active
         document={document as unknown as EditorDocument}
-        quality="high"
+        quality="medium"
         viewer={authored.viewer}
       />,
     );
@@ -84,11 +81,11 @@ describe("SimForge editor Three.js environment", () => {
       weather.clear();
       if (appearance) weather.apply(appearance, scene.getObjectByName("sun") as DirectionalLight ?? null);
     });
-    const view = render(<EditorSceneEnvironmentBridge active={false} document={null} ownsViewer={false} quality="high" viewer={viewer} />);
+    const view = render(<EditorSceneEnvironmentBridge active={false} document={null} ownsViewer={false} quality="medium" viewer={viewer} />);
     const sun = new DirectionalLight(0xff0000, 2);
     sun.name = "sun";
     scene.add(sun);
-    view.rerender(<EditorSceneEnvironmentBridge active document={null} ownsViewer={false} quality="high" viewer={viewer} />);
+    view.rerender(<EditorSceneEnvironmentBridge active document={null} ownsViewer={false} quality="medium" viewer={viewer} />);
     const galleryColor = sun.color.getHex();
     const galleryIntensity = sun.intensity;
     const galleryPosition = sun.position.clone();
@@ -96,7 +93,7 @@ describe("SimForge editor Three.js environment", () => {
     expect(galleryColor).not.toBe(0xff0000);
     expect(galleryIntensity).toBeGreaterThan(0);
     const document = new FakeEditorDocument(withFreshEditorEnvironmentDefaults(withSceneMinutes(EnvironmentSchema.parse({}), FRESH_SCENARIO_MINUTES)));
-    view.rerender(<EditorSceneEnvironmentBridge active document={document as unknown as EditorDocument} ownsViewer={false} quality="high" viewer={viewer} />);
+    view.rerender(<EditorSceneEnvironmentBridge active document={document as unknown as EditorDocument} ownsViewer={false} quality="medium" viewer={viewer} />);
     expect(sun.color.getHex()).toBe(galleryColor);
     expect(sun.intensity).toBe(galleryIntensity);
     expect(sun.position.distanceTo(galleryPosition)).toBeLessThan(0.000001);
@@ -147,7 +144,7 @@ describe("SimForge editor Three.js environment", () => {
     const restore = applyEditorSceneEnvironment(
       viewer,
       withSceneMinutes(environment("clear", "noon"), 12 * 60),
-      { quality: "high" },
+      { quality: "medium" },
     );
 
     expect(sun.position.y).toBeGreaterThan(sun.target.position.y);
@@ -212,7 +209,7 @@ describe("SimForge editor Three.js environment", () => {
       <EditorSceneEnvironmentBridge
         active
         document={document as unknown as EditorDocument}
-        quality="high"
+        quality="medium"
         viewer={viewer}
         actorRenderer={null}
       />,
@@ -264,7 +261,7 @@ describe("SimForge editor Three.js environment", () => {
         active
         actorRenderer={actorRenderer}
         document={document as unknown as EditorDocument}
-        quality="high"
+        quality="medium"
         viewer={viewer}
       />,
     );
@@ -283,7 +280,7 @@ describe("SimForge editor Three.js environment", () => {
     const restore = applyEditorSceneEnvironment(
       viewer,
       withEditorWeatherControls(environment("snow", "dusk"), { snowCover: "covered" }),
-      { quality: "high", reducedMotion: true },
+      { quality: "medium", reducedMotion: true },
     );
 
     expect(setWeatherAppearance).toHaveBeenCalledWith(expect.objectContaining({

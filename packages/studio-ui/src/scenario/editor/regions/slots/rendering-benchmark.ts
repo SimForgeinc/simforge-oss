@@ -13,6 +13,7 @@ export const RENDERING_BENCHMARK_STORAGE_KEY =
   "simforge.rendering-benchmark.v7";
 
 export const RENDERING_BENCHMARK_CONFIGURATION = {
+  sceneProfile: "shared-cinematic-texture-tiers",
   viewportWidth: 1280,
   viewportHeight: 720,
   sampleDurationMs: 7_000,
@@ -90,7 +91,7 @@ export type RenderingBenchmarkSnapshot = {
   capturedAt: string;
 };
 
-const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = ["minimal", "high"];
+const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = ["low", "medium"];
 
 /**
  * Pick the highest-fidelity renderer that stays comfortably interactive and

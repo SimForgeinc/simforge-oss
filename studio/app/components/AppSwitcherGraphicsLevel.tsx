@@ -18,8 +18,8 @@ import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
  * preference sits without spending a row on labels.
  */
 const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
-  minimal: SignalMedium,
-  high: SignalHigh,
+  low: SignalMedium,
+  medium: SignalHigh,
 };
 
 /**
@@ -30,7 +30,7 @@ const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
  * page.
  */
 export function AppSwitcherGraphicsLevel() {
-  const preference = useRenderingPreference() ?? "high";
+  const preference = useRenderingPreference() ?? "medium";
   const levels = SCENARIO_AUTHORING_QUALITY_CHOICES;
   const at = levels.findIndex((choice) => choice.id === preference);
   const current = levels.find((choice) => choice.id === preference)!;

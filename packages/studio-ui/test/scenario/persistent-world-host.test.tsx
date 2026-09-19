@@ -48,12 +48,14 @@ vi.mock("@simforge-oss/viewer", async (importOriginal) => ({
 // recreated WebGL on every progress update. Only the GPU work is replaced.
 vi.mock("../../../viewer/src/viewer", () => ({
   CityViewer: class {
-    readonly renderer: { domElement: HTMLCanvasElement };
+    readonly renderer: { domElement: HTMLCanvasElement; getContext: () => { isContextLost: () => boolean } };
     readonly scene = { add: vi.fn(), getObjectByName: () => undefined };
     constructor(canvas: HTMLCanvasElement, options: unknown) {
       constructions(options);
       if (constructions.mock.calls.length > 10) throw new Error("renderer construction loop");
-      this.renderer = { domElement: canvas };
+      // The retention guard asks the live context whether it is lost before
+      // reusing a canvas; this double stands in for a healthy one.
+      this.renderer = { domElement: canvas, getContext: () => ({ isContextLost: () => false }) };
     }
     loadMap = loads;
     dispose = disposals;
@@ -64,6 +66,7 @@ vi.mock("../../../viewer/src/viewer", () => ({
     setAuthoringFidelity = setAuthoringFidelity;
     setLayerVisible = setLayerVisible;
     setRenderingSuspended = vi.fn();
+    setActivityHeld = vi.fn();
     resetCamera = vi.fn();
     setWeatherAppearance = vi.fn();
   },
@@ -99,8 +102,12 @@ function render(ui: ReactNode) {
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  // Retention releases a disconnected canvas from a MutationObserver callback,
+  // which runs after this teardown. Flush it before clearing the spies, or the
+  // release lands in the next test and reads as a spurious dispose.
+  await act(async () => {});
   vi.unstubAllGlobals();
   window.localStorage.clear();
   constructions.mockClear();
@@ -175,7 +182,7 @@ describe("persistent SimForge world host", () => {
     const viewer = onViewerChange.mock.calls[0]?.[0];
     const instanceId = host.getAttribute("data-world-instance-id");
 
-    act(() => saveRenderingPreference("minimal"));
+    act(() => saveRenderingPreference("low"));
     view.rerender(
       <ScenarioWorldHost
         target={{ ...first, manifestUrl: "/api/maps/mapv_one/browser-assets/manifest.json" }}

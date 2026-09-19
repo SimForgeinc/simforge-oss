@@ -318,6 +318,9 @@ export function normalizeSavedPlaybackTrace(value: unknown): unknown {
 
 export function resolveBrowserRenderIntent(value: unknown): BrowserRenderIntentV1 {
   const portable = parseRenderIntent(value);
+  if (portable.renderTextures !== undefined || portable.nativeVramBudgetBytes !== undefined || portable.nativeVramCapacityBytes !== undefined) {
+    throw new Error('native_render_profile_required: Render and ML Training cannot use browser capture');
+  }
   const fps = portable.renderSpec.video?.fps ?? Math.max(
     1,
     ...portable.renderSpec.sources.flatMap((source) =>

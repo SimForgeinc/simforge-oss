@@ -179,7 +179,7 @@ export function ViewportSettingsPanel({
               ))}
             </div>
             <p {...stylex.props(styles.microMutedSnug)}>
-              Balanced is recommended for most devices. High uses more graphics memory.
+              Low targets 256 px textures; Medium targets 512 px. Weaker devices may select lower quality and report it.
             </p>
           </Section>
         ) : null}

@@ -8,6 +8,7 @@ import {
 } from './map-derivatives-lib.mjs';
 import { inspectPinnedToolchain, pinnedToolEnvironment } from './map-derivative-toolchain.mjs';
 import { buildStaticColliderArtifact, serializeStaticColliderArtifact } from './static-map-colliders-lib.mjs';
+import { buildTextureTiers, TEXTURE_VARIANTS } from '@simforge-oss/map-pipeline/texture-tiers';
 
 function readGlbJsonChunk(file) {
   const descriptor = fs.openSync(file, 'r');
@@ -33,10 +34,18 @@ const mode = arg('mode', 'dry-run');
 const variant = arg('variant', 'all');
 if (!mapId || !/^[a-z0-9-]+$/.test(mapId)) throw new Error('Pass a safe map id with --map <id>');
 if (!['dry-run', 'build'].includes(mode)) throw new Error('--mode must be dry-run or build');
-if (!['all', 'geometry-only', 'roads-only', 'roads-only-v2', 'ktx2', 'static-colliders'].includes(variant)) throw new Error('--variant must be all, geometry-only, roads-only, roads-only-v2, ktx2, or static-colliders');
+if (!['all', 'geometry-only', 'roads-only', 'roads-only-v2', 'ktx2', 'static-colliders', 'texture-tiers', ...TEXTURE_VARIANTS].includes(variant)) throw new Error(`Unknown derivative variant: ${variant}`);
 
 const repository = path.resolve(import.meta.dirname, '..');
-const mapRoot = path.join(repository, 'dev-assets', mapId, '3d');
+const sourceRoot = path.resolve(arg('source-root', path.join(repository, 'dev-assets', mapId)));
+if (variant === 'texture-tiers' || TEXTURE_VARIANTS.includes(variant)) {
+  const outputRoot = path.resolve(arg('output-root', sourceRoot));
+  const options = { sourceRoot, outputRoot, variants: variant === 'texture-tiers' ? TEXTURE_VARIANTS : [variant],
+    concurrency: Number(arg('jobs', '2')), ...(arg('ktx-bin') ? { ktxBin: arg('ktx-bin') } : {}) };
+  console.log(JSON.stringify(mode === 'dry-run' ? options : await buildTextureTiers(options), null, 2));
+  process.exit(0);
+}
+const mapRoot = path.join(sourceRoot, '3d');
 const manifestFile = path.join(mapRoot, 'manifest.json');
 if (!fs.existsSync(manifestFile)) throw new Error(`Map does not exist: ${mapId}`);
 const manifestBytes = fs.readFileSync(manifestFile);
@@ -323,6 +332,11 @@ if (variant === 'ktx2' || variant === 'all') {
     files,
     runtime: { ktx2TranscoderPath: 'variants/basis/', assets: runtimeAssets },
   };
+}
+if (variant === 'all') {
+  await buildTextureTiers({ sourceRoot });
+  const generated = JSON.parse(fs.readFileSync(variantManifestFile)).variants;
+  for (const id of TEXTURE_VARIANTS) variants[id] = generated[id];
 }
 const variantManifest = { schemaVersion: 1, sourceManifestSha256: sha256(manifestBytes), variants };
 atomicWrite(variantManifestFile, `${JSON.stringify(variantManifest, null, 2)}\n`);

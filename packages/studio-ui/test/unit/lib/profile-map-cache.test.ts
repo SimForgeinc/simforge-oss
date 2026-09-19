@@ -115,7 +115,7 @@ describe("complete map closure cache planning", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(["minimal", "high"] as const)(
+  it.each(["low", "medium"] as const)(
     "enumerates every published member for the %s profile",
     async (profile) => {
       const plan = await createProfileMapPlan([map], profile, new AbortController().signal);
@@ -138,7 +138,7 @@ describe("complete map closure cache planning", () => {
 
   it("persists completion per map closure and resumes with no pending assets", async () => {
     const controller = new AbortController();
-    const plan = await createProfileMapPlan([map], "minimal", controller.signal);
+    const plan = await createProfileMapPlan([map], "low", controller.signal);
     const progress = vi.fn();
     const result = await cacheProfileMapPlan(plan, controller.signal, progress);
 
@@ -150,7 +150,7 @@ describe("complete map closure cache planning", () => {
       totalBytes: 7,
     }));
 
-    const resumed = await createProfileMapPlan([map], "high", controller.signal);
+    const resumed = await createProfileMapPlan([map], "medium", controller.signal);
     expect(resumed.remainingAssets).toBe(0);
     expect(resumed.remainingBytes).toBe(0);
     expect(resumed.fullyCachedMapVersionIds).toEqual(["map-1"]);
@@ -158,7 +158,7 @@ describe("complete map closure cache planning", () => {
 
   it("rejects a stale map descriptor instead of persisting the wrong version", async () => {
     const stale = { ...map, browserClosureSha256: "d".repeat(64) };
-    await expect(createProfileMapPlan([stale], "high", new AbortController().signal))
+    await expect(createProfileMapPlan([stale], "medium", new AbortController().signal))
       .rejects.toThrow("changed while its cache plan was being prepared");
   });
 
@@ -171,14 +171,14 @@ describe("complete map closure cache planning", () => {
         assets: inventoryAssets.filter((asset) => !asset.relativePath.startsWith("derived/sumo/")),
       }],
     }), { status: 200 }));
-    const plan = await createProfileMapPlan([map], "high", new AbortController().signal);
+    const plan = await createProfileMapPlan([map], "medium", new AbortController().signal);
     expect(plan.assets.map((asset) => asset.mapVersionId)).toEqual(["map-1", "map-1", "map-1"]);
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/sumo-runtime/"))).toBe(false);
   });
 
   it("retries an expired signed delivery URL through the canonical route", async () => {
     const controller = new AbortController();
-    const plan = await createProfileMapPlan([map], "high", controller.signal);
+    const plan = await createProfileMapPlan([map], "medium", controller.signal);
     const original = vi.mocked(fetch).getMockImplementation()!;
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const url = String(input);
@@ -220,7 +220,7 @@ describe("complete map closure cache planning", () => {
         },
       ],
     }), { status: 200 }));
-    const library = await createProfileMapPlan([map, second], "high", new AbortController().signal);
+    const library = await createProfileMapPlan([map, second], "medium", new AbortController().signal);
     const fetches = vi.mocked(fetch).mock.calls.length;
 
     const subset = selectProfileMapPlan(library, new Set(["map-2"]));

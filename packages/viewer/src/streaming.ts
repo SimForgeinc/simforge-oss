@@ -251,7 +251,7 @@ export class TileStreamLayer {
       if (entry.loading) loading++;
       else if (entry.preparing === null && !entry.budgetBlocked && entry.desired > this.finestResident(entry)) queued++;
       if ((this.opts.essentialAll || this.opts.pinCoarsest)
-        && (!this.opts.want || this.opts.want(entry.def, entry.distance))) {
+        && (this.opts.essentialAll || (this.opts.required ?? this.opts.want)?.(entry.def, entry.distance) !== false)) {
         const requiredIndex = this.opts.essentialAll
           ? (this.opts.maxDesiredIndex?.(entry.def) ?? entry.def.lods.length - 1)
           : 0;
