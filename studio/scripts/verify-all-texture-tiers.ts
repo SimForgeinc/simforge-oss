@@ -1,0 +1,43 @@
+/** Run the complete real-daemon matrix without concealing an earlier failure.
+ * pnpm verify:all-texture-tiers --root=<production daemon on5514–5517>
+ *   --scenario=<Belmont RGB scenario> --ml-scenario=<Garching RGB scenario>
+ *   --texture-url=<Belmont master KTX2>
+ * Fresh worktree: node studio/scripts/sync-studio-assets.mjs before daemon boot;
+ * link/build native-runtime native/wasm/dist prerequisites. Do not reuse a live
+ * user's data root. All processes launched by individual gates close in finally.
+ */
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { join } from 'node:path';
+const args = process.argv.slice(2);
+assert(args.some(arg => arg.startsWith('--root=')) && args.some(arg => arg.startsWith('--scenario='))
+  && args.some(arg => arg.startsWith('--ml-scenario=')) && args.some(arg => arg.startsWith('--texture-url=')), '--root, --scenario, --ml-scenario and --texture-url are required');
+const mlScenario = args.find(arg => arg.startsWith('--ml-scenario='))!.slice('--ml-scenario='.length);
+const matrix = [
+  { name: 'calibration', file: 'texture-tier-assertions.test.ts', args: ['--test'] },
+  { name: 'viewer-context-lifetime', file: 'verify-viewer-context-lifetime.ts', args: [] },
+  { name: 'container-dedup', file: 'verify-texture-container-reuse.ts', args: [] },
+  { name: 'low', file: 'verify-texture-tiers.ts', args: ['--tier=low'] },
+  { name: 'medium', file: 'verify-texture-tiers.ts', args: ['--tier=medium'] },
+  { name: 'medium-portable', file: 'verify-texture-tiers.ts', args: ['--tier=medium', '--capabilities=portable'] },
+  { name: 'medium-restricted', file: 'verify-texture-tiers.ts', args: ['--tier=medium', '--capabilities=restricted'] },
+  { name: 'render', file: 'verify-native-texture-tiers.ts', args: ['--profile=render'] },
+  { name: 'garching-full-refusal', file: 'verify-native-texture-tiers.ts', args: ['--profile=render', '--expect-capacity-refusal=true', `--scenario=${mlScenario}`] },
+  { name: 'ml', file: 'verify-native-texture-tiers.ts', args: ['--profile=ml', `--scenario=${mlScenario}`] },
+];
+const failures: string[] = [];
+for (const gate of matrix) {
+  const started = performance.now();
+  const launch = ['--import', 'tsx', '--conditions=development'];
+  if (gate.name === 'calibration') launch.push('--test');
+  launch.push(join(import.meta.dirname, gate.file));
+  if (gate.name !== 'calibration') launch.push(...args, ...gate.args);
+  const child = spawn(process.execPath, launch, { stdio: 'inherit' });
+  const exit = Promise.withResolvers<number>();
+  child.once('error', error => { console.error(error); exit.resolve(1); });
+  child.once('exit', (code, signal) => exit.resolve(signal ? 1 : code ?? 1));
+  const code = await exit.promise;
+  console.log(`${code === 0 ? 'PASS' : 'FAIL'} matrix/${gate.name}: ${JSON.stringify({ exit: code, seconds: (performance.now() - started) / 1000 })}`);
+  if (code !== 0) failures.push(gate.name);
+}
+assert.equal(failures.length, 0, `tier matrix failed: ${failures.join(', ')}`);

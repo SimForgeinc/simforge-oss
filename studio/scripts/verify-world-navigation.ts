@@ -16,8 +16,12 @@ declare global { interface Window { __worldNavigation: () => Lifetime } }
 export async function assertWorldPaint(page: Page) {
   const sample = await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="scenario-world-host"] canvas');
-    if (!canvas) throw new Error("The ready world has no canvas");
+    const host = document.querySelector('[data-testid="scenario-world-host"]');
+    const canvas = host?.querySelector<HTMLCanvasElement>('canvas');
+    if (!canvas?.isConnected || host?.getAttribute('data-world-load-percent') !== '100'
+      || !host.getAttribute('data-world-loaded-map-version-id')) {
+      throw new Error("The ready world has no connected, map-bound canvas");
+    }
     let visible = canvas.width > 0 && canvas.height > 0 && canvas.getBoundingClientRect().height > 0;
     for (let node: HTMLElement | null = canvas; node; node = node.parentElement) {
       const style = getComputedStyle(node);
@@ -48,6 +52,10 @@ export async function assertWorldPaint(page: Page) {
       }
     }
     if (!viewer) throw new Error("The ready canvas has no live viewer");
+    const diagnostics = window.__simforgeViewerProbe;
+    if (!diagnostics || diagnostics.viewer !== viewer || !('viable' in diagnostics) || diagnostics.viable !== true) {
+      throw new Error("The ready world has no viable renderer diagnostics");
+    }
     const position = viewer.camera.getWorldPosition(viewer.camera.position.clone());
     const surfaceY = viewer.sampleGroundHeight(position.x, position.z);
     const count = pixels.length / 4;
