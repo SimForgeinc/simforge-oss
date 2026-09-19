@@ -246,6 +246,7 @@ export interface CityViewerStats {
     } | null;
     admissionUnderestimates: Record<string, LayerStats['largestAdmissionUnderestimate']>;
     residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
+    actorModels: Readonly<Record<string, { state: 'idle' | 'loading' | 'ready' | 'failed'; url: string; downgradeReason: string }>>;
   };
   /** Required visible geometry is resident, independently of final texture quality. */
   usable: boolean;
