@@ -56,6 +56,7 @@ import { drivingLanes } from "./drive-lanes";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 import { JevController } from "./jev-controller";
 import type { DriveControlSource } from "@/app/lib/live-world/types";
+import type { AuthoredDriveMode } from "@/app/lib/live-world/authored-world-session";
 
 const WORLD_TICK_HZ = 20;
 /** Orbit drag sensitivity, radians per pixel. */
@@ -78,10 +79,13 @@ const HORN_PULSE_MS = 700;
  * Nothing in that loop causes a React render. The HUD is written through refs,
  * and the component re-renders only when a human changes something.
  *
- * The whole session is a recording: the world starts at t = 0 and the clip ends
- * itself at the scenario's `clipSeconds`, at which point the recorded poses are
- * handed to `onSaveClip` as the driven actor's motion. There is no free drive
- * and no review step — a drive the human did not like is driven again.
+ * A session is driven in one of two modes. A `take` is a recording: the world
+ * starts at t = 0 and the clip ends itself at the scenario's `clipSeconds`, at
+ * which point the recorded poses are handed to `onSaveClip` as the driven
+ * actor's motion; there is no review step, and a drive the human did not like
+ * is driven again. A `free` drive records nothing and never ends — the world
+ * runs endlessly, the clip boundary does not bind, and the only way out is the
+ * pause menu.
  */
 export function DriveSession({
   content,
@@ -91,6 +95,7 @@ export function DriveSession({
   vehicleLabel,
   quality,
   roleId,
+  mode = "take",
   onSaveClip,
   onSaved,
   onExit,
@@ -104,11 +109,17 @@ export function DriveSession({
   quality: ScenarioAuthoringQuality;
   /** The actor the human drives, resolved before the session mounted. */
   roleId: string;
-  /** Persist the driven template. Rejecting leaves the take on screen, retryable. */
-  onSaveClip: (template: ScenarioTemplateV2) => Promise<void>;
-  onSaved: () => void;
+  /** `take` records a clip and saves it; `free` just drives. Defaults to `take`. */
+  mode?: AuthoredDriveMode;
+  /**
+   * Persist the driven template. Rejecting leaves the take on screen,
+   * retryable. Required for a `take`; a `free` drive never calls it.
+   */
+  onSaveClip?: (template: ScenarioTemplateV2) => Promise<void>;
+  onSaved?: () => void;
   onExit: () => void;
 }) {
+  const isTake = mode === "take";
   const graphicsTarget = useMemo(() => ({ manifestUrl: map.browserManifestUrl, label: map.label }), [map.browserManifestUrl, map.label]);
   useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const [startError, setStartError] = useState<string | null>(null);
@@ -184,7 +195,15 @@ export function DriveSession({
       nextDocument.importTemplate(content);
       return {
         document: nextDocument,
-        source: await createAuthoredWorldSource({ document: nextDocument, map, tickHz: WORLD_TICK_HZ }),
+        // A free drive is endless. `endless` is what the worker's transport
+        // and its driver-command guard both read; a `free` ego alone would
+        // still have its pedals cut at the clip boundary.
+        source: await createAuthoredWorldSource({
+          document: nextDocument,
+          map,
+          tickHz: WORLD_TICK_HZ,
+          endless: !isTake,
+        }),
       };
     };
     void open().then((scenario) => {
@@ -211,7 +230,7 @@ export function DriveSession({
       created?.source.close();
       created?.document.dispose();
     };
-  }, [content, map]);
+  }, [content, map, isTake]);
 
   // The role is authored; the actor id it compiled to has to be resolved through
   // the source before it can be driven.
@@ -220,15 +239,17 @@ export function DriveSession({
     try {
       const actorId = source.selectEgo(roleId);
       if (!actorId) throw new Error("This scenario produced no drivable vehicle for the drive");
-      source.setEgo(actorId, "take");
+      source.setEgo(actorId, mode);
       setEgoActorId(actorId);
       spawnedAtRef.current = performance.now();
-      setTakePhase({ kind: "recording" });
-      source.beginTake();
+      if (isTake) {
+        setTakePhase({ kind: "recording" });
+        source.beginTake();
+      }
     } catch (error) {
       setStartError(errorMessage(error));
     }
-  }, [roleId, source, world.status]);
+  }, [mode, isTake, roleId, source, world.status]);
   useEffect(() => {
     if (!source) return;
     latestFrameRef.current = null;
@@ -283,14 +304,14 @@ export function DriveSession({
   // authored take would; a rejected save keeps the drive on screen rather than
   // losing the take the human just drove.
   useEffect(() => {
-    if (takePhase.kind !== "saving" || !document) return;
+    if (takePhase.kind !== "saving" || !document || !onSaveClip) return;
     let abandoned = false;
     const { recording } = takePhase;
     void (async () => {
       try {
         document.replaceActorMotion(recordedManualDrive(roleId, recording));
         await onSaveClip(document.data);
-        if (!abandoned) onSaved();
+        if (!abandoned) onSaved?.();
       } catch (error) {
         if (abandoned) return;
         setTakeError(errorMessage(error));
@@ -724,12 +745,14 @@ export function DriveSession({
       </div>
       <div
         {...stylex.props(driveChrome.panelStatus, driveFrame.clip)}
-        data-testid="drive-clip-countdown"
+        data-testid={isTake ? "drive-clip-countdown" : "drive-free-mode"}
         role="status"
       >
-        {takePhase.kind === "recording"
-          ? `Recording · ${Math.max(0, Math.ceil(clipSeconds - clipElapsedS))}s left`
-          : `Clip · ${clipSeconds.toFixed(0)}s`}
+        {!isTake
+          ? "Free drive · no timer"
+          : takePhase.kind === "recording"
+            ? `Recording · ${Math.max(0, Math.ceil(clipSeconds - clipElapsedS))}s left`
+            : `Clip · ${clipSeconds.toFixed(0)}s`}
       </div>
       {status ? (
         <div

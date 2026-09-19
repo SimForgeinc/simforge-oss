@@ -334,6 +334,15 @@ export function MapGalleryPageClient({
     }
   };
 
+  /**
+   * Drive this map, with nothing else attached: no document is created and
+   * nothing is saved, so the only cost of changing your mind is the drive back.
+   */
+  const enterDriveMode = () => {
+    if (locked || !entry.map.ready.browser) return;
+    router.push(`/dashboard/map-assets/drive/${encodeURIComponent(entry.map.mapVersionId)}`);
+  };
+
   return (
     <>
       <AddMapTopBarAction />
@@ -495,6 +504,17 @@ export function MapGalleryPageClient({
                   {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}
                   <span>{creating ? "Creating scenario…" : "Create scenario"}</span>
                   {!creating ? <ArrowRight aria-hidden="true" className={stylex.props(styles.s_847).className} /> : null}
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={enterDriveMode}
+                  disabled={creating || !previewable}
+                  title={locked ? "Connect to SimCloud to drive this map." : !entry.map.ready.browser ? "Prepare this map on this computer first." : "Drive this map with no scenario and no timer."}
+                >
+                  <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
+                  <span>Enter Drive mode</span>
                 </Button>
               </div>
             </div>
