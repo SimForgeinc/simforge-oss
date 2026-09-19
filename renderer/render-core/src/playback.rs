@@ -428,6 +428,12 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
     let mut pending_models: Vec<(String, VehicleModelEntry)> = Vec::new();
     let mut model_assignments = HashMap::new();
     let mut seen_recipes = HashSet::new();
+    if args.vehicle_models.is_none() && doc.actors.iter().any(|actor| is_vehicle_class(&actor.actor_class)) {
+        eprintln!("actor-models-unconfigured: no --vehicle-models directory; vehicle actors will render as procedural primitives, not CARLA GLBs");
+    }
+    if args.pedestrian_models.is_none() && doc.actors.iter().any(|actor| actor.actor_class == "pedestrian") {
+        eprintln!("actor-models-unconfigured: no --pedestrian-models directory; pedestrian actors will render as procedural primitives, not CARLA GLBs");
+    }
     if let Some(dir) = &args.vehicle_models {
         let catalog = VehicleModelCatalog::load(dir)?;
         for desc in &doc.actors {
@@ -457,7 +463,16 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
             let resolved = catalog
                 .resolve(&desc.catalog_id)
                 .map(|entry| (desc.catalog_id.as_str(), entry))
-                .or_else(|| catalog.resolve_deterministic(&desc.id));
+                .or_else(|| {
+                    let substitute = catalog.resolve_deterministic(&desc.id);
+                    if let Some((recipe, _)) = substitute {
+                        eprintln!(
+                            "actor-model-substitution: pedestrian {} requested {}; using deterministic walker {}",
+                            desc.id, desc.catalog_id, recipe
+                        );
+                    }
+                    substitute
+                });
             let Some((recipe_key, entry)) = resolved else {
                 continue;
             };

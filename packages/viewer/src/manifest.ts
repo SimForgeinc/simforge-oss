@@ -44,10 +44,10 @@ const BYTES_PER_FILE_BYTE = [6.6, 3.3, 2.3, 2.0];
 
 /**
  * Cheap pre-load admission heuristic, not a residency measurement. These ratios
- * were measured on Yale Street assets with embedded textures (RGBA8 + mip chain,
- * meshopt geometry expanded). External-texture GLBs omit their image payloads:
- * Garching tiles can decode to over thirteen times this estimate. The selected
- * texture tier and GPU transcode format are also absent from this heuristic.
+ * were measured on Yale Street assets (RGBA8 + mip chain, expanded meshopt
+ * geometry). A GLB with external images does not contain the information needed
+ * to bound their GPU cost: Garching tiles have exceeded this estimate by 15x.
+ * The selected texture tier and GPU transcode format are also absent from this heuristic.
  * Decoded resource bytes replace the reservation; budget enforcement must
  * reclaim optional residency rather than trusting file-size ratios as a bound.
  */
