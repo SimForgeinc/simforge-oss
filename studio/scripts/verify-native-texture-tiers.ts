@@ -182,6 +182,11 @@ if (profile === 'ml') {
 await writeFile(join(out, 'results.json'), JSON.stringify({ profile, envs, rounds, checks: checks.results }, null, 2));
 checks.finish();
 } catch (error) {
+  const jobs = await Promise.all([...outstanding].map(async id => {
+    try { return await api<unknown>(`/api/simforge/render-jobs/${id}`); }
+    catch (detailError) { return { id, detailError: String(detailError) }; }
+  }));
+  await writeFile(join(out, 'failure.json'), JSON.stringify({ profile, envs, error: String(error), jobs, rounds, checks: checks.results }, null, 2));
   console.error(`FAIL native ${profile} execution: ${String(error)}`);
   throw error;
 } finally {
