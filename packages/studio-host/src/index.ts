@@ -1,4 +1,5 @@
 export * from "./contracts";
+export * from "./scenario-map";
 export * from "./capabilities";
 export * from "./desktop-map-cache";
 export * from "./cloud";

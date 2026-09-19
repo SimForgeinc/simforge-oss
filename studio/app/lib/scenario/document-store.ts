@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import { resolveScenarioMap } from "@simforge-oss/studio-host";
 import { queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import {
@@ -25,6 +26,8 @@ type DocumentRow = {
   content_sha256: string;
   canonical_content: string | Record<string, unknown>;
   map_version_id: string | null;
+  map_source_map_id: string | null;
+  map_xodr_sha256: string | null;
   dataset_id: string;
   authoring_quality_id: ScenarioDocumentDto["authoringQualityId"];
   created_at: string;
@@ -53,11 +56,13 @@ const DOCUMENT_SELECT = `
   SELECT d.id, d.workspace_id, d.title, dr.draft_version, dr.schema_version,
     dr.content_sha256,
     dr.canonical_content::text AS canonical_content, dr.map_version_id,
+    mv.source_map_asset_id AS map_source_map_id, mv.xodr_sha256 AS map_xodr_sha256,
     d.dataset_id, dr.authoring_quality_id,
     d.created_at::text AS created_at, d.updated_at::text AS updated_at,
     d.latest_revision_id
   FROM simforge.documents d
   JOIN simforge.drafts dr ON dr.document_id = d.id AND dr.workspace_id = d.workspace_id
+  LEFT JOIN simforge.map_versions mv ON mv.id = dr.map_version_id
 `;
 
 function documentDto(row: DocumentRow): ScenarioDocumentDto {
@@ -70,6 +75,8 @@ function documentDto(row: DocumentRow): ScenarioDocumentDto {
     contentSha256: row.content_sha256,
     content: parseTemplate(parseJsonObject(row.canonical_content)),
     mapVersionId: row.map_version_id,
+    mapSourceMapId: row.map_source_map_id,
+    mapXodrSha256: row.map_xodr_sha256,
     datasetId: row.dataset_id,
     authoringQualityId: row.authoring_quality_id,
     createdAt: row.created_at,
@@ -945,6 +952,7 @@ export async function createScenarioRevision(
   documentId: string,
   input: { expectedVersion: number; idempotencyKey?: string; ambient: ScenarioAmbientProvenance; materializedTraffic?: ScenarioMaterializedTrafficReference },
 ) {
+  const installedMaps = await listScenarioMapDescriptors(context);
   return withTransaction(async (tx) => {
     const traffic = input.materializedTraffic;
     const draft = await tx.queryOne<DocumentRow>(
@@ -958,6 +966,9 @@ export async function createScenarioRevision(
     if (current.draftVersion !== input.expectedVersion) {
       return { kind: "conflict" as const, current };
     }
+    // A revision freezes today's compatible publication; historical revisions
+    // remain immutable. A draft's version records the geometry it was authored on.
+    current.mapVersionId = resolveScenarioMap(current, installedMaps).mapVersionId;
     if (traffic) {
       const bound = await tx.queryOne<{ id: string }>(
         `SELECT id FROM simforge.artifacts

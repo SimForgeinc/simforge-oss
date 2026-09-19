@@ -66,6 +66,10 @@ export type ScenarioDocumentDto = {
   contentSha256: string;
   content: ScenarioTemplateV2;
   mapVersionId: string | null;
+  /** Canonical source identity; the version above records geometry provenance. */
+  mapSourceMapId?: string | null;
+  /** OpenDRIVE digest of the bound version, used to refuse unsafe forward resolution. */
+  mapXodrSha256?: string | null;
   datasetId: string;
   authoringQualityId: ScenarioAuthoringQuality;
   createdAt: string;

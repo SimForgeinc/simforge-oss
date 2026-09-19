@@ -9,6 +9,7 @@ import { gunzipSync } from 'node:zlib';
 import {
   ambientProvenanceForRevisionTraffic,
   createHttpStudioHost,
+  resolveScenarioMap,
   type ScenarioDocumentDto,
   type StudioHostServices,
 } from '@simforge-oss/studio-host';
@@ -59,9 +60,7 @@ export async function materializeRevisionEvidence(session: HostSession, document
   }
   const bundle = admitSimulationPreview(JSON.parse(gunzipSync(bytes).toString('utf8')), { draftVersion: document.draftVersion });
 
-  if (!document.mapVersionId) throw new CliError('map_missing', 'The scenario is not bound to a map version.', { detail: { documentId: document.id } });
-  const map = (await host.artifacts.listMaps()).find((entry) => entry.mapVersionId === document.mapVersionId);
-  if (!map) throw new CliError('map_missing', 'The scenario map is not installed on this host.', { detail: { mapVersionId: document.mapVersionId } });
+  const map = resolveScenarioMap(document, await host.artifacts.listMaps());
 
   await assertOnDrivableNetwork(session, map, bundle);
   const traffic = browserRevisionTraffic(document.content, map, bundle);

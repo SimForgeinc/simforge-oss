@@ -47,6 +47,8 @@ export const ScenarioDocumentSchema = object<ScenarioDocumentDto>({
   /** Owned by `@simforge-oss/scenario`; the editor validates it on load. */
   content: passthrough<ScenarioTemplateV2>(),
   mapVersionId: nullable(string()),
+  mapSourceMapId: optional(nullable(string())),
+  mapXodrSha256: optional(nullable(string())),
   datasetId: string(),
   authoringQualityId: oneOf(SCENARIO_AUTHORING_QUALITY_IDS),
   createdAt: string(),

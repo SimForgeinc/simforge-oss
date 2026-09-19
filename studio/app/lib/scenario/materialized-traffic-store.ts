@@ -1,4 +1,6 @@
 import type { AppContext } from "@/app/lib/db/app-context";
+import { resolveScenarioMap } from "@simforge-oss/studio-host";
+import { listScenarioMapDescriptors } from "./document-store";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
 import {
   checksumBoundPutRequiredHeaders,
@@ -30,8 +32,9 @@ export async function reserveMaterializedTraffic(
     draft_version: number;
     map_version_id: string | null;
     source_map_asset_id: string | null;
+    xodr_sha256: string | null;
   }>(
-    `SELECT d.workspace_id, dr.draft_version, dr.map_version_id, mv.source_map_asset_id
+    `SELECT d.workspace_id, dr.draft_version, dr.map_version_id, mv.source_map_asset_id, mv.xodr_sha256
      FROM simforge.documents d JOIN simforge.drafts dr
        ON dr.document_id = d.id AND dr.workspace_id = d.workspace_id
      JOIN simforge.map_versions mv ON mv.id = dr.map_version_id
@@ -42,10 +45,15 @@ export async function reserveMaterializedTraffic(
   if (
     !document ||
     Number(document.draft_version) !== input.expectedVersion ||
-    document.map_version_id !== input.mapVersionId ||
     document.source_map_asset_id !== input.mapAssetId
   )
     return null;
+  const map = resolveScenarioMap({
+    mapVersionId: document.map_version_id,
+    mapSourceMapId: document.source_map_asset_id,
+    mapXodrSha256: document.xodr_sha256,
+  }, await listScenarioMapDescriptors(context));
+  if (map.mapVersionId !== input.mapVersionId) return null;
   const bucket = artifactBucket();
   const key = `${context.workspaceId}/materialized-traffic/sha256/${input.sha256}.json`;
   const artifactId = scenarioId("usart");
