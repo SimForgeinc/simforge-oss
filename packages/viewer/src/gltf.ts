@@ -292,11 +292,17 @@ class SharedKTX2Loader extends KTX2Loader {
         const authored = ktx2MipInfo(buffer);
         const decoded = this.tracker?.trackDecode();
         const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parseAtLimit(buffer, maxDimension, resolve, reject));
+        const rgbaFallbackReason = (texture as Texture).format === RGBAFormat
+          ? source?.codec === 'rgba' ? 'authored-uncompressed-rgba'
+            : texture.image.width % 4 !== 0 || texture.image.height % 4 !== 0
+              ? 'non-block-aligned-basis-base' : 'no-supported-compressed-transcode-target'
+          : undefined;
         limitCompressedTextureMipmaps(texture, maxDimension);
         texture.addEventListener('dispose', release);
         texture.userData.mapTexture = {
           url, authoredWidth: source?.authoredWidth ?? authored.width, authoredHeight: source?.authoredHeight ?? authored.height,
           width: texture.image.width, height: texture.image.height, allocatedMaxDimension: maxDimension,
+          rgbaFallbackReason,
         };
         decoded?.();
         if (this.signal?.aborted) {

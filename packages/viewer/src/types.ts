@@ -227,6 +227,17 @@ export interface CityViewerLiveQuality {
 
 export interface CityViewerStats {
   tierSelection: TierSelection;
+  loadDiagnostics: {
+    capabilities: { maxTextureSize: number; bc7: boolean; astc: boolean; vendor: string | null; renderer: string | null };
+    availableVariantIds: string[];
+    lastError: {
+      name: string; message: string; code?: string; field?: string; cause?: string;
+      layer?: string; assetId?: string; required?: boolean; estimatedBytes?: number;
+      residentBytes: number; pendingBytes: number; byteBudget: number;
+    } | null;
+    textureFormats: Record<string, number>;
+    rgbaFallbacks: Record<string, number>;
+  };
   /** Required visible geometry is resident, independently of final texture quality. */
   usable: boolean;
   /** Required geometry AND the selected minimum texture tier are resident. */
