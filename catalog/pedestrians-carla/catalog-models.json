@@ -14,7 +14,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0016": {
       "age": "adult",
@@ -30,7 +31,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0017": {
       "age": "adult",
@@ -46,7 +48,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0018": {
       "age": "adult",
@@ -62,7 +65,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0019": {
       "age": "adult",
@@ -78,7 +82,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0020": {
       "age": "adult",
@@ -94,7 +99,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0021": {
       "age": "adult",
@@ -110,7 +116,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0022": {
       "age": "adult",
@@ -126,7 +133,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0023": {
       "age": "adult",
@@ -142,7 +150,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0024": {
       "age": "adult",
@@ -158,7 +167,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0025": {
       "age": "adult",
@@ -174,7 +184,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0026": {
       "age": "adult",
@@ -190,7 +201,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0027": {
       "age": "adult",
@@ -206,7 +218,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0028": {
       "age": "adult",
@@ -222,7 +235,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0029": {
       "age": "adult",
@@ -238,7 +252,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0030": {
       "age": "adult",
@@ -254,7 +269,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0031": {
       "age": "adult",
@@ -270,7 +286,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0032": {
       "age": "adult",
@@ -286,7 +303,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0033": {
       "age": "adult",
@@ -302,7 +320,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0034": {
       "age": "adult",
@@ -318,7 +337,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0035": {
       "age": "adult",
@@ -334,7 +354,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0036": {
       "age": "adult",
@@ -350,7 +371,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0037": {
       "age": "adult",
@@ -366,7 +388,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0038": {
       "age": "adult",
@@ -382,7 +405,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0039": {
       "age": "adult",
@@ -398,7 +422,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0040": {
       "age": "adult",
@@ -414,7 +439,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0041": {
       "age": "adult",
@@ -430,7 +456,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0042": {
       "age": "adult",
@@ -446,7 +473,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0043": {
       "age": "adult",
@@ -462,7 +490,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0044": {
       "age": "adult",
@@ -478,7 +507,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0045": {
       "age": "adult",
@@ -494,7 +524,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0046": {
       "age": "adult",
@@ -510,7 +541,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0047": {
       "age": "adult",
@@ -526,7 +558,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0048": {
       "age": "adult",
@@ -542,7 +575,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0049": {
       "age": "child",
@@ -558,7 +592,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0050": {
       "age": "child",
@@ -574,7 +609,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0051": {
       "age": "child",
@@ -590,7 +626,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     },
     "walker.pedestrian.0052": {
       "age": "child",
@@ -606,7 +643,8 @@
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
-      "tintable": false
+      "tintable": false,
+      "yawOffsetRad": 1.5707963267948966
     }
   },
   "version": 1

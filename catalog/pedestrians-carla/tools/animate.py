@@ -109,7 +109,7 @@ def append_animations(doc, binary, clips, family):
         animations.append(animation)
     doc['animations'] = animations
     extras.update(animationBase=boundary, rigFamily=family, rootMotion='in-place',
-                  convention='y-up, meters, +X forward, in-place animation')
+                  convention='y-up, meters; bind-pose facing +Z; walk/run gait axis +Z; in-place animation; actor binding yaw +pi/2 maps +Z to +X')
     assert hashlib.sha256(binary[:boundary['bytes']]).hexdigest() == original_hash
     return save_glb(doc, binary)
 
