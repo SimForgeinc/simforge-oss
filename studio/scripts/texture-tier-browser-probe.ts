@@ -20,6 +20,7 @@ export interface BrowserTierEvidence {
   viable: boolean | null;
   height: number;
   visible: boolean;
+  visibilityBlockers: { tag: string; testId: string | null; display: string; visibility: string; opacity: string }[];
   capabilities: { maxTextureSize: number; bc7: boolean; astc: boolean };
 }
 
@@ -29,6 +30,8 @@ export interface SettledTierFrame {
   skyVerification: 'five upward unobstructed scene rays per region';
   settledAfterMs: number;
   capturedAtMs: number;
+  geometry: Pick<BrowserTierEvidence, 'visible' | 'visibilityBlockers' | 'pixels'>;
+  mapVersionId: string | null;
   tierSelection: TierSelection | null;
   missingInViewTiles: number | null;
   camera: CameraDiagnostics;
@@ -49,9 +52,14 @@ declare global {
 function capture(viewer: CityViewer) {
   const canvas = viewer.renderer.domElement;
   let visible = canvas.isConnected && canvas.width > 0 && canvas.height > 0 && canvas.getBoundingClientRect().height > 0;
+  const visibilityBlockers: BrowserTierEvidence['visibilityBlockers'] = [];
   for (let element: HTMLElement | null = canvas; element; element = element.parentElement) {
     const style = getComputedStyle(element);
-    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) visible = false;
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+      visible = false;
+      visibilityBlockers.push({ tag: element.tagName, testId: element.getAttribute('data-testid'),
+        display: style.display, visibility: style.visibility, opacity: style.opacity });
+    }
   }
   // Read in the same task as the draw, before the default framebuffer clears.
   viewer.renderer.render(viewer.scene, viewer.camera);
@@ -146,7 +154,7 @@ function capture(viewer: CityViewer) {
   const capabilities = { maxTextureSize: Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)),
     bc7: Boolean(gl.getExtension('EXT_texture_compression_bptc')),
     astc: Boolean(gl.getExtension('WEBGL_compressed_texture_astc')) };
-  return { stats: viewer.getStats(), camera: viewer.getCameraDiagnostics(), textures: [...textures.values()], viable, visible, capabilities,
+  return { stats: viewer.getStats(), camera: viewer.getCameraDiagnostics(), textures: [...textures.values()], viable, visible, visibilityBlockers, capabilities,
     pixels: { samples: pixels.length, colors, geometryHits, litGeometrySamples, insideFacingHits, centerDistance, nearestSurfaceM, trianglesExamined },
     glError: gl.getError(), width: canvas.width, height: canvas.height };
 }
@@ -171,7 +179,8 @@ window.__captureSettledTierFrame = async () => {
     const next = Promise.withResolvers<void>(); setTimeout(next.resolve, 100); await next.promise;
   }
   const canvas = viewer.renderer.domElement;
-  viewer.renderer.render(viewer.scene, viewer.camera);
+  const { visible, visibilityBlockers, pixels: geometryPixels, glError } = capture(viewer);
+  if (glError !== 0) throw new Error(`Settled geometry GL error: ${glError}`);
   const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height;
   const twoD = copy.getContext('2d', { willReadFrequently: true })!;
   twoD.drawImage(canvas, 0, 0);
@@ -216,6 +225,8 @@ window.__captureSettledTierFrame = async () => {
   const stats = viewer.getStats() as CityViewerStats & { tierSelection?: TierSelection };
   return { frame: measureFrameReadability(pixels, copy.width, copy.height, skyRegions), skyRegions,
     skyVerification: 'five upward unobstructed scene rays per region', settledAfterMs: capturedAtMs - started, capturedAtMs,
+    geometry: { visible, visibilityBlockers, pixels: geometryPixels },
+    mapVersionId: document.querySelector('[data-testid="scenario-world-host"]')?.getAttribute('data-world-loaded-map-version-id') ?? null,
     tierSelection: stats.tierSelection ?? null, missingInViewTiles: stats.coverage.city?.missingInViewTiles ?? null,
     camera: viewer.getCameraDiagnostics(), captureView: viewer.captureView(), lighting: { exposure: viewer.renderer.toneMappingExposure, directional },
     glError: viewer.renderer.getContext().getError(), png: copy.toDataURL('image/png') };

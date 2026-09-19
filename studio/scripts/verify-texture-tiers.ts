@@ -152,6 +152,14 @@ try {
         const viewer = window.__simforgeViewerProbe!.viewer;
         const appliedAtMs = performance.now();
         viewer.setCameraPoseConstraintsEnabled(false);
+        // The gallery owns an ongoing tour. Pin ONLY the inspection camera via
+        // the public pose constraint; rendering, streaming and light stay live.
+        viewer.controls.setPoseConstraint((camera, target) => {
+          camera.position.fromArray(view.position);
+          target.fromArray(view.target);
+          camera.fov = view.fov;
+          camera.updateProjectionMatrix();
+        });
         viewer.applyView(view);
         const frame = Promise.withResolvers<void>();
         requestAnimationFrame(() => requestAnimationFrame(() => frame.resolve()));
@@ -225,6 +233,11 @@ try {
     assert(Number.isFinite(ready.pixels.centerDistance) && ready.pixels.centerDistance >= 3);
     assert(ready.pixels.insideFacingHits < ready.pixels.geometryHits / 2, 'majority of visible surfaces face out from the camera enclosure');
   });
+  checks.check('settled inspection visibly contains real lit geometry', settled?.geometry, () => {
+    assert(settled, settlingError ?? 'no settled inspection frame');
+    assert(settled.geometry.visible, 'inspection world must be visible');
+    assert(settled.geometry.pixels.litGeometrySamples >= 24, 'an all-sky frame cannot prove geometry readability');
+  });
   checks.check('settled viewer contains no large near-black region', { frame: settled?.frame, settlingError }, () => {
     assert(settled, settlingError ?? 'no settled frame');
     assertNoBlackGeometry(settled.frame);
@@ -238,6 +251,7 @@ try {
   });
   if (inspectionView) checks.check('inspection framing matches the declared shared camera', { requested: inspectionView, actual: settled?.captureView }, () => {
     assert(settled, settlingError ?? 'no settled inspection frame');
+    assert.equal(settled.mapVersionId, map.mapVersionId, 'capture must belong to the declared map');
     assertSameCameraView(settled.captureView, inspectionView);
     assert.equal(settled.frame.width, 1600); assert.equal(settled.frame.height, 1000);
     assert(inspectionStartedAtMs! >= primary.atMs && inspectionPoseAppliedAtMs! >= inspectionStartedAtMs!);
