@@ -1,4 +1,5 @@
 import { sha256BytesAsync } from '@simforge-oss/engine/hash';
+import { externalModelDiagnostics } from './externalModel';
 import {
   AgXToneMapping,
   Box3,
@@ -1814,6 +1815,7 @@ export class CityViewer {
         admissionUnderestimates: { city: city?.largestAdmissionUnderestimate ?? null,
           roads: road?.largestAdmissionUnderestimate ?? null, vegetation: veg?.largestAdmissionUnderestimate ?? null },
         residencyDeadline: this.residencyDeadline,
+        actorModels: externalModelDiagnostics(),
       },
       usable,
       targetQualityReady,

@@ -3,6 +3,7 @@ import { AnimationClip, Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, Vecto
 import {
   disposeExternalModels,
   externalModelClips,
+  externalModelDiagnostics,
   externalModelScene,
   externalModelState,
   onExternalModelChange,
@@ -138,7 +139,7 @@ describe('external GLB model cache', () => {
     await vi.waitFor(() => expect(active).toBe(0));
   });
 
-  it('records a rejecting loader as failed without throwing', async () => {
+  it('exposes the asset and failure reason when a GLB cannot load', async () => {
     const hash = 'b'.repeat(64);
     const listener = vi.fn();
     const unsubscribe = onExternalModelChange(listener);
@@ -152,6 +153,11 @@ describe('external GLB model cache', () => {
       contentHash: hash,
     })).not.toThrow();
     await vi.waitFor(() => expect(externalModelState(hash)).toBe('failed'));
+    expect(externalModelDiagnostics()[hash]).toMatchObject({
+      state: 'failed',
+      url: 'https://assets.example/missing.glb',
+      downgradeReason: expect.stringContaining('network unavailable'),
+    });
     expect(externalModelScene(hash)).toBeNull();
     expect(externalModelClips(hash)).toEqual([]);
     expect(listener).toHaveBeenCalledOnce();

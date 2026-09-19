@@ -28,6 +28,8 @@ interface LoadedExternalModel {
 }
 
 interface PendingExternalModel {
+  readonly url: string;
+  readonly downgradeReason: string;
   state: 'loading' | 'failed';
 }
 
@@ -57,7 +59,11 @@ export function externalModelState(contentHash: string): ExternalModelState {
 export function requestExternalModel(binding: ExternalModelBinding): void {
   if (binding.kind === 'proxy') return;
   if (records.has(binding.contentHash)) return;
-  records.set(binding.contentHash, { state: 'loading' });
+  records.set(binding.contentHash, {
+    state: 'loading',
+    url: binding.url,
+    downgradeReason: `actor-model-loading: ${binding.url}; displaying a procedural placeholder until the GLB is ready`,
+  });
   queue.push({ binding, generation });
   pumpQueue();
 }
@@ -65,6 +71,15 @@ export function requestExternalModel(binding: ExternalModelBinding): void {
 export function externalModelScene(contentHash: string): Group | null {
   const record = records.get(contentHash);
   return record?.state === 'ready' ? record.scene : null;
+}
+
+/** Asset-load degradation is visible to the same diagnostics surface as map downgrades. */
+export function externalModelDiagnostics(): Readonly<Record<string, { state: ExternalModelState; url: string; downgradeReason: string }>> {
+  return Object.fromEntries([...records].flatMap(([hash, record]) =>
+    record.state === 'ready' ? [] : [[hash, {
+      state: record.state, url: record.url, downgradeReason: record.downgradeReason,
+    }]],
+  ));
 }
 
 export function externalModelClips(contentHash: string): readonly AnimationClip[] {
@@ -106,9 +121,9 @@ async function performLoad({ binding, generation: loadGeneration }: QueuedLoad):
   let gltf: ExternalModelAsset;
   try {
     gltf = await Promise.resolve().then(() => loadExternalModel(binding.url));
-  } catch {
+  } catch (error) {
     if (loadGeneration !== generation) return;
-    records.set(binding.contentHash, { state: 'failed' });
+    reportModelFailure(binding, error);
     emitChange(binding.contentHash);
     return;
   }
@@ -126,11 +141,18 @@ async function performLoad({ binding, generation: loadGeneration }: QueuedLoad):
       clips: [...gltf.animations],
       extents,
     });
-  } catch {
+  } catch (error) {
     disposeScene(gltf.scene);
-    records.set(binding.contentHash, { state: 'failed' });
+    reportModelFailure(binding, error);
   }
   emitChange(binding.contentHash);
+}
+
+function reportModelFailure(binding: ExternalGlbModelBinding, error: unknown): void {
+  const reason = error instanceof Error ? error.message : String(error);
+  const downgradeReason = `actor-model-load-failed: ${binding.url}: ${reason}; displaying a procedural placeholder instead of the authored GLB`;
+  records.set(binding.contentHash, { state: 'failed', url: binding.url, downgradeReason });
+  console.error('[actor-model]', downgradeReason);
 }
 
 function normaliseScene(
