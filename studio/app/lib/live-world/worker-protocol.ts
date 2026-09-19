@@ -2,7 +2,7 @@ import type { SimScenarioInput } from '@simforge-oss/engine';
 import type { MapGraphSources, StaticColliderDiagnostics } from '@simforge-oss/playback';
 
 import type { AuthoredDriveMode, ManualDriveRecording } from './authored-world-session';
-import type { ControlInput, DriverCommand, SpawnActorRequest } from './types';
+import type { ControlInput, DriveControlSource, DriverCommand, PlannerAction, SpawnActorRequest } from './types';
 
 export type LiveWorldWorkerRequest =
   | {
@@ -26,6 +26,8 @@ export type LiveWorldWorkerRequest =
   | { type: 'set-ego'; actorId: string | null; mode?: AuthoredDriveMode }
   | { type: 'control'; input: ControlInput }
   | { type: 'driver-command'; actorId: string; command: DriverCommand | null }
+  | { type: 'control-source'; source: DriveControlSource }
+  | { type: 'planner-action'; actorId: string; action: PlannerAction }
   /** Rebuild the authored world at t = 0 and record the designated ego through the clip end. */
   | { type: 'begin-take' }
   | {

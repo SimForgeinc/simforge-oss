@@ -53,6 +53,8 @@ import { useWorldSource } from "@/app/lib/live-world/use-world-source";
 import { driveFrame } from "./drive-session.stylex";
 import { drivingLanes } from "./drive-lanes";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
+import { JevController } from "./jev-controller";
+import type { DriveControlSource } from "@/app/lib/live-world/types";
 
 const WORLD_TICK_HZ = 20;
 /** Orbit drag sensitivity, radians per pixel. */
@@ -127,6 +129,11 @@ export function DriveSession({
   const [volume, setVolume] = useState(0.8);
   const [trafficEnabled, setTrafficEnabled] = useState(false);
   const [cameraKind, setCameraKind] = useState<DriveCameraKind>("chase");
+  const [controlSource, setControlSource] = useState<DriveControlSource>("human");
+  const [jevStatus, setJevStatus] = useState("Human control");
+  const [jevConnecting, setJevConnecting] = useState(false);
+  const jevRef = useRef<JevController | null>(null);
+  const jevConnectRef = useRef<AbortController | null>(null);
   const lanes = useMemo(() => drivingLanes(laneIndex), [laneIndex]);
   const [gamepadConnected, setGamepadConnected] = useState(false);
   /** How far into the clip the simulation is, sampled for the countdown only. */
@@ -157,7 +164,10 @@ export function DriveSession({
   useEffect(() => {
     if (!source || takePhase.kind !== "recording") return;
     setClipElapsedS(source.transport.time);
-    const timer = setInterval(() => setClipElapsedS(source.transport.time), 250);
+    const timer = setInterval(() => {
+      setClipElapsedS(source.transport.time);
+      if (jevRef.current) setJevStatus(jevRef.current.status);
+    }, 250);
     return () => clearInterval(timer);
   }, [source, takePhase.kind]);
 
@@ -226,6 +236,12 @@ export function DriveSession({
     // a tick that walks backwards after that authoritative reset.
     const unsubscribeResets = source.subscribeResets?.(() => {
       latestFrameRef.current = null;
+      jevConnectRef.current?.abort();
+      jevRef.current?.close();
+      jevRef.current = null;
+      source.setControlSource("human");
+      setControlSource("human");
+      setJevStatus("Human control");
       bridge?.reset();
     });
     // The loop reads frames from a ref: publishing them as React state at 20 Hz
@@ -291,6 +307,51 @@ export function DriveSession({
     setTakeError(null);
     setTakePhase({ kind: "recording" });
     source.beginTake();
+  }, [source]);
+
+  const toggleJev = useCallback(async () => {
+    if (!source || !egoActorId) return;
+    jevConnectRef.current?.abort();
+    if (jevRef.current) {
+      jevRef.current.close();
+      jevRef.current = null;
+      source.setControlSource("human");
+      setControlSource("human");
+      setJevStatus("Human control");
+      return;
+    }
+    const abort = new AbortController();
+    jevConnectRef.current = abort;
+    setJevConnecting(true);
+    try {
+      const controller = await JevController.create(laneIndex, egoActorId, source.scenarioInput, abort.signal);
+      if (abort.signal.aborted) {
+        controller.close();
+        return;
+      }
+      const frame = latestFrameRef.current;
+      const action = frame ? controller.update(frame) : null;
+      if (!action) {
+        controller.close();
+        throw new Error("Wait for the first native vehicle frame before Jev takeover.");
+      }
+      jevRef.current = controller;
+      source.setControlSource("jev");
+      source.setPlannerAction(action);
+      setControlSource("jev");
+      setJevStatus(controller.status);
+    } catch (error) {
+      if (!abort.signal.aborted) toast.error("Jev takeover unavailable", { description: errorMessage(error) });
+    } finally {
+      if (jevConnectRef.current === abort) setJevConnecting(false);
+    }
+  }, [egoActorId, laneIndex, source]);
+
+  useEffect(() => () => {
+    jevConnectRef.current?.abort();
+    jevRef.current?.close();
+    jevRef.current = null;
+    source?.setControlSource("human");
   }, [source]);
 
   const onViewerReady = useCallback((ready: CityViewer) => {
@@ -517,7 +578,11 @@ export function DriveSession({
     const hook = (dtS: number): void => {
       previous?.(dtS);
       const input = inputRef.current;
-      if (input && !pausedRef.current) {
+      const frame = latestFrameRef.current;
+      if (jevRef.current && frame && !pausedRef.current) {
+        const action = jevRef.current.update(frame);
+        if (action) source.setPlannerAction(action);
+      } else if (input && !pausedRef.current && !jevRef.current) {
         // `setDriverCommand`, not `control`: the driver command is held by the
         // runtime and applied at every physics substep, so pushing it once per
         // rendered frame is the whole of driving, and it is the only one of the
@@ -539,7 +604,6 @@ export function DriveSession({
       }
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
-      const frame = latestFrameRef.current;
       if (frame) readEgoTelemetry(frame, egoActorId, telemetry);
       const pose = rig.update(
         { x: actor.x, y: actor.y, z: actor.z, headingRad: actor.headingRad, speedMps: telemetry.speedMps },
@@ -646,6 +710,14 @@ export function DriveSession({
         units={units}
         vehicleLabel={vehicleLabel}
       />
+      <div {...stylex.props(driveChrome.panelStatus, driveFrame.controlSource)}>
+        <Button type="button" variant="outline" onClick={() => void toggleJev()}
+          disabled={jevConnecting || !egoActorId || paused || takePhase.kind !== "recording"}
+          aria-pressed={controlSource === "jev"} data-testid="drive-control-source">
+          {jevConnecting ? "Connecting Jev…" : controlSource === "jev" ? "Take human control" : "Jev takeover"}
+        </Button>
+        <span role="status" data-testid="drive-jev-status">{jevStatus}</span>
+      </div>
       <div
         {...stylex.props(driveChrome.panelStatus, driveFrame.clip)}
         data-testid="drive-clip-countdown"
