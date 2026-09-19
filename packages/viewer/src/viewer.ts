@@ -1651,7 +1651,7 @@ export class CityViewer {
   };
 
   private enforceBudget(): void {
-    this.freeSpace(this.options.byteBudget, Infinity);
+    this.freeSpace(this.options.byteBudget, -Infinity);
   }
 
   /**
