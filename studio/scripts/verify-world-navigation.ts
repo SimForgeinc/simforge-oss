@@ -64,6 +64,10 @@ export async function assertWorldPaint(page: Page) {
 }
 
 async function ready(page: Page, id: string, editor = false) {
+  // Cached Activity trees retain ready attributes while a destination is still
+  // in Suspense. Bind readiness to the visible destination, not the old host.
+  if (editor) await page.getByTestId("scenario-editor-session").waitFor({ state: "visible", timeout: 120_000 });
+  else await page.getByTestId("map-gallery-editorial-overlay").waitFor({ state: "visible", timeout: 120_000 });
   await page.waitForFunction(({ id, editor }) => {
     const world = document.querySelector('[data-testid="scenario-world-host"]');
     return world?.getAttribute("data-world-loaded-map-version-id") === id
@@ -231,6 +235,11 @@ export async function verifyWorldNavigation({ context, ticketUrl, map, other, ou
   } catch (error) {
     const state = await page.evaluate(() => ({
       lifetime: window.__worldNavigation?.() ?? null,
+      url: location.href,
+      hosts: [...document.querySelectorAll('[data-testid="scenario-world-host"]')].map(host => ({
+        loadedMap: host.getAttribute("data-world-loaded-map-version-id"), percent: host.getAttribute("data-world-load-percent"),
+        canvasConnected: Boolean(host.querySelector("canvas")?.isConnected),
+      })),
       body: document.body.innerText.slice(0, 2000),
     })).catch(() => null);
     await writeFile(join(out, "world-navigation-failure.json"), JSON.stringify({ scope, latencyMs, error: String(error), state, samples, rows, errors }, null, 2));
