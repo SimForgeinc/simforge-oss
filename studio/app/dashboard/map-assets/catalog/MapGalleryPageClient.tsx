@@ -88,7 +88,7 @@ function MapGalleryWorldPreview({
   onSumoStatusChange,
 }: {
   map: ScenarioMapDescriptorDto;
-  installedMaps: ReadonlyArray<{ sourceMapId: string; mapVersionId: string }>;
+  installedMaps: readonly LocalMapDescriptor[];
   sumoEnabled: boolean;
   touring: boolean;
   onSumoStatusChange: (status: SumoTrafficStatus) => void;
@@ -99,7 +99,7 @@ function MapGalleryWorldPreview({
   const quality = useRenderingPreference() ?? "medium";
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapId: map.sourceMapId,
-    installedMaps: installedMaps.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })),
+    installedMaps: installedMaps.filter((entry) => entry.installed.browser).map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })),
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,
     label: map.label,
