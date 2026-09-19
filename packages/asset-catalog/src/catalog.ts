@@ -22,7 +22,7 @@ export type ExternalCatalogEntry = Omit<CatalogEntry, 'id'> & {
  * `dims` are the real-world extents of the default build and are asserted
  * against the built bounding box in the test suite, so they cannot drift.
  */
-export const CATALOG = [
+const BUNDLED_CATALOG = [
   // ---------------------------------------------------------------- vehicles
   {
     id: 'vehicle.sedan',
@@ -598,6 +598,7 @@ export const CATALOG = [
   // each mesh is centred on its solver origin and carries only its own body.
   {
     id: 'robot.delivery-4w',
+    proceduralBuilder: 'robot.delivery-4w',
     label: 'Four-wheel delivery robot chassis',
     class: 'robot',
     actorClass: 'static_object',
@@ -610,6 +611,7 @@ export const CATALOG = [
   },
   {
     id: 'robot.wheel',
+    proceduralBuilder: 'robot.wheel',
     label: 'Delivery robot wheel',
     class: 'robot',
     actorClass: 'static_object',
@@ -1018,6 +1020,22 @@ export const CATALOG = [
     defaultParams: {},
   },
 ] as const satisfies readonly CatalogEntry[];
+
+type BundledVehicleId = Extract<(typeof BUNDLED_CATALOG)[number]['id'], `vehicle.${string}`>;
+/** Explicit low-poly choices preserve the canonical class, footprint and builder parameters. */
+export const LOW_POLY_VEHICLE_CATALOG = BUNDLED_CATALOG
+  .filter((entry) => entry.class === 'vehicle')
+  .map((entry) => {
+    const { model: _model, ...metadata } = entry as CatalogEntry;
+    return {
+      ...metadata,
+      id: `${entry.id}.low_poly` as `${BundledVehicleId}.low_poly`,
+      label: `${entry.label} (low-poly)`,
+      proceduralBuilder: entry.id,
+    };
+  });
+
+export const CATALOG = [...BUNDLED_CATALOG, ...LOW_POLY_VEHICLE_CATALOG] as const;
 
 /** Every catalog id, as a literal union. */
 export type CatalogId = (typeof CATALOG)[number]['id'];

@@ -2,6 +2,8 @@ export {
   CATALOG,
   CATALOG_ALIASES,
   CATALOG_IDS,
+  AUTHORING_CATALOG,
+  LOW_POLY_VEHICLE_CATALOG,
   EXTERNAL_CATALOG_PREFIXES,
   actorClassForCatalogEntry,
   actorClassesForCatalogEntry,

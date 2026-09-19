@@ -263,5 +263,7 @@ export interface CatalogEntry {
   readonly defaultParams: Readonly<Record<string, ParamValue>>;
   /** Present for every actor whose authored model must ship with animation. */
   readonly animation?: CatalogAnimationProfile;
+  /** Deliberate procedural appearance; names the canonical builder, never a failed GLB. */
+  readonly proceduralBuilder?: string;
   readonly model?: ExternalModelBinding;
 }

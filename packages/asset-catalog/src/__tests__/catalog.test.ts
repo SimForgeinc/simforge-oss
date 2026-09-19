@@ -41,8 +41,14 @@ describe('catalog', () => {
     for (const cls of PROP_CLASSES) expect(covered.has(cls), `no entries for ${cls}`).toBe(true);
   });
 
-  it('has a builder for every id and no orphan builders', () => {
-    expect([...BUILDER_IDS].sort()).toEqual([...CATALOG_IDS].sort());
+  it('resolves every procedural identity to a real builder without orphan builders', () => {
+    for (const id of CATALOG_IDS) {
+      const entry = getEntry(id);
+      if (!entry.model || entry.proceduralBuilder) {
+        expect(BUILDER_IDS).toContain(entry.proceduralBuilder ?? entry.id);
+      }
+    }
+    for (const id of BUILDER_IDS) expect(isCatalogId(id)).toBe(true);
   });
 
   it('exposes lookups and guards', () => {
