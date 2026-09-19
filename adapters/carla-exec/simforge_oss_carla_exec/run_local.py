@@ -73,14 +73,19 @@ def _q(value: float) -> int | float:
 
 def _mount(x_mm: float, right_mm: float, up_mm: float, yaw_deg: float = 0.0,
            pitch_deg: float = 0.0, roll_deg: float = 0.0) -> dict[str, Any]:
-    """Pronto's pod-relative sheet: x runs back from the pod front datum."""
+    """Pronto's pod-relative sheet: x runs back from the pod front datum.
+
+    Sheet yaw is measured to the right, like `right_mm`, so it is negated into
+    the canonical frame for the same reason the lateral offset is: otherwise a
+    camera is placed on one flank and aimed at the other.
+    """
     return {
         "position": {
             "x": _q(POD_FRONT_DATUM_M + x_mm / 1000.0),
             "y": _q(POD_PLATE_HEIGHT_M + up_mm / 1000.0),
             "z": _q(-right_mm / 1000.0),
         },
-        "rotation": {"yawRad": _q(_angle_rad(yaw_deg)), "pitchRad": _q(_angle_rad(pitch_deg)),
+        "rotation": {"yawRad": _q(_angle_rad(-yaw_deg)), "pitchRad": _q(_angle_rad(pitch_deg)),
                      "rollRad": _q(_angle_rad(roll_deg))},
     }
 
@@ -224,10 +229,16 @@ def _vehicle_mount(x_m: float, lateral_right_m: float, up_m: float,
     canonical left-handed `z`; this mirrors that conversion so a preset's
     numbers can be transcribed without reinterpretation. Unlike `_mount` there
     is no pod datum: these poses are already vehicle-local.
+
+    Yaw is measured the same way as `lateral_right_m` — positive to the right —
+    so it is negated into the canonical frame too. Negating the offset alone
+    put every flank camera on one side of the car and aimed it at the other:
+    `camera_right_side` sat outside the right doors and filmed them, and the
+    corner cameras were mirrored left for right.
     """
     return {
         "position": {"x": _q(x_m), "y": _q(up_m), "z": _q(-lateral_right_m)},
-        "rotation": {"yawRad": _q(_angle_rad(yaw_deg)),
+        "rotation": {"yawRad": _q(_angle_rad(-yaw_deg)),
                      "pitchRad": _q(_angle_rad(pitch_deg)), "rollRad": 0},
     }
 

@@ -12,7 +12,7 @@ import zipfile
 import tempfile
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -22,6 +22,7 @@ from .backend import RenderBackend, runtime_asset_bindings
 from .compiler import (
     LIFECYCLE_ABSENT,
     ExecutionPlan,
+    PlanFrame,
     compile_xosc14,
     substitute_actor_catalog_bindings,
 )
@@ -423,26 +424,50 @@ def _appearance_capability(plan: ExecutionPlan, abort: Callable[[], None] | None
     }
 
 
+def truncate_downed_actors(plan: ExecutionPlan) -> tuple[ExecutionPlan, dict[str, float]]:
+    """End a knocked-down actor's presence at the knockdown instead of erasing it.
+
+    OpenSCENARIO says where a struck body slid to but carries no posture for it,
+    and native physics cannot produce that pose without teleporting the actor
+    after spawn. Dropping the actor outright was the safe reading, but it also
+    deletes every frame *before* the impact — which in a pedestrian-strike
+    scenario is the strike itself, leaving twenty seconds of traffic driving past
+    an empty crossing.
+
+    Keeping the actor until the authored knockdown and despawning it there
+    invents nothing: every rendered frame is an authored, upright pose, and the
+    removal is reported so the truncation is auditable.
+    """
+    downed_at: dict[str, float] = {}
+    for frame in plan.frames:
+        for actor_id, state in frame.actors.items():
+            if state.downed and actor_id not in downed_at:
+                downed_at[actor_id] = frame.t
+    if not downed_at:
+        return plan, {}
+
+    frames: list[PlanFrame] = []
+    for frame in plan.frames:
+        actors = dict(frame.actors)
+        for actor_id, start in downed_at.items():
+            state = actors.get(actor_id)
+            if state is None or frame.t < start:
+                continue
+            actors[actor_id] = replace(state, lifecycle=LIFECYCLE_ABSENT, downed=False)
+        frames.append(replace(frame, actors=actors))
+    return replace(plan, frames=tuple(frames)), downed_at
+
+
 def _preflight_execution_semantics(lease: Lease, plan: ExecutionPlan) -> dict[str, str]:
     """Reject semantics the selected execution mode cannot honestly execute.
 
-    Returns the actors to drop before spawn (with the recorded reason):
-    authored knockdown poses cannot execute under native physics without a
-    post-spawn teleport repair, so the posed actor is dropped and reported in
-    the manifest instead of failing the whole render.
+    Returns the actors to drop before spawn (with the recorded reason). Knocked
+    down actors are not dropped here: `truncate_downed_actors` has already ended
+    them at the knockdown, which keeps the approach and the impact on camera.
     """
     if lease.render_spec.execution_mode != "native-physics":
         return {}
-    downed_actors = sorted({
-        actor_id
-        for frame in plan.frames
-        for actor_id, state in frame.actors.items()
-        if state.downed
-    })
-    execution_drops = {
-        actor_id: "native physics cannot execute authored knockdown poses without post-spawn teleport repair"
-        for actor_id in downed_actors
-    }
+    execution_drops: dict[str, str] = {}
     appearance = _appearance_capability(plan)
     cue_actors = sorted({
         actor_id
@@ -1319,6 +1344,10 @@ def execute_lease(
             frozenset(execution_manifest["materializedTraffic"]["overlapActorIds"]),
         )
     check_abort("compile_xosc")
+    if lease.render_spec.execution_mode == "native-physics":
+        plan, knocked_down_at = truncate_downed_actors(plan)
+    else:
+        knocked_down_at = {}
     execution_drops = _preflight_execution_semantics(lease, plan)
     actor_ids = set(plan.actors)
     unknown_mounts = sorted({
@@ -1452,10 +1481,20 @@ def execute_lease(
                             ],
                         })
                 check_abort("verify_blueprints")
+            if knocked_down_at:
+                # The actor is real up to the impact and gone after it. Report
+                # the cut so a reviewer can tell a truncated body apart from one
+                # that was never rendered at all.
+                emit("actors_truncated_at_knockdown", {
+                    "actors": [
+                        {"actorId": actor_id, "despawnedAtSeconds": round(t, 4)}
+                        for actor_id, t in sorted(knocked_down_at.items())
+                    ],
+                })
             if execution_drops:
-                # Knockdown-posed actors are dropped from execution before any
-                # CARLA body exists; spawn records them in the placement report
-                # so the manifest carries an explicit per-actor diagnostic.
+                # Actors dropped from execution before any CARLA body exists;
+                # spawn records them in the placement report so the manifest
+                # carries an explicit per-actor diagnostic.
                 backend.execution_drops = dict(execution_drops)  # type: ignore[attr-defined]
                 emit("execution_actors_dropped", {"actorIds": sorted(execution_drops)})
             backend.spawn(plan.actors, plan.frames[0], catalog, abort=lambda: backend_fence("spawn_actors"))
@@ -1500,9 +1539,25 @@ def execute_lease(
                 accumulator.configure_spawn_placement(dropped_actor_ids, static_planar_offsets)
             else:
                 spawn_placement = None
+            mount_adjustments: list[Mapping[str, object]] = []
             if lease.job_mode == "full_render":
                 backend.configure_sensors(lease.render_spec, output_dir, MAX_OUTPUT_BYTES, abort=lambda: backend_fence("configure_sensors"))
                 check_abort("configure_sensors")
+                # A rig pose authored for a narrower reference vehicle would
+                # otherwise film the cabin interior. The correction travels in
+                # the run's attestation, because the progress stream forwards
+                # only a fixed set of events and the working directory is not
+                # what the caller keeps.
+                mount_adjustments = list(getattr(backend, "sensor_mount_adjustments", ()) or ())
+                if mount_adjustments:
+                    emit("warning", {
+                        "code": "render.sensor_mount_adjusted",
+                        "message": (
+                            "moved "
+                            + ", ".join(str(m["sensorId"]) for m in mount_adjustments)
+                            + " out of the host body to keep it out of frame"
+                        ),
+                    })
             stability = backend.prepare_scenario(plan.frames[0], abort=lambda: backend_fence("prepare_scenario"))
             check_abort("prepare_scenario")
             emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": len(plan.frames), "executionMode": lease.render_spec.execution_mode})
@@ -1709,6 +1764,8 @@ def execute_lease(
             attestation["nativeStability"] = stability
         if spawn_placement:
             attestation["spawnPlacement"] = dict(spawn_placement)
+        if mount_adjustments:
+            attestation["sensorMountAdjustments"] = mount_adjustments
         parity_evidence = _parity_evidence(
             lease,
             plan,
