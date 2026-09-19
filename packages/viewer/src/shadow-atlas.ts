@@ -32,6 +32,10 @@ export class ShadowAtlas {
   readonly texture: DataTexture;
   /** (originX, originZ, 1/spanX, 1/spanZ) — world XZ to atlas UV. */
   readonly rect: Vector4;
+  readonly diagnostics: {
+    requestedCellPx: number; actualCellPx: number; width: number; height: number;
+    residentBytes: number; downgradeReason: string | null;
+  };
 
   private readonly cellPx: number;
   private readonly gridX: number;
@@ -42,10 +46,19 @@ export class ShadowAtlas {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
 
-  constructor(manifest: CityManifest, cellPx: number) {
+  constructor(manifest: CityManifest, cellPx: number, maxTextureSize: number) {
     const [gx = 1, gz = 1] = manifest.scene.gridDimensions;
     const [cx = 1, cz = 1] = manifest.scene.cellSize;
     const [ox = 0, , oz = 0] = manifest.scene.origin;
+    const requestedCellPx = cellPx;
+    cellPx = Math.min(cellPx, Math.floor(maxTextureSize / Math.max(gx, gz)));
+    if (cellPx < 1) throw new Error(`Shadow atlas grid ${gx}x${gz} exceeds GPU MAX_TEXTURE_SIZE ${maxTextureSize}`);
+    this.diagnostics = {
+      requestedCellPx, actualCellPx: cellPx, width: gx * cellPx, height: gz * cellPx,
+      residentBytes: gx * cellPx * gz * cellPx,
+      downgradeReason: cellPx < requestedCellPx
+        ? `shadow-atlas-gpu-limit: reduced cell resolution from ${requestedCellPx} to ${cellPx} px to fit MAX_TEXTURE_SIZE ${maxTextureSize}` : null,
+    };
     this.cellPx = cellPx;
     this.gridX = gx;
     this.gridZ = gz;
