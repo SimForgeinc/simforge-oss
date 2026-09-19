@@ -116,8 +116,8 @@ export interface TileStreamLayerOptions {
   /** Shared byte ledger; keeps in-flight decodes from blowing past the budget. */
   memory: MemoryGovernor;
   /**
-   * Load wanted tiles' coarsest LODs before finer detail. Keep those fallbacks
-   * resident while wanted; offscreen fallbacks may be evicted under pressure.
+   * Load required tiles' coarsest LODs before finer detail. Keep those fallbacks
+   * resident while required; optional prefetch remains evictable under pressure.
    */
   pinCoarsest: boolean;
   /** Infrastructure such as the single road/ground asset must load even when its conservative estimate exceeds the quality budget. */
@@ -152,9 +152,8 @@ const MAX_UPLOAD_BACKLOG = 3;
  * (`error * screenHeight / (distance * 2 * tan(fov/2))`) and take the coarsest
  * LOD whose projected error is under the threshold. Fetches are ordered by the
  * error a tile would *win*, so the tile that is worst on screen goes first.
- * Nothing is removed before its replacement is on the GPU, and with
- * `pinCoarsest` index 0 stays resident forever, so a tile can never become a
- * hole.
+ * Nothing is removed before its replacement is on the GPU. With `pinCoarsest`,
+ * required index 0 fallbacks stay resident so visible tiles cannot become holes.
  */
 export class TileStreamLayer {
   readonly group = new Group();
@@ -338,6 +337,7 @@ export class TileStreamLayer {
         entry.budgetBlocked = false;
       }
       if (entry.budgetBlocked && this.opts.pinCoarsest && !entry.resident.has(0)
+        && (this.opts.required?.(entry.def, distance) ?? wanted)
         && this.opts.memory.pendingBytes?.() === 0) entry.budgetBlocked = false;
       entry.wanted = wanted;
       entry.desired = desired;
@@ -389,7 +389,7 @@ export class TileStreamLayer {
     }
     if (wanted.length === 0) return;
     // Biggest screen-space win first; not-yet-loaded tiles (gain Infinity) lead.
-    wanted.sort((a, b) => b.gain - a.gain || a.distance - b.distance);
+    wanted.sort((a, b) => Number(b.required) - Number(a.required) || b.gain - a.gain || a.distance - b.distance);
 
     for (const entry of wanted) {
       if (active >= this.opts.maxConcurrent
@@ -405,9 +405,9 @@ export class TileStreamLayer {
     const estimate = estimateLodBytes(lod);
     const essential = this.opts.essentialAll === true
       || (this.opts.essentialCoarsest === true && index === 0);
-    if (!essential && !this.opts.memory.admit(estimate, entry.distance)) {
+    if (!essential && !this.opts.memory.admit(estimate, entry.required ? -Infinity : entry.distance)) {
       entry.budgetBlocked = true;
-      if (this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
+      if (entry.required && this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
         entry.failures = MAX_FAILURES;
         this.reportFailure(entry, index, new RequiredAssetBudgetError(this.opts.name, entry.def.id, this, this.generation, estimate));
       }
@@ -452,7 +452,7 @@ export class TileStreamLayer {
   pumpUploads(deadline: number, pixelBudget: { remaining: number }, camera: Camera): void {
     if (this.disposed || this.uploadQueue.length === 0) return;
     this.uploadQueue.sort(
-      (a, b) => b.entry.gain - a.entry.gain || a.entry.distance - b.entry.distance,
+      (a, b) => Number(b.entry.required) - Number(a.entry.required) || b.entry.gain - a.entry.gain || a.entry.distance - b.entry.distance,
     );
     while (this.uploadQueue.length > 0 && performance.now() < deadline && pixelBudget.remaining > 0) {
       const job = this.uploadQueue[0];
@@ -611,11 +611,11 @@ export class TileStreamLayer {
   evictionCandidates(out: EvictionCandidate[]): void {
     for (const entry of this.entries.values()) {
       for (const [index, asset] of entry.resident) {
-        if (index === 0 && this.opts.pinCoarsest && entry.desired >= 0) continue;
+        if (index === 0 && this.opts.pinCoarsest && entry.required) continue;
         // Evicting the exact asset this stationary view still wants creates an
         // endless fetch -> upload -> eviction loop. Refuse the new admission
         // instead; a camera/quality change will make it eligible later.
-        if (index === entry.desired) continue;
+        if (index === entry.desired && entry.required) continue;
         const unwanted = entry.desired < 0 ? 100 : index > entry.desired ? 5 : 1;
         out.push({
           layer: this,
@@ -634,6 +634,9 @@ export class TileStreamLayer {
     if (!entry || !asset) return 0;
     entry.resident.delete(candidate.index);
     this.bytes -= asset.bytes;
+    // A budget-evicted prefetch must not compete for the same bytes again until
+    // the view changes or it becomes required.
+    if (!entry.required && entry.wanted) entry.budgetBlocked = true;
     this.group.remove(asset.object);
     if (entry.displayed === candidate.index) {
       const fallback = entry.resident.get(0);

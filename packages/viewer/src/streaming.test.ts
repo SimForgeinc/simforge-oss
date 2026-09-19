@@ -86,6 +86,54 @@ describe('essential streaming assets', () => {
     layer.dispose();
   });
 
+  it('defers unaffordable prefetch but still refuses an unaffordable visible fallback', () => {
+    let required = false;
+    const failures: Error[] = [];
+    const layer = new TileStreamLayer({
+      name: 'city-layer', renderer: {} as never, scene: new Scene(),
+      defs: [{ id: 'coarse', box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'coarse.glb', triangles: 1, fileSize: 1, geometricError: 0 }] }],
+      build: async () => emptyAsset(), maxConcurrent: 1, pinCoarsest: true,
+      want: () => true, required: () => required,
+      memory: { admit: () => false, maxAssetBytes: () => 100, pendingBytes: () => 0 },
+      onError: error => failures.push(error),
+    });
+    layer.update(new Vector3(), 1, 9999);
+    expect(failures).toEqual([]);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+    required = true;
+    layer.update(new Vector3(), 1, 9999);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.name).toBe('RequiredAssetBudgetError');
+    expect(layer.stats().requiredPendingAssets).toBe(1);
+    layer.dispose();
+  });
+
+  it('reclaims wanted prefetch without evicting a required fallback or immediately refetching it', async () => {
+    const layer = new TileStreamLayer({
+      name: 'city-layer', renderer: { compileAsync: async () => undefined } as never, scene: new Scene(),
+      defs: ['visible', 'prefetch'].map(id => ({ id,
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: `${id}.glb`, triangles: 1, fileSize: 1, geometricError: 0 }] })),
+      build: async () => emptyAsset(), maxConcurrent: 2, pinCoarsest: true,
+      want: () => true, required: def => def.id === 'visible',
+      memory: { admit: () => true, maxAssetBytes: () => 100, pendingBytes: () => 0 },
+    });
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    const candidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(candidates);
+    expect(candidates.map(candidate => candidate.entryId)).toEqual(['prefetch']);
+    layer.evict(candidates[0]!);
+    layer.update(new Vector3(), 1, 9999);
+    expect(layer.stats().residentAssets).toBe(1);
+    expect(layer.stats().loading).toBe(0);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+    layer.dispose();
+  });
+
   it('does not report an unaffordable optional LOD as endlessly queued', () => {
     const build = vi.fn(async () => emptyAsset());
     const layer = new TileStreamLayer({
