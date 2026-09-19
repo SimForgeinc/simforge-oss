@@ -11,11 +11,11 @@ export function yawToQuaternion(yaw: number): [number, number, number, number] {
 
 const CATALOG_BY_KIND: Record<string, string> = {
   pedestrian: 'pedestrian.adult',
-  bicycle: 'cyclist.commuter',
-  bus: 'vehicle.transit-bus',
-  truck: 'vehicle.box-truck',
+  bicycle: 'vehicle.bicycle',
+  bus: 'vehicle.bus',
+  truck: 'vehicle.box_truck',
   motorcycle: 'vehicle.motorcycle',
-  obstacle: 'prop.traffic-cone',
+  obstacle: 'construction.traffic_cone',
   static_object: 'hazard.cardboard_box',
 };
 

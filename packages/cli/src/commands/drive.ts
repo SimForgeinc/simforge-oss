@@ -177,7 +177,7 @@ function actorClass(kind: string): string { return ({ car: 'car', truck: 'truck'
 function catalogId(actor: SimScenarioInput['actors'][number]): string {
   const tagged = actor.tags?.find((tag) => tag.startsWith('catalog:'));
   if (tagged) return tagged.slice('catalog:'.length);
-  return ({ pedestrian: 'pedestrian.adult', bicycle: 'cyclist.commuter', truck: 'vehicle.box-truck', bus: 'vehicle.transit-bus', motorcycle: 'vehicle.motorcycle' } as Record<string, string>)[actor.kind] ?? 'vehicle.sedan';
+  return ({ pedestrian: 'pedestrian.adult', bicycle: 'vehicle.bicycle', truck: 'vehicle.box_truck', bus: 'vehicle.bus', motorcycle: 'vehicle.motorcycle' } as Record<string, string>)[actor.kind] ?? 'vehicle.sedan';
 }
 function makeSceneState(input: SimScenarioInput, mapId: string, snapshot: { actors: readonly SessionActorSnapshot[] }): Record<string, unknown> {
   const sourceById = new Map(input.actors.map((actor) => [actor.id, actor]));
