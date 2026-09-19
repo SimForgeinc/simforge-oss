@@ -161,9 +161,9 @@ pub fn catalog_id_for(kind: ActorKind, tags: &[String]) -> String {
     }
     match kind {
         ActorKind::Pedestrian => "pedestrian.adult",
-        ActorKind::Bicycle => "cyclist.commuter",
-        ActorKind::Bus => "vehicle.transit-bus",
-        ActorKind::Truck => "vehicle.box-truck",
+        ActorKind::Bicycle => "vehicle.bicycle",
+        ActorKind::Bus => "vehicle.bus",
+        ActorKind::Truck => "vehicle.box_truck",
         ActorKind::Motorcycle => "vehicle.motorcycle",
         ActorKind::StaticObject => "hazard.cardboard_box",
         _ => "vehicle.sedan",

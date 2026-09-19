@@ -118,8 +118,8 @@ export function nativeActorCatalogId(kind: string, tags: readonly string[]): str
   const authored = authoredCatalogId(tags);
   if (authored !== undefined) return authored;
   const defaults: Record<string, string> = {
-    pedestrian: 'pedestrian.adult', bicycle: 'cyclist.commuter', bus: 'vehicle.transit-bus',
-    truck: 'vehicle.box-truck', motorcycle: 'vehicle.motorcycle', obstacle: 'prop.traffic-cone',
+    pedestrian: 'pedestrian.adult', bicycle: 'vehicle.bicycle', bus: 'vehicle.bus',
+    truck: 'vehicle.box_truck', motorcycle: 'vehicle.motorcycle', obstacle: 'construction.traffic_cone',
   };
   return defaults[kind] ?? 'vehicle.sedan';
 }
