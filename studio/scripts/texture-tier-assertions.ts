@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { MAX_DARK_PATCH_FRACTION, MAX_SKY_BLACK_FRACTION, MIN_DAY_SKY_LUMINANCE, type FrameReadability } from './texture-frame-quality';
+import type { CameraView } from '../../packages/viewer/src/camera-controls';
 
 export type Tier = 'low' | 'medium' | 'render' | 'ml';
 export interface TierSelection {
@@ -115,6 +116,14 @@ export function browserCapabilityRestriction(restriction: 'portable' | 'restrict
       klass.prototype.getParameter = function(name) { return name === this.MAX_TEXTURE_SIZE ? 256 : parameter.call(this, name); };` : ''}
     }
   `;
+}
+
+export function assertSameCameraView(actual: CameraView, expected: CameraView): void {
+  for (let axis = 0; axis < 3; axis++) {
+    assert(Math.abs(actual.position[axis]! - expected.position[axis]!) < 1e-6, `camera position differs on axis${axis}`);
+    assert(Math.abs(actual.target[axis]! - expected.target[axis]!) < 1e-6, `camera target differs on axis${axis}`);
+  }
+  assert(Math.abs(actual.fov - expected.fov) < 1e-6, 'camera field of view differs');
 }
 
 export function assertNoBlackGeometry(frame: FrameReadability): void {

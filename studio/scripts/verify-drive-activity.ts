@@ -69,6 +69,11 @@ const api = async <T>(path: string, body?: unknown): Promise<T> => {
 };
 const setup = await api<{ completedAt: string | null }>('/api/simforge/host/setup');
 assert(setup.completedAt, 'fixture owner must complete onboarding before this read-only replay');
+const documentId = decodeURIComponent(route.pathname.split('/').at(-1)!);
+const fixture = await api<{ content: { choreography: { clipSeconds: number }; roles: { id: string }[] } }>(`/api/simforge/documents/${encodeURIComponent(documentId)}`);
+assert(fixture.content.choreography.clipSeconds >= 120,
+  'drive lifecycle fixture needs a dedicated >=120s clip; short native clips auto-save and leave before the world is ready');
+assert(fixture.content.roles.some(role => role.id === route.searchParams.get('actor')), 'drive fixture must contain the selected actor');
 const ticket = await api<{ url: string }>('/api/simforge/host/session', { next: route.pathname + route.search });
 const cdpEndpoint = args.get('cdp');
 if (cdpEndpoint) {
@@ -91,6 +96,7 @@ const recordError = (message: string) => {
 const developmentSignals: string[] = [];
 const cycles: unknown[] = [];
 let before: ActivityPaint | undefined;
+let page: Page | undefined;
 
 async function paint(page: Page): Promise<ActivityPaint> {
   return page.evaluate(async () => {
@@ -132,7 +138,7 @@ async function paint(page: Page): Promise<ActivityPaint> {
 }
 
 try {
-  const page = await context.newPage();
+  page = await context.newPage();
   page.on('pageerror', error => recordError(error.message));
   page.on('console', message => { if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) recordError(message.text()); });
   page.on('request', request => { if (/react-refresh|webpack-hmr|\/_next\/static\/development\//.test(request.url())) developmentSignals.push(request.url()); });
@@ -169,15 +175,23 @@ try {
   if (!before.canvasPresent) throw new Error('Initial drive route has no canvas');
   for (let cycle = 1; cycle <= 2; cycle++) {
     stage = `cycle${cycle}/pause`;
+    // Activity correctly retains the open Pause menu. Resume through its real
+    // control before opening Pause again; blindly pressing Escape would CLOSE
+    // the retained menu on cycle2 and never exercise the second Leave action.
+    const leaveControl = page.getByRole('button', { name: 'Leave the drive', exact: true });
+    if (await leaveControl.isVisible()) {
+      await page.getByRole('button', { name: 'Resume', exact: true }).click();
+      await leaveControl.waitFor({ state: 'hidden', timeout: 10_000 });
+    }
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Leave the drive', exact: true }).waitFor({ timeout: 10_000 });
+    await leaveControl.waitFor({ timeout: 10_000 });
     await page.evaluate(() => {
       const viewer = window.__simforgeViewerProbe!.viewer;
       window.__activityFirst = { viewer, canvas: viewer.renderer.domElement, gl: viewer.renderer.getContext() };
       window.__activityStage = 'away';
     });
     stage = `cycle${cycle}/away`;
-    await page.getByRole('button', { name: 'Leave the drive', exact: true }).click();
+    await leaveControl.click();
     await page.waitForURL('**/dashboard/scenario?**', { timeout: 30_000 });
     // Let deferred cleanup run while React Activity keeps its DOM connected.
     await page.waitForTimeout(250);
@@ -197,8 +211,10 @@ try {
     }, undefined, { timeout: 180_000 });
     const back = await paint(page);
     const resumeToObservationMs = performance.now() - resumeStarted;
+    const pauseRetained = await leaveControl.isVisible();
+    checks.check(`cycle${cycle}/back: Pause menu state retained`, { pauseRetained }, () => assert.equal(pauseRetained, true));
     await page.screenshot({ path: join(out, `back-${cycle}.png`) });
-    cycles.push({ cycle, away, back, resumeToObservationMs });
+    cycles.push({ cycle, away, back, resumeToObservationMs, pauseRetained });
     checks.check(`cycle${cycle}/back: no crash boundary and a viable restored canvas`, {
       canvasPresent: back.canvasPresent, visible: back.visible, contextLost: back.contextLost,
       probeViable: back.probeViable, sameCanvas: back.sameCanvas, sharedContext: back.sharedContext,
@@ -221,7 +237,15 @@ try {
   await writeFile(join(out, 'result.json'), JSON.stringify({ root, port, drivePath, before, cycles, errors, errorEvents, checks: checks.results }, null, 2));
   checks.finish();
 } catch (error) {
-  await writeFile(join(out, 'failure.json'), JSON.stringify({ error: String(error), before, cycles, errors, errorEvents, checks: checks.results }, null, 2));
+  const state = page ? await page.evaluate(() => {
+    const probe = window.__simforgeViewerProbe;
+    return { href: location.href, body: document.body.innerText.slice(0, 10_000),
+      canvasConnected: probe?.viewer.renderer.domElement.isConnected ?? false,
+      contextLost: probe?.viewer.renderer.getContext().isContextLost() ?? null,
+      stats: probe?.viewer.getStats() ?? null };
+  }).catch(() => null) : null;
+  if (page) await page.screenshot({ path: join(out, 'failure.png') }).catch(() => undefined);
+  await writeFile(join(out, 'failure.json'), JSON.stringify({ error: String(error), state, before, cycles, errors, errorEvents, checks: checks.results }, null, 2));
   console.error(`FAIL production drive Activity replay: ${String(error)}`);
   throw error;
 } finally {

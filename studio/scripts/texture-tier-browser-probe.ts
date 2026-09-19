@@ -2,8 +2,9 @@ import { Box3, DoubleSide, Matrix3, Raycaster, Triangle, Vector2, Vector3, type 
 import type { CityViewerStats, CameraDiagnostics } from '../../packages/viewer/src/types';
 import type { CityViewer } from '../../packages/viewer/src/viewer';
 import type {} from '../../packages/viewer/src/viewer-diagnostics';
-import type { ResidentTexture } from './texture-tier-assertions';
+import type { ResidentTexture, TierSelection } from './texture-tier-assertions';
 import { measureFrameReadability, type FrameReadability, type PixelRect } from './texture-frame-quality';
+import type { CameraView } from '../../packages/viewer/src/camera-controls';
 
 // Bundled separately and injected before navigation. Nothing here substitutes
 // the viewer or its fetch path; all observations refer to its real scene.
@@ -27,7 +28,11 @@ export interface SettledTierFrame {
   skyRegions: PixelRect[];
   skyVerification: 'five upward unobstructed scene rays per region';
   settledAfterMs: number;
+  capturedAtMs: number;
+  tierSelection: TierSelection | null;
+  missingInViewTiles: number | null;
   camera: CameraDiagnostics;
+  captureView: CameraView;
   lighting: { exposure: number; directional: { color: number; intensity: number }[] };
   glError: number;
   png: string;
@@ -158,10 +163,11 @@ window.__captureSettledTierFrame = async () => {
     const stats = viewer.getStats(), now = performance.now();
     const changed = stats.residentAssets !== lastAssets || stats.downloads.transferredBytes !== lastBytes || stats.programs !== lastPrograms;
     lastAssets = stats.residentAssets; lastBytes = stats.downloads.transferredBytes; lastPrograms = stats.programs;
-    if (changed || stats.loading || stats.uploading || stats.pendingTextureUploads || stats.downloads.active) idleSince = null;
+    const targetReady = 'targetQualityReady' in stats && stats.targetQualityReady === true;
+    if (changed || !targetReady || stats.coverage.city?.missingInViewTiles !== 0 || stats.loading || stats.queued || stats.uploading || stats.pendingTextureUploads || stats.pendingBytes || stats.downloads.active) idleSince = null;
     else idleSince ??= now;
     if (idleSince !== null && now - idleSince >= 1000) break;
-    if (now - started > 90_000) throw new Error(`Viewer did not settle: ${JSON.stringify({ loading: stats.loading, queued: stats.queued, uploads: stats.pendingTextureUploads, activeDownloads: stats.downloads.active })}`);
+    if (now - started > 90_000) throw new Error(`Viewer did not settle: ${JSON.stringify({ targetReady, missingInView: stats.coverage.city?.missingInViewTiles, loading: stats.loading, queued: stats.queued, uploads: stats.pendingTextureUploads, pendingBytes: stats.pendingBytes, activeDownloads: stats.downloads.active })}`);
     const next = Promise.withResolvers<void>(); setTimeout(next.resolve, 100); await next.promise;
   }
   const canvas = viewer.renderer.domElement;
@@ -170,6 +176,7 @@ window.__captureSettledTierFrame = async () => {
   const twoD = copy.getContext('2d', { willReadFrequently: true })!;
   twoD.drawImage(canvas, 0, 0);
   const pixels = twoD.getImageData(0, 0, copy.width, copy.height).data;
+  const capturedAtMs = performance.now();
   const skyRegions: PixelRect[] = [];
   const edge = Math.min(copy.width, copy.height, Math.max(8, Math.round(copy.height * 32 / 1000)));
   const ray = new Raycaster(), uv = new Vector2();
@@ -206,9 +213,11 @@ window.__captureSettledTierFrame = async () => {
     const light = object as DirectionalLight;
     if (light.isDirectionalLight) directional.push({ color: light.color.getHex(), intensity: light.intensity });
   });
+  const stats = viewer.getStats() as CityViewerStats & { tierSelection?: TierSelection };
   return { frame: measureFrameReadability(pixels, copy.width, copy.height, skyRegions), skyRegions,
-    skyVerification: 'five upward unobstructed scene rays per region', settledAfterMs: performance.now() - started,
-    camera: viewer.getCameraDiagnostics(), lighting: { exposure: viewer.renderer.toneMappingExposure, directional },
+    skyVerification: 'five upward unobstructed scene rays per region', settledAfterMs: capturedAtMs - started, capturedAtMs,
+    tierSelection: stats.tierSelection ?? null, missingInViewTiles: stats.coverage.city?.missingInViewTiles ?? null,
+    camera: viewer.getCameraDiagnostics(), captureView: viewer.captureView(), lighting: { exposure: viewer.renderer.toneMappingExposure, directional },
     glError: viewer.renderer.getContext().getError(), png: copy.toDataURL('image/png') };
 };
 

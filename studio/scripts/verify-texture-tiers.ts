@@ -2,14 +2,19 @@
  * medium/restricted. Root must be throwaway and daemon port must be 5514–5517.
  * --baseline=true uses main's high preset but still EXPECTS the requested tier:
  * its failures are useful red-gate evidence, not a passing compatibility mode.
+ * Optional --inspection-view=<CameraView.json> applies one explicit shared pose
+ * AFTER the original readiness/byte/pacing measurements, for1600x1000 raw-canvas
+ * comparisons. First-view and inspection evidence remain separately labelled.
  */
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
-import { assertAuthoredDimensions, assertDimensions, assertNoBlackGeometry, assertNoDuplicateFetches, assertReadableSky, browserCapabilityRestriction, Checks, FRAME_P95_MS, isTextureUrl, STABILITY_MS, TEXTURE_BUDGET_BYTES, trafficBeforeReady, type NetworkTransfer, type TierSelection } from './texture-tier-assertions';
+import { z } from 'zod';
+import { assertAuthoredDimensions, assertDimensions, assertNoBlackGeometry, assertNoDuplicateFetches, assertReadableSky, assertSameCameraView, browserCapabilityRestriction, Checks, FRAME_P95_MS, isTextureUrl, STABILITY_MS, TEXTURE_BUDGET_BYTES, trafficBeforeReady, type NetworkTransfer, type TierSelection } from './texture-tier-assertions';
 import type { SettledTierFrame } from './texture-tier-browser-probe';
+import type { CameraView } from '../../packages/viewer/src/camera-controls';
 
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 const root = args.get('root');
@@ -20,6 +25,12 @@ const restriction = args.get('capabilities') ?? 'normal';
 assert(['normal', 'portable', 'restricted'].includes(restriction));
 const expected = restriction === 'restricted' ? 'low' : tier;
 const target = expected === 'low' ? 256 : 512;
+let inspectionView: CameraView | undefined;
+if (args.get('inspection-view')) {
+  const vector = z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]);
+  inspectionView = z.object({ position: vector, target: vector, fov: z.number().positive().lt(180) })
+    .parse(JSON.parse(await readFile(args.get('inspection-view')!, 'utf8')));
+}
 const host = JSON.parse(await readFile(join(root, 'host.json'), 'utf8')) as { baseUrl: string; controlToken: string };
 const base = new URL(host.baseUrl);
 assert(base.hostname === '127.0.0.1' && Number(base.port) >= 5514 && Number(base.port) <= 5517, 'only throwaway loopback ports 5514–5517 are allowed');
@@ -116,18 +127,46 @@ try {
     frames.sort((a, b) => a - b);
     return { maxMissingInViewAfterReady, ineligibleSamples, frames: frames.length, p95: frames[Math.ceil(frames.length * 0.95) - 1]!, glErrors };
   }, STABILITY_MS);
+  // Freeze all first-view measurements BEFORE resizing or moving the camera.
+  const primary = await page.evaluate(() => ({ atMs: performance.now(), view: window.__simforgeViewerProbe!.viewer.captureView() }));
+  const primaryNetwork = [...requests.values()];
+  const readyCdp = (capture.timeOrigin + ready.readyAtMs) / 1000 - wallOffset;
+  const textures = primaryNetwork.filter(row => row.texture).map(row => ({ url: row.url, bytes: row.bytes ?? 0 }));
+  const accounting = trafficBeforeReady(primaryNetwork, readyCdp);
+  const textureBytesBeforeReady = accounting.textureBytes;
+  let inspectionStartedAtMs: number | null = null;
+  let inspectionPoseAppliedAtMs: number | null = null;
   let settled: Omit<SettledTierFrame, 'png'> | undefined;
   let settlingError: string | undefined;
   try {
+    if (inspectionView) {
+      inspectionStartedAtMs = await page.evaluate(() => performance.now());
+      const size = await page.evaluate(() => {
+        const viewer = window.__simforgeViewerProbe!.viewer;
+        return { width: viewer.renderer.domElement.clientWidth, height: viewer.renderer.domElement.clientHeight, ratio: viewer.renderer.getPixelRatio() };
+      });
+      assert.equal(size.ratio, 1, 'comparison fixture requires identical1x pixel ratio');
+      const viewport = page.viewportSize()!;
+      await page.setViewportSize({ width: viewport.width + 1600 - size.width, height: viewport.height + 1000 - size.height });
+      const actual = await page.evaluate(async view => {
+        const viewer = window.__simforgeViewerProbe!.viewer;
+        const appliedAtMs = performance.now();
+        viewer.setCameraPoseConstraintsEnabled(false);
+        viewer.applyView(view);
+        const frame = Promise.withResolvers<void>();
+        requestAnimationFrame(() => requestAnimationFrame(() => frame.resolve()));
+        await frame.promise;
+        return { appliedAtMs, view: viewer.captureView(), width: viewer.renderer.domElement.width, height: viewer.renderer.domElement.height };
+      }, inspectionView);
+      inspectionPoseAppliedAtMs = actual.appliedAtMs;
+      assert.equal(actual.width, 1600); assert.equal(actual.height, 1000);
+      assertSameCameraView(actual.view, inspectionView);
+    }
     const { png, ...measurement } = await page.evaluate(() => window.__captureSettledTierFrame());
     assert(png.startsWith('data:image/png;base64,'), 'settled capture must be a real PNG');
     await writeFile(join(out, 'settled.png'), Buffer.from(png.slice('data:image/png;base64,'.length), 'base64'));
     settled = measurement;
   } catch (error) { settlingError = String(error); }
-  const readyCdp = (capture.timeOrigin + ready.readyAtMs) / 1000 - wallOffset;
-  const textures = [...requests.values()].filter(row => row.texture);
-  const accounting = trafficBeforeReady([...requests.values()], readyCdp);
-  const textureBytesBeforeReady = accounting.textureBytes;
   const stats = ready.stats as typeof ready.stats & { tierSelection?: TierSelection; mapTextures?: { dimensions: Record<string, number> }; usable?: boolean; targetQualityReady?: boolean };
   checks.check('Belmont fixture at ready', capture.mapId, () => assert.equal(capture.mapId, map.mapVersionId));
   checks.check('actual resident texture dimensions', stats.mapTextures?.dimensions, () => assertDimensions(stats.mapTextures?.dimensions ?? {}, target));
@@ -190,11 +229,25 @@ try {
     assert(settled, settlingError ?? 'no settled frame');
     assertNoBlackGeometry(settled.frame);
     assert.equal(settled.glError, 0);
+    assert.equal(settled.missingInViewTiles, 0);
+    assert.equal(settled.tierSelection?.actual, expected, 'inspection pose must not silently change the compared tier');
   });
   checks.check('geometry-verified daytime sky is not black', { frame: settled?.frame, skyRegions: settled?.skyRegions, verification: settled?.skyVerification, settlingError }, () => {
     assert(settled, settlingError ?? 'no settled frame');
     assertReadableSky(settled.frame);
   });
-  await writeFile(join(out, 'results.json'), JSON.stringify({ tier, restriction, ready, stability, settled, settlingError, accounting, textureBytesBeforeReady, requests: [...requests.values()], checks: checks.results }, null, 2));
+  if (inspectionView) checks.check('inspection framing matches the declared shared camera', { requested: inspectionView, actual: settled?.captureView }, () => {
+    assert(settled, settlingError ?? 'no settled inspection frame');
+    assertSameCameraView(settled.captureView, inspectionView);
+    assert.equal(settled.frame.width, 1600); assert.equal(settled.frame.height, 1000);
+    assert(inspectionStartedAtMs! >= primary.atMs && inspectionPoseAppliedAtMs! >= inspectionStartedAtMs!);
+    assert(settled.capturedAtMs > inspectionPoseAppliedAtMs!);
+  });
+  const wholeSessionTextures = [...requests.values()].filter(row => row.texture).map(row => ({ url: row.url, bytes: row.bytes ?? 0 }));
+  checks.check('whole-session container dedup including inspection', { requests: wholeSessionTextures.length, distinct: new Set(wholeSessionTextures.map(row => row.url)).size }, () => assertNoDuplicateFetches(wholeSessionTextures));
+  const phases = { readyAtMs: ready.readyAtMs, readyPixelAtMs: ready.snapshotAtMs, primaryFrozenAtMs: primary.atMs, primaryView: primary.view,
+    primaryRequestCount: primaryNetwork.length, inspectionStartedAtMs, inspectionPoseAppliedAtMs };
+  await writeFile(join(out, 'results.json'), JSON.stringify({ tier, restriction, inspectionView, phases, ready, stability, settled, settlingError, accounting, textureBytesBeforeReady,
+    wholeSessionAccounting: trafficBeforeReady([...requests.values()], Infinity), requests: [...requests.values()], checks: checks.results }, null, 2));
   checks.finish();
 } finally { await browser.close(); }
