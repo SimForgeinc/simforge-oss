@@ -463,6 +463,9 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
             let resolved = catalog
                 .resolve(&desc.catalog_id)
                 .map(|entry| (desc.catalog_id.as_str(), entry))
+                // Generic pedestrians intentionally receive a stable walker, not an
+                // identity-equivalent model. Any future explicit procedural pedestrian
+                // choice must bypass this substitution rather than enter the walker pool.
                 .or_else(|| {
                     let substitute = catalog.resolve_deterministic(&desc.id);
                     if let Some((recipe, _)) = substitute {
