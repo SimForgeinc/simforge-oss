@@ -237,6 +237,20 @@ asset network bytes. Neither cache avoids decoding, shader work or GPU
 uploads; do not promise that web result for Electron or blame a metadata
 stall on link speed without profiling the renderer lifetime.
 
+For a map that stalls or fails, open **ADVANCED / DEBUG** on the existing loading
+screen and choose **Copy JSON**. The panel remains available in the error state
+and remembers its expanded/collapsed choice for this browser origin. Its report
+includes the requested and selected texture tiers, available variants, GPU
+capabilities, exact streaming byte accounting, refused asset estimates, per-layer
+coverage (including *missing in view* versus all missing/failed tiles), map
+identity, readiness and canvas visibility, and the full load error chain.
+Unavailable values are marked unknown rather than inferred. The drive's map
+resolution panel also lists requested and installed map versions by stable source
+identity. Share the whole JSON report, not only the headline error; stacks and
+manifest URLs can contain local machine details. On restricted clipboard contexts
+the button uses the same selection-copy fallback as other Studio errors, and
+reports a failure if the browser denies both methods.
+
 The refusal is in the type: `HostOrigin.fromConfigured(value, "packaged")`
 throws `host_origin_plaintext_network` for plain `http://` on a non-loopback
 address unless the caller passes `{ plaintextNetworkAcknowledged: true }`
