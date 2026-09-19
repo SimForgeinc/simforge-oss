@@ -122,6 +122,8 @@ export interface DeriveClosuresOptions {
   name: string;
   workDir: string;
   cellSize?: number;
+  /** KTX-Software installation used for offline native tier transcoding. */
+  ktxBinDir?: string;
 }
 
 function registryArtifact(stage: ClosureStageResult): RegistryClosureArtifact {
@@ -293,7 +295,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await mkdir(path.join(contentDir, '3d', 'runtime'), { recursive: true });
     await cp(decoderJs, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.js'));
     await cp(decoderWasm, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.wasm'));
-    await buildTextureTiers({ sourceRoot: contentDir });
+    await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}) });
     const stage = await finishStage('web', outputDir, 'web', keys, { toolFingerprint, viewerOnly: master.viewerOnly });
     return { ...stage, report };
   });
@@ -364,7 +366,9 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
   if (options.derived === false) {
     return { name: options.name, canonical: registryArtifact(master), derived: [], stages: { master } };
   }
-  return deriveClosures(master, { name: options.name, workDir: options.workDir, ...(options.cellSize ? { cellSize: options.cellSize } : {}) });
+  return deriveClosures(master, { name: options.name, workDir: options.workDir,
+    ...(options.cellSize ? { cellSize: options.cellSize } : {}),
+    ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}) });
 }
 
 /** The web tier for a master stage - whether just built or materialized from a registry. */

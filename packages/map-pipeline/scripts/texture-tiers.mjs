@@ -69,11 +69,26 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
   sourceRoot = await realpath(sourceRoot);
   outputRoot = path.resolve(outputRoot);
   const protectedRoot = path.join(os.homedir(), '.local/share/simforge/maps');
-  await mkdir(outputRoot, { recursive: true });
-  outputRoot = await realpath(outputRoot);
-  if (outputRoot === protectedRoot || outputRoot.startsWith(`${protectedRoot}${path.sep}`)) {
+  // Check the existing ancestor before mkdir, including aliases into an
+  // installed map. Refusing after mkdir would already violate read-only input.
+  let ancestor = outputRoot;
+  for (;;) {
+    try { ancestor = await realpath(ancestor); break; }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      ancestor = path.dirname(ancestor);
+    }
+  }
+  const protectedRealRoot = await realpath(protectedRoot).catch(error => {
+    if (error.code === 'ENOENT') return protectedRoot;
+    throw error;
+  });
+  if (outputRoot === protectedRoot || outputRoot.startsWith(`${protectedRoot}${path.sep}`)
+    || ancestor === protectedRealRoot || ancestor.startsWith(`${protectedRealRoot}${path.sep}`)) {
     throw new Error('Installed maps are immutable; choose a separate --output-root for additive derivatives');
   }
+  await mkdir(outputRoot, { recursive: true });
+  outputRoot = await realpath(outputRoot);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error('Texture transcode concurrency must be 1..8');
   if (!variants.length || variants.some(id => !TEXTURE_VARIANTS.includes(id))) throw new Error('Unknown texture variant');
   await assertHeadroom(outputRoot);
