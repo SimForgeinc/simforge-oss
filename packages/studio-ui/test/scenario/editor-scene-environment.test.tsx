@@ -51,9 +51,6 @@ describe("SimForge editor Three.js environment", () => {
     const view = render(
       <EditorSceneEnvironmentBridge active document={null} quality="low" viewer={browsing.viewer} />,
     );
-    expect(browsing.setAuthoringFidelity).toHaveBeenCalledWith(
-      expect.objectContaining({ cinematicLighting: false }),
-    );
     expect(browsing.setWeatherAppearance).toHaveBeenCalledTimes(1);
     expect(browsing.setAuthoringFidelity.mock.invocationCallOrder[0]!)
       .toBeLessThan(browsing.setWeatherAppearance.mock.invocationCallOrder[0]!);

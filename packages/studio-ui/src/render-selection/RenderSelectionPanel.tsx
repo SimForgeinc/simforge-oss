@@ -36,7 +36,7 @@ const LABELS: Record<ScenarioAuthoringQuality, string> = Object.fromEntries(
 ) as Record<ScenarioAuthoringQuality, string>;
 
 const SUMMARY: Record<ScenarioAuthoringQuality, string> = {
-  low: "256 px texture target; 640 MiB scene budget.",
+  low: "Same world, smaller 256 px textures; 640 MiB scene budget.",
   medium: "512 px texture target; 1.5 GiB scene budget.",
 };
 

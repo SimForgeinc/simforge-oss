@@ -31,9 +31,6 @@ const REMOVED_RENDERING_PREFERENCES: Record<string, RenderingPreference> = {
   high: "medium",
 };
 
-export function usesLightweightRendering(preference: RenderingPreference): boolean {
-  return preference === "low";
-}
 
 export function readRenderingPreference(
   storage?: (Pick<Storage, "getItem"> & Partial<Pick<Storage, "setItem">>) | null,

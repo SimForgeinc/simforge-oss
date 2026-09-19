@@ -16,43 +16,32 @@ export function defaultAuthoringQuality(): ScenarioAuthoringQuality {
  * options), the `onReady` callback (live quality, fidelity and layer
  * visibility), and the header's quality selector.
  */
+// Browser tiers show the same world: sky, lighting, vegetation, geometry and
+// viewport quality are shared. Only texture resolution and residency differ.
+const BROWSER_SCENE_QUALITY = {
+  maxPixelRatio: 2,
+  antialias: true,
+  vegetation: true,
+  cinematicLighting: true,
+  live: {
+    maxPixelRatio: 2,
+    maxScreenSpaceError: 210,
+    vegetationScreenSpaceError: 1500,
+    uploadBudgetMs: 5,
+    uploadPixelsPerFrame: 4.2e6,
+    vegetationMaxDistance: 340,
+    exposure: 1,
+  },
+} as const;
+
 export const AUTHORING_QUALITY = {
   low: {
-    maxPixelRatio: 0.75,
-    antialias: false,
-    vegetation: false,
-    cinematicLighting: false,
-    live: {
-      maxPixelRatio: 0.75,
-      maxScreenSpaceError: 1400,
-      vegetationScreenSpaceError: 10000,
-      byteBudget: 640 * MB,
-      uploadBudgetMs: 0.5,
-      uploadPixelsPerFrame: 256e3,
-      vegetationMaxDistance: 0,
-      exposure: 1,
-    },
+    ...BROWSER_SCENE_QUALITY,
+    live: { ...BROWSER_SCENE_QUALITY.live, byteBudget: 640 * MB },
   },
   medium: {
-    maxPixelRatio: 2,
-    antialias: true,
-    vegetation: true,
-    /**
-     * Generated sky, its image-based light and the sun's real shadow map. Medium
-     * only: the shadow pass and the scattering shader are exactly the cost the
-     * reduced presets exist to avoid.
-     */
-    cinematicLighting: true,
-    live: {
-      maxPixelRatio: 2,
-      maxScreenSpaceError: 210,
-      vegetationScreenSpaceError: 1500,
-      byteBudget: 1.5 * 1024 * MB,
-      uploadBudgetMs: 5,
-      uploadPixelsPerFrame: 4.2e6,
-      vegetationMaxDistance: 340,
-      exposure: 1,
-    },
+    ...BROWSER_SCENE_QUALITY,
+    live: { ...BROWSER_SCENE_QUALITY.live, byteBudget: 1.5 * 1024 * MB },
   },
 } as const satisfies Record<ScenarioAuthoringQuality, unknown>;
 

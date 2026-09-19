@@ -13,6 +13,7 @@ export const RENDERING_BENCHMARK_STORAGE_KEY =
   "simforge.rendering-benchmark.v7";
 
 export const RENDERING_BENCHMARK_CONFIGURATION = {
+  sceneProfile: "shared-cinematic-texture-tiers",
   viewportWidth: 1280,
   viewportHeight: 720,
   sampleDurationMs: 7_000,

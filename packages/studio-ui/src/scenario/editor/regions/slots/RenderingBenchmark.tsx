@@ -6,7 +6,7 @@ import type { CityViewer } from "@simforge-oss/viewer";
 import {
   type ScenarioAuthoringQuality,
 } from "../../../../lib/scenario/contracts";
-import { AUTHORING_QUALITY } from "../../authoring-quality";
+import { AUTHORING_QUALITY, sceneViewerOptions } from "../../authoring-quality";
 import {
   captureRenderingBenchmarkHardware,
   loadRenderingBenchmark,
@@ -265,17 +265,7 @@ function BenchmarkCanvas({
     >
       <CityView
         manifestUrl={manifestUrl}
-        initialOptions={{
-          maxPixelRatio: preset.maxPixelRatio,
-          antialias: preset.antialias,
-          vegetationMaxDistance: preset.live.vegetationMaxDistance,
-          byteBudget: preset.live.byteBudget,
-          maxScreenSpaceError: preset.live.maxScreenSpaceError,
-          vegetationScreenSpaceError: preset.live.vegetationScreenSpaceError,
-          uploadBudgetMs: preset.live.uploadBudgetMs,
-          uploadPixelsPerFrame: preset.live.uploadPixelsPerFrame,
-          exposure: preset.live.exposure,
-        }}
+        initialOptions={{ ...sceneViewerOptions(quality), ...preset.live }}
         onReady={(viewer) => {
           viewerRef.current = viewer;
           onHardware(captureRenderingBenchmarkHardware(viewer));

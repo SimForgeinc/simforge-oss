@@ -10,7 +10,7 @@ RENDERING_PREFERENCE_CHANGE_EVENT,
 type RenderingPreference, } from "../../components/rendering-preference"
 import { useRegisterRenderingBenchmarkTarget } from "../../components/rendering-benchmark-target"
 import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
-import { AUTHORING_QUALITY } from "../editor/authoring-quality";
+import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
   animateMapCamera,
@@ -40,7 +40,7 @@ import { authoringRuntimeReady } from "@simforge-oss/editor";
  * smoothness of a scene nobody can see: the scene's `CloudLoadingSurface` is an
  * opaque cover until the transition reaches `idle`.
  *
- * Measured on Belmont with Low's pacing (0.5 ms / 256k pixels per frame),
+ * Measured on Belmont with the former reduced pacing (0.5 ms / 256k pixels per frame),
  * a warm reload finished downloading and decoding every tile 4.5 s in, then sat
  * on "1 uploading" for a further 16 s feeding one asset to the GPU. Half a
  * millisecond is less than a single large `texImage2D`, so the budget was spent
@@ -491,14 +491,7 @@ export function ScenarioWorldHost({
         <CityView
           key={`world-viewer:${retryNonce}`}
           manifestUrl={retainedTarget.manifestUrl}
-          initialOptions={{
-            maxPixelRatio: quality.maxPixelRatio,
-            antialias: quality.antialias,
-            cinematicLighting: quality.cinematicLighting,
-            vegetationMaxDistance: quality.live.vegetationMaxDistance,
-            byteBudget: quality.live.byteBudget,
-            mapTextureTier: preference,
-          }}
+          initialOptions={sceneViewerOptions(preference)}
           onReady={(viewer) => {
             viewerRef.current = viewer;
             startMetadataProgress(viewer, retainedTarget.label);
