@@ -512,6 +512,9 @@ An entirely missing source map instead reports `scenario_map_absent`.
 Labels and installation directory names are never substitutes for canonical
 source identity. Scenario JSON exports carry that identity and geometry digest
 so an import can follow the same rule.
+The catalog normally publishes one current version per source. If a caller
+supplies multiple candidates for a source, `scenario_map_ambiguous` refuses
+selection by array order rather than pretending the map is absent.
 
 ## Local Studio and SimCloud operations
 
