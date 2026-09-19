@@ -36,7 +36,7 @@ export interface SettledTierFrame {
   missingInViewTiles: number | null;
   camera: CameraDiagnostics;
   captureView: CameraView;
-  lighting: { exposure: number; directional: { color: number; intensity: number }[] };
+  lighting: { exposure: number; directional: { color: number; intensity: number; azimuthDeg: number; elevationDeg: number }[] };
   glError: number;
   png: string;
 }
@@ -217,10 +217,15 @@ window.__captureSettledTierFrame = async () => {
     }
     if (sky) skyRegions.push({ x, y, width: edge, height: edge });
   }
-  const directional: { color: number; intensity: number }[] = [];
+  const directional: SettledTierFrame['lighting']['directional'] = [];
   viewer.scene.traverse(object => {
     const light = object as DirectionalLight;
-    if (light.isDirectionalLight) directional.push({ color: light.color.getHex(), intensity: light.intensity });
+    if (light.isDirectionalLight) {
+      const direction = light.getWorldPosition(new Vector3()).sub(light.target.getWorldPosition(new Vector3())).normalize();
+      directional.push({ color: light.color.getHex(), intensity: light.intensity,
+        azimuthDeg: (Math.atan2(direction.x, direction.z) * 180 / Math.PI + 360) % 360,
+        elevationDeg: Math.asin(Math.max(-1, Math.min(1, direction.y))) * 180 / Math.PI });
+    }
   });
   const stats = viewer.getStats() as CityViewerStats & { tierSelection?: TierSelection };
   return { frame: measureFrameReadability(pixels, copy.width, copy.height, skyRegions), skyRegions,
