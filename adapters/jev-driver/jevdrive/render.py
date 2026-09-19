@@ -19,18 +19,21 @@ def main():
     # Hard gate immediately before every render, never swallowed by a pipe.
     subprocess.run([sys.executable, str(ROOT / "qa_scenestate.py"), "--scene-state", str(state)], check=True)
     doc = json.loads(state.read_text())
-    map_roots = [Path(os.environ["MAPS_ROOT"])] if "MAPS_ROOT" in os.environ else [
-        Path("/home/path/tmp/tier-integration-root/installed-maps/map-bundles"),
-        Path("/home/path/tmp/tier-core-daemon/installed-maps/map-bundles")]
-    maps = next((p for p in map_roots if (p / doc["mapId"] / "3d/manifest.json").is_file()), None)
+    cache = Path(os.environ.get("SIMFORGE_MAPS_CACHE_ROOT",
+                                str(Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "simforge/maps")))
+    maps = Path(os.environ.get("MAPS_ROOT", os.environ.get("SCEN_DEV_ASSETS", str(cache / "dev-assets"))))
+    if not (maps / doc["mapId"] / "3d/manifest.json").is_file():
+        maps = None
     if maps is None:
         raise FileNotFoundError(f"No real mesh bundle for {doc['mapId']}; refusing synthetic-ground substitution")
     tiles = run / "map-glbs"
-    subprocess.run([sys.executable, str(ROOT / "select_tiles.py"), "--scene-state", str(state), "--maps-root", str(maps), "--out", str(tiles)], check=True)
+    subprocess.run([sys.executable, str(ROOT / "select_tiles.py"), "--scene-state", str(state),
+                    "--maps-root", str(maps), "--out", str(tiles), "--texture-tier", "textures-512-bc7"], check=True)
+    selection = json.loads((tiles / "selection.json").read_text())
     frames = run / "frames"
     frames.mkdir(exist_ok=True)
     binary = os.environ.get("SCEN_PLAY", "/home/path/simforge-oss/renderer/target/release/scen-play")
-    command = [binary, "--scene-state", str(state), "--glbs", ",".join(str(p.resolve()) for p in sorted(tiles.glob("*.glb"))),
+    command = [binary, "--scene-state", str(state), "--glbs", ",".join(selection["glbs"]), "--quality", "high",
                "--out-dir", str(frames), "--ticks", str(args.ticks or doc["tickCount"]),
                "--camera", "follow", "--chase-dist", "18", "--chase-height", "12", "--fov", "70",
                "--width", "960", "--height", "540", "--vehicle-models", "/home/path/simforge-oss/catalog/vehicles-carla"]
