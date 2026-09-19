@@ -170,7 +170,10 @@ SPAWN_FOOTPRINT_CLEARANCE_M = 0.15
 #: sits inside the body it films the door skin. Anything more forward-looking
 #: (the 50 deg corner cameras of the NVIDIA surround preset) sees past the
 #: bodywork and keeps its authored pose.
-FLANK_CAMERA_SIN_YAW = 0.866
+# cos(35 deg): a camera within 35 degrees of straight ahead is looking out
+# through the windscreen, which is the intended mounting. Anything turned
+# further than that is aimed at bodywork if it sits inside the shell.
+FORWARD_CAMERA_COS_YAW = 0.819
 
 #: Ground probes start this far above the authored elevation and search this
 #: far down. A hit farther than the acceptance delta from the authored z is
@@ -1648,29 +1651,45 @@ class CarlaBackend:
         if extent is None:
             return x, y, z
         yaw = radians(float(t.get("yaw", 0.0)))
-        # Only a near-perpendicular camera is blocked by the door skin it sits
-        # behind. A corner camera at 50 deg still sees past the bodywork, and
-        # moving it would silently redraw the published rig, so it is left
-        # exactly where the preset put it.
-        if abs(sin(yaw)) < FLANK_CAMERA_SIN_YAW:
+        # A forward camera behind the windscreen is also inside the box and is
+        # the normal, working placement: nothing occludes it, because the body
+        # is below and behind. Everything else aimed out through bodywork is
+        # filming that bodywork.
+        if abs(cos(yaw)) >= FORWARD_CAMERA_COS_YAW and cos(yaw) > 0:
             return x, y, z
         # CARLA's bounding box is centred on the actor's own origin.
         centre = getattr(box, "location", None)
+        cx = float(getattr(centre, "x", 0.0) or 0.0)
         cy = -float(getattr(centre, "y", 0.0) or 0.0)
+        half_x = float(extent.x)
         half_y = float(extent.y)
-        if abs(y - cy) >= half_y:
+        local_x = x - cx
+        local_y = y - cy
+        if abs(local_x) >= half_x or abs(local_y) >= half_y:
             return x, y, z
+        # Leave along the line of sight, so the camera keeps its authored view
+        # and simply stops looking through the car it is bolted to. Scaling
+        # each slab by the ray's component gives the exit distance; the
+        # smaller one is the face it leaves through.
         margin = 0.04
-        # Leave along the side the camera is already looking towards.
-        side = y - cy if abs(y - cy) > 1e-9 else sin(yaw)
-        y = cy + copysign(half_y + margin, side)
+        dx, dy = cos(yaw), sin(yaw)
+        distances = []
+        if abs(dx) > 1e-9:
+            distances.append(((half_x if dx > 0 else -half_x) - local_x) / dx)
+        if abs(dy) > 1e-9:
+            distances.append(((half_y if dy > 0 else -half_y) - local_y) / dy)
+        if not distances:
+            return x, y, z
+        travel = min(d for d in distances if d > 0) + margin
+        x, y = x + dx * travel, y + dy * travel
         self.sensor_mount_adjustments.append({
             "sensorId": getattr(requested, "sensor_id", None),
             "actorId": getattr(requested, "actor_id", None),
             "authored": {"x": round(t["x"], 4), "y": round(t["y"], 4), "z": round(t["z"], 4)},
             "mounted": {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
             "hostHalfWidthM": round(half_y, 4),
-            "reason": "side-facing mount fell inside the host body; moved to its flank",
+            "hostHalfLengthM": round(half_x, 4),
+            "reason": "mount fell inside the host body; moved along its line of sight to the skin",
         })
         return x, y, z
 
