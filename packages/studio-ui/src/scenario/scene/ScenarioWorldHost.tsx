@@ -64,6 +64,7 @@ const METADATA_PROGRESS_POLL_MS = 500;
 
 export type ScenarioWorldTarget = {
   mapId?: string | null;
+  installedMaps?: ReadonlyArray<{ sourceMapId: string; mapVersionId: string }>;
   mapVersionId: string;
   manifestUrl: string;
   label: string;
@@ -501,6 +502,7 @@ export function ScenarioWorldHost({
     <MapLoadDebugPanel source={{
       getViewer: () => viewerRef.current,
       mapId: effectiveTarget?.mapId,
+      installedMaps: effectiveTarget?.installedMaps,
       mapVersionId: effectiveTarget?.mapVersionId,
       manifestUrl: effectiveTarget?.manifestUrl,
       requestedTier: preference,

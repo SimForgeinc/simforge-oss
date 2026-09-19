@@ -82,11 +82,13 @@ const EMPTY_WORLD_STATE: ScenarioWorldState = {
 /** A gallery viewport leases the dashboard world; its tour and traffic are page-owned. */
 function MapGalleryWorldPreview({
   map,
+  installedMaps,
   sumoEnabled,
   touring,
   onSumoStatusChange,
 }: {
   map: ScenarioMapDescriptorDto;
+  installedMaps: ReadonlyArray<{ sourceMapId: string; mapVersionId: string }>;
   sumoEnabled: boolean;
   touring: boolean;
   onSumoStatusChange: (status: SumoTrafficStatus) => void;
@@ -97,11 +99,12 @@ function MapGalleryWorldPreview({
   const quality = useRenderingPreference() ?? "medium";
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapId: map.sourceMapId,
+    installedMaps: installedMaps.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })),
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,
     label: map.label,
     locality: map.locality,
-  }), [map.browserManifestUrl, map.label, map.locality, map.mapVersionId, map.sourceMapId]);
+  }), [installedMaps, map.browserManifestUrl, map.label, map.locality, map.mapVersionId, map.sourceMapId]);
   const tourMap = useMemo<ScenarioMapOption>(() => ({
     mapVersionId: map.mapVersionId,
     sourceMapId: map.sourceMapId,
@@ -339,6 +342,7 @@ export function MapGalleryPageClient({
           {previewable ? (
             <MapGalleryWorldPreview
               map={entry.map}
+              installedMaps={maps}
               onSumoStatusChange={setSumoStatus}
               sumoEnabled={sumoEnabled}
               touring={!creating}

@@ -14,6 +14,8 @@ export const styles = stylex.create({
   screen: { position: "fixed", inset: 0, zIndex: 240, minHeight: "100dvh" },
   pane: { position: "relative", height: "100%", minHeight: "14rem", width: "100%" },
   embedded: { position: "absolute", inset: 0 },
+  withDiagnostics: { display: "flex", flexDirection: "column", overflow: "auto" },
+  diagnosticsWrap: { flex: "1 0 auto", minHeight: 0 },
   wrap: { position: "relative", zIndex: 10, display: "grid", minHeight: "100%", placeItems: "center", paddingInline: "1.25rem", paddingBlock: "2.5rem" },
   paneContent: { width: "100%", maxWidth: "540px", paddingInline: "1.5rem", paddingBlock: "1.75rem" },
   fullContent: { width: "min(540px, calc(100vw - 2rem))", paddingInline: "1.75rem", paddingBlock: "1.75rem", "@media (min-width: 640px)": { paddingInline: "2.5rem", paddingBlock: "2.25rem" } },

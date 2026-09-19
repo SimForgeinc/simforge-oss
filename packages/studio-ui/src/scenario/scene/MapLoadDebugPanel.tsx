@@ -76,7 +76,7 @@ function captureViewer(viewer: CityViewer, manifestUrl: string | null | undefine
   };
 }
 
-export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
+export function MapLoadDebugPanel({ source, docked = true }: { source: MapLoadDebugSource; docked?: boolean }) {
   const contentId = useId();
   const [expanded, setExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -123,7 +123,7 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
     ...snapshot,
   };
   const json = JSON.stringify(payload, null, 2);
-  return <aside {...stylex.props(styles.panel)} aria-label="Map loading diagnostics" aria-live="off" data-testid="map-load-debug">
+  return <aside {...stylex.props(styles.panel, expanded && docked && styles.expanded)} aria-label="Map loading diagnostics" aria-live="off" data-testid="map-load-debug">
     <button {...stylex.props(styles.toggle)} type="button" aria-expanded={expanded} aria-controls={contentId} onClick={() => {
       const next = !expanded;
       setExpanded(next);
@@ -140,6 +140,7 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
         <div>GPU: {snapshot?.viewerDiagnostics?.capabilities.renderer ?? "unknown"} · BC7: {String(snapshot?.viewerDiagnostics?.capabilities.bc7 ?? "unknown")} · ASTC: {String(snapshot?.viewerDiagnostics?.capabilities.astc ?? "unknown")}</div>
         {snapshot?.viewerDiagnostics?.lastError ? <div>Refused / failed: {snapshot.viewerDiagnostics.lastError.layer ?? "unknown layer"} / {snapshot.viewerDiagnostics.lastError.assetId ?? "unknown asset"} · estimate: {snapshot.viewerDiagnostics.lastError.estimatedBytes ?? "unknown"} bytes</div> : null}
         {snapshot?.viewerDiagnostics?.lastError ? <div>At failure — budget: {snapshot.viewerDiagnostics.lastError.byteBudget} · resident: {snapshot.viewerDiagnostics.lastError.residentBytes} · pending: {snapshot.viewerDiagnostics.lastError.pendingBytes} bytes</div> : null}
+        {Object.entries(snapshot?.viewerDiagnostics?.admissionUnderestimates ?? {}).map(([layer, value]) => value ? <div key={layer}>Admission estimate / decoded ({layer}, {value.assetId}): {value.estimatedBytes} / {value.decodedBytes} bytes</div> : null)}
         <div>Requested map version: {source.mapVersionId ?? "unknown"}</div>
         {source.installedMaps ? <div>Installed source / version: {source.installedMaps.map((map) => `${map.sourceMapId} / ${map.mapVersionId}`).join("; ") || "none"}</div> : null}
         <table {...stylex.props(styles.coverage)}><caption>Viewer-reported tile coverage (not inferred)</caption><thead><tr><th>Layer</th><th>Wanted</th><th>Missing</th><th>Missing in view</th><th>Failed</th><th>Budget blocked</th></tr></thead><tbody>
