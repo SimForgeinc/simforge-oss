@@ -496,7 +496,13 @@ for (const id of catalogIds) {
     continue;
   }
 
-  if (!builderIds.has(id)) fail(`${id} has neither a builder nor a model binding`);
+  // A derived entry (`proceduralBuilder`) has no builder of its own: it names
+  // the canonical id whose builder draws it, and `buildProp` dispatches
+  // through that while keeping the derived id on the group.
+  const derivedFrom = entry.proceduralBuilder ?? null;
+  if (!builderIds.has(id) && !(derivedFrom && builderIds.has(derivedFrom))) {
+    fail(`${id} has neither a builder, a ${derivedFrom ? 'resolvable ' : ''}proceduralBuilder, nor a model binding`);
+  }
   const exported = await exportProcedural(pkg, id);
   members.set(relative, { sha256: sha256(exported.bytes), bytes: exported.bytes.byteLength, provide: (destination) => placeBytes(destination, exported.bytes) });
   catalogTable[id] = {
@@ -519,6 +525,7 @@ for (const id of catalogIds) {
       package: '@simforge-oss/asset-catalog',
       packageVersion: pkg.version,
       builder: 'buildProp',
+      ...(derivedFrom ? { proceduralBuilder: derivedFrom } : {}),
       params: exported.params,
       exporter: `THREE.GLTFExporter r${pkg.threeVersion}`,
       meshes: exported.meshes,
