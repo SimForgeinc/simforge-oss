@@ -66,7 +66,10 @@ export async function hostSession(dataRoot?: string, env: NodeJS.ProcessEnv = pr
       source: 'SIMFORGE_API_BASE_URL',
     };
   }
-  const state = await readLocalHostState(dataRoot ? { SIMFORGE_CLOUD_ROOT: dataRoot } : env);
+  // `--data-root` overrides only the data root; `localHostStateDir` reads no other key,
+  // so overriding it on a copy of `env` is exactly equivalent to passing a bare env —
+  // and stays assignable to `ProcessEnv` when Studio's program augments it (`NODE_ENV`).
+  const state = await readLocalHostState(dataRoot ? { ...env, SIMFORGE_CLOUD_ROOT: dataRoot } : env);
   if (!state) {
     throw new CliError('host_unavailable', 'No running local Studio host was found. Start it with `simforge daemon`, or point SIMFORGE_API_BASE_URL at a host.', { detail: { dataRoot: dataRoot ?? null } });
   }

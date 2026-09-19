@@ -1,5 +1,6 @@
 import type { IUniform, Material, Mesh, Object3D, Texture, Vector4 } from 'three';
 import { Vector4 as Vec4 } from 'three';
+import { isMaskOnlyAlbedo } from './albedo-color';
 
 export interface ShadowPatchOptions {
   atlas: Texture;
@@ -14,6 +15,8 @@ export interface ShadowPatchOptions {
   fadeEndY: number;
   /** Render the shadow term itself instead of shaded colour (projection QA). */
   debug?: boolean;
+  /** Browser map preview only: preserve alpha when the source contains no RGB. */
+  maskOnlyAlbedo?: boolean;
 }
 
 interface PatchUniforms {
@@ -79,6 +82,8 @@ export function patchMaterialWithBakedShadow(material: Material, opts: ShadowPat
     uShadowTerm: { value: new Vec4(opts.strength, opts.wallWeight, opts.fadeStartY, opts.fadeEndY) },
   };
   material.userData.cityShadow = uniforms;
+  const albedoMaterial = material as Material & { map?: Texture | null };
+  const maskOnly = (): boolean => !!opts.maskOnlyAlbedo && isMaskOnlyAlbedo(albedoMaterial.map);
 
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms, { uShadowNear: sharedSuppression });
@@ -106,6 +111,12 @@ export function patchMaterialWithBakedShadow(material: Material, opts: ShadowPat
 	}
 	#include <aomap_fragment>`,
     );
+    if (maskOnly()) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        '#include <map_fragment>\n\tdiffuseColor.rgb = diffuse;',
+      );
+    }
     if (opts.debug) {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <opaque_fragment>',
@@ -113,10 +124,12 @@ export function patchMaterialWithBakedShadow(material: Material, opts: ShadowPat
       );
     }
   };
-  // All patched materials compile to the same program; without this every
-  // material clone would get its own program (three keys the cache on the
-  // stringified onBeforeCompile, which is shared here, but be explicit).
-  material.customProgramCacheKey = () => (opts.debug ? 'city-shadow-debug' : 'city-baked-shadow-v2');
+  // Only confirmed mask-only sources get a distinct shader. Every ordinary
+  // material retains the existing program and unchanged lighting.
+  material.customProgramCacheKey = () => {
+    const key = opts.debug ? 'city-shadow-debug' : 'city-baked-shadow-v2';
+    return maskOnly() ? `${key}-albedo-mask` : key;
+  };
   material.needsUpdate = true;
 }
 

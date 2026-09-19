@@ -12,6 +12,11 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import type { WebGLRenderer } from 'three';
+import { AssetDownloadTracker } from './download-progress';
+import { selectKtx2MipLevels } from '@simforge-oss/maps/ktx2';
 
 import {
   collectResources,
@@ -20,9 +25,10 @@ import {
   limitCompressedTextureMipmaps,
   parseMapGLTF,
   resourceDirectory,
-  selectKtx2MipLevels,
   sharedTextures,
-  textureDimensionForBudget,
+  getGLTFLoader,
+  disposeSharedLoader,
+  trackedTextureStats,
 } from './gltf';
 
 function decoded(bytes: number): CompressedTexture {
@@ -40,6 +46,8 @@ function cellWith(texture: CompressedTexture): Group {
 
 afterEach(() => {
   sharedTextures.clear();
+  disposeSharedLoader();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -147,16 +155,52 @@ describe('shared KTX2 texture cache', () => {
   });
 });
 
-describe('compressed texture mip budgets', () => {
-  it('fits a large map image set before allocating its authored high-detail mips', () => {
-    const imageCount = 250;
-    const bytesPerAsset = 1.5 * 1024 ** 3 * 0.5 / 28;
-    const dimension = textureDimensionForBudget(imageCount, bytesPerAsset, 2048);
-    expect(imageCount * dimension ** 2 * 4 / 3).toBeLessThanOrEqual(bytesPerAsset);
-    expect(imageCount * (dimension * 2) ** 2 * 4 / 3).toBeGreaterThan(bytesPerAsset);
-    expect(textureDimensionForBudget(imageCount, bytesPerAsset, 128)).toBe(128);
+it('keeps road-first and concurrent parser caps independent while fetching their shared container once', async () => {
+  vi.spyOn(MeshoptDecoder, 'useWorkers').mockImplementation(() => undefined);
+  vi.spyOn(KTX2Loader.prototype, 'detectSupport').mockImplementation(function (this: KTX2Loader) {
+    this.workerConfig = { bptcSupported: true, astcSupported: false, astcHDRSupported: false,
+      etc1Supported: false, etc2Supported: false, dxtSupported: false, pvrtcSupported: false };
+    return this;
   });
+  vi.stubGlobal('document', { baseURI: 'http://test/' });
+  vi.stubGlobal('self', globalThis);
+  vi.stubGlobal('ProgressEvent', Event);
+  const container = ktx2(1024, 1024, VK_FORMAT_BC7_UNORM_BLOCK);
+  const fetched = vi.fn(async (_input: string | URL | Request) => new Response(container.slice(0)));
+  vi.stubGlobal('fetch', fetched);
+  const renderer = { capabilities: { maxTextureSize: 4096 } } as WebGLRenderer;
+  const tracker = new AssetDownloadTracker();
+  const json = {
+    asset: { version: '2.0' }, scenes: [{ nodes: [0] }], scene: 0, nodes: [{ mesh: 0 }],
+    buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA' }],
+    bufferViews: [{ buffer: 0, byteLength: 36 }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+    materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+    images: [{ uri: 'shared.ktx2', mimeType: 'image/ktx2' }], textures: [{ source: 0 }],
+  };
+  // Embedded geometry uses FileLoader/fetch too; serve its real data URI.
+  fetched.mockImplementation(async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    return url.startsWith('data:') ? new Response(Uint8Array.from(atob(url.split(',')[1]!), char => char.charCodeAt(0))) : new Response(container.slice(0));
+  });
+  const bytes = new TextEncoder().encode(JSON.stringify(json)).buffer;
+  const roadLoader = getGLTFLoader(renderer, '/basis/', tracker, undefined, 128);
+  const cityLoader = getGLTFLoader(renderer, '/basis/', tracker, undefined, 512);
+  const [road, city] = await Promise.all([
+    parseMapGLTF(roadLoader, bytes, 'http://test/'),
+    parseMapGLTF(cityLoader, bytes, 'http://test/'),
+  ]);
+  const roadResources = collectResources(road.scene);
+  const cityResources = collectResources(city.scene);
+  expect(roadResources.textures[0]!.image).toMatchObject({ width: 128 });
+  expect(cityResources.textures[0]!.image).toMatchObject({ width: 512 });
+  expect(trackedTextureStats(tracker)).toMatchObject({ fetchedContainers: 1, fetchedBytes: container.byteLength, containerCacheHits: 1 });
+  disposeResources(roadResources);
+  disposeResources(cityResources);
+});
 
+describe('compressed texture mip budgets', () => {
   it('removes oversized encoded levels before the texture decoder sees them', () => {
     const container = createDefaultContainer();
     container.pixelWidth = 8;
@@ -343,6 +387,7 @@ describe('selectKtx2MipLevels', () => {
     const selected = selectKtx2MipLevels(ktx2(24, 24, VK_FORMAT_UNDEFINED), 6);
     expect(selected.forceRgba).toBe(true);
     expect(readKtx2(new Uint8Array(selected.buffer)).pixelWidth).toBe(6);
+    expect(selectKtx2MipLevels(selected.buffer, 6).forceRgba).toBe(true);
   });
 
   it('retains the nearest block-aligned level for data that is already BC', () => {
@@ -357,4 +402,48 @@ describe('selectKtx2MipLevels', () => {
     const buffer = ktx2(6, 6, VK_FORMAT_BC7_SRGB_BLOCK);
     expect(selectKtx2MipLevels(buffer, 8).buffer).toBe(buffer);
   });
+});
+
+it.each(['abort', 'missing'] as const)('propagates a %s KTX failure without generic texture-error noise', async (mode) => {
+  vi.spyOn(MeshoptDecoder, 'useWorkers').mockImplementation(() => undefined);
+  vi.spyOn(KTX2Loader.prototype, 'detectSupport').mockImplementation(function (this: KTX2Loader) {
+    this.workerConfig = { bptcSupported: true, astcSupported: false, astcHDRSupported: false,
+      etc1Supported: false, etc2Supported: false, dxtSupported: false, pvrtcSupported: false };
+    return this;
+  });
+  vi.stubGlobal('document', { baseURI: 'http://test/' });
+  vi.stubGlobal('self', globalThis);
+  vi.stubGlobal('ProgressEvent', Event);
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const controller = new AbortController();
+  let cancelled = false;
+  vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.startsWith('data:')) return new Response(Uint8Array.from(atob(url.split(',')[1]!), char => char.charCodeAt(0)));
+    if (mode === 'missing') return new Response(null, { status: 404 });
+    return new Promise<Response>((_resolve, reject) => {
+      init!.signal!.addEventListener('abort', () => {
+        cancelled = true;
+        reject(init!.signal!.reason);
+      }, { once: true });
+      queueMicrotask(() => controller.abort());
+    });
+  });
+  const bytes = new TextEncoder().encode(JSON.stringify({
+    asset: { version: '2.0' }, scenes: [{ nodes: [0] }], scene: 0, nodes: [{ mesh: 0 }],
+    buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA' }],
+    bufferViews: [{ buffer: 0, byteLength: 36 }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+    materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+    images: [{ uri: 'image.ktx2', mimeType: 'image/ktx2' }], textures: [{ source: 0 }],
+  })).buffer;
+  const renderer = { capabilities: { maxTextureSize: 4096 } } as WebGLRenderer;
+  const loader = getGLTFLoader(renderer, '/basis/', new AssetDownloadTracker(), controller.signal, 512);
+  const parsed = parseMapGLTF(loader, bytes, 'http://test/');
+  if (mode === 'abort') await expect(parsed).rejects.toMatchObject({ name: 'AbortError' });
+  else await expect(parsed).rejects.toThrow('downloading texture 404');
+  expect(cancelled).toBe(mode === 'abort');
+  expect(consoleError).not.toHaveBeenCalled();
+  expect(sharedTextures.stats()).toMatchObject({ textures: 0, refs: 0 });
 });

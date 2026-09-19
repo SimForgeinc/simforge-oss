@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render as renderView, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as Viewer from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { ScenarioWorldHost } from "../../src/scenario/scene/ScenarioWorldHost";
@@ -48,12 +48,14 @@ vi.mock("@simforge-oss/viewer", async (importOriginal) => ({
 // recreated WebGL on every progress update. Only the GPU work is replaced.
 vi.mock("../../../viewer/src/viewer", () => ({
   CityViewer: class {
-    readonly renderer: { domElement: HTMLCanvasElement };
+    readonly renderer: { domElement: HTMLCanvasElement; getContext: () => { isContextLost: () => boolean } };
     readonly scene = { add: vi.fn(), getObjectByName: () => undefined };
     constructor(canvas: HTMLCanvasElement, options: unknown) {
       constructions(options);
       if (constructions.mock.calls.length > 10) throw new Error("renderer construction loop");
-      this.renderer = { domElement: canvas };
+      // The retention guard asks the live context whether it is lost before
+      // reusing a canvas; this double stands in for a healthy one.
+      this.renderer = { domElement: canvas, getContext: () => ({ isContextLost: () => false }) };
     }
     loadMap = loads;
     dispose = disposals;
@@ -64,6 +66,7 @@ vi.mock("../../../viewer/src/viewer", () => ({
     setAuthoringFidelity = setAuthoringFidelity;
     setLayerVisible = setLayerVisible;
     setRenderingSuspended = vi.fn();
+    setActivityHeld = vi.fn();
     resetCamera = vi.fn();
     setWeatherAppearance = vi.fn();
   },
@@ -99,8 +102,18 @@ function render(ui: ReactNode) {
   };
 }
 
-afterEach(() => {
+beforeEach(() => {
+  // jsdom has no layout engine; the real browser proof covers actual layout.
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 800, 600));
+});
+
+afterEach(async () => {
   cleanup();
+  // Retention releases a disconnected canvas from a MutationObserver callback,
+  // which runs after this teardown. Flush it before clearing the spies, or the
+  // release lands in the next test and reads as a spurious dispose.
+  await act(async () => {});
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.localStorage.clear();
   constructions.mockClear();
@@ -113,6 +126,30 @@ afterEach(() => {
 });
 
 describe("persistent SimForge world host", () => {
+  it("reveals the prepared map before publishing ready, including a running opacity transition", async () => {
+    const canvasAnimations = vi.fn((): Animation[] => [
+      { playState: "running", transitionProperty: "opacity" } as unknown as Animation,
+    ]);
+    Object.defineProperty(HTMLCanvasElement.prototype, "getAnimations", { configurable: true, value: canvasAnimations });
+    const onStateChange = vi.fn();
+    try {
+      const view = render(
+        <ScenarioWorldProvider>
+          <ScenarioWorldSurface target={first} onViewerChange={vi.fn()} onActorRendererChange={vi.fn()} onStateChange={onStateChange} />
+        </ScenarioWorldProvider>,
+      );
+      const host = await view.findByTestId("scenario-world-host");
+      await waitFor(() => expect(host.querySelector("canvas")?.classList.contains("opacity-100")).toBe(true));
+      expect(host.getAttribute("data-world-load-percent")).not.toBe("100");
+      expect(onStateChange.mock.calls.at(-1)?.[0].loadedMapVersionId).toBeNull();
+      canvasAnimations.mockReturnValue([]);
+      await waitFor(() => expect(onStateChange.mock.calls.at(-1)?.[0].loadedMapVersionId).toBe(first.mapVersionId));
+      expect(host.getAttribute("data-world-load-percent")).toBe("100");
+    } finally {
+      Reflect.deleteProperty(HTMLCanvasElement.prototype, "getAnimations");
+    }
+  });
+
   it("moves one loaded canvas between route viewports without loading the map again", async () => {
     const callbacks = { onViewerChange: vi.fn(), onActorRendererChange: vi.fn(), onStateChange: vi.fn() };
     const view = render(
@@ -175,7 +212,7 @@ describe("persistent SimForge world host", () => {
     const viewer = onViewerChange.mock.calls[0]?.[0];
     const instanceId = host.getAttribute("data-world-instance-id");
 
-    act(() => saveRenderingPreference("minimal"));
+    act(() => saveRenderingPreference("low"));
     view.rerender(
       <ScenarioWorldHost
         target={{ ...first, manifestUrl: "/api/maps/mapv_one/browser-assets/manifest.json" }}

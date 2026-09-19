@@ -13,7 +13,8 @@ import {
   type DevAssetMap,
   type StoredMember,
 } from "@/app/lib/map-ingest/server/dev-asset-publication";
-import { ensureMapAsset, mapCacheHoldsAll, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
+import { ensureMapAsset, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
+import { registeredProfileInstalled } from "./map-profile-residency";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
 import { localObjectPath } from "@/app/lib/s3/s3-object";
 import { assertMapUsable, MapAccessError } from "./access";
@@ -434,8 +435,8 @@ export type LocalMapCatalog = {
 async function installedClosures(registered: RegisteredMap | null): Promise<{ browser: boolean; semantic: boolean }> {
   if (!registered) return { browser: false, semantic: false };
   return {
-    browser: await mapCacheHoldsAll(registered.browser.values()),
-    semantic: await mapCacheHoldsAll(registered.semantic.values()),
+    browser: await registeredProfileInstalled(registered.browser.values()),
+    semantic: await registeredProfileInstalled(registered.semantic.values()),
   };
 }
 
@@ -1025,7 +1026,7 @@ export async function readMapInstallState(mapVersionId: string, profile: MapProf
   const job = state.installs.get(`${mapVersionId}\0${profile}`);
   if (job) return { ...job.state, progress: job.state.progress ? { ...job.state.progress } : null };
   const registered = await getRegisteredMap(mapVersionId);
-  if (!registered || !(await mapCacheHoldsAll(registered[profile].values()))) {
+  if (!registered || !(await registeredProfileInstalled(registered[profile].values()))) {
     return { mapVersionId, profile, state: "idle", progress: null, directory: null, message: null };
   }
   return {

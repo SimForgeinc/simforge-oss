@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { CityViewer } from './viewer';
 import type { CityViewerOptions } from './types';
 import type { NativeReadiness, NativeViewportPort } from './native-renderer-adapter';
 import { installViewerRuntimeDiagnostics, type ViewerRuntimeDiagnostics } from './viewer-diagnostics';
+export { waitForCanvasPresentation } from './canvas-presentation';
 
 export interface CityViewProps {
   manifestUrl: string;
@@ -24,6 +25,8 @@ export interface CityViewProps {
   className?: string;
   style?: CSSProperties;
   onReady?: (viewer: CityViewer) => void;
+  /** Terminal release only, including cache eviction/unmount; clear held state, do not use the released viewer. */
+  onDisposed?: (viewer: CityViewer) => void;
   onMapLoaded?: (manifestUrl: string) => void;
   onError?: (error: unknown, manifestUrl: string) => void;
   onCapabilitiesChange?: (capabilities: readonly string[]) => void;
@@ -35,6 +38,7 @@ export interface CityViewProps {
 }
 
 const CANVAS_STYLE: CSSProperties = { display: 'block', width: '100%', height: '100%' };
+let heldCityView: { viewer: CityViewer; release: () => void } | null = null;
 
 export function CityView({
   manifestUrl,
@@ -47,6 +51,7 @@ export function CityView({
   className,
   style,
   onReady,
+  onDisposed,
   onMapLoaded,
   onError,
   onCapabilitiesChange,
@@ -69,30 +74,41 @@ export function CityView({
   const [nativeReadiness, setNativeReadiness] = useState<NativeReadiness | null>(null);
   const [nativeDetail, setNativeDetail] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [loadedManifest, setLoadedManifest] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nativeRegionRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<CityViewer | null>(null);
   const diagnosticsRef = useRef<ViewerRuntimeDiagnostics | null>(null);
+  const retainedObserverRef = useRef<MutationObserver | null>(null);
+  const mapLoadRef = useRef<{ viewer: CityViewer; url: string; promise: Promise<void> } | null>(null);
   const generationRef = useRef(0);
   const initialOptionsRef = useRef(initialOptions);
   const onReadyRef = useRef(onReady);
+  const onDisposedRef = useRef(onDisposed);
   const onErrorRef = useRef(onError);
   const onMapLoadedRef = useRef(onMapLoaded);
   const onCapabilitiesRef = useRef(onCapabilitiesChange);
   const onNativeReadinessRef = useRef(onNativeReadiness);
   const manifestRef = useRef(manifestUrl);
   onReadyRef.current = onReady;
+  onDisposedRef.current = onDisposed;
   onErrorRef.current = onError;
   onMapLoadedRef.current = onMapLoaded;
   onCapabilitiesRef.current = onCapabilitiesChange;
   onNativeReadinessRef.current = onNativeReadiness;
   manifestRef.current = manifestUrl;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (useNative || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    const viewer = new CityViewer(canvas, initialOptionsRef.current);
-    diagnosticsRef.current = installViewerRuntimeDiagnostics(viewer);
+    retainedObserverRef.current?.disconnect();
+    retainedObserverRef.current = null;
+    if (heldCityView?.viewer === viewerRef.current) heldCityView = null;
+    else heldCityView?.release();
+    const viewer = viewerRef.current ?? new CityViewer(canvas, initialOptionsRef.current);
+    viewer.setActivityHeld(false);
+    const diagnostics = installViewerRuntimeDiagnostics(viewer);
+    diagnosticsRef.current = diagnostics;
     viewerRef.current = viewer;
     const onContextLost = () => {
       const failure = new Error('WebGL context was lost; reload the map to recreate its GPU resources');
@@ -103,10 +119,36 @@ export function CityView({
     onReadyRef.current?.(viewer);
     return () => {
       canvas.removeEventListener('webglcontextlost', onContextLost);
-      diagnosticsRef.current?.dispose();
-      diagnosticsRef.current = null;
-      viewerRef.current = null;
-      viewer.dispose();
+      diagnostics.dispose();
+      if (diagnosticsRef.current === diagnostics) diagnosticsRef.current = null;
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        retainedObserverRef.current?.disconnect();
+        retainedObserverRef.current = null;
+        if (heldCityView?.viewer === viewer) heldCityView = null;
+        if (viewerRef.current === viewer) {
+          viewerRef.current = null;
+          mapLoadRef.current = null;
+          setLoadedManifest(null);
+        }
+        onDisposedRef.current?.(viewer);
+        viewer.dispose();
+      };
+      if (canvas.isConnected && !viewer.renderer.getContext().isContextLost()) {
+        // Activity hides a connected tree before its layout-effect cleanup.
+        // Its parent state still refers to this viewer: retain the whole owner,
+        // not just its GL context, and stop its RAF while it is hidden.
+        viewer.setActivityHeld(true);
+        heldCityView?.release();
+        heldCityView = { viewer, release };
+        const observer = new MutationObserver(() => {
+          if (retainedObserverRef.current === observer && !canvas.isConnected) release();
+        });
+        retainedObserverRef.current = observer;
+        observer.observe(canvas.ownerDocument.documentElement, { childList: true, subtree: true });
+      } else release();
     };
   }, [useNative]);
 
@@ -196,13 +238,22 @@ export function CityView({
     setError(null);
     onCapabilitiesRef.current?.([]);
     diagnosticsRef.current?.mapLoadStarted(manifestUrl);
-    viewer.loadMap(manifestUrl).then(() => {
+    let load = mapLoadRef.current;
+    if (!load || load.viewer !== viewer || load.url !== manifestUrl) {
+      const promise = viewer.loadMap(manifestUrl);
+      load = { viewer, url: manifestUrl, promise };
+      mapLoadRef.current = load;
+      void promise.catch(() => { if (mapLoadRef.current?.promise === promise) mapLoadRef.current = null; });
+    }
+    load.promise.then(() => {
       if (generation !== generationRef.current) return;
+      setLoadedManifest(manifestUrl);
       diagnosticsRef.current?.mapLoadSucceeded(manifestUrl);
       onMapLoadedRef.current?.(manifestUrl);
       onCapabilitiesRef.current?.(viewer.getCapabilities());
     }).catch((reason: unknown) => {
       if (generation !== generationRef.current) return;
+      setLoadedManifest(null);
       setError(reason);
       onErrorRef.current?.(reason, manifestUrl);
     });
@@ -245,7 +296,7 @@ export function CityView({
       aria-label={ariaLabel}
       className={className}
       role={role}
-      style={{ ...CANVAS_STYLE, ...style }}
+      style={{ ...CANVAS_STYLE, ...style, visibility: loadedManifest === manifestUrl ? style?.visibility : 'hidden' }}
       tabIndex={tabIndex}
       data-renderer={nativeFailed ? 'web-after-native-fallback' : 'web'}
       data-error={error ? String(error) : undefined}

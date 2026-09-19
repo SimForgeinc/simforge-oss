@@ -36,8 +36,8 @@ const LABELS: Record<ScenarioAuthoringQuality, string> = Object.fromEntries(
 ) as Record<ScenarioAuthoringQuality, string>;
 
 const SUMMARY: Record<ScenarioAuthoringQuality, string> = {
-  minimal: "Roads plus coarse city context.",
-  high: "Full detail for capable GPUs.",
+  low: "Same world, smaller 256 px textures; 640 MiB scene budget.",
+  medium: "512 px texture target; 1.5 GiB scene budget.",
 };
 
 /**
@@ -120,6 +120,7 @@ export function RenderSelectionPanel({
             </h2>
             <div {...stylex.props(styles.rule)} />
           </div>
+          <p {...stylex.props(styles.choiceCopy)}>These are texture targets. A weaker device may select lower quality; the viewport reports the actual tier and reason.</p>
           <div {...stylex.props(styles.choices)}>
             {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => {
               const current = choice.id === currentQuality;
@@ -507,7 +508,7 @@ function gpuCheck(hardware: RenderingBenchmarkHardware | null): DiagnosticCheck 
       id: "gpu",
       status: "fail",
       title: "Rendering on the CPU",
-      detail: `${name} is a software rasterizer. Enable hardware acceleration in the browser, or check that the app is allowed to use the GPU. Balanced is the only setting likely to stay usable here.`,
+      detail: `${name} is a software rasterizer. Enable hardware acceleration in the browser, or check that the app is allowed to use the GPU. Low targets 256 px textures; the app reports any device-pressure downgrade.`,
     };
   }
   if (hardware.gpuClass === "integrated") {

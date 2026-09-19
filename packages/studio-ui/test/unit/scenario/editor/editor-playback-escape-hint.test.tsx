@@ -78,7 +78,7 @@ function surfaceProps() {
     },
     record: null,
     onChanged: vi.fn(),
-    quality: "minimal" as const,
+    quality: "low" as const,
     onQualityChange: vi.fn(),
     loadedMapVersionId: "map-yale",
     active: true,

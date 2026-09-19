@@ -52,6 +52,7 @@ const SCENARIO_LIST_WIDTH_KEY = "uniscenario.scenario-list-width.v2";
 const NO_WORLD_STATE: ScenarioWorldState = {
   target: null,
   loadedMapVersionId: null,
+  preparedMapVersionId: null,
   streaming: false,
   error: null,
 };

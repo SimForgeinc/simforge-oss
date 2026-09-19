@@ -187,7 +187,7 @@ export async function captureBrowserArtifacts(input: BrowserCaptureInput): Promi
       }
     }
     const manifestSink = await hashedSink(input.createArtifactSink, { role: 'render-manifest', actorId: null, sensorId: null, modality: 'manifest' }, 'application/json');
-    const manifest = { schema: 'simforge.browser-render-manifest/v1', engine: BROWSER_RENDER_ENGINE_ID, intentSha256: input.intentSha256, frameMajor: true, schedule: input.schedule, videoEncodings, artifacts: receipts, omittedArtifacts, timings };
+    const manifest = { schema: 'simforge.browser-render-manifest/v1', engine: BROWSER_RENDER_ENGINE_ID, purpose: 'browser-preview', textureTier: input.viewer.getStats().tierSelection, intentSha256: input.intentSha256, frameMajor: true, schedule: input.schedule, videoEncodings, artifacts: receipts, omittedArtifacts, timings };
     await manifestSink.write(encoder.encode(`${JSON.stringify(manifest)}\n`), input.signal);
     const manifestReceipt = await manifestSink.close(input.signal); receipts.push(manifestReceipt);
     emitProgress(input, timings, { event: 'completed', completedFrames: input.schedule.frameCount, artifact: manifestReceipt });

@@ -30,7 +30,8 @@ export const browserEngineAdapter = Object.freeze({
 
 export async function renderHeadlessIntent(request: ResolvedBrowserRenderRequest, services: BrowserEngineServices): Promise<BrowserCaptureResult> {
   assertBrowserSensorHosts(request.intent.renderSpec, request.playbackBundle, request.intent.sensorHosts);
-  const viewer = new CityViewer(services.canvas, { antialias: false, maxPixelRatio: 1 });
+  // Browser capture is a Medium preview, never native final Render/ML output.
+  const viewer = new CityViewer(services.canvas, { antialias: false, maxPixelRatio: 1, mapTextureTier: 'medium' });
   let controller: PlaybackController | null = null;
   try {
     await viewer.loadMap(request.mapManifestUrl);

@@ -362,8 +362,8 @@ function injectSurfaceAppearance(
   const snowDeclarations = snow ? SNOW_FRAGMENT_DECL : '';
   const wetDeclarations = wet ? '\nuniform float surfaceWetness;\n' : '';
   shader.fragmentShader = SURFACE_FRAGMENT_DECL + snowDeclarations + wetDeclarations + shader.fragmentShader.replace(
-    '#include <map_fragment>',
-    `#include <map_fragment>${surfaceColor}`,
+    '#include <color_fragment>',
+    `${surfaceColor}\n#include <color_fragment>`,
   );
   if (snow || wet) {
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -582,8 +582,9 @@ export class SurfaceMaterialRegistry {
       };
       if (wet) cacheKeySuffix += '|surface-weather-wet-v2';
       if (snow) cacheKeySuffix += '|surface-weather-snow-v2';
-      const baseKey = record.originalProgramKey.call(material);
-      material.customProgramCacheKey = () => `${baseKey}${cacheKeySuffix}`;
+      // Base shader selection can settle during paced texture upload.
+      const baseKey = record.originalProgramKey;
+      material.customProgramCacheKey = () => `${baseKey.call(material)}${cacheKeySuffix}`;
     }
     material.needsUpdate = true;
   }

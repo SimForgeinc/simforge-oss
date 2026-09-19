@@ -14,7 +14,7 @@ describe("rendering preference storage", () => {
     expect(readRenderingPreference()).toBeNull();
   });
 
-  it.each(["minimal", "high"] as const)(
+  it.each(["low", "medium"] as const)(
     "persists the %s model-quality preference",
     (preference) => {
       saveRenderingPreference(preference);
@@ -30,20 +30,21 @@ describe("rendering preference storage", () => {
     expect(readRenderingPreference()).toBeNull();
   });
 
-  it.each(["roads-only", "ultra-low-3d"])(
-    "migrates the removed %s level to the nearest surviving level",
-    (removed) => {
+  it.each([["roads-only", "low"], ["ultra-low-3d", "low"], ["minimal", "low"], ["high", "medium"]] as const)(
+    "rewrites stored %s to %s at the read boundary",
+    (removed, current) => {
       window.localStorage.setItem(RENDERING_PREFERENCE_STORAGE_KEY, removed);
-      expect(readRenderingPreference()).toBe("minimal");
+      expect(readRenderingPreference()).toBe(current);
+      expect(window.localStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY)).toBe(current);
     },
   );
 
   it("announces same-tab changes so the persistent world can update live", () => {
     const listener = vi.fn();
     window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, listener);
-    saveRenderingPreference("minimal");
+    saveRenderingPreference("low");
     expect(listener).toHaveBeenCalledOnce();
-    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toBe("minimal");
+    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toBe("low");
     window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, listener);
   });
 
@@ -58,6 +59,6 @@ describe("rendering preference storage", () => {
     };
 
     expect(readRenderingPreference(unavailable)).toBeNull();
-    expect(() => saveRenderingPreference("minimal", unavailable)).not.toThrow();
+    expect(() => saveRenderingPreference("low", unavailable)).not.toThrow();
   });
 });

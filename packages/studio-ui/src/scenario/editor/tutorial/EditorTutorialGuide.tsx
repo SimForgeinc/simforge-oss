@@ -313,8 +313,8 @@ export function EditorTutorialGuide({
                     </SectionHeading>
                     <div {...stylex.props(styles.gridGap32)}>
                       <SettingCard icon={<Gauge aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Render quality">
-                        Choose Balanced or High. Start with Balanced, then raise
-                        quality for sharper scene context or lower it if navigation feels sluggish.
+                        Low targets 256 px textures; Medium targets 512 px textures.
+                        Weaker devices may select lower quality; the app reports the actual tier.
                       </SettingCard>
                       <SettingCard icon={<Camera aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Camera mode">
                         Orbit is best for authoring around a road target. Fly enables free inspection

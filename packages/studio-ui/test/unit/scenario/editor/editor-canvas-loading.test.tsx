@@ -6,6 +6,7 @@ import { EditorCanvasRegion } from "../../../../src/scenario/editor/regions/Edit
 
 const cityViewInstances = vi.hoisted(() => [] as Array<{
   complete: () => void;
+  dispose: () => void;
   viewer: { readonly id: number };
 }>);
 
@@ -16,10 +17,12 @@ vi.mock("@simforge-oss/viewer/react", async () => {
       manifestUrl,
       onMapLoaded,
       onReady,
+      onDisposed,
     }: {
       manifestUrl: string;
       onMapLoaded?: (manifestUrl: string) => void;
       onReady?: (viewer: { readonly id: number }) => void;
+      onDisposed?: (viewer: { readonly id: number }) => void;
     }) => {
       const viewer = React.useMemo(
         () => ({ id: cityViewInstances.length + 1 }),
@@ -29,6 +32,7 @@ vi.mock("@simforge-oss/viewer/react", async () => {
         onReady?.(viewer);
         cityViewInstances.push({
           complete: () => onMapLoaded?.(manifestUrl),
+          dispose: () => onDisposed?.(viewer),
           viewer,
         });
       }, [manifestUrl, onMapLoaded, onReady, viewer]);
@@ -48,7 +52,7 @@ describe("EditorCanvasRegion loading presentation", () => {
       <EditorCanvasRegion
         hostRef={{ current: null }}
         map={{ label: "Test map", manifestUrl: "/manifest.json" } as never}
-        quality="minimal"
+        quality="low"
         onViewerReady={vi.fn()}
         state={null}
         error={null}
@@ -82,18 +86,22 @@ describe("EditorCanvasRegion loading presentation", () => {
       error: null,
     };
     const view = render(
-      <EditorCanvasRegion {...baseProps} quality="minimal" />,
+      <EditorCanvasRegion {...baseProps} quality="low" />,
     );
     expect(cityViewInstances).toHaveLength(1);
 
-    view.rerender(<EditorCanvasRegion {...baseProps} quality="high" />);
+    view.rerender(<EditorCanvasRegion {...baseProps} quality="medium" />);
     expect(cityViewInstances).toHaveLength(2);
 
+    act(() => cityViewInstances[0]?.dispose());
     act(() => cityViewInstances[0]?.complete());
     expect(onMapLoaded).not.toHaveBeenCalled();
 
     act(() => cityViewInstances[1]?.complete());
     expect(onMapLoaded).toHaveBeenCalledOnce();
     expect(onMapLoaded).toHaveBeenCalledWith("/manifest.json");
+    act(() => cityViewInstances[1]?.dispose());
+    act(() => cityViewInstances[1]?.complete());
+    expect(onMapLoaded).toHaveBeenCalledOnce();
   });
 });

@@ -9,7 +9,8 @@ import { MeshoptDecoder } from 'meshoptimizer';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { materializeRegistryPayload, runMapPipeline, sha256 } from '../src/index.js';
+import { composeNativeTextureClosure, materializeRegistryPayload, runMapPipeline, sha256 } from '../src/index.js';
+import { closureFromDirectory } from '@simforge-oss/map-registry';
 import { resolveKtxBinDir } from '../src/ktx2.js';
 
 const temporaryRoots: string[] = [];
@@ -136,11 +137,23 @@ describe('map master pipeline', () => {
     const master = result.stages.master;
     const web = result.stages.web!;
 
-    // Canonical = master; the web tier is the only derivative.
+    // Canonical carries the master plus the same published native BC7 closure.
     expect(result.canonical.kind).toBe('canonical');
     expect(master.closure.metadata).toEqual({ master: true, viewerOnly: true });
     expect(result.derived.map((artifact) => artifact.kind)).toEqual(['web']);
     expect(result.derived[0]!.registryPath).toBe(`derived/web-${web.toolFingerprint}.json`);
+    const prebuilt = await composeNativeTextureClosure(
+      await closureFromDirectory(master.outputDir),
+      await closureFromDirectory(web.outputDir, 'web', web.toolFingerprint),
+    );
+    expect(prebuilt.closure.members).toEqual(result.canonical.closure.members);
+    const envelope = JSON.parse(await readFile(path.join(web.outputDir, '3d/variants/manifest.json'), 'utf8'));
+    const bc7IndexPath = `3d/variants/${envelope.variants['textures-512-bc7'].file}`;
+    const bc7Index: { images: Record<string, { file: string }> } = JSON.parse(await readFile(path.join(web.outputDir, bc7IndexPath), 'utf8'));
+    for (const member of ['3d/manifest.json', '3d/variants/manifest.json', bc7IndexPath,
+      ...Object.values(bc7Index.images).map((image) => `3d/${image.file}`)]) {
+      expect(prebuilt.closure.members[member]).toEqual(web.closure.members[member]);
+    }
 
     // Master content: one document, one geometry buffer, PNG + KTX2 per distinct image.
     const masterFiles = Object.keys(master.closure.members).sort();

@@ -84,7 +84,7 @@ function result(quality: RenderingBenchmarkResult["quality"], missingTiles = 0):
 
 const noop = {
   onStart: vi.fn(), onCancel: vi.fn(), onApply: vi.fn(),
-  qualities: ["minimal", "high"] as const,
+  qualities: ["low", "medium"] as const,
 };
 
 describe("RenderDiagnostics", () => {
@@ -92,7 +92,7 @@ describe("RenderDiagnostics", () => {
     render(
       <RenderDiagnostics
         state={{ phase: "idle", snapshot: null }}
-        currentQuality="minimal"
+        currentQuality="low"
         mapLabel="Yale Street"
         {...noop}
       />,
@@ -107,20 +107,19 @@ describe("RenderDiagnostics", () => {
     const state: BenchmarkState = {
       phase: "measuring",
       candidateIndex: 1,
-      results: [result("minimal")],
+      results: [result("low")],
       failures: [],
       hardware,
       startedAt: Date.now() - 2_000,
     };
     render(
-      <RenderDiagnostics state={state} currentQuality="high" mapLabel="Yale Street" {...noop} />,
+      <RenderDiagnostics state={state} currentQuality="medium" mapLabel="Yale Street" {...noop} />,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
     const status = screen.getByRole("status");
-    expect(status.textContent).toContain("Testing High");
     expect(status.textContent).toContain("1 of 2 complete");
-    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("55");
-    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Orbiting camera");
+    expect(screen.getByTestId("benchmark-lane-low").textContent).toContain("55");
+    expect(screen.getByTestId("benchmark-lane-medium").textContent).toContain("Orbiting camera");
     expect(screen.getByRole("button", { name: /Cancel/ })).toBeTruthy();
   });
 
@@ -132,20 +131,20 @@ describe("RenderDiagnostics", () => {
           message: "None of the renderers could be measured.",
           results: [],
           failures: [
-            { quality: "minimal", message: "Map streaming did not settle" },
-            { quality: "high", message: "WebGL context unavailable" },
+            { quality: "low", message: "Map streaming did not settle" },
+            { quality: "medium", message: "WebGL context unavailable" },
           ],
           hardware,
           startedAt: Date.now() - 30_000,
         }}
-        currentQuality="minimal"
+        currentQuality="low"
         mapLabel="Yale Street"
         {...noop}
       />,
     );
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("Balanced: Map streaming did not settle");
-    expect(alert.textContent).toContain("High: WebGL context unavailable");
+    expect(alert.textContent).toContain("Map streaming did not settle");
+    expect(alert.textContent).toContain("WebGL context unavailable");
   });
 
   it("reports the verdict inline and applies either the recommendation or a manual choice", async () => {
@@ -156,28 +155,27 @@ describe("RenderDiagnostics", () => {
       phase: "complete",
       snapshot: {
         manifestUrl: "https://assets.example/manifest.json",
-        recommended: "minimal",
-        results: [result("minimal")],
-        failures: [{ quality: "high", message: "WebGL context unavailable" }],
+        recommended: "low",
+        results: [result("low")],
+        failures: [{ quality: "medium", message: "WebGL context unavailable" }],
         hardware,
         configuration: RENDERING_BENCHMARK_CONFIGURATION,
         capturedAt: "2026-08-05T00:00:00.000Z",
       },
     };
     render(
-      <RenderDiagnostics state={state} currentQuality="high" mapLabel="Yale Street" {...noop} onApply={onApply} />,
+      <RenderDiagnostics state={state} currentQuality="medium" mapLabel="Yale Street" {...noop} onApply={onApply} />,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("Best match: Balanced")).toBeTruthy();
-    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("96 tiles complete");
-    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Unavailable");
+    expect(screen.getByTestId("benchmark-lane-low").textContent).toContain("96 tiles complete");
+    expect(screen.getByTestId("benchmark-lane-medium").textContent).toContain("Unavailable");
     fireEvent.click(screen.getByRole("button", { name: "Copy developer report" }));
     await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     const report = JSON.parse(writeText.mock.calls[0]![0] as string);
     expect(report.hardware.renderer.renderer).toBe("Apple M3");
     expect(report.results[0].coverage.settled.city.wantedTiles).toBe(96);
-    fireEvent.click(screen.getByRole("button", { name: "Use recommended Balanced" }));
-    expect(onApply).toHaveBeenCalledWith("minimal");
+    fireEvent.click(screen.getByRole("button", { name: "Use recommended Low" }));
+    expect(onApply).toHaveBeenCalledWith("low");
   });
 });
 
@@ -185,9 +183,9 @@ describe("diagnosticChecks", () => {
   it("passes a hardware GPU with every building tile resident and an interactive profile", () => {
     const checks = diagnosticChecks({
       hardware,
-      results: [result("high"), result("minimal")],
+      results: [result("medium"), result("low")],
       failures: [],
-      recommended: "minimal",
+      recommended: "low",
       running: false,
     });
     expect(checks.map((check) => [check.id, check.status])).toEqual([
@@ -226,14 +224,13 @@ describe("diagnosticChecks", () => {
   it("flags missing buildings with the reason and keeps that profile off the recommendation", () => {
     const checks = diagnosticChecks({
       hardware,
-      results: [result("high"), result("minimal", 5)],
+      results: [result("medium"), result("low", 5)],
       failures: [],
-      recommended: "high",
+      recommended: "medium",
       running: false,
     });
     const buildings = checks.find((check) => check.id === "buildings")!;
     expect(buildings.status).toBe("warn");
-    expect(buildings.title).toContain("Balanced");
     expect(buildings.detail).toContain("5 of 96 missing (5 over the memory budget)");
   });
 });

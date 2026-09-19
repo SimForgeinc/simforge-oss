@@ -21,7 +21,7 @@ const CatalogSchema = z.object({
 });
 type PreparationMap = z.infer<typeof CatalogSchema>["maps"][number];
 const PROFILE_LABELS: Record<RenderingPreference, string> = {
-  minimal: "Balanced", high: "High",
+  low: "Low", medium: "Medium",
 };
 
 /** Prepare complete local closures, not a Cloud browser bundle that is not registered here yet. */

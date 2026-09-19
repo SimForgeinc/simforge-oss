@@ -18,7 +18,7 @@ type WorldContext = {
   update: (lease: Lease) => void;
 };
 const Context = createContext<WorldContext | null>(null);
-const EMPTY_STATE: ScenarioWorldState = { target: null, loadedMapVersionId: null, streaming: false, error: null };
+const EMPTY_STATE: ScenarioWorldState = { target: null, loadedMapVersionId: null, preparedMapVersionId: null, streaming: false, error: null };
 
 /**
  * Dashboard lifetime, page viewport. The portal container never changes identity;
@@ -46,6 +46,7 @@ export function ScenarioWorldProvider({ children, keepAlive = false }: { childre
     // Readiness belongs to the destination's declared identity, never the
     // previously painted map while its record is still resolving.
     const matches = props.target?.mapVersionId === state.loadedMapVersionId;
+    const canReveal = props.target?.mapVersionId === state.preparedMapVersionId;
     // Map resources survive a handoff; the gallery's cinematic camera must not
     // put a newly opened editor inside a wall. Do this once per editor lease,
     // never on progress, quality updates or rerenders within that session.
@@ -53,7 +54,7 @@ export function ScenarioWorldProvider({ children, keepAlive = false }: { childre
       lease.framed = true;
       viewerRef.current.resetCamera();
     }
-    if (container) container.className = stylex.props(styles.viewport, !matches && styles.hidden).className ?? "";
+    if (container) container.className = stylex.props(styles.viewport, !matches && !canReveal && styles.hidden).className ?? "";
     props.onViewerChange(viewerRef.current);
     props.onActorRendererChange(actorsRef.current);
     props.onStateChange(matches ? state : { ...state, target: props.target, loadedMapVersionId: null });

@@ -77,7 +77,7 @@ export function DigitalTwinViewerPanel({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
-  const quality = useRenderingPreference() ?? "high";
+  const quality = useRenderingPreference() ?? "medium";
   const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
     ? "native"
     : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"
@@ -238,6 +238,12 @@ export function DigitalTwinViewerPanel({
         nativeReleaseDigest={nativeIdentity?.releaseDigest}
         initialOptions={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
         onReady={onReady}
+        onDisposed={(disposed) => {
+          if (viewerRef.current !== disposed) return;
+          viewerRef.current = null;
+          setViewer(null);
+          setMapGeneration(0);
+        }}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}
         role="application"

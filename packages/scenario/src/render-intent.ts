@@ -83,6 +83,11 @@ export const RenderSensorSourceHostSchema = z.strictObject({
   }),
 });
 
+// Bounds untrusted declaration size and linear validation work, not a GPU
+// descriptor table. Garching has 27,879 source-inclusive members; 65,536 leaves
+// >2x headroom including the three non-map native assets.
+export const RENDER_INTENT_MAX_ASSETS = 65_536;
+
 /**
  * Immutable, renderer-neutral input to every SimForge rendering backend.
  * Transfer URLs and lease data deliberately live in the worker-control claim,
@@ -98,7 +103,13 @@ export const RenderIntentV1Schema = z.strictObject({
   scenarioRevision: RenderIntentScenarioRevisionSchema,
   sensorHosts: z.array(RenderSensorSourceHostSchema).min(1).max(64),
   renderSpec: RenderSpecV3Schema,
-  assets: z.array(RenderIntentAssetSchema).max(4096),
+  /** Native texture representation, pinned in the intent hash; never a viewer default. */
+  renderTextures: z.enum(['uastc-full', 'bc7-512']).optional(),
+  /** Native admission estimate, not a driver-enforced VRAM ceiling. */
+  nativeVramBudgetBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  /** Assumed device capacity for demand-derived admission when no explicit ceiling is set. */
+  nativeVramCapacityBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  assets: z.array(RenderIntentAssetSchema).max(RENDER_INTENT_MAX_ASSETS),
   seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
 }).check((ctx) => {
   const ids = new Set<string>();
