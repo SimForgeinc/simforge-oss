@@ -7,7 +7,8 @@ import sys
 root = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent)
 stats = json.loads((root / "assembly-stats.json").read_text())
 attribution = (
-    '"{display}" pedestrian model © CARLA Simulator contributors (carla.org), '
+    '"{display}" pedestrian model and animations © Computer Vision Center (CVC), '
+    "Universitat Autònoma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), "
     "CC BY 4.0; converted to glTF for SimForge."
 )
 manifest = {
@@ -25,6 +26,8 @@ for blueprint, item in sorted(stats.items()):
             "glbPath": f"catalog/pedestrians-carla/{item['file']}",
             "attribution": line,
             "source": "carla-0.10.0-ue5",
+            "animated": bool(item.get("clips")),
+            "clips": {"idle": "idle", "locomotion": "walk"} if item.get("clips") else {},
         },
         "tintable": False,
         "scaleToDims": False,
@@ -44,6 +47,8 @@ for blueprint, item in sorted(stats.items()):
             "converted to self-contained glTF 2.0 binary",
             "material textures embedded and PBR channels normalized",
             "skeleton and bind pose preserved",
+            "native CARLA animation tracks added without re-exporting mesh or textures",
+            "root motion removed; target bone lengths retained",
         ],
     })
 (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

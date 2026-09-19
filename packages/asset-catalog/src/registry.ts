@@ -216,7 +216,14 @@ export interface PropParamMap {
   'hazard.debris': Record<string, never>;
 }
 
-type Builders = { [K in CatalogId]: (params: PropParamMap[K]) => Group };
+/**
+ * Catalog ids that have a procedural builder. A strict subset of `CatalogId`:
+ * externally modelled entries (CARLA vehicle and pedestrian GLBs) are
+ * registered in the catalog but carry no builder and no param shape.
+ */
+export type BuilderId = Extract<CatalogId, keyof PropParamMap>;
+
+type Builders = { [K in BuilderId]: (params: PropParamMap[K]) => Group };
 
 /**
  * Id -> builder. The mapped type makes this exhaustive: adding a catalog entry
@@ -351,20 +358,20 @@ function buildExternalPlaceholder(id: string, dims: Dims): Group {
  */
 export function buildProp<K extends string>(
   id: K,
-  params?: K extends CatalogId ? Partial<PropParamMap[K]> : never,
+  params?: K extends BuilderId ? Partial<PropParamMap[K]> : never,
 ): Group {
   const entry = getEntry(id);
   const builder = (
     BUILDERS as unknown as Record<
       string,
-      ((params: PropParamMap[CatalogId]) => Group) | undefined
+      ((params: PropParamMap[BuilderId]) => Group) | undefined
     >
   )[id];
   if (!builder) {
     if (entry.model) return buildExternalPlaceholder(id, entry.dims);
     throw new Error(`Unknown catalog id: ${id}`);
   }
-  const merged = { ...entry.defaultParams, ...params } as PropParamMap[CatalogId];
+  const merged = { ...entry.defaultParams, ...params } as PropParamMap[BuilderId];
   const group = builder(merged);
   group.name = id;
   group.userData.catalogId = id;
@@ -372,5 +379,5 @@ export function buildProp<K extends string>(
   return group;
 }
 
-/** The set of ids that have a builder — identical to the catalog ids. */
-export const BUILDER_IDS = Object.keys(BUILDERS) as readonly CatalogId[];
+/** The set of ids that have a procedural builder — a subset of the catalog ids. */
+export const BUILDER_IDS = Object.keys(BUILDERS) as readonly BuilderId[];

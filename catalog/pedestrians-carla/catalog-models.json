@@ -4,7 +4,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0015\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0015\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0015.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -15,7 +20,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0016\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0016\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0016.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -26,7 +36,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0017\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0017\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0017.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -37,7 +52,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0018\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0018\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0018.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -48,7 +68,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0019\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0019\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0019.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -59,7 +84,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0020\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0020\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0020.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -70,7 +100,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0021\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0021\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0021.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -81,7 +116,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0022\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0022\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0022.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -92,7 +132,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0023\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0023\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0023.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -103,7 +148,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0024\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0024\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0024.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -114,7 +164,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0025\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0025\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0025.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -125,7 +180,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0026\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0026\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0026.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -136,7 +196,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0027\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0027\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0027.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -147,7 +212,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0028\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0028\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0028.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -158,7 +228,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0029\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0029\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0029.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -169,7 +244,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0030\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0030\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0030.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -180,7 +260,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0031\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0031\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0031.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -191,7 +276,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0032\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0032\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0032.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -202,7 +292,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0033\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0033\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0033.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -213,7 +308,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0034\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0034\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0034.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -224,7 +324,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0035\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0035\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0035.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -235,7 +340,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0036\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0036\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0036.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -246,7 +356,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0037\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0037\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0037.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -257,7 +372,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0038\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0038\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0038.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -268,7 +388,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0039\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0039\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0039.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -279,7 +404,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0040\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0040\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0040.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -290,7 +420,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0041\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0041\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0041.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -301,7 +436,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0042\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0042\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0042.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -312,7 +452,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0043\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0043\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0043.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -323,7 +468,12 @@
       "age": "adult",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0044\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0044\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0044.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -334,7 +484,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0045\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0045\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0045.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -345,7 +500,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0046\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0046\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0046.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -356,7 +516,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0047\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0047\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0047.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -367,7 +532,12 @@
       "age": "adult",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0048\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0048\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0048.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -378,7 +548,12 @@
       "age": "child",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0049\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0049\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0049.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -389,7 +564,12 @@
       "age": "child",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0050\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0050\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0050.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -400,7 +580,12 @@
       "age": "child",
       "gender": "female",
       "model": {
-        "attribution": "\"CARLA pedestrian 0051\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0051\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0051.glb",
         "source": "carla-0.10.0-ue5"
       },
@@ -411,7 +596,12 @@
       "age": "child",
       "gender": "male",
       "model": {
-        "attribution": "\"CARLA pedestrian 0052\" pedestrian model \u00a9 CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "animated": true,
+        "attribution": "\"CARLA pedestrian 0052\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clips": {
+          "idle": "idle",
+          "locomotion": "walk"
+        },
         "glbPath": "catalog/pedestrians-carla/models/pedestrian_0052.glb",
         "source": "carla-0.10.0-ue5"
       },

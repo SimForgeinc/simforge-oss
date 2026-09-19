@@ -6,6 +6,7 @@ import type {
   PropTag,
 } from './types';
 import { CARLA_VEHICLE_MODELS } from './vehicles-carla.generated';
+import { CARLA_PEDESTRIAN_ENTRIES, CARLA_PEDESTRIAN_MODELS } from './pedestrians-carla.generated';
 export const EXTERNAL_CATALOG_PREFIXES = ['gallery.', 'carla.'] as const;
 export type ExternalCatalogEntry = Omit<CatalogEntry, 'id'> & {
   readonly id: string;
@@ -468,11 +469,7 @@ export const CATALOG = [
     dims: { l: 0.32, w: 0.5, h: 1.75 },
     tags: ['vru', 'occlusion:low', 'sidewalk'],
     defaultParams: { height: 1.75, pose: 'standing' },
-    model: {
-      kind: 'glb',
-      url: '/catalog/pedestrians-carla/models/pedestrian_0015.glb',
-      contentHash: 'b20b0654cef8256053e36cf3ac8af8da3369b61492034a459d995adebcb2b8ba',
-    },
+    model: CARLA_PEDESTRIAN_MODELS['walker.pedestrian.0015'],
   },
   {
     id: 'pedestrian.child',
@@ -490,11 +487,7 @@ export const CATALOG = [
       runSpeedMps: 3,
       directionChangeImpulsiveness: 0.75,
     },
-    model: {
-      kind: 'glb',
-      url: '/catalog/pedestrians-carla/models/pedestrian_0049.glb',
-      contentHash: '8d657dfaf86c9735deafd233bd48bf6e07df687e9a98d35f98fd4d669f14db17',
-    },
+    model: CARLA_PEDESTRIAN_MODELS['walker.pedestrian.0049'],
   },
   {
     id: 'pedestrian.traffic_marshal',
@@ -505,12 +498,9 @@ export const CATALOG = [
     dims: { l: 0.72, w: 0.68, h: 1.88 },
     tags: ['vru', 'workzone', 'occlusion:low', 'roadway'],
     defaultParams: { height: 1.82, pose: 'standing' },
-    model: {
-      kind: 'glb',
-      url: '/catalog/pedestrians-carla/models/pedestrian_0020.glb',
-      contentHash: '0f312e95d46d7e681ab55d3bb542891f6e701ab34670a54e9593808a94636953',
-    },
+    model: CARLA_PEDESTRIAN_MODELS['walker.pedestrian.0020'],
   },
+  ...CARLA_PEDESTRIAN_ENTRIES,
 
   // --------------------------------------------------------- sidewalk robots
   {
