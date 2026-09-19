@@ -114,6 +114,16 @@ describe('assertActorAppearanceGrounded', () => {
     ], [host], assets)).toThrow(/parked requires catalog model vehicle.hatchback/);
   });
 
+  it('accepts declared procedural identity but refuses an absent model of the same vehicle', () => {
+    const empty = { digest: assets.digest, models: new Map() };
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'parked', catalogId: 'vehicle.hatchback.low_poly', authored: true },
+    ], [], empty)).not.toThrow();
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'parked', catalogId: 'vehicle.hatchback', authored: true },
+    ], [], empty)).toThrow(/parked requires catalog model vehicle.hatchback/);
+  });
+
   it('refuses a sensor host whose contract identity is not what the scenario renders', () => {
     expect(() => assertActorAppearanceGrounded(
       [{ actorId: 'ego', catalogId: 'vehicle.sedan', authored: false }],

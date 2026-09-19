@@ -6,6 +6,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import type { RenderSensorSourceHost } from '@simforge-oss/scenario';
+import { getEntry, isCatalogId } from '@simforge-oss/asset-catalog/metadata';
 
 import type { NativeActorAppearance } from './lowering.js';
 
@@ -193,10 +194,10 @@ export function parseActorClosureCatalog(
 
 /**
  * Refuses a render whose appearance would silently downgrade to a proxy:
- * every authored catalog identity must bind a verified closure model, and
- * every sensor host's contract identity must be the identity the lowering
- * renders for that actor and must bind as well. Semantic class defaults
- * (unauthored) keep the class primitive the platform documents.
+ * every authored identity must declare a procedural builder or bind a verified
+ * closure model. A missing model alone never declares procedural intent.
+ * Every sensor host's contract identity must match the identity rendered for
+ * that actor. Unauthored semantic defaults keep the documented class primitive.
  */
 export function assertActorAppearanceGrounded(
   appearances: readonly NativeActorAppearance[],
@@ -216,7 +217,9 @@ export function assertActorAppearanceGrounded(
   const hostActorIds = new Set(sensorHosts.map((host) => host.actorId));
   for (const appearance of appearances) {
     if (!(appearance.authored || hostActorIds.has(appearance.actorId))) continue;
-    if (PROCEDURAL_CATALOG_IDS[appearance.catalogId] || assets.models.has(appearance.catalogId)) continue;
+    const procedural = isCatalogId(appearance.catalogId)
+      && Boolean(getEntry(appearance.catalogId).proceduralBuilder);
+    if (procedural || assets.models.has(appearance.catalogId)) continue;
     throw new Error(`actor ${appearance.actorId} requires catalog model ${appearance.catalogId}, which actor closure ${assets.digest} does not provide`);
   }
 }
