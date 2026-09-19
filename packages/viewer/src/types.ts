@@ -1,4 +1,5 @@
 import type { CityAssetVariantId, CityAssetVariantPreference } from './asset-variants';
+import type { LayerStats } from './streaming';
 
 /**
  * Types for the tiled 3D city manifest (schema version 1.x) plus the public
@@ -242,6 +243,7 @@ export interface CityViewerStats {
       requestedCellPx: number; actualCellPx: number; width: number; height: number;
       residentBytes: number; downgradeReason: string | null;
     } | null;
+    admissionUnderestimates: Record<string, LayerStats['largestAdmissionUnderestimate']>;
   };
   /** Required visible geometry is resident, independently of final texture quality. */
   usable: boolean;
