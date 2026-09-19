@@ -569,8 +569,11 @@ describe('SimForge concrete playback import', () => {
     actor.kind = 'pedestrian';
     actor.tags = ['catalog:pedestrian.child_walking'];
     fixture.instance.manifest.inputHash = contentHash(fixture.instance.input);
-    fixture.trace.header = { ...fixture.trace.header, inputHash: fixture.instance.manifest.inputHash };
-    const bundle = parsePlaybackPair(fixture.instance, fixture.trace);
+    const trace = {
+      ...fixture.trace,
+      header: { ...fixture.trace.header, inputHash: fixture.instance.manifest.inputHash },
+    };
+    const bundle = parsePlaybackPair(fixture.instance, trace);
     expect(bundle.actors.find((entry) => entry.id === actor.id)?.catalogId).toBe('pedestrian.child');
     expect(actor.tags).toEqual(['catalog:pedestrian.child_walking']);
   });
