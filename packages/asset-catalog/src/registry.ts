@@ -366,7 +366,7 @@ export function buildProp<K extends string>(
       string,
       ((params: PropParamMap[BuilderId]) => Group) | undefined
     >
-  )[id];
+  )[entry.proceduralBuilder ?? id];
   if (!builder) {
     if (entry.model) return buildExternalPlaceholder(id, entry.dims);
     throw new Error(`Unknown catalog id: ${id}`);

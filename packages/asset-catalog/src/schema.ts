@@ -90,6 +90,7 @@ const catalogEntrySchema = z.object({
   defaultParams: z.record(z.string(), paramValueSchema),
   animation: animationProfileSchema.optional(),
   model: externalModelSchema.optional(),
+  proceduralBuilder: z.string().regex(CATALOG_ID).optional(),
 });
 
 const externalCatalogEntrySchema = z.strictObject({

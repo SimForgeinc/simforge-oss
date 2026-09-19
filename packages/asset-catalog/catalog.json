@@ -1295,6 +1295,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0015.glb",
       "contentHash": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1329,6 +1330,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0049.glb",
       "contentHash": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1360,6 +1362,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0020.glb",
       "contentHash": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1373,8 +1376,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3031,
+      "l": 0.3031,
+      "w": 1.6822,
       "h": 1.8329
     },
     "tags": [
@@ -1390,6 +1393,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0015.glb",
       "contentHash": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1403,8 +1407,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3031,
+      "l": 0.3031,
+      "w": 1.6822,
       "h": 1.8329
     },
     "tags": [
@@ -1420,6 +1424,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0016.glb",
       "contentHash": "35f8fddb8c07282701e52201629325a4b4dabc92d5f4631f9562225dc3e70b20",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1433,8 +1438,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3192,
+      "l": 0.3192,
+      "w": 1.6822,
       "h": 1.845
     },
     "tags": [
@@ -1450,6 +1455,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0017.glb",
       "contentHash": "8f4ddd68824825e3e3d95ebd9c879568453e390d5fabab878af18762631bcbd2",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1463,8 +1469,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3192,
+      "l": 0.3192,
+      "w": 1.6822,
       "h": 1.8712
     },
     "tags": [
@@ -1480,6 +1486,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0018.glb",
       "contentHash": "d6f10282bb28645d3ad64ac010fd347e17af53f645485dc3cb114bfa6a3a01f5",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1493,8 +1500,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3192,
+      "l": 0.3192,
+      "w": 1.6822,
       "h": 1.845
     },
     "tags": [
@@ -1510,6 +1517,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0019.glb",
       "contentHash": "22ccba1ac7360c3150391ab08195029c7f1b94b57055c2c2f54b60ba90b858c8",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1523,8 +1531,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3299,
+      "l": 0.3299,
+      "w": 1.6822,
       "h": 1.8526
     },
     "tags": [
@@ -1540,6 +1548,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0020.glb",
       "contentHash": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1553,8 +1562,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3192,
+      "l": 0.3192,
+      "w": 1.6822,
       "h": 1.845
     },
     "tags": [
@@ -1570,6 +1579,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0021.glb",
       "contentHash": "a4694c5d967289089f88d9919957fabc3d1e46950df896749772b7932b27e76a",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1583,8 +1593,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.5743,
+      "l": 0.5743,
+      "w": 1.7752,
       "h": 1.8616
     },
     "tags": [
@@ -1600,6 +1610,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0022.glb",
       "contentHash": "c06482bcb1b8e0c781df56903f41af6b3067404029a98194c4f067fd5a44069d",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1613,8 +1624,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.5743,
+      "l": 0.5743,
+      "w": 1.7752,
       "h": 1.8616
     },
     "tags": [
@@ -1630,6 +1641,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0023.glb",
       "contentHash": "8262a9a178f3f319693f2d049d03bd1b37147a10ad92589c2d7cbde3663706ae",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1643,8 +1655,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.5743,
+      "l": 0.5743,
+      "w": 1.7752,
       "h": 1.8616
     },
     "tags": [
@@ -1660,6 +1672,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0024.glb",
       "contentHash": "68848f0763ce83c3a93f3963fa702eb7ea52104585f0649381f4bd35aa3310c6",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1673,8 +1686,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3421,
+      "l": 0.3421,
+      "w": 1.7684,
       "h": 1.8228
     },
     "tags": [
@@ -1690,6 +1703,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0025.glb",
       "contentHash": "4e426fc64b228f6a70f3a81baed14dfca4f91ecdb993828e2a48286b801dde58",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1703,8 +1717,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3371,
+      "l": 0.3371,
+      "w": 1.7684,
       "h": 1.8228
     },
     "tags": [
@@ -1720,6 +1734,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0026.glb",
       "contentHash": "7baa0c1a1139834cc040f7ef5951a9dc996e1554b317e52edbd3f278fd524b0c",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1733,8 +1748,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.777,
-      "w": 0.429,
+      "l": 0.429,
+      "w": 1.777,
       "h": 1.8573
     },
     "tags": [
@@ -1750,6 +1765,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0027.glb",
       "contentHash": "8d68c8a1e4d7219955d4b9de143ca7d9c4af5c0300ee78c831ab0e0d1aa5c39e",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1763,8 +1779,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3421,
+      "l": 0.3421,
+      "w": 1.7684,
       "h": 1.8393
     },
     "tags": [
@@ -1780,6 +1796,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0028.glb",
       "contentHash": "26eccc553e3219ce9666f906a02be5410aaca3ad840fa7c75121e212898a931b",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1793,8 +1810,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3421,
+      "l": 0.3421,
+      "w": 1.7684,
       "h": 1.8393
     },
     "tags": [
@@ -1810,6 +1827,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0029.glb",
       "contentHash": "c085ab0d77eee3dd7283bd100a440a8112c78e6e7e349f636442ff33f5917da3",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1823,8 +1841,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3421,
+      "l": 0.3421,
+      "w": 1.7684,
       "h": 1.8393
     },
     "tags": [
@@ -1840,6 +1858,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0030.glb",
       "contentHash": "ca0dded305c3ffe6a3529dc45132209cdcf2a05d55da65c670e18b5ebb45a8f5",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1853,8 +1872,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3309,
+      "l": 0.3309,
+      "w": 1.7684,
       "h": 1.8441
     },
     "tags": [
@@ -1870,6 +1889,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0031.glb",
       "contentHash": "23594d57d8cc7bc5499ecd3b6424e99d7e95405351248946ebc19bcf0c14e092",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1883,8 +1903,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3179,
+      "l": 0.3179,
+      "w": 1.6822,
       "h": 1.836
     },
     "tags": [
@@ -1900,6 +1920,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0032.glb",
       "contentHash": "25fd57fce9391308c2f3ded2cca248b1c1856cd8eb68521a5f59fdaaa9af45b5",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1913,8 +1934,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3179,
+      "l": 0.3179,
+      "w": 1.6822,
       "h": 1.836
     },
     "tags": [
@@ -1930,6 +1951,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0033.glb",
       "contentHash": "089c4622857d8bedae0c7365c32e2dfc04ffe612882f086cd4ddf15da4b1f6e4",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1943,8 +1965,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3371,
+      "l": 0.3371,
+      "w": 1.7684,
       "h": 1.8588
     },
     "tags": [
@@ -1960,6 +1982,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0034.glb",
       "contentHash": "05dc5476fa06b9d06975635b59b8cdc932078cb94a37bde41d8c3d62da6d7a93",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -1973,8 +1996,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3313,
+      "l": 0.3313,
+      "w": 1.7684,
       "h": 1.8588
     },
     "tags": [
@@ -1990,6 +2013,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0035.glb",
       "contentHash": "48e1784c79c83f96f7d2cee84b63ec9eacd1ba2e0512f4b20b292443029cfe21",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2003,8 +2027,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7712,
-      "w": 0.4034,
+      "l": 0.4034,
+      "w": 1.7712,
       "h": 1.8492
     },
     "tags": [
@@ -2020,6 +2044,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0036.glb",
       "contentHash": "e2ebeac3029e49054ea87858b949122e6f19189ee79214cf09b3ceb7ddc8d305",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2033,8 +2058,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7712,
-      "w": 0.4034,
+      "l": 0.4034,
+      "w": 1.7712,
       "h": 1.8492
     },
     "tags": [
@@ -2050,6 +2075,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0037.glb",
       "contentHash": "281bf3d4b60bdb5ece64763c513f5ba4c341833294e3cfee0c49c52dd7e05b69",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2063,8 +2089,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7712,
-      "w": 0.4034,
+      "l": 0.4034,
+      "w": 1.7712,
       "h": 1.8492
     },
     "tags": [
@@ -2080,6 +2106,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0038.glb",
       "contentHash": "463af7f7f30b8bf0dc06f67dcae486d6dd8f4266bb0e7d51b27768b18511e5f5",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2093,8 +2120,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.4548,
+      "l": 0.4548,
+      "w": 1.7752,
       "h": 1.8705
     },
     "tags": [
@@ -2110,6 +2137,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0039.glb",
       "contentHash": "ef5adf19ca131db0e7464bf2a7136689e477e7683919559f853be6b69af79b56",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2123,8 +2151,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.4548,
+      "l": 0.4548,
+      "w": 1.7752,
       "h": 1.8705
     },
     "tags": [
@@ -2140,6 +2168,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0040.glb",
       "contentHash": "5f27051d2675cdfcb11a27835d846d13fd15866df3f88baa37da559e4ed0f9c8",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2153,8 +2182,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7752,
-      "w": 0.4548,
+      "l": 0.4548,
+      "w": 1.7752,
       "h": 1.8705
     },
     "tags": [
@@ -2170,6 +2199,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0041.glb",
       "contentHash": "9296833c2d48ca4f0764dea1936c9543d1c59845edaaad44c10e3e8967ceb034",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2183,8 +2213,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3055,
+      "l": 0.3055,
+      "w": 1.6822,
       "h": 1.8328
     },
     "tags": [
@@ -2200,6 +2230,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0042.glb",
       "contentHash": "f92d730b637f7b1040aa3a24e8563fa65d26b9509907abb641446027f0e97421",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2213,8 +2244,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3055,
+      "l": 0.3055,
+      "w": 1.6822,
       "h": 1.8328
     },
     "tags": [
@@ -2230,6 +2261,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0043.glb",
       "contentHash": "6173cf8a2dd9cf5a72f7add430c191b67394c3b226c21da15552e7aa7f487121",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2243,8 +2275,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.6822,
-      "w": 0.3055,
+      "l": 0.3055,
+      "w": 1.6822,
       "h": 1.8328
     },
     "tags": [
@@ -2260,6 +2292,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0044.glb",
       "contentHash": "b4947f6a1bf3686dfe124a2bc10d356995a14bce64ba03d598e611f25b53cc61",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2273,8 +2306,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.3309,
+      "l": 0.3309,
+      "w": 1.7684,
       "h": 1.8353
     },
     "tags": [
@@ -2290,6 +2323,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0045.glb",
       "contentHash": "86c7c357ece1de9408f9891162803388a93c51bb788e1da996e2d463ae1f7f4e",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2303,8 +2337,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7684,
-      "w": 0.331,
+      "l": 0.331,
+      "w": 1.7684,
       "h": 1.8353
     },
     "tags": [
@@ -2320,6 +2354,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0046.glb",
       "contentHash": "9c2a298289b782a97404c3811efae94c10834adb581695bec1fce6beb023355c",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2333,8 +2368,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7697,
-      "w": 0.5218,
+      "l": 0.5218,
+      "w": 1.7697,
       "h": 1.8178
     },
     "tags": [
@@ -2350,6 +2385,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0047.glb",
       "contentHash": "8c31d5e974660cb11eacccb39cad48bd0d12eebffe208e94cd54f600fe86635c",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2363,8 +2399,8 @@
     "class": "pedestrian",
     "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.7697,
-      "w": 0.5218,
+      "l": 0.5218,
+      "w": 1.7697,
       "h": 1.8178
     },
     "tags": [
@@ -2380,6 +2416,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0048.glb",
       "contentHash": "ee20b5cc98c4dce249a3ef493b9e8aef43684c8d4bc438578ebabf9a6559c052",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2393,8 +2430,8 @@
     "class": "pedestrian",
     "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.0851,
-      "w": 0.212,
+      "l": 0.212,
+      "w": 1.0851,
       "h": 1.1292
     },
     "tags": [
@@ -2410,6 +2447,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0049.glb",
       "contentHash": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2423,8 +2461,8 @@
     "class": "pedestrian",
     "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.0537,
-      "w": 0.2416,
+      "l": 0.2416,
+      "w": 1.0537,
       "h": 1.1379
     },
     "tags": [
@@ -2440,6 +2478,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0050.glb",
       "contentHash": "c09f2d008ace6269595943e10b228139d9af040f37bf57da6ceb177c758d03ec",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2453,8 +2492,8 @@
     "class": "pedestrian",
     "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.8269,
-      "w": 0.3372,
+      "l": 0.3372,
+      "w": 1.8269,
       "h": 1.8631
     },
     "tags": [
@@ -2470,6 +2509,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0051.glb",
       "contentHash": "c49584e1ea589d6b15e1758efeb6694a848e2da6c1655e05e521659ecc4acf50",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2483,8 +2523,8 @@
     "class": "pedestrian",
     "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
     "dims": {
-      "l": 1.8272,
-      "w": 0.3562,
+      "l": 0.3562,
+      "w": 1.8272,
       "h": 1.8425
     },
     "tags": [
@@ -2500,6 +2540,7 @@
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0052.glb",
       "contentHash": "e3e416fdfc4879340bc0de89657b226d67c0a73bd1886a64d4ef26d71deeac71",
+      "yawRad": 1.5707963267948966,
       "animated": true,
       "clips": {
         "idle": "idle",
@@ -2788,7 +2829,8 @@
     ],
     "defaultParams": {
       "color": "#e6802a"
-    }
+    },
+    "proceduralBuilder": "robot.delivery-4w"
   },
   {
     "id": "robot.wheel",
@@ -2809,7 +2851,8 @@
       "autonomous",
       "delivery"
     ],
-    "defaultParams": {}
+    "defaultParams": {},
+    "proceduralBuilder": "robot.wheel"
   },
   {
     "id": "drone.delivery_quadcopter",
@@ -3610,5 +3653,866 @@
       "occlusion:low"
     ],
     "defaultParams": {}
+  },
+  {
+    "id": "vehicle.sedan.low_poly",
+    "label": "Sedan (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Mid-size four-door passenger car. The default other-vehicle: use it for lead, following and oncoming traffic when nothing special is required.",
+    "dims": {
+      "l": 4.7,
+      "w": 1.82,
+      "h": 1.45
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#2f4f74"
+    },
+    "proceduralBuilder": "vehicle.sedan"
+  },
+  {
+    "id": "vehicle.hatchback.low_poly",
+    "label": "Hatchback (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Compact five-door hatchback. Short, agile city car — good for tight parking rows and gap-acceptance scenarios.",
+    "dims": {
+      "l": 4.05,
+      "w": 1.75,
+      "h": 1.46
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#8f2f2f"
+    },
+    "proceduralBuilder": "vehicle.hatchback"
+  },
+  {
+    "id": "vehicle.suv.low_poly",
+    "label": "SUV (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Mid-size sport-utility vehicle. Tall enough to hide a child or a cyclist from a following driver; the common suburban parked vehicle.",
+    "dims": {
+      "l": 4.85,
+      "w": 1.95,
+      "h": 1.78
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#25282c"
+    },
+    "proceduralBuilder": "vehicle.suv"
+  },
+  {
+    "id": "vehicle.pickup.low_poly",
+    "label": "Pickup truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "compatibleActorClasses": [
+      "car"
+    ],
+    "description": "Full-size crew-cab pickup with an open bed. Long and tall; a parked one at a kerb blocks the sightline into a driveway.",
+    "dims": {
+      "l": 5.9,
+      "w": 2.03,
+      "h": 1.95
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#5a6068"
+    },
+    "proceduralBuilder": "vehicle.pickup"
+  },
+  {
+    "id": "vehicle.van.low_poly",
+    "label": "Cargo van (low-poly)",
+    "class": "vehicle",
+    "actorClass": "van",
+    "description": "High-roof delivery van. A double-parked one is the canonical occluder for a pedestrian stepping out mid-block.",
+    "dims": {
+      "l": 5.3,
+      "w": 2,
+      "h": 2.4
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#e8e9ea"
+    },
+    "proceduralBuilder": "vehicle.van"
+  },
+  {
+    "id": "vehicle.kia.carnival.low_poly",
+    "label": "Kia Carnival 2025 (low-poly)",
+    "class": "vehicle",
+    "actorClass": "van",
+    "compatibleActorClasses": [
+      "car"
+    ],
+    "description": "Pronto sensor-platform vehicle. Browser presentation matches the production Kia Carnival dimensions; CARLA binds this identity to the packaged KiaCarnival2025 blueprint.",
+    "dims": {
+      "l": 5.15,
+      "w": 2,
+      "h": 1.78
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#f1f2f3"
+    },
+    "proceduralBuilder": "vehicle.kia.carnival"
+  },
+  {
+    "id": "vehicle.box_truck.low_poly",
+    "label": "Box truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Two-axle straight truck with a 24 ft cargo body. Completely blocks the sightline across an adjacent lane.",
+    "dims": {
+      "l": 7.6,
+      "w": 2.44,
+      "h": 3.4
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle"
+    ],
+    "defaultParams": {
+      "color": "#e8e9ea"
+    },
+    "proceduralBuilder": "vehicle.box_truck"
+  },
+  {
+    "id": "vehicle.semi_truck.low_poly",
+    "label": "Semi tractor-trailer (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Conventional tractor with a 53 ft box trailer. The strongest mobile occluder in the catalog and the reference articulated vehicle for turning and blind-spot cases.",
+    "dims": {
+      "l": 20.1,
+      "w": 2.6,
+      "h": 4.1
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle"
+    ],
+    "defaultParams": {
+      "color": "#8f2f2f"
+    },
+    "proceduralBuilder": "vehicle.semi_truck"
+  },
+  {
+    "id": "vehicle.bus.low_poly",
+    "label": "Transit bus (low-poly)",
+    "class": "vehicle",
+    "actorClass": "bus",
+    "description": "Forty-foot city bus with kerb-side doors. Stopped at a bus stop it hides boarding and alighting pedestrians from through traffic.",
+    "dims": {
+      "l": 12.2,
+      "w": 2.55,
+      "h": 3.2
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle"
+    ],
+    "defaultParams": {
+      "color": "#2f5b45"
+    },
+    "proceduralBuilder": "vehicle.bus"
+  },
+  {
+    "id": "vehicle.motorcycle.low_poly",
+    "label": "Motorcycle (low-poly)",
+    "class": "vehicle",
+    "actorClass": "motorcycle",
+    "description": "Standard motorcycle, no rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.",
+    "dims": {
+      "l": 2.1,
+      "w": 0.75,
+      "h": 1.23
+    },
+    "tags": [
+      "occlusion:low",
+      "mobile",
+      "vru",
+      "parkable",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#25282c"
+    },
+    "proceduralBuilder": "vehicle.motorcycle"
+  },
+  {
+    "id": "vehicle.bicycle.low_poly",
+    "label": "Cyclist (low-poly)",
+    "class": "vehicle",
+    "actorClass": "bicycle",
+    "description": "Bicycle with a seated rider. The reference vulnerable road user for bike-lane, dooring and right-hook conflicts.",
+    "dims": {
+      "l": 1.75,
+      "w": 0.5,
+      "h": 1.71
+    },
+    "tags": [
+      "occlusion:low",
+      "mobile",
+      "vru",
+      "roadway"
+    ],
+    "defaultParams": {
+      "color": "#2f4f74"
+    },
+    "proceduralBuilder": "vehicle.bicycle"
+  },
+  {
+    "id": "vehicle.ambulance.low_poly",
+    "label": "Ambulance (low-poly)",
+    "class": "vehicle",
+    "actorClass": "van",
+    "compatibleActorClasses": [
+      "truck"
+    ],
+    "description": "Box-body emergency ambulance with a roof light bar. Use lights.emergency and audio.horn timeline state keys for emergency-response conflicts.",
+    "dims": {
+      "l": 6.1,
+      "w": 2.1,
+      "h": 2.65
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle"
+    ],
+    "defaultParams": {
+      "color": "#eceff1"
+    },
+    "proceduralBuilder": "vehicle.ambulance"
+  },
+  {
+    "id": "vehicle.tram.low_poly",
+    "label": "Tram / streetcar (low-poly)",
+    "class": "vehicle",
+    "actorClass": "bus",
+    "compatibleActorClasses": [
+      "truck"
+    ],
+    "description": "Single articulated urban tram for rail-crossing, mixed-traffic and platform conflicts. Its long fixed-path body is a strong moving occluder.",
+    "dims": {
+      "l": 30,
+      "w": 2.65,
+      "h": 3.5
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle"
+    ],
+    "defaultParams": {
+      "color": "#d9e2e8"
+    },
+    "proceduralBuilder": "vehicle.tram"
+  },
+  {
+    "id": "vehicle.mobility_scooter.low_poly",
+    "label": "Mobility scooter (low-poly)",
+    "class": "vehicle",
+    "actorClass": "scooter",
+    "description": "Low-speed powered mobility scooter with a seated rider. Treat as a vulnerable road user for crossing and sidewalk-edge interactions.",
+    "dims": {
+      "l": 1.35,
+      "w": 0.68,
+      "h": 1.35
+    },
+    "tags": [
+      "occlusion:low",
+      "mobile",
+      "vru",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "color": "#287ba8"
+    },
+    "proceduralBuilder": "vehicle.mobility_scooter"
+  },
+  {
+    "id": "vehicle.honda_civic.low_poly",
+    "label": "Honda Civic (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Contemporary Honda Civic compact sedan for recognizable everyday traffic, commuter, parking and intersection scenarios.",
+    "dims": {
+      "l": 4.67,
+      "w": 1.8,
+      "h": 1.42
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#4b5563"
+    },
+    "proceduralBuilder": "vehicle.honda_civic"
+  },
+  {
+    "id": "vehicle.toyota_camry.low_poly",
+    "label": "Toyota Camry (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Modern Toyota Camry family sedan for common commuter traffic, rideshare pickup and parked-car occlusion scenes.",
+    "dims": {
+      "l": 4.88,
+      "w": 1.84,
+      "h": 1.45
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#c8cbd0"
+    },
+    "proceduralBuilder": "vehicle.toyota_camry"
+  },
+  {
+    "id": "vehicle.tesla_model_3.low_poly",
+    "label": "Tesla Model 3 (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Tesla Model 3 electric fastback with a low grille-free nose for modern mixed-fleet and charging-area scenarios.",
+    "dims": {
+      "l": 4.72,
+      "w": 1.85,
+      "h": 1.44
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#f2f3f4"
+    },
+    "proceduralBuilder": "vehicle.tesla_model_3"
+  },
+  {
+    "id": "vehicle.ford_mustang.low_poly",
+    "label": "Ford Mustang (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Ford Mustang two-door performance coupe with a long hood for recognizable enthusiast and high-acceleration traffic scenes.",
+    "dims": {
+      "l": 4.81,
+      "w": 1.92,
+      "h": 1.4
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#1f5fa8"
+    },
+    "proceduralBuilder": "vehicle.ford_mustang"
+  },
+  {
+    "id": "vehicle.chevrolet_corvette.low_poly",
+    "label": "Chevrolet Corvette (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Chevrolet Corvette low sports car with a wide stance for performance-driving and difficult low-profile detection scenarios.",
+    "dims": {
+      "l": 4.63,
+      "w": 1.93,
+      "h": 1.23
+    },
+    "tags": [
+      "occlusion:low",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#d62828"
+    },
+    "proceduralBuilder": "vehicle.chevrolet_corvette"
+  },
+  {
+    "id": "vehicle.porsche_911.low_poly",
+    "label": "Porsche 911 (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Porsche 911 sports coupe with its compact rounded roofline for premium urban traffic and performance scenarios.",
+    "dims": {
+      "l": 4.52,
+      "w": 1.85,
+      "h": 1.3
+    },
+    "tags": [
+      "occlusion:low",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#d9dde2"
+    },
+    "proceduralBuilder": "vehicle.porsche_911"
+  },
+  {
+    "id": "vehicle.jeep_wrangler.low_poly",
+    "label": "Jeep Wrangler (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Four-door Jeep Wrangler with an upright cabin and exposed spare-wheel silhouette for urban and trail-access scenes.",
+    "dims": {
+      "l": 4.79,
+      "w": 1.88,
+      "h": 1.87
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#49633d"
+    },
+    "proceduralBuilder": "vehicle.jeep_wrangler"
+  },
+  {
+    "id": "vehicle.minivan.low_poly",
+    "label": "Passenger minivan (low-poly)",
+    "class": "vehicle",
+    "actorClass": "van",
+    "description": "Seven-seat passenger minivan for school pickup, family travel, rideshare and sliding-door curbside conflicts.",
+    "dims": {
+      "l": 5.15,
+      "w": 2,
+      "h": 1.78
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger"
+    ],
+    "defaultParams": {
+      "color": "#6f7782"
+    },
+    "proceduralBuilder": "vehicle.minivan"
+  },
+  {
+    "id": "vehicle.taxi.low_poly",
+    "label": "City taxi (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Marked city taxi with a roof sign for curb pickup, sudden stopping, passenger loading and dense downtown traffic.",
+    "dims": {
+      "l": 4.9,
+      "w": 1.85,
+      "h": 1.55
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "passenger",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#f0c419"
+    },
+    "proceduralBuilder": "vehicle.taxi"
+  },
+  {
+    "id": "vehicle.police_cruiser.low_poly",
+    "label": "Police cruiser (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Marked police sedan with a roof light bar for traffic stops, pursuits, blocked lanes and emergency-priority scenarios.",
+    "dims": {
+      "l": 5.1,
+      "w": 2,
+      "h": 1.55
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "emergency",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#1f2937"
+    },
+    "proceduralBuilder": "vehicle.police_cruiser"
+  },
+  {
+    "id": "vehicle.police_suv.low_poly",
+    "label": "Police SUV (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Marked police utility vehicle with emergency lighting for incident command, pursuits and roadside response scenes.",
+    "dims": {
+      "l": 5.1,
+      "w": 2,
+      "h": 1.9
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "emergency",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#e9ecef"
+    },
+    "proceduralBuilder": "vehicle.police_suv"
+  },
+  {
+    "id": "vehicle.fire_command_suv.low_poly",
+    "label": "Fire command SUV (low-poly)",
+    "class": "vehicle",
+    "actorClass": "car",
+    "description": "Red fire-department command SUV with warning lights for advance response, road closures and incident staging.",
+    "dims": {
+      "l": 5.2,
+      "w": 2,
+      "h": 1.95
+    },
+    "tags": [
+      "occlusion:medium",
+      "mobile",
+      "parkable",
+      "roadway",
+      "emergency",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#b91c1c"
+    },
+    "proceduralBuilder": "vehicle.fire_command_suv"
+  },
+  {
+    "id": "vehicle.fire_engine.low_poly",
+    "label": "Fire engine (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Full-size structural fire engine with equipment body, ladder and emergency light bar for active incident scenes.",
+    "dims": {
+      "l": 10.2,
+      "w": 2.55,
+      "h": 3.3
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "emergency",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#b91c1c"
+    },
+    "proceduralBuilder": "vehicle.fire_engine"
+  },
+  {
+    "id": "vehicle.dump_truck.low_poly",
+    "label": "Dump truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Three-axle dump truck with a raised-sided aggregate bed for construction traffic, work zones and blind-spot cases.",
+    "dims": {
+      "l": 8.5,
+      "w": 2.55,
+      "h": 3.3
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial",
+      "workzone"
+    ],
+    "defaultParams": {
+      "color": "#e1a11a"
+    },
+    "proceduralBuilder": "vehicle.dump_truck"
+  },
+  {
+    "id": "vehicle.garbage_truck.low_poly",
+    "label": "Garbage truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Municipal refuse collection truck with a tall compactor body for frequent curb stops and neighborhood occlusion scenarios.",
+    "dims": {
+      "l": 9.2,
+      "w": 2.55,
+      "h": 3.45
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#2f855a"
+    },
+    "proceduralBuilder": "vehicle.garbage_truck"
+  },
+  {
+    "id": "vehicle.tow_truck.low_poly",
+    "label": "Tow truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Medium-duty rollback tow truck for disabled-vehicle recovery, shoulder operations and partially blocked traffic lanes.",
+    "dims": {
+      "l": 7.5,
+      "w": 2.45,
+      "h": 2.8
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#f59e0b"
+    },
+    "proceduralBuilder": "vehicle.tow_truck"
+  },
+  {
+    "id": "vehicle.cement_mixer.low_poly",
+    "label": "Cement mixer (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Heavy concrete mixer truck with a rotating-drum silhouette for construction deliveries, turns and large blind spots.",
+    "dims": {
+      "l": 8.8,
+      "w": 2.5,
+      "h": 3.7
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial",
+      "workzone"
+    ],
+    "defaultParams": {
+      "color": "#e5e7eb"
+    },
+    "proceduralBuilder": "vehicle.cement_mixer"
+  },
+  {
+    "id": "vehicle.utility_bucket_truck.low_poly",
+    "label": "Utility bucket truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Utility service truck with a folded aerial bucket boom for roadside maintenance, lane closures and worker-safety scenes.",
+    "dims": {
+      "l": 8.2,
+      "w": 2.5,
+      "h": 3.6
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "service",
+      "workzone"
+    ],
+    "defaultParams": {
+      "color": "#f8fafc"
+    },
+    "proceduralBuilder": "vehicle.utility_bucket_truck"
+  },
+  {
+    "id": "vehicle.tanker_truck.low_poly",
+    "label": "Tanker truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Rigid tanker truck with a cylindrical liquid tank for hazardous-goods routing, turning and high-occlusion scenarios.",
+    "dims": {
+      "l": 10.5,
+      "w": 2.55,
+      "h": 3.6
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial"
+    ],
+    "defaultParams": {
+      "color": "#d7dce1"
+    },
+    "proceduralBuilder": "vehicle.tanker_truck"
+  },
+  {
+    "id": "vehicle.flatbed_truck.low_poly",
+    "label": "Flatbed truck (low-poly)",
+    "class": "vehicle",
+    "actorClass": "truck",
+    "description": "Medium-duty flatbed truck for oversized cargo, loading activity and variable roadside obstruction scenarios.",
+    "dims": {
+      "l": 8,
+      "w": 2.5,
+      "h": 2.65
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "commercial"
+    ],
+    "defaultParams": {
+      "color": "#475569"
+    },
+    "proceduralBuilder": "vehicle.flatbed_truck"
+  },
+  {
+    "id": "vehicle.school_bus.low_poly",
+    "label": "School bus (low-poly)",
+    "class": "vehicle",
+    "actorClass": "bus",
+    "description": "Conventional yellow school bus for pupil loading, flashing-stop conflicts and child pedestrian occlusion scenarios.",
+    "dims": {
+      "l": 10.7,
+      "w": 2.55,
+      "h": 3.2
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#e8b51b"
+    },
+    "proceduralBuilder": "vehicle.school_bus"
+  },
+  {
+    "id": "vehicle.shuttle_bus.low_poly",
+    "label": "Shuttle bus (low-poly)",
+    "class": "vehicle",
+    "actorClass": "bus",
+    "description": "Medium passenger shuttle bus for airport, hotel, campus and paratransit pickup and drop-off interactions.",
+    "dims": {
+      "l": 7.4,
+      "w": 2.3,
+      "h": 2.8
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "roadway",
+      "large-vehicle",
+      "service"
+    ],
+    "defaultParams": {
+      "color": "#e2e8f0"
+    },
+    "proceduralBuilder": "vehicle.shuttle_bus"
+  },
+  {
+    "id": "vehicle.delivery_van.low_poly",
+    "label": "Parcel delivery van (low-poly)",
+    "class": "vehicle",
+    "actorClass": "van",
+    "description": "Long-wheelbase parcel delivery van for frequent curb stops, double parking and driver-exit conflict scenarios.",
+    "dims": {
+      "l": 6,
+      "w": 2.05,
+      "h": 2.65
+    },
+    "tags": [
+      "occlusion:high",
+      "mobile",
+      "parkable",
+      "roadway",
+      "delivery",
+      "commercial"
+    ],
+    "defaultParams": {
+      "color": "#8b5e3c"
+    },
+    "proceduralBuilder": "vehicle.delivery_van"
   }
 ]
