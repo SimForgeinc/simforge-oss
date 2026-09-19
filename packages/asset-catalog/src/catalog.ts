@@ -1193,7 +1193,8 @@ export function resolveCatalogId(id: string): string | null {
 
 /** Look up an entry, throwing on an unknown id (ids are a hard contract). */
 export function getEntry(id: string): CatalogEntry {
-  const entry = BY_ID.get(id) ?? EXTERNAL_BY_ID.get(id);
+  const canonicalId = resolveCatalogId(id);
+  const entry = canonicalId === null ? undefined : BY_ID.get(canonicalId) ?? EXTERNAL_BY_ID.get(canonicalId);
   if (!entry) throw new Error(`Unknown catalog id: ${id}`);
   return entry;
 }

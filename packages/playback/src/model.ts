@@ -16,6 +16,7 @@ import {
 import {
   getEntry,
   isCatalogId,
+  resolveCatalogId,
   type CatalogId,
   type Dims,
 } from '@simforge-oss/asset-catalog';
@@ -48,8 +49,8 @@ export function resolvePlaybackCatalogId(
   kind: SimActor['kind'],
   explicit?: string | null,
 ): { readonly catalogId: CatalogId; readonly modelBasis: PlaybackActor['modelBasis'] } | null {
-  const candidate = explicit ?? defaultCatalogIdForActorKind(kind);
-  if (!isCatalogId(candidate)) return null;
+  const candidate = resolveCatalogId(explicit ?? defaultCatalogIdForActorKind(kind));
+  if (candidate === null || !isCatalogId(candidate)) return null;
   getEntry(candidate);
   return {
     catalogId: candidate,
@@ -732,12 +733,13 @@ function mapPlaybackProps(
 ): PlaybackProp[] {
   const props: PlaybackProp[] = [];
   for (const prop of inputProps) {
-    if (!isCatalogId(prop.catalogId)) {
+    const catalogId = resolveCatalogId(prop.catalogId);
+    if (catalogId === null || !isCatalogId(catalogId)) {
       issues.push(`${name}: prop ${prop.id} requests unknown Studio catalog model ${display(prop.catalogId)}`);
       continue;
     }
-    getEntry(prop.catalogId);
-    props.push({ ...prop, catalogId: prop.catalogId });
+    getEntry(catalogId);
+    props.push({ ...prop, catalogId });
   }
   return props;
 }

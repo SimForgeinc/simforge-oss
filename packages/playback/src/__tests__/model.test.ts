@@ -563,6 +563,18 @@ describe('SimForge concrete playback import', () => {
     );
   });
 
+  it('admits legacy pedestrian aliases without rewriting source tags', () => {
+    const fixture = pair();
+    const actor = fixture.instance.input.actors[0]!;
+    actor.kind = 'pedestrian';
+    actor.tags = ['catalog:pedestrian.child_walking'];
+    fixture.instance.manifest.inputHash = contentHash(fixture.instance.input);
+    fixture.trace.header = { ...fixture.trace.header, inputHash: fixture.instance.manifest.inputHash };
+    const bundle = parsePlaybackPair(fixture.instance, fixture.trace);
+    expect(bundle.actors.find((entry) => entry.id === actor.id)?.catalogId).toBe('pedestrian.child');
+    expect(actor.tags).toEqual(['catalog:pedestrian.child_walking']);
+  });
+
   it('rejects unknown actor model mappings instead of drawing a cosmetic box', () => {
     const fixture = pair();
     fixture.instance.input.actors[0]!.tags = ['catalog:vehicle.does-not-exist'];
