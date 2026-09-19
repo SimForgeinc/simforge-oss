@@ -2,8 +2,8 @@
 
 Read `/home/path/tmp/jev-findings.md` (API contract, measured latency, hard safety rules) and
 `/home/path/tmp/jev-simforge-integration.md` (current design, hook point, schema v2) first.
-Current prototype: `/home/path/tmp/jevdrive/` — `run.py`, `safety.py`, `scene.py`,
-`policy_constants.py`, `render.sh`, `select_tiles.py`, `qa_scenestate.py`, `make_video.py`.
+Current package: `adapters/jev-driver/jevdrive/`. The original prototype lived in
+`/home/path/tmp/jevdrive/`; the render launcher now imports this checkout's package.
 
 ## What exists and is PROVEN (do not re-derive, do not regress)
 
@@ -27,6 +27,29 @@ Current prototype: `/home/path/tmp/jevdrive/` — `run.py`, `safety.py`, `scene.
   meshopt/quantization stripped once (`gltf-transform dequantize`). `--glbs` needs ABSOLUTE paths.
   NEVER pass `--ground-y` with real tiles (it disables the terrain raycast and actors float).
   `--pedestrian-models` aborts the render (skinned-mesh bind-group bug) — vehicles only.
+
+### Current native render path
+
+`render.sh RUN [TICKS]` uses `${PYTHON:-python3}` with this adapter at the front
+of `PYTHONPATH`. Select an interpreter with the adapter's dependencies installed.
+It always requests `scen-play --quality high` for atmosphere, IBL, sun/shadows,
+GTAO, AgX and SMAA; the native CLI's historical `sensor` shading is not the
+human-facing video default. Sensor capture requires an explicit separate
+`scen-play --quality sensor` invocation.
+
+Texture representation is independent of shading: the adapter explicitly selects
+`textures-512-bc7`. It verifies `3d/variants/manifest.json`, the referenced index
+and object digests, then dequantizes nearby geometry (including vegetation) with
+only those tier images. Authored BC7-tier RGBA exceptions are preserved. Missing
+tiers or corrupt objects fail rather than falling back to uncapped master images
+or unsupported BasisLZ/ETC1S. `map-glbs/selection.json` records the selected tier,
+digests, `downgradeReason` and exact cached GLBs passed to playback.
+
+The map root is `MAPS_ROOT`, then `SCEN_DEV_ASSETS`, otherwise
+`${SIMFORGE_MAPS_CACHE_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/maps}/map-bundles`.
+The selected bundle must include the published render manifest and BC7 tier;
+a canonical-only map installation is not a renderable bundle. Source bundles
+are read-only, and all preparation outputs stay under the run directory.
 
 ## Contract A — driver abstraction (multi-driver core owns; everyone else consumes)
 

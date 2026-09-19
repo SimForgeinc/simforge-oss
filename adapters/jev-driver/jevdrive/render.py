@@ -21,10 +21,8 @@ def main():
     doc = json.loads(state.read_text())
     cache = Path(os.environ.get("SIMFORGE_MAPS_CACHE_ROOT",
                                 str(Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "simforge/maps")))
-    maps = Path(os.environ.get("MAPS_ROOT", os.environ.get("SCEN_DEV_ASSETS", str(cache / "dev-assets"))))
+    maps = Path(os.environ.get("MAPS_ROOT", os.environ.get("SCEN_DEV_ASSETS", str(cache / "map-bundles"))))
     if not (maps / doc["mapId"] / "3d/manifest.json").is_file():
-        maps = None
-    if maps is None:
         raise FileNotFoundError(f"No real mesh bundle for {doc['mapId']}; refusing synthetic-ground substitution")
     tiles = run / "map-glbs"
     subprocess.run([sys.executable, str(ROOT / "select_tiles.py"), "--scene-state", str(state),
