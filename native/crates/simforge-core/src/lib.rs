@@ -22,6 +22,8 @@
 //!
 //! Session and compiler crates link this same execution authority.
 
+#[path = "catalog_aliases.generated.rs"]
+pub mod catalog_aliases;
 pub mod checkpoint;
 pub mod engine;
 pub mod error;

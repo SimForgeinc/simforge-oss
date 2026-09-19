@@ -1075,6 +1075,11 @@ export function isCatalogId(id: string): id is CatalogId {
  * does not exist, and an alias may never shadow a canonical id.
  */
 export const CATALOG_ALIASES: Readonly<Record<string, CatalogId>> = {
+  // Legacy authored intent is not a pose override: motion selects idle/walk.
+  'pedestrian.adult_standing': 'pedestrian.adult',
+  'pedestrian.adult_walking': 'pedestrian.adult',
+  'pedestrian.child_standing': 'pedestrian.child',
+  'pedestrian.child_walking': 'pedestrian.child',
   // Loose objects in the carriageway.
   'object.tyre': 'hazard.tire_debris',
   'object.tire': 'hazard.tire_debris',

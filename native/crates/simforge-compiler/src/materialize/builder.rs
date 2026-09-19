@@ -4943,6 +4943,30 @@ mod tests {
     }
 
     #[test]
+    fn legacy_pedestrian_aliases_preserve_dimensions_and_unknown_ids_fail() {
+        with_materializer(|materializer| {
+            let mut role = rigid_role("pedestrian", 0.0, 0.0);
+            role.base.actor.class = t::ActorClass::Pedestrian;
+            for (alias, target) in [
+                ("pedestrian.adult_standing", "pedestrian.adult"),
+                ("pedestrian.adult_walking", "pedestrian.adult"),
+                ("pedestrian.child_standing", "pedestrian.child"),
+                ("pedestrian.child_walking", "pedestrian.child"),
+            ] {
+                role.base.actor.catalog_id = Some(alias.to_owned());
+                let dims = materializer.actor_dims(&role, "roles[0]").unwrap();
+                let expected = materializer.options.catalog.actor_dims(target).unwrap();
+                assert_eq!((dims.l, dims.w, dims.h), (expected.l, expected.w, expected.h));
+                assert_eq!(role.base.actor.catalog_id.as_deref(), Some(alias));
+            }
+            role.base.actor.catalog_id = Some("pedestrian.nonexistent_nonsense".to_owned());
+            let error = materializer.actor_dims(&role, "roles[0]").unwrap_err();
+            assert_eq!(error.code, "actor_catalog_class_mismatch");
+            assert_eq!(error.path.as_deref(), Some("roles[0].actor.catalogId"));
+        });
+    }
+
+    #[test]
     fn relative_parallel_route_pins_extension_offsets_length_and_ds() {
         with_materializer(|materializer| {
             materializer.actors.push(actor("ego", false, false));
