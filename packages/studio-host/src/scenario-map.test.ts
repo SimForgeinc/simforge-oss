@@ -5,6 +5,10 @@ const binding = { mapVersionId: "old", mapSourceMapId: "di-rosa-sf", mapXodrSha2
 const installed = { mapVersionId: "new", sourceMapId: "di-rosa-sf", artifacts: { xodrSha256: binding.mapXodrSha256 }, topologyUrl: "/new/topology" };
 
 describe("scenario map resolution", () => {
+  it("refuses an ambiguous installed catalog instead of choosing by array order", () => {
+    expect(() => resolveScenarioMap(binding, [installed, { ...installed, mapVersionId: "another" }]))
+      .toThrowError(expect.objectContaining({ code: "scenario_map_ambiguous" }));
+  });
   it("opens a superseded scenario on the current publication of its source", () => {
     expect(resolveScenarioMap(binding, [installed]).topologyUrl).toBe("/new/topology");
   });

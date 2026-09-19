@@ -12,7 +12,7 @@ type InstalledMap = {
 
 export class ScenarioMapResolutionError extends Error {
   constructor(
-    readonly code: "scenario_map_absent" | "scenario_map_geometry_drift",
+    readonly code: "scenario_map_absent" | "scenario_map_geometry_drift" | "scenario_map_ambiguous",
     message: string,
     readonly requestedMapVersionId: string | null,
     readonly installedMapVersionId: string | null = null,
@@ -27,9 +27,21 @@ export class ScenarioMapResolutionError extends Error {
  * to labels or slugs: those are not proof that two maps share an origin.
  */
 export function resolveScenarioMap<T extends InstalledMap>(binding: ScenarioMapBinding, installed: readonly T[]): T {
-  const map = binding.mapSourceMapId
-    ? installed.find((candidate) => candidate.sourceMapId === binding.mapSourceMapId)
-    : installed.find((candidate) => candidate.mapVersionId === binding.mapVersionId);
+  let map: T | undefined;
+  for (const candidate of installed) {
+    const matches = binding.mapSourceMapId
+      ? candidate.sourceMapId === binding.mapSourceMapId
+      : candidate.mapVersionId === binding.mapVersionId;
+    if (!matches) continue;
+    if (map) {
+      throw new ScenarioMapResolutionError(
+        "scenario_map_ambiguous",
+        `The installed publications for source map ${binding.mapSourceMapId ?? binding.mapVersionId} are ambiguous: ${map.mapVersionId} and ${candidate.mapVersionId}. Refresh the map catalog so it identifies the newest installed publication.`,
+        binding.mapVersionId,
+      );
+    }
+    map = candidate;
+  }
   if (!map) {
     throw new ScenarioMapResolutionError(
       "scenario_map_absent",

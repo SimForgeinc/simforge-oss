@@ -104,7 +104,7 @@ export function readDocumentTransferFile(input: unknown): ScenarioMapBinding & {
       : null;
   return {
     title: title.slice(0, 200), content, mapVersionId,
-    mapSourceMapId: typeof input.mapSourceMapId === "string" ? input.mapSourceMapId : null,
+    mapSourceMapId: typeof input.mapSourceMapId === "string" ? input.mapSourceMapId : (mapVersionId ? null : content.sourceMap?.mapId ?? null),
     mapXodrSha256: typeof input.mapXodrSha256 === "string" ? input.mapXodrSha256 : null,
   };
 }
