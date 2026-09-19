@@ -24,7 +24,7 @@ import type { CameraControlPreferences } from './camera-drag';
 import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose, initialEditorFocus } from './camera-envelope';
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
-import { disposeAlbedoInspection, registerAlbedoTexture } from './albedo-color';
+import { disposeAlbedoInspection, isMaskOnlyAlbedo, registerAlbedoTexture } from './albedo-color';
 import {
   collectResources,
   disposeResources,
@@ -326,6 +326,7 @@ export class CityViewer {
   private effectiveTextureMaxDimension = Infinity;
   private tierSelection!: TierSelection;
   private lastLoadError: CityViewerStats['loadDiagnostics']['lastError'] = null;
+  private readonly textureCapabilities: CityViewerStats['loadDiagnostics']['capabilities'];
   private textureTierIndex: TextureTierIndex | null = null;
   private textureSources: ReadonlyMap<string, MapTextureSource> = new Map();
   private sourceManifestSha256 = '';
@@ -472,7 +473,12 @@ export class CityViewer {
       stencil: false,
     });
     canvasRendererOwners.set(canvas, this.renderer);
-    this.tierSelection = selectTextureTier(this.options.mapTextureTier, probeTextureCapabilities(this.renderer.getContext()));
+    const gl = this.renderer.getContext();
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    this.textureCapabilities = { ...probeTextureCapabilities(gl),
+      vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) as string : null,
+      renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) as string : null };
+    this.tierSelection = selectTextureTier(this.options.mapTextureTier, this.textureCapabilities);
     this.renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
       const error = new Error(`WebGL shader compilation/linking failed: ${gl.getProgramInfoLog(program) || 'no program log'}\nVertex: ${gl.getShaderInfoLog(vertexShader) || ''}\nFragment: ${gl.getShaderInfoLog(fragmentShader) || ''}`);
       console.error(error);
@@ -596,6 +602,7 @@ export class CityViewer {
       this.pendingTextureBudgetError = null;
       this.downloadTracker.reset();
       this.streamingError = null;
+      this.lastLoadError = null;
       this.inputError = null;
       this.detailFailures = 0;
       this.detailError = null;
@@ -694,7 +701,7 @@ export class CityViewer {
     this.shadowRadius = shadowRadiusForScene(this.sceneBox, this.options.shadowRadiusM);
     this.configureSunShadow();
 
-    this.atlas = new ShadowAtlas(manifest, this.options.shadowAtlasCellSize);
+    this.atlas = new ShadowAtlas(manifest, this.options.shadowAtlasCellSize, this.textureCapabilities.maxTextureSize);
     this.snowCover.setShadowOptions(this.shadowOptions(this.sceneBox, 20, 40));
 
     const visualResourcesPromise = this.ensureVisualResources();
@@ -1679,7 +1686,8 @@ export class CityViewer {
       (this.cityLayer?.residentBytes ?? 0) +
       (this.vegLayer?.residentBytes ?? 0) +
       (this.roadLayer?.residentBytes ?? 0) +
-      this.snowCover.stats().residentBytes
+      this.snowCover.stats().residentBytes +
+      (this.atlas?.diagnostics.residentBytes ?? 0)
     );
   }
 
@@ -1724,6 +1732,8 @@ export class CityViewer {
     const dimensions: Record<string, number> = {};
     const textureFormats: Record<string, number> = {};
     const rgbaFallbacks: Record<string, number> = {};
+    const contentWarnings: Record<string, number> = {};
+    if (this.atlas?.diagnostics.downgradeReason) contentWarnings['shadow-atlas-gpu-limit'] = 1;
     const sources = new Set<object>();
     for (const layer of [this.roadLayer, this.cityLayer, this.vegLayer]) {
       for (const entry of layer?.entries.values() ?? []) for (const asset of entry.resident.values()) {
@@ -1737,6 +1747,7 @@ export class CityViewer {
           textureFormats[format] = (textureFormats[format] ?? 0) + 1;
           const reason = texture.userData.mapTexture.rgbaFallbackReason as string | undefined;
           if (reason) rgbaFallbacks[reason] = (rgbaFallbacks[reason] ?? 0) + 1;
+          if (isMaskOnlyAlbedo(texture)) contentWarnings['albedo-rgb-missing'] = (contentWarnings['albedo-rgb-missing'] ?? 0) + 1;
         }
       }
     }
@@ -1746,16 +1757,13 @@ export class CityViewer {
       && (city?.missingInViewTiles ?? 0) === 0;
     const targetQualityReady = usable && Boolean(this.textureTierIndex) && this.viewResidentNow()
       && this.presetTransitions === 0;
-    const gl = this.renderer.getContext();
-    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     return {
       tierSelection: this.tierSelection,
       loadDiagnostics: {
-        capabilities: { ...probeTextureCapabilities(gl),
-          vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) as string : null,
-          renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) as string : null },
+        capabilities: this.textureCapabilities,
         availableVariantIds: Object.keys(this.variantManifest?.variants ?? {}),
-        lastError: this.lastLoadError, textureFormats, rgbaFallbacks,
+        lastError: this.lastLoadError, textureFormats, rgbaFallbacks, contentWarnings,
+        shadowAtlas: this.atlas?.diagnostics ?? null,
       },
       usable,
       targetQualityReady,

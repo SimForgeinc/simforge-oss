@@ -237,6 +237,11 @@ export interface CityViewerStats {
     } | null;
     textureFormats: Record<string, number>;
     rgbaFallbacks: Record<string, number>;
+    contentWarnings: Record<string, number>;
+    shadowAtlas: {
+      requestedCellPx: number; actualCellPx: number; width: number; height: number;
+      residentBytes: number; downgradeReason: string | null;
+    } | null;
   };
   /** Required visible geometry is resident, independently of final texture quality. */
   usable: boolean;
