@@ -73,6 +73,7 @@ type GalleryEntry = {
 
 const EMPTY_WORLD_STATE: ScenarioWorldState = {
   target: null,
+  preparedMapVersionId: null,
   loadedMapVersionId: null,
   streaming: false,
   error: null,
