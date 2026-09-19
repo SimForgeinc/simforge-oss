@@ -157,13 +157,22 @@ export function inspectAlbedoTexture(renderer: WebGLRenderer, texture: Texture):
   if (!image || typeof image !== 'object' || !('width' in image) || !('height' in image)
     || typeof image.width !== 'number' || typeof image.height !== 'number'
     || image.width <= 0 || image.height <= 0) return;
+  const gl = renderer.getContext();
+  const priorErrors: number[] = [];
+  for (let code = gl.getError(); code !== gl.NO_ERROR; code = gl.getError()) priorErrors.push(code);
+  if (priorErrors.length) {
+    // Preserve the failure, but never attribute another GPU operation's error
+    // to the texture we have not inspected yet.
+    const error = new Error(`Earlier GPU work failed before albedo inspection: WebGL errors ${priorErrors.join(', ')}`);
+    error.name = 'PriorWebGLError';
+    throw error;
+  }
   let inspection = inspections.get(renderer);
   if (!inspection) {
     inspection = new AlbedoInspection();
     inspections.set(renderer, inspection);
   }
   const maskOnly = inspection.maskOnly(renderer, texture, image.width, image.height);
-  const gl = renderer.getContext();
   const error = gl.getError();
   if (error !== gl.NO_ERROR) throw new Error(`Albedo inspection failed with WebGL error ${error}`);
   classifications.set(texture.source, maskOnly);
