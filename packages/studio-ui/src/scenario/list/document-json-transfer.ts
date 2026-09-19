@@ -1,4 +1,5 @@
 import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import type { ScenarioMapBinding } from "@simforge-oss/studio-host";
 
 /**
  * Download and import a document as JSON.
@@ -16,8 +17,10 @@ export type ScenarioDocumentTransferFile = {
   /** Marks the file as ours and pins the shape a future reader should expect. */
   simforgeScenarioExport: 1;
   title: string;
-  /** Advisory: the exporting workspace's map version. Import re-picks a map the target can see. */
+  /** Authored geometry provenance, resolved against the target's current source publication. */
   mapVersionId: string | null;
+  mapSourceMapId?: string | null;
+  mapXodrSha256?: string | null;
   exportedAt: string;
   content: ScenarioTemplateV2;
 };
@@ -44,15 +47,16 @@ export function documentJsonFilename(title: string) {
   return `${base}-${timestamp}.json`;
 }
 
-export function buildDocumentTransferFile(document: {
+export function buildDocumentTransferFile(document: ScenarioMapBinding & {
   title: string;
-  mapVersionId: string | null;
   content: ScenarioTemplateV2;
 }): ScenarioDocumentTransferFile {
   return {
     simforgeScenarioExport: 1,
     title: document.title,
     mapVersionId: document.mapVersionId,
+    mapSourceMapId: document.mapSourceMapId,
+    mapXodrSha256: document.mapXodrSha256,
     exportedAt: new Date().toISOString(),
     content: document.content,
   };
@@ -71,16 +75,12 @@ export function downloadDocumentJson(payload: unknown, filename: string) {
 /**
  * Read an import file into a create payload.
  *
- * Accepts both our wrapper and a bare `ScenarioTemplateV2` for validation. Only
- * the wrapper can name an exact `mapVersionId`; a bare template's canonical
- * source map may have multiple derivative versions and is never treated as a
- * version selector. The caller must verify the declared version is visible in
- * the target workspace.
+ * The wrapper carries canonical source identity and authored geometry provenance.
+ * A bare template cannot prove its geometry version and is not silently retargeted.
  */
-export function readDocumentTransferFile(input: unknown): {
+export function readDocumentTransferFile(input: unknown): ScenarioMapBinding & {
   title: string;
   content: ScenarioTemplateV2;
-  mapVersionId: string | null;
 } {
   if (!isRecord(input)) {
     throw new ScenarioImportError("Scenario JSON must be a JSON object.");
@@ -102,5 +102,9 @@ export function readDocumentTransferFile(input: unknown): {
     typeof input.mapVersionId === "string" && input.mapVersionId.trim()
       ? input.mapVersionId.trim()
       : null;
-  return { title: title.slice(0, 200), content, mapVersionId };
+  return {
+    title: title.slice(0, 200), content, mapVersionId,
+    mapSourceMapId: typeof input.mapSourceMapId === "string" ? input.mapSourceMapId : null,
+    mapXodrSha256: typeof input.mapXodrSha256 === "string" ? input.mapXodrSha256 : null,
+  };
 }

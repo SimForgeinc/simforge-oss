@@ -54,12 +54,9 @@ export type ScenarioMapGroup = {
 };
 
 /**
- * Group documents by map version, newest-edited group first.
- *
- * Grouping is on `mapVersionId` rather than on the label, unlike v1 which grouped on a
- * `backend_map_name || map_name || map_asset_id` string. In v2 the map version IS the identity — two
- * versions of the same town are different maps for authoring purposes, and collapsing them under one
- * label would put documents that cannot be compared into one group.
+ * Group documents by their canonical source's installed publication.
+ * Version ids remain provenance on each document, but replacing a publication
+ * must not split one source map into an installed group and an orphaned group.
  */
 export function groupDocumentsByMap(
   documents: ScenarioDocumentSummaryDto[],
@@ -81,7 +78,8 @@ export function groupDocumentsByMap(
   const groups = new Map<string, ScenarioMapGroup>();
 
   for (const document of documents) {
-    const mapVersionId = document.mapVersionId ?? "";
+    const installedSource = document.mapSourceMapId ? mapBySourceMapId.get(document.mapSourceMapId) : undefined;
+    const mapVersionId = installedSource?.mapVersionId ?? document.mapVersionId ?? "";
     const editedAtMs = documentEditedAtMs(document);
     const group = groups.get(mapVersionId);
     if (group) {

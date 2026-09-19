@@ -37,6 +37,8 @@ export default async function DriverInTheLoopPage({
       documentId={document.id}
       draftVersion={document.draftVersion}
       mapVersionId={document.mapVersionId}
+      mapSourceMapId={document.mapSourceMapId}
+      mapXodrSha256={document.mapXodrSha256}
       roleId={role.roleId}
       title={document.title}
     />

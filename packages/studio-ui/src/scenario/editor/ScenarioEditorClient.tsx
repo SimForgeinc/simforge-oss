@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { ScenarioVersionConflict } from "@simforge-oss/studio-host";
+import { resolveScenarioMap, ScenarioVersionConflict } from "@simforge-oss/studio-host";
 import { SCENARIO_SCHEMA_VERSION, type ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -242,15 +242,19 @@ function ScenarioEditorWorkspace({
   }, [datasetId, initialDocumentId, studioHost]);
 
   const pinnedMapId = record?.content?.anchor?.pin?.mapId ?? null;
-  const map = maps
-    ? maps.find(
-        (entry) => entry.versionId === (record?.mapVersionId ?? selectedMapId),
-      ) ?? (
-        !record?.mapVersionId && pinnedMapId
-          ? maps.find((entry) => mapIdentityMatches(entry, pinnedMapId)) ?? null
-          : null
-      )
-    : null;
+  let map: ScenarioMapEntry | null = null;
+  let mapResolutionError: string | null = null;
+  if (maps) {
+    try {
+      map = record?.mapVersionId
+        ? resolveScenarioMap(record, maps)
+        : maps.find((entry) => entry.versionId === selectedMapId)
+          ?? (pinnedMapId ? maps.find((entry) => mapIdentityMatches(entry, pinnedMapId)) : null)
+          ?? null;
+    } catch (reason) {
+      mapResolutionError = reason instanceof Error ? reason.message : String(reason);
+    }
+  }
   useEffect(() => {
     mapRef.current = map;
   }, [map]);
@@ -528,6 +532,7 @@ function ScenarioEditorWorkspace({
     );
   }
   if (!quality) return shell(<EditorPlaceholder />);
+  if (mapResolutionError) return shell(<EditorEmptyState title="Scenario map unavailable" detail={mapResolutionError} />);
   if (!map)
     return shell(<MapChooser maps={maps} onChoose={setSelectedMapId} />);
 
