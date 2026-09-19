@@ -10,7 +10,7 @@
 //
 //   node packages/render/scripts/fetch-actor-closure.mjs --out <dir> [--base-url <origin>] [--from <cas-dir>]
 //
-// The pinned closure `b4e2576e` carries the CARLA 0.10.0-UE5 vehicle and
+// The pinned closure `70dde8bb` carries the CARLA 0.10.0-UE5 vehicle and
 // pedestrian geometry and is not on the public origin: until a maintainer
 // uploads `closures/<digest>.json` and the 162 blobs it names, this script
 // needs `--from` pointed at the generated root (see
@@ -22,7 +22,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const PINNED_DIGEST = 'b4e2576e711c4dc78666b25c8143c3840db93d7d3073efb0853a7cfd0526d8f6';
+const PINNED_DIGEST = '70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4';
 const PINNED_SIZE_BYTES = 22969;
 const DEFAULT_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 const CLOSURE_SCHEMA = 'simforge.actor-assets-closure/v1';
