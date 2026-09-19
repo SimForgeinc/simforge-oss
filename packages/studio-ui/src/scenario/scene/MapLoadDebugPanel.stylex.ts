@@ -14,6 +14,7 @@ export const styles = stylex.create({
     fontSize: 12,
     pointerEvents: "auto",
   },
+  expanded: { position: "relative", right: "auto", bottom: "auto", width: "calc(100% - 32px)", margin: "0 16px 16px", flexShrink: 0 },
   toggle: {
     display: "block",
     width: "100%",
@@ -26,7 +27,7 @@ export const styles = stylex.create({
     backgroundColor: "transparent",
     border: 0,
   },
-  content: { padding: "0 14px 12px", maxHeight: "75vh", overflow: "auto" },
+  content: { padding: "0 14px 12px", maxHeight: "38vh", overflow: "auto" },
   toolbar: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
   summary: { marginTop: 8, overflowWrap: "anywhere", lineHeight: 1.6 },
   coverage: { width: "100%", marginTop: 8, textAlign: "left", fontVariantNumeric: "tabular-nums", fontSize: 11 },

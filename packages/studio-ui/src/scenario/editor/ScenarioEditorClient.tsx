@@ -263,11 +263,12 @@ function ScenarioEditorWorkspace({
     if (!map || !onWorldTargetChange) return;
     onWorldTargetChange({
       mapId: map.sourceMapId,
+      installedMaps: maps?.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })),
       mapVersionId: map.versionId,
       manifestUrl: map.manifestUrl,
       label: map.label,
     });
-  }, [map, onWorldTargetChange]);
+  }, [map, maps, onWorldTargetChange]);
 
   useEffect(() => {
     // Reveal terminal boot UI too. Requiring a resolved map here hides the map

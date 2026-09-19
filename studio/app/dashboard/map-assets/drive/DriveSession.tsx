@@ -745,7 +745,7 @@ export function DriveSession({
           ) : null}
         </div>
       ) : null}
-      {!mapLoaded || mapLoadError ? <MapLoadDebugPanel source={{
+      {!mapLoaded || mapLoadError ? <MapLoadDebugPanel docked={false} source={{
         getViewer: () => activeViewerRef.current,
         mapId: map.sourceMapId,
         mapVersionId: map.versionId,
