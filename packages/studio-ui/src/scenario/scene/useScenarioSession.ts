@@ -255,6 +255,7 @@ export function useScenarioSession({
     }
     const nextMap = resolvedMap;
     setMap(nextMap);
+    setFailed(resolutionError !== null);
     if (!nextMap || !mapSupportsScenarioPreview(nextMap)) {
       workerRef.current?.cancel();
       prepareFenceRef.current.invalidate();

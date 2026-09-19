@@ -109,6 +109,40 @@ afterEach(() => {
 });
 
 describe("scenario session trace residency", () => {
+  it("opens a superseded draft on its source's current geometry-compatible map", async () => {
+    const { services } = host({
+      ...documentAt(1), mapVersionId: "retired-publication",
+      mapSourceMapId: MAP.sourceMapId, mapXodrSha256: MAP.artifacts!.xodrSha256,
+    });
+    worker.prepare.mockImplementation(async () => fakeBundle("forward-resolved"));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <StudioHostProvider host={services}>{children}</StudioHostProvider>
+    );
+    const rendered = renderHook(() => useScenarioSession({
+      documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
+    }), { wrapper });
+    await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "forward-resolved" }));
+    expect(rendered.result.current.map?.mapVersionId).toBe(MAP.mapVersionId);
+    expect(rendered.result.current.failed).toBe(false);
+  });
+
+  it("refuses drift before producing a driveable preview", async () => {
+    const { services } = host({
+      ...documentAt(1), mapVersionId: "retired-publication",
+      mapSourceMapId: MAP.sourceMapId, mapXodrSha256: "0".repeat(64),
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <StudioHostProvider host={services}>{children}</StudioHostProvider>
+    );
+    const rendered = renderHook(() => useScenarioSession({
+      documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
+    }), { wrapper });
+    await waitFor(() => expect(rendered.result.current.failed).toBe(true));
+    expect(rendered.result.current.message).toContain("Remap");
+    expect(rendered.result.current.bundle).toBeNull();
+    expect(worker.prepare).not.toHaveBeenCalled();
+  });
+
   it("keeps the compiled trace across an autosave echo, and persists it once the content is saved", async () => {
     const { services, saveSimulationPreview } = host(documentAt(1));
     worker.prepare.mockImplementation(async () => fakeBundle("v1"));
