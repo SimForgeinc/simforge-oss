@@ -18,6 +18,8 @@ import type { Ktx2Options } from './ktx2.js';
 import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSourceDigest } from './source.js';
 import { withStageLock } from './stage-lock.js';
 import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+import { composeNativeTextureClosure } from './native-texture-closure.js';
+export { composeNativeTextureClosure } from './native-texture-closure.js';
 
 export { resolveMapSource } from './source.js';
 export type { MapSourceManifest, ResolvedMapSource } from './source.js';
@@ -384,13 +386,18 @@ export async function deriveClosures(master: MasterStageResult, options: DeriveC
     const cached = await cachedStage(outputDir);
     if (cached) return { ...cached, outputDir: path.join(outputDir, 'content'), inputDigest, toolFingerprint, cacheKey, viewerOnly: master.viewerOnly };
     const contentDir = await resetStageContent(outputDir);
-    await copyMembers(master.outputDir, contentDir, Object.keys(master.closure.members));
-    const envelope = JSON.parse(await readFile(path.join(web.outputDir, '3d/variants/manifest.json'), 'utf8'));
-    const indexPath = `3d/variants/${envelope.variants['textures-512-bc7'].file}`;
-    const index = JSON.parse(await readFile(path.join(web.outputDir, indexPath), 'utf8')) as { images: Record<string, { file: string }> };
-    const nativeMembers = new Set(['3d/manifest.json', '3d/variants/manifest.json', indexPath,
-      ...Object.values(index.images).map(image => `3d/${image.file}`)]);
-    await copyMembers(web.outputDir, contentDir, [...nativeMembers]);
+    const composed = await composeNativeTextureClosure(
+      { closure: master.closure, files: Object.fromEntries(Object.keys(master.closure.members).map(member => [member, path.join(master.outputDir, member)])) },
+      { closure: web.closure, files: Object.fromEntries(Object.keys(web.closure.members).map(member => [member, path.join(web.outputDir, member)])) },
+    );
+    for (const [member, source] of Object.entries(composed.files)) {
+      const destination = path.join(contentDir, member);
+      if (typeof source === 'string') await linkOrCopy(source, destination);
+      else {
+        await mkdir(path.dirname(destination), { recursive: true });
+        await writeFile(destination, source);
+      }
+    }
     return finishStage('native-textures', outputDir, 'canonical', { inputDigest, toolFingerprint, cacheKey }, { master: true, viewerOnly: master.viewerOnly });
   });
   return {

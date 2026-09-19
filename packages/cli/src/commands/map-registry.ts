@@ -1,6 +1,6 @@
 import { access, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { runMapPipeline } from '@simforge-oss/map-pipeline';
+import { composeNativeTextureClosure, runMapPipeline } from '@simforge-oss/map-pipeline';
 import type { RegistryClosureArtifact } from '@simforge-oss/map-pipeline';
 import {
   closureFromDirectory,
@@ -155,6 +155,7 @@ export async function registryMapsIngest(options: RegistryIngestOptions): Promis
       fingerprint = webClosure.toolFingerprint;
     }
     derived = [await closureFromDirectory(resolve(options.webDirectory), 'web', fingerprint)];
+    canonical = await composeNativeTextureClosure(canonical, derived[0]!);
   } else {
     const workDir = options.workDir ?? process.env['SIMFORGE_MAP_WORK_DIR'];
     if (!workDir) throw new Error('source ingestion requires --work-dir or SIMFORGE_MAP_WORK_DIR for durable resumable builds');
