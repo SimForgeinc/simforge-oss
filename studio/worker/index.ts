@@ -1,18 +1,21 @@
 import { homedir, hostname } from "node:os";
+import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { simforgeEnv } from "../lib/simforge-env";
 
-import type { RenderProgressRecord } from "@simforge-oss/render";
-import { probeLocalBrowserRender, probeLocalNativeRender } from "@simforge-oss/render/native";
+import { loadBuiltinRenderEngine, type RenderProgressRecord, type WorkerRegisteredResponse } from "@simforge-oss/render";
+import { probeLocalBrowserRender, probeLocalCarlaRender, probeLocalNativeRender } from "@simforge-oss/render/native";
 
 import { runCompilerLoop } from "./compiler.js";
 import { executeRender } from "./executor.js";
 import { CpuJobsClient, downloadInputs } from "./http-client.js";
 import { NativeMapFailure, runNativeClaim } from "./native-render.js";
 import type { CpuJobClaim, LocalRenderEngine } from "./types.js";
+import { runCarlaClaim } from "./carla-render.js";
+import { RenderControlClient } from "./render-control-client.js";
 
 export const WORKER_CAPABILITIES = [
   "native-render",
@@ -24,7 +27,7 @@ export const WORKER_CAPABILITIES = [
 export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
 
 function configuredCapabilities(): ReadonlySet<WorkerCapability> | null {
-  const raw = simforgeEnv("SIMFORGE_WORKER_CAPABILITIES")?.trim();
+  const raw = simforgeEnv("WORKER_CAPABILITIES")?.trim();
   if (!raw) return null;
   const values = raw.split(",").map((value) => value.trim()).filter(Boolean);
   const unknown = values.filter((value): value is string => !(WORKER_CAPABILITIES as readonly string[]).includes(value));
@@ -41,10 +44,12 @@ export function offeredEngines(): { engines: LocalRenderEngine[]; reasons: Recor
   const configured = configuredCapabilities();
   const native = probeLocalNativeRender();
   const browser = probeLocalBrowserRender(process.env, chromium.executablePath());
+  const carla = probeLocalCarlaRender();
   const engines: LocalRenderEngine[] = [];
   if (browser.ready && (!configured || configured.has("browser-render"))) engines.push("browser");
   if (native.ready && (!configured || configured.has("native-render"))) engines.push("native");
-  return { engines, reasons: { browser: browser.reasons, native: native.reasons } };
+  if (carla.ready && (!configured || configured.has("carla-render"))) engines.push("carla");
+  return { engines, reasons: { browser: browser.reasons, native: native.reasons, carla: carla.reasons } };
 }
 
 export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
@@ -60,7 +65,7 @@ export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
     component: "simforge-local-render-worker",
     event: "worker.engines",
     engines: offered.engines,
-    capabilities: configured ? [...configured] : ["native-render", "browser-render", "compile"],
+    capabilities: configured ? [...configured] : ["native-render", "browser-render", "carla-render", "compile"],
     unavailable: Object.fromEntries(Object.entries(offered.reasons).filter(([, reasons]) => reasons.length > 0)),
   })}\n`);
   // The runtime can be installed while this worker runs (onboarding offers
@@ -76,13 +81,19 @@ export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
         component: "simforge-local-render-worker",
         event: "worker.engines",
         engines: now.engines,
-        capabilities: configured ? [...configured] : ["native-render", "browser-render", "compile"],
+        capabilities: configured ? [...configured] : ["native-render", "browser-render", "carla-render", "compile"],
         unavailable: Object.fromEntries(Object.entries(now.reasons).filter(([, reasons]) => reasons.length > 0)),
       })}\n`);
     }
-    return now.engines;
+    return now.engines.filter((engine) => engine !== "carla");
   });
-  const loops: Promise<void>[] = [runClaimLoop(client, controller.signal)];
+  const loops: Promise<void>[] = [];
+  if (!configured || configured.has("browser-render") || configured.has("native-render")) {
+    loops.push(runClaimLoop(client, controller.signal));
+  }
+  if (!configured || configured.has("carla-render")) {
+    loops.push(runCarlaLoop(new RenderControlClient(new URL(baseUrl), token, workerId, client), controller.signal));
+  }
   if (!configured || configured.has("compile")) {
     loops.push(runCompilerLoop(baseUrl, token, controller.signal));
   }
@@ -111,6 +122,73 @@ async function runClaimLoop(client: CpuJobsClient, signal: AbortSignal): Promise
         event: "claim.retry",
         error: error instanceof Error ? error.message : String(error),
       })}\n`);
+      await delay(1_000, signal);
+    }
+  }
+}
+
+async function runCarlaLoop(client: RenderControlClient, signal: AbortSignal): Promise<void> {
+  let registration: WorkerRegisteredResponse | undefined;
+  while (!signal.aborted) {
+    try {
+      if (!offeredEngines().engines.includes("carla")) {
+        await delay(1_000, signal);
+        continue;
+      }
+      if (!registration) {
+        const engine = await loadBuiltinRenderEngine("carla");
+        try {
+          registration = await client.register(engine.capabilities, randomUUID(), signal);
+        } finally {
+          await engine.close?.();
+        }
+      }
+      const claim = await client.claim(registration.registrationId, signal);
+      if (claim.type === "job.none") {
+        await delay(claim.retryAfterMs, signal);
+        continue;
+      }
+      const root = simforgeEnv("LOCAL_WORKER_ROOT")?.trim() || join(homedir(), ".simforge", "cloud", "worker");
+      const workspace = join(root, `${claim.jobId}-${claim.lease.leaseId}`);
+      process.stdout.write(`${JSON.stringify({ component: "simforge-local-render-worker", event: "job.started", jobId: claim.jobId, engine: "carla" })}\n`);
+      const job = new AbortController();
+      const jobSignal = AbortSignal.any([signal, job.signal]);
+      let sequence = 0;
+      let acceptedSequence = 0;
+      const heartbeat = (async () => {
+        while (!jobSignal.aborted) {
+          await delay(registration.heartbeatIntervalMs, jobSignal).catch(() => undefined);
+          if (jobSignal.aborted) return;
+          try {
+            const response = await client.heartbeat(claim, acceptedSequence, jobSignal);
+            if (response.cancelRequested) job.abort(new Error(response.cancelReason ?? "render cancelled"));
+          } catch (error) {
+            job.abort(error);
+          }
+        }
+      })();
+      try {
+        await rm(workspace, { recursive: true, force: true });
+        const outcome = await runCarlaClaim(client, claim, workspace, jobSignal, async (record) => {
+          const response = await client.progress(claim, [{
+            ...record, jobId: claim.jobId, attempt: claim.attempt, sequence: sequence++,
+          }], jobSignal);
+          acceptedSequence = response.acceptedThroughSequence;
+        });
+        process.stdout.write(`${JSON.stringify({ component: "simforge-local-render-worker", event: "job.completed", jobId: claim.jobId, engine: "carla", ...outcome })}\n`);
+      } catch (error) {
+        if (!signal.aborted) {
+          process.stderr.write(`${JSON.stringify({ component: "simforge-local-render-worker", event: "job.failed", jobId: claim.jobId, engine: "carla", error: error instanceof Error ? error.message : String(error) })}\n`);
+          await client.fail(claim, error, AbortSignal.timeout(30_000));
+        }
+      } finally {
+        job.abort(new Error("render attempt finished"));
+        await heartbeat;
+        await rm(workspace, { recursive: true, force: true });
+      }
+    } catch (error) {
+      if (signal.aborted) return;
+      process.stderr.write(`${JSON.stringify({ component: "simforge-local-render-worker", event: "claim.retry", engine: "carla", error: error instanceof Error ? error.message : String(error) })}\n`);
       await delay(1_000, signal);
     }
   }

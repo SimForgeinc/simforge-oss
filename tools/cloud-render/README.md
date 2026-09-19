@@ -377,3 +377,44 @@ rig at all: it dies with `Out of memory on Vulkan; MemoryTypeIndex=1` followed b
 vehicles rendered with doors, lights and wheels but **no body shell** — large
 body meshes are the allocations that fail first. Seeing hollow cars in output is
 a memory symptom, not a content or blueprint problem.
+
+## Sealing approved scenarios
+
+`seal-scenarios.ts` accepts the approved-document JSON array (`doc`, `dataset`,
+`city`, `collision`). **Dry-run is the default:** no network requests, token reads,
+or manifest writes. Run with Node 22.18+:
+
+```bash
+node tools/cloud-render/seal-scenarios.ts /tmp/wanted-docs.json \
+  --base https://dev.simforge.ai \
+  --token-file /home/ubuntu/.simforge/devtok/submit-token.txt \
+  --manifest /tmp/seal-scenarios.jsonl
+```
+
+Required flags are `--base` (HTTP(S) origin) and `--token-file` (bearer token,
+never printed). Optional flags: `--evidence-file`, `--manifest` (default
+`/tmp/seal-scenarios.jsonl`), `--concurrency` (default 3, maximum 32),
+`--poll-ms` (2000), `--timeout-ms` (600000 per export), and `--confirm`.
+Only `--confirm` enables revision POSTs and export polling; it does not submit
+render jobs. The caller must have write access to each document's workspace.
+
+The revision API requires already-uploaded, completed materialized traffic,
+**even for disabled ambient traffic**. `--evidence-file` is a JSON object keyed by
+document ID, with each value containing `workspaceId`, `expectedVersion` (saved
+draft version), `ambient` (the API's complete ambient provenance), and
+`materializedTraffic` (`artifactId`, `sha256`, `sizeBytes`, `sourceInputDigest`,
+`mapAssetId`, `mapVersionId`). Its digest must equal `ambient.resultSha256`.
+Obtain this from the map-bound traffic preparation followed by the document's
+`materialized-traffic/reserve`, checksum-bound storage upload, and
+`materialized-traffic/complete` protocol. The tool does not invent traffic or
+silently disable authored ambient traffic. Missing evidence prints a **BLOCKED
+body template**, not an executable request; supplied evidence prints the exact
+POST body, origin and workspace.
+
+Confirmed runs append durable JSONL records (`base`, `document`, `revision`,
+`export`, `executionPackage`, `status`, request body and workspace). Reuse the
+same manifest to skip sealed documents or resume a pending export. The exact
+request is saved before POST and uses a deterministic per-origin/document
+idempotency key. Failures are recorded per item; other documents continue.
+Use one process per manifest. Sealed entries represent this campaign snapshot,
+not a request to reseal later draft edits. Dry-run leaves the manifest unchanged.

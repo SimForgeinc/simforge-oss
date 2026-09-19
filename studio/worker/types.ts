@@ -5,7 +5,7 @@ import type {
 } from "@simforge-oss/render";
 import type { RenderIntentV1 } from "@simforge-oss/scenario";
 
-export type LocalRenderEngine = "browser" | "native";
+export type LocalRenderEngine = "browser" | "native" | "carla";
 
 export type RemoteInput = {
   readonly inputId: string;
