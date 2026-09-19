@@ -25,19 +25,21 @@ export const NATIVE_ACTOR_ASSETS_CLOSURE_SCHEMA = 'simforge.actor-assets-closure
 export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
 
 /**
- * The public immutable actor closure: sha256 and byte size of the closure
- * document `actor-assets/closures/<digest>.json` as served by the origin.
+ * The immutable actor closure: sha256 and byte size of the closure document
+ * `actor-assets/closures/<digest>.json` as served by the origin.
+ *
+ * `b4e2576e` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 64
+ * of its 165 catalog entries are `carla-0.10.0-ue5` (881 MiB of its 1,288.9
+ * MiB of distinct blobs), and the 39 Meshy and 62 procedural entries no CARLA
+ * model covers are carried over unchanged. It is not on the public origin: an
+ * install resolves it from a packaged `share/actor-assets` directory or
+ * `SIMFORGE_ACTOR_ASSETS_ROOT` until a maintainer uploads the closure document
+ * and its blobs.
  */
-export const PINNED_ACTOR_ASSETS_DIGEST = '6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192';
-export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 12607;
+export const PINNED_ACTOR_ASSETS_DIGEST = 'b4e2576e711c4dc78666b25c8143c3840db93d7d3073efb0853a7cfd0526d8f6';
+export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 22969;
 export const DEFAULT_ACTOR_ASSETS_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 
-/**
- * Catalog ids the retained service builds from articulated primitive parts
- * (`render-core/src/catalog.rs` `body_centred_origin`); they never bind a
- * closure model, so they are not proxy downgrades.
- */
-const PROCEDURAL_CATALOG_IDS: Record<string, true> = { 'robot.delivery-4w': true, 'robot.wheel': true };
 
 export interface NativeActorAssetsInput {
   readonly inputId: typeof NATIVE_ACTOR_ASSETS_INPUT_ID;
