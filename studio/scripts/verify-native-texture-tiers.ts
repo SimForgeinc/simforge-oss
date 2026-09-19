@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, statfs, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { authoredRenderSensors, backendModalities, buildCanonicalRenderSpec, defaultModalities, EnvironmentSchema } from '@simforge-oss/scenario';
@@ -18,6 +18,12 @@ import { Checks } from './texture-tier-assertions';
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 const root = args.get('root');
 assert(root && !resolve(root).includes('/.local/share/simforge/'), '--root must name a throwaway daemon');
+async function requireDiskHeadroom(): Promise<void> {
+  const disk = await statfs(root!);
+  const availableBytes = disk.bavail * disk.bsize;
+  assert(availableBytes >= 25_000_000_000, `Native gate abort: ${availableBytes} free bytes is below the 25 GB safety floor`);
+}
+await requireDiskHeadroom();
 assert(args.get('scenario'), '--scenario must name a real scenario with an enabled RGB sensor');
 const profile = args.get('profile') ?? 'render';
 assert(profile === 'render' || profile === 'ml');
@@ -59,6 +65,7 @@ const renderSpec = buildCanonicalRenderSpec({ content: document.content, selecti
   artifacts: ['video', 'trace', 'manifest'], staticSemantics: false, fidelity: 'dataset',
   environment: document.content.environment ?? EnvironmentSchema.parse({}) });
 const frozen = await freezeScenario(session, document, timeoutMs / 1000);
+await requireDiskHeadroom();
 const checks = new Checks();
 const execute = promisify(execFile);
 type ProfileEvidence = { renderTextures: string; memberCount: number; textureBytes: number; geometryBytes: number; estimatedBytes: number; budgetBytes: number | null; cacheKey: string };
@@ -67,6 +74,7 @@ const rounds: { jobIds: string[]; peakActive: number; elapsedSeconds: number; to
 const outstanding = new Set<string>();
 try {
 for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
+  await requireDiskHeadroom();
   const started = performance.now();
   const submissions: PromiseSettledResult<{ id: string }>[] = await Promise.allSettled(Array.from({ length: envs }, () => api<{ id: string }>('/api/simforge/render-jobs', {
     schema: 'uniscenario.render-intent-submission/v1', engine: 'native', revisionId: frozen.revisionId,
@@ -81,6 +89,7 @@ for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
   let refused = false;
   const deadline = Date.now() + timeoutMs;
   for (;;) {
+    await requireDiskHeadroom();
     const { renderJobs } = await api<{ renderJobs: { id: string; status: string; failureCode: string | null }[] }>('/api/simforge/render-jobs');
     const current = jobs.map(job => renderJobs.find(row => row.id === job.id));
     assert(current.every(Boolean), 'submitted job missing from real queue');
