@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export PYTHONPATH="/home/path/tmp/jevdrive${PYTHONPATH:+:$PYTHONPATH}"
-exec /home/path/tmp/jevdrive/.venv/bin/python -m jevdrive.render "$@"
+ADAPTER_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="${ADAPTER_ROOT}${PYTHONPATH:+:$PYTHONPATH}"
+exec "${PYTHON:-python3}" -m jevdrive.render "$@"
