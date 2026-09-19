@@ -23,6 +23,7 @@ const profile = args.get('profile') ?? 'render';
 assert(profile === 'render' || profile === 'ml');
 const expectRefusal = args.has('expect-capacity-refusal');
 assert(!expectRefusal || profile === 'render', 'refusal fixture is Garching full tier');
+const assumedCapacity = expectRefusal && !args.has('budget-bytes');
 const envs = profile === 'ml' ? Number(args.get('envs') ?? 2) : 1;
 assert(Number.isInteger(envs) && envs >= (profile === 'ml' ? 2 : 1) && envs <= 16);
 // Garching's measured ML estimate is 5.36 GiB; pin 6 GiB, never silently shrink.
@@ -70,7 +71,7 @@ for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
   const submissions: PromiseSettledResult<{ id: string }>[] = await Promise.allSettled(Array.from({ length: envs }, () => api<{ id: string }>('/api/simforge/render-jobs', {
     schema: 'uniscenario.render-intent-submission/v1', engine: 'native', revisionId: frozen.revisionId,
     executionPackageId: frozen.executionPackageId, renderSpec, renderProfile: profile,
-    nativeVramBudgetBytes: budgetBytes, idempotencyKey: `texture-tier-gate:${randomUUID()}`,
+    ...(assumedCapacity ? {} : { nativeVramBudgetBytes: budgetBytes }), idempotencyKey: `texture-tier-gate:${randomUUID()}`,
   }).then(job => { outstanding.add(job.id); return job; })));
   const rejected = submissions.filter(result => result.status === 'rejected');
   assert.equal(rejected.length, 0, `native submissions refused: ${rejected.map(result => String(result.reason)).join('; ')}`);
@@ -92,10 +93,11 @@ for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
         const failure = typeof detail.failureDetail === 'string' ? JSON.parse(detail.failureDetail) as unknown : detail.failureDetail;
         assert(failure && typeof failure === 'object' && 'message' in failure && typeof failure.message === 'string');
         const message = failure.message;
-        const amounts = message.match(/calculated demand (\d+) bytes exceeds (?:assumed|explicit) capacity (\d+) bytes/);
+        const amounts = message.match(/calculated demand (\d+) bytes exceeds (assumed|explicit) capacity (\d+) bytes/);
         assert(amounts, 'refusal must name calculated demand and declared capacity');
-        assert(Number(amounts[1]) > Number(amounts[2]));
-        assert.equal(Number(amounts[2]), budgetBytes);
+        assert(Number(amounts[1]) > Number(amounts[3]));
+        assert.equal(amounts[2], assumedCapacity ? 'assumed' : 'explicit', 'capacity provenance must not imply a measured GPU limit');
+        assert.equal(Number(amounts[3]), budgetBytes);
         assert(message.includes('nativeVramBudgetBytes'), 'refusal must name the override knob');
       });
       outstanding.delete(failed.id);
