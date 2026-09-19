@@ -51,24 +51,8 @@ pub struct VehicleModelCatalog {
     fallback: Vec<(String, VehicleModelEntry)>,
 }
 
-/// Built-in catalog-id -> manifest-key assignments, used when the
-/// `catalog-models.json` sidecar is absent. Mirrors the CarlaVehicles
-/// precomputed mapping (family fallbacks included).
-const FALLBACK_ASSIGNMENTS: &[(&str, &str)] = &[
-    ("vehicle.sedan", "vehicle_sedan_lincoln_mkz"),
-    ("vehicle.taxi", "vehicle_sedan_ford_crown"),
-    ("vehicle.police_cruiser", "vehicle_police_dodge_charger"),
-    ("vehicle.suv", "vehicle_suv_nissan_patrol"),
-    ("vehicle.hatchback", "vehicle_hatchback_mini_cooper"),
-    ("vehicle.ford_mustang", "vehicle_coupe_ford_mustang"),
-    ("vehicle.kia.carnival", "vehicle_minivan_bmw_gran_tourer"),
-    ("vehicle.van", "vehicle_van_mercedes_sprinter"),
-    ("vehicle.bus", "vehicle_bus_mitsubishi_fusorosa"),
-    ("vehicle.box_truck", "vehicle_truck_carlacola"),
-    ("vehicle.semi_truck", "vehicle_truck_european_hgv"),
-    ("vehicle.pickup", "vehicle_pickup_tesla_cybertruck"),
-    ("vehicle.motorcycle", "vehicle_motorcycle_harley"),
-];
+// Shared editorial assignments also generate the browser bindings and sidecar.
+include!("vehicle_assignments.generated.rs");
 
 impl VehicleModelCatalog {
     /// Load the model table from a vehicles-carla style directory.

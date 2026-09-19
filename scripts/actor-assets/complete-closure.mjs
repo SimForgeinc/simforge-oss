@@ -37,10 +37,14 @@
 //     bound file resolves locally, hashes to the declared `contentHash`, and a
 //     sibling `catalog-models.json` provides its attribution and source. The
 //     placeholder box `buildProp` returns for such entries is never exported.
-//   - `proxy` bindings, animated bindings without local clip assets, and
-//     `body-centre` entries other than the two native articulated ids
-//     (`robot.delivery-4w`, `robot.wheel`, built from primitives by
-//     `render-core/src/catalog.rs`) fail the run.
+//     An `animated` binding must name its clips with `model.clips`, and each
+//     named clip must be authored into that same GLB: the closure's
+//     `animations` table then points every motion state back at the one member
+//     (`{glbPath, clip, sha256}`), which is what the retained service plays.
+//   - `proxy` bindings, animated bindings whose clips live in separate
+//     `clipAssets` files, and `body-centre` entries other than the two native
+//     articulated ids (`robot.delivery-4w`, `robot.wheel`, built from
+//     primitives by `render-core/src/catalog.rs`) fail the run.
 // The run fails unless every catalog id is either a closure model or one of
 // the two articulated ids. The output digest is the sha256 of the canonical
 // closure bytes; nothing is predetermined.
@@ -345,9 +349,16 @@ async function findExternalSidecar(externalRoot, glbFile) {
   }
 }
 
+/**
+ * Motion state (catalog `model.clips` key) -> the key the retained service
+ * looks the clip up under (`service/src/server.rs`: `animations.get("walk")`
+ * for a moving walker, `"idle"` otherwise).
+ */
+const NATIVE_MOTION_KEYS = { idle: 'idle', locomotion: 'walk', run: 'run' };
+
 async function resolveExternal(externalRoot, id, binding) {
   if (binding.kind !== 'glb') fail(`${id}: catalog binds a ${binding.kind} model, which is a placeholder, not exportable geometry`);
-  if (binding.animated || binding.clipAssets) fail(`${id}: animated external bindings need their clip assets in the closure; not supported by this generator`);
+  if (binding.clipAssets) fail(`${id}: external clip-asset bindings need their clip GLBs in the closure; this generator only carries clips authored into the bound model`);
   if (!binding.url.startsWith('/') || binding.url.includes('..')) fail(`${id}: model url ${binding.url} is not a root-relative catalog path resolvable under --external-root`);
   const file = path.join(externalRoot, ...binding.url.slice(1).split('/'));
   const bytes = await readFile(file).catch(() => fail(`${id}: bound model ${binding.url} is not present under ${externalRoot}`));
@@ -364,6 +375,24 @@ async function resolveExternal(externalRoot, id, binding) {
   if (typeof model.attribution !== 'string' || typeof model.source !== 'string') fail(`${id}: sidecar entry for ${relative} lacks attribution/source`);
   const document = parseGlb(bytes);
   const convention = document.asset?.extras?.convention;
+  // An animated binding whose clips are authored into the bound model needs no
+  // extra members: the closure's `animations` table points every motion state
+  // back at this member and names the clip inside it, which is exactly what
+  // `VehicleModelEntry::animations` carries and the service plays.
+  let clips = null;
+  if (binding.animated) {
+    const declared = binding.clips ?? fail(`${id}: animated binding declares no clips; the closure cannot name a clip to play`);
+    const present = new Set((document.animations ?? []).map((animation) => animation?.name).filter((name) => typeof name === 'string'));
+    clips = {};
+    for (const [state, clip] of Object.entries(declared)) {
+      if (!(state in NATIVE_MOTION_KEYS)) fail(`${id}: unknown motion state ${state}; expected one of ${Object.keys(NATIVE_MOTION_KEYS).join(', ')}`);
+      if (typeof clip !== 'string' || !present.has(clip)) {
+        fail(`${id}: ${file} has no animation clip ${JSON.stringify(clip)} for motion state ${state} (authored clips: ${[...present].join(', ') || 'none'})`);
+      }
+      clips[NATIVE_MOTION_KEYS[state]] = clip;
+    }
+    if (!('idle' in clips)) fail(`${id}: animated binding has no idle clip; a stationary walker would have nothing to play`);
+  }
   return {
     bytes,
     attribution: model.attribution,
@@ -371,6 +400,7 @@ async function resolveExternal(externalRoot, id, binding) {
     tintable: sidecarEntry.tintable === true,
     scaleToDims: sidecarEntry.scaleToDims === true,
     convention: typeof convention === 'string' ? convention : null,
+    clips,
     file,
   };
 }
@@ -432,7 +462,10 @@ for (const id of catalogIds) {
 
   if (entry.model) {
     const external = await resolveExternal(externalRoot, id, entry.model);
-    members.set(relative, { sha256: sha256(external.bytes), bytes: external.bytes.byteLength, provide: (destination) => placeBytes(destination, external.bytes) });
+    const memberSha = sha256(external.bytes);
+    members.set(relative, { sha256: memberSha, bytes: external.bytes.byteLength, provide: (destination) => placeBytes(destination, external.bytes) });
+    const animations = Object.fromEntries(Object.entries(external.clips ?? {})
+      .map(([key, clip]) => [key, { glbPath: relative, clip, sha256: memberSha }]));
     catalogTable[id] = {
       model: { glbPath: relative, attribution: external.attribution, source: external.source },
       tintable: external.tintable,
@@ -453,8 +486,11 @@ for (const id of catalogIds) {
         origin: 'ground',
         tint: external.tintable ? 'body_paint slot receives the authored tint' : 'authored materials, not tintable',
         dimensions: external.scaleToDims ? 'uniform-scaled to actor length' : 'authored metres, rendered at uniformScale',
+        ...(external.clips
+          ? { animation: `clips authored into the bound model: ${Object.entries(external.clips).map(([key, clip]) => `${key}=${clip}`).join(', ')}` }
+          : {}),
       },
-      animations: {},
+      animations,
     };
     (replacing ? rebound : externalBound).push(id);
     continue;
@@ -524,6 +560,29 @@ if (!(await verified(closureFile, { sha256: digest, bytes: closureBytes.byteLeng
   written += 1;
 }
 
+// Per-source breakdown of the emitted catalog, so the release manifest's
+// `provenance.classes` can be filled from the closure it actually pins
+// instead of a hand count. Bytes are the distinct member bytes a source
+// contributes: several catalog ids may share one GLB (walker variants), and
+// a class's weight is what the package carries, not the sum of its bindings.
+const classes = [];
+const byMemberPath = new Map(Object.entries(closureMembers));
+for (const [source, ids] of [...Object.entries(catalogTable).reduce((map, [id, entry]) => {
+  const source = entry.model?.source ?? 'unknown';
+  map.set(source, [...(map.get(source) ?? []), id]);
+  return map;
+}, new Map())].sort((left, right) => right[1].length - left[1].length)) {
+  const paths = new Set(ids.map((id) => catalogTable[id].model.glbPath));
+  classes.push({
+    source,
+    models: ids.length,
+    distinctBlobs: paths.size,
+    bytes: [...paths].reduce((sum, memberPath) => sum + (byMemberPath.get(memberPath)?.bytes ?? 0), 0),
+    attributions: [...new Set(ids.map((id) => catalogTable[id].model.attribution))].sort(),
+    ids: ids.sort(),
+  });
+}
+
 const report = {
   digest,
   sizeBytes: closureBytes.byteLength,
@@ -543,6 +602,14 @@ const report = {
     rebound,
     nativeArticulated: NATIVE_ARTICULATED_IDS,
   },
+  classes,
+  largestMembers: Object.entries(closureMembers)
+    .sort((left, right) => right[1].bytes - left[1].bytes)
+    .slice(0, 12)
+    .map(([memberPath, member]) => ({ memberPath, bytes: member.bytes, sha256: member.sha256 })),
+  animated: Object.entries(catalogTable)
+    .filter(([, entry]) => Object.keys(entry.animations ?? {}).length > 0)
+    .map(([id, entry]) => ({ id, clips: Object.fromEntries(Object.entries(entry.animations).map(([key, animation]) => [key, animation.clip])) })),
   missing,
 };
 const reportBytes = `${JSON.stringify(report, null, 2)}\n`;

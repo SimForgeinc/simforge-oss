@@ -1294,7 +1294,12 @@
     "model": {
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0015.glb",
-      "contentHash": "b20b0654cef8256053e36cf3ac8af8da3369b61492034a459d995adebcb2b8ba"
+      "contentHash": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
     }
   },
   {
@@ -1323,7 +1328,12 @@
     "model": {
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0049.glb",
-      "contentHash": "8d657dfaf86c9735deafd233bd48bf6e07df687e9a98d35f98fd4d669f14db17"
+      "contentHash": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
     }
   },
   {
@@ -1349,7 +1359,1152 @@
     "model": {
       "kind": "glb",
       "url": "/catalog/pedestrians-carla/models/pedestrian_0020.glb",
-      "contentHash": "0f312e95d46d7e681ab55d3bb542891f6e701ab34670a54e9593808a94636953"
+      "contentHash": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0015",
+    "label": "CARLA pedestrian 0015",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3031,
+      "h": 1.8329
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8329,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0015.glb",
+      "contentHash": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0016",
+    "label": "CARLA pedestrian 0016",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3031,
+      "h": 1.8329
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8329,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0016.glb",
+      "contentHash": "35f8fddb8c07282701e52201629325a4b4dabc92d5f4631f9562225dc3e70b20",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0017",
+    "label": "CARLA pedestrian 0017",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3192,
+      "h": 1.845
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.845,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0017.glb",
+      "contentHash": "8f4ddd68824825e3e3d95ebd9c879568453e390d5fabab878af18762631bcbd2",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0018",
+    "label": "CARLA pedestrian 0018",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3192,
+      "h": 1.8712
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8712,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0018.glb",
+      "contentHash": "d6f10282bb28645d3ad64ac010fd347e17af53f645485dc3cb114bfa6a3a01f5",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0019",
+    "label": "CARLA pedestrian 0019",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3192,
+      "h": 1.845
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.845,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0019.glb",
+      "contentHash": "22ccba1ac7360c3150391ab08195029c7f1b94b57055c2c2f54b60ba90b858c8",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0020",
+    "label": "CARLA pedestrian 0020",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3299,
+      "h": 1.8526
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8526,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0020.glb",
+      "contentHash": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0021",
+    "label": "CARLA pedestrian 0021",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3192,
+      "h": 1.845
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.845,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0021.glb",
+      "contentHash": "a4694c5d967289089f88d9919957fabc3d1e46950df896749772b7932b27e76a",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0022",
+    "label": "CARLA pedestrian 0022",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.5743,
+      "h": 1.8616
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8616,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0022.glb",
+      "contentHash": "c06482bcb1b8e0c781df56903f41af6b3067404029a98194c4f067fd5a44069d",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0023",
+    "label": "CARLA pedestrian 0023",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.5743,
+      "h": 1.8616
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8616,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0023.glb",
+      "contentHash": "8262a9a178f3f319693f2d049d03bd1b37147a10ad92589c2d7cbde3663706ae",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0024",
+    "label": "CARLA pedestrian 0024",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.5743,
+      "h": 1.8616
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8616,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0024.glb",
+      "contentHash": "68848f0763ce83c3a93f3963fa702eb7ea52104585f0649381f4bd35aa3310c6",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0025",
+    "label": "CARLA pedestrian 0025",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3421,
+      "h": 1.8228
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8228,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0025.glb",
+      "contentHash": "4e426fc64b228f6a70f3a81baed14dfca4f91ecdb993828e2a48286b801dde58",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0026",
+    "label": "CARLA pedestrian 0026",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3371,
+      "h": 1.8228
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8228,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0026.glb",
+      "contentHash": "7baa0c1a1139834cc040f7ef5951a9dc996e1554b317e52edbd3f278fd524b0c",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0027",
+    "label": "CARLA pedestrian 0027",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.777,
+      "w": 0.429,
+      "h": 1.8573
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8573,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0027.glb",
+      "contentHash": "8d68c8a1e4d7219955d4b9de143ca7d9c4af5c0300ee78c831ab0e0d1aa5c39e",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0028",
+    "label": "CARLA pedestrian 0028",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3421,
+      "h": 1.8393
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8393,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0028.glb",
+      "contentHash": "26eccc553e3219ce9666f906a02be5410aaca3ad840fa7c75121e212898a931b",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0029",
+    "label": "CARLA pedestrian 0029",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3421,
+      "h": 1.8393
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8393,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0029.glb",
+      "contentHash": "c085ab0d77eee3dd7283bd100a440a8112c78e6e7e349f636442ff33f5917da3",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0030",
+    "label": "CARLA pedestrian 0030",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3421,
+      "h": 1.8393
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8393,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0030.glb",
+      "contentHash": "ca0dded305c3ffe6a3529dc45132209cdcf2a05d55da65c670e18b5ebb45a8f5",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0031",
+    "label": "CARLA pedestrian 0031",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3309,
+      "h": 1.8441
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8441,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0031.glb",
+      "contentHash": "23594d57d8cc7bc5499ecd3b6424e99d7e95405351248946ebc19bcf0c14e092",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0032",
+    "label": "CARLA pedestrian 0032",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3179,
+      "h": 1.836
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.836,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0032.glb",
+      "contentHash": "25fd57fce9391308c2f3ded2cca248b1c1856cd8eb68521a5f59fdaaa9af45b5",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0033",
+    "label": "CARLA pedestrian 0033",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3179,
+      "h": 1.836
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.836,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0033.glb",
+      "contentHash": "089c4622857d8bedae0c7365c32e2dfc04ffe612882f086cd4ddf15da4b1f6e4",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0034",
+    "label": "CARLA pedestrian 0034",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3371,
+      "h": 1.8588
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8588,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0034.glb",
+      "contentHash": "05dc5476fa06b9d06975635b59b8cdc932078cb94a37bde41d8c3d62da6d7a93",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0035",
+    "label": "CARLA pedestrian 0035",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3313,
+      "h": 1.8588
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8588,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0035.glb",
+      "contentHash": "48e1784c79c83f96f7d2cee84b63ec9eacd1ba2e0512f4b20b292443029cfe21",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0036",
+    "label": "CARLA pedestrian 0036",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7712,
+      "w": 0.4034,
+      "h": 1.8492
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8492,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0036.glb",
+      "contentHash": "e2ebeac3029e49054ea87858b949122e6f19189ee79214cf09b3ceb7ddc8d305",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0037",
+    "label": "CARLA pedestrian 0037",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7712,
+      "w": 0.4034,
+      "h": 1.8492
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8492,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0037.glb",
+      "contentHash": "281bf3d4b60bdb5ece64763c513f5ba4c341833294e3cfee0c49c52dd7e05b69",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0038",
+    "label": "CARLA pedestrian 0038",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7712,
+      "w": 0.4034,
+      "h": 1.8492
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8492,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0038.glb",
+      "contentHash": "463af7f7f30b8bf0dc06f67dcae486d6dd8f4266bb0e7d51b27768b18511e5f5",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0039",
+    "label": "CARLA pedestrian 0039",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.4548,
+      "h": 1.8705
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8705,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0039.glb",
+      "contentHash": "ef5adf19ca131db0e7464bf2a7136689e477e7683919559f853be6b69af79b56",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0040",
+    "label": "CARLA pedestrian 0040",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.4548,
+      "h": 1.8705
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8705,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0040.glb",
+      "contentHash": "5f27051d2675cdfcb11a27835d846d13fd15866df3f88baa37da559e4ed0f9c8",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0041",
+    "label": "CARLA pedestrian 0041",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7752,
+      "w": 0.4548,
+      "h": 1.8705
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8705,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0041.glb",
+      "contentHash": "9296833c2d48ca4f0764dea1936c9543d1c59845edaaad44c10e3e8967ceb034",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0042",
+    "label": "CARLA pedestrian 0042",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3055,
+      "h": 1.8328
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8328,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0042.glb",
+      "contentHash": "f92d730b637f7b1040aa3a24e8563fa65d26b9509907abb641446027f0e97421",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0043",
+    "label": "CARLA pedestrian 0043",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3055,
+      "h": 1.8328
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8328,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0043.glb",
+      "contentHash": "6173cf8a2dd9cf5a72f7add430c191b67394c3b226c21da15552e7aa7f487121",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0044",
+    "label": "CARLA pedestrian 0044",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.6822,
+      "w": 0.3055,
+      "h": 1.8328
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8328,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0044.glb",
+      "contentHash": "b4947f6a1bf3686dfe124a2bc10d356995a14bce64ba03d598e611f25b53cc61",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0045",
+    "label": "CARLA pedestrian 0045",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.3309,
+      "h": 1.8353
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8353,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0045.glb",
+      "contentHash": "86c7c357ece1de9408f9891162803388a93c51bb788e1da996e2d463ae1f7f4e",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0046",
+    "label": "CARLA pedestrian 0046",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7684,
+      "w": 0.331,
+      "h": 1.8353
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8353,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0046.glb",
+      "contentHash": "9c2a298289b782a97404c3811efae94c10834adb581695bec1fce6beb023355c",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0047",
+    "label": "CARLA pedestrian 0047",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7697,
+      "w": 0.5218,
+      "h": 1.8178
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8178,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0047.glb",
+      "contentHash": "8c31d5e974660cb11eacccb39cad48bd0d12eebffe208e94cd54f600fe86635c",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0048",
+    "label": "CARLA pedestrian 0048",
+    "class": "pedestrian",
+    "description": "CARLA adult pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.7697,
+      "w": 0.5218,
+      "h": 1.8178
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8178,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0048.glb",
+      "contentHash": "ee20b5cc98c4dce249a3ef493b9e8aef43684c8d4bc438578ebabf9a6559c052",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0049",
+    "label": "CARLA pedestrian 0049",
+    "class": "pedestrian",
+    "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.0851,
+      "w": 0.212,
+      "h": 1.1292
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.1292,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0049.glb",
+      "contentHash": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0050",
+    "label": "CARLA pedestrian 0050",
+    "class": "pedestrian",
+    "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.0537,
+      "w": 0.2416,
+      "h": 1.1379
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.1379,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0050.glb",
+      "contentHash": "c09f2d008ace6269595943e10b228139d9af040f37bf57da6ceb177c758d03ec",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0051",
+    "label": "CARLA pedestrian 0051",
+    "class": "pedestrian",
+    "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.8269,
+      "w": 0.3372,
+      "h": 1.8631
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8631,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0051.glb",
+      "contentHash": "c49584e1ea589d6b15e1758efeb6694a848e2da6c1655e05e521659ecc4acf50",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
+    }
+  },
+  {
+    "id": "pedestrian.carla.0052",
+    "label": "CARLA pedestrian 0052",
+    "class": "pedestrian",
+    "description": "CARLA child pedestrian with native in-place walk, idle and run clips.",
+    "dims": {
+      "l": 1.8272,
+      "w": 0.3562,
+      "h": 1.8425
+    },
+    "tags": [
+      "vru",
+      "occlusion:low",
+      "sidewalk"
+    ],
+    "defaultParams": {
+      "height": 1.8425,
+      "pose": "standing"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/pedestrians-carla/models/pedestrian_0052.glb",
+      "contentHash": "e3e416fdfc4879340bc0de89657b226d67c0a73bd1886a64d4ef26d71deeac71",
+      "animated": true,
+      "clips": {
+        "idle": "idle",
+        "locomotion": "walk"
+      }
     }
   },
   {

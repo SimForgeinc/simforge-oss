@@ -20,6 +20,7 @@ public static class Program
         Log.Logger = new LoggerConfiguration().WriteTo.Console().MinimumLevel.Information().CreateLogger();
         CUE4ParseLog.UseLogger(Log.Logger);
 
+        if (args.Length > 2 && args[2] == "--animations") { AnimationExport.Run(args[0], args[1]); return 0; }
         if (args.Length > 2 && args[2] == "--sections") { SectionProbe.Run(args[0], args[1]); return 0; }
         if (args.Length > 3 && args[2] == "--dumpbp") { SectionProbe.DumpBp(args[0], args[1], args[3]); return 0; }
         if (args.Length > 3 && args[2] == "--dumpbps") { SectionProbe.DumpBps(args[0], args[1], args[3]); return 0; }

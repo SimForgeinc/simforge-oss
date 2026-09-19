@@ -1,6 +1,6 @@
 # SimForge CARLA vehicle models — conventions
 
-18 CC BY 4.0 vehicle GLBs converted from CARLA Simulator content. Machine-readable
+38 CC BY 4.0 vehicle GLBs converted from CARLA Simulator content. Machine-readable
 metadata lives in `manifest.json`; per-asset licensing in `ATTRIBUTION.json`.
 
 ## Coordinate frame
@@ -61,8 +61,34 @@ Material **names** are the contract:
 
 ## Scale caveat
 
-Meshes are exactly CARLA's authored geometry. A few CARLA models are known to
-be larger than their real-world counterparts (e.g. the Fuso Rosa bus and the
-2021 Mini). `manifest.json` carries per-model `dims_lwh_m`; if a consumer needs
-catalog-exact footprints, uniformly scale the GLB to the catalog `dims`
-(see PATCH-NOTES.md for the recommended wiring).
+The models preserve CARLA's authored proportions, not necessarily its original
+triangle topology. A few CARLA models are larger than their real-world
+counterparts (e.g. the Fuso Rosa bus and the 2021 Mini). `manifest.json` carries
+per-model `dims_lwh_m`. The browser uniformly fits the longest authored actor
+axis; the native sidecar sets `scaleToDims: true`. This preserves proportions
+and the authored vehicle length, rather than stretching each axis independently.
+Width and height can therefore differ from the catalog box.
+
+## Conversion provenance
+
+The conversion is a manual process with texture caps, not automatic Nanite or
+LOD selection. Twelve files carry `asset.generator: glTF-Transform v4.4.2`
+following the documented meshoptimizer simplification pass (`tools/README.md`):
+`vehicle_suv_nissan_patrol`, `vehicle_sedan_ford_crown`,
+`vehicle_hatchback_mini_cooper`, `vehicle_truck_european_hgv`,
+`vehicle_van_mercedes_sprinter`, `vehicle_sedan_dodge_charger`,
+`vehicle_sedan_lincoln_mkz`, `vehicle_police_dodge_charger`,
+`vehicle_ambulance_ford`, `vehicle_bus_mitsubishi_fusorosa`,
+`vehicle_truck_carlacola`, and `vehicle_firetruck_actros`.
+The other 26 files identify `simforge-carla-vehicle-pipeline` as their generator.
+
+## Canonical model assignments
+
+`packages/asset-catalog/scripts/generate-vehicle-models.ts` owns the editorial
+assignments and generates the browser bindings, this pack's `catalog-models.json`,
+and the Rust manifest fallback table. Run it with `--check` to reject drift.
+The bicycle uses the upright Gazelle silhouette; the shuttle uses the Sprinter
+instead of shrinking a Fuso bus to minibus length; the Camry uses the rigged
+Impala sedan rather than duplicating the Lincoln used for the generic sedan.
+An HGV tractor is not an articulated semi with a trailer, so `vehicle.semi_truck`
+deliberately retains its builder.

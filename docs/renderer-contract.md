@@ -108,8 +108,9 @@ a required Low working set that cannot fit fails rather than silently reducing
 the promised tier. `tierSelection` and `loadProgress.textureMaxDimension` report
 the actual selection.
 
-Per-GLB file-size ratios are only admission heuristics calibrated on embedded
-textures. External-texture tiles can decode to over thirteen times the estimate.
+Per-GLB file-size ratios are only admission heuristics. A GLB's byte count cannot
+bound the GPU cost of images outside that file: measured tiles exceeded the
+estimate by 15x, while another external-image asset happened to be close.
 The ledger replaces reservations with decoded resource bytes, and enforcement
 reclaims optional allocations under pressure. Brief decode-time overshoots are
 not evidence of a larger configured budget; report their measured peak separately.
