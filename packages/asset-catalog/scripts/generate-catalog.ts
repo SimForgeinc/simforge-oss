@@ -26,7 +26,11 @@ pub fn canonical_catalog_id(id: &str) -> &str {
     CATALOG_ALIASES.iter().find(|(alias, _)| *alias == id).map_or(id, |(_, target)| *target)
 }
 `;
-for (const [path, content] of [[out, `${JSON.stringify(parsed, null, 2)}\n`], [rustOut, rust]]) {
+const targets: Array<[path: string, content: string]> = [
+  [out, `${JSON.stringify(parsed, null, 2)}\n`],
+  [rustOut, rust],
+];
+for (const [path, content] of targets) {
   if (process.argv.includes('--check')) {
     if (readFileSync(path, 'utf8') !== content) throw new Error(`Generated catalog drift: ${path}`);
   } else {
