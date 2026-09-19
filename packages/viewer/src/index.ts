@@ -1,5 +1,6 @@
 export { CityViewer } from './viewer';
 export type { CityViewerLayers } from './viewer';
+export { ViewerInputError } from './render-input';
 export { ViewerOverlayLayer } from './overlays';
 export type {
   ViewerMarker,

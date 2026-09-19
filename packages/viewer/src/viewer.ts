@@ -84,6 +84,7 @@ import {
 } from './streaming';
 import { ViewerOverlayLayer, type ViewerOverlayState, type ViewerPoint3 } from './overlays';
 import { buildVegetation, type VegPrototypeGroup } from './vegetation';
+import { ViewerInputError, requireMapReference, requirePositive, requireRenderableGeometry, requireRenderableManifest, requireTextureTier } from './render-input';
 import type {
   BenchResult,
   CameraDiagnostics,
@@ -314,6 +315,9 @@ export class CityViewer {
 
   private readonly canvas: HTMLCanvasElement;
   private readonly options: Required<CityViewerOptions>;
+  private readonly defaulted: readonly string[];
+  private mapAdmitted = false;
+  private inputError: ViewerInputError | null = null;
   private readonly frameStats = new FrameStats(150);
   private readonly downloadTracker = new AssetDownloadTracker();
   private readonly cityFrustum = new Frustum();
@@ -451,6 +455,12 @@ export class CityViewer {
       Object.entries(options).filter(([, value]) => value !== undefined),
     ) as CityViewerOptions;
     this.options = { ...DEFAULTS, baseUrl: '', ...provided };
+    this.defaulted = Object.freeze(['sunIntensity', 'environmentIntensity', 'exposure', 'mapTextureTier', 'cinematicLighting']
+      .filter(key => options[key as keyof CityViewerOptions] === undefined));
+    requirePositive(this.options.sunIntensity, 'sunIntensity');
+    requirePositive(this.options.environmentIntensity, 'environmentIntensity');
+    requirePositive(this.options.exposure, 'exposure');
+    requireTextureTier(this.options.mapTextureTier);
     this.effectiveTextureMaxDimension = this.options.textureMaxDimension;
 
     this.renderer = new WebGLRenderer({
@@ -570,8 +580,10 @@ export class CityViewer {
   // ---------------------------------------------------------------- loading
 
   loadMap(manifestUrl: string): Promise<void> {
+    try { requireMapReference(manifestUrl); } catch (error) { return Promise.reject(error); }
     const load = this.mapLoadQueue.catch(() => undefined).then(async () => {
       if (this.disposed) return;
+      this.mapAdmitted = false;
       this.assetVariantReloadGeneration++;
       this.textureBudgetRecovery = null;
       if (this.mapLoaded) this.releaseMapResources();
@@ -583,6 +595,7 @@ export class CityViewer {
       this.pendingTextureBudgetError = null;
       this.downloadTracker.reset();
       this.streamingError = null;
+      this.inputError = null;
       this.detailFailures = 0;
       this.detailError = null;
       this.mapLoadActive = true;
@@ -591,7 +604,8 @@ export class CityViewer {
       } catch (err) {
         // dispose() aborts every in-flight request; that is not a failure.
         if (this.disposed || (err as { name?: string } | null)?.name === 'AbortError') return;
-        const error = new Error(`Map bootstrap downloading/decoding failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+        const error = err instanceof ViewerInputError ? err
+          : new Error(`Map bootstrap downloading/decoding failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
         this.recordStreamingError(error);
         throw error;
       } finally {
@@ -611,6 +625,26 @@ export class CityViewer {
     return this.manifest;
   }
 
+  /** Applied base defaults plus current physical lighting; never infers quality from pixel brightness. */
+  getRenderConfiguration() {
+    return {
+      defaulted: this.defaulted,
+      sunIntensity: this.sun?.intensity ?? this.options.sunIntensity,
+      sunColor: this.sun?.color.getHex() ?? null,
+      environmentIntensity: this.scene.environmentIntensity,
+      exposure: this.renderer.toneMappingExposure,
+      mapTextureTier: this.options.mapTextureTier,
+      skyEnabled: this.sky.mesh.visible,
+      environmentAvailable: this.scene.environment !== null,
+      mapAdmitted: this.mapAdmitted,
+      warnings: this.cinematicLighting ? [] : [{
+        code: 'cinematic_lighting_disabled' as const,
+        field: 'cinematicLighting',
+        reason: 'Explicit opt-out disables generated sky and image-based lighting',
+      }],
+    };
+  }
+
   /**
    * Whether the sun is currently casting a real shadow map.
    *
@@ -625,7 +659,10 @@ export class CityViewer {
     const url = this.options.baseUrl ? resolveUrl(this.options.baseUrl, manifestUrl) : manifestUrl;
     this.assetBase = url.replace(/[^/]*$/, '');
     const manifestBuffer = await this.fetchBuffer(url, this.abort.signal);
-    const manifest = JSON.parse(new TextDecoder().decode(manifestBuffer)) as CityManifest;
+    let manifest: CityManifest;
+    try { manifest = JSON.parse(new TextDecoder().decode(manifestBuffer)) as CityManifest; }
+    catch { throw new ViewerInputError('map.manifest', 'expected a nonblank JSON manifest'); }
+    requireRenderableManifest(manifest);
     this.sourceManifestSha256 = await sha256BytesAsync(manifestBuffer);
     if (this.disposed) return;
     this.manifest = manifest;
@@ -678,11 +715,12 @@ export class CityViewer {
       if (!this.disposed) this.recordStreamingError(error);
     });
     this.refreshWeatherAppearance();
+    this.mapAdmitted = true;
     // "Loaded" has to mean "on screen". Until this waited, `loadMap` resolved
     // as soon as the layers existed, so every consumer announced a ready scene
     // with nothing in it and the buildings appeared seconds later.
     await this.whenViewResident();
-    if (this.streamingError) throw new Error(this.streamingError);
+    if (this.streamingError) throw this.inputError ?? new Error(this.streamingError);
   }
 
   /**
@@ -708,8 +746,8 @@ export class CityViewer {
 
   private viewResidentNow(): boolean {
     if (this.disposed || this.streamingError !== null || this.renderingSuspended) return true;
-    if (!this.roadLayer?.ready) return false;
-    if (this.roadLayer.stats().requiredPendingAssets > 0) return false;
+    if (!this.mapAdmitted) return false;
+    if (this.roadLayer && (!this.roadLayer.ready || this.roadLayer.stats().requiredPendingAssets > 0)) return false;
     const city = this.cityLayer;
     if (!city) return true;
     return city.ready && city.missingInView === 0;
@@ -1030,7 +1068,7 @@ export class CityViewer {
         selection = { ...selection, codec: 'uastc', variantId: id, downgradeReason: `Published ${selection.codec} derivative unavailable; using portable UASTC` };
         reference = this.variantManifest?.variants[id];
       }
-      if (!reference) throw new Error(`Map lacks published ${id}; publish texture-tiers before loading this map`);
+      if (!reference) throw new ViewerInputError(`mapTextureTier.${id}`, `expected published ${id} derivative; publish texture-tiers before loading this map`);
       if (this.variantManifest?.sourceManifestSha256 !== this.sourceManifestSha256
         || reference.sourceManifestSha256 !== this.sourceManifestSha256 || reference.schemaVersion !== 1
         || !/^[a-z0-9-]+\.json$/.test(reference.file)) throw new Error('Texture derivative is not bound to this source manifest');
@@ -1061,9 +1099,9 @@ export class CityViewer {
       const requiredImages = new Set<string>();
       const add = (file: string): void => {
         const asset = index.assets[file];
-        if (!asset) throw new Error(`Texture index omits required asset ${file}`);
+        if (!asset) throw new ViewerInputError(`mapTextureTier.${id}.${file}`, 'texture index omits required asset');
         for (const source of asset.images) {
-          if (!index.images[source]) throw new Error(`Texture index omits image ${source}`);
+          if (!index.images[source]) throw new ViewerInputError(`mapTextureTier.${id}.${source}`, 'texture index omits required image');
           requiredImages.add(source);
         }
       };
@@ -1100,6 +1138,7 @@ export class CityViewer {
 
   /** Switch representations without changing the editor camera or geometry. */
   async setMapTextureTier(tier: MapTextureTier): Promise<void> {
+    requireTextureTier(tier);
     if (tier === this.options.mapTextureTier) return;
     this.options.mapTextureTier = tier;
     await this.mapLoadQueue;
@@ -1128,16 +1167,18 @@ export class CityViewer {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
       const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(selectedUrl));
+      requireRenderableGeometry(parsed.scene, sourceFile);
       this.variantLoads[selected.variant]++;
       this.canvas.dataset.assetVariant = selected.variant;
       return parsed;
     } catch (error) {
-      if (!allowsSourceAssetFallback(selected.variant)
+      if (error instanceof ViewerInputError || !allowsSourceAssetFallback(selected.variant)
         || (error as { name?: string } | null)?.name === 'AbortError') throw error;
       this.variantFallbacks++;
       const sourceUrl = resolveUrl(this.assetBase, sourceFile);
       const source = await this.fetchBuffer(sourceUrl, signal, sourceBytes);
       const parsed = await parseMapGLTF(loader, source, resourceDirectory(sourceUrl));
+      requireRenderableGeometry(parsed.scene, sourceFile);
       this.variantLoads.original++;
       this.canvas.dataset.assetVariant = 'original-fallback';
       return parsed;
@@ -1158,6 +1199,7 @@ export class CityViewer {
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(fileUrl));
+    requireRenderableGeometry(parsed.scene, file);
     this.variantLoads[variant]++;
     this.canvas.dataset.assetVariant = variant;
     return parsed;
@@ -1532,7 +1574,24 @@ export class CityViewer {
     }
     this.phaseStats.uploads.push(performance.now() - phaseStart);
 
-    if (!this.renderingSuspended) {
+    if (!this.renderingSuspended && this.mapAdmitted && !this.streamingError
+      && ((this.roadLayer?.group.children.length ?? 0) + (this.cityLayer?.group.children.length ?? 0) > 0)) {
+      try {
+        if (!this.sun || this.sun.parent !== this.scene || !this.sun.visible) {
+          throw new ViewerInputError('sun', 'the admitted scene requires its visible directional light');
+        }
+        requirePositive(this.sun.intensity, 'sunIntensity');
+        requirePositive(this.sun.position.distanceToSquared(this.sun.target.position), 'sun.direction');
+        requirePositive(this.sun.color.r + this.sun.color.g + this.sun.color.b, 'sun.color');
+        requirePositive(this.scene.environmentIntensity, 'environmentIntensity');
+        requirePositive(this.renderer.toneMappingExposure, 'exposure');
+        if (this.cinematicLighting && (this.sky.mesh.parent !== this.scene || !this.sky.mesh.visible || !this.scene.environment)) {
+          throw new ViewerInputError('environment', 'cinematic lighting requires its sky and environment');
+        }
+      } catch (error) {
+        this.recordStreamingError(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
       this.renderer.info.reset();
       phaseStart = performance.now();
       this.renderer.render(this.scene, this.camera);
@@ -1674,7 +1733,9 @@ export class CityViewer {
         }
       }
     }
-    const usable = this.mapLoaded && !this.disposed && !this.renderingSuspended && !streamingError && this.roadReady
+    const usable = this.mapAdmitted && !this.disposed && !this.renderingSuspended && !streamingError
+      && ((this.roadLayer?.group.children.length ?? 0) + (this.cityLayer?.group.children.length ?? 0) > 0)
+      && (!this.roadLayer || this.roadReady)
       && (city?.missingInViewTiles ?? 0) === 0;
     const targetQualityReady = usable && Boolean(this.textureTierIndex) && this.viewResidentNow()
       && this.presetTransitions === 0;
@@ -1881,7 +1942,7 @@ export class CityViewer {
    */
   private recordDetailFailure(error: unknown): void {
     if (this.disposed || (error as { name?: string } | null)?.name === 'AbortError') return;
-    if (error instanceof RequiredAssetBudgetError) {
+    if (error instanceof RequiredAssetBudgetError || error instanceof ViewerInputError) {
       this.recordStreamingError(error);
       return;
     }
@@ -1911,6 +1972,7 @@ export class CityViewer {
       });
       return;
     }
+    if (error instanceof ViewerInputError) this.inputError = error;
     this.streamingError = error instanceof Error ? error.message : String(error);
     console.error('[city-renderer] streaming failed', error);
   }
@@ -1972,6 +2034,11 @@ export class CityViewer {
    * `null` restores the exact pre-weather scene state.
    */
   setWeatherAppearance(appearance: CityWeatherAppearance | null): void {
+    if (appearance) {
+      for (const field of ['sunIntensityScale', 'environmentIntensityScale', 'exposureScale', 'backgroundIntensityScale'] as const) {
+        requirePositive(appearance[field], `weather.${field}`);
+      }
+    }
     this.weatherAppearance = appearance === null ? null : {
       ...appearance,
       fog: appearance.fog ? { ...appearance.fog } : null,
@@ -2049,6 +2116,7 @@ export class CityViewer {
 
   /** Apply authoring quality without rebuilding the renderer or reloading the map. */
   setLiveQuality(next: Partial<CityViewerLiveQuality>): CityViewerLiveQuality {
+    if (next.exposure !== undefined) requirePositive(next.exposure, 'exposure');
     if (this.weatherAppearance) this.weather.clear();
     const finite = (value: number | undefined, fallback: number, min: number, max: number) =>
       value === undefined || !Number.isFinite(value)
@@ -2088,7 +2156,7 @@ export class CityViewer {
       0,
       2000,
     );
-    this.options.exposure = finite(next.exposure, this.options.exposure, 0.1, 4);
+    this.options.exposure = next.exposure ?? this.options.exposure;
     if (this.options.byteBudget !== previousByteBudget) {
       this.roadLayer?.clearBudgetBlocks();
       this.cityLayer?.clearBudgetBlocks();
@@ -2125,6 +2193,7 @@ export class CityViewer {
   }
 
   setExposure(exposure: number): void {
+    requirePositive(exposure, 'exposure');
     if (this.weatherAppearance) this.weather.clear();
     this.options.exposure = exposure;
     this.renderer.toneMappingExposure = exposure;

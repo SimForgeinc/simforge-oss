@@ -129,7 +129,7 @@ export interface CityViewerOptions {
   vegetationScreenSpaceError?: number;
   /** Resident geometry+texture budget in bytes (estimated GPU footprint). */
   byteBudget?: number;
-  /** Browser selects Low/Medium; native-only tiers are explicitly downgraded. */
+  /** Defaults to Medium. Browser selects Low/Medium; native-only tiers are explicitly downgraded. */
   mapTextureTier?: MapTextureTier;
   /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
   textureMaxDimension?: number;
@@ -141,11 +141,11 @@ export interface CityViewerOptions {
   uploadBudgetMs?: number;
   /** Per-frame texel budget for GPU uploads. */
   uploadPixelsPerFrame?: number;
-  /** Directional light intensity. */
+  /** Finite positive directional intensity; defaults to VIEWER_SUN_INTENSITY (5). */
   sunIntensity?: number;
-  /** Environment (IBL) intensity. */
+  /** Finite positive IBL intensity; defaults to VIEWER_ENVIRONMENT_INTENSITY (0.6). */
   environmentIntensity?: number;
-  /** Tone mapping exposure. */
+  /** Finite positive exposure; defaults to VIEWER_EXPOSURE (1). Authored weather scales it unchanged. */
   exposure?: number;
   /** Max distance (m) at which vegetation tiles are drawn. */
   vegetationMaxDistance?: number;
@@ -158,9 +158,8 @@ export interface CityViewerOptions {
   /**
    * Generated sky, its image-based light, and the sun's shadow map.
    *
-   * Off leaves the flat clear colour and the bare direct sun. Reduced authoring
-   * presets turn it off: the shadow pass is the real cost, and the dome's
-   * scattering shader is not free on the GPUs those presets exist for.
+   * Explicit off leaves the flat clear colour and bare direct sun; diagnostics
+   * report cinematic_lighting_disabled. Both browser texture tiers default on.
    */
   cinematicLighting?: boolean;
   /**

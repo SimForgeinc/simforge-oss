@@ -10,7 +10,7 @@ vi.mock('three', async (importOriginal) => {
       domElement: HTMLCanvasElement;
       debug = {};
       shadowMap = {};
-      info = { programs: [], render: { calls: 0, triangles: 0 } };
+      info = { programs: [], render: { calls: 0, triangles: 0 }, reset: vi.fn() };
       capabilities = { maxTextureSize: 4096 };
       private state: { lost: boolean };
       constructor({ canvas }: { canvas: HTMLCanvasElement }) {
@@ -26,12 +26,13 @@ vi.mock('three', async (importOriginal) => {
       }
       setPixelRatio() {}
       setSize() {}
+      render = vi.fn();
       dispose() {}
       forceContextLoss() { this.state.lost = true; }
     },
   };
 });
-vi.mock('./camera-controls', () => ({ CameraRig: class { setPoseConstraint() {} dispose() {} } }));
+vi.mock('./camera-controls', () => ({ CameraRig: class { setPoseConstraint() {} update() {} dispose() {} } }));
 
 import { CityViewer } from './viewer';
 import { installViewerRuntimeDiagnostics } from './viewer-diagnostics';
@@ -75,4 +76,69 @@ it.each([false, true])('preserves a retained canvas across disposal and remount 
     diagnostics.dispose();
     successor.dispose();
   }
+});
+
+function contractViewer(options: ConstructorParameters<typeof CityViewer>[1] = {}) {
+  vi.stubGlobal('window', Object.assign(new EventTarget(), {
+    devicePixelRatio: 1, innerWidth: 800, innerHeight: 600, setTimeout, clearTimeout, setInterval, clearInterval,
+  }));
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+  vi.stubGlobal('cancelAnimationFrame', () => undefined);
+  const canvas = Object.assign(new EventTarget(), {
+    isConnected: true, clientWidth: 800, clientHeight: 600, style: {},
+    getBoundingClientRect: () => ({ width: 800, height: 600 }),
+  }) as unknown as HTMLCanvasElement;
+  return new CityViewer(canvas, options);
+}
+
+it.each([
+  { sunIntensity: 0 }, { exposure: NaN }, { environmentIntensity: 0 },
+])('refuses degenerate construction: %j', (options) => {
+  expect(() => contractViewer(options)).toThrowError(expect.objectContaining({ name: 'ViewerInputError' }));
+});
+
+it('refuses a blank map reference before fetching', async () => {
+  const viewer = contractViewer();
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    await expect(viewer.loadMap(' ')).rejects.toMatchObject({ name: 'ViewerInputError', field: 'map' });
+    expect(fetcher).not.toHaveBeenCalled();
+    const frame = vi.mocked(requestAnimationFrame).mock.calls[0]![0];
+    frame(performance.now());
+    expect(viewer.renderer.render).not.toHaveBeenCalled();
+    expect(viewer.getStats().usable).toBe(false);
+  } finally { viewer.dispose(); }
+});
+
+it('refuses a manifest with no renderable city or road members', async () => {
+  const viewer = contractViewer();
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+    scene: { bounds: { min: [0, 0, 0], max: [10, 10, 10] } }, tiles: [],
+  }))));
+  try {
+    await expect(viewer.loadMap('/empty.json')).rejects.toMatchObject({ name: 'ViewerInputError', field: 'map.members' });
+    expect(viewer.getStats().usable).toBe(false);
+  } finally { viewer.dispose(); }
+});
+
+it('rejects invalid live exposure without changing the applied exposure', () => {
+  const viewer = contractViewer();
+  try {
+    expect(() => viewer.setExposure(0)).toThrowError(expect.objectContaining({ name: 'ViewerInputError' }));
+    expect(viewer.renderer.toneMappingExposure).toBe(1);
+    expect(() => viewer.setLiveQuality({ exposure: NaN })).toThrowError(expect.objectContaining({ name: 'ViewerInputError' }));
+  } finally { viewer.dispose(); }
+});
+
+it('reports missing lighting and tier defaults separately from explicit input', () => {
+  const viewer = contractViewer({ sunIntensity: undefined });
+  try {
+    expect(viewer.getRenderConfiguration()).toMatchObject({
+      sunIntensity: 5, environmentIntensity: 0.6, exposure: 1,
+      mapTextureTier: 'medium',
+      defaulted: expect.arrayContaining(['sunIntensity', 'environmentIntensity', 'exposure', 'mapTextureTier']),
+    });
+  } finally { viewer.dispose(); }
 });
