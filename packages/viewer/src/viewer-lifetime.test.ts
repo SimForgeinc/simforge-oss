@@ -198,7 +198,8 @@ it.each(['late-success', 'terminal-failure', 'stalled', 'progress-before-stall']
     const waiting = lifecycle.whenViewResident().then(() => { completed = true; });
     lifecycle.settleViewResidentWaiters(60_001);
     await Promise.resolve();
-    expect(viewer.getStats().requiredError).toContain('readiness deadline');
+    expect(viewer.getStats().requiredError).not.toBeNull();
+    expect(viewer.getStats().loadDiagnostics.residencyDeadline).toEqual({ missedAtMs: 60_001, recoveredAtMs: null });
     expect(completed).toBe(false);
     lifecycle.settleViewResidentWaiters(90_000);
     expect(viewer.getStats().usable).toBe(false);
