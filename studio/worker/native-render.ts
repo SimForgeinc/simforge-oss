@@ -44,6 +44,8 @@ export async function runNativeClaim(
   reportProgress: (record: RenderProgressRecord) => Promise<void>,
 ): Promise<NativeRenderOutcome> {
   const { payload } = claim;
+  if (!payload.intent.renderTextures) throw new Error("native_render_texture_profile_missing");
+  if (!payload.intent.nativeVramBudgetBytes && !payload.intent.nativeVramCapacityBytes) throw new Error("native_vram_capacity_missing");
   const progress: StageProgressReporter = (record) =>
     reportProgress({
       schema: "simforge.render-progress/v1",
@@ -63,7 +65,7 @@ export async function runNativeClaim(
   const mapInputs = await verifyMapClosure(directory, payload.map.members, signal, progress);
   const inputs = new Map<string, RenderInputFile>([...fetched, ...mapInputs]);
 
-  const engine = createRenderEngine();
+  const engine = createRenderEngine({ nativeCacheDirectory: process.env.SIMFORGE_NATIVE_CACHE_DIR });
   let execution: EngineExecution;
   try {
     execution = await executeEngine({

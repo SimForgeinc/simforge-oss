@@ -104,7 +104,7 @@ const ENGINE_OPTIONS: {
     id: "browser",
     label: "Browser",
     icon: MonitorPlay,
-    hint: "Optimized Three.js renderer.",
+    hint: "Medium-tier browser preview (512 px target), not a native final render.",
   },
   {
     id: "esmini",
@@ -263,6 +263,8 @@ export function RenderConfigPanel({
 }) {
   const studioHost = useStudioHost();
   const [backend, setBackend] = useState<RenderBackend>("native");
+  const [renderProfile, setRenderProfile] = useState<"render" | "ml">("render");
+  const [nativeBudgetGiB, setNativeBudgetGiB] = useState("");
   const hostCapabilitiesState = useStudioHostCapabilities(studioHost);
   const hostCapabilities = hostCapabilitiesState.capabilities;
   const localExecution = hostCapabilities?.execution.localRender !== undefined;
@@ -429,8 +431,11 @@ export function RenderConfigPanel({
       list.push("Video output requires an RGB modality.");
     }
     if (outputs.length === 0) list.push("Enable at least one output.");
+    if (backend === "native" && nativeBudgetGiB !== "" && (!Number.isFinite(Number(nativeBudgetGiB)) || Number(nativeBudgetGiB) <= 0)) {
+      list.push("Native capacity must be a positive number of GiB, or Auto.");
+    }
     return list;
-  }, [outputs, selectedModalities, selectedSensors.length, sensorOptions.length]);
+  }, [backend, nativeBudgetGiB, outputs, selectedModalities, selectedSensors.length, sensorOptions.length]);
 
   /**
    * An engine the host has not confirmed it accepts never reaches submission: while capabilities
@@ -583,8 +588,8 @@ export function RenderConfigPanel({
           "manifest" as const,
         ])],
         staticSemantics: false,
-        // CARLA renders are review-grade evidence; the other engines produce dataset-grade output.
-        fidelity: backend === "carla" ? "review" : "dataset",
+        // Browser captures are explicitly bounded previews, never native final output.
+        fidelity: backend === "native" ? "dataset" : "review",
         environment: renderEnvironment,
       });
       const { revisionId, executionPackageId } = await ensureExecutionPackage();
@@ -592,6 +597,10 @@ export function RenderConfigPanel({
       const job = await studioHost.jobs.submitRenderIntent({
         schema: "uniscenario.render-intent-submission/v1",
         engine: backend,
+        ...(backend === "native" ? {
+          renderProfile,
+          ...(nativeBudgetGiB === "" ? {} : { nativeVramBudgetBytes: Math.floor(Number(nativeBudgetGiB) * 1024 ** 3) }),
+        } : {}),
         revisionId,
         executionPackageId,
         renderSpec,
@@ -902,6 +911,23 @@ export function RenderConfigPanel({
               title="How should this render look and run?"
             />
             <div {...stylex.props(styles.gridGap5)}>
+              {backend === "native" ? (
+                <section>
+                  <StepHeading title="Texture profile" hint="Pinned into the job and its evidence. Capacity failures never lower texture quality." />
+                  <label {...stylex.props(styles.flexColGap1)}>
+                    <span {...stylex.props(styles.capsMicroMuted)}>Native texture profile</span>
+                    <select {...stylex.props(styles.inkBordered)} disabled={stage != null} value={renderProfile} onChange={(event) => setRenderProfile(event.target.value as "render" | "ml")}>
+                      <option value="render">Render — full authored UASTC textures</option>
+                      <option value="ml">ML Training — bounded 512 px BC7 textures</option>
+                    </select>
+                  </label>
+                  <label {...stylex.props(styles.flexColGap1)}>
+                    <span {...stylex.props(styles.capsMicroMuted)}>Native capacity override (GiB)</span>
+                    <input {...stylex.props(styles.inkBordered)} type="number" min="0.1" step="0.1" placeholder="Auto" disabled={stage != null} value={nativeBudgetGiB} onChange={(event) => setNativeBudgetGiB(event.target.value)} />
+                  </label>
+                  <p {...stylex.props(styles.xsMutedBordered2)}>Auto budgets the calculated texture, geometry and frame demand against an assumed 16 GiB device. This is not measured GPU memory or a hard allocation limit. Declare a different ceiling only for provisioned hardware.</p>
+                </section>
+              ) : null}
               <section>
                 <StepHeading hint="Applies to every image sensor in the request." title="Format" />
                 <div {...stylex.props(styles.gridXsGap2)}>
@@ -986,6 +1012,8 @@ export function RenderConfigPanel({
             />
             <dl {...stylex.props(styles.bordered)}>
               <ReviewRow label="Engine" value={`${engineOption.label} · ${localExecution ? "this machine" : "connected service"}`} />
+              {backend === "native" ? <ReviewRow label="Textures" value={renderProfile === "render" ? "Render · uastc-full" : "ML Training · bc7-512"} /> : null}
+              {backend === "native" ? <ReviewRow label="Capacity" value={nativeBudgetGiB === "" ? "Auto · assumed 16 GiB device" : `${nativeBudgetGiB} GiB explicit ceiling`} /> : null}
               <ReviewRow
                 label="Sensors"
                 value={selectedSensors.length > 0

@@ -166,8 +166,16 @@ const FAILURE_MESSAGES: Record<string, string> = {
 export function jobFailureMessage(job: {
   jobState: ScenarioRenderJobState;
   failureCode: string | null;
+  failureDetail?: unknown;
 }): string | null {
   if (job.jobState !== "failed" || !job.failureCode) return null;
+  if (job.failureCode === "native_texture_capacity_exceeded" || job.failureCode === "native_map_asset_set_too_large") {
+    let detail = job.failureDetail;
+    if (typeof detail === "string") {
+      try { detail = JSON.parse(detail); } catch { return detail as string; }
+    }
+    if (detail && typeof detail === "object" && "message" in detail && typeof detail.message === "string") return detail.message;
+  }
   return FAILURE_MESSAGES[job.failureCode] ?? humanizeCode(job.failureCode);
 }
 

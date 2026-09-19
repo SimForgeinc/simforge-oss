@@ -28,8 +28,8 @@ type Preparation = {
 };
 
 const PROFILE_LABELS: Record<RenderingPreference, string> = {
-  minimal: "Balanced",
-  high: "High",
+  low: "Low",
+  medium: "Medium",
 };
 
 const RenderSelectionPanel = dynamic(
@@ -116,7 +116,7 @@ export function RenderSettingsPageClient() {
           manifestUrl={benchmarkTarget?.browserManifestUrl ?? null}
           mapLabel={benchmarkTarget?.label ?? "Current map"}
           catalogReady={benchmarkCatalogReady}
-          currentQuality={currentProfile ?? "minimal"}
+          currentQuality={currentProfile ?? "low"}
           onChoose={choose}
           titleId="render-settings-title"
           descriptionId="render-settings-description"

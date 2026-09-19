@@ -61,15 +61,15 @@ describe("ViewportSettingsPanel", () => {
       <ViewportSettingsPanel
         onQualityChange={onQualityChange}
         placement="topbar"
-        quality="minimal"
+        quality="low"
         viewer={fakeViewer()}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(screen.getByText("Render quality")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Balanced" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "High" }));
-    expect(onQualityChange).toHaveBeenCalledWith("high");
+    expect(screen.getByRole("button", { name: "Low" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Medium" }));
+    expect(onQualityChange).toHaveBeenCalledWith("medium");
   });
 
   it("applies settings to the viewer on mount, even while collapsed", () => {

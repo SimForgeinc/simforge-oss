@@ -1,7 +1,7 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput } from "@simforge-oss/render/native";
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
@@ -263,6 +263,11 @@ function buildIntent(
     },
     sensorHosts,
     renderSpec: input.renderSpec,
+    ...(input.engine === "native" ? {
+      renderTextures: input.renderProfile === "ml" ? "bc7-512" : "uastc-full",
+      nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? 16 * 1024 ** 3,
+      ...(input.nativeVramBudgetBytes === undefined ? {} : { nativeVramBudgetBytes: input.nativeVramBudgetBytes }),
+    } : {}),
     assets: [
       {
         assetId: lineage.map_artifact_id,
@@ -293,9 +298,11 @@ export async function createRenderIntentJob(
     await tx.queryOne(`SELECT pg_advisory_xact_lock(hashtext(:workspace_id)) AS locked`, {
       workspace_id: context.workspaceId,
     });
-    const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string }>(
+    const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string; render_textures: string | null; native_vram_budget: string | null }>(
       `SELECT id, revision_id, execution_package_id, job_mode, job_state, progress,
               intent_sha256, renderer_engine, render_spec_sha256,
+              render_intent->>'renderTextures' AS render_textures,
+              render_intent->>'nativeVramBudgetBytes' AS native_vram_budget,
               created_at::text AS created_at, updated_at::text AS updated_at
          FROM simforge.render_jobs
         WHERE workspace_id = :workspace_id AND idempotency_key = :idempotency_key
@@ -306,6 +313,8 @@ export async function createRenderIntentJob(
       if (existing.revision_id !== input.revisionId
         || existing.execution_package_id !== input.executionPackageId
         || existing.renderer_engine !== input.engine
+        || (input.engine === "native" && existing.render_textures !== (input.renderProfile === "ml" ? "bc7-512" : "uastc-full"))
+        || (input.engine === "native" && (existing.native_vram_budget === null ? undefined : Number(existing.native_vram_budget)) !== input.nativeVramBudgetBytes)
         || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)) {
         throw new Error("uniscenario_render_intent_idempotency_conflict");
       }
@@ -388,7 +397,7 @@ export async function createRenderIntentJob(
       if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
         throw new Error("native_map_master_unavailable");
       }
-      if (renderMembers.length > 4093) throw new Error("native_map_asset_set_too_large");
+      assertNativeMapMemberCapacity(renderMembers.length);
       nativeAssets = renderMembers.map((member) => ({
         assetId: member.relative_path === "master.gltf"
           ? "map.tile.000000"

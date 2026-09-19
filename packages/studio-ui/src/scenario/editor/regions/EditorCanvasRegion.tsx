@@ -34,6 +34,7 @@ export function EditorCanvasRegion({
   map,
   quality,
   onViewerReady,
+  onViewerDisposed,
   onMapLoaded,
   state,
   error,
@@ -44,6 +45,7 @@ export function EditorCanvasRegion({
   map: ScenarioMapEntry;
   quality: ScenarioAuthoringQuality;
   onViewerReady: (viewer: CityViewer) => void;
+  onViewerDisposed?: (viewer: CityViewer) => void;
   onMapLoaded?: (manifestUrl: string) => void;
   state: EditorState | null;
   error: string | null;
@@ -61,6 +63,11 @@ export function EditorCanvasRegion({
     if (activeViewerRef.current !== viewer) return;
     onMapLoaded?.(manifestUrl);
   }, [onMapLoaded]);
+  const reportDisposed = useCallback((viewer: CityViewer) => {
+    if (activeViewerRef.current !== viewer) return;
+    activeViewerRef.current = null;
+    onViewerDisposed?.(viewer);
+  }, [onViewerDisposed]);
 
   return (
     <div
@@ -80,6 +87,7 @@ export function EditorCanvasRegion({
           initialOptions={viewerOptions}
           onViewerReady={registerViewer}
           onViewerMapLoaded={reportMapLoaded}
+          onDisposed={reportDisposed}
           className={stylex.props(styles.wideTall).className}
           ariaLabel={`${map.label} 3D scene. Click an actor to select it, drag to orbit.`}
           role="application"
@@ -116,6 +124,7 @@ export function EditorCanvasRegion({
 function EditorCityViewInstance({
   onViewerMapLoaded,
   onViewerReady,
+  onDisposed,
   ...props
 }: Omit<CityViewProps, "onMapLoaded" | "onReady"> & {
   readonly onViewerMapLoaded: (viewer: CityViewer, manifestUrl: string) => void;
@@ -132,6 +141,10 @@ function EditorCityViewInstance({
       onReady={(viewer) => {
         viewerRef.current = viewer;
         onViewerReady(viewer);
+      }}
+      onDisposed={(viewer) => {
+        if (viewerRef.current === viewer) viewerRef.current = null;
+        onDisposed?.(viewer);
       }}
       onMapLoaded={(manifestUrl) => {
         const viewer = viewerRef.current;

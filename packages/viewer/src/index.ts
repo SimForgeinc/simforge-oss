@@ -92,6 +92,9 @@ export type { VegetationBuildResult, VegPrototypeGroup } from './vegetation';
 export * from './weather';
 export { boundsToBox3, normalizeLods, resolveUrl, estimateLodBytes } from './manifest';
 export type {
+  MapTextureTier,
+  TextureCodec,
+  TierSelection,
   BenchResult,
   CameraDiagnostics,
   CityManifest,

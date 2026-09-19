@@ -14,6 +14,7 @@
  */
 
 import type { CityViewer } from './viewer';
+import { canvasIsPresentable, waitForCanvasPresentation } from './canvas-presentation';
 
 const LOG_PREFIX = '[viewer-diagnostics]';
 const MAP_LOAD_STALL_MS = 15_000;
@@ -28,8 +29,9 @@ type ChromiumPerformanceMemory = {
 /** Read handle an automated gate uses to interrogate the live viewer. */
 export interface ViewerProbe {
   readonly viewer: CityViewer;
-  /** `performance.now()` at which the map load reported itself ready. */
-  readyAtMs: number | null;
+  /** Only non-null while this connected, live renderer can paint target quality. */
+  readonly readyAtMs: number | null;
+  readonly viable: boolean;
   manifestUrl: string | null;
 }
 
@@ -62,7 +64,14 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   let activeManifestUrl: string | null = null;
   let memoryWarned = false;
   let contextLossLogged = false;
-  const probe: ViewerProbe = { viewer, readyAtMs: null, manifestUrl: null };
+  let disposed = false;
+  let readyAtMs: number | null = null;
+  let cancelPresentation: (() => void) | null = null;
+  const probe: ViewerProbe = {
+    viewer, manifestUrl: null,
+    get viable() { return !disposed && canvas.isConnected && !viewer.renderer.getContext().isContextLost(); },
+    get readyAtMs() { return readyAtMs !== null && this.viable && viewer.getStats().targetQualityReady && canvasIsPresentable(canvas) ? readyAtMs : null; },
+  };
   if (typeof window !== 'undefined') window.__simforgeViewerProbe = probe;
 
   const clearMapLoadTimer = () => {
@@ -72,6 +81,9 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   };
   const onContextLost = (event: Event) => {
     event.preventDefault();
+    readyAtMs = null;
+    cancelPresentation?.();
+    cancelPresentation = null;
     if (contextLossLogged) return;
     contextLossLogged = true;
     console.error(LOG_PREFIX, 'webglcontextlost', {
@@ -134,9 +146,13 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
 
   return {
     mapLoadStarted(manifestUrl) {
+      if (disposed) return;
+      clearMapLoadTimer();
       activeManifestUrl = manifestUrl;
       probe.manifestUrl = manifestUrl;
-      probe.readyAtMs = null;
+      readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       mapLoadTimer = window.setTimeout(() => {
         mapLoadTimer = null;
         console.warn(
@@ -147,11 +163,29 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       }, MAP_LOAD_STALL_MS);
     },
     mapLoadSucceeded(manifestUrl) {
+      if (disposed || manifestUrl !== activeManifestUrl) return;
       clearMapLoadTimer();
-      probe.readyAtMs = performance.now();
-      console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats: viewer.getStats() });
+      const stats = viewer.getStats();
+      if (!probe.viable || !stats.targetQualityReady) {
+        readyAtMs = null;
+        console.error(LOG_PREFIX, 'map-load-not-ready', { manifestUrl, viable: probe.viable, stats });
+        return;
+      }
+      cancelPresentation?.();
+      cancelPresentation = waitForCanvasPresentation(canvas, () => {
+        cancelPresentation = null;
+        if (disposed || manifestUrl !== activeManifestUrl || !probe.viable) return;
+        const presentedStats = viewer.getStats();
+        if (!presentedStats.targetQualityReady) return;
+        readyAtMs = performance.now();
+        console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats: presentedStats });
+      });
     },
     mapLoadFailed(manifestUrl, error) {
+      if (disposed || manifestUrl !== activeManifestUrl) return;
+      readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       clearMapLoadTimer();
       console.error(LOG_PREFIX, 'map-load-error', {
         manifestUrl,
@@ -161,6 +195,10 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       });
     },
     dispose() {
+      disposed = true;
+      readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       if (typeof window !== 'undefined' && window.__simforgeViewerProbe === probe) {
         delete window.__simforgeViewerProbe;
       }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { RenderIntentV1Schema, RenderSha256Schema } from '@simforge-oss/scenario';
+import { RENDER_INTENT_MAX_ASSETS, RenderIntentV1Schema, RenderSha256Schema } from '@simforge-oss/scenario';
 
 import { ArtifactIdentitySchema } from './artifacts.js';
 import { EngineCapabilityDeclarationSchema } from './capabilities.js';
@@ -68,7 +68,8 @@ export const JobLeasedResponseSchema = z.strictObject({
   intent: RenderIntentV1Schema,
   intentSha256: RenderSha256Schema,
   executionPackageControlSha256: RenderSha256Schema,
-  inputs: z.array(JobInputTransferSchema).max(4096),
+  // scenario.xosc is transferred in addition to the intent's declared assets.
+  inputs: z.array(JobInputTransferSchema).max(RENDER_INTENT_MAX_ASSETS + 1),
 });
 export const JobClaimResponseSchema = z.discriminatedUnion('type', [NoJobResponseSchema, JobLeasedResponseSchema]);
 

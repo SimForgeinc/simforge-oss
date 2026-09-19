@@ -288,7 +288,17 @@ async function measureReadyScene(page: Page) {
   // the browser realm.
   return await page.evaluate(async (windowMs: number) => {
     const probe = window.__simforgeViewerProbe;
-    const missingAtReady = probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
+    const host = document.querySelector('[data-testid="scenario-world-host"]');
+    const canvas = host?.querySelector('canvas');
+    if (!probe || !('viable' in probe) || probe.viable !== true || !canvas?.isConnected || probe.viewer.renderer.domElement !== canvas
+      || host?.getAttribute('data-world-load-percent') !== '100'
+      || !host.getAttribute('data-world-loaded-map-version-id')
+      ) {
+      throw new Error('Ready measurement requires the connected, map-bound live renderer');
+    }
+    const mapId = host.getAttribute('data-world-loaded-map-version-id');
+    const missingAtReady = probe.viewer.getStats().coverage.city?.missingInViewTiles;
+    if (missingAtReady === undefined) throw new Error('Ready renderer has no city coverage');
     let maxMissingInView = missingAtReady;
     let samples = 1;
     const deltas: number[] = [];
@@ -299,7 +309,14 @@ async function measureReadyScene(page: Page) {
       const now = performance.now();
       deltas.push(now - last);
       last = now;
-      const missing = probe?.viewer.getStats().coverage.city?.missingInViewTiles ?? 0;
+      if (window.__simforgeViewerProbe !== probe || !('viable' in probe) || probe.viable !== true
+        || host.getAttribute('data-world-loaded-map-version-id') !== mapId
+        || host.getAttribute('data-world-load-percent') !== '100'
+        ) {
+        throw new Error('Renderer became ineligible during the ready stability measurement');
+      }
+      const missing = probe.viewer.getStats().coverage.city?.missingInViewTiles;
+      if (missing === undefined) throw new Error('Ready renderer lost its city coverage');
       if (missing > maxMissingInView) maxMissingInView = missing;
       samples++;
     }

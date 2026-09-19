@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { RENDER_INTENT_MAX_ASSETS } from '@simforge-oss/scenario';
 
 /**
  * Native map closure members as they travel on a v2 lease.
@@ -13,6 +14,23 @@ import { createHash } from 'node:crypto';
  */
 export const NATIVE_MAP_MASTER_INPUT_ID = 'map.tile.000000';
 export const NATIVE_MAP_MASTER_PATH = 'master.gltf';
+
+// The intent bounds declaration/validation work, not GPU descriptors. Reserve
+// three assets for OpenDRIVE, catalog and actor closure. 65,533 map members
+// cover Garching's 27,879-member source-inclusive closure with >2x headroom.
+export const NATIVE_MAP_MAX_MEMBERS = RENDER_INTENT_MAX_ASSETS - 3;
+
+export class NativeMapCapacityError extends Error {
+  readonly code = 'native_map_asset_set_too_large';
+  constructor(readonly count: number, readonly limit = NATIVE_MAP_MAX_MEMBERS) {
+    super(`native_map_asset_set_too_large: ${count} members exceeds limit ${limit}`);
+    this.name = 'NativeMapCapacityError';
+  }
+}
+
+export function assertNativeMapMemberCapacity(count: number): void {
+  if (count > NATIVE_MAP_MAX_MEMBERS) throw new NativeMapCapacityError(count);
+}
 
 const NATIVE_MAP_RESOURCE_INPUT_PATTERN = /^map\.resource\.[a-f0-9]{64}$/u;
 
@@ -67,6 +85,7 @@ export function collectNativeMapMembers<T extends NativeMapMemberInput>(inputs: 
     if (members.has(relativePath)) throw new Error(`invalid duplicate native map member ${relativePath}`);
     members.set(relativePath, input);
   }
+  assertNativeMapMemberCapacity(members.size);
   if (!members.has(NATIVE_MAP_MASTER_PATH)) {
     throw new Error(`invalid missing native map member ${NATIVE_MAP_MASTER_INPUT_ID} (${NATIVE_MAP_MASTER_PATH})`);
   }

@@ -70,6 +70,8 @@ suite('native retained service GPU e2e', () => {
     const hostCatalogId = nativeActorCatalogId(actor.kind, plan.actorMetadata[actor.id]?.tags ?? actor.tags);
     const intent: RenderIntentV1 = {
       schema: 'simforge.render-intent/v1',
+      renderTextures: 'uastc-full',
+      nativeVramBudgetBytes: 16 * 1024 ** 3,
       intentId: 'native-gpu-e2e',
       executionPackage: { id: 'native-gpu-e2e-package', sourceInputDigest: 'a'.repeat(64) },
       scenarioRevision: {

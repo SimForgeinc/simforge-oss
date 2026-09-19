@@ -73,6 +73,7 @@ type GalleryEntry = {
 
 const EMPTY_WORLD_STATE: ScenarioWorldState = {
   target: null,
+  preparedMapVersionId: null,
   loadedMapVersionId: null,
   streaming: false,
   error: null,
@@ -93,7 +94,7 @@ function MapGalleryWorldPreview({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [actorRenderer, setActorRenderer] = useState<ActorRenderer | null>(null);
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
-  const quality = useRenderingPreference() ?? "high";
+  const quality = useRenderingPreference() ?? "medium";
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,
@@ -322,6 +323,9 @@ export function MapGalleryPageClient({
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The scenario could not be created.");
+    } finally {
+      // Navigation retains this route through React Activity. The request has
+      // finished even when the component stays mounted behind the editor.
       setCreating(false);
     }
   };

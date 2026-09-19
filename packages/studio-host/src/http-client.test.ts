@@ -22,7 +22,7 @@ const dataset: ScenarioDatasetDto = {
 const document: ScenarioDocumentDto = {
   id: "doc-1", workspaceId: "workspace-1", title: "Merge", draftVersion: 8, schemaVersion: "2",
   contentSha256: "a".repeat(64), content: {} as ScenarioDocumentDto["content"], mapVersionId: "map-v1",
-  datasetId: "usds_1", authoringQualityId: "minimal", createdAt: "now", updatedAt: "now", latestRevisionId: null,
+  datasetId: "usds_1", authoringQualityId: "low", createdAt: "now", updatedAt: "now", latestRevisionId: null,
 };
 
 const revision: ScenarioRevisionDto = {
@@ -128,7 +128,7 @@ describe("request shape", () => {
     expect(flush.keepalive).toBe(true);
     expect(flush.method).toBe("PATCH");
     expect((flush.headers as Record<string, string>)["content-type"]).toBe("application/json");
-    expect(JSON.parse(String(flush.body))).toMatchObject({ expectedVersion: 8, title: "Merge", authoringQualityId: "minimal" });
+    expect(JSON.parse(String(flush.body))).toMatchObject({ expectedVersion: 8, title: "Merge", authoringQualityId: "low" });
   });
 
   it("maps published descriptors onto editor map entries once per catalog read", async () => {

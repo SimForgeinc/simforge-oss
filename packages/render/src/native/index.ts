@@ -10,8 +10,11 @@ export type { NativeLighting, NativeLightingResolution, NativeWeather, WeatherPr
 export {
   NATIVE_MAP_MASTER_INPUT_ID, NATIVE_MAP_MASTER_PATH,
   assertSafeNativeMapMemberPath, collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId,
+  NATIVE_MAP_MAX_MEMBERS, NativeMapCapacityError, assertNativeMapMemberCapacity,
 } from './map-closure.js';
 export type { NativeMapClosure, NativeMapMemberInput } from './map-closure.js';
+export { stageNativeTextureProfile, NativeTextureCapacityError } from './texture-profile.js';
+export type { NativeRenderTextures } from './texture-profile.js';
 export {
   DEFAULT_ACTOR_ASSETS_BASE_URL, NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_ACTOR_ASSETS_RELATIVE_PATH,
   PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES, actorAssetsClosureUrl, assertActorAppearanceGrounded,

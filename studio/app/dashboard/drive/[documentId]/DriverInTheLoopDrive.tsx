@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
@@ -43,10 +43,14 @@ export function DriverInTheLoopDrive({
   title: string;
 }) {
   const router = useRouter();
-  const [map, setMap] = useState<ScenarioMapEntry | null>(null);
-  const [laneIndex, setLaneIndex] = useState<LaneIndex | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [quality, setQuality] = useState<ScenarioAuthoringQuality>("high");
+  const [resources, setResources] = useState<{
+    mapVersionId: string;
+    map: ScenarioMapEntry;
+    laneIndex: LaneIndex;
+  } | null>(null);
+  const completedResourcesRef = useRef<typeof resources>(null);
+  const [error, setError] = useState<{ mapVersionId: string; message: string } | null>(null);
+  const [quality, setQuality] = useState<ScenarioAuthoringQuality>("medium");
 
   // Follows the shared preference so a level picked in the app switcher changes
   // this drive, not the next one.
@@ -59,27 +63,34 @@ export function DriverInTheLoopDrive({
   }, []);
 
   useEffect(() => {
+    // Activity resumes effects without discarding state. Keep the completed
+    // pair and its DriveSession/canvas mounted; a loading placeholder here
+    // would physically remove the canvas and defeat viewer retention.
+    if (completedResourcesRef.current?.mapVersionId === mapVersionId) return;
     const abort = new AbortController();
-    setMap(null);
-    setLaneIndex(null);
+    completedResourcesRef.current = null;
+    setResources(null);
     setError(null);
     void studioHost.artifacts
       .listMaps(abort.signal)
-      .then((installed) => {
+      .then(async (installed) => {
         const entry = installed.find((candidate) => candidate.mapVersionId === mapVersionId);
         if (!entry) throw new Error("This scenario's map is not installed on this computer.");
-        setMap(entry);
-        return loadEngine().then((engine) =>
-          LaneIndex.load(entry.topologyUrl, { engine, signal: abort.signal }),
-        );
+        const engine = await loadEngine();
+        const index = await LaneIndex.load(entry.topologyUrl, { engine, signal: abort.signal });
+        return { mapVersionId, map: entry, laneIndex: index };
       })
-      .then((index) => {
-        if (!abort.signal.aborted) setLaneIndex(index);
+      .then((completed) => {
+        if (abort.signal.aborted) return;
+        completedResourcesRef.current = completed;
+        setResources(completed);
       })
       .catch((reason: unknown) => {
         if (abort.signal.aborted) return;
         const message = reason instanceof Error ? reason.message : String(reason);
-        setError(message);
+        completedResourcesRef.current = null;
+        setResources(null);
+        setError({ mapVersionId, message });
         toast.error("The drive could not start on this map", { description: message });
       });
     return () => abort.abort();
@@ -114,20 +125,20 @@ export function DriverInTheLoopDrive({
     [documentId, draftVersion, quality, title],
   );
 
-  if (error) {
+  if (error?.mapVersionId === mapVersionId) {
     return (
       <CloudLoadingSurface
-        detail={error}
+        detail={error.message}
         role="alert"
         scope="pane"
         title="The drive could not start"
       />
     );
   }
-  if (!map || !laneIndex) {
+  if (!resources || resources.mapVersionId !== mapVersionId) {
     return (
       <CloudLoadingSurface
-        detail={map ? `Reading the lane network of ${map.label}.` : "Finding the map on this computer."}
+        detail="Loading the installed map and its lane network."
         scope="pane"
         title="Starting the drive…"
       />
@@ -137,8 +148,8 @@ export function DriverInTheLoopDrive({
     <DriveSession
       catalogId={catalogId}
       content={content}
-      laneIndex={laneIndex}
-      map={map}
+      laneIndex={resources.laneIndex}
+      map={resources.map}
       onExit={leave}
       onSaved={leave}
       onSaveClip={saveClip}

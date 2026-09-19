@@ -112,58 +112,58 @@ describe("rendering benchmark recommendation", () => {
   it("chooses the highest-fidelity renderer that clears the interactive floor", () => {
     expect(
       recommendRenderingPreference([
-        result("minimal", 55, 24),
-        result("high", 30, 42),
+        result("low", 55, 24),
+        result("medium", 30, 42),
       ]),
-    ).toBe("minimal");
+    ).toBe("low");
   });
 
   it("chooses high when every renderer performs well", () => {
     expect(
       recommendRenderingPreference([
-        result("minimal", 60, 19),
-        result("high", 58, 22),
+        result("low", 60, 19),
+        result("medium", 58, 22),
       ]),
-    ).toBe("high");
+    ).toBe("medium");
   });
 
   it("falls back to the most stable measured renderer when none clear the floor", () => {
     expect(
       recommendRenderingPreference([
-        result("minimal", 25, 52),
-        result("high", 18, 70),
+        result("low", 25, 52),
+        result("medium", 18, 70),
       ]),
-    ).toBe("minimal");
+    ).toBe("low");
   });
 
   it("rejects a renderer whose average looks healthy but orbiting stutters", () => {
-    const high = result("high", 56, 24);
+    const high = result("medium", 56, 24);
     high.metrics.orbit.p95FrameMs = 41;
     high.metrics.orbit.p99FrameMs = 72;
     expect(
       recommendRenderingPreference([
-        result("minimal", 52, 25),
+        result("low", 52, 25),
         high,
       ]),
-    ).toBe("minimal");
+    ).toBe("low");
   });
 
   it("refuses a fast renderer that leaves building tiles missing", () => {
     expect(
       recommendRenderingPreference([
-        result("minimal", 52, 25),
-        result("high", 58, 22, 7),
+        result("low", 52, 25),
+        result("medium", 58, 22, 7),
       ]),
-    ).toBe("minimal");
+    ).toBe("low");
   });
 
   it("prefers complete coverage over a marginally smoother incomplete renderer when none clear the floor", () => {
     expect(
       recommendRenderingPreference([
-        result("high", 30, 40),
-        result("minimal", 31, 38, 3),
+        result("medium", 30, 40),
+        result("low", 31, 38, 3),
       ]),
-    ).toBe("high");
+    ).toBe("medium");
   });
 });
 
@@ -176,8 +176,8 @@ describe("rendering benchmark persistence", () => {
     };
     const snapshot: RenderingBenchmarkSnapshot = {
       manifestUrl: "assets.example/map-a/manifest.json",
-      recommended: "minimal",
-      results: [result("minimal", 55, 24)],
+      recommended: "low",
+      results: [result("low", 55, 24)],
       failures: [],
       hardware,
       configuration: RENDERING_BENCHMARK_CONFIGURATION,
@@ -200,8 +200,8 @@ describe("rendering benchmark persistence", () => {
     };
     const snapshot: RenderingBenchmarkSnapshot = {
       manifestUrl: "assets.example/map-a/manifest.json",
-      recommended: "minimal",
-      results: [result("minimal", 55, 24)],
+      recommended: "low",
+      results: [result("low", 55, 24)],
       failures: [],
       hardware,
       configuration: RENDERING_BENCHMARK_CONFIGURATION,

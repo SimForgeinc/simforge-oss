@@ -17,6 +17,9 @@ import type { WebTierReport } from './web-tier.js';
 import type { Ktx2Options } from './ktx2.js';
 import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSourceDigest } from './source.js';
 import { withStageLock } from './stage-lock.js';
+import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+import { composeNativeTextureClosure } from './native-texture-closure.js';
+export { composeNativeTextureClosure } from './native-texture-closure.js';
 
 export { resolveMapSource } from './source.js';
 export type { MapSourceManifest, ResolvedMapSource } from './source.js';
@@ -27,6 +30,7 @@ export { buildWebTier, webTierToolFingerprint, WEB_TIER_REVISION } from './web-t
 export type { WebTierOptions, WebTierReport } from './web-tier.js';
 export { encodeKtx2, ktx2ToolFingerprint } from './ktx2.js';
 export type { Ktx2Options } from './ktx2.js';
+export { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
 export { clampPbrFactors } from './material-ranges.js';
 export type { MaterialRangeReport } from './material-ranges.js';
 export { borrowTerrainLayerTextures, collectLibraryDonors, terrainDonorLibrary, terrainDonorPoolDigest, terrainLayerBase } from './terrain-layer-textures.js';
@@ -120,6 +124,8 @@ export interface DeriveClosuresOptions {
   name: string;
   workDir: string;
   cellSize?: number;
+  /** KTX-Software installation used for offline native tier transcoding. */
+  ktxBinDir?: string;
 }
 
 function registryArtifact(stage: ClosureStageResult): RegistryClosureArtifact {
@@ -268,7 +274,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
   const decoderJs = require.resolve('three/examples/jsm/libs/basis/basis_transcoder.js');
   const decoderWasm = require.resolve('three/examples/jsm/libs/basis/basis_transcoder.wasm');
   const decoderDigest = sha256(`${(await hashFile(decoderJs)).sha256}\0${(await hashFile(decoderWasm)).sha256}`);
-  const toolFingerprint = sha256(`${webTierToolFingerprint(cellSize)}\0decoder=${decoderDigest}`);
+  const toolFingerprint = sha256(`${webTierToolFingerprint(cellSize)}\0decoder=${decoderDigest}\0${TEXTURE_TIERS_REVISION}`);
   // XODR, location catalogs, reports and map aliases cannot invalidate identical render cells.
   const members = Object.fromEntries(Object.entries(master.closure.members).filter(([file]) => (sceneMember(file) && file !== 'master-report.json') || file === 'env/sky.hdr'));
   const inputDigest = sha256(canonicalJson(members));
@@ -291,6 +297,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await mkdir(path.join(contentDir, '3d', 'runtime'), { recursive: true });
     await cp(decoderJs, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.js'));
     await cp(decoderWasm, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.wasm'));
+    await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}) });
     const stage = await finishStage('web', outputDir, 'web', keys, { toolFingerprint, viewerOnly: master.viewerOnly });
     return { ...stage, report };
   });
@@ -330,15 +337,16 @@ async function webRuntimeStage(master: MasterStageResult, geometry: WebStageResu
     const variantsDir = path.join(contentDir, '3d', 'variants');
     await mkdir(variantsDir, { recursive: true });
     await writeFile(path.join(variantsDir, 'static-colliders-v1.json'), colliderBytes);
-    await writeFile(path.join(variantsDir, 'manifest.json'), `${canonicalJson({
-      schemaVersion: 1,
-      sourceManifestSha256,
-      variants: { 'static-colliders': {
-        id: 'static-colliders', schemaVersion: 1, file: 'static-colliders-v1.json',
-        digest: artifact.digest, outputSha256: sha256(colliderBytes), bytes: colliderBytes.length,
-        sourceTiles: artifact.statistics.sourceTiles, accepted: artifact.statistics.accepted,
-      } },
-    })}\n`);
+    const variantManifestPath = path.join(variantsDir, 'manifest.json');
+    const variants = JSON.parse(await readFile(variantManifestPath, 'utf8'));
+    variants.variants['static-colliders'] = {
+      id: 'static-colliders', schemaVersion: 1, file: 'static-colliders-v1.json',
+      digest: artifact.digest, outputSha256: sha256(colliderBytes), bytes: colliderBytes.length,
+      sourceTiles: artifact.statistics.sourceTiles, accepted: artifact.statistics.accepted,
+    };
+    // copyMembers hardlinks immutable inputs: replace the manifest, never truncate it.
+    await writeFile(`${variantManifestPath}.tmp`, `${canonicalJson(variants)}\n`);
+    await rename(`${variantManifestPath}.tmp`, variantManifestPath);
     const stage = await finishStage('web-runtime', outputDir, 'web', keys, { toolFingerprint });
     return { ...stage, report: geometry.report };
   });
@@ -360,15 +368,41 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
   if (options.derived === false) {
     return { name: options.name, canonical: registryArtifact(master), derived: [], stages: { master } };
   }
-  return deriveClosures(master, { name: options.name, workDir: options.workDir, ...(options.cellSize ? { cellSize: options.cellSize } : {}) });
+  return deriveClosures(master, { name: options.name, workDir: options.workDir,
+    ...(options.cellSize ? { cellSize: options.cellSize } : {}),
+    ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}) });
 }
 
 /** The web tier for a master stage - whether just built or materialized from a registry. */
 export async function deriveClosures(master: MasterStageResult, options: DeriveClosuresOptions): Promise<MapPipelineResult> {
   const web = await webStage(master, options);
+  // Pin the same immutable derivative objects into the native closure. Do not
+  // mutate the cached master or create a second producer for the native path.
+  const toolFingerprint = sha256(`${master.toolFingerprint}\0${TEXTURE_TIERS_REVISION}\0${web.closureDigest}`);
+  const inputDigest = sha256(`${master.closureDigest}\0${web.closureDigest}`);
+  const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
+  const outputDir = path.resolve(options.workDir, 'native-textures', cacheKey);
+  const native = await withStageLock(outputDir, async () => {
+    const cached = await cachedStage(outputDir);
+    if (cached) return { ...cached, outputDir: path.join(outputDir, 'content'), inputDigest, toolFingerprint, cacheKey, viewerOnly: master.viewerOnly };
+    const contentDir = await resetStageContent(outputDir);
+    const composed = await composeNativeTextureClosure(
+      { closure: master.closure, files: Object.fromEntries(Object.keys(master.closure.members).map(member => [member, path.join(master.outputDir, member)])) },
+      { closure: web.closure, files: Object.fromEntries(Object.keys(web.closure.members).map(member => [member, path.join(web.outputDir, member)])) },
+    );
+    for (const [member, source] of Object.entries(composed.files)) {
+      const destination = path.join(contentDir, member);
+      if (typeof source === 'string') await linkOrCopy(source, destination);
+      else {
+        await mkdir(path.dirname(destination), { recursive: true });
+        await writeFile(destination, source);
+      }
+    }
+    return finishStage('native-textures', outputDir, 'canonical', { inputDigest, toolFingerprint, cacheKey }, { master: true, viewerOnly: master.viewerOnly });
+  });
   return {
     name: options.name,
-    canonical: registryArtifact(master),
+    canonical: registryArtifact(native),
     derived: [registryArtifact(web)],
     stages: { master, web },
   };
