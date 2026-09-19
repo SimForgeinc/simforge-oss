@@ -38,6 +38,7 @@ export type CloudLoadingSource = {
   severity?: "loading" | "error";
   icon?: ReactNode;
   actions?: ReactNode;
+  diagnostics?: ReactNode;
 };
 
 export type CloudLoadingContextValue = {

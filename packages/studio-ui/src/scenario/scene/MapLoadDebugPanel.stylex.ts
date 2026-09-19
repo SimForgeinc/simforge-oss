@@ -1,0 +1,41 @@
+import * as stylex from "@stylexjs/stylex";
+
+export const styles = stylex.create({
+  panel: {
+    position: "fixed",
+    right: 16,
+    bottom: 16,
+    zIndex: 2,
+    width: "min(720px, calc(100vw - 32px))",
+    color: "#e5e7eb",
+    backgroundColor: "rgba(15, 20, 29, 0.96)",
+    border: "1px solid #46505f",
+    borderRadius: 8,
+    fontSize: 12,
+    pointerEvents: "auto",
+  },
+  toggle: {
+    display: "block",
+    width: "100%",
+    textAlign: "left",
+    padding: "10px 14px",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    cursor: "pointer",
+    color: "inherit",
+    backgroundColor: "transparent",
+    border: 0,
+  },
+  content: { padding: "0 14px 12px" },
+  toolbar: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  json: {
+    maxHeight: "min(52vh, 520px)",
+    overflow: "auto",
+    whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 1.5,
+    userSelect: "text",
+  },
+});

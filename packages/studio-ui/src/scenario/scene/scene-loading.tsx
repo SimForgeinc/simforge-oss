@@ -2,7 +2,7 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./scene-loading.stylex";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import type { CloudLoadingSurfaceProps } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
@@ -20,6 +20,7 @@ import type { SceneLoadProgress } from "./map-load-progress";
 export function useSceneLoadingSurfaceProps(
   progress: SceneLoadProgress,
   onRetry?: (() => void) | null,
+  diagnostics?: ReactNode,
 ): Omit<CloudLoadingSurfaceProps, "scope"> {
   const failed = progress.phase === "error";
   return useMemo(
@@ -33,6 +34,7 @@ export function useSceneLoadingSurfaceProps(
       phase: progress.phase,
       role: failed ? "alert" : "status",
       icon: failed ? <RotateCcw {...stylex.props(styles.rotateccwIcon)} aria-hidden="true" /> : undefined,
+      diagnostics,
       children: failed && onRetry ? (
         <Button
           xstyle={scene.retry}
@@ -43,6 +45,6 @@ export function useSceneLoadingSurfaceProps(
         </Button>
       ) : null,
     }),
-    [failed, onRetry, progress],
+    [diagnostics, failed, onRetry, progress],
   );
 }

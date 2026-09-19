@@ -67,6 +67,7 @@ import {
   type SceneLoadProgressTracker,
 } from "../scene/map-load-progress";
 import { useSceneLoadingSurfaceProps } from "../scene/scene-loading";
+import { MapLoadDebugPanel } from "../scene/MapLoadDebugPanel";
 import { EditorHeader } from "./regions/EditorHeader";
 import { EditorModeBanner } from "./regions/EditorModeBanner";
 import { PlacementCursorHint } from "./regions/PlacementCursorHint";
@@ -900,6 +901,17 @@ export function ScenarioEditorSurface({
     localMapLoadError
       ? failedSceneLoadProgress(map.label, localMapLoadError)
       : localLoadProgress,
+    null,
+    <MapLoadDebugPanel source={{
+      getViewer: () => localViewerRef.current,
+      mapId: map.sourceMapId,
+      mapVersionId: map.versionId,
+      manifestUrl: map.manifestUrl,
+      requestedTier: quality,
+      phase: localMapLoadError ? "error" : localLoadProgress.phase,
+      readinessAnnounced: sceneReady,
+      error: localMapLoadError,
+    }} />,
   );
 
   return (

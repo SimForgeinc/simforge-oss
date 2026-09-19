@@ -8,6 +8,7 @@ import { LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
 import { loadEngine } from "@simforge-oss/engine/browser";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
 import { RENDERING_PREFERENCE_CHANGE_EVENT } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { defaultAuthoringQuality } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import { studioHost } from "@/app/lib/host";
@@ -31,6 +32,7 @@ export function DriverInTheLoopDrive({
   documentId,
   draftVersion,
   mapVersionId,
+  mapSourceMapId,
   roleId,
   title,
 }: {
@@ -39,6 +41,7 @@ export function DriverInTheLoopDrive({
   documentId: string;
   draftVersion: number;
   mapVersionId: string;
+  mapSourceMapId?: string | null;
   roleId: string;
   title: string;
 }) {
@@ -49,8 +52,9 @@ export function DriverInTheLoopDrive({
     laneIndex: LaneIndex;
   } | null>(null);
   const completedResourcesRef = useRef<typeof resources>(null);
-  const [error, setError] = useState<{ mapVersionId: string; message: string } | null>(null);
+  const [error, setError] = useState<{ mapVersionId: string; message: string; cause: unknown } | null>(null);
   const [quality, setQuality] = useState<ScenarioAuthoringQuality>("medium");
+  const [installedMaps, setInstalledMaps] = useState<Array<{ sourceMapId: string; mapVersionId: string }> | undefined>();
 
   // Follows the shared preference so a level picked in the app switcher changes
   // this drive, not the next one.
@@ -74,6 +78,7 @@ export function DriverInTheLoopDrive({
     void studioHost.artifacts
       .listMaps(abort.signal)
       .then(async (installed) => {
+        setInstalledMaps(installed.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })));
         const entry = installed.find((candidate) => candidate.mapVersionId === mapVersionId);
         if (!entry) throw new Error("This scenario's map is not installed on this computer.");
         const engine = await loadEngine();
@@ -90,7 +95,7 @@ export function DriverInTheLoopDrive({
         const message = reason instanceof Error ? reason.message : String(reason);
         completedResourcesRef.current = null;
         setResources(null);
-        setError({ mapVersionId, message });
+        setError({ mapVersionId, message, cause: reason });
         toast.error("The drive could not start on this map", { description: message });
       });
     return () => abort.abort();
@@ -125,6 +130,16 @@ export function DriverInTheLoopDrive({
     [documentId, draftVersion, quality, title],
   );
 
+  const loadingDiagnostics = <MapLoadDebugPanel source={{
+    getViewer: () => null,
+    mapVersionId,
+    mapId: mapSourceMapId,
+    installedMaps,
+    requestedTier: quality,
+    phase: error?.mapVersionId === mapVersionId ? "error" : "resolving",
+    readinessAnnounced: false,
+    error: error?.mapVersionId === mapVersionId ? error.cause : null,
+  }} />;
   if (error?.mapVersionId === mapVersionId) {
     return (
       <CloudLoadingSurface
@@ -132,6 +147,7 @@ export function DriverInTheLoopDrive({
         role="alert"
         scope="pane"
         title="The drive could not start"
+        diagnostics={loadingDiagnostics}
       />
     );
   }
@@ -141,6 +157,7 @@ export function DriverInTheLoopDrive({
         detail="Loading the installed map and its lane network."
         scope="pane"
         title="Starting the drive…"
+        diagnostics={loadingDiagnostics}
       />
     );
   }
