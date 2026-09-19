@@ -611,41 +611,8 @@ pub const CATALOG: &[CatalogEntry] = &[
     e("hazard.debris", "hazard", None, &[], d(0.88, 0.85, 0.24)),
 ];
 
-/// Author-facing synonyms. The catalog files a prop under the class that owns
-/// it — a tyre carcass is a `hazard`, a cone is `construction` — while authors
-/// and LLMs write `object.cone`. Resolving synonyms is a vocabulary fix, not a
-/// second copy of every prop.
-pub const CATALOG_ALIASES: &[(&str, &str)] = &[
-    ("object.tyre", "hazard.tire_debris"),
-    ("object.tire", "hazard.tire_debris"),
-    ("object.box", "hazard.cardboard_box"),
-    ("object.cardboard_box", "hazard.cardboard_box"),
-    ("object.branch", "hazard.downed_branch"),
-    ("object.trash_bags", "hazard.trash_bags"),
-    ("object.ladder", "hazard.ladder"),
-    ("object.mattress", "hazard.mattress"),
-    ("object.debris", "hazard.debris"),
-    ("object.shed_load", "hazard.debris"),
-    ("object.shopping_cart", "street.shopping_cart"),
-    ("object.cone", "construction.traffic_cone"),
-    ("object.traffic_cone", "construction.traffic_cone"),
-    ("object.barrel", "construction.channelizer_drum"),
-    ("object.drum", "construction.channelizer_drum"),
-    ("object.barrier", "construction.jersey_barrier"),
-    ("object.jersey_barrier", "construction.jersey_barrier"),
-    ("object.barrier_run", "construction.jersey_barrier_run"),
-    ("object.barricade", "construction.barricade_type3"),
-    (
-        "object.pedestrian_barrier",
-        "construction.pedestrian_barrier",
-    ),
-    ("object.sign_board", "construction.sign_road_work"),
-    ("object.arrow_board", "construction.arrow_board"),
-    ("object.stop_sign", "construction.temporary_stop_sign"),
-    ("animal.doe", "animal.deer"),
-    ("animal.buck", "animal.deer"),
-    ("animal.stray_dog", "animal.dog"),
-];
+// Shared with browser lookup and engine physics; generated from asset-catalog.
+pub use simforge_core::catalog_aliases::CATALOG_ALIASES;
 
 /// Physical defaults for semantic campaign props: whether the engine can hit
 /// it and whether it blocks sight lines. Everything not listed is a
