@@ -719,7 +719,9 @@ impl Simulation {
         tags: &[String],
     ) -> Option<VehiclePhysicsProfile> {
         let authored = self.physics_config.profile(actor_id).cloned();
-        if !tags.iter().any(|t| t == "catalog:pedestrian.child") {
+        if !tags.iter().any(|t| t.strip_prefix("catalog:").is_some_and(|id|
+            crate::catalog_aliases::canonical_catalog_id(id) == "pedestrian.child"
+        )) {
             return authored;
         }
         let base = crate::physics::child_pedestrian_physics_profile();

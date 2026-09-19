@@ -118,10 +118,12 @@ impl Simulation {
         let resolved_profile_digest = content_hash_of(&ResolvedProfileDigest {
             version: 2,
             profiles: actor_physics_profiles(),
-            catalog_profiles: BTreeMap::from([(
-                "pedestrian.child".to_owned(),
-                child_pedestrian_physics_profile(),
-            )]),
+            catalog_profiles: std::iter::once("pedestrian.child")
+                .chain(crate::catalog_aliases::CATALOG_ALIASES.iter()
+                    .filter(|(_, target)| *target == "pedestrian.child")
+                    .map(|(alias, _)| *alias))
+                .map(|id| (id.to_owned(), child_pedestrian_physics_profile()))
+                .collect(),
             overrides: self
                 .physics_config
                 .vehicle_profiles
