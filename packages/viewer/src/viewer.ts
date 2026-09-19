@@ -202,13 +202,19 @@ const DEFAULTS = {
  */
 const READY_RADIUS_M = 150;
 const READY_DISTANCE_M = 350;
-/**
- * How long readiness may wait for the view to fill before reporting anyway. A
- * tile that will never arrive (failed, or refused by the byte budget) must not
- * hold the scene closed; the coverage numbers in `getStats` stay truthful
- * either way.
- */
+/** A slow-start diagnostic, not proof that the required footprint can never load. */
 const VIEW_RESIDENT_TIMEOUT_MS = 60_000;
+/** A fetch or driver promise that never settles must not keep loadMap pending forever. */
+const VIEW_RESIDENT_HARD_TIMEOUT_MS = 10 * VIEW_RESIDENT_TIMEOUT_MS;
+
+class ResidencyTimeoutError extends Error {
+  readonly code = 'view_residency_stalled';
+  constructor(readonly diagnostics: { requiredPendingAssets: number; missingInViewTiles: number;
+    residentBytes: number; pendingBytes: number; byteBudget: number }) {
+    super(`Required residency stalled for ${VIEW_RESIDENT_HARD_TIMEOUT_MS} ms: ${diagnostics.requiredPendingAssets} required assets pending, ${diagnostics.missingInViewTiles} missing in view; resident ${diagnostics.residentBytes}, pending ${diagnostics.pendingBytes}, budget ${diagnostics.byteBudget} bytes`);
+    this.name = 'ResidencyTimeoutError';
+  }
+}
 /**
  * How much more texture upload per frame is allowed while the first view is
  * still being assembled, when no interactive frame is at stake.
@@ -326,6 +332,9 @@ export class CityViewer {
   private effectiveTextureMaxDimension = Infinity;
   private tierSelection!: TierSelection;
   private lastLoadError: CityViewerStats['loadDiagnostics']['lastError'] = null;
+  private streamingErrorOrigin: 'deadline' | 'terminal' | null = null;
+  private residencyDeadline: CityViewerStats['loadDiagnostics']['residencyDeadline'] = null;
+  private terminalError: Error | null = null;
   private readonly textureCapabilities: CityViewerStats['loadDiagnostics']['capabilities'];
   private textureTierIndex: TextureTierIndex | null = null;
   private textureSources: ReadonlyMap<string, MapTextureSource> = new Map();
@@ -344,7 +353,7 @@ export class CityViewer {
   private mapLoadQueue: Promise<void> = Promise.resolve();
   private mapLoaded = false;
   /** Callers waiting for the view to be on screen; see `whenViewResident`. */
-  private readonly viewResidentWaiters: { resolve: () => void; deadline: number }[] = [];
+  private readonly viewResidentWaiters: { resolve: () => void; deadline: number; terminalDeadline: number; progress: number }[] = [];
 
   private manifest: CityManifest | null = null;
   private variantManifest: CityAssetVariantManifest | null = null;
@@ -603,6 +612,9 @@ export class CityViewer {
       this.downloadTracker.reset();
       this.streamingError = null;
       this.lastLoadError = null;
+      this.streamingErrorOrigin = null;
+      this.residencyDeadline = null;
+      this.terminalError = null;
       this.inputError = null;
       this.detailFailures = 0;
       this.detailError = null;
@@ -612,7 +624,7 @@ export class CityViewer {
       } catch (err) {
         // dispose() aborts every in-flight request; that is not a failure.
         if (this.disposed || (err as { name?: string } | null)?.name === 'AbortError') return;
-        const error = err instanceof ViewerInputError ? err
+        const error = err instanceof ViewerInputError || err instanceof ResidencyTimeoutError || err instanceof RequiredAssetBudgetError ? err
           : new Error(`Map bootstrap downloading/decoding failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
         this.recordStreamingError(error);
         throw error;
@@ -728,17 +740,15 @@ export class CityViewer {
     // as soon as the layers existed, so every consumer announced a ready scene
     // with nothing in it and the buildings appeared seconds later.
     await this.whenViewResident();
-    if (this.streamingError) throw this.inputError ?? new Error(this.streamingError);
+    if (this.streamingError) throw this.terminalError ?? this.inputError ?? new Error(this.streamingError);
   }
 
   /**
    * Resolves once the road and every in-view city tile are displayed.
    *
-   * The streaming pump runs in `tick`, so this only waits; it never drives the
-   * pipeline itself. It gives up waiting on a teardown, on a streaming error,
-   * on a suspended renderer (a scene that is not drawing cannot become
-   * visible) and after `VIEW_RESIDENT_TIMEOUT_MS`, so a map with a failed or
-   * budget-blocked tile still reports itself loaded rather than hanging.
+   * The frame loop drives streaming. A soft deadline remains observable while
+   * required assets continue preparing, and late residency resolves normally.
+   * Real errors, teardown, suspension, or the hard stall bound settle the wait.
    */
   private whenViewResident(): Promise<void> {
     if (this.viewResidentNow()) return Promise.resolve();
@@ -748,28 +758,65 @@ export class CityViewer {
     this.viewResidentWaiters.push({
       resolve: settle,
       deadline: performance.now() + VIEW_RESIDENT_TIMEOUT_MS,
+      terminalDeadline: performance.now() + VIEW_RESIDENT_HARD_TIMEOUT_MS,
+      progress: this.residencyProgress(performance.now()),
     });
     return promise;
   }
 
+  private residencyProgress(now: number): number {
+    const downloads = this.downloadTracker.snapshot(now, false);
+    let progress = downloads.transferredBytes + downloads.cachedBytes + this.downloadTracker.decodedAssets;
+    for (const layer of [this.roadLayer, this.cityLayer]) {
+      const stats = layer?.stats();
+      if (stats) progress += stats.decodedAssets + stats.uploadedTextures + stats.compiledAssets;
+    }
+    return progress;
+  }
+
   private viewResidentNow(): boolean {
-    if (this.disposed || this.streamingError !== null || this.renderingSuspended) return true;
+    if (this.disposed || (this.streamingError !== null && this.streamingErrorOrigin !== 'deadline') || this.renderingSuspended) return true;
     if (!this.mapAdmitted) return false;
     if (this.roadLayer && (!this.roadLayer.ready || this.roadLayer.stats().requiredPendingAssets > 0)) return false;
     const city = this.cityLayer;
     if (!city) return true;
-    return city.ready && city.missingInView === 0;
+    return city.ready && city.missingInView === 0 && city.stats().requiredPendingAssets === 0;
   }
 
   /** Called from the frame loop, after streaming has had its turn. */
   private settleViewResidentWaiters(now: number): void {
     if (this.viewResidentWaiters.length === 0) return;
     const resident = this.viewResidentNow();
+    const progress = this.residencyProgress(now);
+    if (resident && this.streamingErrorOrigin === 'deadline' && !this.disposed && !this.renderingSuspended) {
+      this.streamingError = null;
+      this.streamingErrorOrigin = null;
+      if (this.residencyDeadline) this.residencyDeadline.recoveredAtMs = now;
+    }
     for (let i = this.viewResidentWaiters.length - 1; i >= 0; i--) {
       const waiter = this.viewResidentWaiters[i];
       if (!waiter) continue;
-      if (!resident && now < waiter.deadline) continue;
-      if (!resident) this.streamingError = 'Required geometry and selected texture tier did not become resident before the readiness deadline';
+      if (progress > waiter.progress) {
+        waiter.progress = progress;
+        waiter.terminalDeadline = now + VIEW_RESIDENT_HARD_TIMEOUT_MS;
+      }
+      if (!resident) {
+        if (now >= waiter.terminalDeadline) {
+          const stats = this.getStats();
+          this.recordStreamingError(new ResidencyTimeoutError({
+            requiredPendingAssets: stats.requiredPendingAssets ?? 0,
+            missingInViewTiles: (stats.coverage.city?.missingInViewTiles ?? 0) + (stats.coverage.roads?.missingInViewTiles ?? 0),
+            residentBytes: stats.residentBytes, pendingBytes: stats.pendingBytes, byteBudget: stats.byteBudget,
+          }));
+        } else {
+          if (now >= waiter.deadline && this.streamingErrorOrigin === null) {
+            this.streamingError = 'Required geometry and selected texture tier did not become resident before the readiness deadline';
+            this.streamingErrorOrigin = 'deadline';
+            this.residencyDeadline = { missedAtMs: now, recoveredAtMs: null };
+          }
+          continue;
+        }
+      }
       this.viewResidentWaiters.splice(i, 1);
       waiter.resolve();
     }
@@ -1766,6 +1813,7 @@ export class CityViewer {
         shadowAtlas: this.atlas?.diagnostics ?? null,
         admissionUnderestimates: { city: city?.largestAdmissionUnderestimate ?? null,
           roads: road?.largestAdmissionUnderestimate ?? null, vegetation: veg?.largestAdmissionUnderestimate ?? null },
+        residencyDeadline: this.residencyDeadline,
       },
       usable,
       targetQualityReady,
@@ -1942,6 +1990,8 @@ export class CityViewer {
       this.surfaceMaterials.setWeatherAppearance({ wetness: 0, snowCoverage: 0 });
     }
     this.streamingError = null;
+    this.streamingErrorOrigin = null;
+    this.terminalError = null;
     this.detailFailures = 0;
     this.detailError = null;
     void this.runPresetTransition(async () => { await this.configureTextureTier(); await this.reloadAssetVariant(); });
@@ -1996,6 +2046,7 @@ export class CityViewer {
         ? { layer: error.layerName, assetId: error.assetId, estimatedBytes: error.estimatedBytes,
             required: error.layer.entries.get(error.assetId)?.required } : {}),
       residentBytes: this.residentBytes(), pendingBytes: this.totalBytes() - this.residentBytes(),
+      ...(error instanceof ResidencyTimeoutError ? error.diagnostics : {}),
       byteBudget: this.options.byteBudget,
     };
     if (error instanceof RequiredAssetBudgetError && this.textureBudgetRecovery) {
@@ -2019,6 +2070,8 @@ export class CityViewer {
     }
     if (error instanceof ViewerInputError) this.inputError = error;
     this.streamingError = error instanceof Error ? error.message : String(error);
+    this.streamingErrorOrigin = 'terminal';
+    this.terminalError = error instanceof Error ? error : new Error(String(error));
     console.error('[city-renderer] streaming failed', error);
   }
 

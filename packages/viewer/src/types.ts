@@ -234,6 +234,7 @@ export interface CityViewerStats {
     lastError: {
       name: string; message: string; code?: string; field?: string; cause?: string;
       layer?: string; assetId?: string; required?: boolean; estimatedBytes?: number;
+      requiredPendingAssets?: number; missingInViewTiles?: number;
       residentBytes: number; pendingBytes: number; byteBudget: number;
     } | null;
     textureFormats: Record<string, number>;
@@ -244,6 +245,7 @@ export interface CityViewerStats {
       residentBytes: number; downgradeReason: string | null;
     } | null;
     admissionUnderestimates: Record<string, LayerStats['largestAdmissionUnderestimate']>;
+    residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
   };
   /** Required visible geometry is resident, independently of final texture quality. */
   usable: boolean;

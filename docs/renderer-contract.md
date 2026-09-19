@@ -77,6 +77,17 @@ and each layer's largest admission-estimate understatement. Its retained structu
 error identifies a refused asset, whether it was required, the estimate, resident
 and pending bytes, budget, and the original cause chain. New map loads reset that
 error. `residentBytes` includes the R8 shadow atlas; older reports omitted it.
+The 60,000 ms readiness deadline is a recoverable slow-start diagnostic:
+`loadDiagnostics.residencyDeadline` records `missedAtMs` and `recoveredAtMs`.
+The load promise remains pending until the required footprint genuinely becomes
+resident, allowing the normal `onMapLoaded` path to recover the UI. Real asset,
+input, budget, and GPU errors remain terminal. A separate 600,000 ms **without
+progress** terminates a wedged readiness wait with `ResidencyTimeoutError`,
+code `view_residency_stalled`; its payload reports required pending assets,
+missing-in-view tiles, resident/pending bytes, and budget. Received bytes and
+completed decode/upload/compile work renew only this no-progress bound, never
+the initial diagnostic deadline.
+
 
 Verification must continue after initial readiness: an initially correct frame
 does not prove that subsequent prefetch stays within budget. Observe a stationary
