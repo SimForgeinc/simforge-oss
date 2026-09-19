@@ -1,0 +1,156 @@
+{
+  "intruder_speed_mps": 0,
+  "reaction_s": 0.3,
+  "progress_rejection_counts": {
+    "occlusion_reachability": 15
+  },
+  "per_frame": [
+    {
+      "time_s": 1.0,
+      "speed_mps": 2.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 1.2666666666666666
+    },
+    {
+      "time_s": 2.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 3.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 4.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 5.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 6.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 7.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 8.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 9.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 10.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 11.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 12.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 13.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 14.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    },
+    {
+      "time_s": 15.0,
+      "speed_mps": 0.0,
+      "progress_rejection": "occlusion_reachability",
+      "observed_free_distance_m": null,
+      "current_speed_braking_and_reaction_m": 0.0
+    }
+  ],
+  "boundary_example": {
+    "frame_time_s": 3.0,
+    "first_rejected_candidate_time_s": 1.4000000000000001,
+    "candidate_distance_m": 0.9800000000000002,
+    "candidate_speed_mps": 1.4000000000000001,
+    "last_safe_sample_distance_m": 0.8450000000000001,
+    "reason": "occlusion_reachability",
+    "observed_free_regions_m": null,
+    "unknown_regions_m": [
+      [
+        73.2,
+        8.4,
+        93.6,
+        15.0
+      ],
+      [
+        62.6,
+        -40.6,
+        114.8,
+        79.0
+      ],
+      [
+        65.8,
+        -14.9,
+        108.3,
+        29.6
+      ],
+      [
+        69.0,
+        -3.3,
+        102.0,
+        18.0
+      ],
+      [
+        72.1,
+        2.0,
+        95.7,
+        13.1
+      ]
+    ]
+  },
+  "explanation": "Zero intruder speed removes dynamic expansion only. Original unknown regions plus 1m actor-radius and 1m uncertainty/tracking/quantization margins remain. Observed-free regions are unsupported (null), so no certified free-space distance is manufactured."
+}

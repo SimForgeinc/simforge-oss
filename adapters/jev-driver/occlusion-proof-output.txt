@@ -1,0 +1,7 @@
+native_sensor_rows ['lead', 'hidden'] [[59.91999816894531, 0.0, 0.0, 1.0, 1.0], [84.91999816894531, 0.0, 0.0, 0.0, 1.0]]
+policy_ids ['lead'] counts {'sensor_objects': 2, 'occluded_objects': 1, 'policy_objects': 1}
+visibility_shadows [[88.0, 0.0, 64.1, 5.6]]
+with_shadows ['yield', 'stop'] rejected {'progress': 'terminal_stopping_reserve:lead', 'hold': 'occlusion_reachability'} without_shadows ['hold', 'yield', 'stop']
+oracle_eval_only {'oracle_actor_count': 2, 'hidden_actor_ids': ['hidden'], 'hidden_centers_in_visibility_shadows': ['hidden']}
+safety_monitor_override yield latched_maneuver_no_longer_feasible native_advanced_s 0.02
+unsupported_question_requirement_rejected True

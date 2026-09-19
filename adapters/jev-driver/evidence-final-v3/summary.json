@@ -1,0 +1,45 @@
+{
+  "world": "Simforge native dynamic-v1 synthetic-straight: scenario.json",
+  "mode": "lockstep",
+  "schema_version": "scene-observation/v2",
+  "model": "jev-1.13.0",
+  "engine_hz": 50,
+  "jev_target_hz": 3.0,
+  "ticks_run": 50,
+  "sim_time_s": 1.0,
+  "requests_completed": 2,
+  "live_api_responses": 2,
+  "valid_jev_choices": 2,
+  "raw_choice_disagreements": 0,
+  "raw_choice_disagreement_rate": 0.0,
+  "executed_disagreements": 0,
+  "executed_disagreement_rate": 0.0,
+  "confidence_mean_disagree": null,
+  "confidence_mean_agree": 0.28,
+  "confidence_disagreement_correlation": null,
+  "confidence_groups": {
+    "below_0.70": {
+      "n": 2,
+      "disagreements": 0
+    },
+    "at_least_0.70": {
+      "n": 0,
+      "disagreements": 0
+    }
+  },
+  "median_decision_latency_ms": 223.57549999999998,
+  "median_api_latency_ms": 223.57299999999998,
+  "deadline_misses": 1,
+  "fallbacks": 1,
+  "safety_overrides": 2,
+  "collision_ticks": 0,
+  "staleness_m": {
+    "median": 0.0,
+    "max": 0.0,
+    "applied_max": 0.0
+  },
+  "max_wall_schedule_lag_s": 0.0,
+  "interpretation": "Small temporally correlated episode; concentration confidence is not correctness and disagreement is not an error label.",
+  "decision_log_path": "/home/path/tmp/jevdrive/evidence-final-v3/decisions.jsonl",
+  "policy": "jev"
+}

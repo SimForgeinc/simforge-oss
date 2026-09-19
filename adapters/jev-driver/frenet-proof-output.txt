@@ -1,0 +1,6 @@
+straight_regression evidence-lockstep 750 state hashes, feasible sets, rejection reasons and timestamps unchanged
+straight_regression evidence-realtime 500 state hashes, feasible sets, rejection reasons and timestamps unchanged
+straight_regression evidence-lockstep-v2 750 state hashes, feasible sets, rejection reasons and timestamps unchanged
+curved_kinematic_hold_feasible_without_obstacle True
+curved_hold_rejected_only_by_rotated_static_OBB swept_footprint_static_obb survivors ['stop']
+total_unchanged_straight_ticks 2000

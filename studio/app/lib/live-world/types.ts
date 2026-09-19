@@ -1,5 +1,11 @@
 import type { TruthFrame } from '@simforge-oss/training-env/browser';
 
+import type { EnvAction } from '@simforge-oss/native-runtime/shared';
+
+export type DriveControlSource = 'human' | 'jev';
+/** Native setpoints only: the advisory model never supplies pedals or steering. */
+export type PlannerAction = Omit<EnvAction, 'control'>;
+
 export type WorldSourceStatus = 'idle' | 'connecting' | 'running' | 'error' | 'closed';
 
 export interface SpawnActorRequest {

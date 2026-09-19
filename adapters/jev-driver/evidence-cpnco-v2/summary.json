@@ -1,0 +1,45 @@
+{
+  "world": "Simforge native dynamic-v1 belmont-research-center: cpnco-dartout.episodes.json",
+  "mode": "lockstep",
+  "schema_version": "scene-observation/v2",
+  "model": "jev-1.13.0",
+  "engine_hz": 50,
+  "jev_target_hz": 3.0,
+  "ticks_run": 800,
+  "sim_time_s": 16.0,
+  "requests_completed": 0,
+  "live_api_responses": 0,
+  "valid_jev_choices": 0,
+  "raw_choice_disagreements": 0,
+  "raw_choice_disagreement_rate": null,
+  "executed_disagreements": 0,
+  "executed_disagreement_rate": null,
+  "confidence_mean_disagree": null,
+  "confidence_mean_agree": null,
+  "confidence_disagreement_correlation": null,
+  "confidence_groups": {
+    "below_0.70": {
+      "n": 0,
+      "disagreements": 0
+    },
+    "at_least_0.70": {
+      "n": 0,
+      "disagreements": 0
+    }
+  },
+  "median_decision_latency_ms": null,
+  "median_api_latency_ms": null,
+  "deadline_misses": 0,
+  "fallbacks": 0,
+  "safety_overrides": 800,
+  "collision_ticks": 0,
+  "staleness_m": {
+    "median": null,
+    "max": 0,
+    "applied_max": 0
+  },
+  "max_wall_schedule_lag_s": 0.0,
+  "interpretation": "Small temporally correlated episode; concentration confidence is not correctness and disagreement is not an error label.",
+  "decision_log_path": "/home/path/tmp/jevdrive/evidence-cpnco-v2/decisions.jsonl",
+  "policy": "jev"
+}

@@ -1,0 +1,20 @@
+# Regenerable, never committed.
+.venv/
+__pycache__/
+*.egg-info/
+
+# Renderer inputs and outputs rebuilt by render.sh:
+#   map-glbs/  decompressed map tiles (gltf-transform dequantize, ~600 MB per map)
+#   frames/    scen-play PNG output
+#   composite/ sidebar-composited frames
+map-glbs/
+*/map-glbs/
+frames/
+*/frames/
+composite/
+*/composite/
+hud/
+*/hud/
+
+# Browser profile from Studio verification.
+chrome-proof/

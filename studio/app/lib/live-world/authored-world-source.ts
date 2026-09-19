@@ -19,6 +19,8 @@ import {
 import type { LiveWorldWorkerRequest, LiveWorldWorkerResponse } from './worker-protocol';
 import type {
   ControlInput,
+  DriveControlSource,
+  PlannerAction,
   DriverCommand,
   SpawnActorRequest,
   WorldSource,
@@ -42,6 +44,9 @@ export interface WorldTransport {
 
 export interface AuthoredWorldSource extends WorldSource {
   readonly transport: WorldTransport;
+  readonly scenarioInput: SimScenarioInput;
+  setControlSource(source: DriveControlSource): void;
+  setPlannerAction(action: PlannerAction): void;
   subscribeTransport(fn: (t: WorldTransport) => void): () => void;
   readonly egoActorId: string | null;
   readonly driveMode: AuthoredDriveMode;
@@ -220,6 +225,17 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   get lastError(): string | null { return this.currentError; }
   get egoActorId(): string | null { return this.currentEgoActorId; }
   get driveMode(): AuthoredDriveMode { return this.currentDriveMode; }
+  get scenarioInput(): SimScenarioInput { return this.input; }
+
+  setControlSource(source: DriveControlSource): void {
+    if (this.currentStatus !== 'running') return;
+    this.worker.postMessage({ type: 'control-source', source } satisfies LiveWorldWorkerRequest);
+  }
+
+  setPlannerAction(action: PlannerAction): void {
+    if (this.currentStatus !== 'running' || this.currentEgoActorId === null || this.transportState.completed) return;
+    this.worker.postMessage({ type: 'planner-action', actorId: this.currentEgoActorId, action } satisfies LiveWorldWorkerRequest);
+  }
 
   subscribeFrames(fn: Parameters<WorldSource['subscribeFrames']>[0]): () => void {
     this.frameListeners.add(fn);

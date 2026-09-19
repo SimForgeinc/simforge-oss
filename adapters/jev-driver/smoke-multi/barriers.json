@@ -1,0 +1,38 @@
+[
+  {
+    "tick": 0,
+    "drivers": 3,
+    "wall_ms": 0.783,
+    "sum_api_ms": 0
+  },
+  {
+    "tick": 17,
+    "drivers": 3,
+    "wall_ms": 551.369,
+    "sum_api_ms": 994.631
+  },
+  {
+    "tick": 34,
+    "drivers": 3,
+    "wall_ms": 183.662,
+    "sum_api_ms": 365.183
+  },
+  {
+    "tick": 50,
+    "drivers": 3,
+    "wall_ms": 204.769,
+    "sum_api_ms": 408.077
+  },
+  {
+    "tick": 67,
+    "drivers": 3,
+    "wall_ms": 268.237,
+    "sum_api_ms": 461.953
+  },
+  {
+    "tick": 84,
+    "drivers": 3,
+    "wall_ms": 287.172,
+    "sum_api_ms": 613.5
+  }
+]

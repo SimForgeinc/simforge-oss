@@ -1,0 +1,53 @@
+{
+  "ticks_run": 100,
+  "sim_time_s": 2.0,
+  "drivers_per_run": 3,
+  "live_api_calls": 11,
+  "live_api_responses": 11,
+  "accepted_jev_choices": 9,
+  "median_api_latency_ms": 204.022,
+  "fallback_reasons": {
+    "no_feasible_candidate": 3,
+    "forced_single_candidate": 4,
+    "deadline_miss": 2
+  },
+  "counts": {
+    "safety_overrides": 5,
+    "no_feasible_driver_ticks": 6,
+    "alpha:emergency_brake": 2,
+    "bravo:emergency_brake": 2,
+    "charlie:emergency_brake": 2,
+    "collision_ticks": 0,
+    "near_miss_ticks": 0,
+    "alpha:stop": 82,
+    "bravo:stop": 14,
+    "charlie:hold": 98,
+    "bravo:yield": 84,
+    "alpha:yield": 16
+  },
+  "collision_ticks": 0,
+  "near_miss_ticks": 0,
+  "native_collision_events": [],
+  "scene_state_frames": 100,
+  "scene_state_path": "smoke-multi/scenestate.json",
+  "decision_log_path": "smoke-multi/decisions.jsonl",
+  "per_driver": {
+    "alpha": {
+      "persona": "cooperative",
+      "distance_m": 13.229,
+      "final_speed_mps": 3.445
+    },
+    "bravo": {
+      "persona": "cooperative",
+      "distance_m": 11.449,
+      "final_speed_mps": 4.374
+    },
+    "charlie": {
+      "persona": "cooperative",
+      "distance_m": 11.88,
+      "final_speed_mps": 6.0
+    }
+  },
+  "interpretation": "Observed interaction, not a calibrated safety certificate or causal fault proof.",
+  "qa_passed": true
+}

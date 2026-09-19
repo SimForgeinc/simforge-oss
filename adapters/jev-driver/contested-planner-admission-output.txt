@@ -1,0 +1,6 @@
+template cpnco-dartout map belmont-research-center native_ego_pose (0.0, 147.2495914629838, 116.30089247621085, 1.4282509708812996, 6.11094948610767)
+sensor_counts {'sensor_objects': 1, 'occluded_objects': 1, 'policy_objects': 0} policy_objects 0 static_occluders 4
+route_ego_frame_m [[-2.0, 0.0], [0.0, 0.0], [5.0, 0.0], [10.0, 0.1], [15.0, 0.5], [19.9, 1.3], [24.9, 2.1], [29.8, 2.8], [34.7, 3.6]]
+feasible [] rejected {'progress': 'outside_straight_corridor_operating_domain', 'hold': 'outside_straight_corridor_operating_domain', 'yield': 'outside_straight_corridor_operating_domain', 'stop': 'outside_straight_corridor_operating_domain'}
+safe_refusal_native_emergency_brake_t_s 0.02
+Jev_calls 0 NO_CONTESTED_DRIVING_QUALITY_RESULT

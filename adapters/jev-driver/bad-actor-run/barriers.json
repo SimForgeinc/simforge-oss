@@ -1,0 +1,362 @@
+[
+  {
+    "tick": 0,
+    "drivers": 3,
+    "wall_ms": 0.765,
+    "sum_api_ms": 0
+  },
+  {
+    "tick": 17,
+    "drivers": 3,
+    "wall_ms": 347.626,
+    "sum_api_ms": 693.597
+  },
+  {
+    "tick": 34,
+    "drivers": 3,
+    "wall_ms": 165.776,
+    "sum_api_ms": 274.196
+  },
+  {
+    "tick": 50,
+    "drivers": 3,
+    "wall_ms": 104.671,
+    "sum_api_ms": 204.882
+  },
+  {
+    "tick": 67,
+    "drivers": 3,
+    "wall_ms": 148.716,
+    "sum_api_ms": 270.272
+  },
+  {
+    "tick": 84,
+    "drivers": 3,
+    "wall_ms": 169.815,
+    "sum_api_ms": 326.78
+  },
+  {
+    "tick": 100,
+    "drivers": 3,
+    "wall_ms": 180.801,
+    "sum_api_ms": 323.753
+  },
+  {
+    "tick": 117,
+    "drivers": 3,
+    "wall_ms": 173.151,
+    "sum_api_ms": 172.955
+  },
+  {
+    "tick": 134,
+    "drivers": 3,
+    "wall_ms": 238.071,
+    "sum_api_ms": 237.744
+  },
+  {
+    "tick": 150,
+    "drivers": 3,
+    "wall_ms": 193.206,
+    "sum_api_ms": 192.939
+  },
+  {
+    "tick": 167,
+    "drivers": 3,
+    "wall_ms": 298.898,
+    "sum_api_ms": 298.524
+  },
+  {
+    "tick": 184,
+    "drivers": 3,
+    "wall_ms": 196.885,
+    "sum_api_ms": 196.723
+  },
+  {
+    "tick": 200,
+    "drivers": 3,
+    "wall_ms": 155.737,
+    "sum_api_ms": 155.175
+  },
+  {
+    "tick": 217,
+    "drivers": 3,
+    "wall_ms": 187.031,
+    "sum_api_ms": 186.768
+  },
+  {
+    "tick": 234,
+    "drivers": 3,
+    "wall_ms": 141.216,
+    "sum_api_ms": 140.797
+  },
+  {
+    "tick": 250,
+    "drivers": 3,
+    "wall_ms": 150.575,
+    "sum_api_ms": 150.17
+  },
+  {
+    "tick": 267,
+    "drivers": 3,
+    "wall_ms": 153.857,
+    "sum_api_ms": 153.445
+  },
+  {
+    "tick": 284,
+    "drivers": 3,
+    "wall_ms": 139.557,
+    "sum_api_ms": 139.157
+  },
+  {
+    "tick": 300,
+    "drivers": 3,
+    "wall_ms": 260.27,
+    "sum_api_ms": 259.94
+  },
+  {
+    "tick": 317,
+    "drivers": 3,
+    "wall_ms": 272.064,
+    "sum_api_ms": 271.87
+  },
+  {
+    "tick": 334,
+    "drivers": 3,
+    "wall_ms": 144.903,
+    "sum_api_ms": 144.587
+  },
+  {
+    "tick": 350,
+    "drivers": 3,
+    "wall_ms": 237.433,
+    "sum_api_ms": 237.002
+  },
+  {
+    "tick": 367,
+    "drivers": 3,
+    "wall_ms": 249.011,
+    "sum_api_ms": 248.783
+  },
+  {
+    "tick": 384,
+    "drivers": 3,
+    "wall_ms": 249.125,
+    "sum_api_ms": 248.719
+  },
+  {
+    "tick": 400,
+    "drivers": 3,
+    "wall_ms": 162.805,
+    "sum_api_ms": 162.313
+  },
+  {
+    "tick": 417,
+    "drivers": 3,
+    "wall_ms": 169.804,
+    "sum_api_ms": 169.394
+  },
+  {
+    "tick": 434,
+    "drivers": 3,
+    "wall_ms": 134.62,
+    "sum_api_ms": 134.28
+  },
+  {
+    "tick": 450,
+    "drivers": 3,
+    "wall_ms": 349.346,
+    "sum_api_ms": 349.074
+  },
+  {
+    "tick": 467,
+    "drivers": 3,
+    "wall_ms": 255.813,
+    "sum_api_ms": 255.43
+  },
+  {
+    "tick": 484,
+    "drivers": 3,
+    "wall_ms": 245.231,
+    "sum_api_ms": 244.975
+  },
+  {
+    "tick": 500,
+    "drivers": 3,
+    "wall_ms": 187.27,
+    "sum_api_ms": 187.094
+  },
+  {
+    "tick": 517,
+    "drivers": 3,
+    "wall_ms": 162.616,
+    "sum_api_ms": 162.339
+  },
+  {
+    "tick": 534,
+    "drivers": 3,
+    "wall_ms": 116.542,
+    "sum_api_ms": 116.285
+  },
+  {
+    "tick": 550,
+    "drivers": 3,
+    "wall_ms": 257.056,
+    "sum_api_ms": 256.699
+  },
+  {
+    "tick": 567,
+    "drivers": 3,
+    "wall_ms": 151.102,
+    "sum_api_ms": 150.94
+  },
+  {
+    "tick": 584,
+    "drivers": 3,
+    "wall_ms": 151.158,
+    "sum_api_ms": 150.874
+  },
+  {
+    "tick": 600,
+    "drivers": 3,
+    "wall_ms": 224.291,
+    "sum_api_ms": 223.905
+  },
+  {
+    "tick": 617,
+    "drivers": 3,
+    "wall_ms": 186.551,
+    "sum_api_ms": 186.227
+  },
+  {
+    "tick": 634,
+    "drivers": 3,
+    "wall_ms": 253.528,
+    "sum_api_ms": 253.095
+  },
+  {
+    "tick": 650,
+    "drivers": 3,
+    "wall_ms": 155.398,
+    "sum_api_ms": 154.88
+  },
+  {
+    "tick": 667,
+    "drivers": 3,
+    "wall_ms": 249.688,
+    "sum_api_ms": 249.351
+  },
+  {
+    "tick": 684,
+    "drivers": 3,
+    "wall_ms": 225.729,
+    "sum_api_ms": 225.512
+  },
+  {
+    "tick": 700,
+    "drivers": 3,
+    "wall_ms": 203.568,
+    "sum_api_ms": 203.145
+  },
+  {
+    "tick": 717,
+    "drivers": 3,
+    "wall_ms": 226.548,
+    "sum_api_ms": 226.093
+  },
+  {
+    "tick": 734,
+    "drivers": 3,
+    "wall_ms": 259.169,
+    "sum_api_ms": 258.872
+  },
+  {
+    "tick": 750,
+    "drivers": 3,
+    "wall_ms": 120.719,
+    "sum_api_ms": 120.391
+  },
+  {
+    "tick": 767,
+    "drivers": 3,
+    "wall_ms": 124.781,
+    "sum_api_ms": 124.396
+  },
+  {
+    "tick": 784,
+    "drivers": 3,
+    "wall_ms": 157.675,
+    "sum_api_ms": 157.271
+  },
+  {
+    "tick": 800,
+    "drivers": 3,
+    "wall_ms": 243.564,
+    "sum_api_ms": 243.133
+  },
+  {
+    "tick": 817,
+    "drivers": 3,
+    "wall_ms": 116.285,
+    "sum_api_ms": 116.045
+  },
+  {
+    "tick": 834,
+    "drivers": 3,
+    "wall_ms": 194.108,
+    "sum_api_ms": 193.741
+  },
+  {
+    "tick": 850,
+    "drivers": 3,
+    "wall_ms": 154.856,
+    "sum_api_ms": 154.547
+  },
+  {
+    "tick": 867,
+    "drivers": 3,
+    "wall_ms": 167.908,
+    "sum_api_ms": 167.559
+  },
+  {
+    "tick": 884,
+    "drivers": 3,
+    "wall_ms": 254.722,
+    "sum_api_ms": 254.213
+  },
+  {
+    "tick": 900,
+    "drivers": 3,
+    "wall_ms": 169.151,
+    "sum_api_ms": 168.818
+  },
+  {
+    "tick": 917,
+    "drivers": 3,
+    "wall_ms": 332.824,
+    "sum_api_ms": 332.396
+  },
+  {
+    "tick": 934,
+    "drivers": 3,
+    "wall_ms": 110.35,
+    "sum_api_ms": 110.109
+  },
+  {
+    "tick": 950,
+    "drivers": 3,
+    "wall_ms": 180.901,
+    "sum_api_ms": 180.589
+  },
+  {
+    "tick": 967,
+    "drivers": 3,
+    "wall_ms": 140.18,
+    "sum_api_ms": 139.818
+  },
+  {
+    "tick": 984,
+    "drivers": 3,
+    "wall_ms": 131.715,
+    "sum_api_ms": 131.265
+  }
+]

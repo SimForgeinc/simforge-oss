@@ -1,0 +1,557 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jevdrive:scene-observation:v2",
+  "title": "SceneObservation",
+  "description": "Planar roadway state. Null/unsupported NEVER means free. Numeric limits snapshot jevdrive/policy.py, the single threshold review source. Covariance packing/frame/method are explicit; track IDs are provider-and-episode scoped. Version 2 adds signed ego longitudinal velocity (nullable until observed), permits null initial radial velocity, and adds optional oriented occupied boxes for curved-route swept-footprint filtering.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "seq",
+    "state_time_s",
+    "last_observed_time_s",
+    "frame",
+    "provider",
+    "capabilities",
+    "uncertainty_layout",
+    "calibration",
+    "ego",
+    "route",
+    "coverage",
+    "objects"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "scene-observation/v2"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "state_time_s": {
+      "type": "number"
+    },
+    "last_observed_time_s": {
+      "type": "number"
+    },
+    "frame": {
+      "const": "ego-flu"
+    },
+    "provider": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "kind"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ground_truth",
+            "abstract_sensor",
+            "estimate"
+          ]
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": [
+        "profile",
+        "supplied",
+        "unsupported"
+      ],
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "supplied": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "unsupported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "uncertainty_layout": {
+      "type": "object",
+      "required": [
+        "frame",
+        "position_order",
+        "velocity_order",
+        "packing",
+        "position_units",
+        "velocity_units",
+        "conditioning"
+      ],
+      "properties": {
+        "frame": {
+          "const": "ego-flu"
+        },
+        "position_order": {
+          "const": [
+            "xx",
+            "xy",
+            "yy"
+          ]
+        },
+        "velocity_order": {
+          "const": [
+            "vxvx",
+            "vxvy",
+            "vyvy"
+          ]
+        },
+        "packing": {
+          "const": "upper_triangle"
+        },
+        "position_units": {
+          "const": "m^2"
+        },
+        "velocity_units": {
+          "const": "m^2/s^2"
+        },
+        "conditioning": {
+          "type": "string"
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "required": [
+        "status",
+        "method",
+        "model_version",
+        "calibration_domain",
+        "calibration_dataset",
+        "calibration_version"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "calibrated",
+            "uncalibrated",
+            "unknown"
+          ]
+        },
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "calibration_domain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "calibration_dataset": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "calibration_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ego": {
+      "type": "object",
+      "required": [
+        "speed_mps",
+        "accel_mps2",
+        "length_m",
+        "width_m",
+        "longitudinal_velocity_mps",
+        "longitudinal_velocity_source"
+      ],
+      "properties": {
+        "speed_mps": {
+          "type": "number"
+        },
+        "accel_mps2": {
+          "type": "number"
+        },
+        "length_m": {
+          "type": "number"
+        },
+        "width_m": {
+          "type": "number"
+        },
+        "longitudinal_velocity_mps": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Signed along the admitted route-aligned ego forward axis. Negative is reverse. Native provider derives sign from route-arc delta; a real provider uses signed odometry. Null at first observation."
+        },
+        "longitudinal_velocity_source": {
+          "type": "string"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": [
+        "centerline_m",
+        "width_m",
+        "speed_limit_mps",
+        "required_stop_m",
+        "source",
+        "complete"
+      ],
+      "properties": {
+        "centerline_m": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/vec2"
+          }
+        },
+        "width_m": {
+          "type": "number"
+        },
+        "speed_limit_mps": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "required_stop_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "radius_m",
+        "complete",
+        "omitted_objects",
+        "measurement_age_s",
+        "unknown_regions_m",
+        "untracked_occupied_regions_m",
+        "observed_free_regions_m",
+        "frame",
+        "vertical_bounds_m",
+        "state_time_s",
+        "source",
+        "geometry"
+      ],
+      "properties": {
+        "radius_m": {
+          "type": "number"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "omitted_objects": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measurement_age_s": {
+          "type": "number"
+        },
+        "unknown_regions_m": {
+          "$ref": "#/$defs/regions"
+        },
+        "untracked_occupied_regions_m": {
+          "$ref": "#/$defs/regions"
+        },
+        "observed_free_regions_m": {
+          "$ref": "#/$defs/regions"
+        },
+        "frame": {
+          "const": "ego-flu"
+        },
+        "vertical_bounds_m": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "state_time_s": {
+          "type": "number"
+        },
+        "source": {
+          "type": "string"
+        },
+        "geometry": {
+          "const": "rectangles:[center_x,center_y,length,width]"
+        },
+        "occupied_obbs_m_rad": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "[center_x_m,center_y_m,length_m,width_m,heading_rad], ego FLU, scene timestamp, map/perception source. Includes physical occluding parked bodies even when renderer catalog marks them noncollidable."
+        }
+      }
+    },
+    "objects": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "$ref": "#/$defs/object"
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Feasible survivors only. Empty is a logged no-feasible-candidate fallback state and MUST NOT be sent to Jev.",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "end_speed_mps",
+          "horizon_s",
+          "min_clearance_m"
+        ],
+        "anyOf": [
+          {"required": ["accel_mps2"]},
+          {"required": ["profile", "advance_m", "duration_s"]}
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Opaque identifier from the caller's finite feasible candidate set; not generated by Jev."
+          },
+          "accel_mps2": {
+            "type": "number"
+          },
+          "profile": {"const": "advance_then_stop"},
+          "advance_m": {"type": "number"},
+          "duration_s": {"type": "number"},
+          "end_speed_mps": {
+            "type": "number"
+          },
+          "horizon_s": {
+            "type": "number"
+          },
+          "min_clearance_m": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vec2": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number"
+      }
+    },
+    "covariance": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      },
+      "description": "Nullable upper triangle with units/frame/order above; per-object uncertainty_source names the producing method, conditional on existence. Never 1-score."
+    },
+    "regions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 8,
+      "items": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "items": {
+          "type": "number"
+        }
+      },
+      "description": "Planar rectangles [center_x_m,center_y_m,length_m,width_m], sharing enclosing frame, vertical bounds, state time and source. Null means unsupported, not empty/free."
+    },
+    "object": {
+      "type": "object",
+      "required": [
+        "track_id",
+        "x_m",
+        "y_m",
+        "range_m",
+        "bearing_rad",
+        "range_rate_mps",
+        "existence_probability",
+        "position_cov_m2",
+        "velocity_cov_m2ps2",
+        "source",
+        "uncertainty_source",
+        "measurement_age_s",
+        "state_time_s",
+        "last_observed_time_s"
+      ],
+      "properties": {
+        "track_id": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "track_status": {
+          "enum": [
+            "tentative",
+            "confirmed",
+            "coasting"
+          ]
+        },
+        "x_m": {
+          "type": "number"
+        },
+        "y_m": {
+          "type": "number"
+        },
+        "range_m": {
+          "type": "number"
+        },
+        "bearing_rad": {
+          "type": "number"
+        },
+        "range_rate_mps": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Negative means closing. Null when the first native sample has no finite-difference history; never turn that unknown into 0."
+        },
+        "rel_vx_mps": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "rel_vy_mps": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "heading_rad": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "length_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "width_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "existence_probability": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "detection_score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "class_probabilities": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "position_cov_m2": {
+          "$ref": "#/$defs/covariance"
+        },
+        "velocity_cov_m2ps2": {
+          "$ref": "#/$defs/covariance"
+        },
+        "source": {
+          "type": "string"
+        },
+        "uncertainty_source": {
+          "type": "string"
+        },
+        "measurement_age_s": {
+          "type": "number"
+        },
+        "track_age_s": {
+          "type": "number"
+        },
+        "state_time_s": {
+          "type": "number"
+        },
+        "last_observed_time_s": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

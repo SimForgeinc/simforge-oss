@@ -1,0 +1,709 @@
+{
+  "version": 1,
+  "instances": [
+    {
+      "input": {
+        "schemaVersion": 1,
+        "mapId": "garching-phase-1-2",
+        "clipSeconds": 20.0,
+        "warmupSeconds": 0.0,
+        "dt": 0.02,
+        "seed": "jev-multidriver-1",
+        "physics": {
+          "mode": "dynamic-v1"
+        },
+        "operationalConditions": {
+          "weather": "clear",
+          "timeOfDay": "day",
+          "traffic": "moderate",
+          "visibility": "unrestricted",
+          "effects": {
+            "visibilityRangeM": 1000.0,
+            "frictionScale": 1.0,
+            "trafficSpeedFactor": 1.0
+          }
+        },
+        "metricSubject": "alpha",
+        "actors": [
+          {
+            "id": "alpha",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "160:0:-3",
+                "s": 100.0,
+                "tFrac": 0.0
+              },
+              "pose": {
+                "x": -828.9664502559856,
+                "z": 1221.8868634544094,
+                "headingRad": 1.2462287940840182
+              },
+              "speedMps": 12.0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "160:0:-3"
+                ]
+              },
+              "cruiseSpeedMps": 17.0
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "catalog:vehicle.sedan",
+              "persona:reckless",
+              "controlled:jev"
+            ]
+          },
+          {
+            "id": "bravo",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "160:0:-3",
+                "s": 145.0,
+                "tFrac": 0.0
+              },
+              "pose": {
+                "x": -814.5859590801591,
+                "z": 1179.2466323071594,
+                "headingRad": 1.2505652796944065
+              },
+              "speedMps": 7.0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "160:0:-3"
+                ]
+              },
+              "cruiseSpeedMps": 7.0
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "catalog:vehicle.sedan",
+              "persona:cooperative",
+              "controlled:jev"
+            ]
+          },
+          {
+            "id": "charlie",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "160:0:-3",
+                "s": 192.0,
+                "tFrac": 0.0
+              },
+              "pose": {
+                "x": -799.6659346809421,
+                "z": 1134.6777105139533,
+                "headingRad": 1.246386269521363
+              },
+              "speedMps": 6.0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "160:0:-3"
+                ]
+              },
+              "cruiseSpeedMps": 6.0
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "catalog:vehicle.sedan",
+              "persona:cooperative",
+              "controlled:jev"
+            ]
+          }
+        ],
+        "interactions": [],
+        "signalPrograms": [
+          {
+            "id": "signal:3809",
+            "phases": [
+              {
+                "phase": "red",
+                "durationS": 45.0
+              },
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "21:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "752:0:1"
+                ]
+              },
+              {
+                "rsl": "21:0:4",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "750:0:1"
+                ]
+              },
+              {
+                "rsl": "84:0:-3",
+                "s": 0.0,
+                "connectingLaneRsls": [
+                  "797:0:-1"
+                ]
+              },
+              {
+                "rsl": "84:0:-4",
+                "s": 0.0,
+                "connectingLaneRsls": [
+                  "794:0:-1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "749",
+              "controllerIds": [
+                "4297"
+              ],
+              "headIds": [
+                "3809",
+                "3813",
+                "3863",
+                "3867",
+                "3913",
+                "3915",
+                "3916"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4297",
+                  "headIds": [
+                    "3809",
+                    "3813",
+                    "3863",
+                    "3867",
+                    "3913",
+                    "3915",
+                    "3916"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3811",
+            "phases": [
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 45.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "229:0:2",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "780:0:1"
+                ]
+              },
+              {
+                "rsl": "229:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "782:0:1"
+                ]
+              },
+              {
+                "rsl": "370:0:-2",
+                "s": 23.324249289637255,
+                "connectingLaneRsls": [
+                  "768:0:-1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "749",
+              "controllerIds": [
+                "4294"
+              ],
+              "headIds": [
+                "3811",
+                "3812",
+                "3853",
+                "3869",
+                "3917"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4294",
+                  "headIds": [
+                    "3811",
+                    "3812",
+                    "3853",
+                    "3869",
+                    "3917"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3815",
+            "phases": [
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 15.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "371:0:2",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3015:0:1"
+                ]
+              },
+              {
+                "rsl": "371:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3006:0:1"
+                ]
+              },
+              {
+                "rsl": "371:0:4",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3007:0:1"
+                ]
+              },
+              {
+                "rsl": "87:0:2",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3018:0:1"
+                ]
+              },
+              {
+                "rsl": "87:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3034:0:1"
+                ]
+              },
+              {
+                "rsl": "87:0:4",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3031:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "2997",
+              "controllerIds": [
+                "4298"
+              ],
+              "headIds": [
+                "3815",
+                "3816",
+                "3817",
+                "3818",
+                "3827",
+                "3828",
+                "3829",
+                "3910"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4298",
+                  "headIds": [
+                    "3815",
+                    "3816",
+                    "3817",
+                    "3818",
+                    "3827",
+                    "3828",
+                    "3829",
+                    "3910"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3824",
+            "phases": [
+              {
+                "phase": "red",
+                "durationS": 15.0
+              },
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "146:0:-2",
+                "s": 3.309317167518019,
+                "connectingLaneRsls": [
+                  "3041:0:-1"
+                ]
+              },
+              {
+                "rsl": "146:0:-2",
+                "s": 3.309317167518019,
+                "connectingLaneRsls": [
+                  "3043:0:-1"
+                ]
+              },
+              {
+                "rsl": "81:0:2",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "2999:0:1"
+                ]
+              },
+              {
+                "rsl": "81:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "2998:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "2997",
+              "controllerIds": [
+                "4299"
+              ],
+              "headIds": [
+                "3824",
+                "3825",
+                "3826",
+                "3831",
+                "3832",
+                "3903"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4299",
+                  "headIds": [
+                    "3824",
+                    "3825",
+                    "3826",
+                    "3831",
+                    "3832",
+                    "3903"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3841",
+            "phases": [
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 30.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "313:0:3",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3174:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "3169",
+              "controllerIds": [
+                "4300"
+              ],
+              "headIds": [
+                "3841",
+                "3842",
+                "3843",
+                "3844",
+                "3908"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4300",
+                  "headIds": [
+                    "3841",
+                    "3842",
+                    "3843",
+                    "3844",
+                    "3908"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3845",
+            "phases": [
+              {
+                "phase": "red",
+                "durationS": 15.0
+              },
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 15.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "269:0:4",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "3175:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "3169",
+              "controllerIds": [
+                "4301"
+              ],
+              "headIds": [
+                "3845",
+                "3847"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4301",
+                  "headIds": [
+                    "3845",
+                    "3847"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3851",
+            "phases": [
+              {
+                "phase": "red",
+                "durationS": 15.0
+              },
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 30.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "229:0:4",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "791:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "749",
+              "controllerIds": [
+                "4295"
+              ],
+              "headIds": [
+                "3851",
+                "3852",
+                "3855"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4295",
+                  "headIds": [
+                    "3851",
+                    "3852",
+                    "3855"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          },
+          {
+            "id": "signal:3888",
+            "phases": [
+              {
+                "phase": "red",
+                "durationS": 30.0
+              },
+              {
+                "phase": "green",
+                "durationS": 12.0
+              },
+              {
+                "phase": "yellow",
+                "durationS": 3.0
+              },
+              {
+                "phase": "red",
+                "durationS": 15.0
+              }
+            ],
+            "offsetS": 23.0,
+            "loop": true,
+            "stopLines": [
+              {
+                "rsl": "21:0:2",
+                "s": 1.0,
+                "connectingLaneRsls": [
+                  "779:0:1"
+                ]
+              }
+            ],
+            "mapBinding": {
+              "junctionId": "749",
+              "controllerIds": [
+                "4296"
+              ],
+              "headIds": [
+                "3888",
+                "3914"
+              ],
+              "controllerHeadGroups": [
+                {
+                  "controllerId": "4296",
+                  "headIds": [
+                    "3888",
+                    "3914"
+                  ]
+                }
+              ],
+              "timingSource": "synthetic-default"
+            }
+          }
+        ],
+        "roadControls": [],
+        "surfacePatches": [],
+        "props": [],
+        "occluders": [],
+        "occlusionPairs": []
+      }
+    }
+  ]
+}

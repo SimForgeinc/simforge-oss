@@ -79,4 +79,17 @@ export const driveFrame = stylex.create({
     lineHeight: "1rem",
     color: driveColors.textBody,
   },
+  controlSource: {
+    position: "absolute",
+    right: "1rem",
+    top: "1rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+    padding: "0.75rem",
+    maxWidth: "22rem",
+    fontSize: "0.75rem",
+    pointerEvents: "auto",
+    color: driveColors.textBody,
+  },
 });

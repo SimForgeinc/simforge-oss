@@ -1,0 +1,5 @@
+t_s 1.0 native_unsigned 5.9 derived_signed 5.9
+t_s 2.0 native_unsigned 0.2 derived_signed -0.2
+t_s 3.0 native_unsigned 3.7 derived_signed -3.7
+t_s 4.0 native_unsigned 7.2 derived_signed -7.2
+reverse_motion_rejected_without_trusting_unsigned_speed True

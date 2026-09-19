@@ -1,0 +1,3 @@
+creep 1 displacement_m 0.5071167884665684 final_speed_mps 0.0
+creep 2 displacement_m 1.0261146649065083 final_speed_mps 0.0
+two_bounded_creeps_stop_and_reanchor_without_episode_reset True

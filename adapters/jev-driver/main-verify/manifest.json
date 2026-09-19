@@ -1,0 +1,47 @@
+{
+  "mode": "lockstep",
+  "scenario_sha256": "90f02a0cef9650003891b61db3cce8c19917594fbd27e8bd8def520b1a8a2ae9",
+  "model": "jev-1.13.0",
+  "schema": "scene-observation/v2",
+  "seed": "jev-driving-1",
+  "spec_path": "/home/path/tmp/jevdrive/scenario.json",
+  "map_id": "synthetic-straight",
+  "materialized_input_hash": "5fbe0297d09ee5c7833ac4a86384858c266c01ef502103bcf0d7f2ca24ce9ef0",
+  "policy": "jev",
+  "native_engine_version": "0.6.0",
+  "native_abi": 2,
+  "native_module": "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/_native.abi3.so",
+  "questions": {
+    "maneuver": {
+      "type": "choice",
+      "instructions": "Select one concrete longitudinal command from `candidates` for the next decision interval. This is a preference ranking among code-vetted legal trajectories, NOT a request to certify safety. Use visible positions and range_rate_mps (negative means closing), ego speed, speed limit, and the candidate numeric acceleration/end-speed. Seek useful progress without unnecessarily closing on a slower visible lead. Do not slow simply because a distant vehicle exists or because an unknown region exists: the deterministic filter already bounded those hazards. Use the exact command effects below; never invent velocity, class, dimensions or hidden actors from null fields."
+    },
+    "if_progress": {
+      "type": "noul",
+      "instructions": "If the ego increases or holds speed, would the observed closing rate toward a visible road user make slowing within the next planning horizon useful? This branch is read only if the selected command is progress or hold. Judge from range, range_rate_mps and ego speed; no unseen-actor facts are available."
+    },
+    "if_slow": {
+      "type": "noul",
+      "instructions": "If the ego slows, is that slowing serving a currently visible closing interaction or an explicit required stop, rather than merely responding to the existence of a distant actor? This branch is read only for yield or stop. Unknown regions are not observed actors."
+    },
+    "if_creep": {
+      "type": "noul",
+      "instructions": "If a bounded advance-then-stop creep is selected, is that movement likely to reveal more of the currently unknown route region? Reason only from the reported unknown-region geometry, not from imagined hidden actors. This branch is read only for creep."
+    }
+  },
+  "question_version": "v3",
+  "question_gates": {
+    "min_confidence": 0.05,
+    "min_selected_probability": null,
+    "probability_above_uniform": 0.01
+  },
+  "constants_sha256": "c2fa4c434340f66a85c671e51c3f0c351a63ec22754c690fa12df265a74b378d",
+  "decision_hz": 3.0,
+  "deadline_ms": 333.0,
+  "include_occluded": false,
+  "oracle_in_planner": false,
+  "injected_delay_request_indices": [],
+  "shadow_max_speed_mps": 8.0,
+  "shadow_reaction_s": 0.3,
+  "sensitivity_run": false
+}

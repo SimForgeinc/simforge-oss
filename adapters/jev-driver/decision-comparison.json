@@ -1,0 +1,118 @@
+[
+  {
+    "run": "evidence-lockstep",
+    "requests": 45,
+    "valid": 44,
+    "raw_divergence": 30,
+    "executed_divergence": 10,
+    "fallbacks": {
+      "low_confidence": 29,
+      "accepted": 10,
+      "deadline_miss": 5,
+      "invalid_active_branch": 1
+    },
+    "confidence_median": 0.395,
+    "confidence_buckets": {
+      "below_0.4": {
+        "n": 22,
+        "raw_disagreements": 11
+      },
+      "0.4_to_0.7": {
+        "n": 4,
+        "raw_disagreements": 1
+      },
+      "at_least_0.7": {
+        "n": 18,
+        "raw_disagreements": 18
+      }
+    },
+    "input_tokens_median": 1957,
+    "staleness_p90_m": 0.0
+  },
+  {
+    "run": "evidence-realtime",
+    "requests": 28,
+    "valid": 28,
+    "raw_divergence": 20,
+    "executed_divergence": 8,
+    "fallbacks": {
+      "low_confidence": 18,
+      "accepted": 8,
+      "deadline_miss": 2
+    },
+    "confidence_median": 0.91,
+    "confidence_buckets": {
+      "below_0.4": {
+        "n": 9,
+        "raw_disagreements": 2
+      },
+      "0.4_to_0.7": {
+        "n": 2,
+        "raw_disagreements": 1
+      },
+      "at_least_0.7": {
+        "n": 17,
+        "raw_disagreements": 17
+      }
+    },
+    "input_tokens_median": 1956.0,
+    "staleness_p90_m": 3.2
+  },
+  {
+    "run": "evidence-lockstep-v2",
+    "requests": 45,
+    "valid": 44,
+    "raw_divergence": 9,
+    "executed_divergence": 9,
+    "fallbacks": {
+      "invalid_active_branch": 1,
+      "accepted": 42,
+      "deadline_miss": 2
+    },
+    "confidence_median": 0.39,
+    "confidence_buckets": {
+      "below_0.4": {
+        "n": 22,
+        "raw_disagreements": 1
+      },
+      "0.4_to_0.7": {
+        "n": 22,
+        "raw_disagreements": 8
+      },
+      "at_least_0.7": {
+        "n": 0,
+        "raw_disagreements": 0
+      }
+    },
+    "input_tokens_median": 1917,
+    "staleness_p90_m": 0.0
+  },
+  {
+    "run": "evidence-realtime-v2",
+    "requests": 13,
+    "valid": 13,
+    "raw_divergence": 5,
+    "executed_divergence": 5,
+    "fallbacks": {
+      "accepted": 12,
+      "deadline_miss": 1
+    },
+    "confidence_median": 0.29,
+    "confidence_buckets": {
+      "below_0.4": {
+        "n": 9,
+        "raw_disagreements": 1
+      },
+      "0.4_to_0.7": {
+        "n": 4,
+        "raw_disagreements": 4
+      },
+      "at_least_0.7": {
+        "n": 0,
+        "raw_disagreements": 0
+      }
+    },
+    "input_tokens_median": 1919,
+    "staleness_p90_m": 3.4
+  }
+]

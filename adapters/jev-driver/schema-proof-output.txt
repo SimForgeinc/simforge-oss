@@ -1,0 +1,5 @@
+schema_validated_tick_scenes 2000 and every live request state
+unsupported_visibility_refuses_planning True
+CARLA_python_module /home/path/.local/lib/python3.12/site-packages/carla/__init__.py
+CARLA_offline_transform Vector3D(x=1.000000, y=4.000000, z=0.000000)
+CARLA_snapshot_methods True
