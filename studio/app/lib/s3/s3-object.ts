@@ -148,12 +148,24 @@ export async function registerLocalFile(
   await mkdir(dirname(metaPath), { recursive: true });
   const temporaryPath = `${filePath}.${randomUUID()}.tmp`;
   try {
-    await link(sourcePath, temporaryPath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
-    await copyFile(sourcePath, temporaryPath);
+    try {
+      await link(sourcePath, temporaryPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
+      await copyFile(sourcePath, temporaryPath);
+    }
+    // POSIX rename() is a no-op when both names resolve to the SAME inode, and it
+    // does not unlink the source. Re-registering a content-addressed object that is
+    // already a link to `sourcePath` therefore leaked one permanent temporary link
+    // per call; repeated seeding accumulated 860,088 of them across the data roots.
+    const [existing, temporary] = await Promise.all([
+      stat(filePath).catch(() => null),
+      stat(temporaryPath),
+    ]);
+    if (!existing || existing.ino !== temporary.ino) await rename(temporaryPath, filePath);
+  } finally {
+    await rm(temporaryPath, { force: true });
   }
-  await rename(temporaryPath, filePath);
   const metadata = { contentType, checksumSha256Hex, sizeBytes };
   await writeFile(metaPath, JSON.stringify(metadata));
   return { ...metadata, key: resolvedKey };
