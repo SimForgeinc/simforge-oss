@@ -41,7 +41,7 @@ const api = async <T>(path: string, body?: unknown): Promise<T> => {
   const response = await fetch(new URL(path, base), { method: body === undefined ? 'GET' : 'POST',
     headers: { authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body) });
-  assert(response.ok, `${path}: ${response.status} ${await response.clone().text()}`);
+  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
   return response.json() as Promise<T>;
 };
 const catalog = await api<{ maps: { mapVersionId: string; sourceMapId: string }[] }>('/api/simforge/maps');

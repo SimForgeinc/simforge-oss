@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { MAX_DARK_PATCH_FRACTION, MAX_SKY_BLACK_FRACTION, MIN_DAY_SKY_LUMINANCE, type FrameReadability } from './texture-frame-quality';
 
 export type Tier = 'low' | 'medium' | 'render' | 'ml';
 export interface TierSelection {
@@ -99,6 +100,35 @@ export function assertNoDuplicateFetches(requests: readonly TextureRequest[]): v
   const traffic = textureTraffic(requests);
   assert.equal(traffic.duplicates.length, 0,
     `repeated texture containers: ${JSON.stringify(traffic.duplicates.slice(0, 10))}`);
+}
+
+/** Real WebGL capability boundary, injected before any renderer is constructed. */
+export function browserCapabilityRestriction(restriction: 'portable' | 'restricted'): string {
+  return `
+    for (const klass of [WebGLRenderingContext, WebGL2RenderingContext]) {
+      const extension = klass.prototype.getExtension;
+      klass.prototype.getExtension = function(name) {
+        if (name === 'EXT_texture_compression_bptc' || name === 'WEBGL_compressed_texture_astc') return null;
+        return extension.call(this, name);
+      };
+      ${restriction === 'restricted' ? `const parameter = klass.prototype.getParameter;
+      klass.prototype.getParameter = function(name) { return name === this.MAX_TEXTURE_SIZE ? 256 : parameter.call(this, name); };` : ''}
+    }
+  `;
+}
+
+export function assertNoBlackGeometry(frame: FrameReadability): void {
+  assert(frame.nonSkyPixels >= frame.patchEdge ** 2 && frame.darkestPatch.eligiblePixels > 0, 'no non-sky frame area measured');
+  assert(frame.darkestPatch.blackFraction < MAX_DARK_PATCH_FRACTION,
+    `${frame.darkestPatch.width}x${frame.darkestPatch.height} patch at ${frame.darkestPatch.x},${frame.darkestPatch.y} is ${(100 * frame.darkestPatch.blackFraction).toFixed(3)}% near-black; must be <${100 * MAX_DARK_PATCH_FRACTION}%`);
+}
+
+export function assertReadableSky(frame: FrameReadability): void {
+  assert(frame.skyPixels >= frame.patchEdge ** 2, 'fixture needs an explicitly identified visible sky region');
+  assert(frame.skyMeanLuminance >= MIN_DAY_SKY_LUMINANCE,
+    `daytime sky mean display luminance ${frame.skyMeanLuminance.toFixed(3)} < ${MIN_DAY_SKY_LUMINANCE}`);
+  assert(frame.skyBlackFraction <= MAX_SKY_BLACK_FRACTION,
+    `sky is ${(100 * frame.skyBlackFraction).toFixed(3)}% near-black; must be <=${100 * MAX_SKY_BLACK_FRACTION}%`);
 }
 
 export class Checks {

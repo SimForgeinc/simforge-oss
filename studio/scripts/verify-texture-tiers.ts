@@ -8,8 +8,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
-import { assertAuthoredDimensions, assertDimensions, assertNoDuplicateFetches, Checks, FRAME_P95_MS, isTextureUrl, STABILITY_MS, TEXTURE_BUDGET_BYTES, trafficBeforeReady, type NetworkTransfer, type TierSelection } from './texture-tier-assertions';
-import type {} from './texture-tier-browser-probe';
+import { assertAuthoredDimensions, assertDimensions, assertNoBlackGeometry, assertNoDuplicateFetches, assertReadableSky, browserCapabilityRestriction, Checks, FRAME_P95_MS, isTextureUrl, STABILITY_MS, TEXTURE_BUDGET_BYTES, trafficBeforeReady, type NetworkTransfer, type TierSelection } from './texture-tier-assertions';
+import type { SettledTierFrame } from './texture-tier-browser-probe';
 
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 const root = args.get('root');
@@ -29,13 +29,13 @@ const api = async <T>(path: string, body?: unknown): Promise<T> => {
   const response = await fetch(new URL(path, base), { method: body === undefined ? 'GET' : 'POST',
     headers: { authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body) });
-  assert(response.ok, `${path}: ${response.status} ${await response.clone().text()}`);
+  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
   return response.json() as Promise<T>;
 };
 const setup = await fetch(new URL('/api/simforge/host/setup', base), { method: 'PUT', headers: {
   authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
   body: JSON.stringify({ mode: 'local', quality: args.has('baseline') ? 'high' : tier }) });
-assert(setup.ok, `tier setup ${setup.status}: ${await setup.text()}`);
+if (!setup.ok) throw new Error(`tier setup ${setup.status}: ${await setup.text()}`);
 const { maps } = await api<{ maps: { sourceMapId: string; mapVersionId: string; label: string }[] }>('/api/simforge/maps');
 const map = maps.find(map => map.sourceMapId === 'belmont-research-center');
 assert(map, 'install real Belmont in the throwaway daemon');
@@ -47,17 +47,9 @@ const checks = new Checks();
 try {
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   await context.addInitScript({ content: bundled.outputFiles[0]!.text });
-  if (restriction !== 'normal') await context.addInitScript({ content: `
-    for (const klass of [WebGLRenderingContext, WebGL2RenderingContext]) {
-      const extension = klass.prototype.getExtension;
-      klass.prototype.getExtension = function(name) {
-        if (/compressed_texture_(bptc|astc)/i.test(name)) return null;
-        return extension.call(this, name);
-      };
-      ${restriction === 'restricted' ? `const parameter = klass.prototype.getParameter;
-      klass.prototype.getParameter = function(name) { return name === this.MAX_TEXTURE_SIZE ? 256 : parameter.call(this, name); };` : ''}
-    }
-  ` });
+  if (restriction === 'portable' || restriction === 'restricted') {
+    await context.addInitScript({ content: browserCapabilityRestriction(restriction) });
+  }
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   await cdp.send('Network.enable');
@@ -124,6 +116,14 @@ try {
     frames.sort((a, b) => a - b);
     return { maxMissingInViewAfterReady, ineligibleSamples, frames: frames.length, p95: frames[Math.ceil(frames.length * 0.95) - 1]!, glErrors };
   }, STABILITY_MS);
+  let settled: Omit<SettledTierFrame, 'png'> | undefined;
+  let settlingError: string | undefined;
+  try {
+    const { png, ...measurement } = await page.evaluate(() => window.__captureSettledTierFrame());
+    assert(png.startsWith('data:image/png;base64,'), 'settled capture must be a real PNG');
+    await writeFile(join(out, 'settled.png'), Buffer.from(png.slice('data:image/png;base64,'.length), 'base64'));
+    settled = measurement;
+  } catch (error) { settlingError = String(error); }
   const readyCdp = (capture.timeOrigin + ready.readyAtMs) / 1000 - wallOffset;
   const textures = [...requests.values()].filter(row => row.texture);
   const accounting = trafficBeforeReady([...requests.values()], readyCdp);
@@ -158,6 +158,20 @@ try {
     if (restriction !== 'normal') { assert.equal(stats.tierSelection.codec, 'uastc'); assert(stats.tierSelection.downgradeReason); }
     assert.equal(stats.tierSelection.variantId, `textures-${target}-${stats.tierSelection.codec}`);
   });
+  checks.check('real context restriction and supported codec selection', { ...ready.capabilities, codec: stats.tierSelection?.codec }, () => {
+    const capabilities = ready.capabilities;
+    if (restriction !== 'normal') {
+      assert.equal(capabilities.bc7, false); assert.equal(capabilities.astc, false);
+    }
+    if (restriction === 'restricted') assert.equal(capabilities.maxTextureSize, 256);
+    assert(capabilities.maxTextureSize >= target);
+    if (expected === 'low' || (!capabilities.bc7 && !capabilities.astc)) {
+      assert.equal(stats.tierSelection?.codec, 'uastc');
+    } else {
+      assert((stats.tierSelection?.codec === 'bc7' && capabilities.bc7)
+        || (stats.tierSelection?.codec === 'astc' && capabilities.astc), 'capable Medium must select an available native block codec');
+    }
+  });
   checks.check('zero GL and browser errors', { atReady: ready.glError, subsequent: stability.glErrors, errors }, () => { assert.equal(ready.glError, 0); assert.deepEqual(stability.glErrors, []); assert.deepEqual(errors, []); });
   checks.check('settled frame pacing', { p95: stability.p95, boundMs: FRAME_P95_MS, frames: stability.frames }, () => { assert(stability.frames >= 30); assert(stability.p95 <= FRAME_P95_MS); });
   checks.check('ready-instant lit geometry pixels', { visible: ready.visible, ...ready.pixels }, () => {
@@ -172,6 +186,15 @@ try {
     assert(Number.isFinite(ready.pixels.centerDistance) && ready.pixels.centerDistance >= 3);
     assert(ready.pixels.insideFacingHits < ready.pixels.geometryHits / 2, 'majority of visible surfaces face out from the camera enclosure');
   });
-  await writeFile(join(out, 'results.json'), JSON.stringify({ tier, restriction, ready, stability, accounting, textureBytesBeforeReady, requests: [...requests.values()], checks: checks.results }, null, 2));
+  checks.check('settled viewer contains no large near-black region', { frame: settled?.frame, settlingError }, () => {
+    assert(settled, settlingError ?? 'no settled frame');
+    assertNoBlackGeometry(settled.frame);
+    assert.equal(settled.glError, 0);
+  });
+  checks.check('geometry-verified daytime sky is not black', { frame: settled?.frame, skyRegions: settled?.skyRegions, verification: settled?.skyVerification, settlingError }, () => {
+    assert(settled, settlingError ?? 'no settled frame');
+    assertReadableSky(settled.frame);
+  });
+  await writeFile(join(out, 'results.json'), JSON.stringify({ tier, restriction, ready, stability, settled, settlingError, accounting, textureBytesBeforeReady, requests: [...requests.values()], checks: checks.results }, null, 2));
   checks.finish();
 } finally { await browser.close(); }

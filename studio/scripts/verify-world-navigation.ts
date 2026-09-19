@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BrowserContext, Page } from "playwright-core";
-import type { CityViewer } from "@simforge-oss/viewer";
+import type {} from "../../packages/viewer/src/viewer-diagnostics";
 
 type Descriptor = { mapVersionId: string; sourceMapId: string; label: string; browserAssetRootUrl: string };
 type RequestRow = { url: string; bytes: number; bodyBytes: number; status?: number; at: number };
@@ -40,22 +40,13 @@ export async function assertWorldPaint(page: Page) {
       squares += value * value;
       if (value > 35 && pixels[i + 3]! > 0) lit++;
     }
-    // Locate the live CityView ref, not a second renderer or a mocked scene.
-    type Hook = { memoizedState?: { current?: CityViewer }; next?: Hook };
-    type Fiber = { memoizedState?: Hook; return?: Fiber };
-    const key = Object.keys(canvas).find((name) => name.startsWith("__reactFiber$"))!;
-    let viewer: CityViewer | undefined;
-    for (let fiber = (canvas as unknown as Record<string, Fiber>)[key]; fiber; fiber = fiber.return) {
-      for (let hook = fiber.memoizedState; hook && typeof hook === "object"; hook = hook.next) {
-        const candidate = hook.memoizedState?.current;
-        if (candidate?.renderer?.domElement === canvas && typeof candidate.sampleGroundHeight === "function") viewer = candidate;
-      }
-    }
-    if (!viewer) throw new Error("The ready canvas has no live viewer");
+    // Bind the published viability contract to THIS visible canvas. React hook
+    // internals are not a lifetime API and change when ownership is retained.
     const diagnostics = window.__simforgeViewerProbe;
-    if (!diagnostics || diagnostics.viewer !== viewer || !('viable' in diagnostics) || diagnostics.viable !== true) {
+    if (!diagnostics || diagnostics.viewer.renderer.domElement !== canvas || !('viable' in diagnostics) || diagnostics.viable !== true) {
       throw new Error("The ready world has no viable renderer diagnostics");
     }
+    const viewer = diagnostics.viewer;
     const position = viewer.camera.getWorldPosition(viewer.camera.position.clone());
     const surfaceY = viewer.sampleGroundHeight(position.x, position.z);
     const count = pixels.length / 4;
@@ -86,13 +77,15 @@ async function ready(page: Page, id: string, editor = false) {
 
 /** Real route/DOM ownership, not a hook mock: moving the provider below a page
  * boundary must fail even if HTTP caching makes the reload appear inexpensive. */
-export async function verifyWorldNavigation({ context, ticketUrl, map, other, out, latencyMs }: {
+export async function verifyWorldNavigation({ context, ticketUrl, map, other, out, latencyMs, scope = "full" }: {
   context: BrowserContext;
   ticketUrl: string;
   map: Descriptor;
   other: Descriptor;
   out: string;
   latencyMs: number;
+  /** Same-map still includes all five editor/list release cycles; only the different-map leg is omitted. */
+  scope?: "full" | "same-map";
 }) {
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
@@ -208,6 +201,15 @@ export async function verifyWorldNavigation({ context, ticketUrl, map, other, ou
       console.log(`PASS editor/list cycle ${cycle}: exit ${exitMs.toFixed(0)} ms < 4000; no retained city context on list; one renderer on re-entry`);
     }
 
+    if (scope === "same-map") {
+      assert.equal((await page.evaluate(() => window.__worldNavigation())).wrongMapFrames, 0, "same-map navigation must never expose the wrong world");
+      assert.deepEqual(errors, []);
+      const skipped = [{ leg: "different-map", reason: "explicit same-map scope; all editor/list and retained navigation assertions ran" }];
+      await writeFile(join(out, "world-navigation.json"), JSON.stringify({ scope, documentId, initial, firstResult, samples, rows, errors, skipped }, null, 2));
+      console.log(`SKIP different-map: explicitly selected same-map scope`);
+      return firstResult;
+    }
+
     // Start the different-map case independently of the editor's replaceState
     // history edits. The same-route lifetime was asserted above, before reload.
     await page.goto(new URL("/dashboard/map-assets", ticketUrl).href, { waitUntil: "domcontentloaded" });
@@ -224,7 +226,15 @@ export async function verifyWorldNavigation({ context, ticketUrl, map, other, ou
     assert.equal(changed.wrongMapFrames, 0, "no frame may expose the previous map under a different target");
     assert.deepEqual(errors, []);
     console.log(`PASS different map: ${other.label} ready; its closure loaded through the existing renderer`);
-    await writeFile(join(out, "world-navigation.json"), JSON.stringify({ initial, firstResult, samples, changed, rows, errors }, null, 2));
+    await writeFile(join(out, "world-navigation.json"), JSON.stringify({ documentId, initial, firstResult, samples, changed, rows, errors }, null, 2));
     return firstResult;
+  } catch (error) {
+    const state = await page.evaluate(() => ({
+      lifetime: window.__worldNavigation?.() ?? null,
+      body: document.body.innerText.slice(0, 2000),
+    })).catch(() => null);
+    await writeFile(join(out, "world-navigation-failure.json"), JSON.stringify({ scope, latencyMs, error: String(error), state, samples, rows, errors }, null, 2));
+    await page.screenshot({ path: join(out, "world-navigation-failure.png") }).catch(() => undefined);
+    throw error;
   } finally { await page.close(); }
 }

@@ -15,6 +15,7 @@ assert(args.some(arg => arg.startsWith('--root=')) && args.some(arg => arg.start
 const mlScenario = args.find(arg => arg.startsWith('--ml-scenario='))!.slice('--ml-scenario='.length);
 const matrix = [
   { name: 'calibration', file: 'texture-tier-assertions.test.ts', args: ['--test'] },
+  { name: 'frame-readability-calibration', file: 'texture-frame-quality.test.ts', args: ['--test'] },
   { name: 'viewer-context-lifetime', file: 'verify-viewer-context-lifetime.ts', args: [] },
   { name: 'container-dedup', file: 'verify-texture-container-reuse.ts', args: [] },
   { name: 'low', file: 'verify-texture-tiers.ts', args: ['--tier=low'] },
@@ -29,9 +30,9 @@ const failures: string[] = [];
 for (const gate of matrix) {
   const started = performance.now();
   const launch = ['--import', 'tsx', '--conditions=development'];
-  if (gate.name === 'calibration') launch.push('--test');
+  if (gate.file.endsWith('.test.ts')) launch.push('--test');
   launch.push(join(import.meta.dirname, gate.file));
-  if (gate.name !== 'calibration') launch.push(...args, ...gate.args);
+  if (!gate.file.endsWith('.test.ts')) launch.push(...args, ...gate.args);
   const child = spawn(process.execPath, launch, { stdio: 'inherit' });
   const exit = Promise.withResolvers<number>();
   child.once('error', error => { console.error(error); exit.resolve(1); });
