@@ -288,6 +288,7 @@ struct ModelRecipe {
     tintable: bool,
     scale_to_dims: bool,
     model_length_m: Option<f64>,
+    yaw_offset_rad: f32,
     attribution: String,
     source: String,
     glb: String,
@@ -1196,6 +1197,7 @@ fn build_model_recipe(
         tintable: entry.tintable,
         scale_to_dims: entry.scale_to_dims,
         model_length_m: entry.model_length_m,
+        yaw_offset_rad: entry.yaw_offset_rad,
         attribution: entry.attribution.clone(),
         source: entry.source.clone(),
         glb: asset_path.to_string(),
@@ -1429,10 +1431,16 @@ fn spawn_actor_if_needed(
         } else {
             1.0
         };
+        // Catalog orientation is shared by RGB, instance IDs and motion vectors.
+        let model_transform = Transform {
+            rotation: Quat::from_rotation_y(recipe.yaw_offset_rad),
+            scale: Vec3::splat(scale),
+            ..default()
+        };
         let holder = commands
             .spawn((
                 ChildOf(root),
-                Transform::from_scale(Vec3::splat(scale)),
+                model_transform,
                 Visibility::Inherited,
             ))
             .id();
@@ -1489,8 +1497,7 @@ fn spawn_actor_if_needed(
                 });
             }
             if pb.args.mv {
-                let offset =
-                    Transform::from_scale(Vec3::splat(scale)).mul_transform(part.transform);
+                let offset = model_transform.mul_transform(part.transform);
                 let mv_entity = commands
                     .spawn((
                         MvClone,
