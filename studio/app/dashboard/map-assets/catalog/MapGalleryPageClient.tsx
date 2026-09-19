@@ -322,6 +322,9 @@ export function MapGalleryPageClient({
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The scenario could not be created.");
+    } finally {
+      // Navigation retains this route through React Activity. The request has
+      // finished even when the component stays mounted behind the editor.
       setCreating(false);
     }
   };
