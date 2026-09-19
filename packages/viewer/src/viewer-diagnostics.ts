@@ -14,6 +14,7 @@
  */
 
 import type { CityViewer } from './viewer';
+import { canvasIsPresentable, waitForCanvasPresentation } from './canvas-presentation';
 
 const LOG_PREFIX = '[viewer-diagnostics]';
 const MAP_LOAD_STALL_MS = 15_000;
@@ -65,10 +66,11 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   let contextLossLogged = false;
   let disposed = false;
   let readyAtMs: number | null = null;
+  let cancelPresentation: (() => void) | null = null;
   const probe: ViewerProbe = {
     viewer, manifestUrl: null,
     get viable() { return !disposed && canvas.isConnected && !viewer.renderer.getContext().isContextLost(); },
-    get readyAtMs() { return this.viable && viewer.getStats().targetQualityReady ? readyAtMs : null; },
+    get readyAtMs() { return readyAtMs !== null && this.viable && viewer.getStats().targetQualityReady && canvasIsPresentable(canvas) ? readyAtMs : null; },
   };
   if (typeof window !== 'undefined') window.__simforgeViewerProbe = probe;
 
@@ -80,6 +82,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   const onContextLost = (event: Event) => {
     event.preventDefault();
     readyAtMs = null;
+    cancelPresentation?.();
+    cancelPresentation = null;
     if (contextLossLogged) return;
     contextLossLogged = true;
     console.error(LOG_PREFIX, 'webglcontextlost', {
@@ -147,6 +151,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       activeManifestUrl = manifestUrl;
       probe.manifestUrl = manifestUrl;
       readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       mapLoadTimer = window.setTimeout(() => {
         mapLoadTimer = null;
         console.warn(
@@ -165,12 +171,21 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
         console.error(LOG_PREFIX, 'map-load-not-ready', { manifestUrl, viable: probe.viable, stats });
         return;
       }
-      readyAtMs = performance.now();
-      console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats });
+      cancelPresentation?.();
+      cancelPresentation = waitForCanvasPresentation(canvas, () => {
+        cancelPresentation = null;
+        if (disposed || manifestUrl !== activeManifestUrl || !probe.viable) return;
+        const presentedStats = viewer.getStats();
+        if (!presentedStats.targetQualityReady) return;
+        readyAtMs = performance.now();
+        console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats: presentedStats });
+      });
     },
     mapLoadFailed(manifestUrl, error) {
       if (disposed || manifestUrl !== activeManifestUrl) return;
       readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       clearMapLoadTimer();
       console.error(LOG_PREFIX, 'map-load-error', {
         manifestUrl,
@@ -182,6 +197,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
     dispose() {
       disposed = true;
       readyAtMs = null;
+      cancelPresentation?.();
+      cancelPresentation = null;
       if (typeof window !== 'undefined' && window.__simforgeViewerProbe === probe) {
         delete window.__simforgeViewerProbe;
       }

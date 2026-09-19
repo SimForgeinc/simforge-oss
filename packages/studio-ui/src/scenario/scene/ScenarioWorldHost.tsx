@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CityViewer, TierSelection } from "@simforge-oss/viewer";
 import { ActorRenderer } from "@simforge-oss/viewer";
-import { CityView } from "@simforge-oss/viewer/react";
+import { CityView, waitForCanvasPresentation } from "@simforge-oss/viewer/react";
 import { cn } from "../../lib/utils";
 import { readRenderingPreference,
 RENDERING_PREFERENCE_CHANGE_EVENT,
@@ -38,7 +38,7 @@ import { authoringRuntimeReady } from "@simforge-oss/editor";
  * frame rate smooth while tiles stream in mid-session — a real concern once
  * someone is panning around the map. During the initial load they protect the
  * smoothness of a scene nobody can see: the scene's `CloudLoadingSurface` is an
- * opaque cover until the transition reaches `idle`.
+ * opaque cover until the prepared scene enters `revealing`.
  *
  * Measured on Belmont with the former reduced pacing (0.5 ms / 256k pixels per frame),
  * a warm reload finished downloading and decoding every tile 4.5 s in, then sat
@@ -71,6 +71,8 @@ export type ScenarioWorldTarget = {
 export type ScenarioWorldState = {
   target: ScenarioWorldTarget | null;
   loadedMapVersionId: string | null;
+  /** Resources bound to the current canvas; safe to reveal, not yet announced ready. */
+  preparedMapVersionId: string | null;
   streaming: boolean;
   error: unknown | null;
   /** Camera/loading choreography currently owning the shared viewer. */
@@ -81,6 +83,7 @@ export type MapTransitionPhase =
   | "idle"
   | "loading"
   | "zooming-in"
+  | "revealing"
   | "error";
 
 /**
@@ -114,6 +117,7 @@ export function ScenarioWorldHost({
   const [loadedMapVersionId, setLoadedMapVersionId] = useState<string | null>(
     null,
   );
+  const [preparedMapVersionId, setPreparedMapVersionId] = useState<string | null>(null);
   const [error, setError] = useState<unknown | null>(null);
   const [transitionPhase, setTransitionPhase] =
     useState<MapTransitionPhase>(target || pendingTarget ? "loading" : "idle");
@@ -126,7 +130,7 @@ export function ScenarioWorldHost({
     () => readRenderingPreference() ?? "medium",
   );
   const quality = AUTHORING_QUALITY[preference];
-  const uploadBudget = transitionPhase === "idle" ? null : BOOT_UPLOAD_BUDGET;
+  const uploadBudget = transitionPhase === "idle" || transitionPhase === "revealing" ? null : BOOT_UPLOAD_BUDGET;
   const uploadBudgetRef = useRef(uploadBudget);
   uploadBudgetRef.current = uploadBudget;
   const reactId = useId();
@@ -148,6 +152,7 @@ export function ScenarioWorldHost({
   const cancelCameraAnimationRef = useRef<(() => void) | null>(null);
   const cancelModelSettleRef = useRef<(() => void) | null>(null);
   const cancelMetadataProgressRef = useRef<(() => void) | null>(null);
+  const presentationRef = useRef<{ target: ScenarioWorldTarget; detail: string; generation: number } | null>(null);
   const actorRendererRef = useRef<ActorRenderer | null>(null);
   const onViewerChangeRef = useRef(onViewerChange);
   const onActorRendererChangeRef = useRef(onActorRendererChange);
@@ -243,6 +248,35 @@ export function ScenarioWorldHost({
     updateTransitionPhase("idle");
   };
 
+  const revealPreparedMap = (current: ScenarioWorldTarget, detail: string) => {
+    presentationRef.current = { target: current, detail, generation: transitionGenerationRef.current };
+    setPreparedMapVersionId(current.mapVersionId);
+    updateTransitionPhase("revealing");
+  };
+
+  useEffect(() => {
+    if (transitionPhase !== "revealing") return;
+    const presentation = presentationRef.current;
+    const viewer = viewerRef.current;
+    if (!presentation || !viewer) return;
+    return waitForCanvasPresentation(viewer.renderer.domElement, () => {
+      const latest = targetRef.current ?? retainedTargetRef.current;
+      if (presentation.generation !== transitionGenerationRef.current
+        || latest?.mapVersionId !== presentation.target.mapVersionId
+        || viewerRef.current !== viewer) return;
+      presentationRef.current = null;
+      setLoadedMapVersionId(presentation.target.mapVersionId);
+      setError(null);
+      updateLoadProgress({
+        phase: "ready",
+        percent: 100,
+        message: `${presentation.target.label} is ready`,
+        detail: presentation.detail,
+      });
+      finishCameraTransition(viewer);
+    });
+  }, [preparedMapVersionId, transitionPhase]);
+
   // Hand the GPU uploader its boot budget while the cover is up and the
   // preset's own pacing back the moment it lifts. See BOOT_UPLOAD_BUDGET.
   useEffect(() => {
@@ -316,6 +350,7 @@ export function ScenarioWorldHost({
 
     const generation = ++transitionGenerationRef.current;
     setLoadedMapVersionId(null);
+    setPreparedMapVersionId(null);
     setError(null);
     progressTrackerRef.current = { peakOutstanding: 0, percent: 55 };
     setLoadProgress({
@@ -355,17 +390,7 @@ export function ScenarioWorldHost({
         ) {
           return;
         }
-        waitForPaintFrames(() => {
-          if (generation !== transitionGenerationRef.current) return;
-          setLoadedMapVersionId(current.mapVersionId);
-          updateLoadProgress({
-            phase: "ready",
-            percent: 100,
-            message: `${current.label} is ready`,
-            detail: "The new rendering profile is fully prepared.",
-          });
-          finishCameraTransition(viewer);
-        });
+        revealPreparedMap(current, "The new rendering profile is fully prepared.");
       },
       (reason) => {
         if (generation !== transitionGenerationRef.current) return;
@@ -405,6 +430,7 @@ export function ScenarioWorldHost({
     transitionGenerationRef.current += 1;
     setError(null);
     setLoadedMapVersionId(null);
+    setPreparedMapVersionId(null);
     progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
     cancelCameraAnimationRef.current?.();
     cancelModelSettleRef.current?.();
@@ -447,11 +473,12 @@ export function ScenarioWorldHost({
     onStateChangeRef.current({
       target: effectiveTarget,
       loadedMapVersionId,
+      preparedMapVersionId,
       streaming,
       error,
       transitionPhase,
     });
-  }, [effectiveTarget, error, loadedMapVersionId, streaming, transitionPhase]);
+  }, [effectiveTarget, error, loadedMapVersionId, preparedMapVersionId, streaming, transitionPhase]);
 
   const sceneLoading = useSceneLoadingSurfaceProps(
     loadProgress,
@@ -462,6 +489,7 @@ export function ScenarioWorldHost({
           transitionGenerationRef.current += 1;
           setError(null);
           setLoadedMapVersionId(null);
+          setPreparedMapVersionId(null);
           progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
           setLoadProgress(initialSceneLoadProgress(current.label));
           updateTransitionPhase("loading");
@@ -479,6 +507,7 @@ export function ScenarioWorldHost({
       data-world-manifest-url={effectiveTarget?.manifestUrl ?? ""}
       data-world-loaded-map-version-id={loadedMapVersionId ?? ""}
       data-world-load-percent={loadProgress.percent ?? ""}
+      data-world-prepared-map-version-id={preparedMapVersionId ?? ""}
       data-world-transition={transitionPhase}
       data-world-interactive={String(interactive)}
     >
@@ -521,6 +550,7 @@ export function ScenarioWorldHost({
             cancelMetadataProgressRef.current?.();
             loadedMapVersionIdRef.current = null;
             setLoadedMapVersionId(null);
+            setPreparedMapVersionId(null);
             setTierSelection(null);
             actorRendererRef.current = null;
             onViewerChangeRef.current(null);
@@ -551,7 +581,7 @@ export function ScenarioWorldHost({
             const pulledBackDestination = destinationView
               ? pulledBackMapView(destinationView)
               : null;
-            const publishReady = () => {
+            const prepareReveal = () => {
               const latest = targetRef.current ?? retainedTargetRef.current;
               if (
                 !latest ||
@@ -561,15 +591,7 @@ export function ScenarioWorldHost({
                 return;
               }
               cancelModelSettleRef.current = null;
-              setLoadedMapVersionId(current.mapVersionId);
-              setError(null);
-              updateLoadProgress({
-                phase: "ready",
-                percent: 100,
-                message: `${current.label} is ready`,
-                detail: "Scene assets are loaded and ready to use.",
-              });
-              finishCameraTransition(viewer);
+              revealPreparedMap(current, "Scene assets are loaded and ready to use.");
             };
             const completeMapLoad = () => {
               const latest = targetRef.current ?? retainedTargetRef.current;
@@ -596,10 +618,10 @@ export function ScenarioWorldHost({
                   pulledBackDestination,
                   destinationView,
                   MAP_ZOOM_IN_MS,
-                  () => waitForPaintFrames(publishReady),
+                  prepareReveal,
                 );
               } else {
-                waitForPaintFrames(publishReady);
+                prepareReveal();
               }
             };
 
@@ -669,7 +691,7 @@ export function ScenarioWorldHost({
           className={cn(
             "h-full w-full transition-[opacity,filter] duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none",
             !interactive && "pointer-events-none",
-            streaming || transitionPhase === "loading" || transitionPhase === "error"
+            preparedMapVersionId !== effectiveTarget?.mapVersionId || transitionPhase === "loading" || transitionPhase === "error"
               ? "opacity-0"
               : "opacity-100 saturate-100 blur-0",
           )}
@@ -682,23 +704,16 @@ export function ScenarioWorldHost({
         aria-hidden="true"
         className={cn(
           "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_42%,rgba(0,0,0,0.48)_100%)] transition-opacity duration-500 motion-reduce:hidden",
-          transitionPhase === "idle" ? "opacity-0" : "opacity-100",
+          transitionPhase === "idle" || transitionPhase === "revealing" ? "opacity-0" : "opacity-100",
         )}
       />
-      {transitionPhase !== "idle" ? (
+      {transitionPhase !== "idle" && transitionPhase !== "revealing" ? (
         <CloudLoadingSurface scope="screen" {...sceneLoading} />
       ) : null}
     </div>
   );
 }
 
-function waitForPaintFrames(onComplete: () => void): void {
-  if (typeof requestAnimationFrame !== "function") {
-    onComplete();
-    return;
-  }
-  requestAnimationFrame(() => requestAnimationFrame(onComplete));
-}
 
 function renderingPreferenceLabel(preference: RenderingPreference): string {
   switch (preference) {

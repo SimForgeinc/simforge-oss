@@ -4,6 +4,7 @@ import { CityViewer } from './viewer';
 import type { CityViewerOptions } from './types';
 import type { NativeReadiness, NativeViewportPort } from './native-renderer-adapter';
 import { installViewerRuntimeDiagnostics, type ViewerRuntimeDiagnostics } from './viewer-diagnostics';
+export { waitForCanvasPresentation } from './canvas-presentation';
 
 export interface CityViewProps {
   manifestUrl: string;
