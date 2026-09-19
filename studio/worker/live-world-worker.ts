@@ -19,6 +19,7 @@ import type {
   LiveWorldWorkerRequest,
   LiveWorldWorkerResponse,
 } from '../app/lib/live-world/worker-protocol';
+import type { DriveControlSource } from '../app/lib/live-world/types';
 import {
   applyDriverCommand,
   applyEgoControl,
@@ -51,6 +52,7 @@ let authoredInput: SimScenarioInput | null = null;
 let authoredGraph: LaneGraph | null = null;
 let egoActorId: string | null = null;
 let driveMode: AuthoredDriveMode = 'take';
+let controlSource: DriveControlSource = 'human';
 let playing = true;
 let inspecting = false;
 let completed = false;
@@ -88,8 +90,24 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
     return;
   }
 
+  if (message.type === 'control-source') {
+    controlSource = message.source;
+    if (egoActorId !== null && !completed) {
+      assertOutcome(releaseEgo(world, egoActorId, commandSequence++));
+      assertOutcome(holdEgoNeutral(world, egoActorId, commandSequence++));
+    }
+    return;
+  }
+  if (message.type === 'planner-action') {
+    if (controlSource !== 'jev' || message.actorId !== egoActorId || completed) return;
+    assertOutcome(world.applyCommand('drive-worker', commandSequence++, {
+      kind: 'act', actorId: message.actorId, action: message.action,
+    }));
+    return;
+  }
   if (message.type === 'set-ego') {
     try {
+      controlSource = 'human';
       if (!authoredInput) throw new Error('ego designation is only available for authored worlds');
       if (message.actorId !== null) assertControllableActor(authoredInput, message.actorId);
       // Ownership is explicit in the engine, not implied by the first key:
@@ -135,6 +153,7 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   }
 
   if (message.type === 'control') {
+    if (controlSource !== 'human') return;
     // A completed authored clip is a healthy, parked world. Keyboard control
     // continues at 20 Hz while Drive is mounted, so ignore it until replay
     // instead of asking a finished WorldSession to accept another act command.
@@ -179,6 +198,7 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   }
 
   if (message.type === 'driver-command') {
+    if (controlSource !== 'human') return;
     // As above: a parked clip is not an error, and the driver's pedals simply
     // stop being read until the transport replays.
     if (!endless && authoredInput && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))) {
@@ -273,6 +293,7 @@ function rebuildAuthoredWorld(): WorldSession {
   truth = world.subscribeTruth();
   commandSequence = 0;
   completed = false;
+  controlSource = 'human';
   take = null;
   // A rebuilt world knows nothing of the previous one's overrides; the owned
   // ego must be held neutral again before its first tick, or it would start

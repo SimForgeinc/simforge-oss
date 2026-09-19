@@ -1,0 +1,9 @@
+{
+  "observations": 360,
+  "coverage_equivalence": 360,
+  "unscaled_render_samples": 6,
+  "panel_driver_counts": [
+    1,
+    6
+  ]
+}

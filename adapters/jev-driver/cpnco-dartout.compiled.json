@@ -1,0 +1,634 @@
+{
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 16.0,
+    "warmupSeconds": 1.0,
+    "dt": 0.02,
+    "seed": "jev-driving-1",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000.0,
+        "frictionScale": 1.0,
+        "trafficSpeedFactor": 1.0
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "116:0:-1",
+            "s": 3.8495296747042573,
+            "tFrac": 0.0
+          },
+          "pose": {
+            "x": 146.34026830228493,
+            "z": -110.1353633316821,
+            "headingRad": 1.3935951519309135
+          },
+          "speedMps": 6.111111111111112
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1.0
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "146:0:-1",
+              "2246:0:-1",
+              "134:0:-1",
+              "784:0:-1",
+              "116:0:-1",
+              "231:0:-1",
+              "81:0:-1",
+              "1512:0:-1",
+              "93:0:-1",
+              "82:0:-1",
+              "1739:0:-1",
+              "36:0:-1",
+              "27:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 6.111111111111112
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "ped",
+        "kind": "pedestrian",
+        "dims": {
+          "l": 0.6,
+          "w": 0.6,
+          "h": 1.75
+        },
+        "initial": {
+          "pose": {
+            "x": 151.8292704530336,
+            "z": -146.5592650551601,
+            "headingRad": 1.5785918428294825
+          },
+          "speedMps": 1.5000000000000002
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yieldToVehicles": false,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1.0
+          },
+          "route": {
+            "kind": "polyline",
+            "points": [
+              {
+                "x": 151.93772943229303,
+                "z": -132.6465514195946
+              },
+              {
+                "x": 151.92994479580403,
+                "z": -133.6451355752626
+              },
+              {
+                "x": 151.922160159315,
+                "z": -134.6437197309306
+              },
+              {
+                "x": 151.91437552282602,
+                "z": -135.6423038865986
+              },
+              {
+                "x": 151.90659088633703,
+                "z": -136.64088804226657
+              },
+              {
+                "x": 151.898806249848,
+                "z": -137.63947219793457
+              },
+              {
+                "x": 151.89102161335902,
+                "z": -138.63805635360256
+              },
+              {
+                "x": 151.88323697687002,
+                "z": -139.63664050927056
+              },
+              {
+                "x": 151.87545234038103,
+                "z": -140.63522466493856
+              },
+              {
+                "x": 151.867667703892,
+                "z": -141.63380882060656
+              },
+              {
+                "x": 151.85988306740302,
+                "z": -142.63239297627456
+              },
+              {
+                "x": 151.85209843091403,
+                "z": -143.63097713194253
+              },
+              {
+                "x": 151.844313794425,
+                "z": -144.62956128761053
+              },
+              {
+                "x": 151.836529157936,
+                "z": -145.62814544327853
+              },
+              {
+                "x": 151.82874452144702,
+                "z": -146.62672959894653
+              },
+              {
+                "x": 151.820959884958,
+                "z": -147.62531375461452
+              },
+              {
+                "x": 151.813175248469,
+                "z": -148.62389791028252
+              },
+              {
+                "x": 151.80539061198002,
+                "z": -149.6224820659505
+              },
+              {
+                "x": 151.79760597549102,
+                "z": -150.6210662216185
+              },
+              {
+                "x": 150.91860049736468,
+                "z": -151.06386678468127
+              },
+              {
+                "x": 150.0163379485486,
+                "z": -151.4918308129831
+              },
+              {
+                "x": 149.11407539973249,
+                "z": -151.9197948412849
+              },
+              {
+                "x": 148.2118128509164,
+                "z": -152.34775886958673
+              },
+              {
+                "x": 147.30955030210032,
+                "z": -152.77572289788853
+              },
+              {
+                "x": 146.4072877532842,
+                "z": -153.20368692619036
+              },
+              {
+                "x": 145.50502520446813,
+                "z": -153.63165095449216
+              }
+            ]
+          },
+          "cruiseSpeedMps": 1.5000000000000002
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ped",
+          "class:pedestrian",
+          "binding:on_reference"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ped-reaches-the-lane",
+        "actorId": "ped",
+        "trigger": {
+          "kind": "at",
+          "t": 4.181993837554029
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 1.5000000000000002
+        },
+        "dynamics": {
+          "shape": "step",
+          "constraint": "time",
+          "value": 0.1
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [
+      {
+        "id": "parked-row-0",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.34865003245952,
+          "z": -128.48947067893042,
+          "headingRad": 1.5142294750958956
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-1",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.4441162650394,
+          "z": -135.10773628343736,
+          "headingRad": 1.5998925981941916
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-2",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.34396834525722,
+          "z": -141.4633687184715,
+          "headingRad": 1.58325491397391
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-3",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.33878126575433,
+          "z": -147.83890149649218,
+          "headingRad": 1.5739951289626384
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      }
+    ],
+    "occluders": [
+      {
+        "id": "parked-row-0",
+        "groupId": "parked-row",
+        "obb": {
+          "center": {
+            "x": 151.34865003245952,
+            "z": -128.48947067893042
+          },
+          "lengthM": 4.85,
+          "widthM": 1.95,
+          "headingRad": 1.5142294750958956,
+          "heightM": 1.78
+        }
+      },
+      {
+        "id": "parked-row-1",
+        "groupId": "parked-row",
+        "obb": {
+          "center": {
+            "x": 151.4441162650394,
+            "z": -135.10773628343736
+          },
+          "lengthM": 4.85,
+          "widthM": 1.95,
+          "headingRad": 1.5998925981941916,
+          "heightM": 1.78
+        }
+      },
+      {
+        "id": "parked-row-2",
+        "groupId": "parked-row",
+        "obb": {
+          "center": {
+            "x": 151.34396834525722,
+            "z": -141.4633687184715
+          },
+          "lengthM": 4.85,
+          "widthM": 1.95,
+          "headingRad": 1.58325491397391,
+          "heightM": 1.78
+        }
+      },
+      {
+        "id": "parked-row-3",
+        "groupId": "parked-row",
+        "obb": {
+          "center": {
+            "x": 151.33878126575433,
+            "z": -147.83890149649218
+          },
+          "lengthM": 4.85,
+          "widthM": 1.95,
+          "headingRad": 1.5739951289626384,
+          "heightM": 1.78
+        }
+      }
+    ],
+    "occlusionPairs": [
+      {
+        "observer": "ego",
+        "target": "ped",
+        "occluderId": "parked-row"
+      }
+    ],
+    "nearMissCriteria": []
+  },
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "cpnco-dartout",
+      "templateVersion": 2,
+      "templateDigest": "f9f3f2ea092924b5",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "fd71c0c9f89b5fe737d47fb3cbbf23bf5c535588bb41b0b1bed589ae92490001",
+      "engineGraphDigest": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+      "siteId": "d48448619381d262",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "jev-driving-1",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "d48448619381d262#-1",
+    "archetype": "C5.cpnco-dartout",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "d48448619381d262",
+      "score": 0.9053333333333332,
+      "verdict": "degraded",
+      "originFeatureId": "seg_347712791ed29751",
+      "entryLaneRsl": "146:0:-1",
+      "egoTurn": null,
+      "degradationSummary": "Degraded match (score 0.91). speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter). corridor.speedLimitKph worst value 24 at s=0 m, wanted [25, 65]. Presentation was relaxed; the scenario still tests what it was written to test.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.01)",
+        "every required adjacency present along the corridor",
+        "161.66 m of runway available, 150 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {
+        "arrivalTtc": 1.8
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "116:0:-1",
+        "spawnS": 82.33331282939145,
+        "initialSpeedMps": 6.111111111111112,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ped",
+        "actorKind": "pedestrian",
+        "roleKind": "on_reference",
+        "laneRsl": null,
+        "spawnS": 0.0,
+        "initialSpeedMps": 1.5000000000000002,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [
+      {
+        "id": "parked-row-0",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.34865003245952,
+          "z": -128.48947067893042,
+          "headingRad": 1.5142294750958956
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-1",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.4441162650394,
+          "z": -135.10773628343736,
+          "headingRad": 1.5998925981941916
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-2",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.34396834525722,
+          "z": -141.4633687184715,
+          "headingRad": 1.58325491397391
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      },
+      {
+        "id": "parked-row-3",
+        "groupId": "parked-row",
+        "catalogId": "vehicle.suv",
+        "pose": {
+          "x": 151.33878126575433,
+          "z": -147.83890149649218,
+          "headingRad": 1.5739951289626384
+        },
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "scale": 1.0,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "ped"
+        },
+        "targetRevealToConflictS": 0.9
+      }
+    ],
+    "arrival": [
+      {
+        "interactionId": "ped-reaches-the-lane",
+        "actorId": "ped",
+        "referenceActorId": "ego",
+        "spawnDeltaS": 13.913076981370253,
+        "spawnS": 13.913136384562316,
+        "targetDeltaT": -1.8,
+        "achievedDeltaT": -1.7998265950935544,
+        "achievedTtc": 1.7998265950935544,
+        "fireTime": 4.181993837554029,
+        "iterations": 15,
+        "converged": true
+      }
+    ],
+    "inputHash": "1f51ceadddef7b54b0522801da1539543d39da06e1abdad58686deb84c2c2c4a",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ped-walks-out",
+        "actorId": "ped",
+        "verb": "route",
+        "timeS": 0.0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "ped-commits",
+        "actorId": "ped",
+        "verb": "set",
+        "timeS": 0.0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "ped-ignores-traffic",
+        "actorId": "ped",
+        "verb": "set",
+        "timeS": 0.0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "choreography.interactions.ped-walks-out",
+        "reason": "route(polyline) at t=0 folded into ped's spawn route (25.0 m), so the arrival solver can place the actor along it",
+        "impact": "informational"
+      },
+      {
+        "path": "props.parked-row",
+        "reason": "occlusion declared between ego and ped; reveal-to-conflict is reported by the engine, not solved for",
+        "impact": "informational"
+      }
+    ]
+  },
+  "observations": []
+}

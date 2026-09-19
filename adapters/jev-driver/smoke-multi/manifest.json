@@ -1,0 +1,118 @@
+{
+  "world": "Simforge native dynamic-v1",
+  "mode": "lockstep",
+  "model": "jev-1.13.0",
+  "map_id": "garching-phase-1-2",
+  "spec_path": "/home/path/tmp/jevdrive/coordinated.episodes.json",
+  "native_input_hash": "145f80eb83deb38d1afdfdf240aefbf5ae8ce1a589a92cacc6b46e7615befffa",
+  "seed": "jev-multidriver-1",
+  "engine_hz": 50,
+  "drivers": [
+    {
+      "actor_id": "alpha",
+      "name": "cooperative",
+      "question_set": "cooperative",
+      "candidate_family": [
+        "progress",
+        "hold",
+        "yield",
+        "stop"
+      ],
+      "safety_profile": {
+        "name": "conservative-v1",
+        "horizon_s": 3.0,
+        "position_margin_m": 0.5,
+        "tracking_margin_m": 0.4,
+        "tracking_speed_error_mps": 0.8,
+        "max_accel_mps2": 1.5,
+        "guaranteed_brake_mps2": 3.0,
+        "stop_buffer_m": 2.0,
+        "shadow_max_speed_mps": 8.0,
+        "shadow_reaction_s": 0.3,
+        "headway_s": 2.5,
+        "stop_gap_m": 6.0
+      },
+      "decision_hz": 3.0
+    },
+    {
+      "actor_id": "bravo",
+      "name": "cooperative",
+      "question_set": "cooperative",
+      "candidate_family": [
+        "progress",
+        "hold",
+        "yield",
+        "stop"
+      ],
+      "safety_profile": {
+        "name": "conservative-v1",
+        "horizon_s": 3.0,
+        "position_margin_m": 0.5,
+        "tracking_margin_m": 0.4,
+        "tracking_speed_error_mps": 0.8,
+        "max_accel_mps2": 1.5,
+        "guaranteed_brake_mps2": 3.0,
+        "stop_buffer_m": 2.0,
+        "shadow_max_speed_mps": 8.0,
+        "shadow_reaction_s": 0.3,
+        "headway_s": 2.5,
+        "stop_gap_m": 6.0
+      },
+      "decision_hz": 3.0
+    },
+    {
+      "actor_id": "charlie",
+      "name": "cooperative",
+      "question_set": "cooperative",
+      "candidate_family": [
+        "progress",
+        "hold",
+        "yield",
+        "stop"
+      ],
+      "safety_profile": {
+        "name": "conservative-v1",
+        "horizon_s": 3.0,
+        "position_margin_m": 0.5,
+        "tracking_margin_m": 0.4,
+        "tracking_speed_error_mps": 0.8,
+        "max_accel_mps2": 1.5,
+        "guaranteed_brake_mps2": 3.0,
+        "stop_buffer_m": 2.0,
+        "shadow_max_speed_mps": 8.0,
+        "shadow_reaction_s": 0.3,
+        "headway_s": 2.5,
+        "stop_gap_m": 6.0
+      },
+      "decision_hz": 3.0
+    }
+  ],
+  "sensor_profile": "per-actor 360-degree range/OBB-LOS exact visible boxes",
+  "include_occluded": false,
+  "oracle_in_planner": false,
+  "commit": "all requests submitted concurrently; all answers collected before any latch commits",
+  "scenario_solution": "Real Garching road 160 corridor, no route controls or parked-row occluders. Conservative occlusion speed/reaction/horizon unchanged.",
+  "policy": "jev",
+  "questions": {
+    "cooperative": {
+      "maneuver": {
+        "type": "choice",
+        "instructions": "Select one listed code-vetted maneuver for the next interval. Be a cooperative driver: make useful progress toward ego.cruise_speed_mps, smoothly match slower traffic and create space when closing, but avoid needless braking. Use visible positions, relative velocities, range_rate_mps (negative is closing), the cruise target and candidate effects. Only listed candidates are feasible under your envelope. Unknown regions are not observed actors. Never infer hidden actors or another driver's intentions."
+      },
+      "must_create_space": {
+        "type": "noul",
+        "instructions": "Does the visible relative motion indicate that creating more space from another road user would be useful now? Judge only observed positions and velocities, not unknown intentions."
+      }
+    },
+    "reckless": {
+      "maneuver": {
+        "type": "choice",
+        "instructions": "Select one listed maneuver as an impatient, aggressive driver. Prioritize getting ahead and closing gaps quickly toward ego.cruise_speed_mps. Prefer surge or progress whenever offered; accept short following distance and late gentle braking rather than courteous yielding. Every listed candidate was checked under YOUR deliberately short-horizon envelope; you cannot choose a rejected option or raw control. Use only this observation, never guess another driver's intent."
+      },
+      "must_create_space": {
+        "type": "noul",
+        "instructions": "Does the visible relative motion indicate that creating more space from another road user would be useful now? Judge only observed positions and velocities, not unknown intentions."
+      }
+    }
+  }
+}

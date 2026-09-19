@@ -1,0 +1,85 @@
+{
+  "package": {
+    "root": "/home/path/tmp/jevdrive",
+    "installed": "Editable jevdrive 0.1.0 in the existing .venv",
+    "owners": {
+      "jevdrive/policy.py": "Immutable Persona/SafetyProfile values; all questions, confidence gates, driving envelopes, decision rates and browser takeover thresholds",
+      "jevdrive/client.py": "One pooled official SDK client, pinned jev-1.13.0, response validation and deadline fallback",
+      "jevdrive/driver.py": "Per-actor observation, Decision value, advisory choice and held maneuver",
+      "jevdrive/runtime.py": "The sole N-driver tick loop and concurrent request/commit barrier; N=1 shares this implementation",
+      "jevdrive/sensing.py": "Independent per-actor range/OBB line-of-sight gate over native physical state",
+      "jevdrive/scene.py": "Shared observation normalization and bounded visibility-shadow coverage",
+      "jevdrive/safety.py": "Reused finite candidate generation and swept-footprint safety checks with explicit per-persona parameters",
+      "jevdrive/geometry.py": "Reused route sampling and footprint geometry",
+      "jevdrive/world.py": "Native Simulation action batches and canonical native Trace scene-state export",
+      "jevdrive/evaluation.py": "Outcome-only near-miss/contact and envelope-violation attribution",
+      "jevdrive/scenarios.py": "Real-map scenario authoring",
+      "jevdrive/render.py": "Fail-closed QA-gated native rendering",
+      "jevdrive/video.py": "One data-driven 480px decision panel and unscaled 960px render composition",
+      "jevdrive/serve.py": "Loopback Studio bridge using the same SDK, questions, candidate generator and safety policy"
+    }
+  },
+  "reused_repo_abstractions": [
+    "adapters/gym/simforge_oss_gym/_native.pyi:518-568 — Simulation advances explicit per-actor action batches in ONE native world; EnvSession/PolicySession are ego-only and cannot provide this shared multi-actor barrier.",
+    "adapters/gym/simforge_oss_gym/_native.pyi:573-585 — Trace.parse(...).scene_state_json() is the canonical recorder; no hand-written yaw/quaternion/catalog conversion remains.",
+    "adapters/gym/simforge_oss_gym/episodes.py:175-196,217-237 — native episode/map-bundle loading, validation and graph reuse.",
+    "adapters/gym/simforge_oss_gym/_native.pyi:70-104 — native LaneGraph sampling, route construction and route pose sampling author the actual Garching corridor.",
+    "native/crates/simforge-core/src/engine/world.rs:157-175 and engine/motion.rs:453-465 — native target-speed/acceleration/preview overrides retain physical dynamics and native lane steering; no Python vehicle model or raw Jev control.",
+    "packages/editor/src/laneIndex.ts:480-500,541 and packages/editor/src/routeOverlay.ts:140-145 — lane snapping/projection, lane poses and storage-station/travel-station convention. Browser code uses these rather than new nearest-lane math.",
+    "packages/engine/src/browser.ts:19-27 — the existing WASM engine load path remains unchanged.",
+    "packages/engine/src/frames.ts:38-50 — canonical localFromScene conversion, not another coordinate convention.",
+    "packages/engine/src/core/math.ts:113,254 — existing OBB overlap and swept OBB collision checks for browser sensing and per-tick deterministic monitoring.",
+    "packages/training-env/src/world-session.ts:68-76 — existing native held act commands; Studio worker/source protocol extended instead of another simulator.",
+    "studio/app/lib/live-world/authored-world-source.ts:300 and studio/worker/live-world-worker.ts — existing held-command/worker-host ownership pattern; added human/jev ownership and native planner actions.",
+    "studio/app/lib/scenario/http.ts:14-24 and studio/app/api/simforge/documents/[documentId]/driver-in-the-loop/route.ts:17-24 — existing authenticated request and JSON response conventions.",
+    "studio/app/dashboard/map-assets/drive/DriveSession.tsx and drive-session.stylex.ts:17 — existing ref-driven frame hook, Button, driveChrome and StyleX tokens. Existing driver-in-the-loop preparation/store remain unchanged."
+  ],
+  "new_abstractions_and_reason": [
+    "JevDriver/Decision and data-valued Persona/SafetyProfile: no prior per-controlled-actor Jev state or isolated persona envelope existed; replaces the inline single-ego loop.",
+    "NativeWorld adapter: Python exposes the native multi-actor Simulation API, but no multi-actor PolicyRunner; adapter batches vetted setpoints without reimplementing dynamics.",
+    "ActorSensor: the installed wheel exposes only EnvSession's ego radial slab, not a generic per-actor observation builder. The explicit ideal visible-box sensor gates each actor separately and never transmits hidden actors or peer decisions.",
+    "Outcome scorer: native collision events lack the Jev persona-envelope attribution requested here; scoring stays strictly outside perception/planning.",
+    "DecisionPanel: the previous renderer overlaid the render; this adds an independent sidebar and logged decision history for 1–6 drivers.",
+    "Studio JevController and authenticated loopback proxy: no takeover controller or TypeSafe server route existed. Server calls reuse the actual Python package and pooled client, so question text/thresholds are not copied into TypeScript."
+  ],
+  "deleted": [
+    "run.py inline single-driver loop and custom SceneStateRecorder",
+    "record_scenestate.py duplicate mirrored-yaw recorder",
+    "make_video.py in-frame HUD implementation",
+    "compare.py, evaluate_authored.py, sweep.py obsolete single-driver replay/sensitivity entrypoints",
+    "NativeRouteContext, GroundTruthProvider, and unused CarlaProvider prototype paths",
+    "Historical v1/v2 question variants; old top-level policy_constants.py/scene.py/safety.py/geometry.py paths moved into the package without shims",
+    "All throwaway Studio verification scripts after their result artifacts were saved"
+  ],
+  "primary_runs": {
+    "coordinated": {"path": "/home/path/tmp/jevdrive/coordinated-run", "video": "jev-closed-loop.mp4", "ticks": 1000, "duration_s": 20, "drivers": 3, "live_api_calls": 173, "accepted_choices": 172, "collision_ticks": 0, "near_miss_ticks": 0},
+    "bad_actor": {"path": "/home/path/tmp/jevdrive/bad-actor-approach-run", "video": "jev-closed-loop.mp4", "ticks": 1000, "duration_s": 20, "drivers": 3, "live_api_calls": 130, "accepted_choices": 123, "collision_ticks": 4, "near_miss_ticks": 340, "native_collision": {"actors": ["alpha", "bravo"], "time_s": 16.257992206591677}}
+  },
+  "scenario_solution": "Authored three vehicles on the real 874m Garching OpenDRIVE lane 160:0:-3. The route has no signal/stop controls and no parked-row occluders, so neither known blocker is suppressed. Cooperative shadow assumptions remain 8m/s intruder speed, 0.3s reaction and a 3s horizon. Sensing is explicitly upgraded from ego-only radial slabs to per-actor ideal visible boxes; hidden actors remain omitted. Reckless alpha alone uses the labelled 1s horizon and smaller clearance/stronger assumed braking envelope. Its surge choices close a real 95m initial lead distance; bravo reacts defensively and a native rear-end contact emerges. No contact, pose, or raw control was injected. The first near-miss threshold crossing is logged at approximately 13.1s; one contact event spans four observed overlap ticks, not four independent crashes. Following/yielding were demonstrated, not lane changing.",
+  "verification": {
+    "qa": "qa_scenestate.py passed on both 1000-frame documents before rendering; render.py hard-fails on QA or renderer failure",
+    "media": "ffprobe: both 1440x540, 50/1 fps, 1000 frames, duration 20.000000s",
+    "inspected_coordinated_ticks": [17, 500, 999],
+    "inspected_bad_actor_ticks": [34, 500, 813, 999],
+    "unscaled_render": "Six sampled composite left panes are pixel-identical to original 960x540 render PNGs",
+    "schema": "All 360 primary-run decision/fallback observations validate against scene-observation.v2.schema.json",
+    "concurrency": "52 coordinated and 30 bad-actor barriers have summed API latency more than twice barrier wall time. Median three-driver launch spread is 0.826ms / 0.652ms; every accepted choice belonged to that driver's feasible set.",
+    "single_driver": "single-live-proof: same loop, N=1, 50 ticks, two real accepted Jev requests, QA passed",
+    "panel_scaling": "Same panel renderer exercised with 1 and 6 driver rows",
+    "studio_native": "native-takeover-proof.json: actual native world, 400 ticks, 16 decision-service requests; lateral offset 0.306084m to 0.015369m, initial speed 4.009836m/s and final 4.063886m/s; native human-command return accepted",
+    "studio_ui": "studio-toggle-proof.json: actual authenticated Studio Drive page, Jev aria-pressed=true with status 'Jev hold', then human aria-pressed=false and 'Human control'. Fixed an actual older-WASM missing Route.projectPoint binding by using LaneIndex projection and native snapshot legs throughout."
+  },
+  "commands": {
+    "run": "bash run.sh run --spec coordinated.episodes.json --out NEW_DIRECTORY",
+    "bad_actor": "bash run.sh run --spec bad-actor-approach.episodes.json --out NEW_DIRECTORY",
+    "render": "bash render.sh RUN_DIRECTORY",
+    "studio_service": "bash run.sh serve (Studio proxies loopback http://127.0.0.1:8766; override with server-side JEVDRIVE_URL)"
+  },
+  "limits": [
+    "Studio's headless Chrome lost its WebGL context. The real control-source toggle and server requests were exercised, but 3D visual confirmation of Studio motion is NOT claimed; native headless motion is separately measured.",
+    "Studio stops before unsupported signal/road-control or junction entries rather than assuming green. Arbitrary intersections, large off-road recovery, reverse takeover and lane changing are not qualified.",
+    "Bad-actor behavior ends with minimum-risk stopping after its feasible set disappears. There are real cloud calls throughout the 20s scene, but a stopped driver with no feasible alternatives does not buy meaningless model requests.",
+    "The runs are lockstep simulation with an explicitly ideal box sensor, not real-time road-safety validation. No public-road actuation, calibration study or general collision-proof guarantee.",
+    "No project-wide builds, tests, linters or formatters were run. Only targeted execution, schema checks, native/app smoke work, and the local package's editable installation were performed."
+  ]
+}

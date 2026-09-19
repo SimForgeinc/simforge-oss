@@ -1,0 +1,15 @@
+{
+ "template": "/home/path/simforge-oss/examples/ltap-opposing.template.json",
+ "map": "el-camino-road",
+ "seeds": [
+  "jev-driving-1"
+ ],
+ "episode": {
+  "decisionHz": 50,
+  "observation": {
+   "stateVector": true,
+   "objectListRangeM": 120,
+   "bev": null
+  }
+ }
+}

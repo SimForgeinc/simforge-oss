@@ -1,0 +1,41 @@
+{
+  "world": "Simforge native dynamic-v1 synthetic lead-car",
+  "mode": "lockstep",
+  "schema_version": "scene-observation/v1",
+  "model": "jev-1.13.0",
+  "engine_hz": 50,
+  "jev_target_hz": 3.0,
+  "ticks_run": 750,
+  "sim_time_s": 15.0,
+  "real_api_requests": 45,
+  "valid_jev_choices": 44,
+  "disagreements": 9,
+  "disagreement_rate": 0.20454545454545456,
+  "confidence_mean_disagree": 0.45333333333333337,
+  "confidence_mean_agree": 0.3445714285714286,
+  "confidence_disagreement_correlation": 0.4258615592083335,
+  "confidence_groups": {
+    "below_0.70": {
+      "n": 44,
+      "disagreements": 9
+    },
+    "at_least_0.70": {
+      "n": 0,
+      "disagreements": 0
+    }
+  },
+  "median_decision_latency_ms": 166.416,
+  "median_api_latency_ms": 166.398,
+  "deadline_misses": 2,
+  "fallbacks": 3,
+  "safety_overrides": 0,
+  "collision_ticks": 0,
+  "staleness_m": {
+    "median": 0.0,
+    "max": 0.0,
+    "applied_max": 0.0
+  },
+  "max_wall_schedule_lag_s": 0.0,
+  "interpretation": "Small temporally correlated episode; concentration confidence is not correctness and disagreement is not an error label.",
+  "decision_log_path": "/home/path/tmp/jevdrive/evidence-lockstep-v2/decisions.jsonl"
+}

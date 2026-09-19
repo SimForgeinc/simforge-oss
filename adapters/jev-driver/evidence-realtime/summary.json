@@ -1,0 +1,41 @@
+{
+  "world": "Simforge native dynamic-v1 synthetic lead-car",
+  "mode": "realtime",
+  "schema_version": "scene-observation/v1",
+  "model": "jev-1.13.0",
+  "engine_hz": 50,
+  "jev_target_hz": 3.0,
+  "ticks_run": 500,
+  "sim_time_s": 10.0,
+  "real_api_requests": 28,
+  "valid_jev_choices": 28,
+  "disagreements": 20,
+  "disagreement_rate": 0.7142857142857143,
+  "confidence_mean_disagree": 0.8415,
+  "confidence_mean_agree": 0.35375,
+  "confidence_disagreement_correlation": 0.8020105166692876,
+  "confidence_groups": {
+    "below_0.70": {
+      "n": 11,
+      "disagreements": 3
+    },
+    "at_least_0.70": {
+      "n": 17,
+      "disagreements": 17
+    }
+  },
+  "median_decision_latency_ms": 181.6705,
+  "median_api_latency_ms": 171.5855,
+  "deadline_misses": 2,
+  "fallbacks": 20,
+  "safety_overrides": 1,
+  "collision_ticks": 0,
+  "staleness_m": {
+    "median": 1.2372,
+    "max": 4.3381,
+    "applied_max": 3.2
+  },
+  "max_wall_schedule_lag_s": 0.0006,
+  "interpretation": "Small temporally correlated episode; concentration confidence is not correctness and disagreement is not an error label.",
+  "decision_log_path": "/home/path/tmp/jevdrive/evidence-realtime/decisions.jsonl"
+}

@@ -1,0 +1,2 @@
+recorded_action_replay 750 of 750 scene hashes and sim timestamps match; no API calls in replay
+final_ego_pose (15.0, 127.93621988315617, 1.3587567028439754e-14, -1.9560552288060505e-16, 5.800000146512524)

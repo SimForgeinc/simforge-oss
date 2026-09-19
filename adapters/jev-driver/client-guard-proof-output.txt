@@ -1,0 +1,2 @@
+captured_inconsistency_refused evidence-lockstep if_progress hold
+captured_inconsistency_refused evidence-lockstep-v2 maneuver hold

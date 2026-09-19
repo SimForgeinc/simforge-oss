@@ -1,0 +1,36 @@
+{
+  "ticks_run": 50,
+  "sim_time_s": 1.0,
+  "drivers_per_run": 1,
+  "live_api_calls": 0,
+  "live_api_responses": 0,
+  "accepted_jev_choices": 0,
+  "median_api_latency_ms": null,
+  "fallback_reasons": {
+    "no_feasible_candidate": 1,
+    "forced_single_candidate": 2
+  },
+  "counts": {
+    "safety_overrides": 2,
+    "no_feasible_driver_ticks": 2,
+    "alpha:emergency_brake": 2,
+    "collision_ticks": 0,
+    "near_miss_ticks": 0,
+    "alpha:stop": 48
+  },
+  "collision_ticks": 0,
+  "near_miss_ticks": 0,
+  "native_collision_events": [],
+  "scene_state_frames": 50,
+  "scene_state_path": "single-driver-proof/scenestate.json",
+  "decision_log_path": "single-driver-proof/decisions.jsonl",
+  "per_driver": {
+    "alpha": {
+      "persona": "cooperative",
+      "distance_m": 8.118,
+      "final_speed_mps": 6.919
+    }
+  },
+  "interpretation": "Observed interaction, not a calibrated safety certificate or causal fault proof.",
+  "qa_passed": true
+}

@@ -1,0 +1,10 @@
+school-dartout easterbrook-discovery-school NativeError no_site at anchor: no site matched on easterbrook-discovery-school attrs {'kind': 'runtime', 'issues_json': None}
+cpnco-dartout belmont-research-center MATCHED
+input_surface ['actor_ids', 'clip_seconds', 'content_hash', 'dt', 'map_id', 'metric_subject', 'parse', 'physics_mode', 'seed', 'to_json', 'warmup_seconds', 'with_clip_seconds', 'with_seed']
+result_surface ['input', 'manifest_json', 'observations_json']
+ltap-opposing belmont-research-center NativeError no_site at anchor: no site matched on belmont-research-center attrs {'kind': 'runtime', 'issues_json': None}
+ltap-opposing di-rosa-sf NativeError no_site at anchor: no site matched on di-rosa-sf attrs {'kind': 'runtime', 'issues_json': None}
+ltap-opposing easterbrook-discovery-school NativeError no_site at anchor: no site matched on easterbrook-discovery-school attrs {'kind': 'runtime', 'issues_json': None}
+ltap-opposing el-camino-road MATCHED
+input_surface ['actor_ids', 'clip_seconds', 'content_hash', 'dt', 'map_id', 'metric_subject', 'parse', 'physics_mode', 'seed', 'to_json', 'warmup_seconds', 'with_clip_seconds', 'with_seed']
+result_surface ['input', 'manifest_json', 'observations_json']

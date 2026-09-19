@@ -1,0 +1,3 @@
+frames=100 actors=3 map=garching-phase-1-2
+checks run: {'displacement': 297, 'velocity': 297, 'quaternion': 297}
+PASS scene-state is coherent: orientation matches motion, no teleports

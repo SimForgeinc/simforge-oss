@@ -1,0 +1,5661 @@
+{
+  "kind": "offline-fixed-observation-sensitivity-not-closed-loop",
+  "source": "evidence-cpnco-v2-fixed/ticks.jsonl",
+  "warning": "A feasible stationary stop is not a traversable corridor. The scene distribution was generated with the original 8m/s,0.3s envelope; relaxation is not validated on real data.",
+  "rows": [
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.05,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.1,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25",
+          "creep_0_5"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 31,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 31,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 31,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.15,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 31,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 14,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop",
+          "creep_0_25"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 31,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 45,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 17
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 15,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [
+          "stop"
+        ],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 45,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 18
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.2,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 46,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 18
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 46,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 18
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 46,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 18
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 14,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "3.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "4.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "5.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "6.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "7.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "8.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "9.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "10.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "11.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "12.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "13.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "14.0": [
+          "hold",
+          "yield",
+          "stop"
+        ],
+        "15.0": [
+          "hold",
+          "yield",
+          "stop"
+        ]
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 46,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.25,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 0.5,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 1.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 2.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 4.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.0,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.1,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.3,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    },
+    {
+      "arm": "without_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 60
+      }
+    },
+    {
+      "arm": "with_creep",
+      "assumed_intruder_speed_mps": 8.0,
+      "reaction_s": 0.5,
+      "sampled_frames": 15,
+      "frames_with_any_candidate": 0,
+      "frames_with_progress": 0,
+      "frames_with_bounded_creep": 0,
+      "feasible_sets_by_time_s": {
+        "1.0": [],
+        "2.0": [],
+        "3.0": [],
+        "4.0": [],
+        "5.0": [],
+        "6.0": [],
+        "7.0": [],
+        "8.0": [],
+        "9.0": [],
+        "10.0": [],
+        "11.0": [],
+        "12.0": [],
+        "13.0": [],
+        "14.0": [],
+        "15.0": []
+      },
+      "rejection_counts": {
+        "occlusion_reachability": 88,
+        "creep_requires_standstill": 2
+      }
+    }
+  ]
+}

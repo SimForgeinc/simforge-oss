@@ -1,0 +1,36 @@
+{
+  "mode": "realtime",
+  "scenario_sha256": "90f02a0cef9650003891b61db3cce8c19917594fbd27e8bd8def520b1a8a2ae9",
+  "model": "jev-1.13.0",
+  "schema": "scene-observation/v1",
+  "seed": "jev-driving-1",
+  "native_engine_version": "0.6.0",
+  "native_abi": 2,
+  "native_module": "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/_native.abi3.so",
+  "questions": {
+    "intent": {
+      "type": "choice",
+      "instructions": "Choose a driving preference for this observed scene, not a safety verdict. Favor progress on a clear road, but yielding when closing on a slower road user or a stop constraint. All motion choices are separately filtered by deterministic code. Unknown observations are not evidence of a clear road.",
+      "criteria": {
+        "progress": "Make comfortable legal progress.",
+        "yield": "Create space or slow for a road user or constraint."
+      }
+    },
+    "if_progress": {
+      "type": "choice",
+      "instructions": "Assuming the driver prefers progress, select the most appropriate candidate from `candidates`. All listed candidates passed the deterministic filter for its stated modeled bounds. Balance useful progress, comfort and following space; prefer holding speed over needless stopping, but do not accelerate toward a close slower vehicle. Choose only a listed maneuver."
+    },
+    "if_yield": {
+      "type": "choice",
+      "instructions": "Assuming the driver prefers yielding, select the most appropriate candidate from `candidates`. All listed candidates passed the deterministic filter for its stated modeled bounds. Prefer smooth slowing to create space rather than an unnecessary hard stop; hold if slowing serves no purpose. Choose only a listed maneuver."
+    }
+  },
+  "constants_sha256": "5e1740a4ab337460ecbdddf30fee76fff88b8d16d86293cbf7c64da320bd27c1",
+  "decision_hz": 3.0,
+  "deadline_ms": 333.0,
+  "include_occluded": false,
+  "oracle_in_planner": false,
+  "injected_delay_request_indices": [
+    5
+  ]
+}

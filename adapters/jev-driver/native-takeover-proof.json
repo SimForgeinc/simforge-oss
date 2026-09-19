@@ -1,0 +1,60 @@
+{
+  "calls": 16,
+  "samples": [
+    {
+      "tick": 0,
+      "status": "Jev aligning position and heading",
+      "speed": 4.00983619449598,
+      "offset": 0.30608418960531836
+    },
+    {
+      "tick": 50,
+      "status": "Jev aligning position and heading",
+      "speed": 4.01164311445435,
+      "offset": 0.2742587310484011
+    },
+    {
+      "tick": 100,
+      "status": "Jev aligning position and heading",
+      "speed": 4.010360685667313,
+      "offset": 0.20417687889574038
+    },
+    {
+      "tick": 150,
+      "status": "Jev aligning position and heading",
+      "speed": 3.1949533461210358,
+      "offset": 0.11845939045870242
+    },
+    {
+      "tick": 200,
+      "status": "Jev progress",
+      "speed": 0.5900559555787909,
+      "offset": 0.09258576656314645
+    },
+    {
+      "tick": 250,
+      "status": "Jev progress",
+      "speed": 1.069534606577085,
+      "offset": 0.08039693752208782
+    },
+    {
+      "tick": 300,
+      "status": "Jev progress",
+      "speed": 2.1840083941058928,
+      "offset": 0.05780940689850564
+    },
+    {
+      "tick": 350,
+      "status": "Jev progress",
+      "speed": 3.298493258231097,
+      "offset": 0.032848067520954226
+    },
+    {
+      "tick": 399,
+      "status": "Jev progress",
+      "speed": 4.063886421257489,
+      "offset": 0.015368896016854854
+    }
+  ],
+  "humanReturnAccepted": true
+}

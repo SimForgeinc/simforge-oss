@@ -1,0 +1,492 @@
+{
+  "captured_from_logs_at_utc": "2026-09-17T03:36:44.766169+00:00",
+  "documentation": "https://docs.typesafe.ai/api.md#choice-answer",
+  "expected": "choice is a highest-probability option",
+  "api_responses_audited": 165,
+  "inconsistent_responses": 2,
+  "cases": [
+    {
+      "run": "evidence-lockstep",
+      "question": "if_progress",
+      "timestamp": {
+        "clock": "simulation-seconds",
+        "request_state_time_s": 10.0,
+        "received_at_s": 10.0,
+        "request_seq": 500,
+        "actual_request_wall_clock_utc": null,
+        "note": "Original run did not record UTC; simulation timestamps are exact. Future client calls now log UTC and verbatim response bytes."
+      },
+      "request_payload": {
+        "model": "jev-1.13.0",
+        "state": {
+          "calibration": {
+            "calibration_dataset": null,
+            "calibration_domain": "simulated-measurement",
+            "calibration_version": "exact-no-statistical-fit",
+            "method": "exact_simulator_state",
+            "model_version": "0.6.0",
+            "status": "calibrated"
+          },
+          "candidates": [
+            {
+              "accel_mps2": 1.0,
+              "end_speed_mps": 8.8,
+              "horizon_s": 3.0,
+              "id": "progress",
+              "min_clearance_m": 20.6
+            },
+            {
+              "accel_mps2": 0.0,
+              "end_speed_mps": 5.8,
+              "horizon_s": 3.0,
+              "id": "hold",
+              "min_clearance_m": 25.1
+            },
+            {
+              "accel_mps2": -1.5,
+              "end_speed_mps": 1.3,
+              "horizon_s": 3.0,
+              "id": "yield",
+              "min_clearance_m": 31.9
+            },
+            {
+              "accel_mps2": -4.0,
+              "end_speed_mps": 0.0,
+              "horizon_s": 3.0,
+              "id": "stop",
+              "min_clearance_m": 38.3
+            }
+          ],
+          "capabilities": {
+            "profile": "native-visible-radial-v1",
+            "supplied": [
+              "ego.speed_mps",
+              "objects.x_m",
+              "objects.y_m",
+              "objects.range_rate_mps",
+              "route.speed_limit_mps",
+              "coverage.unknown_regions_m",
+              "candidates"
+            ],
+            "unsupported": [
+              "objects.class",
+              "objects.length_m",
+              "objects.width_m",
+              "objects.heading_rad",
+              "objects.rel_vx_mps",
+              "objects.rel_vy_mps",
+              "objects.velocity_cov_m2ps2",
+              "observed_free_regions_m"
+            ]
+          },
+          "coverage": {
+            "complete": true,
+            "frame": "ego-flu",
+            "geometry": "rectangles:[center_x,center_y,length,width]",
+            "measurement_age_s": 0.0,
+            "observed_free_regions_m": null,
+            "omitted_objects": 0,
+            "radius_m": 120.0,
+            "source": "map-and-visible-blockers",
+            "state_time_s": 10.0,
+            "unknown_regions_m": [
+              [
+                96.6,
+                0.0,
+                46.8,
+                4.3
+              ]
+            ],
+            "untracked_occupied_regions_m": [],
+            "vertical_bounds_m": null
+          },
+          "ego": {
+            "accel_mps2": 0.0,
+            "length_m": 4.5,
+            "speed_mps": 5.8,
+            "width_m": 1.9
+          },
+          "frame": "ego-flu",
+          "last_observed_time_s": 10.0,
+          "objects": [
+            {
+              "bearing_rad": 0.0,
+              "class": null,
+              "class_probabilities": null,
+              "detection_score": null,
+              "existence_probability": 1.0,
+              "heading_rad": null,
+              "last_observed_time_s": 10.0,
+              "length_m": null,
+              "measurement_age_s": 0.0,
+              "position_cov_m2": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "range_m": 77.2,
+              "range_rate_mps": 0.2,
+              "rel_vx_mps": null,
+              "rel_vy_mps": null,
+              "source": "simforge.object-slab",
+              "state_time_s": 10.0,
+              "track_age_s": 10.0,
+              "track_id": "lead",
+              "track_status": "confirmed",
+              "uncertainty_source": "exact_simulator_state",
+              "velocity_cov_m2ps2": null,
+              "width_m": null,
+              "x_m": 77.2,
+              "y_m": 0.0
+            }
+          ],
+          "provider": {
+            "kind": "abstract_sensor",
+            "name": "simforge-object-slab",
+            "version": "0.6.0"
+          },
+          "route": {
+            "centerline_m": [
+              [
+                -98.9,
+                0.0
+              ],
+              [
+                301.1,
+                0.0
+              ]
+            ],
+            "complete": true,
+            "required_stop_m": null,
+            "source": "map:synthetic-straight",
+            "speed_limit_mps": 13.88888888888889,
+            "width_m": 3.5
+          },
+          "schema_version": "scene-observation/v1",
+          "seq": 500,
+          "state_time_s": 10.0,
+          "uncertainty_layout": {
+            "conditioning": "given existence; cross position-velocity covariance omitted",
+            "frame": "ego-flu",
+            "packing": "upper_triangle",
+            "position_order": [
+              "xx",
+              "xy",
+              "yy"
+            ],
+            "position_units": "m^2",
+            "velocity_order": [
+              "vxvx",
+              "vxvy",
+              "vyvy"
+            ],
+            "velocity_units": "m^2/s^2"
+          }
+        },
+        "questions": {
+          "intent": {
+            "type": "choice",
+            "instructions": "Choose a driving preference for this observed scene, not a safety verdict. Favor progress on a clear road, but yielding when closing on a slower road user or a stop constraint. All motion choices are separately filtered by deterministic code. Unknown observations are not evidence of a clear road.",
+            "criteria": {
+              "progress": "Make comfortable legal progress.",
+              "yield": "Create space or slow for a road user or constraint."
+            }
+          },
+          "if_progress": {
+            "type": "choice",
+            "instructions": "Assuming the driver prefers progress, select the most appropriate candidate from `candidates`. All listed candidates passed the deterministic filter for its stated modeled bounds. Balance useful progress, comfort and following space; prefer holding speed over needless stopping, but do not accelerate toward a close slower vehicle. Choose only a listed maneuver.",
+            "criteria": {
+              "progress": "Gently increase speed while staying in the current lane; bounded by the speed limit.",
+              "hold": "Keep the current speed and stay in the current lane.",
+              "yield": "Smoothly slow down in the current lane to create space.",
+              "stop": "Decelerate firmly to a stop in the current lane."
+            }
+          },
+          "if_yield": {
+            "type": "choice",
+            "instructions": "Assuming the driver prefers yielding, select the most appropriate candidate from `candidates`. All listed candidates passed the deterministic filter for its stated modeled bounds. Prefer smooth slowing to create space rather than an unnecessary hard stop; hold if slowing serves no purpose. Choose only a listed maneuver.",
+            "criteria": {
+              "progress": "Gently increase speed while staying in the current lane; bounded by the speed limit.",
+              "hold": "Keep the current speed and stay in the current lane.",
+              "yield": "Smoothly slow down in the current lane to create space.",
+              "stop": "Decelerate firmly to a stop in the current lane."
+            }
+          }
+        }
+      },
+      "raw_response": {
+        "answers": {
+          "if_progress": {
+            "choice": "hold",
+            "confidence": 0.32,
+            "probabilities": {
+              "hold": 0.49,
+              "progress": 0.5,
+              "stop": 0.0,
+              "yield": 0.01
+            },
+            "type": "choice"
+          },
+          "if_yield": {
+            "choice": "yield",
+            "confidence": 0.9,
+            "probabilities": {
+              "hold": 0.07,
+              "progress": 0.0,
+              "stop": 0.0,
+              "yield": 0.93
+            },
+            "type": "choice"
+          },
+          "intent": {
+            "choice": "progress",
+            "confidence": 0.25,
+            "probabilities": {
+              "progress": 0.62,
+              "yield": 0.38
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1956,
+          "output_tokens": 118
+        }
+      },
+      "handling": "invalid_active_branch",
+      "chosen_maneuver": "hold"
+    },
+    {
+      "run": "evidence-lockstep-v2",
+      "question": "maneuver",
+      "timestamp": {
+        "clock": "simulation-seconds",
+        "request_state_time_s": 0.0,
+        "received_at_s": 0.0,
+        "request_seq": 0,
+        "actual_request_wall_clock_utc": null,
+        "note": "Original run did not record UTC; simulation timestamps are exact. Future client calls now log UTC and verbatim response bytes."
+      },
+      "request_payload": {
+        "model": "jev-1.13.0",
+        "state": {
+          "calibration": {
+            "calibration_dataset": null,
+            "calibration_domain": "simulated-measurement",
+            "calibration_version": "exact-no-statistical-fit",
+            "method": "exact_simulator_state",
+            "model_version": "0.6.0",
+            "status": "calibrated"
+          },
+          "candidates": [
+            {
+              "accel_mps2": 1.0,
+              "end_speed_mps": 13.0,
+              "horizon_s": 3.0,
+              "id": "progress",
+              "min_clearance_m": 16.8
+            },
+            {
+              "accel_mps2": 0.0,
+              "end_speed_mps": 10.0,
+              "horizon_s": 3.0,
+              "id": "hold",
+              "min_clearance_m": 21.3
+            },
+            {
+              "accel_mps2": -1.5,
+              "end_speed_mps": 5.5,
+              "horizon_s": 3.0,
+              "id": "yield",
+              "min_clearance_m": 28.1
+            },
+            {
+              "accel_mps2": -4.0,
+              "end_speed_mps": 0.0,
+              "horizon_s": 3.0,
+              "id": "stop",
+              "min_clearance_m": 38.8
+            }
+          ],
+          "capabilities": {
+            "profile": "native-visible-radial-v1",
+            "supplied": [
+              "ego.speed_mps",
+              "objects.x_m",
+              "objects.y_m",
+              "objects.range_rate_mps",
+              "route.speed_limit_mps",
+              "coverage.unknown_regions_m",
+              "candidates"
+            ],
+            "unsupported": [
+              "objects.class",
+              "objects.length_m",
+              "objects.width_m",
+              "objects.heading_rad",
+              "objects.rel_vx_mps",
+              "objects.rel_vy_mps",
+              "objects.velocity_cov_m2ps2",
+              "observed_free_regions_m"
+            ]
+          },
+          "coverage": {
+            "complete": true,
+            "frame": "ego-flu",
+            "geometry": "rectangles:[center_x,center_y,length,width]",
+            "measurement_age_s": 0.0,
+            "observed_free_regions_m": null,
+            "omitted_objects": 0,
+            "radius_m": 120.0,
+            "source": "map-and-visible-blockers",
+            "state_time_s": 0.0,
+            "unknown_regions_m": [
+              [
+                101.0,
+                0.0,
+                38.1,
+                3.8
+              ]
+            ],
+            "untracked_occupied_regions_m": [],
+            "vertical_bounds_m": null
+          },
+          "ego": {
+            "accel_mps2": 0.0,
+            "length_m": 4.5,
+            "speed_mps": 10.0,
+            "width_m": 1.9
+          },
+          "frame": "ego-flu",
+          "last_observed_time_s": 0.0,
+          "objects": [
+            {
+              "bearing_rad": 0.0,
+              "class": null,
+              "class_probabilities": null,
+              "detection_score": null,
+              "existence_probability": 1.0,
+              "heading_rad": null,
+              "last_observed_time_s": 0.0,
+              "length_m": null,
+              "measurement_age_s": 0.0,
+              "position_cov_m2": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "range_m": 85.9,
+              "range_rate_mps": 0.0,
+              "rel_vx_mps": null,
+              "rel_vy_mps": null,
+              "source": "simforge.object-slab",
+              "state_time_s": 0.0,
+              "track_age_s": 0.0,
+              "track_id": "lead",
+              "track_status": "confirmed",
+              "uncertainty_source": "exact_simulator_state",
+              "velocity_cov_m2ps2": null,
+              "width_m": null,
+              "x_m": 85.9,
+              "y_m": 0.0
+            }
+          ],
+          "provider": {
+            "kind": "abstract_sensor",
+            "name": "simforge-object-slab",
+            "version": "0.6.0"
+          },
+          "route": {
+            "centerline_m": [
+              [
+                -30.2,
+                0.0
+              ],
+              [
+                369.8,
+                0.0
+              ]
+            ],
+            "complete": true,
+            "required_stop_m": null,
+            "source": "map:synthetic-straight",
+            "speed_limit_mps": 13.88888888888889,
+            "width_m": 3.5
+          },
+          "schema_version": "scene-observation/v1",
+          "seq": 0,
+          "state_time_s": 0.0,
+          "uncertainty_layout": {
+            "conditioning": "given existence; cross position-velocity covariance omitted",
+            "frame": "ego-flu",
+            "packing": "upper_triangle",
+            "position_order": [
+              "xx",
+              "xy",
+              "yy"
+            ],
+            "position_units": "m^2",
+            "velocity_order": [
+              "vxvx",
+              "vxvy",
+              "vyvy"
+            ],
+            "velocity_units": "m^2/s^2"
+          }
+        },
+        "questions": {
+          "maneuver": {
+            "type": "choice",
+            "instructions": "Select one concrete longitudinal command from `candidates` for the next decision interval. This is a preference ranking among code-vetted legal trajectories, NOT a request to certify safety. Use visible positions and range_rate_mps (negative means closing), ego speed, speed limit, and the candidate numeric acceleration/end-speed. Seek useful progress without unnecessarily closing on a slower visible lead. Do not slow simply because a distant vehicle exists or because an unknown region exists: the deterministic filter already bounded those hazards. Use the exact command effects below; never invent velocity, class, dimensions or hidden actors from null fields.",
+            "criteria": {
+              "progress": "Positive acceleration: increase speed by the listed accel_mps2, up to the listed end_speed_mps. Prefer this only when useful progress warrants becoming faster.",
+              "hold": "Zero acceleration: retain the current speed. Prefer this when speed is appropriate and neither increasing nor reducing it improves the current interaction.",
+              "yield": "Negative acceleration of -1.5 m/s^2: deliberately become slower, smoothly. Prefer this for a closing interaction needing extra spacing but not a firm stop.",
+              "stop": "Negative acceleration of -4 m/s^2 until stopped: deliberately choose a firm stop. Prefer this only when stopping rather than merely matching speed is useful."
+            }
+          },
+          "if_progress": {
+            "type": "noul",
+            "instructions": "If the ego increases or holds speed, would the observed closing rate toward a visible road user make slowing within the next planning horizon useful? This branch is read only if the selected command is progress or hold. Judge from range, range_rate_mps and ego speed; no unseen-actor facts are available."
+          },
+          "if_slow": {
+            "type": "noul",
+            "instructions": "If the ego slows, is that slowing serving a currently visible closing interaction or an explicit required stop, rather than merely responding to the existence of a distant actor? This branch is read only for yield or stop. Unknown regions are not observed actors."
+          }
+        }
+      },
+      "raw_response": {
+        "answers": {
+          "if_progress": {
+            "noul": 0.39,
+            "type": "noul"
+          },
+          "if_slow": {
+            "noul": 0.23,
+            "type": "noul"
+          },
+          "maneuver": {
+            "choice": "progress",
+            "confidence": 0.33,
+            "probabilities": {
+              "hold": 0.5,
+              "progress": 0.49,
+              "stop": 0.0,
+              "yield": 0.01
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1918,
+          "output_tokens": 82
+        }
+      },
+      "handling": "invalid_active_branch",
+      "chosen_maneuver": "hold"
+    }
+  ],
+  "scope": "Final audit: all completed prototype live runs, including final signed-state/v3 smoke calls and the initial successful 3-call smoke; authored default and relaxed episodes made zero API calls. Excludes the initial pre-network serialization failure. Two inconsistent responses among 165 live responses; the earlier audit denominator was 136. Parsed JSON values are verbatim as logged; original wire whitespace and original request UTC were not retained. Current client records UTC and raw response text. No credentials included."
+}

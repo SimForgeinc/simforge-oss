@@ -1,0 +1,30 @@
+[
+  {
+    "run": "evidence-cpnco-v2-fixed",
+    "ticks": 800,
+    "recorded_state_hashes_match": true,
+    "route_progress_m": 4.96767,
+    "minimum_actor_obb_gap_m": 26.2557,
+    "minimum_static_obb_gap_m": 2.90404,
+    "minimum_radial_closing_ttc_s": 6.32711,
+    "peak_longitudinal_jerk_mps3": 31.34665,
+    "actor_overlap_ticks": 0,
+    "final_speed_mps": 3.6209869712100472e-12,
+    "empty_feasible_ticks": 800,
+    "safety_overrides": 1
+  },
+  {
+    "run": "evidence-cpnco-baseline-final",
+    "ticks": 800,
+    "recorded_state_hashes_match": true,
+    "route_progress_m": 4.96767,
+    "minimum_actor_obb_gap_m": 26.2557,
+    "minimum_static_obb_gap_m": 2.90404,
+    "minimum_radial_closing_ttc_s": 6.32711,
+    "peak_longitudinal_jerk_mps3": 31.34665,
+    "actor_overlap_ticks": 0,
+    "final_speed_mps": 3.6209869712100472e-12,
+    "empty_feasible_ticks": 800,
+    "safety_overrides": 0
+  }
+]

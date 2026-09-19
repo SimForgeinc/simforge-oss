@@ -1,0 +1,13 @@
+NativeError: no_site at anchor: no site matched on easterbrook-discovery-school
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/env.py", line 153, in __init__
+    spec: EpisodeSpec = load_episode_spec(episodes_spec, maps_dir=maps_dir)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/episodes.py", line 232, in load_episode_spec
+    _load_instances(absolute.parent, spec, _GraphCache(), bundles) if has_a else _load_template(absolute.parent, spec, bundles)
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/episodes.py", line 212, in _load_template
+    result = compile_template(template_json, bundle, spec.get("site"), seed=seed, options_json=options_json)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_native.NativeError: no_site at anchor: no site matched on easterbrook-discovery-school

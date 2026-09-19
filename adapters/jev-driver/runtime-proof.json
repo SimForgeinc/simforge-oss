@@ -1,0 +1,51 @@
+{
+  "coordinated-run": {
+    "live_requests_by_driver": {
+      "bravo": 59,
+      "charlie": 59,
+      "alpha": 55
+    },
+    "concurrent_barriers_sum_api_gt_twice_wall": 52,
+    "median_three_driver_launch_spread_ms": 0.8260000000000001,
+    "max_three_driver_launch_spread_ms": 4.159000000000001,
+    "collision_ticks": [],
+    "first_near_miss": null
+  },
+  "bad-actor-approach-run": {
+    "live_requests_by_driver": {
+      "alpha": 38,
+      "bravo": 33,
+      "charlie": 59
+    },
+    "concurrent_barriers_sum_api_gt_twice_wall": 30,
+    "median_three_driver_launch_spread_ms": 0.652,
+    "max_three_driver_launch_spread_ms": 4.218,
+    "collision_ticks": [
+      813,
+      814,
+      815,
+      816
+    ],
+    "first_near_miss": {
+      "tick": 656,
+      "time_s": 13.1,
+      "kind": "near_miss",
+      "rear_actor": "alpha",
+      "front_actor": "bravo",
+      "gap_m": 27.548,
+      "closing_mps": 9.263,
+      "ttc_s": 2.974,
+      "envelope_violations": [
+        {
+          "actor_id": "alpha",
+          "envelope": "conservative-v1",
+          "rule": "following_headway",
+          "required_gap_m": 39.565,
+          "actual_gap_m": 27.548,
+          "is_actor_own_envelope": false
+        }
+      ],
+      "attribution": "observed following-envelope violation, not a causal/legal fault proof"
+    }
+  }
+}

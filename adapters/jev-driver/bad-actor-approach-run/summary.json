@@ -1,0 +1,66 @@
+{
+  "ticks_run": 1000,
+  "sim_time_s": 20.0,
+  "drivers_per_run": 3,
+  "live_api_calls": 130,
+  "live_api_responses": 130,
+  "accepted_jev_choices": 123,
+  "median_api_latency_ms": 193.00549999999998,
+  "fallback_reasons": {
+    "no_feasible_candidate": 46,
+    "deadline_miss": 7,
+    "forced_single_candidate": 4
+  },
+  "counts": {
+    "safety_overrides": 49,
+    "no_feasible_driver_ticks": 720,
+    "alpha:emergency_brake": 322,
+    "bravo:emergency_brake": 396,
+    "charlie:emergency_brake": 2,
+    "collision_ticks": 4,
+    "near_miss_ticks": 340,
+    "alpha:hold": 194,
+    "bravo:stop": 14,
+    "charlie:hold": 998,
+    "bravo:yield": 84,
+    "alpha:surge": 354,
+    "bravo:hold": 391,
+    "bravo:progress": 115,
+    "alpha:progress": 31,
+    "alpha:yield": 25,
+    "alpha:late_brake": 40,
+    "alpha:stop": 34
+  },
+  "collision_ticks": 4,
+  "near_miss_ticks": 340,
+  "native_collision_events": [
+    {
+      "kind": "collision",
+      "t": 16.257992206591677,
+      "a": "alpha",
+      "b": "bravo"
+    }
+  ],
+  "scene_state_frames": 1000,
+  "scene_state_path": "bad-actor-approach-run/scenestate.json",
+  "decision_log_path": "bad-actor-approach-run/decisions.jsonl",
+  "per_driver": {
+    "alpha": {
+      "persona": "reckless",
+      "distance_m": 163.917,
+      "final_speed_mps": 0.0
+    },
+    "bravo": {
+      "persona": "cooperative",
+      "distance_m": 74.556,
+      "final_speed_mps": 0.02
+    },
+    "charlie": {
+      "persona": "cooperative",
+      "distance_m": 119.88,
+      "final_speed_mps": 6.0
+    }
+  },
+  "interpretation": "Observed interaction, not a calibrated safety certificate or causal fault proof.",
+  "qa_passed": true
+}

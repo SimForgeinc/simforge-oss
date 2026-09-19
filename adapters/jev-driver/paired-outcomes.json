@@ -1,0 +1,130 @@
+{
+  "evidence-lockstep": {
+    "baseline_rule": "Hold if bumper gap exceeds 6m + 2.5s * ego speed and hold is feasible; otherwise first feasible of yield, stop, hold, progress; emergency brake if none.",
+    "baseline_vs_raw_jev_confusion": {
+      "hold": {
+        "progress": 12,
+        "yield": 18,
+        "hold": 14
+      }
+    },
+    "jev": {
+      "arm": "recorded_live_Jev_actions",
+      "ticks": 750,
+      "sim_time_s": 15.0,
+      "route_progress_m": 97.7362,
+      "minimum_bumper_gap_m": 71.7158,
+      "minimum_closing_ttc_s": 20.0001,
+      "peak_longitudinal_jerk_mps3": 21.1498,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 0,
+      "intervention_reasons": {},
+      "baseline_decision_counts": {},
+      "recorded_state_hashes_match": true
+    },
+    "baseline": {
+      "arm": "conservative_baseline",
+      "ticks": 750,
+      "sim_time_s": 15.0,
+      "route_progress_m": 122.3323,
+      "minimum_bumper_gap_m": 49.0877,
+      "minimum_closing_ttc_s": 15.0215,
+      "peak_longitudinal_jerk_mps3": 25.4603,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 7,
+      "intervention_reasons": {
+        "latched_maneuver_no_longer_feasible:occlusion_reachability": 7
+      },
+      "baseline_decision_counts": {
+        "hold": 38,
+        "yield": 7
+      },
+      "recorded_state_hashes_match": false
+    }
+  },
+  "evidence-realtime": {
+    "baseline_rule": "Hold if bumper gap exceeds 6m + 2.5s * ego speed and hold is feasible; otherwise first feasible of yield, stop, hold, progress; emergency brake if none.",
+    "baseline_vs_raw_jev_confusion": {
+      "hold": {
+        "progress": 3,
+        "yield": 17,
+        "hold": 8
+      }
+    },
+    "jev": {
+      "arm": "recorded_live_Jev_actions",
+      "ticks": 500,
+      "sim_time_s": 10.0,
+      "route_progress_m": 68.9115,
+      "minimum_bumper_gap_m": 71.4143,
+      "minimum_closing_ttc_s": 19.6784,
+      "peak_longitudinal_jerk_mps3": 19.2365,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 1,
+      "intervention_reasons": {},
+      "baseline_decision_counts": {},
+      "recorded_state_hashes_match": true
+    },
+    "baseline": {
+      "arm": "conservative_baseline",
+      "ticks": 500,
+      "sim_time_s": 10.0,
+      "route_progress_m": 90.5704,
+      "minimum_bumper_gap_m": 50.8496,
+      "minimum_closing_ttc_s": 15.0215,
+      "peak_longitudinal_jerk_mps3": 25.4603,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 6,
+      "intervention_reasons": {
+        "latched_maneuver_no_longer_feasible:occlusion_reachability": 6
+      },
+      "baseline_decision_counts": {
+        "hold": 23,
+        "yield": 7
+      },
+      "recorded_state_hashes_match": false
+    }
+  },
+  "evidence-lockstep-v2": {
+    "baseline_rule": "Hold if bumper gap exceeds 6m + 2.5s * ego speed and hold is feasible; otherwise first feasible of yield, stop, hold, progress; emergency brake if none.",
+    "baseline_vs_raw_jev_confusion": {
+      "hold": {
+        "hold": 35,
+        "yield": 9
+      }
+    },
+    "jev": {
+      "arm": "recorded_live_Jev_actions",
+      "ticks": 750,
+      "sim_time_s": 15.0,
+      "route_progress_m": 118.7924,
+      "minimum_bumper_gap_m": 52.6276,
+      "minimum_closing_ttc_s": 17.3318,
+      "peak_longitudinal_jerk_mps3": 21.1666,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 0,
+      "intervention_reasons": {},
+      "baseline_decision_counts": {},
+      "recorded_state_hashes_match": true
+    },
+    "baseline": {
+      "arm": "conservative_baseline",
+      "ticks": 750,
+      "sim_time_s": 15.0,
+      "route_progress_m": 122.3323,
+      "minimum_bumper_gap_m": 49.0877,
+      "minimum_closing_ttc_s": 15.0215,
+      "peak_longitudinal_jerk_mps3": 25.4603,
+      "collision_or_overlap_ticks": 0,
+      "safety_monitor_interventions": 7,
+      "intervention_reasons": {
+        "latched_maneuver_no_longer_feasible:occlusion_reachability": 7
+      },
+      "baseline_decision_counts": {
+        "hold": 38,
+        "yield": 7
+      },
+      "recorded_state_hashes_match": false
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "url": "http://127.0.0.1:3026/dashboard/drive/uscn_1506a4a9ca11424489b2cf14?actor=ego",
+  "jevPressed": "true",
+  "jevStatus": "Jev hold",
+  "humanPressed": "false",
+  "humanStatus": "Human control",
+  "text": "CAR\n00:58\nCHASE\nTRAFFIC OFF\nKM/H\nESC\n0.00 g\n0\nKM/H\n1\n800\nJev takeover\nHuman control\nRecording · 2s left\nWebGL context was lost; reload the map to recreate its GPU resources"
+}

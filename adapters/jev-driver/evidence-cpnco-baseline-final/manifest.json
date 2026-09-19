@@ -1,0 +1,39 @@
+{
+  "mode": "lockstep",
+  "scenario_sha256": "bda9fba00f4bd246b0d40bb24b4f01fa4452bc820e51791e1a3dc2b87a83b9f0",
+  "model": "jev-1.13.0",
+  "schema": "scene-observation/v2",
+  "seed": "jev-driving-1",
+  "spec_path": "/home/path/tmp/jevdrive/cpnco-dartout.episodes.json",
+  "map_id": "belmont-research-center",
+  "materialized_input_hash": "1f51ceadddef7b54b0522801da1539543d39da06e1abdad58686deb84c2c2c4a",
+  "policy": "baseline",
+  "native_engine_version": "0.6.0",
+  "native_abi": 2,
+  "native_module": "/home/path/tmp/jevdrive/.venv/lib/python3.12/site-packages/simforge_oss_gym/_native.abi3.so",
+  "questions": {
+    "maneuver": {
+      "type": "choice",
+      "instructions": "Select one concrete longitudinal command from `candidates` for the next decision interval. This is a preference ranking among code-vetted legal trajectories, NOT a request to certify safety. Use visible positions and range_rate_mps (negative means closing), ego speed, speed limit, and the candidate numeric acceleration/end-speed. Seek useful progress without unnecessarily closing on a slower visible lead. Do not slow simply because a distant vehicle exists or because an unknown region exists: the deterministic filter already bounded those hazards. Use the exact command effects below; never invent velocity, class, dimensions or hidden actors from null fields."
+    },
+    "if_progress": {
+      "type": "noul",
+      "instructions": "If the ego increases or holds speed, would the observed closing rate toward a visible road user make slowing within the next planning horizon useful? This branch is read only if the selected command is progress or hold. Judge from range, range_rate_mps and ego speed; no unseen-actor facts are available."
+    },
+    "if_slow": {
+      "type": "noul",
+      "instructions": "If the ego slows, is that slowing serving a currently visible closing interaction or an explicit required stop, rather than merely responding to the existence of a distant actor? This branch is read only for yield or stop. Unknown regions are not observed actors."
+    }
+  },
+  "question_version": "v2",
+  "question_gates": {
+    "min_confidence": 0.05,
+    "min_selected_probability": 0.26
+  },
+  "constants_sha256": "caa77f9568ff02a903b1a5d77a8f76da4920836a1193dc6c03efb73c0dd7339e",
+  "decision_hz": 3.0,
+  "deadline_ms": 333.0,
+  "include_occluded": false,
+  "oracle_in_planner": false,
+  "injected_delay_request_indices": []
+}
