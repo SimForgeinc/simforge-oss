@@ -21,23 +21,22 @@ function isRenderingPreference(value: unknown): value is RenderingPreference {
 /**
  * Data migration for browser storage, not a compatibility alias.
  *
- * "roads-only" and "ultra-low-3d" were removed: they required per-map
- * derivatives no release ships, so they could only fail to load. A browser
- * that saved one before the removal is rewritten to the nearest surviving
- * level here, at the single read boundary, so nothing downstream ever sees a
- * level that no longer exists.
+ * Stored legacy levels are rewritten here, at the only browser-storage read
+ * boundary. Downstream consumers and server validation accept only tier ids.
  */
 const REMOVED_RENDERING_PREFERENCES: Record<string, RenderingPreference> = {
-  "roads-only": "minimal",
-  "ultra-low-3d": "minimal",
+  "roads-only": "low",
+  "ultra-low-3d": "low",
+  minimal: "low",
+  high: "medium",
 };
 
 export function usesLightweightRendering(preference: RenderingPreference): boolean {
-  return preference !== "high";
+  return preference === "low";
 }
 
 export function readRenderingPreference(
-  storage?: Pick<Storage, "getItem"> | null,
+  storage?: (Pick<Storage, "getItem"> & Partial<Pick<Storage, "setItem">>) | null,
 ): RenderingPreference | null {
   try {
     const browserStorage =
@@ -48,7 +47,11 @@ export function readRenderingPreference(
         : storage;
     if (!browserStorage) return null;
     const stored = browserStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY);
-    if (stored !== null && stored in REMOVED_RENDERING_PREFERENCES) return REMOVED_RENDERING_PREFERENCES[stored]!;
+    if (stored !== null && Object.hasOwn(REMOVED_RENDERING_PREFERENCES, stored)) {
+      const migrated = REMOVED_RENDERING_PREFERENCES[stored]!;
+      try { browserStorage.setItem?.(RENDERING_PREFERENCE_STORAGE_KEY, migrated); } catch { /* Storage can be read-only. */ }
+      return migrated;
+    }
     return isRenderingPreference(stored) ? stored : null;
   } catch {
     return null;
@@ -88,7 +91,7 @@ export function requestRenderingPreferenceSelection(): void {
 
 /**
  * The saved preference, kept current as any surface changes it. `null` until
- * the user has chosen one; callers that render fall back to `"high"`.
+ * the user has chosen one; callers that render fall back to `"medium"`.
  */
 export function useRenderingPreference(): RenderingPreference | null {
   const [preference, setPreference] = useState<RenderingPreference | null>(readRenderingPreference);

@@ -5,7 +5,7 @@ import { readRenderingPreference } from "../../components/rendering-preference";
 const MB = 1024 * 1024;
 
 export function defaultAuthoringQuality(): ScenarioAuthoringQuality {
-  return readRenderingPreference() ?? "high";
+  return readRenderingPreference() ?? "medium";
 }
 
 /**
@@ -17,7 +17,7 @@ export function defaultAuthoringQuality(): ScenarioAuthoringQuality {
  * visibility), and the header's quality selector.
  */
 export const AUTHORING_QUALITY = {
-  minimal: {
+  low: {
     maxPixelRatio: 0.75,
     antialias: false,
     vegetation: false,
@@ -33,12 +33,12 @@ export const AUTHORING_QUALITY = {
       exposure: 1,
     },
   },
-  high: {
+  medium: {
     maxPixelRatio: 2,
     antialias: true,
     vegetation: true,
     /**
-     * Generated sky, its image-based light and the sun's real shadow map. High
+     * Generated sky, its image-based light and the sun's real shadow map. Medium
      * only: the shadow pass and the scattering shader are exactly the cost the
      * reduced presets exist to avoid.
      */
@@ -97,6 +97,9 @@ export function sceneViewerOptions(
     maxPixelRatio: preset.maxPixelRatio,
     antialias: preset.antialias,
     cinematicLighting: preset.cinematicLighting,
+    byteBudget: preset.live.byteBudget,
+    vegetationMaxDistance: preset.live.vegetationMaxDistance,
     ...extra,
+    mapTextureTier: quality,
   };
 }

@@ -57,6 +57,6 @@ export const DISABLED_AMBIENT_PROVENANCE = {
 } as const satisfies ScenarioAmbientProvenance;
 
 export const SCENARIO_AUTHORING_QUALITY_CHOICES = [
-  { id: "minimal", label: "Balanced", guidance: "Road and coarse city context only: no vegetation, low resolution, and very restrained streaming.", downloadGuidance: "Download size varies with the map and visible detail", gpuMemoryGuidance: "Resident estimate: 370–640 MB · 2 GB GPU recommended", recommended: false },
-  { id: "high", label: "High", guidance: "Sharper viewport with a larger resident scene.", downloadGuidance: "Full-detail assets can exceed 1 GB per map", gpuMemoryGuidance: "Resident estimate: 377–1,601 MB · 4 GB GPU recommended", recommended: true },
+  { id: "low", label: "Low", guidance: "256 px texture target with a 640 MiB scene budget. Weaker devices may select lower quality and report it.", downloadGuidance: "Published 256 px UASTC textures; download varies with visible detail", gpuMemoryGuidance: "640 MiB scene budget · 2 GB GPU recommended", recommended: false },
+  { id: "medium", label: "Medium", guidance: "512 px texture target with a 1.5 GiB scene budget. Weaker devices may select Low and report it.", downloadGuidance: "Published 512 px BC7 or ASTC textures when supported; portable UASTC otherwise", gpuMemoryGuidance: "1.5 GiB scene budget · 4 GB GPU recommended", recommended: true },
 ] as const satisfies ReadonlyArray<{ id: ScenarioAuthoringQuality; label: string; guidance: string; downloadGuidance: string; gpuMemoryGuidance: string; recommended: boolean }>;

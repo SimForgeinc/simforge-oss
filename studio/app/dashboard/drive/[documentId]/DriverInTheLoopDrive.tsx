@@ -46,7 +46,7 @@ export function DriverInTheLoopDrive({
   const [map, setMap] = useState<ScenarioMapEntry | null>(null);
   const [laneIndex, setLaneIndex] = useState<LaneIndex | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [quality, setQuality] = useState<ScenarioAuthoringQuality>("high");
+  const [quality, setQuality] = useState<ScenarioAuthoringQuality>("medium");
 
   // Follows the shared preference so a level picked in the app switcher changes
   // this drive, not the next one.

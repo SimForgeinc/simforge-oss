@@ -12,14 +12,14 @@ import {
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 
 const QUALITY_OPTIONS: Array<{ value: RenderingPreference; label: string }> = [
-  { value: "minimal", label: "Balanced" },
-  { value: "high", label: "High" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
 ];
 
 /** Controls shared authoring quality for the packaged @simforge-oss/viewer. */
 export function DigitalTwinLayersPanel() {
   const [quality, setQuality] = useState<RenderingPreference>(
-    () => readRenderingPreference() ?? "minimal",
+    () => readRenderingPreference() ?? "low",
   );
   const [cacheState, setCacheState] = useState<"idle" | "clearing" | "cleared">("idle");
 

@@ -90,7 +90,7 @@ export type RenderingBenchmarkSnapshot = {
   capturedAt: string;
 };
 
-const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = ["minimal", "high"];
+const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = ["low", "medium"];
 
 /**
  * Pick the highest-fidelity renderer that stays comfortably interactive and

@@ -77,7 +77,7 @@ export function DigitalTwinViewerPanel({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
-  const quality = useRenderingPreference() ?? "high";
+  const quality = useRenderingPreference() ?? "medium";
   const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
     ? "native"
     : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"

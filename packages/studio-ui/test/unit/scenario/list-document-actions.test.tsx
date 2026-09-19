@@ -59,7 +59,7 @@ const FULL_DOCUMENT = {
   content: { meta: { name: "Original title" }, roles: [], props: [], variants: [] },
   mapVersionId: "usmap_1",
   datasetId: "usds_1",
-  authoringQualityId: "minimal",
+  authoringQualityId: "low",
   createdAt: "2026-08-01T00:00:00.000Z",
   updatedAt: "2026-08-01T00:00:00.000Z",
   latestRevisionId: null,

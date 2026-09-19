@@ -175,7 +175,7 @@ describe("persistent SimForge world host", () => {
     const viewer = onViewerChange.mock.calls[0]?.[0];
     const instanceId = host.getAttribute("data-world-instance-id");
 
-    act(() => saveRenderingPreference("minimal"));
+    act(() => saveRenderingPreference("low"));
     view.rerender(
       <ScenarioWorldHost
         target={{ ...first, manifestUrl: "/api/maps/mapv_one/browser-assets/manifest.json" }}

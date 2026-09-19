@@ -428,7 +428,7 @@ export function applyEditorSceneEnvironment(
   const appearance = resolveEditorSceneEnvironment(environment);
   const particleBudget: WeatherParticleBudget = options.reducedMotion
     ? "off"
-    : options.quality === "high"
+    : options.quality === "medium"
       ? "high"
       : "medium";
   const rendererAppearance: EditorSceneEnvironmentAppearance = {

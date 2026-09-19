@@ -14,11 +14,11 @@ import type { RenderSpecV3, ScenarioTemplateV2 } from "@simforge-oss/scenario";
 // ── Enumerations shared by request validation and the UI ─────────────────────
 
 export const SCENARIO_AUTHORING_QUALITY_IDS = [
-  "minimal",
-  "high",
+  "low",
+  "medium",
 ] as const;
 export type ScenarioAuthoringQuality = (typeof SCENARIO_AUTHORING_QUALITY_IDS)[number];
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "high" satisfies ScenarioAuthoringQuality;
+export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "medium" satisfies ScenarioAuthoringQuality;
 
 export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export type ScenarioDatasetVisibility = (typeof SCENARIO_DATASET_VISIBILITIES)[number];
@@ -540,6 +540,8 @@ export type ScenarioRenderIntentSubmission = {
   revisionId: string;
   executionPackageId: string;
   engine: ScenarioRendererEngine;
+  renderProfile?: "render" | "ml";
+  nativeVramBudgetBytes?: number;
   idempotencyKey: string;
   [key: string]: unknown;
 };

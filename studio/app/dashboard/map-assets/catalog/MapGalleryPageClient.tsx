@@ -93,7 +93,7 @@ function MapGalleryWorldPreview({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [actorRenderer, setActorRenderer] = useState<ActorRenderer | null>(null);
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
-  const quality = useRenderingPreference() ?? "high";
+  const quality = useRenderingPreference() ?? "medium";
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,

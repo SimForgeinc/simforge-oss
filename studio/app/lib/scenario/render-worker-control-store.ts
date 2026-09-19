@@ -13,6 +13,7 @@ import {
   NativeRenderManifestSchema,
   NativeRunDiagnosticsSchema,
   nativeActorAssetsInput,
+  assertNativeMapMemberCapacity,
   nativeEvidenceFailure,
   nativeRunExpectations,
   type NativeRunDiagnostics,
@@ -524,7 +525,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
           throw new Error("native_map_master_unavailable");
         }
-        if (renderMembers.length > 4093) throw new Error("native_map_asset_set_too_large");
+        assertNativeMapMemberCapacity(renderMembers.length);
         inputs.push(...renderMembers.map((member) => ({
           inputId: member.relative_path === "master.gltf"
             ? "map.tile.000000"

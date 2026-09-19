@@ -25,11 +25,12 @@ import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCs
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
 import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { startNativeRenderService, terminateProcess } from './service-process.js';
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, linkOrCopy } from './actor-assets.js';
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
-import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers, type NativeMapClosure } from './map-closure.js';
+import { collectNativeMapMembers } from './map-closure.js';
+import { stageNativeTextureProfile } from './texture-profile.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
@@ -51,6 +52,7 @@ export interface NativeRenderEngineOptions {
   /** Where the pinned actor closure's blobs come from; defaults to the installed closure (`resolveActorAssets`). */
   readonly actorAssetsBaseUrl?: string;
   readonly actorAssetsCacheDir?: string;
+  readonly nativeCacheDirectory?: string;
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -88,23 +90,6 @@ export function resolveBinary(options: NativeRenderEngineOptions): string {
   return service.state === 'available' ? service.path : service.searched[service.searched.length - 1]!;
 }
 
-/**
- * Uses the closure members in place when they already lie at their
- * closure-relative paths under one directory (the ensured local map); only
- * a scattered closure (per-attempt downloads) is linked into the workspace.
- */
-async function materializeMapRoot(workspace: string, closure: NativeMapClosure<RenderInputFile>): Promise<string> {
-  const master = closure.members.get(NATIVE_MAP_MASTER_PATH)!;
-  const sharedRoot = path.dirname(master.path);
-  const inPlace = [...closure.members].every(([member, input]) => path.resolve(sharedRoot, member) === path.resolve(input.path));
-  if (inPlace) return sharedRoot;
-  const mapRoot = path.join(workspace, 'map');
-  await fs.rm(mapRoot, { recursive: true, force: true });
-  for (const [member, input] of closure.members) {
-    await linkOrCopy(input.path, path.join(mapRoot, member));
-  }
-  return mapRoot;
-}
 
 interface Encoder {
   readonly source: RenderSourceV3;
@@ -206,28 +191,20 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const xoscInput = context.inputs.get('scenario.xosc');
       if (!xoscInput) throw new Error('native render requires scenario.xosc');
       const closure = collectNativeMapMembers(context.inputs.values());
-      const mapRoot = await materializeMapRoot(context.workspace, closure);
-      const masterPath = path.join(mapRoot, NATIVE_MAP_MASTER_PATH);
-      const document = JSON.parse(await fs.readFile(masterPath, 'utf8')) as {
-        buffers?: Array<{ uri?: string }>;
-        images?: Array<{ uri?: string }>;
-        textures?: Array<{ source?: number; extensions?: { KHR_texture_basisu?: { source: number } } }>;
-      };
-      const imageIndices = new Set<number>();
-      for (const texture of document.textures ?? []) {
-        const source = texture.extensions?.KHR_texture_basisu?.source ?? texture.source;
-        if (source !== undefined) imageIndices.add(source);
-      }
-      const resources = [...(document.buffers ?? [])];
-      for (const index of imageIndices) {
-        const image = document.images?.[index];
-        if (!image) throw new Error(`master references missing image ${index}`);
-        resources.push(image);
-      }
-      for (const resource of resources) {
-        if (!resource.uri || resource.uri.startsWith('data:')) continue;
-        if (!closure.members.has(resource.uri)) throw new Error(`master references undeclared map member: ${resource.uri}`);
-      }
+      if (!intent.renderTextures) throw new Error('native_render_texture_profile_missing');
+      if (!intent.nativeVramBudgetBytes && !intent.nativeVramCapacityBytes) throw new Error('native_vram_capacity_missing');
+      const sensorVideo = nativeSensorVideoFormat(intent);
+      const textureProfile = await stageNativeTextureProfile({
+        closure,
+        renderTextures: intent.renderTextures,
+        budgetBytes: intent.nativeVramBudgetBytes,
+        capacityBytes: intent.nativeVramCapacityBytes,
+        framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
+        cacheDirectory: options.nativeCacheDirectory,
+      });
+      const masterPath = textureProfile.masterPath;
+      await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
+      const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
       // Actor appearance is part of the render contract: the intent declares
       // the actor closure as `actors.native-closure`, the worker delivers its
       // bytes, and the closure's members must verify before any frame is
@@ -260,7 +237,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
       // Lidar and radar videos ride the cameras' fixed-step clock: one frame
       // per simulated tick, so every video of the run is time-locked.
-      const sensorVideo = nativeSensorVideoFormat(intent);
       const wantsSensorArchive = intent.renderSpec.artifacts.includes('sensorArchive');
       const traceRelative = 'trace/native-trace.json';
       const tracePath = path.join(context.workspace, traceRelative);
@@ -439,6 +415,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
       await writeJson(nativeManifestPath, NativeRenderManifestSchema.parse({
         schema: 'simforge.native-render-manifest/v1',
+        textureProfile: textureEvidence,
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
@@ -465,6 +442,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const diagnosticsPath = path.join(context.workspace, diagnosticsRelative);
       await writeJson(diagnosticsPath, NativeRunDiagnosticsSchema.parse({
         schema: 'simforge.native-run-diagnostics/v1',
+        textureProfile: textureEvidence,
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,

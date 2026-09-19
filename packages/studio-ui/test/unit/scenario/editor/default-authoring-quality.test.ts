@@ -6,7 +6,7 @@ import { saveRenderingPreference } from "../../../../src/components/rendering-pr
 describe("default authoring quality", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it.each(["minimal", "high"] as const)(
+  it.each(["low", "medium"] as const)(
     "starts new editor sessions with the saved %s quality",
     (quality) => {
       saveRenderingPreference(quality);
@@ -15,6 +15,6 @@ describe("default authoring quality", () => {
   );
 
   it("defaults to high before a browser preference is saved", () => {
-    expect(defaultAuthoringQuality()).toBe("high");
+    expect(defaultAuthoringQuality()).toBe("medium");
   });
 });

@@ -20,6 +20,7 @@ import {
   nativeActorAssetsInput,
   nativeEvidenceFailure,
   nativeMapMemberInputId,
+  assertNativeMapMemberCapacity,
   nativeRunExpectations,
   resolveActorAssets,
   type NativeRunDiagnostics,
@@ -58,8 +59,6 @@ import type { JobTransaction } from "./lifecycle-lock";
 
 export const LOCAL_NATIVE_RENDER_MODE = "native_render" as const;
 const NATIVE_EVIDENCE_MAX_BYTES = 16 * 1024 * 1024;
-/** Input-declaration cap of the full-render intent; not a property of the map. */
-const NATIVE_MAP_MAX_MEMBERS = 4093;
 
 function artifactBucket() { return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts"; }
 
@@ -172,7 +171,7 @@ export async function claimLocalNativeRenderSource(tx: JobTransaction, jobId: st
 async function declaredNativeMapMembers(mapVersionId: string, workspaceId: string) {
   const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
   if (!source) throw new Error("native_map_asset_set_unavailable");
-  if (source.members.length > NATIVE_MAP_MAX_MEMBERS) throw new Error("native_map_asset_set_too_large");
+  assertNativeMapMemberCapacity(source.members.length);
   return source.members.map((member) => ({
     inputId: nativeMapMemberInputId(member.relativePath),
     relativePath: member.relativePath,

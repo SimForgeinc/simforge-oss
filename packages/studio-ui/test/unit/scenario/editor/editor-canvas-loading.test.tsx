@@ -48,7 +48,7 @@ describe("EditorCanvasRegion loading presentation", () => {
       <EditorCanvasRegion
         hostRef={{ current: null }}
         map={{ label: "Test map", manifestUrl: "/manifest.json" } as never}
-        quality="minimal"
+        quality="low"
         onViewerReady={vi.fn()}
         state={null}
         error={null}
@@ -82,11 +82,11 @@ describe("EditorCanvasRegion loading presentation", () => {
       error: null,
     };
     const view = render(
-      <EditorCanvasRegion {...baseProps} quality="minimal" />,
+      <EditorCanvasRegion {...baseProps} quality="low" />,
     );
     expect(cityViewInstances).toHaveLength(1);
 
-    view.rerender(<EditorCanvasRegion {...baseProps} quality="high" />);
+    view.rerender(<EditorCanvasRegion {...baseProps} quality="medium" />);
     expect(cityViewInstances).toHaveLength(2);
 
     act(() => cityViewInstances[0]?.complete());

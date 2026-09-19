@@ -4,14 +4,14 @@ import { decideOnboardingGate } from "../onboarding-gate";
 import type { StudioSetup } from "../setup";
 
 const PENDING: StudioSetup = { completedAt: null, mode: null, quality: null };
-const DONE: StudioSetup = { completedAt: "2026-09-11T00:00:00.000Z", mode: "local", quality: "high" };
+const DONE: StudioSetup = { completedAt: "2026-09-11T00:00:00.000Z", mode: "local", quality: "medium" };
 
 function decide(input: Partial<Parameters<typeof decideOnboardingGate>[0]>) {
   return decideOnboardingGate({
     setup: PENDING,
     preference: null,
     requestedQuality: null,
-    fallbackQuality: "minimal",
+    fallbackQuality: "low",
     ...input,
   });
 }
@@ -22,13 +22,13 @@ describe("first-run gate decision", () => {
   });
 
   it("lets a completed installation through untouched", () => {
-    assert.deepEqual(decide({ setup: DONE, preference: "minimal" }), { kind: "allow" });
+    assert.deepEqual(decide({ setup: DONE, preference: "low" }), { kind: "allow" });
   });
 
   it("adopts the recorded level in a browser profile that has no preference", () => {
     assert.deepEqual(decide({ setup: DONE }), {
       kind: "adopt",
-      quality: "high",
+      quality: "medium",
       savePreference: true,
       recordSetup: false,
     });
@@ -37,34 +37,34 @@ describe("first-run gate decision", () => {
   it("falls back to the default level when a completed setup recorded none", () => {
     assert.deepEqual(decide({ setup: { completedAt: DONE.completedAt, mode: "cloud", quality: null } }), {
       kind: "adopt",
-      quality: "minimal",
+      quality: "low",
       savePreference: true,
       recordSetup: false,
     });
   });
 
   it("treats an installation that predates onboarding as already set up", () => {
-    assert.deepEqual(decide({ preference: "minimal" }), {
+    assert.deepEqual(decide({ preference: "low" }), {
       kind: "adopt",
-      quality: "minimal",
+      quality: "low",
       savePreference: false,
       recordSetup: true,
     });
   });
 
   it("honours a level named by the incoming link instead of onboarding", () => {
-    assert.deepEqual(decide({ requestedQuality: "minimal" }), {
+    assert.deepEqual(decide({ requestedQuality: "low" }), {
       kind: "adopt",
-      quality: "minimal",
+      quality: "low",
       savePreference: true,
       recordSetup: true,
     });
   });
 
   it("prefers the stored preference over the link when both are present", () => {
-    assert.deepEqual(decide({ preference: "high", requestedQuality: "minimal" }), {
+    assert.deepEqual(decide({ preference: "medium", requestedQuality: "low" }), {
       kind: "adopt",
-      quality: "high",
+      quality: "medium",
       savePreference: false,
       recordSetup: true,
     });

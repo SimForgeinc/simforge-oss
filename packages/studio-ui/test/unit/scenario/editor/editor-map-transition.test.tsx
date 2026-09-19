@@ -94,7 +94,7 @@ describe("ScenarioEditorSurface map transition", () => {
       },
       record: null,
       onChanged: vi.fn(),
-      quality: "minimal" as const,
+      quality: "low" as const,
       onQualityChange: vi.fn(),
       injectedViewer: viewer,
     } as unknown as ComponentProps<typeof ScenarioEditorSurface>;
@@ -154,7 +154,7 @@ describe("ScenarioEditorSurface map transition", () => {
       },
       record: null,
       onChanged: vi.fn(),
-      quality: "minimal" as const,
+      quality: "low" as const,
       onQualityChange: vi.fn(),
       injectedViewer: viewer,
       loadedMapVersionId: "map-yale",

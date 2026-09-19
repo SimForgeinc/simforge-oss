@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       content,
       mapVersionId: selectedMap.mapVersionId,
       datasetId,
-      authoringQualityId: "minimal",
+      authoringQualityId: "low",
     });
     return NextResponse.json({ document, analysis, resolution }, { status: 201 });
   } catch (error) {
