@@ -109,6 +109,7 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
   }, [source.manifestUrl, source.phase, source.error]);
   const payload = {
     schema: "simforge.map-load-debug.v1",
+    reportedAt: new Date().toISOString(),
     identity: { mapId: source.mapId ?? "unknown", mapVersionId: source.mapVersionId ?? "unknown", manifestUrl: source.manifestUrl ?? "unknown" },
     installedMaps: source.installedMaps ?? "unknown",
     environment: { userAgent: typeof navigator === "undefined" ? "unknown" : navigator.userAgent, pageUrl: typeof location === "undefined" ? "unknown" : `${location.origin}${location.pathname}` },

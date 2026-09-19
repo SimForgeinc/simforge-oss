@@ -5,7 +5,7 @@ export const styles = stylex.create({
     position: "fixed",
     right: 16,
     bottom: 16,
-    zIndex: 2,
+    zIndex: 11,
     width: "min(720px, calc(100vw - 32px))",
     color: "#e5e7eb",
     backgroundColor: "rgba(15, 20, 29, 0.96)",
