@@ -543,6 +543,24 @@ for (const id of catalogIds) {
   exportedProcedural.push(id);
 }
 
+// A base catalog id the current catalog no longer declares still keeps its
+// entry (dropping it would strip a scenario's actor of its appearance), but
+// its `glbPath` may be a member this run just rebound: `pedestrian.adult` and
+// the legacy `pedestrian.adult_standing`/`_walking` aliases all answer
+// `models/pedestrian.adult/model.glb`. Left alone, those aliases would keep
+// the old entry's attribution and source while resolving to the new bytes —
+// CC BY 4.0 CARLA geometry credited to Meshy, which is a licence violation,
+// not a cosmetic drift. They adopt the rebound entry wholesale, so every
+// member's bytes are described by exactly one provenance.
+const reboundPaths = new Map(rebound.map((id) => [catalogTable[id].model.glbPath, id]));
+const realigned = [];
+for (const [id, entry] of Object.entries(catalogTable)) {
+  const owner = reboundPaths.get(entry.model?.glbPath);
+  if (owner === undefined || owner === id) continue;
+  catalogTable[id] = { ...catalogTable[owner], provenance: { ...catalogTable[owner].provenance, catalogId: id, alias: `shares ${entry.model.glbPath} with ${owner}; base entry realigned to the rebound model` } };
+  realigned.push({ id, owner, wasSource: entry.model.source });
+}
+
 const missing = catalogIds.filter((id) => !(id in catalogTable) && !NATIVE_ARTICULATED_IDS.includes(id));
 if (missing.length > 0) fail(`catalog ids without a closure model or native articulated support: ${missing.join(', ')}`);
 
@@ -579,12 +597,19 @@ for (const [source, ids] of [...Object.entries(catalogTable).reduce((map, [id, e
   map.set(source, [...(map.get(source) ?? []), id]);
   return map;
 }, new Map())].sort((left, right) => right[1].length - left[1].length)) {
-  const paths = new Set(ids.map((id) => catalogTable[id].model.glbPath));
+  // Distinct BLOBS, not distinct member paths: `pedestrian.adult` and its
+  // legacy aliases are three member paths holding one sha256, and the
+  // package carries those bytes once.
+  const blobs = new Map(ids.map((id) => {
+    const member = byMemberPath.get(catalogTable[id].model.glbPath);
+    return [member.sha256, member.bytes];
+  }));
   classes.push({
     source,
     models: ids.length,
-    distinctBlobs: paths.size,
-    bytes: [...paths].reduce((sum, memberPath) => sum + (byMemberPath.get(memberPath)?.bytes ?? 0), 0),
+    memberPaths: new Set(ids.map((id) => catalogTable[id].model.glbPath)).size,
+    distinctBlobs: blobs.size,
+    bytes: [...blobs.values()].reduce((sum, bytes) => sum + bytes, 0),
     attributions: [...new Set(ids.map((id) => catalogTable[id].model.attribution))].sort(),
     ids: ids.sort(),
   });
@@ -610,6 +635,7 @@ const report = {
     nativeArticulated: NATIVE_ARTICULATED_IDS,
   },
   classes,
+  realigned,
   largestMembers: Object.entries(closureMembers)
     .sort((left, right) => right[1].bytes - left[1].bytes)
     .slice(0, 12)
