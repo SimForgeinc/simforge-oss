@@ -127,6 +127,37 @@ async function runClaimLoop(client: CpuJobsClient, signal: AbortSignal): Promise
   }
 }
 
+/**
+ * The machine's own identity, as the plane's registration contract demands it:
+ * `hardwareProfile`, `gpuModel` and `gpuMemoryMiB` are mandatory, and one of
+ * `imageDigest` (container) or `codeDigest` (host-native) must be a sha256
+ * digest. These describe the hardware and the build, so they are read from the
+ * environment the deployment sets rather than probed or invented here; a
+ * missing one fails loudly instead of registering a worker that lies about
+ * what it is.
+ */
+function carlaWorkerLabels(): Record<string, string> {
+  const required = (name: string): string => {
+    const value = simforgeEnv(name)?.trim();
+    if (!value) throw new Error(`SIMFORGE_${name} is required to register a CARLA worker`);
+    return value;
+  };
+  const digest = simforgeEnv("WORKER_IMAGE_DIGEST")?.trim() || simforgeEnv("WORKER_CODE_DIGEST")?.trim();
+  if (!digest) throw new Error("SIMFORGE_WORKER_IMAGE_DIGEST or SIMFORGE_WORKER_CODE_DIGEST is required");
+  const digestKey = simforgeEnv("WORKER_IMAGE_DIGEST")?.trim() ? "imageDigest" : "codeDigest";
+  const labels: Record<string, string> = {
+    hardwareProfile: required("WORKER_HARDWARE_PROFILE"),
+    gpuModel: required("WORKER_GPU_MODEL"),
+    gpuMemoryMiB: required("WORKER_GPU_MEMORY_MIB"),
+    [digestKey]: digest,
+  };
+  for (const name of ["BASE_IMAGE", "BASE_IMAGE_DIGEST", "BASE_IMAGE_PLATFORM_DIGEST"]) {
+    const value = simforgeEnv(`WORKER_${name}`)?.trim();
+    if (value) labels[name.toLowerCase().replace(/_(.)/g, (_, c: string) => c.toUpperCase())] = value;
+  }
+  return labels;
+}
+
 async function runCarlaLoop(client: RenderControlClient, signal: AbortSignal): Promise<void> {
   let registration: WorkerRegisteredResponse | undefined;
   while (!signal.aborted) {
@@ -138,7 +169,7 @@ async function runCarlaLoop(client: RenderControlClient, signal: AbortSignal): P
       if (!registration) {
         const engine = await loadBuiltinRenderEngine("carla");
         try {
-          registration = await client.register(engine.capabilities, randomUUID(), signal);
+          registration = await client.register(engine.capabilities, randomUUID(), carlaWorkerLabels(), signal);
         } finally {
           await engine.close?.();
         }

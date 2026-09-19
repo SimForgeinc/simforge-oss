@@ -23,7 +23,14 @@ export class RenderControlClient {
   private async request<T>(path: string, body: unknown, responseSchema: { parse(value: unknown): T }, signal: AbortSignal): Promise<T> {
     const response = await fetch(new URL(path, this.baseUrl), {
       method: "POST",
-      headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json" },
+      headers: {
+        authorization: `Bearer ${this.token}`,
+        "content-type": "application/json",
+        // The plane resolves the credential from the token *and* this header
+        // (control-plane-store.ts:155-165); without it every worker route
+        // answers 401 worker_credential_missing.
+        "x-simforge-worker-node-id": this.workerId,
+      },
       body: JSON.stringify(body),
       signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
     });
@@ -36,9 +43,16 @@ export class RenderControlClient {
     return responseSchema.parse(value);
   }
 
-  register(engine: EngineCapabilityDeclaration, instanceId: string, signal: AbortSignal) {
+  /**
+   * The plane requires hardwareProfile, gpuModel and gpuMemoryMiB labels plus
+   * an image or code digest, and rejects the registration by name when one is
+   * missing (`worker_label_<key>_required`,
+   * render-worker-control-store.ts:47-74). They describe the machine, so they
+   * come from its environment rather than being guessed here.
+   */
+  register(engine: EngineCapabilityDeclaration, instanceId: string, labels: Record<string, string>, signal: AbortSignal) {
     return this.request("/api/simforge/internal/workers/register", WorkerRegisterRequestSchema.parse({
-      schema, type: "worker.register", workerId: this.workerId, instanceId, engine, labels: {},
+      schema, type: "worker.register", workerId: this.workerId, instanceId, engine, labels,
     }), WorkerRegisteredResponseSchema, signal);
   }
 
