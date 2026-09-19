@@ -135,7 +135,13 @@ export function ScenarioCoverageMap({
   }, [maps]);
 
   const covered = useMemo(
-    () => (coverage?.footprints ?? []).filter((footprint) => groupsByMapVersionId.has(footprint.mapVersionId)),
+    () => [...groupsByMapVersionId.values()].flatMap((group) => {
+      const sourceMapId = group.documents.find((document) => document.mapSourceMapId)?.mapSourceMapId;
+      const footprint = coverage?.footprints.find((candidate) =>
+        sourceMapId ? candidate.sourceMapId === sourceMapId : candidate.mapVersionId === group.mapVersionId,
+      );
+      return footprint ? [{ ...footprint, mapVersionId: group.mapVersionId }] : [];
+    }),
     [coverage, groupsByMapVersionId],
   );
 
@@ -151,7 +157,9 @@ export function ScenarioCoverageMap({
       .filter((group) => !drawn.has(group.mapVersionId))
       .map((group) => ({
         group,
-        reason: reasons.get(group.mapVersionId) ?? "not installed on this computer",
+        reason: coverage.unprojected.find((entry) =>
+          group.documents.some((document) => document.mapSourceMapId === entry.sourceMapId),
+        )?.reason ?? reasons.get(group.mapVersionId) ?? "source map absent from this installation",
       }));
   }, [covered, coverage, groupsByMapVersionId]);
 

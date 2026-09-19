@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { ScenarioVersionConflict } from "@simforge-oss/studio-host";
+import { resolveScenarioMap, ScenarioVersionConflict } from "@simforge-oss/studio-host";
 import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { TemplateDocument } from "@simforge-oss/scenario";
@@ -340,6 +340,8 @@ export function useScenarioDocumentActions({
           buildDocumentTransferFile({
             title: full.title,
             mapVersionId: full.mapVersionId,
+            mapSourceMapId: full.mapSourceMapId,
+            mapXodrSha256: full.mapXodrSha256,
             content: full.content,
           }),
           documentJsonFilename(full.title),
@@ -359,17 +361,7 @@ export function useScenarioDocumentActions({
       setImportingDocument(true);
       try {
         const parsed = readDocumentTransferFile(JSON.parse(await file.text()));
-        // The file's own map id is advisory: it is workspace-scoped, so a document imported into a
-        // workspace that cannot see it would be bound to a map it can never load.
-        // A canonical source asset may have multiple immutable derivative map
-        // versions. Only the wrapper's exact mapVersionId can select one; a
-        // bare template's sourceMap.mapId is intentionally never guessed.
-        const map = maps.find((entry) => entry.mapVersionId === parsed.mapVersionId) ?? null;
-        if (!map) {
-          throw new ScenarioImportError(
-            "Scenario JSON must identify an exact published map version. Re-export it with mapVersionId or choose a map explicitly; a source map with multiple derivatives is ambiguous.",
-          );
-        }
+        const map = resolveScenarioMap(parsed, maps);
         const content = reconcileTemplateMapIdentity(parsed.content, map);
         if (content.sourceMap?.mapId !== map.sourceMapId || content.anchor.pin?.mapId !== map.sourceMapId) {
           throw new ScenarioImportError(

@@ -115,6 +115,7 @@ export function documentSummaryFromDocument(document: {
   title: string;
   datasetId: string;
   mapVersionId: string | null;
+  mapSourceMapId?: string | null;
   latestRevisionId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -134,6 +135,7 @@ export function documentSummaryFromDocument(document: {
     datasetId: document.datasetId,
     datasetSortOrder: 0,
     mapVersionId: document.mapVersionId,
+    mapSourceMapId: document.mapSourceMapId,
     mapLabel: null,
     latestRevisionId: document.latestRevisionId,
     revisionCount: 0,

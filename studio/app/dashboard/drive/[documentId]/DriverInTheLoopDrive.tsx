@@ -7,6 +7,7 @@ import type { CatalogId } from "@simforge-oss/asset-catalog";
 import { LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
 import { loadEngine } from "@simforge-oss/engine/browser";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import { resolveScenarioMap } from "@simforge-oss/studio-host";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
 import { RENDERING_PREFERENCE_CHANGE_EVENT } from "@simforge-oss/studio-ui/components/rendering-preference";
@@ -33,6 +34,7 @@ export function DriverInTheLoopDrive({
   draftVersion,
   mapVersionId,
   mapSourceMapId,
+  mapXodrSha256,
   roleId,
   title,
 }: {
@@ -42,6 +44,7 @@ export function DriverInTheLoopDrive({
   draftVersion: number;
   mapVersionId: string;
   mapSourceMapId?: string | null;
+  mapXodrSha256?: string | null;
   roleId: string;
   title: string;
 }) {
@@ -79,8 +82,7 @@ export function DriverInTheLoopDrive({
       .listMaps(abort.signal)
       .then(async (installed) => {
         setInstalledMaps(installed.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })));
-        const entry = installed.find((candidate) => candidate.mapVersionId === mapVersionId);
-        if (!entry) throw new Error("This scenario's map is not installed on this computer.");
+        const entry = resolveScenarioMap({ mapVersionId, mapSourceMapId, mapXodrSha256 }, installed);
         const engine = await loadEngine();
         const index = await LaneIndex.load(entry.topologyUrl, { engine, signal: abort.signal });
         return { mapVersionId, map: entry, laneIndex: index };
@@ -99,7 +101,7 @@ export function DriverInTheLoopDrive({
         toast.error("The drive could not start on this map", { description: message });
       });
     return () => abort.abort();
-  }, [mapVersionId]);
+  }, [mapVersionId, mapSourceMapId, mapXodrSha256]);
 
   const role = useMemo(
     () => content.roles.find((candidate) => candidate.id === roleId) ?? null,

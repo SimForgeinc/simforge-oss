@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { ambientProvenanceForRevisionTraffic, type ScenarioRevisionEvidenceDto } from "@simforge-oss/studio-host";
+import { ambientProvenanceForRevisionTraffic, resolveScenarioMap, type ScenarioRevisionEvidenceDto } from "@simforge-oss/studio-host";
 import {
   materializeBrowserRevisionTraffic,
   previewAmbientTrafficProfile,
@@ -246,7 +246,14 @@ export function useScenarioSession({
 
   useEffect(() => {
     if (!maps || !document || document.id !== documentId) return;
-    const nextMap = maps.find((candidate) => candidate.mapVersionId === document.mapVersionId) ?? null;
+    let resolvedMap: ScenarioMapOption | null = null;
+    let resolutionError: string | null = null;
+    try {
+      resolvedMap = resolveScenarioMap(document, maps);
+    } catch (reason) {
+      resolutionError = reason instanceof Error ? reason.message : String(reason);
+    }
+    const nextMap = resolvedMap;
     setMap(nextMap);
     if (!nextMap || !mapSupportsScenarioPreview(nextMap)) {
       workerRef.current?.cancel();
@@ -254,7 +261,7 @@ export function useScenarioSession({
       preparedKeyRef.current = null;
       compilingKeyRef.current = null;
       setBundle(null);
-      setMessage("Preview unavailable for this map.");
+      setMessage(resolutionError ?? "Preview unavailable for this map.");
       return;
     }
     // Everything that determines the trace: authored content and the immutable

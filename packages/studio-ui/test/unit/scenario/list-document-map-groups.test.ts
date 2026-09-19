@@ -41,15 +41,22 @@ function summary(
 }
 
 describe("groupDocumentsByMap", () => {
-  it("groups on the map version id, not the label", () => {
-    // Two versions of the same town are different maps for authoring, so a shared label must not
-    // collapse them — this is the one behaviour that differs from v1's label-keyed grouping.
+  it("does not collapse unrelated or unproven identities just because labels match", () => {
     const groups = groupDocumentsByMap([
       summary({ id: "a", mapVersionId: "usmv_v1", mapLabel: "Richmond" }),
       summary({ id: "b", mapVersionId: "usmv_v2", mapLabel: "Richmond" }),
     ]);
     expect(groups).toHaveLength(2);
     expect(groups.map((group) => group.mapVersionId).sort()).toEqual(["usmv_v1", "usmv_v2"]);
+  });
+
+  it("keeps superseded scenarios in their source's installed coverage group", () => {
+    const groups = groupDocumentsByMap([
+      summary({ id: "old", mapVersionId: "v1", mapSourceMapId: "source" }),
+      summary({ id: "new", mapVersionId: "v2", mapSourceMapId: "source" }),
+    ], [{ mapVersionId: "v2", sourceMapId: "source", label: "Di Rosa" }]);
+    expect(groups.map((group) => ({ map: group.mapVersionId, documents: group.documents.map((doc) => doc.id) })))
+      .toEqual([{ map: "v2", documents: ["old", "new"] }]);
   });
 
   it("orders groups by their most recently edited document", () => {
