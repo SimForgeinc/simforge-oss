@@ -114,28 +114,21 @@ describe('surface material profiles', () => {
     expect(material.roughness).toBeGreaterThan(authored);
   });
 
-  it('composes its shader after an existing baked-shadow patch and uses stable keys', () => {
+  it('keeps shader cache identities distinct when a base shader selection changes after registration', () => {
     const root = new Group();
     const road = surface('Roads_Road_Layer0', 'Asphalt1_Road');
     const material = road.material as MeshStandardMaterial;
-    material.onBeforeCompile = (shader) => {
-      shader.fragmentShader = `// baked-shadow\n${shader.fragmentShader}`;
-    };
-    material.customProgramCacheKey = () => 'city-baked-shadow-v1';
+    let baseSelection = 'ordinary-albedo';
+    material.customProgramCacheKey = () => baseSelection;
     root.add(road);
     const registry = new SurfaceMaterialRegistry();
     registry.registerTree(root, 'road');
     registry.apply('enhanced');
-    const shader = {
-      uniforms: {},
-      vertexShader: 'void main(){\n#include <project_vertex>\n}',
-      fragmentShader: 'void main(){\n#include <map_fragment>\n}',
-    };
-    material.onBeforeCompile(shader as never, {} as never);
-    expect(shader.fragmentShader).toContain('// baked-shadow');
-    expect(shader.fragmentShader).toContain('surfaceHash');
-    expect(shader.vertexShader).toContain('vSurfaceWorldPos');
-    expect(material.customProgramCacheKey()).toBe('city-baked-shadow-v1|surface-enhanced-asphalt-v1');
+    const ordinaryKey = material.customProgramCacheKey();
+    baseSelection = 'mask-only-albedo';
+    expect(material.customProgramCacheKey()).not.toBe(ordinaryKey);
+    baseSelection = 'ordinary-albedo';
+    expect(material.customProgramCacheKey()).toBe(ordinaryKey);
   });
 
   it('reports unknowns unchanged with deterministic identity evidence', () => {

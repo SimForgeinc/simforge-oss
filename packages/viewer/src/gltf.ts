@@ -8,6 +8,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ktx2MipInfo, selectKtx2MipLevels } from '@simforge-oss/maps/ktx2';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 import type { CityViewerOptions } from './types';
+import { inspectAlbedoTexture } from './albedo-color';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -582,6 +583,7 @@ export function estimateResourceBytes(res: AssetResources): number {
  */
 export function uploadTexture(renderer: WebGLRenderer, tex: Texture): void {
   renderer.initTexture(tex);
+  inspectAlbedoTexture(renderer, tex);
   const data = tex.image as unknown;
   if (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) {
     data.close();

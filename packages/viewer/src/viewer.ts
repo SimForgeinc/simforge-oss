@@ -24,6 +24,7 @@ import type { CameraControlPreferences } from './camera-drag';
 import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose, initialEditorFocus } from './camera-envelope';
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
+import { disposeAlbedoInspection, registerAlbedoTexture } from './albedo-color';
 import {
   collectResources,
   disposeResources,
@@ -959,6 +960,7 @@ export class CityViewer {
       debug: this.options.debugShadowProjection,
       fadeStartY: box.min.y + fadeFrom,
       fadeEndY: box.min.y + fadeTo,
+      maskOnlyAlbedo: true,
     };
   }
 
@@ -1191,6 +1193,8 @@ export class CityViewer {
       }
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       for (const mat of mats) {
+        const albedo = (mat as Material & { map?: Texture | null }).map;
+        if (albedo?.isTexture) registerAlbedoTexture(albedo);
         for (const value of Object.values(mat as unknown as Record<string, unknown>)) {
           const tex = value as Texture | null;
           if (tex && (tex as unknown as { isTexture?: boolean }).isTexture) {
@@ -2307,6 +2311,7 @@ export class CityViewer {
     this.overlays.dispose();
     this.vegetationData.clear();
     this.surfaceMaterials.dispose();
+    disposeAlbedoInspection(this.renderer);
     if (this.sun) this.scene.remove(this.sun, this.sun.target);
     this.scene.clear();
     // Three's compileAsync() owns an internal requestAnimationFrame readiness
