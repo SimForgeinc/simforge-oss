@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import struct
 import sys
+from repair_materials import repair_materials
 
 EXPORT = Path(sys.argv[1])
 BP_DUMPS = Path(sys.argv[2])
@@ -111,9 +112,10 @@ def assemble_walker(walker):
         doc["images"] = writer.images
         doc["textures"] = writer.textures
         doc["samplers"] = writer.samplers
+    repair_materials(doc)
     doc.setdefault("asset", {})["generator"] = "simforge-carla-pedestrian-pipeline"
     doc["asset"]["extras"] = {
-        "convention": "y-up, meters, +X forward, bind pose",
+        "convention": "y-up, meters; bind-pose facing +Z; bind pose; actor binding yaw +pi/2 maps +Z to +X",
         "source": "CARLA (CC BY 4.0)",
         "id": f"walker.pedestrian.{walker_id}",
         "skeletonPreserved": True,
@@ -134,6 +136,11 @@ def assemble_walker(walker):
         "dims_xyz_m": dims,
         "materials": len(writer.materials),
         "textures": len(writer.images),
+        "materialColorFallbacks": {
+            material["name"]: material["extras"]["baseColorFallback"]
+            for material in doc["materials"]
+            if "baseColorFallback" in material.get("extras", {})
+        },
         "bytes": len(output),
         "sha256": hashlib.sha256(output).hexdigest(),
         "skeletonPreserved": True,

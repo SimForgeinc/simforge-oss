@@ -12,7 +12,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF01_A_G2"
@@ -29,7 +30,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF01_A_G2"
@@ -46,7 +48,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF02_A_G2"
@@ -63,7 +66,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF02_B_G2"
@@ -80,7 +84,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF02_C_G2"
@@ -97,7 +102,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF02_Cop_G2"
@@ -114,7 +120,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF02_A_G2"
@@ -131,7 +138,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF03_A_G2"
@@ -148,7 +156,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF03_A_G2"
@@ -165,7 +174,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroF03_A_G2"
@@ -182,7 +192,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroM01_A_G2"
@@ -199,7 +210,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroM01_B_G2"
@@ -216,7 +228,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroM02_A_G2"
@@ -233,7 +246,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AmerM01_A_G2"
@@ -250,7 +264,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AmerM01_A_G2"
@@ -267,7 +282,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AmerM01_A_G2"
@@ -284,7 +300,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AmerM01_Cop_G2"
@@ -301,7 +318,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaF01_G2"
@@ -318,7 +336,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaF01_G2"
@@ -335,7 +354,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaM01_A_G2"
@@ -352,7 +372,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaM01_B_G2"
@@ -369,7 +390,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaM02_A_G2"
@@ -386,7 +408,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaM02_A_G2"
@@ -403,7 +426,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AsiaM02_A_G2"
@@ -420,7 +444,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF01_A_G2"
@@ -437,7 +462,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF01_A_G2"
@@ -454,7 +480,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF01_A_G2"
@@ -471,7 +498,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF02_A_G2"
@@ -488,7 +516,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF02_B_G2"
@@ -505,7 +534,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroF02_B_G2"
@@ -522,7 +552,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroM01_A_G2"
@@ -539,7 +570,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroM01_B_G2"
@@ -556,7 +588,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroM02_A_G2"
@@ -573,7 +606,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroM02_A_G2"
@@ -590,7 +624,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroG02_A_G2"
@@ -607,7 +642,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_EuroB02_A_G2"
@@ -624,7 +660,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroG01_A_G3"
@@ -641,7 +678,8 @@
         "material textures embedded and PBR channels normalized",
         "skeleton and bind pose preserved",
         "native CARLA animation tracks added without re-exporting mesh or textures",
-        "root motion removed; target bone lengths retained"
+        "root motion removed; target bone lengths retained",
+        "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback"
       ],
       "source": "CARLA 0.10.0 UE5 cooked content",
       "sourceMesh": "SK_AfroB01_A_G3"

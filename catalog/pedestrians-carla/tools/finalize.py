@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate pedestrian catalog manifests from assembly-stats.json."""
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -15,6 +16,15 @@ manifest = {
     "version": 1,
     "source": "CARLA 0.10.0 UE5 cooked content",
     "license": "CC-BY-4.0",
+    "coordinateFrame": {
+        "up": "+Y",
+        "units": "meters",
+        "bindPoseFacing": "+Z",
+        "gaitAxis": "+Z",
+        "actorForward": "+X",
+        "actorBindingYawRad": math.pi / 2,
+        "embeddedConventionIsStale": False,
+    },
     "pedestrians": stats,
 }
 entries = {}
@@ -31,6 +41,7 @@ for blueprint, item in sorted(stats.items()):
         },
         "tintable": False,
         "scaleToDims": False,
+        "yawOffsetRad": math.pi / 2,
         "age": item["age"],
         "gender": item["gender"],
     }
@@ -49,6 +60,7 @@ for blueprint, item in sorted(stats.items()):
             "skeleton and bind pose preserved",
             "native CARLA animation tracks added without re-exporting mesh or textures",
             "root motion removed; target bone lengths retained",
+            "normal-map-as-albedo bindings removed; primary source tint used where recovered, otherwise explicit neutral-gray fallback",
         ],
     })
 (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

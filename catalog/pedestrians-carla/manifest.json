@@ -1,10 +1,19 @@
 {
+  "coordinateFrame": {
+    "actorBindingYawRad": 1.5707963267948966,
+    "actorForward": "+X",
+    "bindPoseFacing": "+Z",
+    "embeddedConventionIsStale": false,
+    "gaitAxis": "+Z",
+    "units": "meters",
+    "up": "+Y"
+  },
   "license": "CC-BY-4.0",
   "pedestrians": {
     "walker.pedestrian.0015": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0015",
-      "bytes": 18699244,
+      "bytes": 18699908,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -29,10 +38,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
+      "sha256": "75785219de2948ed155a88007c26ac09f7a8a388ff3578d1d48b7ce6dc266cd7",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 12
@@ -40,7 +67,7 @@
     "walker.pedestrian.0016": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0016",
-      "bytes": 18124892,
+      "bytes": 18125848,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -65,10 +92,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_A",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_e": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_E",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "35f8fddb8c07282701e52201629325a4b4dabc92d5f4631f9562225dc3e70b20",
+      "sha256": "2b217d5df0e984c2ebcbe65c6d1ec1aa3b7cf727a63541edb03197f7cdf9debd",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 11
@@ -76,7 +129,7 @@
     "walker.pedestrian.0017": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0017",
-      "bytes": 13600960,
+      "bytes": 13601948,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -101,10 +154,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_shoes_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Shoes_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "8f4ddd68824825e3e3d95ebd9c879568453e390d5fabab878af18762631bcbd2",
+      "sha256": "771b81055de89dcbd739a0b22b40934c5250012e7f158e35783fdb79f73cc9cd",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 11
@@ -112,7 +191,7 @@
     "walker.pedestrian.0018": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0018",
-      "bytes": 11814800,
+      "bytes": 11815176,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -137,10 +216,20 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 5,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "d6f10282bb28645d3ad64ac010fd347e17af53f645485dc3cb114bfa6a3a01f5",
+      "sha256": "66c376db9580793ae9416d1e9519808a0713a769e1ec3d3e10680498f0c3cc40",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_B_G2",
       "textures": 10
@@ -148,7 +237,7 @@
     "walker.pedestrian.0019": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0019",
-      "bytes": 15559196,
+      "bytes": 15559852,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -173,10 +262,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_pants_d": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_JacketPants_D",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_shoes_d": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Shoes_D",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "22ccba1ac7360c3150391ab08195029c7f1b94b57055c2c2f54b60ba90b858c8",
+      "sha256": "dc8c3ee0349a7e4f801899023f917f82a4ee64161a455fab457dcaa6faabc4d1",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_C_G2",
       "textures": 11
@@ -184,7 +291,7 @@
     "walker.pedestrian.0020": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0020",
-      "bytes": 16640548,
+      "bytes": 16642352,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -209,10 +316,60 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "cop_badge": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Badge",
+          "sourceTintAvailable": true
+        },
+        "cop_belt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Belt",
+          "sourceTintAvailable": true
+        },
+        "cop_hat": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Hat",
+          "sourceTintAvailable": true
+        },
+        "cop_jacket": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Jacket",
+          "sourceTintAvailable": true
+        },
+        "cop_pants": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Pants",
+          "sourceTintAvailable": true
+        },
+        "cop_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 10,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
+      "sha256": "48e58cc481c26a3ec3049c188090813e14cc0c7dcebeedb4b26da82c8e44d151",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_Cop_G2",
       "textures": 13
@@ -220,7 +377,7 @@
     "walker.pedestrian.0021": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0021",
-      "bytes": 15459472,
+      "bytes": 15460444,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -245,10 +402,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_c": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_C",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_shoes_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Shoes_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "a4694c5d967289089f88d9919957fabc3d1e46950df896749772b7932b27e76a",
+      "sha256": "20c388a5875083e7d36ebf0af21a645b5c14068c79e603220fbd7b09cf5f80d7",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 13
@@ -256,7 +439,7 @@
     "walker.pedestrian.0022": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0022",
-      "bytes": 14135788,
+      "bytes": 14136672,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -281,10 +464,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f03_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_pants_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Pants_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_shirt_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Shirt_A",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "c06482bcb1b8e0c781df56903f41af6b3067404029a98194c4f067fd5a44069d",
+      "sha256": "8131edfeeb6c4a7f28eae77aaf35d1587ce869381bd4dac43a927f5be2029695",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -292,7 +501,7 @@
     "walker.pedestrian.0023": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0023",
-      "bytes": 14135788,
+      "bytes": 14136672,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -317,10 +526,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f03_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_pants_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Pants_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_shirt_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Shirt_A",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "8262a9a178f3f319693f2d049d03bd1b37147a10ad92589c2d7cbde3663706ae",
+      "sha256": "f30605ff180e57fa60bd9245c9db615af839b8d3db4980152d978e156ed24b2b",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -328,7 +563,7 @@
     "walker.pedestrian.0024": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0024",
-      "bytes": 14135788,
+      "bytes": 14136672,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -353,10 +588,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f03_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_pants_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Pants_A",
+          "sourceTintAvailable": false
+        },
+        "afro_f03_shirt_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Shirt_A",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "68848f0763ce83c3a93f3963fa702eb7ea52104585f0649381f4bd35aa3310c6",
+      "sha256": "dfef7f1a8f1a046bfe191b12c687b2f81a6721fc0bbbbbc2f3efd2eca92851f3",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -364,7 +625,7 @@
     "walker.pedestrian.0025": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0025",
-      "bytes": 20375812,
+      "bytes": 20376752,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -389,10 +650,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_m01_pants": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Pants",
+          "sourceTintAvailable": false
+        },
+        "afro_m01_shirt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shirt",
+          "sourceTintAvailable": true
+        },
+        "afro_m01_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "4e426fc64b228f6a70f3a81baed14dfca4f91ecdb993828e2a48286b801dde58",
+      "sha256": "ceba21725bba9ae3ff49ac82a8a5ad37c310d3ded7ec00739c75c6c584f8b1cb",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM01_A_G2",
       "textures": 11
@@ -400,7 +687,7 @@
     "walker.pedestrian.0026": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0026",
-      "bytes": 19796252,
+      "bytes": 19797236,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -425,10 +712,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m01_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_shoes_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Shoes_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "7baa0c1a1139834cc040f7ef5951a9dc996e1554b317e52edbd3f278fd524b0c",
+      "sha256": "fe22eeb9f968548fd3fbdedc7d5d140af6b77aa6dc80b60865f5c4e8b2245ffb",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM01_B_G2",
       "textures": 11
@@ -436,7 +749,7 @@
     "walker.pedestrian.0027": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0027",
-      "bytes": 24913160,
+      "bytes": 24914400,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -461,10 +774,44 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_m02_pants": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Pants",
+          "sourceTintAvailable": true
+        },
+        "afro_m02_shirt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Shirt",
+          "sourceTintAvailable": true
+        },
+        "afro_m02_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Shoes",
+          "sourceTintAvailable": true
+        },
+        "afro_m02_waist": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Waist",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 10,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "8d68c8a1e4d7219955d4b9de143ca7d9c4af5c0300ee78c831ab0e0d1aa5c39e",
+      "sha256": "a5c8583cecd8439768ac426b6c3db71da1ef6dd064dd1e5e6693628e8121e17f",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM02_A_G2",
       "textures": 13
@@ -472,7 +819,7 @@
     "walker.pedestrian.0028": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0028",
-      "bytes": 23130136,
+      "bytes": 23131020,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -497,10 +844,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "amer_m01_pants_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Pants_B",
+          "sourceTintAvailable": false
+        },
+        "amer_m01_shirt_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_08_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shirt_B",
+          "sourceTintAvailable": false
+        },
+        "amer_m01_shoes_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shoes_B",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 8,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "26eccc553e3219ce9666f906a02be5410aaca3ad840fa7c75121e212898a931b",
+      "sha256": "a85245f9ab887912b03b171cc0cf3fd538373b02caa5f4ba1629154d01731f64",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
@@ -508,7 +881,7 @@
     "walker.pedestrian.0029": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0029",
-      "bytes": 23129876,
+      "bytes": 23130488,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -533,10 +906,28 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "amer_m01_shirt_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_08_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shirt_B",
+          "sourceTintAvailable": false
+        },
+        "amer_m01_shoes_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shoes_B",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "c085ab0d77eee3dd7283bd100a440a8112c78e6e7e349f636442ff33f5917da3",
+      "sha256": "3e2f2b935d84916b73f8e33f0860afc87745a2e44a71d0976fb1a2f3e6528c39",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
@@ -544,7 +935,7 @@
     "walker.pedestrian.0030": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0030",
-      "bytes": 25179576,
+      "bytes": 25180492,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -569,10 +960,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "amer_m01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "amer_m01_pants_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Pants_B",
+          "sourceTintAvailable": false
+        },
+        "amer_m01_shoes_b": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shoes_B",
+          "sourceTintAvailable": false
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "ca0dded305c3ffe6a3529dc45132209cdcf2a05d55da65c670e18b5ebb45a8f5",
+      "sha256": "d694651f3c030872d25d93ed9b0bdafa7bf1e43e51180bb24e0910b435c22334",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 14
@@ -580,7 +997,7 @@
     "walker.pedestrian.0031": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0031",
-      "bytes": 22465392,
+      "bytes": 22467196,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -605,10 +1022,60 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "cop_badge": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Badge",
+          "sourceTintAvailable": true
+        },
+        "cop_belt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Belt",
+          "sourceTintAvailable": true
+        },
+        "cop_hat": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Hat",
+          "sourceTintAvailable": true
+        },
+        "cop_jacket": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Jacket",
+          "sourceTintAvailable": true
+        },
+        "cop_pants": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Pants",
+          "sourceTintAvailable": true
+        },
+        "cop_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 11,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "23594d57d8cc7bc5499ecd3b6424e99d7e95405351248946ebc19bcf0c14e092",
+      "sha256": "65063903f8cda5a17beb2bca180b8c4ab0a3c560b3f03980ef51771e8c1a8314",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_Cop_G2",
       "textures": 15
@@ -616,7 +1083,7 @@
     "walker.pedestrian.0032": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0032",
-      "bytes": 19330708,
+      "bytes": 19331692,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -641,10 +1108,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_pants_d": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_D",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_e": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_E",
+          "sourceTintAvailable": true
+        },
+        "asia_f01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaF01_G2/00_IndividualComponents/Clothes/MI_AsiaF01_Jacket_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 8,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "25fd57fce9391308c2f3ded2cca248b1c1856cd8eb68521a5f59fdaaa9af45b5",
+      "sha256": "1de3397365b4fc868c0d2d86684bb43e9dce9f39466d002cc27d874b2883a1ce",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
@@ -652,7 +1145,7 @@
     "walker.pedestrian.0033": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0033",
-      "bytes": 19330448,
+      "bytes": 19331128,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -677,10 +1170,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_pants_d": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_D",
+          "sourceTintAvailable": true
+        },
+        "asia_f01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaF01_G2/00_IndividualComponents/Clothes/MI_AsiaF01_Jacket_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "089c4622857d8bedae0c7365c32e2dfc04ffe612882f086cd4ddf15da4b1f6e4",
+      "sha256": "369e869956f9cc8b81e26236d900dac47130543cd4a82b0640acb9c5d3032df7",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
@@ -688,7 +1199,7 @@
     "walker.pedestrian.0034": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0034",
-      "bytes": 21311272,
+      "bytes": 21312256,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -713,10 +1224,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m01_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_shoes_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Shoes_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "05dc5476fa06b9d06975635b59b8cdc932078cb94a37bde41d8c3d62da6d7a93",
+      "sha256": "53231297ed585ce37fdad4805f2354c1f759ab9e4266a626ef6a0022779aab81",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM01_A_G2",
       "textures": 10
@@ -724,7 +1261,7 @@
     "walker.pedestrian.0035": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0035",
-      "bytes": 21286824,
+      "bytes": 21287764,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -749,10 +1286,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Pants_A",
+          "sourceTintAvailable": true
+        },
+        "asia_m01_shoes_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Shoes_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "48e1784c79c83f96f7d2cee84b63ec9eacd1ba2e0512f4b20b292443029cfe21",
+      "sha256": "c95a07bf884012f28b64f5c9275e99cf62392bc9fccb21ad6b7f25db0feb034f",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM01_B_G2",
       "textures": 11
@@ -760,7 +1323,7 @@
     "walker.pedestrian.0036": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0036",
-      "bytes": 18267640,
+      "bytes": 18268280,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -785,10 +1348,28 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m02_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "asia_m02_shirt_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Shirt_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "e2ebeac3029e49054ea87858b949122e6f19189ee79214cf09b3ceb7ddc8d305",
+      "sha256": "c9e37a2c7dadc79010e97858b8f888b6ca55774b3a1d0e1a258755b11bff943f",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
@@ -796,7 +1377,7 @@
     "walker.pedestrian.0037": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0037",
-      "bytes": 18267960,
+      "bytes": 18268592,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -821,10 +1402,28 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m02_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "asia_m02_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Pants_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "281bf3d4b60bdb5ece64763c513f5ba4c341833294e3cfee0c49c52dd7e05b69",
+      "sha256": "212b4d713a21e5bc77734e1c42bc3f3e53dcff7f18dfd28e3f741c97d458bb66",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
@@ -832,7 +1431,7 @@
     "walker.pedestrian.0038": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0038",
-      "bytes": 19652164,
+      "bytes": 19653096,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -857,10 +1456,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "asia_m02_boots_a": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Boots_A",
+          "sourceTintAvailable": false
+        },
+        "asia_m02_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Pants_A",
+          "sourceTintAvailable": true
+        },
+        "asia_m02_shirt_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Shirt_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "463af7f7f30b8bf0dc06f67dcae486d6dd8f4266bb0e7d51b27768b18511e5f5",
+      "sha256": "a5e27a4883b3dfe1f88064192a4e731d6e06af1e23736192159202108e2380ae",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 10
@@ -868,7 +1493,7 @@
     "walker.pedestrian.0039": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0039",
-      "bytes": 13135688,
+      "bytes": 13136360,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -893,10 +1518,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_f01_boots_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Boots_A",
+          "sourceTintAvailable": true
+        },
+        "euro_f01_dress_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Dress_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "ef5adf19ca131db0e7464bf2a7136689e477e7683919559f853be6b69af79b56",
+      "sha256": "18b9a8dff1b284e2b0b546f99f24ac6a049c5f5fc0b172bb9fe5e6fec4d7e83a",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -904,7 +1547,7 @@
     "walker.pedestrian.0040": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0040",
-      "bytes": 13135688,
+      "bytes": 13136360,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -929,10 +1572,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_f01_boots_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Boots_A",
+          "sourceTintAvailable": true
+        },
+        "euro_f01_dress_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Dress_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "5f27051d2675cdfcb11a27835d846d13fd15866df3f88baa37da559e4ed0f9c8",
+      "sha256": "d5bf5ff4bd33db7ab3bc48d88e66e9810eea72802e591941eef68bc63d40e605",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -940,7 +1601,7 @@
     "walker.pedestrian.0041": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0041",
-      "bytes": 13135688,
+      "bytes": 13136360,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -965,10 +1626,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_f01_boots_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Boots_A",
+          "sourceTintAvailable": true
+        },
+        "euro_f01_dress_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Dress_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "9296833c2d48ca4f0764dea1936c9543d1c59845edaaad44c10e3e8967ceb034",
+      "sha256": "a6b00f499572697e989815f42e154e5716244a4161f2634a974e7f1fad2fda99",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -976,7 +1655,7 @@
     "walker.pedestrian.0042": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0042",
-      "bytes": 14421476,
+      "bytes": 14422444,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1001,10 +1680,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_d": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_D",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "f92d730b637f7b1040aa3a24e8563fa65d26b9509907abb641446027f0e97421",
+      "sha256": "4b1ef111b32fade8346d61e42ff4e40bbd264b39290b8415c88faf21d19ef79a",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_A_G2",
       "textures": 11
@@ -1012,7 +1717,7 @@
     "walker.pedestrian.0043": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0043",
-      "bytes": 16633940,
+      "bytes": 16634592,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1037,10 +1742,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_jacket_c": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_07_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_C",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 5,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "6173cf8a2dd9cf5a72f7add430c191b67394c3b226c21da15552e7aa7f487121",
+      "sha256": "e5e8be62f3f13bd766b7fce54c98b5cd441c8f079d67fd7ce9809873179702e1",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
@@ -1048,7 +1771,7 @@
     "walker.pedestrian.0044": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0044",
-      "bytes": 16633940,
+      "bytes": 16634592,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1073,10 +1796,28 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f01_jacket_c": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_07_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_C",
+          "sourceTintAvailable": true
+        },
+        "afro_f01_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_02_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 5,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "b4947f6a1bf3686dfe124a2bc10d356995a14bce64ba03d598e611f25b53cc61",
+      "sha256": "80fded41df3c39a0f819c6fffe6e51dfd4144175939bc2f508edd40c0d79cb2a",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
@@ -1084,7 +1825,7 @@
     "walker.pedestrian.0045": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0045",
-      "bytes": 20095496,
+      "bytes": 20096464,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1109,10 +1850,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_c": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_C",
+          "sourceTintAvailable": true
+        },
+        "afro_f02_pants_c": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Pants_C",
+          "sourceTintAvailable": true
+        },
+        "afro_m01_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "86c7c357ece1de9408f9891162803388a93c51bb788e1da996e2d463ae1f7f4e",
+      "sha256": "24ca9de4b75329b1ebef0c1bf6a6b93ae899e7f9d033d56126a749fce52ded87",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM01_A_G2",
       "textures": 12
@@ -1120,7 +1887,7 @@
     "walker.pedestrian.0046": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0046",
-      "bytes": 22503884,
+      "bytes": 22504824,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1145,10 +1912,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_m01_pants": {
+          "kind": "neutral-gray-placeholder",
+          "parameter": null,
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_04_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Pants",
+          "sourceTintAvailable": false
+        },
+        "afro_m01_shirt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shirt",
+          "sourceTintAvailable": true
+        },
+        "afro_m01_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Plastic_01_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "9c2a298289b782a97404c3811efae94c10834adb581695bec1fce6beb023355c",
+      "sha256": "9d9edfc77e43f1214a715b8880946f5f34d3a1ecdc09c7fbbc29f25248d8b2d4",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM01_B_G2",
       "textures": 11
@@ -1156,7 +1949,7 @@
     "walker.pedestrian.0047": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0047",
-      "bytes": 13674372,
+      "bytes": 13675348,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1181,10 +1974,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_m02_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_pants_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Pants_A",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_shoes_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Shoes_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "8c31d5e974660cb11eacccb39cad48bd0d12eebffe208e94cd54f600fe86635c",
+      "sha256": "0fe8b14e78832a821592dc8e3986fb61bc10eb1bef76dd1ea8aead531515adbe",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 12
@@ -1192,7 +2011,7 @@
     "walker.pedestrian.0048": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0048",
-      "bytes": 15195176,
+      "bytes": 15196156,
       "clips": {
         "idle": {
           "duration": 19.666666,
@@ -1217,10 +2036,36 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_m02_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_shoes_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Shoes_A",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 7,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "ee20b5cc98c4dce249a3ef493b9e8aef43684c8d4bc438578ebabf9a6559c052",
+      "sha256": "727f489a287e0403362fb8ae86f372ece310570f4bc4f4e5d7d2f3d67da3986c",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 14
@@ -1228,7 +2073,7 @@
     "walker.pedestrian.0049": {
       "age": "child",
       "blueprint": "walker.pedestrian.0049",
-      "bytes": 17993008,
+      "bytes": 17993976,
       "clips": {
         "idle": {
           "duration": 1.5,
@@ -1253,10 +2098,36 @@
       "gender": "female",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "euro_g02_jacket": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Jacket",
+          "sourceTintAvailable": true
+        },
+        "euro_g02_pants": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Pants",
+          "sourceTintAvailable": true
+        },
+        "euro_g02_shoes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Shoes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 8,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
+      "sha256": "6505688a06dc9b1467790fac0113f8e0a66416c7e7bf172284d5937d01aee300",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroG02_A_G2",
       "textures": 12
@@ -1264,7 +2135,7 @@
     "walker.pedestrian.0050": {
       "age": "child",
       "blueprint": "walker.pedestrian.0050",
-      "bytes": 23037536,
+      "bytes": 23038824,
       "clips": {
         "idle": {
           "duration": 1.5,
@@ -1289,10 +2160,44 @@
       "gender": "male",
       "generation": 2,
       "jointCount": 66,
+      "materialColorFallbacks": {
+        "afro_f02_jacket_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_B",
+          "sourceTintAvailable": true
+        },
+        "amer_m01_jacket_a": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Jacket_A",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_pants_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Pants_B",
+          "sourceTintAvailable": true
+        },
+        "euro_m02_shoes_b": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_weave_denim_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Shoes_B",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 9,
       "rigFamily": "G2",
       "rootMotion": "in-place",
-      "sha256": "c09f2d008ace6269595943e10b228139d9af040f37bf57da6ceb177c758d03ec",
+      "sha256": "0b750353f0538f3bc2f4bf2c673f9a538439977df22c9087e70abfa66b57e13f",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroB02_A_G2",
       "textures": 15
@@ -1300,7 +2205,7 @@
     "walker.pedestrian.0051": {
       "age": "child",
       "blueprint": "walker.pedestrian.0051",
-      "bytes": 13440024,
+      "bytes": 13440400,
       "clips": {
         "idle": {
           "duration": 26.333334,
@@ -1325,10 +2230,20 @@
       "gender": "female",
       "generation": 3,
       "jointCount": 26,
+      "materialColorFallbacks": {
+        "afro_g01_clothes": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric03_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroG01_G3/00_IndividualComponents/Clothes/MI_AfroG01_Clothes",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 5,
       "rigFamily": "G3",
       "rootMotion": "in-place",
-      "sha256": "c49584e1ea589d6b15e1758efeb6694a848e2da6c1655e05e521659ecc4acf50",
+      "sha256": "8be79fc3846afd065c19174a86f1d33edd69f65a74450bdb24093702afeef278",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroG01_A_G3",
       "textures": 10
@@ -1336,7 +2251,7 @@
     "walker.pedestrian.0052": {
       "age": "child",
       "blueprint": "walker.pedestrian.0052",
-      "bytes": 16681640,
+      "bytes": 16682012,
       "clips": {
         "idle": {
           "duration": 26.333334,
@@ -1361,10 +2276,20 @@
       "gender": "male",
       "generation": 3,
       "jointCount": 26,
+      "materialColorFallbacks": {
+        "afro_b01_shirt": {
+          "kind": "source-primary-tint-without-layer-masks",
+          "parameter": "Color_1",
+          "reason": "normal-map-was-bound-as-albedo",
+          "removedImage": "T_Fabric_09_n@d1024",
+          "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroB01_G3/00_IndividualComponents/Clothes/MI_AfroB01_Shirt",
+          "sourceTintAvailable": true
+        }
+      },
       "materials": 6,
       "rigFamily": "G3",
       "rootMotion": "in-place",
-      "sha256": "e3e416fdfc4879340bc0de89657b226d67c0a73bd1886a64d4ef26d71deeac71",
+      "sha256": "8ea1af2bf9573b0be52369b83c460c032875a27b28dbd5baa4150f2539fce50b",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroB01_A_G3",
       "textures": 14

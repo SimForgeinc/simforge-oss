@@ -1,0 +1,576 @@
+{
+  "source": "simforge/carla-render-worker:native-migration-abi2; UE MaterialInstanceConstant VectorParameterValues",
+  "policy": "Use only primary Color_1; masked B/C layer tints are not whole-material albedo. Missing primary tint uses explicit neutral-gray placeholder.",
+  "materials": {
+    "afro_b01_shirt": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroB01_G3/00_IndividualComponents/Clothes/MI_AfroB01_Shirt",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.015218,
+        0.027727,
+        0.088542
+      ],
+      "placeholder": false
+    },
+    "afro_f01_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f01_jacket_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f01_jacket_c": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Jacket_C",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f01_pants_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f01_pants_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.683189,
+        1.0,
+        0.755358
+      ],
+      "placeholder": false
+    },
+    "afro_f01_pants_d": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_D",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.760417,
+        0.760417,
+        0.760417
+      ],
+      "placeholder": false
+    },
+    "afro_f01_pants_e": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF01_G2/00_IndividualComponents/Clothes/MI_AfroF01_Pants_E",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        0.458406,
+        0.068014
+      ],
+      "placeholder": false
+    },
+    "afro_f02_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.272624,
+        0.31232,
+        0.348958
+      ],
+      "placeholder": false
+    },
+    "afro_f02_jacket_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.130045,
+        0.213906,
+        0.244792
+      ],
+      "placeholder": false
+    },
+    "afro_f02_jacket_c": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Jacket_C",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f02_jacket_pants_d": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_JacketPants_D",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f02_pants_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Pants_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.348958,
+        0.348958,
+        0.348958
+      ],
+      "placeholder": false
+    },
+    "afro_f02_pants_c": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Pants_C",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.21875,
+        0.21875,
+        0.21875
+      ],
+      "placeholder": false
+    },
+    "afro_f02_shoes_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Shoes_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.4375,
+        0.4375,
+        0.4375
+      ],
+      "placeholder": false
+    },
+    "afro_f02_shoes_d": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF02_G2/00_IndividualComponents/Clothes/MI_AfroF02_Shoes_D",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_f03_boots_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Boots_A",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "afro_f03_pants_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Pants_A",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "afro_f03_shirt_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroF03_G2/00_IndividualComponents/Clothes/MI_AfroF03_Shirt_A",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "afro_g01_clothes": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroG01_G3/00_IndividualComponents/Clothes/MI_AfroG01_Clothes",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.213159,
+        0.270462,
+        0.46875
+      ],
+      "placeholder": false
+    },
+    "afro_m01_pants": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Pants",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "afro_m01_shirt": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shirt",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.176595,
+        0.304458,
+        0.484375
+      ],
+      "placeholder": false
+    },
+    "afro_m01_shoes": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM01_G2/00_IndividualComponents/Clothes/MI_AfroM01_Shoes",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        0.571441,
+        0.458333
+      ],
+      "placeholder": false
+    },
+    "afro_m02_pants": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Pants",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "afro_m02_shirt": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Shirt",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.092429,
+        0.091624,
+        0.114583
+      ],
+      "placeholder": false
+    },
+    "afro_m02_shoes": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Shoes",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.35,
+        0.35,
+        0.35
+      ],
+      "placeholder": false
+    },
+    "afro_m02_waist": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AfroM02_G2/00_IndividualComponents/Clothes/MI_AfroM02_Waist",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "amer_m01_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.046875,
+        0.046875,
+        0.046875
+      ],
+      "placeholder": false
+    },
+    "amer_m01_pants_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Pants_B",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "amer_m01_shirt_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shirt_B",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "amer_m01_shoes_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_G2/00_IndividualComponents/Clothes/MI_AmerM01_Shoes_B",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "asia_f01_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaF01_G2/00_IndividualComponents/Clothes/MI_AsiaF01_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.078125,
+        0.118752,
+        0.15625
+      ],
+      "placeholder": false
+    },
+    "asia_m01_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "asia_m01_jacket_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Jacket_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.464193,
+        0.474688,
+        0.484375
+      ],
+      "placeholder": false
+    },
+    "asia_m01_pants_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Pants_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "asia_m01_pants_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Pants_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.348958,
+        0.348958,
+        0.348958
+      ],
+      "placeholder": false
+    },
+    "asia_m01_shoes_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Shoes_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "asia_m01_shoes_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM01_G2/00_IndividualComponents/Clothes/MI_AsiaM01_Shoes_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        0.753883,
+        0.071805
+      ],
+      "placeholder": false
+    },
+    "asia_m02_boots_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Boots_A",
+      "parameter": null,
+      "linearRgb": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "placeholder": true
+    },
+    "asia_m02_pants_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Pants_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "asia_m02_shirt_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AsiaM02_G2/00_IndividualComponents/Clothes/MI_AsiaM02_Shirt_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.697917,
+        0.749454,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_badge": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Badge",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_belt": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Belt",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_hat": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Hat",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_jacket": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Jacket",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_pants": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Pants",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "cop_shoes": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/AmerM01_cop_G2/00_IndividualComponents/Clothes/MI_Cop_Shoes",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "euro_f01_boots_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Boots_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.838799,
+        0.630757,
+        0.371238
+      ],
+      "placeholder": false
+    },
+    "euro_f01_dress_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroF01_G2/00_IndividualComponents/Clothes/MI_EuroF01_Dress_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "placeholder": false
+    },
+    "euro_g02_jacket": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Jacket",
+      "parameter": "Color_1",
+      "linearRgb": [
+        5.0,
+        4.584,
+        0.0
+      ],
+      "placeholder": false
+    },
+    "euro_g02_pants": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Pants",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        0.385417,
+        0.894483
+      ],
+      "placeholder": false
+    },
+    "euro_g02_shoes": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroG02_G2/00_IndividualComponents/Clothes/MI_EuroG02_Shoes",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.021249,
+        6.8e-05,
+        0.057292
+      ],
+      "placeholder": false
+    },
+    "euro_m02_jacket_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Jacket_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "placeholder": false
+    },
+    "euro_m02_pants_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Pants_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.423268,
+        0.423268,
+        0.423268
+      ],
+      "placeholder": false
+    },
+    "euro_m02_pants_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Pants_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.423268,
+        0.423268,
+        0.423268
+      ],
+      "placeholder": false
+    },
+    "euro_m02_shoes_a": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Shoes_A",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.396755,
+        0.396755,
+        0.396755
+      ],
+      "placeholder": false
+    },
+    "euro_m02_shoes_b": {
+      "sourceMaterial": "/Game/Carla/Static/Pedestrian/EuroM02_G2/00_IndividualComponents/Clothes/MI_EuroM02_Shoes_B",
+      "parameter": "Color_1",
+      "linearRgb": [
+        0.181164,
+        0.0,
+        0.0
+      ],
+      "placeholder": false
+    }
+  }
+}
