@@ -118,9 +118,9 @@
     },
     {
       "id": "actor-appearance-closure",
-      "role": "92 glTF actor-appearance models plus their catalog, fetched by packages/render/scripts/fetch-actor-closure.mjs and staged into every package so native renders resolve actors offline.",
-      "license": "Mixed; determined per member from the pinned catalog",
-      "origin": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192.json",
+      "role": "165 glTF actor-appearance models plus their catalog, staged by packages/render/scripts/fetch-actor-closure.mjs into every package so native renders resolve actors offline.",
+      "license": "Mixed; determined per member from the pinned catalog. CC BY 4.0 is now the dominant term: 64 of the 165 entries are CARLA content.",
+      "origin": "Not published. The closure was generated locally by scripts/actor-assets/complete-closure.mjs and is staged with `--from`; https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4.json does not exist until a maintainer uploads it.",
       "targets": [
         "windows-x64",
         "linux-x64",
@@ -128,38 +128,54 @@
         "macos-x64"
       ],
       "provenance": {
-        "closureDigest": "6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192",
-        "closureBytes": 12607,
-        "catalogDigest": "971c6a56f61e4633871ec9410d34118eab7df76893dcda5908d857320e5dac20",
-        "note": "The closure document itself records only digests and sizes; the per-model attribution lives in its catalog-models.json member, which is what these counts were read from.",
+        "closureDigest": "70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4",
+        "closureBytes": 22969,
+        "catalogDigest": "7955d6ec4bee61d2739293ebd421e264b88c5bd3b891cdf432d5a21338cf6e98",
+        "catalogEntries": 165,
+        "members": 168,
+        "distinctBlobs": 162,
+        "distinctBlobBytes": 1351545934,
+        "note": "The closure document itself records only digests and sizes; the per-model attribution lives in its catalog-models.json member, which is what these counts were read from. `models` counts catalog entries and `blobs`/`bytes` count the distinct members a class contributes, since several ids can share one GLB (vehicle.van, vehicle.shuttle_bus and vehicle.delivery_van are all the Sprinter). Both are emitted by the generator's report, not counted by hand.",
+        "supersedes": "6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192, which carried no CARLA vehicles at all: 34 procedural, 55 Meshy and one CARLA pedestrian.",
         "classes": [
           {
+            "source": "carla-0.10.0-ue5",
+            "models": 68,
+            "memberPaths": 64,
+            "blobs": 58,
+            "bytes": 845037000,
+            "attribution": "Per-model, from catalog/vehicles-carla/ATTRIBUTION.json and catalog/pedestrians-carla/ATTRIBUTION.json; each of the 68 entries carries its own string naming the model, the holder and CC BY 4.0. Example: \"Ford Ambulance\" vehicle model (c) CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Pedestrians additionally credit the Computer Vision Center (CVC), Universitat Autonoma de Barcelona (UAB).",
+            "terms": "CC-BY-4.0: redistribution permitted with credit, license identification and a statement of modification. The models were extracted from cooked Unreal packages with CUE4Parse, decimated with meshoptimizer and re-authored as glTF 2.0; every attribution string states the conversion.",
+            "content": "23 vehicle ids over 20 distinct GLBs, and 45 pedestrian ids (41 catalog walkers plus the four legacy pedestrian.adult/child _standing/_walking aliases, which answer the same members and were realigned off their old Meshy attribution) over 38 distinct skinned GLBs carrying in-model idle/walk/run clips."
+          },
+          {
             "source": "asset-catalog-procedural",
-            "models": 34,
+            "models": 62,
+            "blobs": 62,
+            "bytes": 22984020,
             "attribution": "SimForge procedural catalog model (@simforge-oss/asset-catalog 0.1.0-rc.65), built by buildProp() with catalog default params",
-            "terms": "SimForge's own output, Apache-2.0 with the rest of the product"
+            "terms": "SimForge's own output, Apache-2.0 with the rest of the product",
+            "content": "Retained wherever no CARLA model covers the id, including vehicle.semi_truck (deliberately NOT bound to the European HGV tractor, which is not an articulated semi) and the 37 derived .low_poly entries."
           },
           {
             "source": "meshy-refined",
-            "models": 55,
+            "models": 35,
+            "memberPaths": 35,
+            "blobs": 35,
+            "bytes": 413070888,
             "attribution": "Generated with Meshy for SimForge",
             "terms": "Meshy ToS 3.2 (2026-03-07): free plan grants CC BY 4.0 with credit to Meshy; paid plan grants full ownership with no attribution. Either way redistribution is permitted; we credit under CC BY 4.0 to satisfy the stricter branch.",
-            "attributionApplied": "Model created with Meshy - CC BY 4.0 License"
-          },
-          {
-            "source": "carla-0.10.0-ue5",
-            "models": 1,
-            "attribution": "\"CARLA pedestrian 0020\" pedestrian model (c) CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
-            "terms": "CC-BY-4.0: redistribution permitted with credit, license notice and a statement of modification."
+            "attributionApplied": "Model created with Meshy - CC BY 4.0 License",
+            "content": "Props, animals, street furniture and the specialist trucks (dump truck, tow truck, cement mixer, bucket truck) the CARLA pack does not cover. Down from 55: 16 ids moved to CARLA geometry and 4 legacy pedestrian aliases were realigned to it."
           }
         ]
       },
       "obligations": [
         {
           "kind": "attribution",
-          "requirement": "Reproduce each member's attribution, and for the CC BY 4.0 model its credit, license identification and the fact that it was converted.",
+          "requirement": "Reproduce each member's attribution, and for every CC BY 4.0 model its credit, license identification and the fact that it was converted.",
           "status": "satisfied",
-          "evidence": "The pinned catalog (sha256 971c6a56...) carries a per-model attribution string for all 90 catalog entries; THIRD_PARTY_NOTICES reproduces the three provenance classes and the CC BY 4.0 credit verbatim."
+          "evidence": "The pinned catalog (sha256 7955d6ec...) carries a non-empty per-model attribution string for all 165 catalog entries, verified programmatically; all 68 carla-0.10.0-ue5 strings name the model, the rights holder and CC BY 4.0 and state that it was converted to glTF. THIRD_PARTY_NOTICES must reproduce the three provenance classes and the CARLA credit verbatim."
         },
         {
           "kind": "redistribution-terms",
@@ -169,13 +185,25 @@
             "macos-arm64",
             "macos-x64"
           ],
-          "requirement": "Establish the right to redistribute the 55 Meshy-generated models inside a publicly downloadable installer, and satisfy whatever that right requires.",
+          "requirement": "Establish the right to redistribute the 35 Meshy-generated models inside a publicly downloadable installer, and satisfy whatever that right requires.",
           "status": "satisfied",
-          "evidence": "Meshy Terms of Service (https://www.meshy.ai/terms-of-use, Last Updated 2026-03-07) section 3.2: free-plan customers acknowledge Meshy owns the output and are granted a licence \"under the Creative Commons Attribution 4.0 International License (CC BY 4.0). This means Free Customer can share and adapt the assets for any purpose, even commercially, as long as Free Customer provides appropriate credit to Provider\"; paid-plan customers retain ownership with no attribution requirement. Redistribution is therefore permitted under either plan, and the two branches differ only in whether credit is required. THIRD_PARTY_NOTICES credits Meshy under CC BY 4.0 unconditionally, which satisfies the stricter branch, so the plan question does not gate publication.",
+          "evidence": "Meshy Terms of Service (https://www.meshy.ai/terms-of-use, Last Updated 2026-03-07) section 3.2: free-plan customers acknowledge Meshy owns the output and are granted a licence \"under the Creative Commons Attribution 4.0 International License (CC BY 4.0). This means Free Customer can share and adapt the assets for any purpose, even commercially, as long as Free Customer provides appropriate credit to Provider\"; paid-plan customers retain ownership with no attribution requirement. Redistribution is therefore permitted under either plan, and the two branches differ only in whether credit is required. THIRD_PARTY_NOTICES credits Meshy under CC BY 4.0 unconditionally, which satisfies the stricter branch, so the plan question does not gate the release.",
           "remediation": [
-            "Optional: record the plan from the Meshy account billing history to drop the CC BY 4.0 credit requirement for these 55 models."
+            "Optional: record the plan from the Meshy account billing history to drop the CC BY 4.0 credit requirement for these 35 models."
           ],
           "residualProvenanceGap": "Which Meshy plan the closure was generated under is not recorded in this repository. tools/meshy/generate.mjs drives Meshy's Text-to-3D API with a MESHY_API_KEY from the secrets manager, and the API is a subscription feature, which suggests a paid plan, but that is an inference. It is answerable only from the Meshy account's billing history, and it is not blocking: attributing under CC BY 4.0 is valid in both cases."
+        },
+        {
+          "kind": "availability",
+          "requirement": "Serve the pinned closure document and its 162 blobs from the origin, so a packaged install can fetch them.",
+          "status": "unsatisfied",
+          "evidence": "The closure was generated locally by scripts/actor-assets/complete-closure.mjs and verified by rendering; nothing was uploaded. There are no write credentials for the CloudFront distribution in this environment (aws sts get-caller-identity reports no locatable credentials), so publishing could not be attempted and was not faked.",
+          "remediation": [
+            "Upload closures/70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4.json to <origin>/actor-assets/closures/ and every blob to <origin>/blobs/sha256/<first two hex>/<full sha256>, from a generated root (1,288.9 MiB over 162 objects).",
+            "Invalidate nothing: the paths are content-addressed and immutable.",
+            "Verify with `node packages/render/scripts/fetch-actor-closure.mjs --out <tmp>` with no --from: it re-downloads and re-hashes every member against the pinned document.",
+            "Until then, packaged installs must stage the closure locally: `node packages/render/scripts/fetch-actor-closure.mjs --out <root>/share/actor-assets --from <generated root>`."
+          ]
         }
       ]
     },
