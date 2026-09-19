@@ -30,7 +30,7 @@ function selectionCopy(text: string): boolean {
   return ok;
 }
 
-async function writeToClipboard(text: string): Promise<boolean> {
+export async function writeToClipboard(text: string): Promise<boolean> {
   try {
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);

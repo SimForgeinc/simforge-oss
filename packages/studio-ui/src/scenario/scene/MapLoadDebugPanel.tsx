@@ -5,6 +5,7 @@ import type { CityViewer, CityViewerStats } from "@simforge-oss/viewer";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../../components/ui/button";
 import { styles } from "./MapLoadDebugPanel.stylex";
+import { writeToClipboard } from "../list/CopyableErrorMessage";
 
 const STORAGE_KEY = "simforge.map-load-debug.expanded";
 
@@ -130,14 +131,15 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
     }}>{expanded ? "▾" : "▸"} ADVANCED / DEBUG</button>
     {expanded ? <div id={contentId} {...stylex.props(styles.content)}>
       <div {...stylex.props(styles.toolbar)}><span>Live map diagnostics · sizes in bytes</span><Button size="sm" onClick={async () => {
-        try { await navigator.clipboard.writeText(json); setCopyStatus("Copied JSON"); }
-        catch { setCopyStatus("Clipboard unavailable. Select and copy the JSON below."); }
+        const copied = await writeToClipboard(json);
+        setCopyStatus(copied ? "Copied JSON" : "Clipboard unavailable. Select and copy the JSON below.");
       }}>Copy JSON</Button></div>
       <div {...stylex.props(styles.summary)}>
         <div>Tier: {source.requestedTier} requested → {snapshot?.tierSelection.actual ?? "unknown"} actual · {snapshot?.tierSelection.codec ?? "unknown"}</div>
         <div>Budget: {snapshot?.memory.byteBudget ?? "unknown"} · resident: {snapshot?.memory.residentBytes ?? "unknown"} · pending: {snapshot?.memory.pendingBytes ?? "unknown"} bytes</div>
         <div>GPU: {snapshot?.viewerDiagnostics?.capabilities.renderer ?? "unknown"} · BC7: {String(snapshot?.viewerDiagnostics?.capabilities.bc7 ?? "unknown")} · ASTC: {String(snapshot?.viewerDiagnostics?.capabilities.astc ?? "unknown")}</div>
         {snapshot?.viewerDiagnostics?.lastError ? <div>Refused / failed: {snapshot.viewerDiagnostics.lastError.layer ?? "unknown layer"} / {snapshot.viewerDiagnostics.lastError.assetId ?? "unknown asset"} · estimate: {snapshot.viewerDiagnostics.lastError.estimatedBytes ?? "unknown"} bytes</div> : null}
+        {snapshot?.viewerDiagnostics?.lastError ? <div>At failure — budget: {snapshot.viewerDiagnostics.lastError.byteBudget} · resident: {snapshot.viewerDiagnostics.lastError.residentBytes} · pending: {snapshot.viewerDiagnostics.lastError.pendingBytes} bytes</div> : null}
         <div>Requested map version: {source.mapVersionId ?? "unknown"}</div>
         {source.installedMaps ? <div>Installed source / version: {source.installedMaps.map((map) => `${map.sourceMapId} / ${map.mapVersionId}`).join("; ") || "none"}</div> : null}
         <table {...stylex.props(styles.coverage)}><caption>Viewer-reported tile coverage (not inferred)</caption><thead><tr><th>Layer</th><th>Wanted</th><th>Missing</th><th>Missing in view</th><th>Failed</th><th>Budget blocked</th></tr></thead><tbody>
