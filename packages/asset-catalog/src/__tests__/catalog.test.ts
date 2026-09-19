@@ -58,6 +58,12 @@ describe('catalog', () => {
     expect(() => getEntry('vehicle.hovercraft' as never)).toThrow();
   });
 
+  it('resolves authored pedestrian aliases for direct editor and viewer lookups', () => {
+    expect(getEntry('pedestrian.child_walking')).toBe(getEntry('pedestrian.child'));
+    expect(getEntry('pedestrian.adult_standing')).toBe(getEntry('pedestrian.adult'));
+    expect(() => getEntry('pedestrian.nonexistent_nonsense')).toThrow();
+  });
+
   it('keeps rigid-body components out of new-authoring choices', () => {
     expect(AUTHORING_CATALOG.some((entry) => entry.origin === 'body-centre')).toBe(false);
     expect(AUTHORING_CATALOG.some((entry) => entry.id === 'pedestrian.adult')).toBe(true);
