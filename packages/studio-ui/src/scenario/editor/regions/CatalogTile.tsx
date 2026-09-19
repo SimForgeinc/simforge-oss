@@ -12,7 +12,7 @@ import {
 
 import { DynamicActorCatalogIcon, type DynamicActorCatalogId } from "./DynamicActorCatalogIcon";
 import { ObjectCatalogIcon } from "./ObjectCatalogIcon";
-import { PedestrianCatalogIcon, type PedestrianCatalogId } from "./PedestrianCatalogIcon";
+import { PEDESTRIAN_CATALOG_IDS, PedestrianCatalogIcon, type PedestrianCatalogId } from "./PedestrianCatalogIcon";
 import { VehicleCatalogIcon, type VehicleCatalogId } from "./VehicleCatalogIcon";
 import { styles as catalog } from "./catalog-surfaces.stylex";
 
@@ -110,8 +110,13 @@ export function CatalogTile({
  */
 function catalogArt(entry: CatalogEntry) {
   if (!entry.id.startsWith("carla.")) {
-    if (entry.class === "vehicle") return <VehicleCatalogIcon id={entry.id as VehicleCatalogId} />;
-    if (entry.class === "pedestrian") return <PedestrianCatalogIcon id={entry.id as PedestrianCatalogId} />;
+    if (entry.class === "vehicle") return <VehicleCatalogIcon id={(entry.proceduralBuilder ?? entry.id) as VehicleCatalogId} />;
+    if (entry.class === "pedestrian") {
+      const id = (PEDESTRIAN_CATALOG_IDS as readonly string[]).includes(entry.id)
+        ? entry.id as PedestrianCatalogId
+        : entry.dims.h < 1.5 ? "pedestrian.child" : "pedestrian.adult";
+      return <PedestrianCatalogIcon id={id} />;
+    }
     if (entry.class === "sidewalk_robot" || entry.class === "drone" || entry.class === "animal") {
       return <DynamicActorCatalogIcon id={entry.id as DynamicActorCatalogId} />;
     }

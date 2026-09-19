@@ -21,8 +21,6 @@ import {
   pushActorCatalogRecent,
   STATIC_CAR_CATALOG_IDS,
 } from "../../../../src/scenario/editor/regions/actor-catalog";
-import { VEHICLE_CATALOG_IDS } from "../../../../src/scenario/editor/regions/VehicleCatalogIcon";
-import { PEDESTRIAN_CATALOG_IDS } from "../../../../src/scenario/editor/regions/PedestrianCatalogIcon";
 import { OBJECT_CATALOG_IDS } from "../../../../src/scenario/editor/regions/ObjectCatalogIcon";
 import { DYNAMIC_ACTOR_CATALOG_IDS } from '../../../../src/scenario/editor/regions/DynamicActorCatalogIcon';
 
@@ -115,6 +113,23 @@ describe("ActorLibraryRail", () => {
     });
     expect(screen.getByTestId("catalog-section-emergency-response").textContent)
       .toContain(carlaObject.label);
+  });
+
+  it("defaults to CARLA and places the durable low-poly identity from its own tab", () => {
+    const togglePlacement = vi.fn();
+    render(<ActorLibraryRail
+      controller={{ cancel: vi.fn(), togglePlacement } as never}
+      state={{ mode: "idle", placing: null, selection: [] } as never}
+      hostRef={{ current: null }}
+    />);
+    fireEvent.click(screen.getByRole("button", { name: "Car" }));
+    expect(screen.getByRole("tab", { name: "CARLA" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.queryByTestId("catalog-vehicle.sedan.low_poly")).toBeNull();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Low-poly" }), { button: 0, ctrlKey: false });
+    expect(screen.queryByTestId("catalog-vehicle.sedan")).toBeNull();
+    expect(screen.getByTestId("catalog-vehicle.semi_truck.low_poly")).not.toBeNull();
+    fireEvent.click(screen.getByTestId("catalog-action-vehicle.sedan.low_poly"));
+    expect(togglePlacement).toHaveBeenCalledWith("vehicle.sedan.low_poly");
   });
 
   it("matches standalone search and bounded recent ordering", () => {
@@ -250,12 +265,6 @@ describe("ActorLibraryRail", () => {
     expect(screen.getByTestId("catalog-section-emergency-response").textContent).toContain("Emergency response");
     expect(screen.getByTestId("catalog-vehicle.sedan")).not.toBeNull();
     expect(screen.getByTestId("catalog-vehicle.ambulance")).not.toBeNull();
-    const catalogVehicleIds = CATALOG.filter((entry) => entry.class === "vehicle").map((entry) => entry.id);
-    expect([...VEHICLE_CATALOG_IDS]).toEqual(catalogVehicleIds);
-    const everydayCarIds = ACTOR_CATALOG_SECTIONS.vehicles.find((section) => section.id === "everyday-cars")!.catalogIds;
-    for (const id of everydayCarIds) {
-      expect(screen.getByTestId(`catalog-${id}`).querySelector(`[data-vehicle-icon="${id}"]`)).not.toBeNull();
-    }
     // Every rendered car tile draws its own model, none fall back to a glyph.
     expect(document.querySelectorAll("[data-vehicle-icon]")).toHaveLength(
       document.querySelectorAll('[data-testid^="catalog-vehicle."]').length,
@@ -272,26 +281,19 @@ describe("ActorLibraryRail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Two-wheelers" }));
     expect(screen.getByRole("dialog", { name: "Add a two-wheeler" })).not.toBeNull();
-    const twoWheelerIds = CATALOG.filter(isTwoWheelerCatalogEntry).map((entry) => entry.id);
+    const twoWheelerIds = CATALOG.filter((entry) => isTwoWheelerCatalogEntry(entry) && entry.model?.kind === "glb").map((entry) => entry.id);
     for (const id of twoWheelerIds) {
       expect(screen.getByTestId(`catalog-${id}`).querySelector(`[data-vehicle-icon="${id}"]`)).not.toBeNull();
     }
     expect(screen.getByTestId("catalog-vehicle.motorcycle")).not.toBeNull();
     expect(screen.getByTestId("catalog-vehicle.bicycle")).not.toBeNull();
-    expect(screen.getByTestId("catalog-vehicle.mobility_scooter")).not.toBeNull();
+    expect(screen.queryByTestId("catalog-vehicle.mobility_scooter")).toBeNull();
     expect(screen.queryByTestId("catalog-vehicle.sedan")).toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search catalog" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Add random car" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Pedestrian" }));
     expect(screen.getByRole("dialog", { name: "Add a pedestrian" })).not.toBeNull();
-    // The icon set must cover every pedestrian the catalog can author. Sorted
-    // because the icon list is ordered for the drawer, not by catalog.
-    expect([...PEDESTRIAN_CATALOG_IDS].sort()).toEqual(
-      CATALOG.filter((entry) => entry.class === "pedestrian")
-        .map((entry) => entry.id)
-        .sort(),
-    );
     const offeredPedestrianIds = ACTOR_CATALOG_SECTIONS.pedestrians.flatMap(
       (section) => section.catalogIds,
     );

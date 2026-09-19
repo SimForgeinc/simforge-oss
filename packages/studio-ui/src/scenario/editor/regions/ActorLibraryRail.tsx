@@ -18,6 +18,7 @@ import {
   isCatalogId,
 } from "@simforge-oss/asset-catalog";
 import { CarlaReadyMark } from "../../../components/CarlaReadyMark";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import {
   carlaCompatibilityFor,
   loadCarlaCompatibility,
@@ -188,6 +189,7 @@ export function ActorLibraryRail({
   const [recents, setRecents] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [category, setCategory] = useState<string>(ALL_CATEGORIES);
+  const [vehicleSource, setVehicleSource] = useState("carla");
   const [carlaTable, setCarlaTable] = useState<CarlaCompatibilityTable | null>(null);
   const [carlaObjects, setCarlaObjects] = useState<readonly CarlaObjectDto[]>([]);
   const [carlaCompatibleOnly, setCarlaCompatibleOnly] = useState(false);
@@ -355,8 +357,16 @@ export function ActorLibraryRail({
   );
   const entries = useMemo(() => {
     const filtered = filterActorCatalog(catalog, filter, query, favorites, recents);
-    return filtered.filter((entry) => catalogEntryMatchesTool(entry, activeTool));
-  }, [activeTool, catalog, favorites, filter, query, recents]);
+    return filtered.filter((entry) => {
+      if (!catalogEntryMatchesTool(entry, activeTool)) return false;
+      if (activeTool !== "vehicles" && activeTool !== "two-wheelers") return true;
+      return vehicleSource === "low-poly"
+        ? Boolean(entry.proceduralBuilder)
+        : entry.id.startsWith("carla.") || (
+          entry.model?.kind === "glb" && entry.model.url.startsWith("/catalog/vehicles-carla/")
+        );
+    });
+  }, [activeTool, catalog, favorites, filter, query, recents, vehicleSource]);
   const activeDefinition = TOOLS.find((tool) => tool.id === activeTool) ?? null;
   const activeKind = activeDefinition?.kind ?? null;
   const groups = useMemo(
@@ -602,6 +612,12 @@ export function ActorLibraryRail({
       ) : null}
 
       {open && activeTool ? (
+        <Tabs asChild value={vehicleSource} onValueChange={(value) => {
+          setVehicleSource(value);
+          setCategory(ALL_CATEGORIES);
+          setSelectedIndex(0);
+          setCarlaCompatibleOnly(false);
+        }}>
         <section
           ref={catalogPanelRef as React.RefObject<HTMLElement>}
           aria-label={addActorTitle(activeTool)}
@@ -649,6 +665,12 @@ export function ActorLibraryRail({
 
           {activeKind === "scene" ? null : (
           <div style={styles.controls}>
+            {activeTool === "vehicles" || activeTool === "two-wheelers" ? (
+              <TabsList aria-label="Vehicle model source" style={{ width: "100%" }}>
+                <TabsTrigger value="carla" style={{ flex: 1 }}>CARLA</TabsTrigger>
+                <TabsTrigger value="low-poly" style={{ flex: 1 }}>Low-poly</TabsTrigger>
+              </TabsList>
+            ) : null}
             <div style={styles.searchRow}>
               <div style={styles.searchWrap}>
                 <span style={styles.searchGlyph}>⌕</span>
@@ -760,6 +782,7 @@ export function ActorLibraryRail({
           </div>
           )}
 
+          <TabsContent asChild value={vehicleSource}>
           <div style={styles.panelBody}>
             {activeKind === "search" ? (
               <PanelSearchResults
@@ -840,6 +863,7 @@ export function ActorLibraryRail({
               </div>
             )}
           </div>
+          </TabsContent>
 
           <footer style={styles.panelFooter}>
             <span>
@@ -850,6 +874,7 @@ export function ActorLibraryRail({
             <span>{activeKind === "scene" ? "Esc close" : "↑↓ · Enter · Esc cancel"}</span>
           </footer>
         </section>
+        </Tabs>
       ) : null}
       </div>
     </div>
