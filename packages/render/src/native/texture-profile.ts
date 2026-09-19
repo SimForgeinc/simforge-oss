@@ -5,7 +5,6 @@ import { homedir } from 'node:os';
 import type { RenderInputFile } from '../index.js';
 import { hashFile } from '../hash.js';
 import { assertSafeNativeMapMemberPath, type NativeMapClosure } from './map-closure.js';
-import { linkOrCopy } from './actor-assets.js';
 
 export type NativeRenderTextures = 'uastc-full' | 'bc7-512';
 export class NativeTextureCapacityError extends Error {
@@ -117,11 +116,23 @@ export async function stageNativeTextureProfile(input: {
   await fs.mkdir(directory, { recursive: true });
   for (const [uri, member] of selected) {
     const target = path.join(directory, uri);
-    try { await linkOrCopy(member.path, target); }
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    try { await fs.link(member.path, target); }
     catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      const digest = await hashFile(target);
-      if (digest.sha256 !== member.sha256 || digest.sizeBytes !== member.sizeBytes) throw new Error(`native_texture_cache_digest_mismatch: ${uri}`);
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'EEXIST') {
+        const digest = await hashFile(target);
+        if (digest.sha256 !== member.sha256 || digest.sizeBytes !== member.sizeBytes) throw new Error(`native_texture_cache_digest_mismatch: ${uri}`);
+      } else if (code === 'EXDEV' || code === 'EPERM') {
+        // A cross-filesystem cache still publishes atomically: another env must
+        // never read an unfinished copy while its sibling populates the cache.
+        const temporary = await fs.mkdtemp(path.join(path.dirname(target), '.asset-'));
+        try {
+          const candidate = path.join(temporary, 'payload');
+          await fs.copyFile(member.path, candidate);
+          await fs.rename(candidate, target);
+        } finally { await fs.rm(temporary, { recursive: true, force: true }); }
+      } else throw error;
     }
   }
   // Never modify the read-only installed master or a hardlink to it.

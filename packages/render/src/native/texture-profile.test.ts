@@ -2,13 +2,13 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import type { RenderInputFile } from '../engine.js';
 import { collectNativeMapMembers, nativeMapMemberInputId } from './map-closure.js';
 import { NativeTextureCapacityError, stageNativeTextureProfile } from './texture-profile.js';
 
 const directories: string[] = [];
-afterEach(async () => { await Promise.all(directories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true }))); });
+afterEach(async () => { vi.restoreAllMocks(); await Promise.all(directories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true }))); });
 
 async function fixture() {
   const directory = await fs.mkdtemp(path.join(tmpdir(), 'native-texture-profile-'));
@@ -65,8 +65,9 @@ it('refuses a pinned capacity before staging and exposes demand, capacity and th
   await expect(fs.stat(value.cacheDirectory)).rejects.toMatchObject({code:'ENOENT'});
 });
 
-it('reuses an immutable disk cache across simultaneous environments without partial master files', async () => {
+it.each(['hardlink', 'cross-filesystem'])('reuses the %s cache across simultaneous environments without partial files', async (mode) => {
   const value = await fixture();
+  if (mode === 'cross-filesystem') vi.spyOn(fs, 'link').mockRejectedValue(Object.assign(new Error('cross-device link'), { code: 'EXDEV' }));
   const results = await Promise.all([0,1].map(() => stageNativeTextureProfile({...value,renderTextures:'bc7-512',framePixels:1280*720,capacityBytes:16*1024**3})));
   expect(results[0]!.masterPath).toBe(results[1]!.masterPath);
   expect(JSON.parse(await fs.readFile(results[0]!.masterPath,'utf8')).buffers[0].uri).toBe('geometry.bin');
