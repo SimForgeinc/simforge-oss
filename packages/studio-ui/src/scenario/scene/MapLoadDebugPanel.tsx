@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { CityViewer } from "@simforge-oss/viewer";
+import type { CityViewer, CityViewerStats } from "@simforge-oss/viewer";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../../components/ui/button";
 import { styles } from "./MapLoadDebugPanel.stylex";
@@ -48,11 +48,40 @@ function canvasPresentation(viewer: CityViewer) {
   return { visible, connected: canvas.isConnected, width: bounds.width, height: bounds.height, documentVisibility: document.visibilityState };
 }
 
+type LoadSnapshot = {
+  capturedAt: string;
+  manifestUrlAtCapture: string;
+  tierSelection: CityViewerStats["tierSelection"];
+  memory: Pick<CityViewerStats, "byteBudget" | "residentBytes" | "pendingBytes">;
+  viewerDiagnostics: CityViewerStats["loadDiagnostics"];
+  progress: Pick<CityViewerStats, "residentTiles" | "residentAssets" | "coverage" | "loading" | "queued" | "uploading" | "pendingTextureUploads" | "requiredPendingAssets" | "usable" | "targetQualityReady" | "loadProgress" | "downloads">;
+  renderConfiguration: unknown;
+  canvas: { visible: boolean; connected: boolean; width: number; height: number; documentVisibility: string };
+  errors: { streaming: string | null; required: string | null; detail: string | null; detailFailures: number | "unknown" };
+};
+
+function captureViewer(viewer: CityViewer, manifestUrl: string | null | undefined): LoadSnapshot {
+  const stats = viewer.getStats();
+  return {
+    capturedAt: new Date().toISOString(),
+    manifestUrlAtCapture: manifestUrl ?? "unknown",
+    tierSelection: stats.tierSelection,
+    memory: { byteBudget: stats.byteBudget, residentBytes: stats.residentBytes, pendingBytes: stats.pendingBytes },
+    viewerDiagnostics: stats.loadDiagnostics,
+    progress: { residentTiles: stats.residentTiles, residentAssets: stats.residentAssets, coverage: stats.coverage, loading: stats.loading, queued: stats.queued, uploading: stats.uploading, pendingTextureUploads: stats.pendingTextureUploads, requiredPendingAssets: stats.requiredPendingAssets, usable: stats.usable, targetQualityReady: stats.targetQualityReady, loadProgress: stats.loadProgress, downloads: stats.downloads },
+    renderConfiguration: viewer.getRenderConfiguration(),
+    canvas: canvasPresentation(viewer),
+    errors: { streaming: stats.streamingError, required: stats.requiredError ?? null, detail: stats.detailError ?? null, detailFailures: stats.detailFailures ?? "unknown" },
+  };
+}
+
 export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
   const contentId = useId();
   const [expanded, setExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
-  const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [snapshot, setSnapshot] = useState<LoadSnapshot | null>(null);
+  const [viewerAvailable, setViewerAvailable] = useState(false);
+  const [captureError, setCaptureError] = useState<unknown>(null);
   const sourceRef = useRef(source);
   sourceRef.current = source;
   useEffect(() => {
@@ -62,28 +91,16 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
     const capture = () => {
       const current = sourceRef.current;
       const viewer = current.getViewer();
+      setViewerAvailable(viewer !== null);
       if (!viewer) {
-        setSnapshot((previous) => previous?.manifestUrlAtCapture === current.manifestUrl
-          ? { ...previous, viewerAvailable: false }
-          : { viewerAvailable: false, capturedAt: null });
+        setSnapshot((previous) => previous?.manifestUrlAtCapture === current.manifestUrl ? previous : null);
         return;
       }
       try {
-        const stats = viewer?.getStats();
-        setSnapshot({
-          capturedAt: new Date().toISOString(),
-          manifestUrlAtCapture: current.manifestUrl ?? "unknown",
-          viewerAvailable: true,
-          tierSelection: stats?.tierSelection ?? "unknown",
-          memory: stats ? { byteBudget: stats.byteBudget, residentBytes: stats.residentBytes, pendingBytes: stats.pendingBytes } : "unknown",
-          progress: stats ? { residentTiles: stats.residentTiles, residentAssets: stats.residentAssets, coverage: stats.coverage, loading: stats.loading, queued: stats.queued, uploading: stats.uploading, pendingTextureUploads: stats.pendingTextureUploads, requiredPendingAssets: stats.requiredPendingAssets, usable: stats.usable, targetQualityReady: stats.targetQualityReady, loadProgress: stats.loadProgress, downloads: stats.downloads } : "unknown",
-          renderConfiguration: viewer?.getRenderConfiguration() ?? "unknown",
-          viewerDiagnostics: stats?.loadDiagnostics ?? "unknown",
-          canvas: viewer ? canvasPresentation(viewer) : "unknown",
-          errors: { streaming: stats?.streamingError ?? null, required: stats?.requiredError ?? null, detail: stats?.detailError ?? null, detailFailures: stats?.detailFailures ?? "unknown" },
-        });
+        setSnapshot(captureViewer(viewer, current.manifestUrl));
+        setCaptureError(null);
       } catch (error) {
-        setSnapshot((previous) => ({ ...previous, captureError: serializeLoadError(error) }));
+        setCaptureError(serializeLoadError(error));
       }
     };
     capture();
@@ -99,6 +116,8 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
     phase: source.phase,
     readinessAnnounced: source.readinessAnnounced,
     loadError: serializeLoadError(source.error),
+    viewerAvailable,
+    captureError,
     ...snapshot,
   };
   const json = JSON.stringify(payload, null, 2);
@@ -113,6 +132,20 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
         try { await navigator.clipboard.writeText(json); setCopyStatus("Copied JSON"); }
         catch { setCopyStatus("Clipboard unavailable. Select and copy the JSON below."); }
       }}>Copy JSON</Button></div>
+      <div {...stylex.props(styles.summary)}>
+        <div>Tier: {source.requestedTier} requested → {snapshot?.tierSelection.actual ?? "unknown"} actual · {snapshot?.tierSelection.codec ?? "unknown"}</div>
+        <div>Budget: {snapshot?.memory.byteBudget ?? "unknown"} · resident: {snapshot?.memory.residentBytes ?? "unknown"} · pending: {snapshot?.memory.pendingBytes ?? "unknown"} bytes</div>
+        <div>GPU: {snapshot?.viewerDiagnostics?.capabilities.renderer ?? "unknown"} · BC7: {String(snapshot?.viewerDiagnostics?.capabilities.bc7 ?? "unknown")} · ASTC: {String(snapshot?.viewerDiagnostics?.capabilities.astc ?? "unknown")}</div>
+        {snapshot?.viewerDiagnostics?.lastError ? <div>Refused / failed: {snapshot.viewerDiagnostics.lastError.layer ?? "unknown layer"} / {snapshot.viewerDiagnostics.lastError.assetId ?? "unknown asset"} · estimate: {snapshot.viewerDiagnostics.lastError.estimatedBytes ?? "unknown"} bytes</div> : null}
+        <div>Requested map version: {source.mapVersionId ?? "unknown"}</div>
+        {source.installedMaps ? <div>Installed source / version: {source.installedMaps.map((map) => `${map.sourceMapId} / ${map.mapVersionId}`).join("; ") || "none"}</div> : null}
+        <table {...stylex.props(styles.coverage)}><caption>Viewer-reported tile coverage (not inferred)</caption><thead><tr><th>Layer</th><th>Wanted</th><th>Missing</th><th>Missing in view</th><th>Failed</th><th>Budget blocked</th></tr></thead><tbody>
+          {(["roads", "city", "vegetation"] as const).map((layer) => {
+            const coverage = snapshot?.progress.coverage[layer];
+            return <tr key={layer}><th>{layer}</th><td>{coverage?.wantedTiles ?? "unknown"}</td><td>{coverage?.missingTiles ?? "unknown"}</td><td>{coverage?.missingInViewTiles ?? "unknown"}</td><td>{coverage?.failedTiles ?? "unknown"}</td><td>{coverage?.budgetBlockedTiles ?? "unknown"}</td></tr>;
+          })}
+        </tbody></table>
+      </div>
       {copyStatus ? <p role="status">{copyStatus}</p> : null}
       <pre {...stylex.props(styles.json)} tabIndex={0} data-testid="map-load-debug-json">{json}</pre>
     </div> : null}
