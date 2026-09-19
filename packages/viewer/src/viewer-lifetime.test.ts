@@ -1,7 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type * as Three from 'three';
 import { Box3, Group, Scene, Vector3 } from 'three';
-import { TileStreamLayer } from './streaming';
+import { TileStreamLayer, type PreparedAsset } from './streaming';
+import type { AssetDownloadTracker } from './download-progress';
 
 vi.mock('three', async (importOriginal) => {
   const three = await importOriginal<typeof Three>();
@@ -168,5 +169,71 @@ it('enforces the resident budget on a frame without waiting for another admissio
     vi.mocked(requestAnimationFrame).mock.calls[0]![0](performance.now());
     expect(viewer.getStats().residentBytes).toBeLessThanOrEqual(10);
     expect(layer.group.children).toHaveLength(0);
+  } finally { viewer.dispose(); }
+});
+
+it.each(['late-success', 'terminal-failure', 'stalled', 'progress-before-stall'] as const)('handles required residency after a deadline: %s', async (outcome) => {
+  vi.spyOn(performance, 'now').mockReturnValue(0);
+  const viewer = contractViewer({ cinematicLighting: false });
+  let finish!: (asset: PreparedAsset) => void;
+  const layer = new TileStreamLayer({
+    name: 'required-city', renderer: { compileAsync: async () => undefined } as never, scene: new Scene(),
+    defs: [{ id: 'required', box: new Box3(new Vector3(), new Vector3(1, 1, 1)),
+      lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }] }],
+    build: () => new Promise(resolve => { finish = resolve; }),
+    maxConcurrent: 1, pinCoarsest: true,
+    memory: { admit: () => true, maxAssetBytes: () => 100 },
+  });
+  Object.assign(viewer, { cityLayer: layer, mapAdmitted: true });
+  // Exercise the frame lifecycle without requiring a browser GL context.
+  const lifecycle = viewer as unknown as {
+    whenViewResident(): Promise<void>;
+    settleViewResidentWaiters(now: number): void;
+    recordStreamingError(error: Error): void;
+    downloadTracker: AssetDownloadTracker;
+  };
+  try {
+    layer.update(new Vector3(), 1, 9999);
+    let completed = false;
+    const waiting = lifecycle.whenViewResident().then(() => { completed = true; });
+    lifecycle.settleViewResidentWaiters(60_001);
+    await Promise.resolve();
+    expect(viewer.getStats().requiredError).toContain('readiness deadline');
+    expect(completed).toBe(false);
+    lifecycle.settleViewResidentWaiters(90_000);
+    expect(viewer.getStats().usable).toBe(false);
+    if (outcome === 'stalled' || outcome === 'progress-before-stall') {
+      let terminalAt = 600_001;
+      if (outcome === 'progress-before-stall') {
+        const tracker = lifecycle.downloadTracker;
+        tracker.advance(tracker.begin(), 1024, 590_000);
+        lifecycle.settleViewResidentWaiters(590_000);
+        lifecycle.settleViewResidentWaiters(600_001);
+        await Promise.resolve();
+        expect(completed).toBe(false);
+        terminalAt = 1_190_001;
+      }
+      lifecycle.settleViewResidentWaiters(terminalAt);
+      await waiting;
+      expect(viewer.getStats().usable).toBe(false);
+      expect(viewer.getStats().loadDiagnostics.lastError).toMatchObject({
+        name: 'ResidencyTimeoutError', code: 'view_residency_stalled',
+        requiredPendingAssets: 1, missingInViewTiles: 1,
+      });
+      return;
+    }
+    if (outcome === 'terminal-failure') lifecycle.recordStreamingError(new Error('required upload failed'));
+    finish({ object: new Group(), resources: { geometries: [], materials: [], textures: [] }, bytes: 1, pendingTextures: [] });
+    await Promise.resolve();
+    layer.pumpUploads(100, { remaining: 1 }, viewer.camera);
+    await layer.whenCompilationIdle();
+    layer.update(new Vector3(), 1, 9999);
+    lifecycle.settleViewResidentWaiters(100_000);
+    await waiting;
+    expect(viewer.getStats().usable).toBe(outcome === 'late-success');
+    expect(viewer.getStats().requiredError).toBe(outcome === 'late-success' ? null : 'required upload failed');
+    expect(viewer.getStats().loadDiagnostics.residencyDeadline).toEqual({
+      missedAtMs: 60_001, recoveredAtMs: outcome === 'late-success' ? 100_000 : null,
+    });
   } finally { viewer.dispose(); }
 });
