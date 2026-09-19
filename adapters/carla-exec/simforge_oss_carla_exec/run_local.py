@@ -304,11 +304,21 @@ def _lower_source(actor_id: str, template: dict[str, Any],
 VEHICLE_KINDS = {"vehicle", "car", "truck", "bus", "van", "motorcycle"}
 
 
-def _host_actor(root: ET.Element) -> str:
+def _host_actor(root: ET.Element, requested: str | None = None) -> str:
     actors = _entities(root, lambda: None)
     vehicles = [actor_id for actor_id, binding in actors.items() if binding.kind in VEHICLE_KINDS]
     if not vehicles:
         raise ContractError("OpenSCENARIO contains no vehicle to host the sensor rig")
+    if requested is not None:
+        # Which vehicle carries the rig decides what the footage is *of*: the
+        # default below is only a stable guess, and in a scenario authored
+        # around a collision the interesting vehicle is rarely the first one.
+        if requested not in vehicles:
+            raise ContractError(
+                f"requested sensor host {requested!r} is not a vehicle in this scenario; "
+                f"choose from {sorted(vehicles)}"
+            )
+        return requested
     # The authored ego leads: its id is the one vehicle ids sort under the same prefix.
     return min(vehicles, key=lambda actor_id: (not actor_id.startswith("vehicle"), actor_id))
 
@@ -319,11 +329,12 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
                  sdg_modalities: list[str] | None = None,
                  annotations: bool = False,
                  rig: str = "pronto-port-e",
+                 host_actor: str | None = None,
                  video: dict[str, Any] | None = None) -> dict[str, Any]:
     xodr_bytes = xodr_path.read_bytes()
     scenario_sha = hashlib.sha256(scenario_bytes).hexdigest()
     root = ET.fromstring(scenario_bytes)
-    actor_id = _host_actor(root)
+    actor_id = _host_actor(root, host_actor)
     if rig not in SENSOR_RIGS:
         raise ContractError(f"unknown sensor rig {rig!r}; choose from {sorted(SENSOR_RIGS)}")
     fmt = video or dict(VIDEO)
@@ -410,6 +421,7 @@ def run_local_command(args: argparse.Namespace) -> dict[str, object]:
         seed=args.seed, sdg_modalities=sdg_modalities,
         annotations=bool(getattr(args, "annotations", False)),
         rig=getattr(args, "rig", None) or "pronto-port-e",
+        host_actor=getattr(args, "host_actor", None),
         video=video_format(
             getattr(args, "camera_width", None),
             getattr(args, "camera_height", None),

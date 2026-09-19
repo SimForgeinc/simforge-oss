@@ -307,3 +307,73 @@ Re-run `teardown-3090.sh` later to see the invoiced number.
    Provisioning states the hardware truthfully and does not work around either.
 4. **A Studio worker-node id and a dev worker token.** Both are issued by the
    dev control plane and are not derivable here.
+
+## Rendering directly on a cook box, without the control plane
+
+The worker image is not required to render. `bringup-cook-box.sh` turns a box
+that carries the full production cook into a render host in about 30 s —
+it discovers the engine's own carla wheel, extracts it into a venv, copies the
+adapter in, installs `xmllint`/`ffmpeg`, writes the Vulkan ICD and starts the
+engine — after which `run-local` renders straight from `scenario.xosc`. This is
+how the surround-rig crash scenes were produced, and it sidesteps the stale
+worker image entirely (that image bundles `engineVersion: native-v1`, rejects
+the plane's `uniscenario.*` response tag, and ships the platform `carla_worker`
+rather than this adapter, so every claim leases then expires with no log line).
+
+Two things about a bare cook are worth knowing before debugging a silent hang:
+
+- **The Vulkan ICD is missing.** A cook declares no driver capabilities, so
+  `/usr/share/vulkan/icd.d` is empty, UE5's render thread never starts and the
+  game thread aborts after 60 s with no useful message. The script writes the
+  one-line `nvidia_icd.json` itself.
+- **The engine refuses to run as root** and its directory must be owned by the
+  engine user; the script reads that user off the launcher path rather than
+  assuming `carla`.
+
+## Distributing the cook: use ECR, not ghcr
+
+The production cook is ~146 GB unpacked, ~22 GB compressed, and **rented hosts
+could not pull it from ghcr**: the large layer retried forever, authenticated
+or not. Copying ghcr -> ECR with `crane` from a third box also failed, first
+with an HTTP/2 `PROTOCOL_ERROR` and then `unexpected EOF` over HTTP/1.1.
+
+What worked is pushing to ECR **from a box that already holds the image**:
+
+```bash
+aws ecr get-login-password | docker login -u AWS --password-stdin "$ECR"
+docker tag ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics "$ECR/simcloud-carla-worker-dev:cook-prod-graphics"
+docker push "$ECR/simcloud-carla-worker-dev:cook-prod-graphics"     # ~17 min
+```
+
+Pass the pull credential at create time via vast's `image_login`
+(`-u AWS -p <token> <registry>`); the ECR token is valid 12 h, which outlives
+any pull. After the switch, 14 of 16 rented boxes pulled the cook without a
+single retry loop.
+
+Because pull speed varies by an order of magnitude between hosts and vast's
+status reporting is unreliable, the cheapest way to get a working box quickly is
+to **race a fleet and keep the winners**: create ~16, poll until the first few
+report `running`, destroy the rest. Two failure modes showed up that no amount
+of waiting fixes — a host whose DNS cannot resolve the ECR layer bucket
+(`...s3.us-east-1.amazonaws.com: no such host`), and a host whose ssh proxy
+closes the connection, which the instance's `public_ipaddr` + `direct_port_start`
+works around.
+
+## VRAM: what actually fits
+
+Measured with `nvidia-smi` sampled during full renders of production scenarios:
+
+| rig | resolution | peak VRAM |
+|---|---|---|
+| `parity-front` (1 camera + chase) | 1280x720 | 8.3 - 9.8 GiB |
+| `nvidia-sdg-av` (7 surround + chase + lidar) | 1920x1208 | 17.2 - 19.3 GiB |
+
+The map alone is ~6.5 GiB resident **at every quality level** — Low, Medium and
+High land within 10 MiB of each other, and `r.Streaming.PoolSize` changes
+nothing even though both flags appear in the process command line. Actors cost
+~0.7 GiB and eight cameras ~1.5 GiB. So a 10 GiB card cannot host the surround
+rig at all: it dies with `Out of memory on Vulkan; MemoryTypeIndex=1` followed by
+`Signal 11`. The same pressure, just below the fatal threshold, is what produces
+vehicles rendered with doors, lights and wheels but **no body shell** — large
+body meshes are the allocations that fail first. Seeing hollow cars in output is
+a memory symptom, not a content or blueprint problem.
