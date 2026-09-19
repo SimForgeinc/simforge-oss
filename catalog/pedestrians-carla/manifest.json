@@ -4,7 +4,21 @@
     "walker.pedestrian.0015": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0015",
-      "bytes": 17880708,
+      "bytes": 18699244,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8329,
@@ -14,8 +28,11 @@
       "file": "models/pedestrian_0015.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "b20b0654cef8256053e36cf3ac8af8da3369b61492034a459d995adebcb2b8ba",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "66c8f0349411e42dc697c6c4cf714c507c66c66ddda6a039da8d19355e045885",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 12
@@ -23,7 +40,21 @@
     "walker.pedestrian.0016": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0016",
-      "bytes": 17306360,
+      "bytes": 18124892,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8329,
@@ -33,8 +64,11 @@
       "file": "models/pedestrian_0016.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "4ad9708546817ce32355c6f8a4f455aceca5206ad5fb805e9e5bd5c983b715ae",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "35f8fddb8c07282701e52201629325a4b4dabc92d5f4631f9562225dc3e70b20",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 11
@@ -42,7 +76,21 @@
     "walker.pedestrian.0017": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0017",
-      "bytes": 12782428,
+      "bytes": 13600960,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.845,
@@ -52,8 +100,11 @@
       "file": "models/pedestrian_0017.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "b7056a5f931967fe13b6ba55fd227de02c0011a9a58e1adb1cf8edf9bbb07ade",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "8f4ddd68824825e3e3d95ebd9c879568453e390d5fabab878af18762631bcbd2",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 11
@@ -61,7 +112,21 @@
     "walker.pedestrian.0018": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0018",
-      "bytes": 10996356,
+      "bytes": 11814800,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8712,
@@ -71,8 +136,11 @@
       "file": "models/pedestrian_0018.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 5,
-      "sha256": "d58a0f77a3616b771dffcb12c59477da610ad7ad7ec8174d3fc7c8582340de7d",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "d6f10282bb28645d3ad64ac010fd347e17af53f645485dc3cb114bfa6a3a01f5",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_B_G2",
       "textures": 10
@@ -80,7 +148,21 @@
     "walker.pedestrian.0019": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0019",
-      "bytes": 14740664,
+      "bytes": 15559196,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.845,
@@ -90,8 +172,11 @@
       "file": "models/pedestrian_0019.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "14c33b4c62cc2927b7b17ca88ef1eb8c5c55c70a2ebe13d07ac15c6e2a2b91e0",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "22ccba1ac7360c3150391ab08195029c7f1b94b57055c2c2f54b60ba90b858c8",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_C_G2",
       "textures": 11
@@ -99,7 +184,21 @@
     "walker.pedestrian.0020": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0020",
-      "bytes": 15822012,
+      "bytes": 16640548,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8526,
@@ -109,8 +208,11 @@
       "file": "models/pedestrian_0020.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 10,
-      "sha256": "0f312e95d46d7e681ab55d3bb542891f6e701ab34670a54e9593808a94636953",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "0cd9cc134b8ff2489fe036dc6f016f2bcf739d01e0ed745f35d2b94cd7fe8c14",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_Cop_G2",
       "textures": 13
@@ -118,7 +220,21 @@
     "walker.pedestrian.0021": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0021",
-      "bytes": 14640936,
+      "bytes": 15459472,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.845,
@@ -128,8 +244,11 @@
       "file": "models/pedestrian_0021.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "2b8a5a2092ab0ee2173a1cb0abe1940bd9fbbc389767819c7f062b8e54ceaee2",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "a4694c5d967289089f88d9919957fabc3d1e46950df896749772b7932b27e76a",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 13
@@ -137,7 +256,21 @@
     "walker.pedestrian.0022": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0022",
-      "bytes": 13317256,
+      "bytes": 14135788,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8616,
@@ -147,8 +280,11 @@
       "file": "models/pedestrian_0022.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "26e571174abd0e108f3d1dec4ecde2e062b74c1e893791e32c407c00a82e01bf",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "c06482bcb1b8e0c781df56903f41af6b3067404029a98194c4f067fd5a44069d",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -156,7 +292,21 @@
     "walker.pedestrian.0023": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0023",
-      "bytes": 13317256,
+      "bytes": 14135788,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8616,
@@ -166,8 +316,11 @@
       "file": "models/pedestrian_0023.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "ccee4fc1492c1d6474d40c4cc36385eaad384e536548ab4f99723400b2020e9e",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "8262a9a178f3f319693f2d049d03bd1b37147a10ad92589c2d7cbde3663706ae",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -175,7 +328,21 @@
     "walker.pedestrian.0024": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0024",
-      "bytes": 13317256,
+      "bytes": 14135788,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8616,
@@ -185,8 +352,11 @@
       "file": "models/pedestrian_0024.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "06facd8503613e3fcc1c0124f445fb6cff5ea03a47254c028a49e6583146afbb",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "68848f0763ce83c3a93f3963fa702eb7ea52104585f0649381f4bd35aa3310c6",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
@@ -194,7 +364,21 @@
     "walker.pedestrian.0025": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0025",
-      "bytes": 19557280,
+      "bytes": 20375812,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8228,
@@ -204,8 +388,11 @@
       "file": "models/pedestrian_0025.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "3e825dff7bcdf089edb60ca73d92c0cfd88392ad49c10e273087271b71b3b453",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "4e426fc64b228f6a70f3a81baed14dfca4f91ecdb993828e2a48286b801dde58",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM01_A_G2",
       "textures": 11
@@ -213,7 +400,21 @@
     "walker.pedestrian.0026": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0026",
-      "bytes": 18977720,
+      "bytes": 19796252,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8228,
@@ -223,8 +424,11 @@
       "file": "models/pedestrian_0026.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "63073b24ede26006aec45abf234530cce85105259e4716ade98bf492407aaea3",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "7baa0c1a1139834cc040f7ef5951a9dc996e1554b317e52edbd3f278fd524b0c",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM01_B_G2",
       "textures": 11
@@ -232,7 +436,21 @@
     "walker.pedestrian.0027": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0027",
-      "bytes": 24094624,
+      "bytes": 24913160,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.777,
         1.8573,
@@ -242,8 +460,11 @@
       "file": "models/pedestrian_0027.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 10,
-      "sha256": "a447ef488467da6b3f28f44ce234edf789ff765ff1557dc514c6d6e19b88b604",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "8d68c8a1e4d7219955d4b9de143ca7d9c4af5c0300ee78c831ab0e0d1aa5c39e",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroM02_A_G2",
       "textures": 13
@@ -251,7 +472,21 @@
     "walker.pedestrian.0028": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0028",
-      "bytes": 22311604,
+      "bytes": 23130136,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8393,
@@ -261,8 +496,11 @@
       "file": "models/pedestrian_0028.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 8,
-      "sha256": "bd8ff1a0c5abb99e385858374f1b4379eebf7142de400ceb8fe4ca87f9ebed54",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "26eccc553e3219ce9666f906a02be5410aaca3ad840fa7c75121e212898a931b",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
@@ -270,7 +508,21 @@
     "walker.pedestrian.0029": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0029",
-      "bytes": 22311344,
+      "bytes": 23129876,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8393,
@@ -280,8 +532,11 @@
       "file": "models/pedestrian_0029.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "9e7da003b9e501cf00a1743b0fcf4d56aefdcc160984ecc13704fe575f64a84b",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "c085ab0d77eee3dd7283bd100a440a8112c78e6e7e349f636442ff33f5917da3",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
@@ -289,7 +544,21 @@
     "walker.pedestrian.0030": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0030",
-      "bytes": 24361040,
+      "bytes": 25179576,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8393,
@@ -299,8 +568,11 @@
       "file": "models/pedestrian_0030.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "69794446c4e2923275ae513a52336262b87a5bbe12b9256d512eb950f67bc6f1",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "ca0dded305c3ffe6a3529dc45132209cdcf2a05d55da65c670e18b5ebb45a8f5",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 14
@@ -308,7 +580,21 @@
     "walker.pedestrian.0031": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0031",
-      "bytes": 21646856,
+      "bytes": 22465392,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8441,
@@ -318,8 +604,11 @@
       "file": "models/pedestrian_0031.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 11,
-      "sha256": "ba5eb56617313b2f9711d763ae2820f72d2d35022629da874c43ea95cd0064a5",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "23594d57d8cc7bc5499ecd3b6424e99d7e95405351248946ebc19bcf0c14e092",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AmerM01_Cop_G2",
       "textures": 15
@@ -327,7 +616,21 @@
     "walker.pedestrian.0032": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0032",
-      "bytes": 18512176,
+      "bytes": 19330708,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.836,
@@ -337,8 +640,11 @@
       "file": "models/pedestrian_0032.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 8,
-      "sha256": "6db6240038772c758d6fa20c7e6b05b8641eb1674488ade7822bc9ce4b988bd4",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "25fd57fce9391308c2f3ded2cca248b1c1856cd8eb68521a5f59fdaaa9af45b5",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
@@ -346,7 +652,21 @@
     "walker.pedestrian.0033": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0033",
-      "bytes": 18511912,
+      "bytes": 19330448,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.836,
@@ -356,8 +676,11 @@
       "file": "models/pedestrian_0033.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "0f658fea1ad782c1ffa561754158c2852a6680fa9038fa2878afe3f115e517d2",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "089c4622857d8bedae0c7365c32e2dfc04ffe612882f086cd4ddf15da4b1f6e4",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
@@ -365,7 +688,21 @@
     "walker.pedestrian.0034": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0034",
-      "bytes": 20492740,
+      "bytes": 21311272,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8588,
@@ -375,8 +712,11 @@
       "file": "models/pedestrian_0034.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "3d597ffacd27bde326b4140fff4b6e3dbeb586c7c52c44389e2d80412bc23728",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "05dc5476fa06b9d06975635b59b8cdc932078cb94a37bde41d8c3d62da6d7a93",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM01_A_G2",
       "textures": 10
@@ -384,7 +724,21 @@
     "walker.pedestrian.0035": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0035",
-      "bytes": 20468292,
+      "bytes": 21286824,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8588,
@@ -394,8 +748,11 @@
       "file": "models/pedestrian_0035.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "4712856d13acea278352a82d8fc67021f7ff5082cec934f8b29e93f5bfe36fe0",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "48e1784c79c83f96f7d2cee84b63ec9eacd1ba2e0512f4b20b292443029cfe21",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM01_B_G2",
       "textures": 11
@@ -403,7 +760,21 @@
     "walker.pedestrian.0036": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0036",
-      "bytes": 17449108,
+      "bytes": 18267640,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7712,
         1.8492,
@@ -413,8 +784,11 @@
       "file": "models/pedestrian_0036.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "c9573c08777c4634de26d2c1051439ac78ffe222a35a5d065b50ac95fe84aedc",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "e2ebeac3029e49054ea87858b949122e6f19189ee79214cf09b3ceb7ddc8d305",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
@@ -422,7 +796,21 @@
     "walker.pedestrian.0037": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0037",
-      "bytes": 17449428,
+      "bytes": 18267960,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7712,
         1.8492,
@@ -432,8 +820,11 @@
       "file": "models/pedestrian_0037.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "7b45e9189d35d764483c8b4ea1525ef57557909731f46a6cb8a11560c3f53b0c",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "281bf3d4b60bdb5ece64763c513f5ba4c341833294e3cfee0c49c52dd7e05b69",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
@@ -441,7 +832,21 @@
     "walker.pedestrian.0038": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0038",
-      "bytes": 18833632,
+      "bytes": 19652164,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7712,
         1.8492,
@@ -451,8 +856,11 @@
       "file": "models/pedestrian_0038.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "f5b2a5253ed24b3289f640f24a7c30b02397351db4fd222e9d4e5b7fa9c8720c",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "463af7f7f30b8bf0dc06f67dcae486d6dd8f4266bb0e7d51b27768b18511e5f5",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 10
@@ -460,7 +868,21 @@
     "walker.pedestrian.0039": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0039",
-      "bytes": 12317160,
+      "bytes": 13135688,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8705,
@@ -470,8 +892,11 @@
       "file": "models/pedestrian_0039.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "aecbfe718da4df1cc79dd31fb7a53322084b7020be80261e9ad247832888d4eb",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "ef5adf19ca131db0e7464bf2a7136689e477e7683919559f853be6b69af79b56",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -479,7 +904,21 @@
     "walker.pedestrian.0040": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0040",
-      "bytes": 12317160,
+      "bytes": 13135688,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8705,
@@ -489,8 +928,11 @@
       "file": "models/pedestrian_0040.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "aaa4747fc1449057430b992a03e0ca482aee61da522d059f0f157ff92cc78aa2",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "5f27051d2675cdfcb11a27835d846d13fd15866df3f88baa37da559e4ed0f9c8",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -498,7 +940,21 @@
     "walker.pedestrian.0041": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0041",
-      "bytes": 12317160,
+      "bytes": 13135688,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.7752,
         1.8705,
@@ -508,8 +964,11 @@
       "file": "models/pedestrian_0041.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "c9c8c4c191841ed3ab9b2b1ed5c800db17586b6519821805c0e6845303e387f2",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "9296833c2d48ca4f0764dea1936c9543d1c59845edaaad44c10e3e8967ceb034",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
@@ -517,7 +976,21 @@
     "walker.pedestrian.0042": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0042",
-      "bytes": 13603016,
+      "bytes": 14421476,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8328,
@@ -527,8 +1000,11 @@
       "file": "models/pedestrian_0042.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 6,
-      "sha256": "00768344e6b21067e6f26a2959173cb006ad70f4d07240c050887dd824b451fb",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "f92d730b637f7b1040aa3a24e8563fa65d26b9509907abb641446027f0e97421",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_A_G2",
       "textures": 11
@@ -536,7 +1012,21 @@
     "walker.pedestrian.0043": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0043",
-      "bytes": 15815480,
+      "bytes": 16633940,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8328,
@@ -546,8 +1036,11 @@
       "file": "models/pedestrian_0043.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 5,
-      "sha256": "9a1369b18648d0b3c824257cab9de79d8e5765ba83dd980505ae6d55741c157a",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "6173cf8a2dd9cf5a72f7add430c191b67394c3b226c21da15552e7aa7f487121",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
@@ -555,7 +1048,21 @@
     "walker.pedestrian.0044": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0044",
-      "bytes": 15815480,
+      "bytes": 16633940,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_female_WalkCicle0D"
+        }
+      },
       "dims_xyz_m": [
         1.6822,
         1.8328,
@@ -565,8 +1072,11 @@
       "file": "models/pedestrian_0044.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 5,
-      "sha256": "89f247e86c3411308968756ce751de5070e476dda9390c9175c599c0c0f90582",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "b4947f6a1bf3686dfe124a2bc10d356995a14bce64ba03d598e611f25b53cc61",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
@@ -574,7 +1084,21 @@
     "walker.pedestrian.0045": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0045",
-      "bytes": 19276964,
+      "bytes": 20095496,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8353,
@@ -584,8 +1108,11 @@
       "file": "models/pedestrian_0045.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "74492d6d27762053ab2322b57af8f118824bbcd18e8e1194986e756a4a473f13",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "86c7c357ece1de9408f9891162803388a93c51bb788e1da996e2d463ae1f7f4e",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM01_A_G2",
       "textures": 12
@@ -593,7 +1120,21 @@
     "walker.pedestrian.0046": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0046",
-      "bytes": 21685352,
+      "bytes": 22503884,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7684,
         1.8353,
@@ -603,8 +1144,11 @@
       "file": "models/pedestrian_0046.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "c11908f69464aaa8e7c75581e941921948d7e7551e7a24b69970935e7fa35995",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "9c2a298289b782a97404c3811efae94c10834adb581695bec1fce6beb023355c",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM01_B_G2",
       "textures": 11
@@ -612,7 +1156,21 @@
     "walker.pedestrian.0047": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0047",
-      "bytes": 12855836,
+      "bytes": 13674372,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7697,
         1.8178,
@@ -622,8 +1180,11 @@
       "file": "models/pedestrian_0047.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "c5aa944aeeeb2ef5f6c356ff59e43fc833cac9c5717f2ee9258f92945bcea932",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "8c31d5e974660cb11eacccb39cad48bd0d12eebffe208e94cd54f600fe86635c",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 12
@@ -631,7 +1192,21 @@
     "walker.pedestrian.0048": {
       "age": "adult",
       "blueprint": "walker.pedestrian.0048",
-      "bytes": 14376640,
+      "bytes": 15195176,
+      "clips": {
+        "idle": {
+          "duration": 19.666666,
+          "source": "AS_female_Idle0C"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_female_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_male2_WalkCicle0E"
+        }
+      },
       "dims_xyz_m": [
         1.7697,
         1.8178,
@@ -641,8 +1216,11 @@
       "file": "models/pedestrian_0048.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 7,
-      "sha256": "6ad82c79bdffd086ef374d2eae4c451f0b7c4909e2190304a94d0c1f88dfb996",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "ee20b5cc98c4dce249a3ef493b9e8aef43684c8d4bc438578ebabf9a6559c052",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 14
@@ -650,7 +1228,21 @@
     "walker.pedestrian.0049": {
       "age": "child",
       "blueprint": "walker.pedestrian.0049",
-      "bytes": 17750140,
+      "bytes": 17993008,
+      "clips": {
+        "idle": {
+          "duration": 1.5,
+          "source": "AS_Girl_Idle"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_Girl_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_Girl_walkCicle0C"
+        }
+      },
       "dims_xyz_m": [
         1.0851,
         1.1292,
@@ -660,8 +1252,11 @@
       "file": "models/pedestrian_0049.glb",
       "gender": "female",
       "generation": 2,
+      "jointCount": 66,
       "materials": 8,
-      "sha256": "8d657dfaf86c9735deafd233bd48bf6e07df687e9a98d35f98fd4d669f14db17",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "f0a284c15f0ed18d7da07e6363224e8adfb71b92198bd5dd05a23e9c50e285ba",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroG02_A_G2",
       "textures": 12
@@ -669,7 +1264,21 @@
     "walker.pedestrian.0050": {
       "age": "child",
       "blueprint": "walker.pedestrian.0050",
-      "bytes": 22794668,
+      "bytes": 23037536,
+      "clips": {
+        "idle": {
+          "duration": 1.5,
+          "source": "AS_Girl_Idle"
+        },
+        "run": {
+          "duration": 2.2666667,
+          "source": "AS_Girl_runCicle0E"
+        },
+        "walk": {
+          "duration": 2.3666666,
+          "source": "AS_Girl_walkCicle0C"
+        }
+      },
       "dims_xyz_m": [
         1.0537,
         1.1379,
@@ -679,8 +1288,11 @@
       "file": "models/pedestrian_0050.glb",
       "gender": "male",
       "generation": 2,
+      "jointCount": 66,
       "materials": 9,
-      "sha256": "d4c256bd16488685f294c5f4ae7cc60b64c23f1bd1247b4f43808000b53a050c",
+      "rigFamily": "G2",
+      "rootMotion": "in-place",
+      "sha256": "c09f2d008ace6269595943e10b228139d9af040f37bf57da6ceb177c758d03ec",
       "skeletonPreserved": true,
       "sourceMesh": "SK_EuroB02_A_G2",
       "textures": 15
@@ -688,7 +1300,21 @@
     "walker.pedestrian.0051": {
       "age": "child",
       "blueprint": "walker.pedestrian.0051",
-      "bytes": 13057140,
+      "bytes": 13440024,
+      "clips": {
+        "idle": {
+          "duration": 26.333334,
+          "source": "AS_idleAXz02_G3"
+        },
+        "run": {
+          "duration": 0.73333335,
+          "source": "AS_joggingG3"
+        },
+        "walk": {
+          "duration": 2.0333333,
+          "source": "AS_childWalking_G3"
+        }
+      },
       "dims_xyz_m": [
         1.8269,
         1.8631,
@@ -698,8 +1324,11 @@
       "file": "models/pedestrian_0051.glb",
       "gender": "female",
       "generation": 3,
+      "jointCount": 26,
       "materials": 5,
-      "sha256": "a891685b1943fc5e0863e923ded113e7d62301b3780464d6981451e0411a27ad",
+      "rigFamily": "G3",
+      "rootMotion": "in-place",
+      "sha256": "c49584e1ea589d6b15e1758efeb6694a848e2da6c1655e05e521659ecc4acf50",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroG01_A_G3",
       "textures": 10
@@ -707,7 +1336,21 @@
     "walker.pedestrian.0052": {
       "age": "child",
       "blueprint": "walker.pedestrian.0052",
-      "bytes": 16298740,
+      "bytes": 16681640,
+      "clips": {
+        "idle": {
+          "duration": 26.333334,
+          "source": "AS_idleAXz02_G3"
+        },
+        "run": {
+          "duration": 0.73333335,
+          "source": "AS_joggingG3"
+        },
+        "walk": {
+          "duration": 2.0333333,
+          "source": "AS_childWalking_G3"
+        }
+      },
       "dims_xyz_m": [
         1.8272,
         1.8425,
@@ -717,8 +1360,11 @@
       "file": "models/pedestrian_0052.glb",
       "gender": "male",
       "generation": 3,
+      "jointCount": 26,
       "materials": 6,
-      "sha256": "daf5c112e58a2c77842eef7d1defaf18bd4174db00ca42150f1eb78a6d56a81c",
+      "rigFamily": "G3",
+      "rootMotion": "in-place",
+      "sha256": "e3e416fdfc4879340bc0de89657b226d67c0a73bd1886a64d4ef26d71deeac71",
       "skeletonPreserved": true,
       "sourceMesh": "SK_AfroB01_A_G3",
       "textures": 14
