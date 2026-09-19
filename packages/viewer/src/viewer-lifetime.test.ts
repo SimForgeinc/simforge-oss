@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type * as Three from 'three';
+import { Box3, Group, Scene, Vector3 } from 'three';
+import { TileStreamLayer } from './streaming';
 
 vi.mock('three', async (importOriginal) => {
   const three = await importOriginal<typeof Three>();
@@ -140,5 +142,31 @@ it('reports missing lighting and tier defaults separately from explicit input', 
       mapTextureTier: 'medium',
       defaulted: expect.arrayContaining(['sunIntensity', 'environmentIntensity', 'exposure', 'mapTextureTier']),
     });
+  } finally { viewer.dispose(); }
+});
+
+it('enforces the resident budget on a frame without waiting for another admission', async () => {
+  const viewer = contractViewer({ byteBudget: 10, cinematicLighting: false });
+  let wanted = true;
+  const layer = new TileStreamLayer({
+    name: 'budget-pressure', renderer: { compileAsync: async () => undefined } as never, scene: new Scene(),
+    defs: [{ id: 'offscreen', box: new Box3(new Vector3(), new Vector3(1, 1, 1)),
+      lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }] }],
+    build: async () => ({ object: new Group(), resources: { geometries: [], materials: [], textures: [] },
+      bytes: 20, pendingTextures: [] }),
+    maxConcurrent: 1, pinCoarsest: true, want: () => wanted,
+    memory: { admit: () => true, maxAssetBytes: () => 100 },
+  });
+  Object.assign(viewer, { cityLayer: layer, lastStreamUpdate: -Infinity });
+  try {
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, viewer.camera);
+    await layer.whenCompilationIdle();
+    expect(viewer.getStats().residentBytes).toBe(20);
+    wanted = false;
+    vi.mocked(requestAnimationFrame).mock.calls[0]![0](performance.now());
+    expect(viewer.getStats().residentBytes).toBeLessThanOrEqual(10);
+    expect(layer.group.children).toHaveLength(0);
   } finally { viewer.dispose(); }
 });
