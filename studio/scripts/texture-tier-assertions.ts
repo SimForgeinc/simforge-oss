@@ -104,12 +104,12 @@ export function assertNoDuplicateFetches(requests: readonly TextureRequest[]): v
 }
 
 /** Real WebGL capability boundary, injected before any renderer is constructed. */
-export function browserCapabilityRestriction(restriction: 'portable' | 'restricted'): string {
+export function browserCapabilityRestriction(restriction: 'portable' | 'restricted' | 'apple'): string {
   return `
     for (const klass of [WebGLRenderingContext, WebGL2RenderingContext]) {
       const extension = klass.prototype.getExtension;
       klass.prototype.getExtension = function(name) {
-        if (name === 'EXT_texture_compression_bptc' || name === 'WEBGL_compressed_texture_astc') return null;
+        if (name === 'EXT_texture_compression_bptc' || (${restriction !== 'apple'} && name === 'WEBGL_compressed_texture_astc')) return null;
         return extension.call(this, name);
       };
       ${restriction === 'restricted' ? `const parameter = klass.prototype.getParameter;

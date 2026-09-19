@@ -22,7 +22,7 @@ assert(root && !resolve(root).includes('/.local/share/simforge/'), '--root must 
 const tier = args.get('tier') ?? 'low';
 assert(tier === 'low' || tier === 'medium', 'browser tiers are low or medium; render/ml require verify:native-texture-tiers');
 const restriction = args.get('capabilities') ?? 'normal';
-assert(['normal', 'portable', 'restricted'].includes(restriction));
+assert(['normal', 'portable', 'restricted', 'apple'].includes(restriction));
 const expected = restriction === 'restricted' ? 'low' : tier;
 const target = expected === 'low' ? 256 : 512;
 let inspectionView: CameraView | undefined;
@@ -48,17 +48,17 @@ const setup = await fetch(new URL('/api/simforge/host/setup', base), { method: '
   body: JSON.stringify({ mode: 'local', quality: args.has('baseline') ? 'high' : tier }) });
 if (!setup.ok) throw new Error(`tier setup ${setup.status}: ${await setup.text()}`);
 const { maps } = await api<{ maps: { sourceMapId: string; mapVersionId: string; label: string }[] }>('/api/simforge/maps');
-const map = maps.find(map => map.sourceMapId === 'belmont-research-center');
-assert(map, 'install real Belmont in the throwaway daemon');
+const map = maps.find(map => map.sourceMapId === (args.get('map') ?? 'belmont-research-center'));
+assert(map, 'install the requested map in the throwaway daemon');
 const ticket = await api<{ url: string }>('/api/simforge/host/session', { next: args.get('path') ?? '/dashboard/map-assets' });
 const bundled = await build({ entryPoints: [join(import.meta.dirname, 'texture-tier-browser-probe.ts')], bundle: true, write: false, format: 'iife', platform: 'browser' });
 const browser = await chromium.launch({ executablePath: args.get('chromium') ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-  headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=vulkan', '--enable-features=Vulkan', '--disable-vulkan-surface'] });
+  headless: true, args: ['--no-sandbox', '--use-gl=angle', `--use-angle=${args.get('angle') ?? 'vulkan'}`, '--enable-features=Vulkan', '--disable-vulkan-surface'] });
 const checks = new Checks();
 try {
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   await context.addInitScript({ content: bundled.outputFiles[0]!.text });
-  if (restriction === 'portable' || restriction === 'restricted') {
+  if (restriction === 'portable' || restriction === 'restricted' || restriction === 'apple') {
     await context.addInitScript({ content: browserCapabilityRestriction(restriction) });
   }
   const page = await context.newPage();
@@ -176,7 +176,7 @@ try {
     settled = measurement;
   } catch (error) { settlingError = String(error); }
   const stats = ready.stats as typeof ready.stats & { tierSelection?: TierSelection; mapTextures?: { dimensions: Record<string, number> }; usable?: boolean; targetQualityReady?: boolean };
-  checks.check('Belmont fixture at ready', capture.mapId, () => assert.equal(capture.mapId, map.mapVersionId));
+  checks.check('requested map fixture at ready', capture.mapId, () => assert.equal(capture.mapId, map.mapVersionId));
   checks.check('actual resident texture dimensions', stats.mapTextures?.dimensions, () => assertDimensions(stats.mapTextures?.dimensions ?? {}, target));
   checks.check('exact resident authored mip invariant', { residentSources: ready.textures.length, target }, () => {
     assertAuthoredDimensions(ready.textures, target);
@@ -202,13 +202,13 @@ try {
   checks.check('requested and actual tier reported honestly', stats.tierSelection, () => {
     assert(stats.tierSelection); assert.equal(stats.tierSelection.requested, tier); assert.equal(stats.tierSelection.actual, expected);
     assert.equal(stats.tierSelection.longestEdgePx, target);
-    if (restriction !== 'normal') { assert.equal(stats.tierSelection.codec, 'uastc'); assert(stats.tierSelection.downgradeReason); }
+    if (restriction === 'portable' || restriction === 'restricted') { assert.equal(stats.tierSelection.codec, 'uastc'); assert(stats.tierSelection.downgradeReason); }
     assert.equal(stats.tierSelection.variantId, `textures-${target}-${stats.tierSelection.codec}`);
   });
   checks.check('real context restriction and supported codec selection', { ...ready.capabilities, codec: stats.tierSelection?.codec }, () => {
     const capabilities = ready.capabilities;
     if (restriction !== 'normal') {
-      assert.equal(capabilities.bc7, false); assert.equal(capabilities.astc, false);
+      assert.equal(capabilities.bc7, false); assert.equal(capabilities.astc, restriction === 'apple');
     }
     if (restriction === 'restricted') assert.equal(capabilities.maxTextureSize, 256);
     assert(capabilities.maxTextureSize >= target);

@@ -325,6 +325,7 @@ export class CityViewer {
   private textureLoadAbort = new AbortController();
   private effectiveTextureMaxDimension = Infinity;
   private tierSelection!: TierSelection;
+  private lastLoadError: CityViewerStats['loadDiagnostics']['lastError'] = null;
   private textureTierIndex: TextureTierIndex | null = null;
   private textureSources: ReadonlyMap<string, MapTextureSource> = new Map();
   private sourceManifestSha256 = '';
@@ -1721,6 +1722,8 @@ export class CityViewer {
       : sum((s) => s.loading + s.queued + s.uploading) + auxiliaryPending > 0 ? 'decoding'
       : 'ready';
     const dimensions: Record<string, number> = {};
+    const textureFormats: Record<string, number> = {};
+    const rgbaFallbacks: Record<string, number> = {};
     const sources = new Set<object>();
     for (const layer of [this.roadLayer, this.cityLayer, this.vegLayer]) {
       for (const entry of layer?.entries.values() ?? []) for (const asset of entry.resident.values()) {
@@ -1730,6 +1733,10 @@ export class CityViewer {
           const image = texture.image as { width: number; height: number };
           const key = `${image.width}x${image.height}`;
           dimensions[key] = (dimensions[key] ?? 0) + 1;
+          const format = String(texture.format);
+          textureFormats[format] = (textureFormats[format] ?? 0) + 1;
+          const reason = texture.userData.mapTexture.rgbaFallbackReason as string | undefined;
+          if (reason) rgbaFallbacks[reason] = (rgbaFallbacks[reason] ?? 0) + 1;
         }
       }
     }
@@ -1739,8 +1746,17 @@ export class CityViewer {
       && (city?.missingInViewTiles ?? 0) === 0;
     const targetQualityReady = usable && Boolean(this.textureTierIndex) && this.viewResidentNow()
       && this.presetTransitions === 0;
+    const gl = this.renderer.getContext();
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     return {
       tierSelection: this.tierSelection,
+      loadDiagnostics: {
+        capabilities: { ...probeTextureCapabilities(gl),
+          vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) as string : null,
+          renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) as string : null },
+        availableVariantIds: Object.keys(this.variantManifest?.variants ?? {}),
+        lastError: this.lastLoadError, textureFormats, rgbaFallbacks,
+      },
       usable,
       targetQualityReady,
       mapTextures: { dimensions, ...trackedTextureStats(this.downloadTracker) },
@@ -1953,6 +1969,25 @@ export class CityViewer {
 
   private recordStreamingError(error: unknown): void {
     if (this.disposed || (error as { name?: string } | null)?.name === 'AbortError') return;
+    const detail = error as { code?: string; field?: string; cause?: unknown } | null;
+    const causes: string[] = [];
+    const seen = new Set<unknown>();
+    for (let cause = detail?.cause; cause !== undefined && cause !== null && !seen.has(cause);) {
+      seen.add(cause);
+      causes.push(cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause));
+      cause = cause instanceof Error ? cause.cause : undefined;
+    }
+    this.lastLoadError = {
+      name: error instanceof Error ? error.name : 'Error',
+      message: error instanceof Error ? error.message : String(error),
+      code: detail?.code, field: detail?.field,
+      cause: causes.length ? causes.join('\nCaused by: ') : undefined,
+      ...(error instanceof RequiredAssetBudgetError
+        ? { layer: error.layerName, assetId: error.assetId, estimatedBytes: error.estimatedBytes,
+            required: error.layer.entries.get(error.assetId)?.required } : {}),
+      residentBytes: this.residentBytes(), pendingBytes: this.totalBytes() - this.residentBytes(),
+      byteBudget: this.options.byteBudget,
+    };
     if (error instanceof RequiredAssetBudgetError && this.textureBudgetRecovery) {
       this.pendingTextureBudgetError = error;
       return;
