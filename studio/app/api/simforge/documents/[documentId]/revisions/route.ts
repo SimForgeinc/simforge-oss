@@ -8,7 +8,7 @@ import {
   createScenarioRevision,
   listScenarioRevisions,
 } from "@/app/lib/scenario/document-store";
-import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
+import { ScenarioMapResolutionError, STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -45,7 +45,13 @@ export async function POST(request: Request, route: Context) {
     "mutateContent",
   );
   if (access.response) return access.response;
-  const result = await createScenarioRevision(auth.context, documentId, parsed.data);
+  let result;
+  try {
+    result = await createScenarioRevision(auth.context, documentId, parsed.data);
+  } catch (error) {
+    if (!(error instanceof ScenarioMapResolutionError)) throw error;
+    return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
+  }
   if (result.kind === "not_found") {
     return NextResponse.json({ error: "document_not_found" }, { status: 404 });
   }
@@ -53,7 +59,7 @@ export async function POST(request: Request, route: Context) {
     return NextResponse.json(
       {
         error: "materialized_traffic_binding_invalid",
-        message: "The materialized traffic evidence does not bind to this document at its pinned map version.",
+        message: "The materialized traffic evidence does not bind to this document's current compatible map publication.",
       },
       { status: 409 },
     );

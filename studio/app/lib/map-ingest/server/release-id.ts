@@ -19,8 +19,8 @@
  *  - changed content resolves to a different release, so a new version is
  *    published alongside the old one, and the editor's
  *    `ROW_NUMBER() OVER (PARTITION BY source_map_asset_id ORDER BY created_at DESC)`
- *    offers the newest while every already-authored scenario keeps the exact
- *    version it was bound to.
+ *    offers the newest. Scenarios follow that source's newest compatible
+ *    publication; frozen revisions retain their exact immutable version.
  *
  * The discriminator is computed from the member digests rather than from the
  * closure digest because the closure planner needs the release id as an input,

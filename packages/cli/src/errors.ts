@@ -1,4 +1,4 @@
-import { ProtocolDecodeError, StudioHostRequestError } from '@simforge-oss/studio-host';
+import { ProtocolDecodeError, ScenarioMapResolutionError, StudioHostRequestError } from '@simforge-oss/studio-host';
 import { toStructuredError as toStructuredCompilerError, type StructuredError } from '@simforge-oss/compiler';
 
 export * from '@simforge-oss/compiler';
@@ -19,6 +19,12 @@ export * from '@simforge-oss/compiler';
  * so `internal_error` is the one code it cannot act on.
  */
 export function toStructuredError(error: unknown): StructuredError {
+  if (error instanceof ScenarioMapResolutionError) {
+    return { code: error.code, reason: error.message, detail: {
+      requestedMapVersionId: error.requestedMapVersionId,
+      installedMapVersionId: error.installedMapVersionId,
+    } };
+  }
   if (error instanceof StudioHostRequestError) {
     return { code: error.code, reason: error.message, detail: { status: error.status } };
   }

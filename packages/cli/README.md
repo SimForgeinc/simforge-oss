@@ -499,6 +499,20 @@ local blob cache (`--blob-cache-root`, hardlinked into every layout):
 Versions published before the master format (tiled canonical closures) are
 refused by `pull`; re-ingest them.
 
+Studio scenarios follow the newest installed publication of their canonical
+source map (`sourceMapId` / `mapSourceMapId`), not an obsolete version id.
+The authored `mapVersionId` remains geometry provenance, and frozen revisions
+remain immutable. Forward resolution requires equal OpenDRIVE SHA-256 digests:
+rebuilding the browser assets cannot orphan a scenario or move its anchors.
+If OpenDRIVE differs (or its authored digest is unavailable), opening or freezing
+refuses with `scenario_map_geometry_drift` and requires remapping from the old
+OpenDRIVE to the new. This deliberately fails closed even for potentially benign
+OpenDRIVE changes; road/lane ids alone do not prove unchanged geometry.
+An entirely missing source map instead reports `scenario_map_absent`.
+Labels and installation directory names are never substitutes for canonical
+source identity. Scenario JSON exports carry that identity and geometry digest
+so an import can follow the same rule.
+
 ## Local Studio and SimCloud operations
 
 Every verb below talks to the running local host over loopback with the
