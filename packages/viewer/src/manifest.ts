@@ -43,10 +43,13 @@ export function sceneCenter(manifest: CityManifest): Vector3 {
 const BYTES_PER_FILE_BYTE = [6.6, 3.3, 2.3, 2.0];
 
 /**
- * Pre-load estimate of the GPU footprint of a LOD. The manifest only exposes
- * the compressed file size; these ratios were measured over the Yale Street
- * tiles (RGBA8 + mip chain, meshopt geometry expanded). The ledger is corrected
- * with the real number once the asset is built.
+ * Cheap pre-load admission heuristic, not a residency measurement. These ratios
+ * were measured on Yale Street assets with embedded textures (RGBA8 + mip chain,
+ * meshopt geometry expanded). External-texture GLBs omit their image payloads:
+ * Garching tiles can decode to over thirteen times this estimate. The selected
+ * texture tier and GPU transcode format are also absent from this heuristic.
+ * Decoded resource bytes replace the reservation; budget enforcement must
+ * reclaim optional residency rather than trusting file-size ratios as a bound.
  */
 export function estimateLodBytes(lod: ManifestLod): number {
   const ratio = BYTES_PER_FILE_BYTE[Math.min(lod.level, BYTES_PER_FILE_BYTE.length - 1)] ?? 2;

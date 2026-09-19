@@ -1764,6 +1764,8 @@ export class CityViewer {
         availableVariantIds: Object.keys(this.variantManifest?.variants ?? {}),
         lastError: this.lastLoadError, textureFormats, rgbaFallbacks, contentWarnings,
         shadowAtlas: this.atlas?.diagnostics ?? null,
+        admissionUnderestimates: { city: city?.largestAdmissionUnderestimate ?? null,
+          roads: road?.largestAdmissionUnderestimate ?? null, vegetation: veg?.largestAdmissionUnderestimate ?? null },
       },
       usable,
       targetQualityReady,

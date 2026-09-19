@@ -90,6 +90,7 @@ export interface LayerStats {
   budgetBlockedTiles: number;
   /** Wanted tiles that hit their terminal failure count and will not retry. */
   failedTiles: number;
+  largestAdmissionUnderestimate: { assetId: string; estimatedBytes: number; decodedBytes: number } | null;
 }
 
 export interface MemoryGovernor {
@@ -183,6 +184,7 @@ export class TileStreamLayer {
   private decodedAssets = 0;
   private uploadedTextures = 0;
   private compiledAssets = 0;
+  private largestAdmissionUnderestimate: LayerStats['largestAdmissionUnderestimate'] = null;
 
   constructor(opts: TileStreamLayerOptions) {
     this.opts = opts;
@@ -278,6 +280,7 @@ export class TileStreamLayer {
       uploadedTextures: this.uploadedTextures,
       compiledAssets: this.compiledAssets,
       compiling: this.compiling.size,
+      largestAdmissionUnderestimate: this.largestAdmissionUnderestimate,
       requiredPendingAssets,
       wantedTiles,
       missingTiles,
@@ -427,6 +430,10 @@ export class TileStreamLayer {
           disposeResources(asset.resources);
           return;
         }
+        const previous = this.largestAdmissionUnderestimate;
+        if (asset.bytes > estimate && (!previous || asset.bytes * previous.estimatedBytes > previous.decodedBytes * estimate)) {
+          this.largestAdmissionUnderestimate = { assetId: entry.def.id, estimatedBytes: estimate, decodedBytes: asset.bytes };
+        }
         entry.preparing = index;
         this.decodedAssets++;
         this.pending += asset.bytes;
@@ -563,6 +570,7 @@ export class TileStreamLayer {
       disposeResources(job.asset.resources);
     }
     this.bytes = 0;
+    this.largestAdmissionUnderestimate = null;
     this.pending = Math.max(0, this.pending);
     this.bootstrapped = !this.opts.pinCoarsest;
     this.group.clear();
