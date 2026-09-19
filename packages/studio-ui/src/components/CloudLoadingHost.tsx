@@ -321,6 +321,7 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
             }
             dataTransitionState={visible ? "covering" : "revealing"}
             detail={renderedSource.detail}
+            diagnostics={renderedSource.diagnostics}
             icon={renderedSource.icon}
             kind={renderedSource.kind}
             phase={renderedSource.phase}
@@ -434,6 +435,7 @@ function loadingSourcesEqual(
     && left.severity === right.severity
     && left.icon === right.icon
     && left.actions === right.actions
+    && left.diagnostics === right.diagnostics
   );
 }
 

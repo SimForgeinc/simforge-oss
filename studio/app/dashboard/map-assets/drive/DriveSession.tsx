@@ -17,6 +17,7 @@ import type { CityViewer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import { useRegisterRenderingBenchmarkTarget } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
@@ -117,6 +118,7 @@ export function DriveSession({
   const activeViewerRef = useRef<CityViewer | null>(null);
   const [bridge, setBridge] = useState<TruthViewerBridge | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState<unknown>(null);
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
   const [takePhase, setTakePhase] = useState<
     { kind: "recording" } | { kind: "saving"; recording: ManualDriveRecording } | { kind: "failed" }
@@ -357,6 +359,7 @@ export function DriveSession({
   const onViewerReady = useCallback((ready: CityViewer) => {
     activeViewerRef.current = ready;
     setViewer(ready);
+    setMapLoadError(null);
     setBridge(createTruthViewerBridge(ready, { layer: "drive-live", groundLift: true }));
   }, []);
   const onViewerDisposed = useCallback((disposed: CityViewer) => {
@@ -683,6 +686,7 @@ export function DriveSession({
         manifestUrl={map.browserManifestUrl}
         onError={(reason) => {
           setMapLoaded(false);
+          setMapLoadError(reason);
           setStartError(errorMessage(reason));
         }}
         onMapLoaded={() => setMapLoaded(true)}
@@ -741,6 +745,16 @@ export function DriveSession({
           ) : null}
         </div>
       ) : null}
+      {!mapLoaded || mapLoadError ? <MapLoadDebugPanel source={{
+        getViewer: () => activeViewerRef.current,
+        mapId: map.sourceMapId,
+        mapVersionId: map.versionId,
+        manifestUrl: map.browserManifestUrl,
+        requestedTier: quality,
+        phase: mapLoadError ? "error" : "loading",
+        readinessAnnounced: mapLoaded,
+        error: mapLoadError,
+      }} /> : null}
       {paused ? (
         <PauseMenu
           cameraKind={cameraKind}

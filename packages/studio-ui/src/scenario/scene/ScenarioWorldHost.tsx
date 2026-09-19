@@ -29,6 +29,7 @@ import {
 } from "./map-load-progress";
 import { useSceneLoadingSurfaceProps } from "./scene-loading";
 import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
+import { MapLoadDebugPanel } from "./MapLoadDebugPanel";
 import { authoringRuntimeReady } from "@simforge-oss/editor";
 
 /**
@@ -62,6 +63,7 @@ const BOOT_UPLOAD_BUDGET = { uploadBudgetMs: 20, uploadPixelsPerFrame: 168e5 } a
 const METADATA_PROGRESS_POLL_MS = 500;
 
 export type ScenarioWorldTarget = {
+  mapId?: string | null;
   mapVersionId: string;
   manifestUrl: string;
   label: string;
@@ -496,6 +498,16 @@ export function ScenarioWorldHost({
           setRetryNonce((value) => value + 1);
         }
       : null,
+    <MapLoadDebugPanel source={{
+      getViewer: () => viewerRef.current,
+      mapId: effectiveTarget?.mapId,
+      mapVersionId: effectiveTarget?.mapVersionId,
+      manifestUrl: effectiveTarget?.manifestUrl,
+      requestedTier: preference,
+      phase: transitionPhase,
+      readinessAnnounced: Boolean(effectiveTarget && loadedMapVersionId === effectiveTarget.mapVersionId),
+      error,
+    }} />,
   );
 
   return (

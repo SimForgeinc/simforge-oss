@@ -397,6 +397,10 @@
         "types": "./dist/scenario/route-states.d.ts",
         "default": "./dist/scenario/route-states.js"
       },
+      "./scenario/scene/MapLoadDebugPanel": {
+        "types": "./dist/scenario/scene/MapLoadDebugPanel.d.ts",
+        "default": "./dist/scenario/scene/MapLoadDebugPanel.js"
+      },
       "./scenario/scene/ScenarioWorldHost": {
         "types": "./dist/scenario/scene/ScenarioWorldHost.d.ts",
         "default": "./dist/scenario/scene/ScenarioWorldHost.js"
@@ -907,6 +911,11 @@
       "development": "./src/scenario/route-states.tsx",
       "types": "./dist/scenario/route-states.d.ts",
       "default": "./dist/scenario/route-states.js"
+    },
+    "./scenario/scene/MapLoadDebugPanel": {
+      "development": "./src/scenario/scene/MapLoadDebugPanel.tsx",
+      "types": "./dist/scenario/scene/MapLoadDebugPanel.d.ts",
+      "default": "./dist/scenario/scene/MapLoadDebugPanel.js"
     },
     "./scenario/scene/ScenarioWorldHost": {
       "development": "./src/scenario/scene/ScenarioWorldHost.tsx",

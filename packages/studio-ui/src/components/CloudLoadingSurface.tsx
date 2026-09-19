@@ -38,6 +38,7 @@ export type CloudLoadingSurfaceProps = {
   phase?: string;
   icon?: ReactNode;
   children?: ReactNode;
+  diagnostics?: ReactNode;
   className?: string;
   xstyle?: stylex.StyleXStyles;
   style?: CSSProperties;
@@ -57,12 +58,12 @@ export type CloudLoadingSurfaceProps = {
   dataTransitionState?: "covering" | "revealing";
 };
 
-export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, icon, children, className, xstyle, style, backdropAnimated = scope !== "pane", backdropAssetBase, backdropClassName, contentWrapClassName, contentClassName, testId = "cloud-loading-surface", contentTestId = "cloud-loading-content", telemetryTestId = "cloud-loading-telemetry", role = "status", ariaBusy = role !== "alert", ariaHidden = false, dataTransitionState }: CloudLoadingSurfaceProps) {
+export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, icon, children, diagnostics, className, xstyle, style, backdropAnimated = scope !== "pane", backdropAssetBase, backdropClassName, contentWrapClassName, contentClassName, testId = "cloud-loading-surface", contentTestId = "cloud-loading-content", telemetryTestId = "cloud-loading-telemetry", role = "status", ariaBusy = role !== "alert", ariaHidden = false, dataTransitionState }: CloudLoadingSurfaceProps) {
   // Memoized because the host compares sources field by field: a fresh `icon`
   // or `actions` element every render would republish on every render.
   const published = useMemo<CloudLoadingSource | null>(
-    () => scope !== "screen" ? null : { kind, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, priority, severity: role === "alert" ? "error" : "loading", icon, actions: children },
-    [activityToken, children, detail, icon, kind, phase, priority, progress, progressValueLabel, role, scope, telemetry, title],
+    () => scope !== "screen" ? null : { kind, title, detail, progress, progressValueLabel, activityToken, telemetry, phase, priority, severity: role === "alert" ? "error" : "loading", icon, actions: children, diagnostics },
+    [activityToken, children, diagnostics, detail, icon, kind, phase, priority, progress, progressValueLabel, role, scope, telemetry, title],
   );
   const hosted = useCloudLoadingSource(published);
   const normalizedProgress = normalizeProgress(progress); const hasProgress = progress !== undefined;
@@ -74,6 +75,7 @@ export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, 
       {hasProgress ? <div {...stylex.props(styles.progressWrap)}><div aria-label={`${title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={normalizedProgress ?? undefined} {...stylex.props(styles.progressTrack)} role="progressbar">{normalizedProgress == null ? <div {...stylex.props(styles.shimmer)} /> : <div {...stylex.props(styles.progressFill)} style={{ width: `${normalizedProgress}%` }} />}</div><div {...stylex.props(styles.progressMeta)}><span>{progressValueLabel ?? (normalizedProgress == null ? "Working" : `${normalizedProgress}%`)}</span></div></div> : null}
       {children}
     </div></div>
+    {diagnostics}
   </div>;
 }
 export function CloudActivityIndicator({ label, className, xstyle, iconXstyle, testId }: { label?: string; className?: string; xstyle?: stylex.StyleXStyles; iconXstyle?: stylex.StyleXStyles; testId?: string }) { return <span {...mergeStyleProps(stylex.props(styles.activity, xstyle), className)} data-testid={testId} role={label ? "status" : undefined}><LoaderCircle aria-hidden="true" {...stylex.props(styles.activityIcon, iconXstyle)} />{label ? <span>{label}</span> : null}</span>; }

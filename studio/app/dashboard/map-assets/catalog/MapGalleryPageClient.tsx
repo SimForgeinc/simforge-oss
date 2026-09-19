@@ -96,11 +96,12 @@ function MapGalleryWorldPreview({
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
   const quality = useRenderingPreference() ?? "medium";
   const target = useMemo<ScenarioWorldTarget>(() => ({
+    mapId: map.sourceMapId,
     mapVersionId: map.mapVersionId,
     manifestUrl: map.browserManifestUrl,
     label: map.label,
     locality: map.locality,
-  }), [map.browserManifestUrl, map.label, map.locality, map.mapVersionId]);
+  }), [map.browserManifestUrl, map.label, map.locality, map.mapVersionId, map.sourceMapId]);
   const tourMap = useMemo<ScenarioMapOption>(() => ({
     mapVersionId: map.mapVersionId,
     sourceMapId: map.sourceMapId,

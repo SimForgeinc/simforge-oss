@@ -258,6 +258,7 @@ function ScenarioEditorWorkspace({
   useEffect(() => {
     if (!map || !onWorldTargetChange) return;
     onWorldTargetChange({
+      mapId: map.sourceMapId,
       mapVersionId: map.versionId,
       manifestUrl: map.manifestUrl,
       label: map.label,
