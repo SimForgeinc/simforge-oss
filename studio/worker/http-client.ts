@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, statSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -159,9 +159,13 @@ export class CpuJobsClient {
   ): Promise<void> {
     if (reservation.reused) return;
     if (!reservation.uploadUrl) throw new Error(`new ${reservation.key} reservation is missing an upload URL`);
+    // A stream body with no content-length makes undici fall back to
+    // `Transfer-Encoding: chunked`, which S3 rejects on a presigned PUT with
+    // 501 NotImplemented. Declare the size instead of buffering the file,
+    // since recordings run to gigabytes.
     const response = await fetch(workerObjectUrl(reservation.uploadUrl), {
       method: "PUT",
-      headers: reservation.headers,
+      headers: { ...reservation.headers, "content-length": String(statSync(artifact.path).size) },
       body: createReadStream(artifact.path),
       duplex: "half",
       signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),
@@ -282,7 +286,7 @@ export class CpuJobsClient {
   async uploadNativeArtifact(reservation: NativeArtifactReservation, path: string, signal: AbortSignal): Promise<void> {
     const response = await fetch(workerObjectUrl(reservation.upload.url), {
       method: reservation.upload.method,
-      headers: reservation.upload.headers,
+      headers: { ...reservation.upload.headers, "content-length": String(statSync(path).size) },
       body: createReadStream(path),
       duplex: "half",
       signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),

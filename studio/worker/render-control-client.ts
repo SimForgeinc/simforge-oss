@@ -11,6 +11,27 @@ import {
 } from "@simforge-oss/render";
 import type { CpuJobsClient } from "./http-client.js";
 
+/**
+ * The deployed plane answers with the pre-rename
+ * `uniscenario.render-worker-control/v2` envelope tag while the shared schema
+ * requires the canonical spelling, so every response would otherwise fail to
+ * parse — one of the reasons CARLA jobs leased and then expired.
+ *
+ * Only the envelope is rewritten, and only this exact string. The documents
+ * carried inside a lease are left byte-for-byte as received, because the
+ * intent digest that authorizes the render is taken over those bytes:
+ * canonicalizing them made the worker compute a different sha256 than the
+ * plane stored. Those nested schemas are namespace-tolerant instead.
+ */
+const LEGACY_CONTROL_SCHEMA = "uniscenario.render-worker-control/v2";
+
+function canonicalizeEnvelope(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  const envelope = value as Record<string, unknown>;
+  if (envelope.schema !== LEGACY_CONTROL_SCHEMA) return value;
+  return { ...envelope, schema };
+}
+
 /** CARLA's control-v2 transport; the CPU-job lanes retain their own protocol. */
 export class RenderControlClient {
   constructor(
@@ -36,11 +57,7 @@ export class RenderControlClient {
     });
     if (!response.ok) throw new Error(`render control ${path} returned ${response.status}: ${(await response.text()).slice(0, 2048)}`);
     const value: unknown = await response.json();
-    // The deployed render-worker-control-store.ts:30 still emits this pre-rename namespace.
-    if (value !== null && typeof value === "object" && "schema" in value && value.schema === "uniscenario.render-worker-control/v2") {
-      return responseSchema.parse({ ...value, schema });
-    }
-    return responseSchema.parse(value);
+    return responseSchema.parse(canonicalizeEnvelope(value));
   }
 
   /**
