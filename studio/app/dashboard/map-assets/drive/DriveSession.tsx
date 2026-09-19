@@ -112,6 +112,7 @@ export function DriveSession({
   const [document, setDocument] = useState<EditorDocument | null>(null);
   const [source, setSource] = useState<AuthoredWorldSource | null>(null);
   const [viewer, setViewer] = useState<CityViewer | null>(null);
+  const activeViewerRef = useRef<CityViewer | null>(null);
   const [bridge, setBridge] = useState<TruthViewerBridge | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
@@ -293,8 +294,16 @@ export function DriveSession({
   }, [source]);
 
   const onViewerReady = useCallback((ready: CityViewer) => {
+    activeViewerRef.current = ready;
     setViewer(ready);
     setBridge(createTruthViewerBridge(ready, { layer: "drive-live", groundLift: true }));
+  }, []);
+  const onViewerDisposed = useCallback((disposed: CityViewer) => {
+    if (activeViewerRef.current !== disposed) return;
+    activeViewerRef.current = null;
+    setViewer(null);
+    setMapLoaded(false);
+    setBridge(null);
   }, []);
 
   const ambientTraffic = useDriveAmbientTraffic({
@@ -614,6 +623,7 @@ export function DriveSession({
         }}
         onMapLoaded={() => setMapLoaded(true)}
         onReady={onViewerReady}
+        onDisposed={onViewerDisposed}
         initialOptions={sceneViewerOptions(quality)}
         role="application"
         tabIndex={0}

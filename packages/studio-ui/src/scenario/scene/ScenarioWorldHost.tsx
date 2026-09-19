@@ -517,6 +517,22 @@ export function ScenarioWorldHost({
             onViewerChange(viewer);
             onActorRendererChange(actorRenderer);
           }}
+          onDisposed={(disposed) => {
+            if (viewerRef.current !== disposed) return;
+            viewerRef.current = null;
+            ++transitionGenerationRef.current;
+            cancelCameraAnimationRef.current?.();
+            cancelCameraAnimationRef.current = null;
+            cancelModelSettleRef.current?.();
+            cancelModelSettleRef.current = null;
+            cancelMetadataProgressRef.current?.();
+            loadedMapVersionIdRef.current = null;
+            setLoadedMapVersionId(null);
+            setTierSelection(null);
+            actorRendererRef.current = null;
+            onViewerChangeRef.current(null);
+            onActorRendererChangeRef.current(null);
+          }}
           onMapLoaded={(manifestUrl) => {
             const current = targetRef.current ?? retainedTarget;
             if (manifestUrl !== current.manifestUrl) return;

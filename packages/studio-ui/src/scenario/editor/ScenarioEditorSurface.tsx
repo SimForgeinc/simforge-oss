@@ -190,6 +190,7 @@ export function ScenarioEditorSurface({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [localViewer, setLocalViewer] = useState<CityViewer | null>(null);
+  const localViewerRef = useRef<CityViewer | null>(null);
   const [localMapLoadedUrl, setLocalMapLoadedUrl] = useState<string | null>(null);
   const [localMapLoadError, setLocalMapLoadError] = useState<unknown | null>(null);
   const [localLoadProgress, setLocalLoadProgress] = useState(() =>
@@ -300,11 +301,22 @@ export function ScenarioEditorSurface({
   useEffect(() => () => cancelCameraFlightRef.current?.(), []);
 
   const onViewerReady = useCallback((next: CityViewer) => {
+    localViewerRef.current = next;
     setLocalViewer(next);
     setLocalMapLoadedUrl(null);
     setLocalMapLoadError(null);
     setLocalLoadProgress(initialSceneLoadProgress(map.label));
   }, [map.label]);
+  const onViewerDisposed = useCallback((disposed: CityViewer) => {
+    if (localViewerRef.current !== disposed) return;
+    localViewerRef.current = null;
+    cancelLocalModelSettleRef.current?.();
+    cancelLocalModelSettleRef.current = null;
+    cancelCameraFlightRef.current?.();
+    cancelCameraFlightRef.current = null;
+    setLocalViewer(null);
+    setLocalMapLoadedUrl(null);
+  }, []);
   const onMapLoaded = useCallback((manifestUrl: string) => {
     const activeViewer = localViewer;
     if (!activeViewer || typeof activeViewer.getStats !== "function") {
@@ -987,6 +999,7 @@ export function ScenarioEditorSurface({
               map={map}
               quality={quality}
               onViewerReady={onViewerReady}
+              onViewerDisposed={onViewerDisposed}
               onMapLoaded={onMapLoaded}
               state={state}
               error={error}

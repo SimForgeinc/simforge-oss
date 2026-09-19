@@ -280,6 +280,9 @@ function BenchmarkCanvas({
           viewerRef.current = viewer;
           onHardware(captureRenderingBenchmarkHardware(viewer));
         }}
+        onDisposed={(disposed) => {
+          if (viewerRef.current === disposed) viewerRef.current = null;
+        }}
         onMapLoaded={() => void run()}
         onError={onError}
       />
