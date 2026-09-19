@@ -113,6 +113,21 @@ function makeDocument(actorClass = "car", sensors: unknown[] = [], actorId = VEH
 
 
 describe("ActorDetailsPanel", () => {
+  it("protects authored livery but enables neutral body paint and deliberate low-poly paint", () => {
+    const controller = makeController();
+    const props = { controller, document: makeDocument().document, onClose: vi.fn() };
+    const { rerender } = render(<ActorDetailsPanel {...props} actor={{ ...VEHICLE, catalogId: "vehicle.ambulance" }} />);
+    const swatch = () => screen.getByRole("button", { name: "Red", exact: true }) as HTMLButtonElement;
+    expect(swatch().disabled).toBe(true);
+    fireEvent.click(swatch());
+    expect(controller.updateActorAppearance).not.toHaveBeenCalled();
+    rerender(<ActorDetailsPanel {...props} actor={VEHICLE} />);
+    expect(swatch().disabled).toBe(false);
+    fireEvent.click(swatch());
+    expect(controller.updateActorAppearance).toHaveBeenCalled();
+    rerender(<ActorDetailsPanel {...props} actor={{ ...VEHICLE, catalogId: "vehicle.ambulance.low_poly" }} />);
+    expect(swatch().disabled).toBe(false);
+  });
   it("adds an enabled dash camera straight from the rail", () => {
     const { addActorSensor, document } = makeDocument();
     render(

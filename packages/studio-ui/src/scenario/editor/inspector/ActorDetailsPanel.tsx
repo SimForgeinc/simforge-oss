@@ -82,6 +82,7 @@ export function ActorDetailsPanel({
   const rotationId = useId();
   const speedId = useId();
   const entry = getEntry(actor.catalogId);
+  const tintable = !entry.model || (entry.model.kind === "glb" && entry.model.paint === "body_paint");
   const initialSpeedKph = Math.round(actor.initialSpeedKph ?? 0);
   const paint = actor.bodyColor ?? (
     typeof entry.defaultParams.color === "string" ? entry.defaultParams.color : "#E8E044"
@@ -112,8 +113,9 @@ export function ActorDetailsPanel({
       closeLabel="Close actor details"
       closeTestId="actor-details-close"
       headerFooter={(
-        <fieldset {...stylex.props(styles.ruleT)}>
+        <fieldset disabled={!tintable} {...stylex.props(styles.ruleT)}>
           <legend {...stylex.props(styles.srOnly)}>Color</legend>
+          {!tintable ? <p>Authored livery — colour is fixed.</p> : null}
           <div {...stylex.props(styles.flexCenterBetween)}>
             {PAINTS.map((option) => {
               const active = paint.toLowerCase() === option.value.toLowerCase();
@@ -121,6 +123,7 @@ export function ActorDetailsPanel({
                 <button
                   aria-label={option.label}
                   aria-pressed={active}
+                  disabled={!tintable}
                   {...stylex.props(styles.paintSwatch, active ? styles.paintSwatchActive : styles.paintSwatchIdle)}
                   key={option.value}
                   onClick={() => controller?.updateActorAppearance(actor.id, { bodyColor: option.value })}
@@ -288,7 +291,7 @@ export function ActorDetailsPanel({
 }
 
 function ActorModelArtwork({ actor }: { actor: ActorRecord }) {
-  const catalogId = actor.catalogId;
+  const catalogId = (getEntry(actor.catalogId).proceduralBuilder ?? actor.catalogId) as CatalogId;
   if (isVehicleCatalogId(catalogId)) {
     return <VehicleCatalogIcon id={catalogId} />;
   }

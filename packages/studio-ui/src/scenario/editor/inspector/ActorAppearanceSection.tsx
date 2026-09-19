@@ -70,6 +70,7 @@ export function ActorAppearanceSection({
   }, []);
 
   const entry = getEntry(actor.catalogId);
+  const tintable = !entry.model || (entry.model.kind === "glb" && entry.model.paint === "body_paint");
   const siblings = CATALOG.filter((candidate) => candidate.class === entry.class);
   const galleryAsset = actor.catalogId.startsWith("gallery.");
   const galleryVersion = galleryAsset
@@ -140,8 +141,9 @@ export function ActorAppearanceSection({
         </div>
       )}
 
-      <fieldset>
+      <fieldset disabled={!tintable}>
         <legend {...stylex.props(styles.muted)}>Paint</legend>
+        {!tintable ? <p>Authored livery — colour is fixed.</p> : null}
         <div {...stylex.props(styles.flexWrapGap1)}>
           {PAINTS.map((option) => {
             const active = paint?.toLowerCase() === option.value.toLowerCase();
@@ -151,6 +153,7 @@ export function ActorAppearanceSection({
                 type="button"
                 aria-label={option.label}
                 aria-pressed={active}
+                disabled={!tintable}
                 title={option.label}
                 onClick={() =>
                   controller?.updateActorAppearance(actor.id, {

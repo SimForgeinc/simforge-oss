@@ -243,14 +243,12 @@ export function groupActorCatalog(
   tool: CatalogTool,
   definitions: readonly ActorCatalogSectionDefinition[] = ACTOR_CATALOG_SECTIONS[tool],
 ): ActorCatalogSection[] {
-  const visibleById = new Map(entries.map((entry) => [entry.id, entry]));
   const assigned = new Set<string>();
   const sections = definitions.map((definition) => {
     const sectionEntries = definition.catalogIds.flatMap((id) => {
-      const entry = visibleById.get(id);
-      if (!entry) return [];
-      assigned.add(id);
-      return [entry];
+      const matches = entries.filter((entry) => entry.id === id || entry.proceduralBuilder === id);
+      for (const entry of matches) assigned.add(entry.id);
+      return matches;
     });
     sectionEntries.sort(compareBundledThenCarla);
     return { id: definition.id, label: definition.label, entries: sectionEntries };
