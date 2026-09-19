@@ -51,6 +51,7 @@
   "dependencies": {
     "@simforge-oss/asset-catalog": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/maps": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
     "ktx-parse": "1.1.0",
     "three": "^0.185.0"
@@ -64,6 +65,9 @@
     }
   },
   "devDependencies": {
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^29.1.1",
+    "react-dom": "^19.2.0",
     "@types/react": "^19.2.0",
     "@types/three": "^0.185.0",
     "react": "^19.2.0",

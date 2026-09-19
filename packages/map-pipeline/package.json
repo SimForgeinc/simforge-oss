@@ -19,6 +19,10 @@
         "types": "./dist/scripts/map-derivatives.d.mts",
         "default": "./dist/scripts/map-derivatives.mjs"
       },
+      "./texture-tiers": {
+        "types": "./dist/scripts/texture-tiers.d.mts",
+        "default": "./dist/scripts/texture-tiers.mjs"
+      },
       "./static-map-colliders": {
         "types": "./dist/scripts/static-map-colliders.d.mts",
         "default": "./dist/scripts/static-map-colliders.mjs"
@@ -43,6 +47,11 @@
       "development": "./scripts/map-derivatives.mjs",
       "types": "./dist/scripts/map-derivatives.d.mts",
       "default": "./dist/scripts/map-derivatives.mjs"
+    },
+    "./texture-tiers": {
+      "development": "./scripts/texture-tiers.mjs",
+      "types": "./dist/scripts/texture-tiers.d.mts",
+      "default": "./dist/scripts/texture-tiers.mjs"
     },
     "./static-map-colliders": {
       "development": "./scripts/static-map-colliders.mjs",

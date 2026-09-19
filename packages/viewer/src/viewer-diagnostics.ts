@@ -28,8 +28,9 @@ type ChromiumPerformanceMemory = {
 /** Read handle an automated gate uses to interrogate the live viewer. */
 export interface ViewerProbe {
   readonly viewer: CityViewer;
-  /** `performance.now()` at which the map load reported itself ready. */
-  readyAtMs: number | null;
+  /** Only non-null while this connected, live renderer can paint target quality. */
+  readonly readyAtMs: number | null;
+  readonly viable: boolean;
   manifestUrl: string | null;
 }
 
@@ -62,7 +63,13 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   let activeManifestUrl: string | null = null;
   let memoryWarned = false;
   let contextLossLogged = false;
-  const probe: ViewerProbe = { viewer, readyAtMs: null, manifestUrl: null };
+  let disposed = false;
+  let readyAtMs: number | null = null;
+  const probe: ViewerProbe = {
+    viewer, manifestUrl: null,
+    get viable() { return !disposed && canvas.isConnected && !viewer.renderer.getContext().isContextLost(); },
+    get readyAtMs() { return this.viable && viewer.getStats().targetQualityReady ? readyAtMs : null; },
+  };
   if (typeof window !== 'undefined') window.__simforgeViewerProbe = probe;
 
   const clearMapLoadTimer = () => {
@@ -72,6 +79,7 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
   };
   const onContextLost = (event: Event) => {
     event.preventDefault();
+    readyAtMs = null;
     if (contextLossLogged) return;
     contextLossLogged = true;
     console.error(LOG_PREFIX, 'webglcontextlost', {
@@ -134,9 +142,11 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
 
   return {
     mapLoadStarted(manifestUrl) {
+      if (disposed) return;
+      clearMapLoadTimer();
       activeManifestUrl = manifestUrl;
       probe.manifestUrl = manifestUrl;
-      probe.readyAtMs = null;
+      readyAtMs = null;
       mapLoadTimer = window.setTimeout(() => {
         mapLoadTimer = null;
         console.warn(
@@ -147,11 +157,20 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       }, MAP_LOAD_STALL_MS);
     },
     mapLoadSucceeded(manifestUrl) {
+      if (disposed || manifestUrl !== activeManifestUrl) return;
       clearMapLoadTimer();
-      probe.readyAtMs = performance.now();
-      console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats: viewer.getStats() });
+      const stats = viewer.getStats();
+      if (!probe.viable || !stats.targetQualityReady) {
+        readyAtMs = null;
+        console.error(LOG_PREFIX, 'map-load-not-ready', { manifestUrl, viable: probe.viable, stats });
+        return;
+      }
+      readyAtMs = performance.now();
+      console.info(LOG_PREFIX, 'map-loaded', { manifestUrl, stats });
     },
     mapLoadFailed(manifestUrl, error) {
+      if (disposed || manifestUrl !== activeManifestUrl) return;
+      readyAtMs = null;
       clearMapLoadTimer();
       console.error(LOG_PREFIX, 'map-load-error', {
         manifestUrl,
@@ -161,6 +180,8 @@ export function installViewerRuntimeDiagnostics(viewer: CityViewer): ViewerRunti
       });
     },
     dispose() {
+      disposed = true;
+      readyAtMs = null;
       if (typeof window !== 'undefined' && window.__simforgeViewerProbe === probe) {
         delete window.__simforgeViewerProbe;
       }

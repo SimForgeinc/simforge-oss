@@ -843,6 +843,9 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../engine
+      '@simforge-oss/maps':
+        specifier: workspace:*
+        version: link:../maps
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
@@ -856,12 +859,21 @@ importers:
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.4(@types/react@19.2.18)
       '@types/three':
         specifier: ^0.185.0
         version: 0.185.4
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1(@noble/hashes@2.4.0)
       react:
         specifier: ^19.2.0
         version: 19.2.8
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3

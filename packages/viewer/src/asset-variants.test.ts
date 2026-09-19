@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowsSourceAssetFallback, isCityAssetVariantManifest, selectAssetVariant, type CityAssetVariantManifest } from './asset-variants';
+import { allowsSourceAssetFallback, isCityAssetVariantManifest, probeTextureCapabilities, selectAssetVariant, selectTextureTier, type CityAssetVariantManifest } from './asset-variants';
 
 const manifest: CityAssetVariantManifest = {
   schemaVersion: 1,
@@ -43,6 +43,7 @@ describe('city asset variants', () => {
     expect(allowsSourceAssetFallback('geometry-only')).toBe(true);
     expect(allowsSourceAssetFallback('ktx2')).toBe(true);
     expect(allowsSourceAssetFallback('original')).toBe(false);
+    expect(allowsSourceAssetFallback('textures-512-bc7')).toBe(false);
   });
 
   it('rejects derivative paths that escape the map asset root', () => {
@@ -63,4 +64,21 @@ describe('city asset variants', () => {
     expect(isCityAssetVariantManifest(manifest)).toBe(true);
     expect(isCityAssetVariantManifest({ schemaVersion: 2, variants: {} })).toBe(false);
   });
+});
+
+it('selects only native formats exposed by the actual context and reports codec and device downgrades', () => {
+  const extensions = new Set(['WEBGL_compressed_texture_astc']);
+  let maxTextureSize = 4096;
+  const gl = {
+    MAX_TEXTURE_SIZE: 0x0d33,
+    getParameter: () => maxTextureSize,
+    getExtension: (name: string) => extensions.has(name) ? {} : null,
+  } as unknown as WebGL2RenderingContext;
+  expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ actual: 'medium', codec: 'astc', variantId: 'textures-512-astc', downgradeReason: null });
+  extensions.clear();
+  expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ actual: 'medium', codec: 'uastc', variantId: 'textures-512-uastc', downgradeReason: expect.stringContaining('unavailable') });
+  maxTextureSize = 256;
+  expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ actual: 'low', codec: 'uastc', longestEdgePx: 256, downgradeReason: expect.stringContaining('MAX_TEXTURE_SIZE') });
+  maxTextureSize = 128;
+  expect(() => selectTextureTier('medium', probeTextureCapabilities(gl))).toThrow('minimum Low');
 });

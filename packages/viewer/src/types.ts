@@ -1,3 +1,5 @@
+import type { CityAssetVariantId, CityAssetVariantPreference } from './asset-variants';
+
 /**
  * Types for the tiled 3D city manifest (schema version 1.x) plus the public
  * option/stat shapes of {@link CityViewer}.
@@ -102,6 +104,17 @@ export interface VegetationInstanceFile {
   transforms: number[];
   lodKeepCounts?: number[][];
 }
+export type MapTextureTier = 'low' | 'medium' | 'render' | 'ml';
+export type TextureCodec = 'uastc' | 'bc7' | 'astc';
+export interface TierSelection {
+  readonly requested: MapTextureTier;
+  readonly actual: MapTextureTier;
+  readonly codec: TextureCodec;
+  readonly longestEdgePx: 256 | 512 | null;
+  readonly variantId: string | null;
+  readonly downgradeReason: string | null;
+}
+
 
 export interface CityViewerOptions {
   /** Base URL that manifest-relative asset paths resolve against. */
@@ -116,6 +129,8 @@ export interface CityViewerOptions {
   vegetationScreenSpaceError?: number;
   /** Resident geometry+texture budget in bytes (estimated GPU footprint). */
   byteBudget?: number;
+  /** Browser selects Low/Medium; native-only tiers are explicitly downgraded. */
+  mapTextureTier?: MapTextureTier;
   /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
   textureMaxDimension?: number;
   /** Resolve external image URLs in batches before a GLTF starts loading its textures. */
@@ -161,7 +176,7 @@ export interface CityViewerOptions {
   /** Horizontal metres kept between the camera and the map footprint edge. */
   cameraBoundsInset?: number;
   /** Local optimized asset preference. Ultra Low fails closed rather than fetching textured source. */
-  assetVariant?: import('./asset-variants').CityAssetVariantPreference;
+  assetVariant?: CityAssetVariantPreference;
   /** Variant manifest URL; defaults to `variants/manifest.json` beside the source manifest. */
   variantManifestUrl?: string;
   /** Required before KTX2 variants can be selected (for example `/basis/`). */
@@ -212,6 +227,17 @@ export interface CityViewerLiveQuality {
 }
 
 export interface CityViewerStats {
+  tierSelection: TierSelection;
+  /** Required visible geometry is resident, independently of final texture quality. */
+  usable: boolean;
+  /** Required geometry AND the selected minimum texture tier are resident. */
+  targetQualityReady: boolean;
+  mapTextures: {
+    dimensions: Record<string, number>;
+    fetchedBytes: number;
+    fetchedContainers: number;
+    containerCacheHits: number;
+  };
   fps: number;
   frameMsAvg: number;
   frameMsP50: number;
@@ -276,7 +302,7 @@ export interface CityViewerStats {
   snowCover: import('./snow-cover').SnowCoverStats;
   assetVariants: {
     manifest: boolean;
-    loaded: Record<'original' | 'geometry-only' | 'ktx2', number>;
+    loaded: Record<CityAssetVariantId | 'original', number>;
     fallbacks: number;
   };
   /** Per-layer residency against what the camera currently wants. */
