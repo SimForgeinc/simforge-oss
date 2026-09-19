@@ -53,19 +53,35 @@ bytes, including external textures and startup metadata. `loadProgress`
 reports the current stage and completed decode, texture-upload, and compile
 counts; elapsed time alone is never progress.
 
-Readiness requires road geometry and pinned coarse city tiles intersecting the
-current camera frustum to finish GPU preparation. Offscreen tiles do not gate
-startup or fetch solely to complete a whole-map bootstrap. Their resident
-fallbacks may be evicted under memory pressure; newly visible tiles load their
-coarse fallback before refinement. `requiredPendingAssets` excludes optional refinements;
-`requiredError` surfaces required download, decode, upload, compile, or memory
-admission failures. A failed compile must not publish the asset as resident.
+Readiness requires road geometry and coarse city tiles in the readiness footprint
+to finish GPU preparation. Required work precedes optional prefetch in both the
+fetch and upload queues. A wanted tile in the prefetch margin is not necessarily
+required: refusing it for budget must defer it, never fail an otherwise usable map.
+Only required coarse fallbacks are pinned. Budget enforcement reclaims optional
+residency, and an evicted prefetch waits for a view change instead of immediately
+refetching. Newly required tiles still load their coarse fallback before refinement.
+`requiredPendingAssets` excludes optional refinements; `requiredError` surfaces
+required download, decode, upload, compile, or memory admission failures. A failed
+compile must not publish the asset as resident.
 Consumers should poll from bootstrap start, use stage-specific idle deadlines
 and an overall deadline, and report processing as indeterminate when no byte
 denominator is available.
 Initial and reset views focus the nearest authored city tile rather than empty
 terrain bounds. WebGL context loss is a required error, including after startup;
 the React surface reports it to its host so a blank canvas cannot remain ready.
+
+`loadDiagnostics` includes actual GPU capabilities and unmasked vendor/renderer,
+published variant IDs, resident texture-format and named RGBA-fallback counts,
+named content warnings, shadow-atlas allocation and any resolution reduction,
+and each layer's largest admission-estimate understatement. Its retained structured
+error identifies a refused asset, whether it was required, the estimate, resident
+and pending bytes, budget, and the original cause chain. New map loads reset that
+error. `residentBytes` includes the R8 shadow atlas; older reports omitted it.
+
+Verification must continue after initial readiness: an initially correct frame
+does not prove that subsequent prefetch stays within budget. Observe a stationary
+camera for at least 90–120 seconds after readiness, and report moving-camera
+streaming separately rather than calling transient in-view misses a settled state.
 
 
 `textureMaxDimension` selects existing compressed mip levels before GPU upload;
@@ -74,15 +90,22 @@ this limit with their quality preset's memory budget. It can change atomically
 through `setAuthoringFidelity`; textures are cached separately by URL and mip
 limit. Map changes renew the decoder's cancellation signal so an aborted prior
 map cannot cancel the next map's texture requests.
-Before any image decode, the map's tile count and each GLTF's image count
-determine an initial mip budget, reserving half the memory budget for geometry,
-environment resources, and in-flight work. This avoids preparing oversized
-textures merely to discover later that the required coarse map cannot fit.
-If required coarse tiles cannot fit, the viewer estimates the footprint of
-resident and required visible tiles and lowers the mip ceiling in power-of-two steps, never
-below 128 pixels. Geometry remains required. The effective limit is reported in
-`loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
-Each new map starts from the user's selected preset ceiling.
+Published Low uses a 256 px UASTC tier; Medium selects a 512 px BC7 or ASTC tier
+when supported, otherwise portable UASTC. Admission checks the unique images in
+the readiness footprint before decode. Medium may explicitly downgrade to Low;
+a required Low working set that cannot fit fails rather than silently reducing
+the promised tier. `tierSelection` and `loadProgress.textureMaxDimension` report
+the actual selection.
+
+Per-GLB file-size ratios are only admission heuristics calibrated on embedded
+textures. External-texture tiles can decode to over thirteen times the estimate.
+The ledger replaces reservations with decoded resource bytes, and enforcement
+reclaims optional allocations under pressure. Brief decode-time overshoots are
+not evidence of a larger configured budget; report their measured peak separately.
+The shadow atlas is capped at the context's real `MAX_TEXTURE_SIZE`, preserving
+world-space UVs while reducing cell resolution if necessary. Its allocation is
+charged to the same ledger and any clamp has the named `shadow-atlas-gpu-limit`
+reason.
 Trimmed Basis mips whose base dimensions are not divisible by four decode to
 RGBA with the same authored pixels, avoiding illegal BC GPU allocations.
 Already-transcoded BC sources retain the nearest block-aligned authored mip.
@@ -92,9 +115,9 @@ still charges their actual bytes.
 
 `resolveAssetUrls` optionally resolves a GLTF's external image URLs together
 before texture loading. This lets authenticated embedders batch authorization
-instead of serializing one database-backed request per image. Eight bounded
-texture requests feed four transcoder workers; encoded unused mip levels are
-removed before transcoding.
+instead of serializing one database-backed request per image. Bounded texture
+requests feed a shared transcoder pool; encoded unused mip levels are removed
+before transcoding.
 
 ## Frozen wire identifiers
 
