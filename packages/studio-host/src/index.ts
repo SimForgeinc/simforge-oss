@@ -1,6 +1,7 @@
 export * from "./contracts";
 export * from "./scenario-map";
 export * from "./capabilities";
+export * from "./driver-in-the-loop";
 export * from "./desktop-map-cache";
 export * from "./cloud";
 export * from "./protocol";

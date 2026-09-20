@@ -8,6 +8,8 @@ import { ChevronDown, ClipboardCheck, Cloud, Plus } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import type { DatasetCloudHome } from "./dataset-home";
+import { useStudioHost } from "../../host";
+import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
@@ -98,6 +100,15 @@ export function DatasetStrip({
   onEditDatasetDetails: (dataset: ScenarioDatasetDto) => void;
   onDeleteDataset: (dataset: ScenarioDatasetDto) => void;
 }) {
+  const hostCapabilities = useStudioHostCapabilities(useStudioHost());
+  const managed =
+    hostCapabilities.status === "ready" &&
+    hostCapabilities.capabilities.persistence.kind === "managed-postgres-object-storage";
+  const workspaceName =
+    hostCapabilities.status === "ready"
+      ? hostCapabilities.capabilities.identity.displayName ??
+        hostCapabilities.capabilities.host.label
+      : "Workspace";
   const [hoveredDatasetId, setHoveredDatasetId] = useState<string | null>(null);
   const [menuDatasetId, setMenuDatasetId] = useState<string | null>(null);
   const owned = datasets.filter(isDatasetEditable);
@@ -390,7 +401,9 @@ export function DatasetStrip({
         data-testid="scenario-dataset-rail"
       >
         <ul {...stylex.props(styles.list)}>
-          {renderSectionLabel("On this computer", "Datasets stored on this computer")}
+          {managed
+            ? renderSectionLabel(workspaceName, `Datasets stored in ${workspaceName}`)
+            : renderSectionLabel("On this computer", "Datasets stored on this computer")}
           {loading && datasets.length === 0
             ? [0, 1, 2].map((index) => (
                 <li key={index} role="presentation" aria-hidden="true">
@@ -399,11 +412,11 @@ export function DatasetStrip({
               ))
             : null}
           {owned.map(renderLocalIcon)}
-          {owned.length > 0 && shared.length > 0 ? (
+          {!managed && owned.length > 0 && shared.length > 0 ? (
             <li role="separator" {...stylex.props(styles.divider)} aria-hidden="true" />
           ) : null}
-          {shared.map(renderLocalIcon)}
-          {renderCloudSection()}
+          {!managed ? shared.map(renderLocalIcon) : null}
+          {managed ? null : renderCloudSection()}
         </ul>
         <div {...stylex.props(styles.footer)}>
           <Tooltip>
@@ -426,7 +439,7 @@ export function DatasetStrip({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={12}>
-              New dataset on this computer
+              {managed ? `New dataset in ${workspaceName}` : "New dataset on this computer"}
             </TooltipContent>
           </Tooltip>
           <Tooltip>

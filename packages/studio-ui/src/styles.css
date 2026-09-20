@@ -269,7 +269,6 @@ html {
    * scanlines — and each is meant to be an absolutely-positioned,
    * aria-hidden sibling filling the banner box. */
   .list-hero-photo {
-    background-image: url("/dashboard/datasets-header.png");
     background-size: cover;
     background-position: center right;
     opacity: 0.8;
