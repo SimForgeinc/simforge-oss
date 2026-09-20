@@ -1119,7 +1119,7 @@ pub struct ControllerHeadGroup {
 }
 
 /// Stable binding back to the map's physical signal furniture/export ids.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalMapBinding {
     pub junction_id: String,
@@ -1132,7 +1132,7 @@ pub struct SignalMapBinding {
     pub timing_source: TimingSource,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalProgram {
     pub id: Id,
@@ -1167,7 +1167,7 @@ impl SignalProgram {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RoadControlMapBinding {
     pub junction_id: String,
@@ -1177,7 +1177,7 @@ pub struct RoadControlMapBinding {
 
 /// A deterministic static right-of-way control. Unlike a traffic signal this
 /// has per-actor memory: an actor must stop, dwell, then is released.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RoadControl {
     pub id: Id,

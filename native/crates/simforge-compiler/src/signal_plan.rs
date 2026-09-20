@@ -11,14 +11,14 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use simforge_core::types::{ControlIndication, SignalPhase, SignalProgram, TimingSource};
 
 use crate::error::CompileError;
 use crate::map_signals::MapSignalCatalog;
 use crate::template::{MapSignalPlan, MapSignalPlanClip};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignalControlDiagnosticCode {
     UnresolvedHead,
@@ -28,7 +28,7 @@ pub enum SignalControlDiagnosticCode {
     MissingControllerStage,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalControlDiagnostic {
     pub code: SignalControlDiagnosticCode,
@@ -43,7 +43,7 @@ pub struct SignalControlDiagnostic {
 
 /// The executable movement grain. One program may govern several
 /// approach/connecting-lane pairs, but it has one phase at `t`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalMovementBinding {
     pub id: String,
@@ -55,7 +55,7 @@ pub struct SignalMovementBinding {
     pub connecting_lane_rsls: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalControllerBinding {
     pub id: String,
@@ -64,7 +64,7 @@ pub struct SignalControllerBinding {
     pub movement_ids: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalHeadControlBinding {
     pub id: String,
@@ -75,7 +75,7 @@ pub struct SignalHeadControlBinding {
     pub resolved: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalJunctionControlBinding {
     pub id: String,
@@ -84,7 +84,7 @@ pub struct SignalJunctionControlBinding {
     pub head_ids: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalControlIndex {
     pub heads: BTreeMap<String, SignalHeadControlBinding>,
@@ -94,7 +94,7 @@ pub struct SignalControlIndex {
     pub diagnostics: Vec<SignalControlDiagnostic>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalReferenceSelection {
     pub selected_head_id: String,
@@ -110,7 +110,7 @@ pub struct SignalReferenceSelection {
     pub diagnostics: Vec<SignalControlDiagnostic>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SignalReferenceEvaluation {
     pub time_seconds: f64,
     pub head_states: BTreeMap<String, ControlIndication>,

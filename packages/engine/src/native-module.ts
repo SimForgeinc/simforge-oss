@@ -109,6 +109,11 @@ export interface NativeMapBundle {
   staticColliderDiagnosticsJson(): string;
   /** `SignalControlIndex` JSON: exact head/movement/controller/junction reverse indices of the map control plan. */
   signalControlIndexJson(): string;
+  controlPlanJsonWithCatalog(catalogJson: string): string;
+  signalControlIndexJsonWithCatalog(catalogJson: string): string;
+  compileSignalPlansJson(programsJson: string, plansJson: string, optionsJson: string, catalogJson: string): string;
+  selectSignalReferenceJson(indexJson: string, referenceJson: string): string | null;
+  evaluateSignalReferenceJson(indexJson: string, selectionJson: string, optionsJson: string): string;
   /** `SiteSignalPlan` JSON for a matched site handle. */
   siteSignalPlanJson(site: NativeSite): string;
   /** Program id an authored signal reference (`SiteSignalRef` JSON) resolves to at a matched site, or `null`. */
@@ -439,7 +444,7 @@ export interface NativeModule {
    */
   materializeAmbientTraffic(input: NativeScenarioInput, graph: NativeLaneGraph, profileJson: string, optionsJson?: string | null): [NativeScenarioInput, string];
 
-  canonicalJson(document: string): string;
+  parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;
   sha256Hex(data: Uint8Array): string;
   engineVersion(): string;

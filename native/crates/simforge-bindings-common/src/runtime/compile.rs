@@ -16,9 +16,16 @@ use simforge_compiler::anchor::lift::{
     PortableSourceSignature,
 };
 use simforge_compiler::map_signals::{
-    build_site_signal_plan, resolve_site_signal_program, SiteSignalRef,
+    build_map_control_plan, build_site_signal_plan, parse_map_signal_catalog,
+    resolve_site_signal_program, MapSignalCatalog, SiteSignalRef,
 };
 use simforge_compiler::materialize::{instantiate, MaterializeOptions, Observation, SiteSelection};
+use simforge_compiler::signal_plan::{
+    build_signal_control_index, compile_map_signal_plans, evaluate_signal_reference_phase,
+    select_signal_reference, SignalControlIndex, SignalReferenceSelection,
+    CompileMapSignalPlansOptions,
+};
+use simforge_compiler::map_signals::SignalMapView;
 use simforge_compiler::sites::{match_on_map, SiteMatchOptions};
 use simforge_compiler::situation::{
     apply_situation_transaction, compare_situation, compile_situation, parse_situation,
@@ -43,6 +50,10 @@ impl From<CompileError> for BindingError {
     fn from(value: CompileError) -> Self {
         BindingError::Runtime(value.to_string())
     }
+}
+pub fn parse_signal_catalog_json(xodr: &str, geojson_json: &str) -> Result<String> {
+    let geojson = json_arg("signals geojson", geojson_json)?;
+    Ok(serde_json::to_string(&parse_map_signal_catalog(xodr, &geojson))?)
 }
 
 fn json_arg<T: serde::de::DeserializeOwned>(what: &str, text: &str) -> Result<T> {
@@ -188,6 +199,60 @@ impl MapAsset {
     /// The matcher's `DerivedMapIndex`.
     pub fn index_json(&self) -> Result<String> {
         Ok(serde_json::to_string(self.bundle.index())?)
+    }
+    /// Build map controls from an explicitly supplied catalog, preserving authored catalog overrides.
+    pub fn control_plan_json_with_catalog(&self, catalog_json: &str) -> Result<String> {
+        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
+        let view = SignalMapView { index: self.bundle.index(), graph: self.bundle.graph(), topology: self.bundle.topology(), signal_catalog: &catalog };
+        Ok(serde_json::to_string(&build_map_control_plan(&view))?)
+    }
+
+    pub fn signal_control_index_json_with_catalog(&self, catalog_json: &str) -> Result<String> {
+        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
+        let view = SignalMapView { index: self.bundle.index(), graph: self.bundle.graph(), topology: self.bundle.topology(), signal_catalog: &catalog };
+        let plan = build_map_control_plan(&view);
+        let heads = catalog.heads.iter().map(|head| head.id.clone()).collect::<Vec<_>>();
+        Ok(serde_json::to_string(&build_signal_control_index(&plan.signal_programs, &heads))?)
+    }
+
+    pub fn parse_signal_catalog_json(&self, xodr: &str, geojson_json: &str) -> Result<String> {
+        let geojson = json_arg("signals geojson", geojson_json)?;
+        Ok(serde_json::to_string(&parse_map_signal_catalog(xodr, &geojson))?)
+    }
+
+    pub fn compile_signal_plans_json(&self, programs_json: &str, plans_json: &str, options_json: &str, catalog_json: &str) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
+        let plans: Vec<simforge_compiler::template::MapSignalPlan> = json_arg("map signal plans", plans_json)?;
+        let options: serde_json::Value = json_arg("compile options", options_json)?;
+        let map_id: String = serde_json::from_value(options.get("mapId").cloned().ok_or_else(|| BindingError::argument("compile options: mapId missing".to_owned()))?)?;
+        let clip_seconds: f64 = serde_json::from_value(options.get("clipSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: clipSeconds missing".to_owned()))?)?;
+        let warmup_seconds: f64 = serde_json::from_value(options.get("warmupSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: warmupSeconds missing".to_owned()))?)?;
+        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
+        let world_signal_set_ids: Vec<String> = options.get("worldSignalSetIds").and_then(|value| serde_json::from_value(value.clone()).ok()).unwrap_or_default();
+        let compiled = compile_map_signal_plans(&programs, &plans, &CompileMapSignalPlansOptions {
+            map_id: &map_id, clip_seconds, warmup_seconds, signal_catalog: &catalog, world_signal_set_ids: &world_signal_set_ids,
+        })?;
+        Ok(serde_json::to_string(&compiled)?)
+    }
+
+    pub fn select_signal_reference_json(&self, index_json: &str, reference_json: &str) -> Result<Option<String>> {
+        let index: SignalControlIndex = json_arg("signal control index", index_json)?;
+        let reference: serde_json::Value = json_arg("signal reference", reference_json)?;
+        let head_id: String = serde_json::from_value(reference.get("headId").cloned().ok_or_else(|| BindingError::argument("signal reference: headId missing".to_owned()))?)?;
+        let movement_id = reference.get("movementId").and_then(|v| v.as_str());
+        let controller_id = reference.get("controllerId").and_then(|v| v.as_str());
+        Ok(select_signal_reference(&index, &head_id, movement_id, controller_id).map(|selection| serde_json::to_string(&selection)).transpose()?)
+    }
+
+    pub fn evaluate_signal_reference_json(&self, index_json: &str, selection_json: &str, options_json: &str) -> Result<String> {
+        let index: SignalControlIndex = json_arg("signal control index", index_json)?;
+        let selection: SignalReferenceSelection = json_arg("signal selection", selection_json)?;
+        let options: serde_json::Value = json_arg("signal evaluation", options_json)?;
+        let time_seconds = options.get("timeSeconds").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let reference_phase = options.get("referencePhase").and_then(|v| v.as_str()).ok_or_else(|| BindingError::argument("signal evaluation: referencePhase missing".to_owned()))?;
+        let reference_phase = serde_json::from_value(serde_json::Value::String(reference_phase.to_owned())).map_err(|e| BindingError::argument(format!("signal evaluation: {e}")))?;
+        let evaluation = evaluate_signal_reference_phase(&index, &selection, time_seconds, reference_phase, &Default::default());
+        Ok(serde_json::to_string(&evaluation)?)
     }
     pub fn static_collider_diagnostics_json(&self) -> Result<String> {
         Ok(serde_json::to_string(
