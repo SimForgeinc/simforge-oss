@@ -1,6 +1,6 @@
 /** Error types the package throws. All extend `Error` and set `name`. */
 
-import type { $ZodIssue } from 'zod/v4/core';
+import type { $ZodIssue } from 'zod-v4/v4/core';
 
 /** A structured, JSON-safe view of one schema violation. */
 export interface ScenarioIssue {

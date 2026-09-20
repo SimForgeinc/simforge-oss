@@ -23,7 +23,7 @@
  * schema itself only makes it optional.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ExprAstSchema, NumberOrExprSchema } from './expr/index.js';
 import { LogicalAnchorSchema } from './schema/v2/anchor.js';

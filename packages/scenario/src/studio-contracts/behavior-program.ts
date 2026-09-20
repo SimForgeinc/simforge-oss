@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 
 import {
   DEFAULT_BEHAVIOR_CLIP_END,
@@ -38,8 +38,11 @@ import { DIVERT_TAIL_MAX_M, divertTailLengthM } from "./divert-tail.js";
  * strip unknown keys instead, so a worker or generator that carries an extra
  * field does not fail the draft parse.
  *
- * Written against `zod-v3` because both Studio hosts compose these schemas
- * directly into their zod-3 actor draft schemas.
+ * Written against `zod` — the classic API, this package's plain `zod`
+ * dependency — because both Studio hosts compose these schemas directly into
+ * their own actor draft schemas, and a classic discriminated union only
+ * composes within one physical copy of zod. See
+ * `docs/engineering/zod-instances.md`.
  */
 
 export const ACTOR_BEHAVIOR_SCHEMA_VERSION = "simforge.actor-behavior.v1";

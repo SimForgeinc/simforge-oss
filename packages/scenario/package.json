@@ -50,8 +50,8 @@
   ],
   "dependencies": {
     "immer": "^11.1.15",
-    "zod": "^4.4.3",
-    "zod-v3": "npm:zod@3.25.76"
+    "zod": "^3.25.76",
+    "zod-v4": "npm:zod@4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

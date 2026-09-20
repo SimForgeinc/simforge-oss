@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** Stable authored driver policies. Physical vehicle parameters stay separate. */
 export const DRIVER_PROFILE_IDS = ['lawful', 'cautious', 'assertive', 'violator'] as const;

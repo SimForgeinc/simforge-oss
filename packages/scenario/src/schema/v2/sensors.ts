@@ -1,6 +1,6 @@
 /** Sensors rigidly mounted to an actor. */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { EntityIdSchema, Vec3Schema } from '../v1.js';
 import { MAX_HALF_TURN_RAD, MAX_QUARTER_TURN_RAD } from '../../canonical-number.js';

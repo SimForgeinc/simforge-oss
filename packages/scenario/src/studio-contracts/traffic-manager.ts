@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 
 /** Preset list of traffic engines for simulating traffic in a scenario simulation. */
 export const TrafficEngine = z.enum(["CARLA_TRAFFIC"]);

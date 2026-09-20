@@ -417,11 +417,8 @@ importers:
         specifier: ^0.185.0
         version: 0.185.1
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-      zod-v3:
-        specifier: npm:zod@3.25.76
-        version: zod@3.25.76
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -602,11 +599,11 @@ importers:
         specifier: ^11.1.15
         version: 11.1.18
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-      zod-v3:
-        specifier: npm:zod@3.25.76
-        version: zod@3.25.76
+        specifier: ^3.25.76
+        version: 3.25.76
+      zod-v4:
+        specifier: npm:zod@4.4.3
+        version: zod@4.4.3
     devDependencies:
       '@types/node':
         specifier: ^22.10.0

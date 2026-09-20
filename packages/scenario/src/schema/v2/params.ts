@@ -20,7 +20,7 @@
  * and is trivially renderable in a UI as three widgets.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ExprSchema, NumberOrExprSchema } from '../../expr/index.js';
 import { ParamIdSchema, RangeSchema } from './common.js';

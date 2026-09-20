@@ -7,7 +7,7 @@
  * mutable scenario or sensor-rig template.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { canonicalize, deepFreeze } from './serialize.js';
 import { EntityIdSchema } from './schema/v1.js';

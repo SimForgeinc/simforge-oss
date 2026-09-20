@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { RenderSpecV3Schema } from './render-spec.js';
 import { EntityIdSchema } from './schema/v1.js';

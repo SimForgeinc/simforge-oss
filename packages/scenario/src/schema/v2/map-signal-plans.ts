@@ -1,5 +1,5 @@
 /** Map-bound edits to the phase plan of existing physical traffic signals. */
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ControlIndicationSchema } from './traffic-controls.js';
 

@@ -30,7 +30,7 @@
  * which is how arrival criticality is preserved across maps.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { DriverProfileSchema } from '../../driver-profiles.js';
 import { ExprSchema, NumberOrExprSchema } from '../../expr/index.js';

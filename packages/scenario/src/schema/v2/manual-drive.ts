@@ -32,7 +32,7 @@
  * reproduce.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** The only recording format this schema accepts. */
 export const MANUAL_DRIVE_RECORDING_VERSION = 1;
