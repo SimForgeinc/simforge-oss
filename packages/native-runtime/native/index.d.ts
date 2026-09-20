@@ -85,6 +85,11 @@ export declare class MapBundle {
   /** The `MapSignalCatalog`. */
   signalCatalogJson(): string
   signalControlIndexJson(): string
+  controlPlanJsonWithCatalog(catalogJson: string): string
+  signalControlIndexJsonWithCatalog(catalogJson: string): string
+  compileSignalPlansJson(programsJson: string, plansJson: string, optionsJson: string, catalogJson: string): string
+  selectSignalReferenceJson(indexJson: string, referenceJson: string): string | null
+  evaluateSignalReferenceJson(indexJson: string, selectionJson: string, optionsJson: string): string
   /** The matcher's `DerivedMapIndex`. */
   indexJson(): string
   staticColliderDiagnosticsJson(): string
@@ -409,6 +414,8 @@ export declare function materializeAmbientTraffic(input: ScenarioInput, graph: L
 export declare function motionLimitsJson(kind: string): string
 
 export const OBJECT_FEATURES: number
+
+export declare function parseMapSignalCatalog(xodr: string, geojsonJson: string): string
 
 export interface PlacementRoute {
   lanes: Array<string>

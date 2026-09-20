@@ -499,6 +499,14 @@ impl JsMapBundle {
         self.inner.signal_control_index_json_with_catalog(&catalog_json).js()
     }
     #[napi]
+    pub fn signal_control_index_json_with_programs(&self, programs_json: String, catalog_json: String) -> Result<String> {
+        self.inner.signal_control_index_json_with_programs(&programs_json, &catalog_json).js()
+    }
+    #[napi]
+    pub fn expand_map_signal_movements_json(&self, programs_json: String, plans_json: String) -> Result<String> {
+        self.inner.expand_map_signal_movements_json(&programs_json, &plans_json).js()
+    }
+    #[napi]
     pub fn compile_signal_plans_json(&self, programs_json: String, plans_json: String, options_json: String, catalog_json: String) -> Result<String> {
         self.inner.compile_signal_plans_json(&programs_json, &plans_json, &options_json, &catalog_json).js()
     }

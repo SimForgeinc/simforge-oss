@@ -2474,6 +2474,7 @@ impl<'a> Materializer<'a> {
                 warmup_seconds: self.template.choreography.warmup_seconds,
                 signal_catalog: self.bundle.signal_catalog(),
                 world_signal_set_ids: &world_ids,
+                world_routes: None,
             },
         )
         .map_err(CompileError::as_findings)?;
