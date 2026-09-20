@@ -9,11 +9,7 @@ import { AppSwitcherGraphicsLevel } from "@/app/components/AppSwitcherGraphicsLe
 import { CloudAccountChip } from "@/app/components/cloud/CloudAccountChip";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
-import {
-  DASHBOARD_APPS,
-  DASHBOARD_UTILITIES,
-  type NavItem,
-} from "@/app/lib/dashboard-nav";
+import { useDashboardNav, type NavItem } from "@/app/lib/dashboard-nav";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 /**
@@ -35,6 +31,7 @@ export function AppSwitcherOverlay({
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   const close = () => onOpenChange(false);
+  const { apps, utilities } = useDashboardNav(pathname);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -73,7 +70,7 @@ export function AppSwitcherOverlay({
               aria-label="SimForge apps"
               data-testid="app-switcher-tabs"
             >
-              {DASHBOARD_APPS.map((app) => (
+              {apps.map((app) => (
                 <AppTab
                   active={!app.disabled && app.match(pathname)}
                   app={app}
@@ -88,7 +85,7 @@ export function AppSwitcherOverlay({
                 aria-label="App utilities"
                 {...stylex.props(styles.utilities)}
               >
-                {DASHBOARD_UTILITIES.map((item) => (
+                {utilities.map((item) => (
                   <UtilityLink
                     active={item.match(pathname)}
                     item={item}

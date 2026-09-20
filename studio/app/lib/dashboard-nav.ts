@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo } from "react";
 import {
   Boxes,
   Brain,
@@ -9,8 +12,13 @@ import {
   MonitorCog,
   PackageCheck,
   Settings,
+  UserRound,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { StudioHostCapabilities, StudioHostNavIcon } from "@simforge-oss/studio-host";
+import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
+import { studioHost } from "@/app/lib/host";
 
 export type NavItem = {
   href: string;
@@ -134,8 +142,57 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
   },
 ];
 
-export const DASHBOARD_NAV: NavItem[] = [...DASHBOARD_APPS, ...DASHBOARD_UTILITIES];
+/**
+ * The icons a host may name, and the components they name.
+ *
+ * Exhaustive over {@link StudioHostNavIcon} by its type, so the union and the
+ * components it refers to cannot drift; named imports keep the rest of lucide
+ * out of the bundle, which is why this is a table and not a namespace lookup.
+ */
+const HOST_NAV_ICONS: Record<StudioHostNavIcon, LucideIcon> = {
+  UserRound,
+  Users,
+};
 
-export function activeNavItem(pathname: string): NavItem | null {
-  return DASHBOARD_NAV.find((item) => item.match(pathname)) ?? null;
+/**
+ * The utilities for one host: Studio's own, then whatever the host itself
+ * contributes through the capability document's `navItems`.
+ *
+ * `null` capabilities — the report has not arrived, or the host could not be
+ * reached — render Studio's own set unchanged, which is what every host has.
+ */
+export function dashboardUtilities(capabilities: StudioHostCapabilities | null): NavItem[] {
+  const contributed = capabilities?.navItems ?? [];
+  if (contributed.length === 0) return DASHBOARD_UTILITIES;
+  return [
+    ...DASHBOARD_UTILITIES,
+    ...contributed.map((item) => ({
+      href: item.href,
+      label: item.label,
+      description: item.description,
+      icon: HOST_NAV_ICONS[item.icon],
+      match: (pathname: string) => pathname.startsWith(item.matchPrefix),
+    })),
+  ];
+}
+
+/**
+ * The navigation as this host presents it: the three apps, the utilities the
+ * host offers, and the entry the current path is inside.
+ */
+export function useDashboardNav(pathname: string): {
+  apps: NavItem[];
+  utilities: NavItem[];
+  activeItem: NavItem | null;
+} {
+  const capabilities = useStudioHostCapabilities(studioHost);
+  const report = capabilities.status === "ready" ? capabilities.capabilities : null;
+  return useMemo(() => {
+    const utilities = dashboardUtilities(report);
+    return {
+      apps: DASHBOARD_APPS,
+      utilities,
+      activeItem: [...DASHBOARD_APPS, ...utilities].find((item) => item.match(pathname)) ?? null,
+    };
+  }, [report, pathname]);
 }
