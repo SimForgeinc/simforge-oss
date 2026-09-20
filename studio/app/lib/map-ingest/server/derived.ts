@@ -15,14 +15,16 @@ import type { MapSources } from "@simforge-oss/maps/node";
 import type { MapTopologyIndex } from "@simforge-oss/maps/topology";
 import type { CityManifestDocument } from "./city-manifest";
 
-import mapIntelPackageJson from "../../../../../packages/maps/package.json";
+import mapsPackageJson from "@simforge-oss/maps/package.json";
 
 /**
- * Build receipts record the exact version of the workspace package that the
- * local cloud app executes. Reading its manifest keeps provenance aligned with
- * workspace package bumps while the app dependency remains `workspace:*`.
+ * Build receipts record the exact version of the map package that produced
+ * them. Read through the package's own `./package.json` export rather than a
+ * relative path out of the app, so the version is the one that is actually
+ * installed — a workspace link here, a published tarball wherever this app is
+ * vendored — instead of whatever happens to sit at a fixed depth above `app/`.
  */
-export const MAP_INTEL_BUILDER_VERSION = mapIntelPackageJson.version;
+export const MAP_INTEL_BUILDER_VERSION = mapsPackageJson.version;
 
 export type BuildDerivedArtifactsInput = {
   mapId: string;

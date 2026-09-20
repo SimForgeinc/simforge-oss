@@ -1,12 +1,14 @@
 import * as stylex from "@stylexjs/stylex";
 // `driveColors` is a `defineVars` group, and StyleX resolves those imports
-// itself with plain Node conditions — the public `./drive/drive.stylex`
-// subpath would land it on `dist`, which names the same variables differently
-// than the `src` copy the dev host loads and does not exist at all until the
-// package has been built. The source path is what keeps the two agreeing, the
-// same reason `stylex.config.mjs` pins the token alias to `src`. The package
-// export stays for consumers outside this repo, which have no relative path.
-import { driveColors } from "../../../../../packages/studio-ui/src/drive/drive.stylex";
+// itself, through plain Node conditions and then `stylex.config.mjs`'s
+// aliases — never through the app's `@/*` or the workspace layout. Both
+// copies of the package are compile roots, so whichever this resolves to
+// (`dist` once the package is built, `src` through the alias before it is)
+// its variable names have CSS. What must not happen is reaching across the
+// app's own directory: this app is vendored into hosts that have no sibling
+// `packages/` at all, and a relative path out of `app/` cannot be resolved
+// there. The public subpath is the specifier every consumer can resolve.
+import { driveColors } from "@simforge-oss/studio-ui/drive/drive.stylex";
 
 /**
  * The session's frame, drawn from Drive's instrument tokens rather than the
