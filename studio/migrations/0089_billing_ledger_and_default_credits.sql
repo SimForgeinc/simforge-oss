@@ -1,3 +1,4 @@
+-- simforge:local-only seeds every workspace with 50000 starter credits and changes the balance default; a host that sells credits owns those balances itself.
 -- Ledger-backed compute billing and starter credit balance.
 ALTER TABLE workspaces
   ALTER COLUMN credits_balance SET DEFAULT 50000;
