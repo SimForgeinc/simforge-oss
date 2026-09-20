@@ -87,6 +87,8 @@ export declare class MapBundle {
   signalControlIndexJson(): string
   controlPlanJsonWithCatalog(catalogJson: string): string
   signalControlIndexJsonWithCatalog(catalogJson: string): string
+  signalControlIndexJsonWithPrograms(programsJson: string, catalogJson: string): string
+  expandMapSignalMovementsJson(programsJson: string, plansJson: string): string
   compileSignalPlansJson(programsJson: string, plansJson: string, optionsJson: string, catalogJson: string): string
   selectSignalReferenceJson(indexJson: string, referenceJson: string): string | null
   evaluateSignalReferenceJson(indexJson: string, selectionJson: string, optionsJson: string): string
