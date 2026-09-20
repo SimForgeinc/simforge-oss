@@ -192,6 +192,29 @@ export async function readLocalObjectMetadata(bucket: string, key: string): Prom
   };
 }
 
+/**
+ * How many bytes this object has, or `null` if the host does not hold it.
+ *
+ * The question readiness actually asks: a closure member is present when the
+ * store has it at the length the registry recorded. Deliberately NOT
+ * {@link readLocalObjectMetadata} — that answers with a digest, and computes
+ * one by reading the whole object when none was stored, which would hash
+ * `master.gltf` every time a catalog is listed.
+ *
+ * Absence is `null`, not a throw: "not here yet" is the ordinary answer while
+ * a map is still being installed. Every other failure still throws.
+ */
+export async function readLocalObjectSize(bucket: string, key: string): Promise<number | null> {
+  try {
+    if (bucket === MAP_CACHE_BUCKET) return (await mapCacheObject(key)).sizeBytes;
+    const fileStat = await stat(localObjectPath(bucket, key));
+    return fileStat.isFile() ? fileStat.size : null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 export async function readLocalObject(bucket: string, key: string): Promise<Uint8Array> {
   if (bucket === MAP_CACHE_BUCKET) return readFile((await mapCacheObject(key)).path);
   return readFile(localObjectPath(bucket, key));

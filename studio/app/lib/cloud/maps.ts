@@ -16,7 +16,7 @@ import {
 import { ensureMapAsset, MapCacheError, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { registeredProfileInstalled } from "./map-profile-residency";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
-import { localObjectPath } from "@/app/lib/s3/s3-object";
+import { localObjectPath, readLocalObjectSize } from "@/app/lib/s3/s3-object";
 import { assertMapUsable, MapAccessError } from "./access";
 import { BUNDLED_MAPS } from "./bundled-maps";
 import {
@@ -470,12 +470,11 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
         const cached = await resolveCachedMapAsset(member.sha256);
         ready[profile] = cached !== null && cached.sizeBytes === member.byteLength;
       } else {
-        try {
-          const file = await stat(localObjectPath(member.bucket, member.key));
-          ready[profile] = file.isFile() && file.size === member.byteLength;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-        }
+        // Presence is asked of the object store, not of this process's disk:
+        // a host that keeps closures in object storage holds the member
+        // without any local file, and a filesystem probe would report every
+        // map as unprepared and hide the whole catalog from the editor.
+        ready[profile] = (await readLocalObjectSize(member.bucket, member.key)) === member.byteLength;
       }
     }
     seen.add(descriptor.sourceMapId);
