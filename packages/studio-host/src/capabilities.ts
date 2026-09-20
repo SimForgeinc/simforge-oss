@@ -139,6 +139,14 @@ export type StudioHostIdentity = {
 export type StudioHostPersistence =
   | { kind: "pglite-filesystem"; dataRoot: string }
   | { kind: "managed-postgres-object-storage" };
+export type StudioHostAction = "transfer" | "driver-in-the-loop";
+
+export type StudioHostActionCapability = {
+  available: boolean;
+  /** Human-readable explanation shown before an unavailable action is attempted. */
+  reason: string | null;
+};
+
 
 export type RenderWorkerCapability = {
   /** A registered, healthy worker for this engine is currently accepting jobs. */
@@ -218,6 +226,8 @@ export type StudioHostCapabilities = {
   host: { kind: StudioHostKind; label: string; version: string | null };
   identity: StudioHostIdentity;
   persistence: StudioHostPersistence;
+  /** Optional action-level availability; omitted by older hosts and treated as available. */
+  actions?: Partial<Record<StudioHostAction, StudioHostActionCapability>>;
   execution: {
     /** The shared browser engine/viewport always runs where the UI runs. */
     browserSimulation: true;

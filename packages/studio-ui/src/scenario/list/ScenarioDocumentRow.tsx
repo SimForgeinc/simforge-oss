@@ -45,6 +45,8 @@ import {
 } from "./document-list-utils";
 import { ScenarioRating } from "./ScenarioRating";
 import { useScenarioOpenScenarioExport } from "./useScenarioOpenScenarioExport";
+import { useStudioHost } from "../../host";
+import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 
 export const SCENARIO_TAG_DRAG_MIME = "application/x-simforge-scenario-tag-id";
 
@@ -214,7 +216,13 @@ function DocumentActionCluster({
   | "onToggleVariations"
   | "onError"
   | "onNotice"
->) {
+> ) {
+  const hostCapabilities = useStudioHostCapabilities(useStudioHost());
+  const actionCapability = (
+    action: "transfer" | "driver-in-the-loop",
+  ) => hostCapabilities.capabilities?.actions?.[action];
+  const transferCapability = actionCapability("transfer");
+  const driverCapability = actionCapability("driver-in-the-loop");
   const label = documentName(document);
   const openScenarioExport = useScenarioOpenScenarioExport({
     documentId: document.id,
@@ -262,7 +270,7 @@ function DocumentActionCluster({
             <CopyPlus {...stylex.props(styles.duplicateCopyPlus)} aria-hidden="true" />
             Duplicate
           </DropdownMenuItem>
-          {onTransferDocument ? (
+          {onTransferDocument && transferCapability?.available !== false ? (
             <DropdownMenuItem disabled={!mutable} onSelect={() => onTransferDocument(document)}>
               <MapPinned {...stylex.props(styles.transferMapPin)} aria-hidden="true" />
               Transfer to another map
@@ -328,7 +336,7 @@ function DocumentActionCluster({
       >
         <Pencil {...stylex.props(styles.pencilIcon)} aria-hidden="true" />
       </Button>
-      {onDriverInTheLoop ? (
+      {onDriverInTheLoop && driverCapability?.available !== false ? (
         <TooltipProvider delayDuration={150}>
           <Tooltip>
             <TooltipTrigger asChild>
