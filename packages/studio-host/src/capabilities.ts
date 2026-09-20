@@ -284,3 +284,19 @@ export type StudioHostCapabilities = {
     survivesUiClose: boolean;
   };
 };
+
+/**
+ * Whether this host runs somewhere other than the machine looking at it.
+ *
+ * The two axes that make a host remote are reported separately — it calls
+ * itself `cloud`, and its storage is managed rather than a directory on this
+ * disk — and either one is enough. Every surface that only means something on
+ * the machine that owns the data asks this one question, so "what is a cloud
+ * host" cannot be answered differently in two places.
+ */
+export function isCloudHost(capabilities: StudioHostCapabilities): boolean {
+  return (
+    capabilities.host.kind === "cloud" ||
+    capabilities.persistence.kind === "managed-postgres-object-storage"
+  );
+}

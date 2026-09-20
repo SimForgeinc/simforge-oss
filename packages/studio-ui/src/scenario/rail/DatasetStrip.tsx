@@ -9,6 +9,7 @@ import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import type { DatasetCloudHome } from "./dataset-home";
 import { useStudioHost } from "../../host";
+import { isCloudHost } from "@simforge-oss/studio-host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { Button } from "../../components/ui/button";
 import {
@@ -102,8 +103,7 @@ export function DatasetStrip({
 }) {
   const hostCapabilities = useStudioHostCapabilities(useStudioHost());
   const managed =
-    hostCapabilities.status === "ready" &&
-    hostCapabilities.capabilities.persistence.kind === "managed-postgres-object-storage";
+    hostCapabilities.status === "ready" && isCloudHost(hostCapabilities.capabilities);
   const workspaceName =
     hostCapabilities.status === "ready"
       ? hostCapabilities.capabilities.identity.displayName ??
