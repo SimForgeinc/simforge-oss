@@ -1652,8 +1652,8 @@
     "__schema13": {
       "default": 0,
       "type": "number",
-      "minimum": -3.141592653589793,
-      "maximum": 3.141592653589793
+      "minimum": -3.141593,
+      "maximum": 3.141593
     },
     "__schema14": {
       "type": "string",

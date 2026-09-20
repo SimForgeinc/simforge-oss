@@ -39,6 +39,33 @@ describe('actor-attached sensors', () => {
     expect(firstEnabledDashCamera(second.roles[0]!.actor)?.id).toBe('front-dash-camera');
   });
 
+  it('survives its own canonical text at the edge of the rotation range', () => {
+    // A rear-facing camera is mounted at yaw = π exactly. Canonical text keeps
+    // six decimals, so π is written 3.141593 — larger than π. Two production
+    // documents parsed at the source and then failed on re-parse, which means
+    // the file the serializer wrote could not be opened again.
+    for (const yawRad of [Math.PI, -Math.PI]) {
+      const input = ltapTemplateInput();
+      const camera = defaultDashCamera(
+        { class: 'car', dims: { length: 4.4, width: 1.8, height: 1.6 } },
+        'rear-dash-camera',
+      );
+      camera.mount.rotation = { yawRad, pitchRad: 0, rollRad: 0 };
+      input.roles![0]!.actor.sensors = [camera];
+
+      const parsed = parseTemplate(input);
+      expect(parsed.roles[0]?.actor.sensors[0]?.mount.rotation.yawRad).toBe(yawRad);
+
+      const text = serializeTemplate(parsed);
+      const reparsed = parseTemplate(JSON.parse(text));
+      // The value quantises once, onto the grid, and then never moves again.
+      expect(reparsed.roles[0]?.actor.sensors[0]?.mount.rotation.yawRad).toBe(
+        Math.sign(yawRad) * 3.141593,
+      );
+      expect(serializeTemplate(reparsed)).toBe(text);
+    }
+  });
+
   it('builds active sensors against the authored dimensions of a non-reference vehicle', () => {
     const bus = { class: 'bus', dims: { length: 12.4, width: 2.55, height: 3.3 } } as const;
     const lidar = ActorSensorSchema.parse(defaultLidar(bus, 'bus-roof-lidar'));

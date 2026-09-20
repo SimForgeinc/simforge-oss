@@ -38,6 +38,7 @@ import { LaneRefSchema as V1LaneRefSchema, PoseSchema as V1PoseSchema } from '..
 import { ApproachRelationSchema, TurnDirectionSchema } from './anchor.js';
 import { FeatureRefSchema, RoleIdSchema, RoleRefSchema, V2ExtensionsSchema } from './common.js';
 import { ActorSensorSchema, type ActorSensor } from './sensors.js';
+import { MAX_HALF_TURN_RAD } from '../../canonical-number.js';
 
 /** Actor classes. Drives dynamics limits, footprint, and occluder height. */
 export const ACTOR_CLASSES = [
@@ -132,7 +133,7 @@ export const FramePoseSchema = z.strictObject({
   /** Lateral offset as a fraction of local lane width, −1..1 (0 = centre). May be parameterised. */
   tFrac: TFracOrExprSchema.default(0),
   /** Yaw relative to the lane tangent, radians. */
-  headingOffsetRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  headingOffsetRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
 });
 
 /**
@@ -354,7 +355,7 @@ export const RelativeToRoleSchema = z.strictObject({
   dsM: NumberOrExprSchema,
   /** Lateral offset within the resulting lane, fraction of width. */
   tFrac: z.number().min(-1).max(1).default(0),
-  headingOffsetRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  headingOffsetRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
   /**
    * The pairwise offset measured in `ref`'s own pose frame, metres: `alongM`
    * positive ahead of it, `acrossM` positive to its left.

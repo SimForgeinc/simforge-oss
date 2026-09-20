@@ -22,6 +22,7 @@ import { z } from 'zod';
 import { ExprSchema, NumberOrExprSchema } from '../../expr/index.js';
 import { FeatureRefSchema, PropIdSchema, RoleRefSchema, V2ExtensionsSchema } from './common.js';
 import { FramePoseSchema } from './roles.js';
+import { MAX_HALF_TURN_RAD } from '../../canonical-number.js';
 
 /** Who is prevented from seeing whom. */
 export const OcclusionPairSchema = z.strictObject({
@@ -52,7 +53,7 @@ export const PropAttachmentSchema = z.strictObject({
   longitudinalM: z.number().finite().min(-20).max(20).default(0),
   lateralM: z.number().finite().min(-20).max(20).default(0),
   heightM: z.number().finite().min(0).max(20).default(0),
-  headingOffsetRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  headingOffsetRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
 });
 
 /** One placed prop (or a repeated run of them). */
@@ -68,7 +69,7 @@ export const PropPlacementSchema = z.strictObject({
   /** Rigid actor-local attachment; `pose` remains the authoring/fallback pose. */
   attachment: PropAttachmentSchema.optional(),
   /** Yaw relative to the lane tangent, radians. */
-  headingOffsetRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  headingOffsetRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
   /** Uniform scale. Height class is what decides whether a prop occludes. */
   scale: z.number().positive().max(10).default(1),
   /** Declares the prop as a sight-line blocker between two roles. */

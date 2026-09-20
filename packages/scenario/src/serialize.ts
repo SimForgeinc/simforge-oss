@@ -17,7 +17,10 @@
  *    the map pipeline itself; for radians it is 1 µrad. It kills the
  *    `0.30000000000000004` noise that makes float diffs unreadable, and it is
  *    idempotent — rounding an already-rounded value is a no-op, so
- *    `serialize(parse(serialize(d))) === serialize(d)`.
+ *    `serialize(parse(serialize(d))) === serialize(d)`. The grid and the
+ *    rounding live in `canonical-number.ts`, which the schema reads too: a
+ *    range whose edge the grid cannot express would refuse the very text this
+ *    module writes.
  * 4. **`-0` is normalised to `0`** and non-finite numbers are rejected, since
  *    JSON cannot represent them.
  * 5. Two-space indent, one trailing newline: line-oriented diffs.
@@ -30,27 +33,9 @@
 import { ScenarioValidationError, toScenarioIssues } from './errors.js';
 import { ScenarioV1Schema, type ScenarioV1 } from './schema/v1.js';
 import { ScenarioTemplateV2Schema, type ScenarioTemplateV2 } from './schema/v2/template.js';
+import { FLOAT_DECIMALS, roundFloat } from './canonical-number.js';
 
-/** Decimal places kept for every non-integer number. See module docs. */
-export const FLOAT_DECIMALS = 6;
-
-/** Above this magnitude `toFixed` starts emitting exponent notation; pass through instead. */
-const ROUND_LIMIT = 1e15;
-
-/**
- * Quantise one number for serialization.
- *
- * @throws If the value is `NaN` or infinite.
- */
-export function roundFloat(value: number): number {
-  if (!Number.isFinite(value)) {
-    throw new TypeError(`cannot serialize non-finite number: ${value}`);
-  }
-  if (Number.isInteger(value)) return value === 0 ? 0 : value;
-  if (Math.abs(value) >= ROUND_LIMIT) return value;
-  const rounded = Number(value.toFixed(FLOAT_DECIMALS));
-  return rounded === 0 ? 0 : rounded;
-}
+export { FLOAT_DECIMALS, roundFloat };
 
 /**
  * Recursively sort object keys and round numbers.

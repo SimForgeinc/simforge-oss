@@ -2379,8 +2379,8 @@
             "headingOffsetRad": {
               "default": 0,
               "type": "number",
-              "minimum": -3.141592653589793,
-              "maximum": 3.141592653589793
+              "minimum": -3.141593,
+              "maximum": 3.141593
             },
             "rigidOffsetM": {
               "type": "object",
@@ -2831,8 +2831,8 @@
             "yawRad": {
               "default": 0,
               "type": "number",
-              "minimum": -3.141592653589793,
-              "maximum": 3.141592653589793
+              "minimum": -3.141593,
+              "maximum": 3.141593
             },
             "pitchRad": {
               "default": 0,
@@ -2843,8 +2843,8 @@
             "rollRad": {
               "default": 0,
               "type": "number",
-              "minimum": -3.141592653589793,
-              "maximum": 3.141592653589793
+              "minimum": -3.141593,
+              "maximum": 3.141593
             }
           },
           "additionalProperties": false
@@ -3144,8 +3144,8 @@
     "__schema85": {
       "default": 0,
       "type": "number",
-      "minimum": -3.141592653589793,
-      "maximum": 3.141592653589793
+      "minimum": -3.141593,
+      "maximum": 3.141593
     },
     "__schema86": {
       "type": "object",
@@ -3319,8 +3319,8 @@
             "headingOffsetRad": {
               "default": 0,
               "type": "number",
-              "minimum": -3.141592653589793,
-              "maximum": 3.141592653589793
+              "minimum": -3.141593,
+              "maximum": 3.141593
             }
           },
           "required": [
@@ -3331,8 +3331,8 @@
         "headingOffsetRad": {
           "default": 0,
           "type": "number",
-          "minimum": -3.141592653589793,
-          "maximum": 3.141592653589793
+          "minimum": -3.141593,
+          "maximum": 3.141593
         },
         "scale": {
           "default": 1,

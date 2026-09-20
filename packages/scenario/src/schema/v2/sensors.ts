@@ -3,13 +3,20 @@
 import { z } from 'zod';
 
 import { EntityIdSchema, Vec3Schema } from '../v1.js';
+import { MAX_HALF_TURN_RAD, MAX_QUARTER_TURN_RAD } from '../../canonical-number.js';
 
 
-/** Euler orientation in the actor-local frame, in radians. */
+/**
+ * Euler orientation in the actor-local frame, in radians.
+ *
+ * Bounded by what canonical text can write, not by π exactly: a rear-facing
+ * camera really is mounted at yaw = π, and the serializer's 6-decimal grid
+ * writes that as 3.141593. See {@link canonicalBound}.
+ */
 export const SensorRotationSchema = z.strictObject({
-  yawRad: z.number().min(-Math.PI).max(Math.PI).default(0),
-  pitchRad: z.number().min(-Math.PI / 2).max(Math.PI / 2).default(0),
-  rollRad: z.number().min(-Math.PI).max(Math.PI).default(0),
+  yawRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
+  pitchRad: z.number().min(-MAX_QUARTER_TURN_RAD).max(MAX_QUARTER_TURN_RAD).default(0),
+  rollRad: z.number().min(-MAX_HALF_TURN_RAD).max(MAX_HALF_TURN_RAD).default(0),
 });
 
 /**
