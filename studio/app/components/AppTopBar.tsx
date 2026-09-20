@@ -7,7 +7,7 @@ import { AppSwitcherOverlay } from "@/app/components/AppSwitcherOverlay";
 import SimForgeLogo from "@/app/components/landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
-import { activeNavItem } from "@/app/lib/dashboard-nav";
+import { useDashboardNav } from "@/app/lib/dashboard-nav";
 import { cloudPlate, styles } from "@/app/components/AppTopBar.stylex";
 
 export function AppTopBar() {
@@ -17,7 +17,7 @@ export function AppTopBar() {
   const [hasMounted, setHasMounted] = useState(false);
 
   const slotCtx = useTopBarSlotContext();
-  const activeItem = activeNavItem(pathname);
+  const { activeItem } = useDashboardNav(pathname);
   const routePageTitle = pathname.startsWith("/dashboard/scenario")
     ? "Dataset"
     : activeItem?.label ?? null;

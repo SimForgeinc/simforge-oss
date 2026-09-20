@@ -210,6 +210,35 @@ export type NativeRenderInstall = {
   error: string | null;
 };
 
+/**
+ * Icons a host may name for a navigation entry it contributes.
+ *
+ * A name, not a component: the capability document is JSON over HTTP, and the
+ * host that produces it has no way to hand the UI a React element. The union
+ * is the contract — the UI ships exactly these icons, so a host cannot name
+ * one that does not render. Extend it when a host needs another.
+ */
+export type StudioHostNavIcon = "UserRound" | "Users";
+
+/**
+ * A utility surface that exists because of THIS host, contributed to the
+ * dashboard's navigation.
+ *
+ * Studio's own navigation is a constant: the three apps and the utilities that
+ * every installation has. A host may have surfaces of its own — an account, a
+ * tenant — that Studio cannot know about and must not hardcode. It names them
+ * here instead of the shell forking the navigation module to add them.
+ */
+export type StudioHostNavItem = {
+  href: string;
+  label: string;
+  /** One line, shown under the label in the app switcher. */
+  description: string;
+  icon: StudioHostNavIcon;
+  /** Pathname prefix that marks this entry the active one. */
+  matchPrefix: string;
+};
+
 export type StudioWorkerNode = {
   id: string;
   engines: readonly string[];
@@ -228,6 +257,8 @@ export type StudioHostCapabilities = {
   persistence: StudioHostPersistence;
   /** Optional action-level availability; omitted by older hosts and treated as available. */
   actions?: Partial<Record<StudioHostAction, StudioHostActionCapability>>;
+  /** See {@link StudioHostNavItem}; absent on hosts that add no surfaces of their own. */
+  navItems?: readonly StudioHostNavItem[];
   execution: {
     /** The shared browser engine/viewport always runs where the UI runs. */
     browserSimulation: true;
