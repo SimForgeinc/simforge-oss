@@ -29,7 +29,7 @@
  * it does not have special-case code for.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { FeatureIdSchema, RangeSchema, clause } from './common.js';
 

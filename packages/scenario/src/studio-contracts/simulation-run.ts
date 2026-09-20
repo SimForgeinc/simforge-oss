@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 import { EnvironmentPresetSchema } from "./environment-preset";
 import { ScenarioStatus } from "./run-status";
 import { ScenarioLocationSchema } from "./scenario-location";

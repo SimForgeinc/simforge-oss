@@ -31,7 +31,7 @@
  * — and that is a decision an author should make on purpose. See `migrate-v2.ts`.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { MapRefSchema, ScenarioMetaSchema } from '../v1.js';
 import { LogicalAnchorSchema } from './anchor.js';

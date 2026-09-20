@@ -16,7 +16,7 @@
  * elements have no id (`target.points.0`).
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ParamConstraintSchema } from './params.js';
 

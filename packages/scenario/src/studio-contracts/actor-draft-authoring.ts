@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 
 /**
  * Studio actor-draft authoring contracts shared by both Studio hosts.
@@ -8,8 +8,11 @@ import { z } from "zod-v3";
  * the behavior program in `behavior-program.ts`, and the worker defaults the
  * behavior-program actions fall back to.
  *
- * Written against `zod-v3` because both hosts compose these schemas directly
- * into their zod-3 actor draft schemas.
+ * Written against `zod` — the classic API, which is this package's plain
+ * `zod` dependency — because both hosts compose these schemas directly into
+ * their own actor draft schemas, and a classic discriminated union only
+ * composes within one physical copy of zod. The scenario schema itself is on
+ * `zod-v4`; see `docs/engineering/zod-instances.md`.
  */
 
 /** Worker defaults for behavior-program actions that omit an explicit value. */

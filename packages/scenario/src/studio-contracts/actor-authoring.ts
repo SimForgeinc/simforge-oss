@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** Hard bounds accepted by the scenario authoring surface. */
 export const VEHICLE_SPEED_CAP_KPH = 240;

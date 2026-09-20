@@ -1,5 +1,5 @@
 /** Portable, authored traffic-control furniture and its deterministic program. */
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { NumberOrExprSchema } from '../../expr/index.js';
 import { FeatureRefSchema } from './common.js';

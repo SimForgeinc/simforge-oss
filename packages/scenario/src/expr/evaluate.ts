@@ -13,7 +13,7 @@
  * makes the one-axis-one-owner timing analysis possible before a map is chosen.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ExprAstSchema, ExpressionError, type Expr } from './ast.js';
 import { parseExpr } from './parse.js';

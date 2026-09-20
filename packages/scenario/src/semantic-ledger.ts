@@ -8,7 +8,7 @@
  * represented as ordered events and explicit action/trigger outcomes.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 export const SEMANTIC_LEDGER_SCHEMA = 'uniscenarios.semantic-ledger/v1' as const;
 export const SEMANTIC_LEDGER_VERSION = 1 as const;

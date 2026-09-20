@@ -33,7 +33,7 @@
  * validate; one level covers every condition in the taxonomy.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { NumberOrExprSchema } from '../../expr/index.js';
 import { TurnDirectionSchema } from './anchor.js';

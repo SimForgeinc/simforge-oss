@@ -21,7 +21,7 @@
  * separately, which is the check a brand would only have approximated.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** Identifier syntax shared by every id in a v2 template. */
 export const V2_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;

@@ -1,6 +1,6 @@
 /** Canonical actor-mounted perception rig presets. */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { EntityIdSchema } from '../v1.js';
 

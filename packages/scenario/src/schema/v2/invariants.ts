@@ -15,7 +15,7 @@
  * why "degradation may relax presentation, never intent" is checkable at all.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { NumberOrExprSchema } from '../../expr/index.js';
 import { InteractionRefSchema, RangeSchema, RoleRefSchema } from './common.js';

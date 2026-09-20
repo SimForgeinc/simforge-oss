@@ -20,7 +20,7 @@
  * typed and round-trip it.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** Binary operators. Standard precedence: `*` `/` bind tighter than `+` `-`. */
 export const BIN_OPS = ['+', '-', '*', '/'] as const;

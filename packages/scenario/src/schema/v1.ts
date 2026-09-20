@@ -35,7 +35,7 @@
  * positions do.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** The schema version this module describes. */
 export const SCENARIO_VERSION = 1;

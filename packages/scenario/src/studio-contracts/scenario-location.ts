@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 
 /** Bounding box (lat/lng). */
 export const BboxSchema = z.object({

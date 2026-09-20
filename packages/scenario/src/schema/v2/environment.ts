@@ -14,7 +14,7 @@
  * it.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { NumberOrExprSchema } from '../../expr/index.js';
 import { FeatureRefSchema, V2ExtensionsSchema, V2_ID_PATTERN } from './common.js';

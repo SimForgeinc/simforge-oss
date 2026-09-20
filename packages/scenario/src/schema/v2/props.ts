@@ -17,7 +17,7 @@
  *    should place twenty props. It expands at instantiation time, not here.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ExprSchema, NumberOrExprSchema } from '../../expr/index.js';
 import { FeatureRefSchema, PropIdSchema, RoleRefSchema, V2ExtensionsSchema } from './common.js';

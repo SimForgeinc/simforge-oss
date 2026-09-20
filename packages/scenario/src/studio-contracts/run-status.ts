@@ -1,4 +1,4 @@
-import { z } from "zod-v3";
+import { z } from "zod";
 
 export const ScenarioStatus = z.enum(["DRAFT", "FINALIZED"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;

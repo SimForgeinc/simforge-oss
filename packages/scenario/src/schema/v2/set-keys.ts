@@ -17,7 +17,7 @@
  * handles come from the map, not from the schema.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 /** Value domain of a settable key. */
 export const SetValueTypeSchema = z.enum(['boolean', 'number', 'enum', 'string']);

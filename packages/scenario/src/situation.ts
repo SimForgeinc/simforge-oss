@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 import { ScenarioValidationError, toScenarioIssues, type ScenarioIssue } from './errors.js';
 import { canonicalize, deepFreeze } from './serialize.js';
 import { Sha256 } from './sha256.js';

@@ -8,7 +8,7 @@
  * `description` rather than silently dropped.
  */
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { ScenarioV1ObjectSchema, SCENARIO_VERSION } from './schema/v1.js';
 
