@@ -116,6 +116,17 @@ test("the member's own row decides where its bytes come from", async (t) => {
     "the redirect goes to the URL the presigner signs for that bucket and key",
   );
 
+  // The redirect and the bytes behind it are both cacheable: a closure member
+  // is content-addressed, and answering no-store made a reload re-fetch
+  // thousands of tiles across the wire it already paid for.
+  const redirectCacheControl = response.headers.get("cache-control");
+  assert.match(redirectCacheControl ?? "", /^private, max-age=[1-9]\d{2,}$/, redirectCacheControl ?? "absent");
+  assert.equal(
+    new URL(location, "http://127.0.0.1").searchParams.get("response-cache-control"),
+    "public, max-age=31536000, immutable",
+    "the store is told to mark the object immutable",
+  );
+
   // A HEAD asks the same question and must get the same answer, or a client
   // that probes before fetching concludes the member is gone.
   const head = await serveLocalMapAsset(get(mapVersionId, "3d/variants/objects/tile.ktx2", "HEAD"), true);

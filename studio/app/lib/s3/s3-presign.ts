@@ -11,6 +11,9 @@ export const MEDIA_URL_TTL_SECONDS = 3600;
 export const PRESIGN_TTL_SECONDS = MEDIA_URL_TTL_SECONDS;
 export const UPLOAD_TTL_SECONDS = 900;
 
+/** A content-addressed object never changes, so its bytes are cacheable forever. */
+export const IMMUTABLE_OBJECT_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 export type CompletedPart = { ETag?: string; PartNumber?: number };
 
 export function checksumBoundPutRequiredHeaders(
@@ -45,9 +48,12 @@ export async function getPresignedGetUrl(
   bucket = S3_BUCKET,
   expiresIn = MEDIA_URL_TTL_SECONDS,
   responseContentDisposition?: string,
+  /** `response-cache-control`: what the store says about the bytes it returns. */
+  responseCacheControl?: string,
 ): Promise<string> {
   const url = objectUrl(bucket, key);
   if (responseContentDisposition) url.searchParams.set("response-content-disposition", responseContentDisposition);
+  if (responseCacheControl) url.searchParams.set("response-cache-control", responseCacheControl);
   return signLocalObjectUrl(url, "GET", expiresIn);
 }
 
@@ -59,7 +65,12 @@ export async function getMapArtifactDownloadUrl(
   sha256: string,
   byteLength: number,
 ): Promise<string> {
-  if (bucket !== MAP_CACHE_BUCKET) return getPresignedGetUrl(key, bucket);
+  // A closure member is named by its digest: the bytes behind this key cannot
+  // change, so the store is told to say so and the browser keeps them instead
+  // of re-fetching thousands of tiles on every load.
+  if (bucket !== MAP_CACHE_BUCKET) {
+    return getPresignedGetUrl(key, bucket, MEDIA_URL_TTL_SECONDS, undefined, IMMUTABLE_OBJECT_CACHE_CONTROL);
+  }
   const map = await getRegisteredMap(mapVersionId);
   if (map) {
     for (const [relativePath, member] of map.browser) {

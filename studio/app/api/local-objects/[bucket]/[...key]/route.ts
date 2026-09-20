@@ -20,8 +20,13 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const objectKey = key.join("/");
   try {
     const metadata = await readLocalObjectMetadata(bucket, objectKey);
+    // What the signer asked the store to say about these bytes, then the
+    // route's own answer. A presigned URL for a content-addressed member
+    // carries the immutable header, which is the whole reason a browser
+    // stops re-fetching thousands of closure members on every load.
+    const requested = new URL(request.url).searchParams.get("response-cache-control");
     const immutableMapAsset = bucket === LOCAL_ARTIFACT_BUCKET && objectKey.startsWith("maps/");
-    const cacheControl = immutableMapAsset ? "private, max-age=31536000, immutable" : "no-store";
+    const cacheControl = requested ?? (immutableMapAsset ? "private, max-age=31536000, immutable" : "no-store");
     const headers = new Headers({
       "content-type": metadata.contentType,
       "content-length": String(metadata.sizeBytes),

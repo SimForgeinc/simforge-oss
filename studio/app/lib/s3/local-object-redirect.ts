@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
-const DEV_REDIRECT_CACHE_SECONDS = 50 * 60;
+import { MEDIA_URL_TTL_SECONDS } from "./s3-presign";
 
-export function browserAssetRedirectCacheControl(nodeEnv = process.env.NODE_ENV) {
-  // Development assets are immutable and the redirect target remains valid
-  // for one hour. Reusing it for fifty minutes lets the browser reuse the S3
-  // response cache without risking an expired signature. Shared environments
-  // retain the authenticated no-store boundary.
-  return nodeEnv === "development"
-    ? `private, max-age=${DEV_REDIRECT_CACHE_SECONDS}`
-    : "private, no-store";
+/**
+ * Margin between a presigned URL's lifetime and how long a browser may reuse
+ * the redirect that points at it. Reusing a redirect whose signature has since
+ * expired costs a failed fetch and a reload; ten minutes is longer than any
+ * page load that could be holding one.
+ */
+const REDIRECT_REUSE_MARGIN_SECONDS = 10 * 60;
+
+/**
+ * How long a browser may reuse the redirect itself.
+ *
+ * A map closure is thousands of members, and each one costs an authorized hop
+ * through this app before the object store is reached. Answering `no-store`
+ * made every reload pay all of them again — minutes of latency for bytes the
+ * browser already had. The redirect is cached for just under the signature's
+ * life instead.
+ *
+ * `private` is the boundary that matters: the redirect names a signed URL
+ * issued to one session, so a shared cache must never hold it. Nothing about
+ * that changes per environment, which is why this no longer asks which one it
+ * is running in.
+ */
+export function browserAssetRedirectCacheControl() {
+  return `private, max-age=${MEDIA_URL_TTL_SECONDS - REDIRECT_REUSE_MARGIN_SECONDS}`;
 }
-
 
 /**
  * Redirect to an object.
