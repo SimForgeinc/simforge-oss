@@ -112,6 +112,10 @@ export interface NativeMapBundle {
   controlPlanJsonWithCatalog(catalogJson: string): string;
   signalControlIndexJsonWithCatalog(catalogJson: string): string;
   compileSignalPlansJson(programsJson: string, plansJson: string, optionsJson: string, catalogJson: string): string;
+  /** Build the control index from supplied programs (legacy, normalized or expanded) rather than rebuilding from the catalog. */
+  signalControlIndexJsonWithPrograms(programsJson: string, catalogJson: string): string;
+  /** Expand plan movements into per-head programs; the pre-Rust `expandMapSignalMovements`. */
+  expandMapSignalMovementsJson(programsJson: string, plansJson: string): string;
   selectSignalReferenceJson(indexJson: string, referenceJson: string): string | null;
   evaluateSignalReferenceJson(indexJson: string, selectionJson: string, optionsJson: string): string;
   /** `SiteSignalPlan` JSON for a matched site handle. */
