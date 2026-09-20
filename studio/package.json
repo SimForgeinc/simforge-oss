@@ -16,6 +16,7 @@
     "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --publish never",
     "desktop:verify": "node desktop/verify-package.mjs",
     "migrate": "tsx scripts/migrate.ts",
+    "test:migrations": "tsx --test scripts/__tests__/migration-plan.test.ts",
     "seed": "tsx scripts/seed.ts",
     "bootstrap:maps": "tsx scripts/bootstrap-public-maps.ts",
     "verify:map-install": "tsx scripts/verify-map-install.ts",

@@ -1,3 +1,4 @@
+-- simforge:local-only reshapes the local copy of billing_ledger; a host that bills real money keeps its own ledger, with its own migrations.
 -- Reservation-aware usage ledger for in-flight credit accounting.
 ALTER TABLE billing_ledger
   ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'settled',

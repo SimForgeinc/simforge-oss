@@ -1,3 +1,4 @@
+-- simforge:local-only drops the tenant and billing tables because a local install has no tenants; on a host those tables are live product data.
 -- Cut the hosted-SaaS billing and tenant-identity rows out of the local
 -- database.
 --
