@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { StudioHostCapabilities, StudioHostNavIcon } from "@simforge-oss/studio-host";
+import { isCloudHost, type StudioHostCapabilities, type StudioHostNavIcon } from "@simforge-oss/studio-host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { studioHost } from "@/app/lib/host";
 
@@ -28,6 +28,11 @@ export type NavItem = {
   match: (pathname: string) => boolean;
   /** What the page is for, in three phrases; shown on the switcher's tabs. */
   highlights?: readonly string[];
+  /**
+   * The surface is about the machine this installation runs on, so a cloud
+   * host — which is not that machine — does not offer it at all.
+   */
+  localOnly?: boolean;
   disabled?: boolean;
 };
 
@@ -120,10 +125,13 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
   {
     // One SimCloud surface: the account, what it unlocks, and the explicit
     // dataset and artifact transfers that used to be a "Cloud Storage" tab.
+    // Local-only: it connects THIS installation to SimCloud, and a hosted
+    // installation already is the thing it would connect to.
     href: "/dashboard/simcloud",
     label: "SimCloud",
     description: "Your SimCloud account, and the datasets and artifacts it holds",
     icon: Cloud,
+    localOnly: true,
     match: (p) => p.startsWith("/dashboard/simcloud"),
   },
   {
@@ -155,17 +163,22 @@ const HOST_NAV_ICONS: Record<StudioHostNavIcon, LucideIcon> = {
 };
 
 /**
- * The utilities for one host: Studio's own, then whatever the host itself
+ * The utilities for one host: Studio's own minus the ones that are about the
+ * machine this installation runs on, plus whatever the host itself
  * contributes through the capability document's `navItems`.
  *
  * `null` capabilities — the report has not arrived, or the host could not be
- * reached — render Studio's own set unchanged, which is what every host has.
+ * reached — render Studio's own set unchanged. That is the set every
+ * installation has, and an entry that appears and then withdraws reads better
+ * than a navigation that flickers empty while the report is in flight.
  */
 export function dashboardUtilities(capabilities: StudioHostCapabilities | null): NavItem[] {
+  const cloud = capabilities !== null && isCloudHost(capabilities);
+  const own = cloud ? DASHBOARD_UTILITIES.filter((item) => item.localOnly !== true) : DASHBOARD_UTILITIES;
   const contributed = capabilities?.navItems ?? [];
-  if (contributed.length === 0) return DASHBOARD_UTILITIES;
+  if (contributed.length === 0) return own;
   return [
-    ...DASHBOARD_UTILITIES,
+    ...own,
     ...contributed.map((item) => ({
       href: item.href,
       label: item.label,
