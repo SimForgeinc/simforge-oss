@@ -40,3 +40,35 @@ signature requests through a URL pool for exactly this reason when it is the
 client. This is the same batching, offered to a viewer rather than used by a
 downloader, and it belongs on the host boundary so a local install can answer
 it from the cache and a hosted one from its store.
+
+## Two more rc.70 asks from the same path
+
+### The cache is a local concept and a cloud host should never reach for it
+
+`streamCachedObject` asks `resolveCachedMapAsset` first and only then decides
+to redirect. On a host whose closures live in object storage that question can
+never be answered yes, and asking it is not free: the cache opens its store,
+which creates `$HOME/.local/share/simforge/map-cache`, and a serverless
+function has no home directory —
+`ENOENT: mkdir '/home/sbx_user1051'` on every request. The hosted deployment
+works around it with `SIMFORGE_MAP_CACHE_ROOT=/tmp`, which makes a writable
+directory appear so that nothing is ever written to it.
+
+> **Ask:** gate the cache probe on the host. When `isCloudHost()` holds, go
+> straight to the object-store redirect and never construct the download
+> cache. The environment variable then stops being load-bearing, and the
+> failure mode — a filesystem error from a component that has no role in this
+> deployment — stops existing.
+
+### The catalog reads whole closures to check two files
+
+`readLocalMapCatalog` decides `ready.browser` and `ready.semantic` from two
+entry points, `3d/manifest.json` and `master.gltf`. To reach them it calls
+`getRegisteredMap`, which loads every member of both closures — thousands of
+rows per map. Over Aurora's Data API on a cold function that is ~18 s for ten
+maps, spent almost entirely on rows nobody reads.
+
+> **Ask:** let the registry answer for named members without materialising the
+> closure — a `getRegisteredMapMembers(mapVersionId, profile, paths[])`, or a
+> catalog query that returns the two entry points for every map in one
+> statement. Folds in with the catalog ask already recorded elsewhere.
