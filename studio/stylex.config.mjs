@@ -70,17 +70,20 @@ export const stylexBabelOptions = {
   enableInlinedConditionalMerge: true,
   unstable_moduleResolution: { type: "commonJS", rootDir: repoRoot },
   /**
-   * `@/*` is the app's own alias. The `studio-ui` token entry is a fallback,
-   * not a pin: StyleX resolves theme imports itself and tries the bare
-   * specifier through Node before any alias, with plain Node conditions and
-   * no `development` condition, so while `dist` exists an app-side token
-   * import resolves there and its variables are named from that copy — which
-   * is why `dist` is one of the compile roots. The alias is what resolves the
-   * same import when the package has never been built.
+   * `@/*` is the app's own alias. The `studio-ui` entries are fallbacks, not
+   * pins: StyleX resolves theme imports itself and tries the bare specifier
+   * through Node before any alias, with plain Node conditions and no
+   * `development` condition, so while `dist` exists an app-side token import
+   * resolves there and its variables are named from that copy — which is why
+   * `dist` is one of the compile roots. The aliases are what resolve the same
+   * imports when the package has never been built. Both token groups the app
+   * imports by their public subpath need one: the theme tokens under
+   * `stylex/`, and Drive's instrument tokens under `drive/`.
    */
   aliases: {
     "@/*": [join(studioDir, "*")],
     "@simforge-oss/studio-ui/stylex/*": [join(studioUiDir, "src/stylex/*")],
+    "@simforge-oss/studio-ui/drive/*": [join(studioUiDir, "src/drive/*")],
   },
 };
 
