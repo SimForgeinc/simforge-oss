@@ -3257,6 +3257,16 @@ pub struct MapSignalMovement {
     pub connecting_lane_rsl: String,
 }
 
+fn serialize_signal_movements<S>(
+    movements: &Option<Vec<MapSignalMovement>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    movements.as_deref().unwrap_or(&[]).serialize(serializer)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MapSignalHeadRef {
@@ -3266,7 +3276,7 @@ pub struct MapSignalHeadRef {
     pub additional_stages: Vec<MapSignalHeadRef>,
     #[serde(default)]
     pub display_head_ids: Vec<String>,
-    #[serde(default)]
+    #[serde(default, serialize_with = "serialize_signal_movements")]
     pub movements: Option<Vec<MapSignalMovement>>,
 }
 

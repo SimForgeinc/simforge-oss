@@ -1069,9 +1069,36 @@ pub fn compile_map_signal_plans(
             if output.iter().any(|program| program.id == signal.id) || options.world_signal_set_ids.iter().any(|id| id == &signal.id) {
                 return Err(plan_error("map_signal_plan_dual_ownership", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" has conflicting ownership", signal.id)));
             }
+            let baseline_phases: Vec<SignalPhase> = signal
+                .phases
+                .iter()
+                .map(|phase| SignalPhase { phase: phase.phase, duration_s: phase.duration_s })
+                .collect();
+            if baseline_phases.is_empty() || baseline_phases.iter().any(|phase| !phase.duration_s.is_finite() || phase.duration_s <= 0.0) {
+                return Err(plan_error("map_signal_plan_reference_unbound", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" has invalid phases", signal.id)));
+            }
+            let mut phases = baseline_phases.clone();
+            if !signal.baseline_only {
+                let mut points = vec![-options.warmup_seconds, 0.0, options.clip_seconds, options.clip_seconds + ENDPOINT_PAD_S];
+                points.extend(plan.clips.iter().flat_map(|clip| [clip.start_s, clip.end_s]));
+                points.sort_by(f64::total_cmp);
+                points.dedup();
+                phases.clear();
+                for window in points.windows(2) {
+                    let (from, to) = (window[0], window[1]);
+                    let sample = from + (to - from) / 2.0;
+                    let phase = plan.clips.iter().find(|clip| sample >= clip.start_s && sample < clip.end_s)
+                        .filter(|clip| signal.selected_by_clip_ids.iter().any(|id| id == &clip.id))
+                        .map_or_else(|| phase_at(&SignalProgram { id: signal.id.clone(), phases: baseline_phases.clone(), offset_s: signal.offset_s, loop_: signal.r#loop, dark_fallback: None, dark_dwell_s: None, stop_lines: Vec::new(), map_binding: None }, sample, options.warmup_seconds), |clip| clip.indication);
+                    if let Some(last) = phases.last_mut() {
+                        if last.phase == phase { last.duration_s += to - from; continue; }
+                    }
+                    phases.push(SignalPhase { phase, duration_s: to - from });
+                }
+            }
             output.push(SignalProgram {
                 id: signal.id.clone(),
-                phases: signal.phases.iter().map(|phase| SignalPhase { phase: phase.phase, duration_s: phase.duration_s }).collect(),
+                phases,
                 offset_s: signal.offset_s,
                 loop_: signal.r#loop,
                 dark_fallback: None,
@@ -1126,6 +1153,7 @@ mod tests {
 
     #[test]
     fn compound_selection_unions_stage_movements_and_heads() {
+
         let programs = vec![program("m1", "c1", "h1", "j"), program("m2", "c2", "h2", "j")];
         let index = build_signal_control_index(&programs, &["h1".into(), "h2".into()]);
         let single = select_signal_plan_reference(&index, &reference("c1", "h1")).unwrap();
@@ -1136,6 +1164,21 @@ mod tests {
         assert_ne!(single, compound);
         assert_eq!(compound.stage_movement_ids, vec!["m1", "m2"]);
         assert_eq!(compound.movement_head_ids, vec!["h1", "h2"]);
+    }
+
+    #[test]
+    fn signal_reference_round_trip_preserves_legacy_movement_bytes() {
+        let omitted = r#"{"controllerId":"c1","headId":"h1","additionalStages":[],"displayHeadIds":[]}"#;
+        let explicit_empty = r#"{"controllerId":"c1","headId":"h1","additionalStages":[],"displayHeadIds":[],"movements":[]}"#;
+        let entries = r#"{"controllerId":"c1","headId":"h1","additionalStages":[],"displayHeadIds":[],"movements":[{"approachLaneRsl":"a","connectingLaneRsl":"b"}]}"#;
+        for (wire, expected) in [
+            (omitted, r#"{"controllerId":"c1","headId":"h1","additionalStages":[],"displayHeadIds":[],"movements":[]}"#),
+            (explicit_empty, explicit_empty),
+            (entries, entries),
+        ] {
+            let reference: MapSignalHeadRef = serde_json::from_str(wire).unwrap();
+            assert_eq!(serde_json::to_string(&reference).unwrap(), expected);
+        }
     }
 
     #[test]
