@@ -9,7 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use simforge_core::map::{LaneGraph, TopologyGate, TopologyIndex};
 use simforge_core::types::{
@@ -21,7 +21,7 @@ use crate::anchor::{flip_relation, MatchedSite};
 use crate::map_index::DerivedMapIndex;
 use crate::template::{ApproachRelation, SignalApproach};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalHead {
     pub id: String,
@@ -30,7 +30,7 @@ pub struct MapSignalHead {
     pub dynamic: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapRoadControlHead {
     pub id: String,
@@ -38,7 +38,7 @@ pub struct MapRoadControlHead {
     pub s: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSpeedLimitHead {
     pub id: String,
@@ -47,7 +47,7 @@ pub struct MapSpeedLimitHead {
     pub speed_limit_kph: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ApplicabilitySource {
     Signal,
@@ -55,7 +55,7 @@ pub enum ApplicabilitySource {
 }
 
 /// OpenDRIVE lane applicability for a physical signal head.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalApplicability {
     pub head_id: String,
@@ -65,7 +65,7 @@ pub struct MapSignalApplicability {
     pub source: ApplicabilitySource,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalController {
     pub id: String,
@@ -73,14 +73,14 @@ pub struct MapSignalController {
     pub signal_ids: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalJunction {
     pub junction_id: String,
     pub controller_ids: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalCatalog {
     pub heads: Vec<MapSignalHead>,
@@ -91,21 +91,21 @@ pub struct MapSignalCatalog {
     pub junctions: Vec<MapSignalJunction>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PlanTimingSource {
     SyntheticDefault,
     None,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PlanStateSource {
     SyntheticCycle,
     None,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SiteSignalPlan {
     pub junction_id: Option<String>,
@@ -136,7 +136,7 @@ impl SiteSignalPlan {
 }
 
 /// Map-wide physical controls used by the scenario-independent ambient world.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapControlPlan {
     pub signal_programs: Vec<SignalProgram>,

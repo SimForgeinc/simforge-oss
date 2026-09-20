@@ -91,6 +91,10 @@ pub fn canonical_json(document: String) -> Result<String> {
 pub fn content_hash(document: String) -> Result<String> {
     rt::content_hash(&document).js()
 }
+#[napi]
+pub fn parse_map_signal_catalog(xodr: String, geojson_json: String) -> Result<String> {
+    rt::parse_signal_catalog_json(&xodr, &geojson_json).js()
+}
 
 #[napi]
 pub fn sha256_hex(data: Uint8Array) -> String {
@@ -485,6 +489,26 @@ impl JsMapBundle {
     #[napi]
     pub fn signal_control_index_json(&self) -> Result<String> {
         self.inner.signal_control_index_json().js()
+    }
+    #[napi]
+    pub fn control_plan_json_with_catalog(&self, catalog_json: String) -> Result<String> {
+        self.inner.control_plan_json_with_catalog(&catalog_json).js()
+    }
+    #[napi]
+    pub fn signal_control_index_json_with_catalog(&self, catalog_json: String) -> Result<String> {
+        self.inner.signal_control_index_json_with_catalog(&catalog_json).js()
+    }
+    #[napi]
+    pub fn compile_signal_plans_json(&self, programs_json: String, plans_json: String, options_json: String, catalog_json: String) -> Result<String> {
+        self.inner.compile_signal_plans_json(&programs_json, &plans_json, &options_json, &catalog_json).js()
+    }
+    #[napi]
+    pub fn select_signal_reference_json(&self, index_json: String, reference_json: String) -> Result<Option<String>> {
+        self.inner.select_signal_reference_json(&index_json, &reference_json).js()
+    }
+    #[napi]
+    pub fn evaluate_signal_reference_json(&self, index_json: String, selection_json: String, options_json: String) -> Result<String> {
+        self.inner.evaluate_signal_reference_json(&index_json, &selection_json, &options_json).js()
     }
     /// The matcher's `DerivedMapIndex`.
     #[napi]

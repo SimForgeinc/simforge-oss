@@ -33,7 +33,7 @@ pub use batch::Batch;
 pub use compile::{
     adapt_template_notes_json, apply_situation_transaction_json, cell_seed, compare_situation_json,
     compile_situation_json, compile_template, find_site, find_sites, lift_map_bound_template,
-    match_sites, materialize_ambient_traffic, rehearse_situation_json, solve_situation_json,
+    match_sites, materialize_ambient_traffic, parse_signal_catalog_json, rehearse_situation_json, solve_situation_json,
     template_identity_json, Compiled, MapAsset, PolicyCallback, Site,
 };
 pub use env::{Env, StepView};
