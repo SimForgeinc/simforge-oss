@@ -1141,4 +1141,21 @@ mod tests {
             }]
         );
     }
+    #[test]
+    fn catalog_serde_round_trip_preserves_authored_overrides() {
+        let catalog = MapSignalCatalog {
+            heads: vec![MapSignalHead { id: "authored-head".into(), road_id: "road".into(), s: 4.5, dynamic: true }],
+            road_controls: vec![],
+            speed_limits: vec![],
+            applicability: vec![MapSignalApplicability {
+                head_id: "authored-head".into(), road_id: "road".into(), from_lane: Some(-1), to_lane: Some(-1),
+                source: ApplicabilitySource::Signal,
+            }],
+            controllers: vec![MapSignalController { id: "controller".into(), sequence: 2.0, signal_ids: vec!["authored-head".into()] }],
+            junctions: vec![MapSignalJunction { junction_id: "junction".into(), controller_ids: vec!["controller".into()] }],
+        };
+        let encoded = serde_json::to_string(&catalog).unwrap();
+        let decoded: MapSignalCatalog = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(serde_json::to_string(&decoded).unwrap(), encoded);
+    }
 }
