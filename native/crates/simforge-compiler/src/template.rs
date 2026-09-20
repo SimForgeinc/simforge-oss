@@ -3267,7 +3267,7 @@ pub struct MapSignalHeadRef {
     #[serde(default)]
     pub display_head_ids: Vec<String>,
     #[serde(default)]
-    pub movements: Vec<MapSignalMovement>,
+    pub movements: Option<Vec<MapSignalMovement>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

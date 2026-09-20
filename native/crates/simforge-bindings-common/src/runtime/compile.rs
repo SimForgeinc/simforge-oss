@@ -22,8 +22,8 @@ use simforge_compiler::map_signals::{
 use simforge_compiler::materialize::{instantiate, MaterializeOptions, Observation, SiteSelection};
 use simforge_compiler::signal_plan::{
     build_signal_control_index, compile_map_signal_plans, evaluate_signal_reference_phase,
-    select_signal_reference, SignalControlIndex, SignalReferenceSelection,
-    CompileMapSignalPlansOptions,
+    expand_map_signal_movements, select_signal_plan_reference, CompileMapSignalPlansOptions,
+    SignalControlIndex, SignalReferenceSelection,
 };
 use simforge_compiler::map_signals::SignalMapView;
 use simforge_compiler::sites::{match_on_map, SiteMatchOptions};
@@ -214,6 +214,18 @@ impl MapAsset {
         let heads = catalog.heads.iter().map(|head| head.id.clone()).collect::<Vec<_>>();
         Ok(serde_json::to_string(&build_signal_control_index(&plan.signal_programs, &heads))?)
     }
+    pub fn signal_control_index_json_with_programs(&self, programs_json: &str, catalog_json: &str) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
+        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
+        let heads = catalog.heads.iter().map(|head| head.id.clone()).collect::<Vec<_>>();
+        Ok(serde_json::to_string(&build_signal_control_index(&programs, &heads))?)
+    }
+
+    pub fn expand_map_signal_movements_json(&self, programs_json: &str, plans_json: &str) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
+        let plans: Vec<simforge_compiler::template::MapSignalPlan> = json_arg("map signal plans", plans_json)?;
+        Ok(serde_json::to_string(&expand_map_signal_movements(&programs, &plans)?)?)
+    }
 
     pub fn parse_signal_catalog_json(&self, xodr: &str, geojson_json: &str) -> Result<String> {
         let geojson = json_arg("signals geojson", geojson_json)?;
@@ -227,21 +239,23 @@ impl MapAsset {
         let map_id: String = serde_json::from_value(options.get("mapId").cloned().ok_or_else(|| BindingError::argument("compile options: mapId missing".to_owned()))?)?;
         let clip_seconds: f64 = serde_json::from_value(options.get("clipSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: clipSeconds missing".to_owned()))?)?;
         let warmup_seconds: f64 = serde_json::from_value(options.get("warmupSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: warmupSeconds missing".to_owned()))?)?;
-        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
         let world_signal_set_ids: Vec<String> = options.get("worldSignalSetIds").and_then(|value| serde_json::from_value(value.clone()).ok()).unwrap_or_default();
+        let world_routes: Option<std::collections::BTreeMap<String, simforge_compiler::signal_plan::WorldRouteBinding>> =
+            options.get("worldRoutes").and_then(|value| serde_json::from_value(value.clone()).ok());
+        let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
         let compiled = compile_map_signal_plans(&programs, &plans, &CompileMapSignalPlansOptions {
             map_id: &map_id, clip_seconds, warmup_seconds, signal_catalog: &catalog, world_signal_set_ids: &world_signal_set_ids,
+            world_routes: world_routes.as_ref(),
         })?;
         Ok(serde_json::to_string(&compiled)?)
     }
 
     pub fn select_signal_reference_json(&self, index_json: &str, reference_json: &str) -> Result<Option<String>> {
         let index: SignalControlIndex = json_arg("signal control index", index_json)?;
-        let reference: serde_json::Value = json_arg("signal reference", reference_json)?;
-        let head_id: String = serde_json::from_value(reference.get("headId").cloned().ok_or_else(|| BindingError::argument("signal reference: headId missing".to_owned()))?)?;
-        let movement_id = reference.get("movementId").and_then(|v| v.as_str());
-        let controller_id = reference.get("controllerId").and_then(|v| v.as_str());
-        Ok(select_signal_reference(&index, &head_id, movement_id, controller_id).map(|selection| serde_json::to_string(&selection)).transpose()?)
+        let reference: simforge_compiler::template::MapSignalHeadRef = json_arg("signal reference", reference_json)?;
+        Ok(select_signal_plan_reference(&index, &reference)
+            .map(|selection| serde_json::to_string(&selection))
+            .transpose()?)
     }
 
     pub fn evaluate_signal_reference_json(&self, index_json: &str, selection_json: &str, options_json: &str) -> Result<String> {

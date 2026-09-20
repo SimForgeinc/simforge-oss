@@ -22,12 +22,23 @@ use crate::map_index::DerivedMapIndex;
 use crate::template::{ApproachRelation, SignalApproach};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum MapSignalHeadKind {
+    Physical,
+    Virtual,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSignalHead {
     pub id: String,
     pub road_id: String,
     pub s: f64,
     pub dynamic: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<MapSignalHeadKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signal_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -318,10 +329,31 @@ pub fn parse_map_signal_catalog(xodr: &str, geojson: &Value) -> MapSignalCatalog
                 road_id,
                 s: finite(p.get("s"), 0.0),
                 dynamic: true,
+                kind: Some(MapSignalHeadKind::Physical),
+                signal_id: None,
             })
         })
         .collect();
     heads.sort_by(|a, b| a.id.cmp(&b.id));
+    for (road_attrs, road_body) in paired_elements(xodr, "road") {
+        let road_id = attrs(road_attrs).get("id").cloned().unwrap_or_default();
+        for (signal_attrs, signal_body) in paired_elements(road_body, "signal") {
+            let signal_attrs = attrs(signal_attrs);
+            let Some(id) = signal_attrs.get("id") else { continue };
+            let Some(head) = heads.iter_mut().find(|head| head.id == *id) else { continue };
+            let metadata = any_elements(signal_body, "vectorSignal")
+                .into_iter()
+                .next()
+                .map(attrs)
+                .unwrap_or_default();
+            let signal_id = metadata.get("signalId").filter(|value| !value.is_empty()).cloned();
+            let virtual_head = metadata.get("gateId").is_some() && signal_id.is_none();
+            head.road_id = if road_id.is_empty() { head.road_id.clone() } else { road_id.clone() };
+            head.s = signal_attrs.get("s").and_then(|value| value.parse().ok()).unwrap_or(head.s);
+            head.kind = Some(if virtual_head { MapSignalHeadKind::Virtual } else { MapSignalHeadKind::Physical });
+            head.signal_id = signal_id;
+        }
+    }
 
     let mut road_controls: Vec<MapRoadControlHead> = features
         .iter()
@@ -1143,19 +1175,21 @@ mod tests {
     }
     #[test]
     fn catalog_serde_round_trip_preserves_authored_overrides() {
-        let catalog = MapSignalCatalog {
-            heads: vec![MapSignalHead { id: "authored-head".into(), road_id: "road".into(), s: 4.5, dynamic: true }],
-            road_controls: vec![],
-            speed_limits: vec![],
-            applicability: vec![MapSignalApplicability {
-                head_id: "authored-head".into(), road_id: "road".into(), from_lane: Some(-1), to_lane: Some(-1),
-                source: ApplicabilitySource::Signal,
-            }],
-            controllers: vec![MapSignalController { id: "controller".into(), sequence: 2.0, signal_ids: vec!["authored-head".into()] }],
-            junctions: vec![MapSignalJunction { junction_id: "junction".into(), controller_ids: vec!["controller".into()] }],
-        };
+        let wire = r#"{
+          "heads": [{"id":"authored-head","roadId":"road","s":4.5,"dynamic":true,"kind":"physical","signalId":"rr-signal-17"}],
+          "roadControls": [], "speedLimits": [],
+          "applicability": [{"headId":"authored-head","roadId":"road","fromLane":-1,"toLane":-1,"source":"signal"}],
+          "controllers": [{"id":"controller","sequence":2.0,"signalIds":["authored-head"]}],
+          "junctions": [{"junctionId":"junction","controllerIds":["controller"]}]
+        }"#;
+        let catalog: MapSignalCatalog = serde_json::from_str(wire).unwrap();
+        let head = &catalog.heads[0];
+        assert_eq!(head.signal_id.as_deref(), Some("rr-signal-17"));
+        assert_eq!(head.kind, Some(MapSignalHeadKind::Physical));
         let encoded = serde_json::to_string(&catalog).unwrap();
         let decoded: MapSignalCatalog = serde_json::from_str(&encoded).unwrap();
         assert_eq!(serde_json::to_string(&decoded).unwrap(), encoded);
+        assert!(encoded.contains("\"signalId\":\"rr-signal-17\""));
+        assert!(encoded.contains("\"kind\":\"physical\""));
     }
 }

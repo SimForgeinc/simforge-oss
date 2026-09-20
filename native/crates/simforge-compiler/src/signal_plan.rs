@@ -12,11 +12,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
-use simforge_core::types::{ControlIndication, SignalPhase, SignalProgram, TimingSource};
+use simforge_core::types::{ControlIndication, SignalMapBinding, SignalPhase, SignalProgram, StopLine, TimingSource};
 
 use crate::error::CompileError;
 use crate::map_signals::MapSignalCatalog;
-use crate::template::{MapSignalPlan, MapSignalPlanClip};
+use crate::template::{MapSignalHeadRef, MapSignalPlan, MapSignalPlanClip};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -87,6 +87,8 @@ pub struct SignalJunctionControlBinding {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignalControlIndex {
+    #[serde(default)]
+    pub physical_head_ids: BTreeSet<String>,
     pub heads: BTreeMap<String, SignalHeadControlBinding>,
     pub movements: BTreeMap<String, SignalMovementBinding>,
     pub controllers: BTreeMap<String, SignalControllerBinding>,
@@ -99,12 +101,13 @@ pub struct SignalControlIndex {
 pub struct SignalReferenceSelection {
     pub selected_head_id: String,
     pub reference_movement_id: String,
-    /// Exact authoritative OpenDRIVE controller stage selected for authoring.
     pub reference_controller_id: String,
     pub junction_id: String,
     pub controller_ids: Vec<String>,
     pub stage_movement_ids: Vec<String>,
     pub movement_head_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub display_head_ids: Vec<String>,
     pub intersection_head_ids: Vec<String>,
     pub related_movement_ids: Vec<String>,
     pub diagnostics: Vec<SignalControlDiagnostic>,
@@ -339,6 +342,7 @@ pub fn build_signal_control_index(
         })
         .collect();
     SignalControlIndex {
+        physical_head_ids: physical_head_ids.iter().cloned().collect(),
         heads,
         movements,
         controllers,
@@ -420,11 +424,89 @@ pub fn select_signal_reference(
         controller_ids: movement.controller_ids.clone(),
         stage_movement_ids: controller.movement_ids.clone(),
         movement_head_ids: controller.head_ids.clone(),
+        display_head_ids: Vec::new(),
         intersection_head_ids,
         related_movement_ids,
         diagnostics,
     })
 }
+/// Resolve a complete authored plan reference, including simultaneous stages
+/// and display-only heads.
+pub fn select_signal_plan_reference(
+    index: &SignalControlIndex,
+    reference: &MapSignalHeadRef,
+) -> Option<SignalReferenceSelection> {
+    let resolve = |controller_id: &str, head_id: &str| {
+        let controller = index.controllers.get(controller_id)?;
+        let head = index.heads.get(head_id)?;
+        let movement_id = controller
+            .movement_ids
+            .iter()
+            .find(|id| head.movement_ids.iter().any(|m| m == *id))?;
+        select_signal_reference(index, head_id, Some(movement_id), Some(controller_id))
+    };
+    let primary = resolve(&reference.controller_id, &reference.head_id)?;
+    let display_head_ids = sorted_unique(reference.display_head_ids.iter().cloned());
+    if display_head_ids.iter().any(|id| {
+        (!index.physical_head_ids.is_empty() && !index.physical_head_ids.contains(id))
+            || (index.physical_head_ids.is_empty() && !index.heads.contains_key(id))
+    }) {
+        return None;
+    }
+    if reference.additional_stages.is_empty() && display_head_ids.is_empty() && reference.movements.is_none() {
+        return Some(primary);
+    }
+    let mut controller_ids = BTreeSet::from([reference.controller_id.clone()]);
+    let mut stage_movement_ids: BTreeSet<String> = primary.stage_movement_ids.iter().cloned().collect();
+    let mut movement_head_ids: BTreeSet<String> = primary.movement_head_ids.iter().cloned().collect();
+    for stage in &reference.additional_stages {
+        if !controller_ids.insert(stage.controller_id.clone()) {
+            return None;
+        }
+        let selection = resolve(&stage.controller_id, &stage.head_id)?;
+        if selection.junction_id != primary.junction_id {
+            return None;
+        }
+        stage_movement_ids.extend(selection.stage_movement_ids);
+        movement_head_ids.extend(selection.movement_head_ids);
+    }
+    if let Some(requested) = &reference.movements {
+        stage_movement_ids.clear();
+        for id in &primary.stage_movement_ids {
+            if index.movements.get(id).is_some_and(|movement| movement.approach_lane_rsls.is_empty()) {
+                stage_movement_ids.insert(id.clone());
+            }
+        }
+        for pair in requested {
+            let mut found = false;
+            for id in &primary.related_movement_ids {
+                let Some(movement) = index.movements.get(id) else { continue };
+                if movement.approach_lane_rsls.iter().any(|lane| lane == &pair.approach_lane_rsl)
+                    && movement.connecting_lane_rsls.iter().any(|lane| lane == &pair.connecting_lane_rsl)
+                {
+                    stage_movement_ids.insert(id.clone());
+                    found = true;
+                }
+            }
+            if !found {
+                return None;
+            }
+        }
+        movement_head_ids = stage_movement_ids
+            .iter()
+            .filter_map(|id| index.movements.get(id))
+            .flat_map(|movement| movement.head_ids.iter().cloned())
+            .collect();
+    }
+    let mut result = primary;
+    result.controller_ids = controller_ids.into_iter().collect();
+    result.stage_movement_ids = stage_movement_ids.into_iter().collect();
+    result.movement_head_ids = movement_head_ids.into_iter().collect();
+    result.display_head_ids = display_head_ids.clone();
+    result.intersection_head_ids = sorted_unique(result.intersection_head_ids.into_iter().chain(display_head_ids));
+    Some(result)
+}
+
 
 /// Project authored movement state onto every physical head at the selected
 /// intersection. Exact controller-stage head membership is authoritative.
@@ -490,13 +572,20 @@ pub fn evaluate_signal_reference_phase(
 
 /* -------------------------------------------------------- plan compiler */
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldRouteBinding {
+    pub points_hash: String,
+    pub length_m: f64,
+}
+
 pub struct CompileMapSignalPlansOptions<'a> {
     pub map_id: &'a str,
     pub clip_seconds: f64,
     pub warmup_seconds: f64,
     pub signal_catalog: &'a MapSignalCatalog,
-    /// Resolved engine signal ids owned by `@world set(signal:*.phase)`.
     pub world_signal_set_ids: &'a [String],
+    pub world_routes: Option<&'a BTreeMap<String, WorldRouteBinding>>,
 }
 
 const ENDPOINT_PAD_S: f64 = 1e-6;
@@ -755,13 +844,13 @@ fn compile_junction(
         selection.movement_head_ids.dedup();
         selection.intersection_head_ids.extend(clip.reference.display_head_ids.iter().cloned());
         selection.intersection_head_ids.sort();
-        if !clip.reference.movements.is_empty() {
+        if let Some(requested) = &clip.reference.movements {
             let wanted: BTreeSet<String> = control_index
                 .movements
                 .values()
                 .filter(|movement| {
                     movement.controller_ids.iter().any(|id| controller_ids.contains(id))
-                        && clip.reference.movements.iter().any(|requested| {
+                        && requested.iter().any(|requested| {
                             movement.approach_lane_rsls.iter().any(|lane| lane == &requested.approach_lane_rsl)
                                 && movement.connecting_lane_rsls.iter().any(|lane| lane == &requested.connecting_lane_rsl)
                         })
@@ -886,12 +975,80 @@ fn compile_junction(
 
 /// Compile bounded authoring clips into complete, non-looping engine programs.
 /// Baseline map timing is retained during warm-up and every uncovered gap.
+/// Split exact movement-controlled programs into one executable program per
+/// stop-line connector, preserving baseline timing and authored identity.
+pub fn expand_map_signal_movements(
+    programs: &[SignalProgram],
+    plans: &[MapSignalPlan],
+) -> Result<Vec<SignalProgram>, CompileError> {
+    let split_junctions: BTreeSet<String> = plans
+        .iter()
+        .filter(|plan| plan.clips.iter().any(|clip| clip.reference.movements.is_some()))
+        .map(|plan| plan.binding.junction_id.clone())
+        .collect();
+    let mut split_ids: BTreeSet<String> = programs.iter().map(|program| program.id.clone()).collect();
+    let mut output = Vec::new();
+    for program in programs {
+        let Some(binding) = &program.map_binding else {
+            output.push(program.clone());
+            continue;
+        };
+        if !split_junctions.contains(&binding.junction_id) || program.stop_lines.is_empty() {
+            output.push(program.clone());
+            continue;
+        }
+        let mut movements = Vec::new();
+        for (line_index, line) in program.stop_lines.iter().enumerate() {
+            if line.connecting_lane_rsls.is_empty() {
+                return Err(plan_error(
+                    "map_signal_plan_reference_unbound",
+                    "mapSignalPlans".to_owned(),
+                    format!("program \"{}\" lacks exact topology lane pairs for movement selection", program.id),
+                ));
+            }
+            for (connector_index, connector) in line.connecting_lane_rsls.iter().enumerate() {
+                let id = format!("{}:movement:{}:{}", program.id, line_index, connector_index);
+                if !split_ids.insert(id.clone()) {
+                    return Err(plan_error(
+                        "map_signal_plan_dual_ownership",
+                        "mapSignalPlans".to_owned(),
+                        format!("movement program \"{id}\" already exists"),
+                    ));
+                }
+                let mut movement = program.clone();
+                movement.id = id;
+                movement.stop_lines = vec![simforge_core::types::StopLine {
+                    rsl: line.rsl.clone(),
+                    s: line.s,
+                    connecting_lane_rsls: vec![connector.clone()],
+                }];
+                if let Some(map_binding) = &mut movement.map_binding {
+                    map_binding.head_ids.clear();
+                    if let Some(groups) = &mut map_binding.controller_head_groups {
+                        for group in groups {
+                            group.head_ids.clear();
+                        }
+                    }
+                }
+                movements.push(movement);
+            }
+        }
+        let mut baseline = program.clone();
+        baseline.stop_lines.clear();
+        output.push(baseline);
+        output.extend(movements);
+    }
+    Ok(output)
+}
+
+/// Compile bounded authoring clips into complete, non-looping engine programs.
+/// Baseline map timing is retained during warm-up and every uncovered gap.
 pub fn compile_map_signal_plans(
     programs: &[SignalProgram],
     plans: &[MapSignalPlan],
     options: &CompileMapSignalPlansOptions<'_>,
 ) -> Result<Vec<SignalProgram>, CompileError> {
-    let mut output: Vec<SignalProgram> = programs.to_vec();
+    let mut output = expand_map_signal_movements(programs, plans)?;
     for (plan_index, plan) in plans.iter().enumerate() {
         let compiled = compile_junction(&output, plan, options, plan_index)?;
         for replacement in compiled {
@@ -899,6 +1056,100 @@ pub fn compile_map_signal_plans(
                 *slot = replacement;
             }
         }
+        for signal in &plan.route_signals {
+            let Some(routes) = options.world_routes else {
+                return Err(plan_error("map_signal_plan_reference_unbound", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" lacks a world route binding", signal.id)));
+            };
+            let Some(route) = routes.get(&signal.actor_id) else {
+                return Err(plan_error("map_signal_plan_reference_unbound", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" lacks an exact world-route actor", signal.id)));
+            };
+            if route.points_hash != signal.route_points_hash || !route.length_m.is_finite() || signal.s < 0.0 || signal.s > route.length_m {
+                return Err(plan_error("map_signal_plan_reference_unbound", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" has an invalid world-route binding", signal.id)));
+            }
+            if output.iter().any(|program| program.id == signal.id) || options.world_signal_set_ids.iter().any(|id| id == &signal.id) {
+                return Err(plan_error("map_signal_plan_dual_ownership", format!("mapSignalPlans.{plan_index}.routeSignals"), format!("route signal \"{}\" has conflicting ownership", signal.id)));
+            }
+            output.push(SignalProgram {
+                id: signal.id.clone(),
+                phases: signal.phases.iter().map(|phase| SignalPhase { phase: phase.phase, duration_s: phase.duration_s }).collect(),
+                offset_s: signal.offset_s,
+                loop_: signal.r#loop,
+                dark_fallback: None,
+                dark_dwell_s: None,
+                stop_lines: vec![StopLine { rsl: String::new(), s: signal.s, connecting_lane_rsls: Vec::new() }],
+                map_binding: Some(SignalMapBinding {
+                    junction_id: signal.coordination_id.clone().unwrap_or_else(|| plan.binding.junction_id.clone()),
+                    controller_ids: Vec::new(),
+                    head_ids: Vec::new(),
+                    controller_head_groups: None,
+                    timing_source: TimingSource::Authored,
+                }),
+            });
+        }
     }
     Ok(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use simforge_core::types::{ControllerHeadGroup, SignalMapBinding, StopLine};
+
+    fn program(id: &str, controller: &str, head: &str, junction: &str) -> SignalProgram {
+        SignalProgram {
+            id: id.into(),
+            phases: vec![SignalPhase { phase: ControlIndication::Red, duration_s: 1.0 }],
+            offset_s: 0.0,
+            loop_: true,
+            dark_fallback: None,
+            dark_dwell_s: None,
+            stop_lines: vec![StopLine { rsl: "r".into(), s: 0.0, connecting_lane_rsls: vec!["lane".into()] }],
+            map_binding: Some(SignalMapBinding {
+                junction_id: junction.into(),
+                controller_ids: vec![controller.into()],
+                head_ids: vec![head.into()],
+                controller_head_groups: Some(vec![ControllerHeadGroup { controller_id: controller.into(), head_ids: vec![head.into()] }]),
+                timing_source: TimingSource::Map,
+            }),
+        }
+    }
+
+    fn reference(controller_id: &str, head_id: &str) -> MapSignalHeadRef {
+        MapSignalHeadRef {
+            controller_id: controller_id.into(),
+            head_id: head_id.into(),
+            additional_stages: Vec::new(),
+            display_head_ids: Vec::new(),
+            movements: None,
+        }
+    }
+
+    #[test]
+    fn compound_selection_unions_stage_movements_and_heads() {
+        let programs = vec![program("m1", "c1", "h1", "j"), program("m2", "c2", "h2", "j")];
+        let index = build_signal_control_index(&programs, &["h1".into(), "h2".into()]);
+        let single = select_signal_plan_reference(&index, &reference("c1", "h1")).unwrap();
+        let mut compound = reference("c1", "h1");
+        compound.additional_stages.push(reference("c2", "h2"));
+        compound.display_head_ids.push("h2".into());
+        let compound = select_signal_plan_reference(&index, &compound).unwrap();
+        assert_ne!(single, compound);
+        assert_eq!(compound.stage_movement_ids, vec!["m1", "m2"]);
+        assert_eq!(compound.movement_head_ids, vec!["h1", "h2"]);
+    }
+
+    #[test]
+    fn compound_selection_refuses_duplicate_controller_cross_junction_and_unknown_display_head() {
+        let programs = vec![program("m1", "c1", "h1", "j"), program("m2", "c2", "h2", "other")];
+        let index = build_signal_control_index(&programs, &["h1".into(), "h2".into()]);
+        let mut duplicate = reference("c1", "h1");
+        duplicate.additional_stages.push(reference("c1", "h1"));
+        assert!(select_signal_plan_reference(&index, &duplicate).is_none());
+        let mut cross = reference("c1", "h1");
+        cross.additional_stages.push(reference("c2", "h2"));
+        assert!(select_signal_plan_reference(&index, &cross).is_none());
+        let mut unknown = reference("c1", "h1");
+        unknown.display_head_ids.push("missing".into());
+        assert!(select_signal_plan_reference(&index, &unknown).is_none());
+    }
 }
