@@ -6,6 +6,9 @@ import { ensureMapAsset, MapCacheError, resolveCachedMapAsset } from "@/app/lib/
 import { MapAccessError, parseLocalMapAssetUrl, resolveAuthorizedMapMember } from "./access";
 import { primeCloudSession } from "./connection";
 import type { RegistryMember } from "./map-registry";
+import { MAP_CACHE_BUCKET } from "./map-registry";
+import { getMapArtifactDownloadUrl } from "@/app/lib/s3/s3-presign";
+import { browserAssetRedirectCacheControl, objectRedirect } from "@/app/lib/s3/local-object-redirect";
 
 /**
  * One authorized URL for installed and downloaded members alike. Admission
@@ -57,14 +60,36 @@ function parseRange(header: string | null, size: number): { start: number; end: 
 /**
  * Stream a verified cache object with byte-range support. `sha256` is the
  * authorized member's identity; the path comes from the cache, never a caller.
+ *
+ * `storedAt` is where the bytes live when the cache does not hold them. A
+ * member whose row names a real bucket and key is already in the object
+ * store, and on a host that serves its closures from there the cache is
+ * always cold: filling it would mean downloading the object from the
+ * deployment's own upstream — itself — and the miss became a 404 for every
+ * tile. Such a member is redirected to the store instead, the same way the
+ * map-asset routes deliver objects. Members in the map cache's own bucket
+ * keep the ensure path: for them the cache IS the store.
  */
 export async function streamCachedObject(
   request: Request,
   member: Pick<RegistryMember, "sha256" | "byteLength" | "mediaType">,
   ensureUrl: string,
   headOnly: boolean,
+  storedAt?: { mapVersionId: string; bucket: string; key: string },
 ): Promise<Response> {
   let cached = await resolveCachedMapAsset(member.sha256);
+  if (!cached && storedAt && storedAt.bucket !== MAP_CACHE_BUCKET) {
+    const url = await getMapArtifactDownloadUrl(
+      storedAt.mapVersionId,
+      storedAt.key,
+      storedAt.bucket,
+      member.sha256,
+      member.byteLength,
+    );
+    const redirect = objectRedirect(url, 302);
+    redirect.headers.set("Cache-Control", browserAssetRedirectCacheControl());
+    return redirect;
+  }
   if (!cached) {
     await ensureMapAsset({
       requestId: `route:${randomUUID()}`,
@@ -114,7 +139,11 @@ export async function serveLocalMapAsset(request: Request, headOnly: boolean): P
     if (ref.kind !== "map") throw new MapAccessError("MapCacheError", "invalid_map_asset_url");
     await primeCloudSession();
     const { member } = await resolveAuthorizedMapMember(ref);
-    return await streamCachedObject(request, member, url.pathname, headOnly);
+    return await streamCachedObject(request, member, url.pathname, headOnly, {
+      mapVersionId: ref.mapVersionId,
+      bucket: member.bucket,
+      key: member.key,
+    });
   } catch (error) {
     return mapAccessErrorResponse(error);
   }
