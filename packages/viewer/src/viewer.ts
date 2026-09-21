@@ -119,6 +119,7 @@ function layerCoverage(stats: LayerStats | undefined): LayerCoverage | null {
 }
 
 const DEFAULTS = {
+  vegetation: true,
   maxPixelRatio: 2,
   antialias: true,
   /**
@@ -725,13 +726,14 @@ export class CityViewer {
     // after the React settings effect runs.
     const vegetationPromise = this.options.vegetationMaxDistance <= 0
       ? Promise.resolve()
-      : this.loadVegetationInstances(manifest);
+      : this.options.vegetation
+        ? this.loadVegetationInstances(manifest)
+        : Promise.resolve();
 
     this.createRoadLayer(manifest);
     this.createCityLayer(manifest);
-    await vegetationPromise;
     if (this.disposed) return;
-    if (this.options.vegetationMaxDistance > 0) this.createVegetationLayer(manifest);
+    if (this.options.vegetation && this.options.vegetationMaxDistance > 0) this.createVegetationLayer(manifest);
 
     void visualResourcesPromise.catch((error: unknown) => {
       if (!this.disposed) this.recordStreamingError(error);
@@ -2084,7 +2086,7 @@ export class CityViewer {
 
   private async ensureVegetationLayer(): Promise<void> {
     if (this.vegLayer || !this.manifest || this.disposed
-      || this.options.vegetationMaxDistance <= 0) return;
+      || !this.options.vegetation || this.options.vegetationMaxDistance <= 0) return;
     this.auxiliaryLoads++;
     try {
       await this.loadVegetationInstances(this.manifest);
