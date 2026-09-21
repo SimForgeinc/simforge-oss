@@ -32,6 +32,13 @@ export const SCENARIO_DEFAULT_CPU_CLAIM_FAMILIES = [
   "artifact_postprocess",
 ] as const;
 const MAX_CPU_JOB_ARTIFACTS = 64;
+/**
+ * The largest single output any CPU lane may hand back. Native sensor archives
+ * carry a lidar point cloud per frame and pass 512 MiB on a five-second clip;
+ * the native reservation already admits this much, so the generic completion
+ * must too or the render fails after every byte has been uploaded.
+ */
+const MAX_CPU_JOB_ARTIFACT_BYTES = 8 * 1024 * 1024 * 1024;
 
 /** Render engines a local worker can offer; the host only leases jobs of engines the worker declared. */
 export const LOCAL_RENDER_ENGINES = ["browser", "native"] as const;
@@ -65,7 +72,7 @@ export const ReserveCpuJobOutputSchema = CpuJobFenceSchema.extend({
     ]),
     mediaType: z.string().trim().min(1).max(200),
     sha256: CompilerDigestSchema,
-    sizeBytes: z.number().int().positive().max(512 * 1024 * 1024),
+    sizeBytes: z.number().int().positive().max(MAX_CPU_JOB_ARTIFACT_BYTES),
   })).min(1).max(MAX_CPU_JOB_ARTIFACTS),
 });
 
@@ -74,7 +81,7 @@ export const CompleteCpuJobSchema = CpuJobFenceSchema.extend({
     id: z.string().trim().min(1),
     kind: z.string().trim().min(1).max(100),
     sha256: CompilerDigestSchema,
-    sizeBytes: z.number().int().positive().max(512 * 1024 * 1024),
+    sizeBytes: z.number().int().positive().max(MAX_CPU_JOB_ARTIFACT_BYTES),
   })).min(1).max(MAX_CPU_JOB_ARTIFACTS),
   compile: z.strictObject({
     manifestSha256: CompilerDigestSchema,
@@ -97,7 +104,7 @@ export const CompleteCpuJobSchema = CpuJobFenceSchema.extend({
       artifactId: z.string().trim().min(1),
       identity: RenderArtifactIdentitySchema,
       sha256: CompilerDigestSchema,
-      sizeBytes: z.number().int().positive().max(8 * 1024 * 1024 * 1024),
+      sizeBytes: z.number().int().positive().max(MAX_CPU_JOB_ARTIFACT_BYTES),
       mediaType: z.string().trim().min(1).max(200),
     })).min(1).max(MAX_CPU_JOB_ARTIFACTS),
   }).optional(),
@@ -107,7 +114,7 @@ export const CompleteCpuJobSchema = CpuJobFenceSchema.extend({
 export const ReserveLocalNativeArtifactSchema = CpuJobFenceSchema.extend({
   identity: RenderArtifactIdentitySchema,
   sha256: CompilerDigestSchema,
-  sizeBytes: z.number().int().positive().max(8 * 1024 * 1024 * 1024),
+  sizeBytes: z.number().int().positive().max(MAX_CPU_JOB_ARTIFACT_BYTES),
   mediaType: z.string().trim().min(1).max(200),
 });
 
