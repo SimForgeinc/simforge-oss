@@ -621,3 +621,37 @@ export type ProtocolRequestConformance = [
   Assert<Accepts<protocol.PrepareExportRequest, typeof CreateExportSchema>>,
   Assert<Accepts<protocol.CreateValidationRunRequest, typeof CreateValidationRunSchema>>,
 ];
+
+/**
+ * The map-graph sidecars: the five closure members `loadMapGraph` reads to
+ * build the browser simulation's world.
+ *
+ * They are the members whose identity the client PINS — it compares the
+ * `x-content-sha256` the response carries against the digest the map
+ * descriptor gave it, and refuses the map when they disagree. That pin is
+ * right: a world built from the wrong topology is a silent wrong answer, not
+ * a broken page. It also constrains delivery, because a digest can only be
+ * attested by something that has read the bytes: an object store cannot emit
+ * a custom header, and these objects carry no stored checksum of their own
+ * (a multipart ETag is not one). So they are streamed through the app, while
+ * everything else in a closure — the thousands of tiles nobody pins — is
+ * redirected to the store.
+ *
+ * One list, used both to build the URLs and to decide how to serve them, so
+ * a sixth sidecar cannot be added on one side only.
+ */
+export const MAP_GRAPH_SIDECARS = [
+  "topology-index.json.gz",
+  "derived/topology-derived.json.gz",
+  "derived/locations.json.gz",
+  "map.xodr",
+  "signals.geojson.gz",
+] as const;
+
+/**
+ * Whether this closure member's bytes must reach the client with their digest
+ * attested. See {@link MAP_GRAPH_SIDECARS}.
+ */
+export function requiresDigestAttestation(relativePath: string): boolean {
+  return (MAP_GRAPH_SIDECARS as readonly string[]).includes(relativePath);
+}

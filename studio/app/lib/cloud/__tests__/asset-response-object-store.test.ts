@@ -132,6 +132,46 @@ test("the member's own row decides where its bytes come from", async (t) => {
   const head = await serveLocalMapAsset(get(mapVersionId, "3d/variants/objects/tile.ktx2", "HEAD"), true);
   assert.equal(head.status, 302);
 
+  // The five map-graph sidecars are pinned by the client, and only something
+  // that has read the bytes can attest a digest: they stream through the app
+  // with x-content-sha256 even though they live in the same bucket as the
+  // tile above, which is redirected.
+  const { MAP_GRAPH_SIDECARS } = await import("@/app/lib/scenario/contracts");
+  const { writeLocalObject } = await import("@/app/lib/s3/s3-object");
+  const sidecarMapVersionId = "usmap_sidecars";
+  const sidecarMembers = new Map(MAP_GRAPH_SIDECARS.map((relativePath, index) => {
+    const key = `blobs/sha256/${SHA.slice(0, 2)}/${SHA}-${index}`;
+    return [relativePath, {
+      sha256: SHA,
+      byteLength: BYTES.byteLength,
+      mediaType: "application/octet-stream",
+      bucket: "simforge-maps-internal",
+      key,
+    }] as const;
+  }));
+  for (const member of sidecarMembers.values()) {
+    await writeLocalObject("simforge-maps-internal", member.key, BYTES);
+  }
+  rememberUpstreamMap({
+    mapVersionId: sidecarMapVersionId,
+    access: "public",
+    origin: process.env.SIMFORGE_CLOUD_ORIGIN!,
+    registryReleaseDigest: "b".repeat(64),
+    canonicalDigest: "c".repeat(64),
+    browser: new Map(sidecarMembers),
+    semantic: new Map(),
+  });
+  for (const relativePath of MAP_GRAPH_SIDECARS) {
+    const sidecar = await serveLocalMapAsset(get(sidecarMapVersionId, relativePath), false);
+    assert.equal(sidecar.status, 200, relativePath);
+    assert.equal(
+      sidecar.headers.get("x-content-sha256"),
+      SHA,
+      `${relativePath} must arrive with its digest attested or the browser refuses the map`,
+    );
+    assert.equal(Buffer.from(await sidecar.arrayBuffer()).toString("utf8"), BYTES.toString("utf8"));
+  }
+
   const { MAP_CACHE_BUCKET } = await import("../map-registry");
   const cacheMapVersionId = "usmap_cache_member";
   // Nothing has downloaded this member and the digest names no cached file,

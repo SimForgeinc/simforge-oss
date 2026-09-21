@@ -13,6 +13,7 @@ import {
   type ScenarioDocumentSummaryPageDto,
   type ScenarioMapDescriptorDto,
   type ScenarioRevisionDto,
+  MAP_GRAPH_SIDECARS,
 } from "./contracts";
 import { canonicalContentSha256, scenarioId } from "./core";
 import { simforgeEnv } from "@/lib/simforge-env";
@@ -1559,9 +1560,11 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
     sumoNetworkSha256: row.sumo_network_sha256,
     // Existing aliases remain on the same browser route. Unlike presigned
     // artifact URLs, these cannot expire while a page is open.
-    topologyArtifactUrl: `${browserAssetRootUrl}/topology-index.json.gz`,
-    derivedTopologyUrl: `${browserAssetRootUrl}/derived/topology-derived.json.gz`,
-    locationsUrl: `${browserAssetRootUrl}/derived/locations.json.gz`,
+    // Named from `MAP_GRAPH_SIDECARS`, which is also what decides these five
+    // are streamed with their digest attested rather than redirected.
+    topologyArtifactUrl: `${browserAssetRootUrl}/${MAP_GRAPH_SIDECARS[0]}`,
+    derivedTopologyUrl: `${browserAssetRootUrl}/${MAP_GRAPH_SIDECARS[1]}`,
+    locationsUrl: `${browserAssetRootUrl}/${MAP_GRAPH_SIDECARS[2]}`,
     sumoNetworkUrl: null,
     // Stable first-party route: the browser never needs to know which bucket owns the immutable
     // preview, and it never keeps an expiring S3 URL in SPA state.
@@ -1573,7 +1576,7 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
     // URLs above and never cached (§2.5.3). The editor's authoring projection does
     // NOT come through here — it is built server-side from the artifact bytes,
     // because these inputs are megabytes and the projection is kilobytes.
-    signalsArtifactUrl: `${browserAssetRootUrl}/signals.geojson.gz`,
+    signalsArtifactUrl: `${browserAssetRootUrl}/${MAP_GRAPH_SIDECARS[4]}`,
     xodr: { artifactId: row.xodr_artifact_id, sha256: row.xodr_sha256 },
     coordinateSystem: { id: row.coordinate_system_id, sha256: row.coordinate_system_sha256 },
   };
