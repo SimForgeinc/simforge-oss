@@ -4,6 +4,7 @@ import { useStudioHost } from "../../../host";
 import { useCallback } from "react";
 import type { ScenarioDocumentDto } from "@simforge-oss/studio-host";
 import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/recording-client";
+import { savedSimulationRevisionEvidence } from "../../../lib/scenario/editor/saved-simulation-evidence";
 import { RenderWorkspace } from "./RenderWorkspace";
 import { useOptionalScenarioSession } from "../../scene/ScenarioSessionContext";
 
@@ -53,8 +54,10 @@ export function DocumentRenderWorkspace({
    *
    * Idempotent per draft version. The document's latest snapshot is checked first: when it was
    * frozen from the draft version the author is looking at, it is the execution package already
-   * and is reused without touching the browser session. Only a changed or never-frozen draft needs
-   * deterministic traffic evidence, which only a live session can produce.
+   * and is reused without touching any session. Only a changed or never-frozen draft needs
+   * deterministic traffic evidence: the live session produces it when the editor holds this very
+   * draft; otherwise — the pane opened from the dataset list, where the editor session is gone —
+   * the same evidence comes from the simulation the editor saved for this draft version.
    * `studioHost.projects.ensureRevision` then reuses any other snapshot of the same draft version,
    * so two renders of an unedited scenario share one snapshot instead of minting a duplicate.
    */
@@ -69,10 +72,9 @@ export function DocumentRenderWorkspace({
           return latestRevision.id;
         }
       }
-      if (!scenarioSession) {
-        throw new Error("Open this scenario from its dataset before creating a render.");
-      }
-      const evidence = await scenarioSession.prepareRevisionEvidence(document.id);
+      const evidence = scenarioSession?.document?.id === document.id
+        ? await scenarioSession.prepareRevisionEvidence(document.id)
+        : await savedSimulationRevisionEvidence(studioHost, document, signal);
       const result = await studioHost.projects.ensureRevision({
         documentId: document.id,
         expectedDraftVersion: document.draftVersion,
@@ -81,7 +83,7 @@ export function DocumentRenderWorkspace({
       });
       return result.revisionId;
     },
-    [document.draftVersion, document.id, document.latestRevisionId, scenarioSession, studioHost],
+    [document, scenarioSession, studioHost],
   );
 
   /**
