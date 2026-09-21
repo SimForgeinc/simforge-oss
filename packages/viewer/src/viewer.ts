@@ -1076,6 +1076,13 @@ export class CityViewer {
     return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes, sessionId);
   }
 
+  private async fetchAssetResponse(url: string, signal: AbortSignal): Promise<Response> {
+    const resolved = this.options.resolveMapAssetUrls
+      ? (await this.options.resolveMapAssetUrls([url], signal)).get(url) ?? url
+      : url;
+    return fetch(resolved, { signal });
+  }
+
   private async readJsonResponse(response: Response): Promise<unknown> {
     const decoded = this.downloadTracker.trackDecode();
     const buffer = await readResponseBufferWithProgress(response, this.downloadTracker);
@@ -1087,7 +1094,7 @@ export class CityViewer {
   private async loadVariantManifest(): Promise<CityAssetVariantManifest | null> {
     const relative = this.options.variantManifestUrl || 'variants/manifest.json';
     try {
-      const response = await fetch(resolveUrl(this.assetBase, relative), { signal: this.abort.signal });
+      const response = await this.fetchAssetResponse(resolveUrl(this.assetBase, relative), this.abort.signal);
       if (!response.ok) return null;
       const value = await this.readJsonResponse(response);
       return isCityAssetVariantManifest(value) ? value : null;
@@ -1104,9 +1111,7 @@ export class CityViewer {
       if (typeof reference.file !== 'string' || reference.file.length === 0) {
         throw new Error('Static semantics manifest reference requires a non-empty file');
       }
-      const response = await fetch(resolveUrl(this.assetBase, reference.file), {
-        signal: this.abort.signal,
-      });
+      const response = await this.fetchAssetResponse(resolveUrl(this.assetBase, reference.file), this.abort.signal);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return parseStaticSemantics(await this.readJsonResponse(response));
     } catch (error) {
@@ -1469,9 +1474,7 @@ export class CityViewer {
         if (this.disposed || this.abort.signal.aborted) return;
         if (!tile.instanceFile) continue;
         try {
-          const res = await fetch(resolveUrl(this.assetBase, tile.instanceFile), {
-            signal: this.abort.signal,
-          });
+          const res = await this.fetchAssetResponse(resolveUrl(this.assetBase, tile.instanceFile), this.abort.signal);
           if (!res.ok) continue;
           this.vegetationData.set(tile.id, (await this.readJsonResponse(res)) as VegetationInstanceFile);
         } catch {
