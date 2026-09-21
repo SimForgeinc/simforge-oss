@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { RefObject } from "react";
 import { AppSwitcherGraphicsLevel } from "@/app/components/AppSwitcherGraphicsLevel";
-import { CloudAccountChip } from "@/app/components/cloud/CloudAccountChip";
+import { SwitcherAccount } from "@/app/components/SwitcherAccount";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { useDashboardNav, type NavItem } from "@/app/lib/dashboard-nav";
@@ -31,7 +31,7 @@ export function AppSwitcherOverlay({
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   const close = () => onOpenChange(false);
-  const { apps, utilities } = useDashboardNav(pathname);
+  const { apps, utilities, capabilities } = useDashboardNav(pathname);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -95,7 +95,7 @@ export function AppSwitcherOverlay({
                 ))}
               </nav>
               <div {...stylex.props(styles.footerAside)}>
-                <CloudAccountChip onNavigate={close} />
+                <SwitcherAccount capabilities={capabilities} onNavigate={close} />
                 <AppSwitcherGraphicsLevel />
               </div>
             </div>
