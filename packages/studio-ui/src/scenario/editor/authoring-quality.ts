@@ -1,6 +1,7 @@
 import type { CityViewerOptions } from "@simforge-oss/viewer";
 import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
 import { readRenderingPreference } from "../../components/rendering-preference";
+import { loadViewportSettings } from "./regions/slots/viewport-settings";
 
 const MB = 1024 * 1024;
 
@@ -88,6 +89,7 @@ export function sceneViewerOptions(
     cinematicLighting: preset.cinematicLighting,
     byteBudget: preset.live.byteBudget,
     vegetationMaxDistance: preset.live.vegetationMaxDistance,
+    vegetation: loadViewportSettings().layers.vegetation,
     ...extra,
     mapTextureTier: quality,
   };

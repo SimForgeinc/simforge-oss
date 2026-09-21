@@ -121,6 +121,8 @@ export interface CityViewerOptions {
   /** Base URL that manifest-relative asset paths resolve against. */
   baseUrl?: string;
   /** Device pixel ratio cap. Retina at 2.0 is ~4x the fill cost of 1.0. */
+  /** Whether vegetation assets should be requested and streamed. Defaults to true. */
+  vegetation?: boolean;
   maxPixelRatio?: number;
   /** WebGL multisample antialiasing. Requires a renderer recreation to change. */
   antialias?: boolean;
