@@ -96,8 +96,7 @@ function memberMap(rows: MemberRow[]): Map<string, RegistryMember> {
 
 async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | null> {
   const [map] = await queryRows<MapRow>(
-    `SELECT mv.id,
-       mv.descriptor->'provenance'->>'kind' AS provenance_kind,
+    `SELECT mv.id, mv.descriptor->'provenance'->>'kind' AS provenance_kind,
        mv.descriptor->'provenance'->>'origin' AS provenance_origin,
        mv.descriptor->'provenance'->>'visibility' AS provenance_visibility,
        mv.descriptor->>'registryReleaseDigest' AS registry_release_digest,
@@ -105,42 +104,116 @@ async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
      FROM simforge.map_versions mv
      LEFT JOIN simforge.native_map_asset_sets ns ON ns.id = mv.native_map_asset_set_id
        AND ns.workspace_id = mv.workspace_id AND ns.asset_set_state = 'available'
-     WHERE mv.id = :map_version_id AND mv.retired_at IS NULL
-     LIMIT 1`,
+     WHERE mv.id = :map_version_id AND mv.retired_at IS NULL LIMIT 1`,
     { map_version_id: mapVersionId },
   );
   if (!map) return null;
-  const browserRows = await queryRows<MemberRow>(
-    `SELECT m.relative_path, b.sha256, b.byte_length, b.media_type, b.storage_bucket, b.storage_key
-     FROM simforge.map_versions mv
-     JOIN simforge.browser_asset_sets s ON s.id = mv.browser_asset_set_id
+  const [browserRows, nativeRows] = await Promise.all([
+    queryRows<MemberRow>(
+      `SELECT m.relative_path, b.sha256, b.byte_length, b.media_type, b.storage_bucket, b.storage_key
+       FROM simforge.map_versions mv JOIN simforge.browser_asset_sets s ON s.id = mv.browser_asset_set_id
        AND s.workspace_id = mv.workspace_id AND s.asset_set_state = 'available'
-     JOIN simforge.browser_asset_members m ON m.asset_set_id = s.id
-     JOIN simforge.browser_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
-     WHERE mv.id = :map_version_id`,
-    { map_version_id: mapVersionId },
-  );
-  const nativeRows = await queryRows<MemberRow>(
-    `SELECT m.relative_path, b.sha256, b.byte_length, b.media_type, b.storage_bucket, b.storage_key
-     FROM simforge.map_versions mv
-     JOIN simforge.native_map_asset_sets s ON s.id = mv.native_map_asset_set_id
+       JOIN simforge.browser_asset_members m ON m.asset_set_id = s.id
+       JOIN simforge.browser_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
+       WHERE mv.id = :map_version_id`,
+      { map_version_id: mapVersionId },
+    ),
+    queryRows<MemberRow>(
+      `SELECT m.relative_path, b.sha256, b.byte_length, b.media_type, b.storage_bucket, b.storage_key
+       FROM simforge.map_versions mv JOIN simforge.native_map_asset_sets s ON s.id = mv.native_map_asset_set_id
        AND s.workspace_id = mv.workspace_id AND s.asset_set_state = 'available'
-     JOIN simforge.native_map_asset_members m ON m.asset_set_id = s.id
-     JOIN simforge.native_map_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
-     WHERE mv.id = :map_version_id`,
-    { map_version_id: mapVersionId },
-  );
+       JOIN simforge.native_map_asset_members m ON m.asset_set_id = s.id
+       JOIN simforge.native_map_asset_blobs b ON b.id = m.blob_id AND b.verification_state = 'verified'
+       WHERE mv.id = :map_version_id`,
+      { map_version_id: mapVersionId },
+    ),
+  ]);
   const downloaded = map.provenance_kind === CLOUD_DOWNLOAD_PROVENANCE;
   return {
-    mapVersionId,
-    access: downloaded ? (map.provenance_visibility === "public" ? "public" : "cloud") : "local",
+    mapVersionId, access: downloaded ? (map.provenance_visibility === "public" ? "public" : "cloud") : "local",
     origin: downloaded ? map.provenance_origin : null,
-    registryReleaseDigest: map.registry_release_digest,
-    canonicalDigest: map.canonical_digest,
-    browser: memberMap(browserRows),
-    semantic: memberMap(nativeRows),
+    registryReleaseDigest: map.registry_release_digest, canonicalDigest: map.canonical_digest,
+    browser: memberMap(browserRows), semantic: memberMap(nativeRows),
   };
 }
+
+/**
+ * Load the metadata and entry points needed by the catalog in bounded queries.
+ * Authorization still uses {@link getRegisteredMap}, which loads the complete
+ * closure for a single map when a member is actually requested.
+ */
+export type RegisteredMapSummary = RegisteredMap & {
+  installed: { browser: boolean | null; semantic: boolean | null };
+  closureBytes: { browser: number; semantic: number } | null;
+};
+
+export async function loadRegisteredMapSummaries(mapVersionIds: readonly string[]): Promise<Map<string, RegisteredMapSummary>> {
+  if (mapVersionIds.length === 0) return new Map();
+  type SummaryRow = MapRow & {
+    browser_entry: MemberRow | string | null;
+    semantic_entry: MemberRow | string | null;
+    browser_installed: boolean | null;
+    semantic_installed: boolean | null;
+    browser_bytes: number | string | null;
+    semantic_bytes: number | string | null;
+  };
+  const rows = await queryRows<SummaryRow>(
+    `SELECT mv.id,
+       mv.descriptor->'provenance'->>'kind' AS provenance_kind,
+       mv.descriptor->'provenance'->>'origin' AS provenance_origin,
+       mv.descriptor->'provenance'->>'visibility' AS provenance_visibility,
+       mv.descriptor->>'registryReleaseDigest' AS registry_release_digest,
+       ns.canonical_digest, bs.byte_length AS browser_bytes, ns.byte_length AS semantic_bytes,
+       browser.entry AS browser_entry, semantic.entry AS semantic_entry,
+       (bs.asset_set_state = 'available') AS browser_installed,
+       (ns.asset_set_state = 'available') AS semantic_installed
+     FROM simforge.map_versions mv
+     LEFT JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+       AND bs.workspace_id = mv.workspace_id AND bs.asset_set_state = 'available'
+     LEFT JOIN simforge.native_map_asset_sets ns ON ns.id = mv.native_map_asset_set_id
+       AND ns.workspace_id = mv.workspace_id AND ns.asset_set_state = 'available'
+     LEFT JOIN LATERAL (
+       SELECT (jsonb_agg(jsonb_build_object(
+         'relative_path', m.relative_path, 'sha256', b.sha256, 'byte_length', b.byte_length,
+         'media_type', b.media_type, 'storage_bucket', b.storage_bucket, 'storage_key', b.storage_key
+       )) FILTER (WHERE m.relative_path = '3d/manifest.json' AND b.verification_state = 'verified')) -> 0 AS entry
+       FROM simforge.browser_asset_members m
+       LEFT JOIN simforge.browser_asset_blobs b ON b.id = m.blob_id
+       WHERE m.asset_set_id = bs.id
+       AND m.relative_path = '3d/manifest.json'
+     ) browser ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT (jsonb_agg(jsonb_build_object(
+         'relative_path', m.relative_path, 'sha256', b.sha256, 'byte_length', b.byte_length,
+         'media_type', b.media_type, 'storage_bucket', b.storage_bucket, 'storage_key', b.storage_key
+       )) FILTER (WHERE m.relative_path = 'master.gltf' AND b.verification_state = 'verified')) -> 0 AS entry
+       FROM simforge.native_map_asset_members m
+       LEFT JOIN simforge.native_map_asset_blobs b ON b.id = m.blob_id
+       WHERE m.asset_set_id = ns.id
+       AND m.relative_path = 'master.gltf'
+     ) semantic ON TRUE
+     WHERE mv.id IN (SELECT value FROM jsonb_array_elements_text(CAST(:map_version_ids AS jsonb)))
+       AND mv.retired_at IS NULL`,
+    { map_version_ids: [...new Set(mapVersionIds)], cache_bucket: MAP_CACHE_BUCKET },
+  );
+  const result = new Map<string, RegisteredMapSummary>();
+  const entry = (value: MemberRow | string | null) => memberMap(value === null ? [] : [typeof value === "string" ? JSON.parse(value) as MemberRow : value]);
+  for (const row of rows) {
+    const downloaded = row.provenance_kind === CLOUD_DOWNLOAD_PROVENANCE;
+    result.set(row.id, {
+      mapVersionId: row.id,
+      access: downloaded ? (row.provenance_visibility === "public" ? "public" : "cloud") : "local",
+      origin: downloaded ? row.provenance_origin : null,
+      registryReleaseDigest: row.registry_release_digest,
+      canonicalDigest: row.canonical_digest,
+      browser: entry(row.browser_entry), semantic: entry(row.semantic_entry),
+      installed: { browser: row.browser_installed, semantic: row.semantic_installed },
+      closureBytes: row.browser_bytes === null ? null : { browser: Number(row.browser_bytes), semantic: Number(row.semantic_bytes ?? 0) },
+    });
+  }
+  return result;
+}
+
 
 /** The locally registered map, memoized per process once registered; null when not registered. */
 export function getRegisteredMap(mapVersionId: string): Promise<RegisteredMap | null> {
