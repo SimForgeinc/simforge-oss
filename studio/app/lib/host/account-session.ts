@@ -34,7 +34,14 @@ export function switcherAccountKind(
  */
 export async function signOutOfHost(navigate: (href: string) => void): Promise<void> {
   try {
-    await fetch(SIGN_OUT_PATH, { method: "POST", headers: { "content-type": "application/json" } });
+    // The body is `{}` and not nothing: the route declares JSON, and Better
+    // Auth answers an empty body with 400 "Invalid JSON in request body" and
+    // leaves the session alive — a sign-out that silently did not sign out.
+    await fetch(SIGN_OUT_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
   } catch {
     // Reported by arriving signed out, or by still being signed in.
   }

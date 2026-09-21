@@ -68,11 +68,16 @@ describe("the app switcher's account line", () => {
 describe("signing out of a host", () => {
   it("ends the session at the host's own route and leaves for the landing page", async () => {
     const calls: string[] = [];
+    const bodies: unknown[] = [];
     const navigated: string[] = [];
     const previousFetch = globalThis.fetch;
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       calls.push(`${init?.method ?? "GET"} ${String(input)}`);
-      return Response.json({ ok: true });
+      // The request declares JSON, so it has to carry some. Better Auth
+      // refuses an empty body with 400 and keeps the session, which is a
+      // sign-out button that does not sign anyone out.
+      bodies.push(JSON.parse(typeof init?.body === "string" ? init.body : ""));
+      return Response.json({ success: true });
     }) as typeof fetch;
     try {
       await signOutOfHost((href) => navigated.push(href));
@@ -80,6 +85,7 @@ describe("signing out of a host", () => {
       globalThis.fetch = previousFetch;
     }
     assert.deepEqual(calls, [`POST ${SIGN_OUT_PATH}`]);
+    assert.deepEqual(bodies, [{}], "the route is sent a JSON object, not an empty body");
     assert.deepEqual(navigated, ["/"]);
   });
 
