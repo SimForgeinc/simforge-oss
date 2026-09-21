@@ -69,10 +69,9 @@ export const styles = stylex.create({
     border: 0,
     paddingInline: space.xs,
     paddingBlock: space.xxs,
-    backgroundColor: colors.panelSolid,
-    color: colors.text,
-    cursor: "pointer",
-    font: text.label,
+    fontFamily: text.fontBody,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineTight,
   },
   /** Bottom-left plate: load state and the maps that cannot be drawn. */
   legend: {
