@@ -154,11 +154,18 @@ const SENSOR_KINDS: {
   { id: "radar", label: "Radar", hint: "Range, angle and radial-velocity captures" },
 ];
 
-const OUTPUT_OPTIONS: { id: "video" | "sensorArchive" | "annotations"; label: string; hint: string }[] = [
+type RenderOutput = "video" | "sensorArchive" | "annotations";
+const OUTPUT_OPTIONS: { id: RenderOutput; label: string; hint: string }[] = [
   { id: "video", label: "Videos", hint: "One encoded video per camera, plus lidar/radar visualizations" },
   { id: "sensorArchive", label: "Sensor data archives", hint: "Lidar point clouds and radar CSV per sensor" },
   { id: "annotations", label: "Annotations", hint: "Frame-aligned NDJSON" },
 ];
+/**
+ * What the native engine returns: one video per RGB, lidar and radar source, and a raw-payload
+ * archive per lidar/radar sensor when asked — the closure the host verifies on completion
+ * (`expectedNativeClosure`). It writes no frame-aligned annotations, so that card is not offered.
+ */
+const NATIVE_OUTPUTS: ReadonlySet<RenderOutput> = new Set(["video", "sensorArchive"]);
 
 const ENGINE_STEP: RenderWizardStep = { id: "engine", label: "Engine" };
 const CAMERA_STEP: RenderWizardStep = { id: "cameras", label: "Cameras" };
@@ -301,7 +308,7 @@ export function RenderConfigPanel({
   const [resolutionIndex, setResolutionIndex] = useState(0);
   const [fps, setFps] = useState<number>(() => authoredVideo?.fps ?? 24);
   const [quality, setQuality] = useState<(typeof CARLA_QUALITIES)[number]>("standard");
-  const [outputs, setOutputs] = useState<("video" | "sensorArchive" | "annotations")[]>(["video"]);
+  const [outputs, setOutputs] = useState<RenderOutput[]>(["video"]);
   const [durationSeconds, setDurationSeconds] = useState(
     () => currentContent?.choreography.clipSeconds ?? 20,
   );
@@ -466,7 +473,7 @@ export function RenderConfigPanel({
   function selectBackend(next: RenderBackend) {
     if (!engineAvailability(next, hostCapabilities).offered) return;
     setBackend(next);
-    if (next === "native") setOutputs(["video"]);
+    if (next === "native") setOutputs((current) => current.filter((output) => NATIVE_OUTPUTS.has(output)));
     setSubmitError(null);
     setStepIndex(0);
   }
@@ -505,7 +512,7 @@ export function RenderConfigPanel({
     });
   }
 
-  function toggleOutput(id: "video" | "sensorArchive" | "annotations") {
+  function toggleOutput(id: RenderOutput) {
     setOutputs((current) =>
       current.includes(id) ? current.filter((candidate) => candidate !== id) : [...current, id],
     );
@@ -883,7 +890,7 @@ export function RenderConfigPanel({
               title="What should the render return?"
             />
             <div {...stylex.props(styles.gridGap152)}>
-              {OUTPUT_OPTIONS.filter((option) => backend !== "native" || option.id === "video").map((option) => (
+              {OUTPUT_OPTIONS.filter((option) => backend !== "native" || NATIVE_OUTPUTS.has(option.id)).map((option) => (
                 <RenderOptionCard
                   hint={option.hint}
                   key={option.id}
