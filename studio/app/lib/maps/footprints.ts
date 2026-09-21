@@ -164,6 +164,20 @@ export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioM
         };
       }
       cache.set(map.xodr.sha256, entry);
+      if ("geometry" in entry) {
+        await queryRows(
+          `UPDATE simforge.map_versions
+           SET descriptor = descriptor || CAST(:footprint AS jsonb)
+           WHERE id = :map_version_id AND retired_at IS NULL
+           RETURNING id`,
+          {
+            map_version_id: map.mapVersionId,
+            footprint: JSON.stringify({
+              footprint: { polygon: entry.geometry.polygon, center: entry.geometry.center },
+            }),
+          },
+        );
+      }
     }
     if ("geometry" in entry) {
       footprints.push({ ...identity, polygon: entry.geometry.polygon, center: entry.geometry.center });
