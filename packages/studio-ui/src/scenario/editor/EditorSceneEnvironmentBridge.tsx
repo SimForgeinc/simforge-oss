@@ -8,6 +8,7 @@ import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
 import { AUTHORING_QUALITY } from "./authoring-quality";
 import { resolvePracticalLighting } from "./practical-lighting";
 import { applyDefaultSceneEnvironment, applyEditorSceneEnvironment } from "./scene-environment";
+import { loadViewportSettings, VIEWPORT_SETTINGS_CHANGE_EVENT } from "./regions/slots/viewport-settings";
 import { sceneTimeSignature } from "./scene-time";
 import { editorWeatherControlSignature } from "./weather-controls";
 
@@ -37,7 +38,9 @@ export function applySceneFidelity(
   viewer.setAuthoringFidelity({
     cinematicLighting: preset.cinematicLighting,
   });
-  viewer.setLayerVisible("vegetation", preset.vegetation);
+  // The quality preset controls streaming fidelity; the persisted viewport
+  // setting controls whether vegetation is drawn on every Studio surface.
+  viewer.setLayerVisible("vegetation", loadViewportSettings().layers.vegetation);
 }
 
 /**
@@ -91,6 +94,15 @@ export function EditorSceneEnvironmentBridge({
     if (!viewer || !ownsViewer) return;
     applySceneFidelity(viewer, quality);
   }, [ownsViewer, quality, viewer]);
+  useEffect(() => {
+    if (!viewer) return;
+    const applyVegetationPreference = () => {
+      viewer.setLayerVisible("vegetation", loadViewportSettings().layers.vegetation);
+    };
+    window.addEventListener(VIEWPORT_SETTINGS_CHANGE_EVENT, applyVegetationPreference);
+    return () => window.removeEventListener(VIEWPORT_SETTINGS_CHANGE_EVENT, applyVegetationPreference);
+  }, [viewer]);
+
 
   useEffect(() => {
     if (!viewer) return;
