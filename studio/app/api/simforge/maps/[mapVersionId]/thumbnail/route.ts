@@ -23,13 +23,67 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     const registered = await getRegisteredMap(mapVersionId);
     if (registered) {
       assertMapUsable(registered);
-      const stored = await getScenarioMapThumbnail(auth.context, mapVersionId);
-      if (!stored) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-      const member = [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === stored.sha256);
-      if (!member) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-      const ensureUrl = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${
-        member[0].split("/").map(encodeURIComponent).join("/")}`;
-      return await streamCachedObject(request, stored, ensureUrl, headOnly);
+      // Published closures identify the preview by its stable path. The
+      // thumbnail_artifact row is a publication record and may have a
+      // different digest/storage copy than the browser closure member.
+      const member =
+        registered.browser.get("derived/thumbnail.webp") ??
+        [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === stored.sha256)?.[1];
+      if (member) {
+        const relativePath = registered.browser.get("derived/thumbnail.webp")
+          ? "derived/thumbnail.webp"
+          : [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === member.sha256)?.[0];
+        if (!relativePath) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
+        const ensureUrl = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${
+          relativePath.split("/").map(encodeURIComponent).join("/")}`;
+        const response = await streamCachedObject(
+          request,
+          member,
+          ensureUrl,
+          headOnly,
+          {
+            mapVersionId,
+            bucket: member.bucket,
+            key: member.key,
+            attestDigest: true,
+          },
+        );
+        // Closure members are content-addressed and immutable.
+        response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        return response;
+      }
+      // If the closure omitted a preview, ask the publishing Cloud for the
+      // publication artifact. This keeps old hosted releases usable without
+      // manufacturing an object or weakening map authorization.
+      const upstream = await upstreamGet(
+        `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/thumbnail`,
+        request.signal,
+      );
+      if (upstream.ok) {
+        const headers = new Headers(upstream.headers);
+        headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        if (headOnly) {
+          await discardResponseBody(upstream);
+          return new Response(null, { status: 200, headers });
+        }
+        return new Response(upstream.body, { status: upstream.status, headers });
+      }
+      await discardResponseBody(upstream);
+      // Older publications may have only the standalone thumbnail artifact.
+      const response = await streamCachedObject(
+        request,
+        stored,
+        `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/thumbnail`,
+        headOnly,
+        {
+          mapVersionId,
+          bucket: stored.bucket,
+          key: stored.key,
+          attestDigest: true,
+        },
+      );
+      response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      return response;
     }
     // Not yet installed: the preview comes from the publishing Cloud under this
     // installation's access (anonymous RFS or the active account), never a
