@@ -17,8 +17,8 @@ import {
 } from "../sumo-runtime";
 
 const MIN_DOWNLOAD_CONCURRENCY = 8;
-const MAX_DOWNLOAD_CONCURRENCY = 32;
-const DOWNLOAD_URL_BATCH_SIZE = 512;
+const MAX_DOWNLOAD_CONCURRENCY = 12;
+const DOWNLOAD_URL_BATCH_SIZE = 96;
 const MAX_CACHE_LOOKUP_CONCURRENCY = 24;
 const MAX_ASSET_DOWNLOAD_ATTEMPTS = 2;
 /** A broken response or Cache Storage write must not hold bulk preparation open forever. */

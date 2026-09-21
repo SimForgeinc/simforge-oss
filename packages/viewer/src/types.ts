@@ -134,8 +134,6 @@ export interface CityViewerOptions {
   mapTextureTier?: MapTextureTier;
   /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
   textureMaxDimension?: number;
-  /** Resolve manifest-relative map members to direct immutable URLs in one batch. */
-  resolveMapAssetUrls?: ((urls: readonly string[], signal: AbortSignal) => Promise<ReadonlyMap<string, string>>) | null;
   /** Resolve external image URLs in batches before a GLTF starts loading its textures. */
   resolveAssetUrls?: ((urls: readonly string[], signal: AbortSignal) => Promise<ReadonlyMap<string, string>>) | null;
   /** Concurrent tile fetch/parse slots. */
