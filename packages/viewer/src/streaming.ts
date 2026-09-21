@@ -135,7 +135,8 @@ export interface TileStreamLayerOptions {
   required?: (def: StreamTileDef, distance: number) => boolean;
   /** Dynamic upper LOD bound for runtime fidelity modes. */
   maxDesiredIndex?: (def: StreamTileDef) => number;
-  /** Called after a new LOD becomes the displayed one. */
+  /** Optional admission/eviction bias. Larger values are lower priority (vegetation uses this). */
+  priorityBias?: number;
   onDisplay?: (def: StreamTileDef, asset: PreparedAsset, index: number) => void;
   /** Called every frame for the displayed asset (vegetation density LOD). */
   onTick?: (def: StreamTileDef, asset: PreparedAsset, distance: number, index: number) => void;
@@ -185,6 +186,7 @@ export class TileStreamLayer {
   private uploadedTextures = 0;
   private compiledAssets = 0;
   private largestAdmissionUnderestimate: LayerStats['largestAdmissionUnderestimate'] = null;
+  private estimateRatio = 1;
 
   constructor(opts: TileStreamLayerOptions) {
     this.opts = opts;
@@ -405,10 +407,12 @@ export class TileStreamLayer {
   private startLoad(entry: Entry, index: number): boolean {
     const lod = entry.def.lods[index];
     if (!lod) return false;
-    const estimate = estimateLodBytes(lod);
+    const rawEstimate = estimateLodBytes(lod);
+    const estimate = rawEstimate * this.estimateRatio;
     const essential = this.opts.essentialAll === true
       || (this.opts.essentialCoarsest === true && index === 0);
-    if (!essential && !this.opts.memory.admit(estimate, entry.required ? -Infinity : entry.distance)) {
+    const priority = (entry.required ? -Infinity : entry.distance) + (this.opts.priorityBias ?? 0);
+    if (!essential && !this.opts.memory.admit(estimate, priority)) {
       entry.budgetBlocked = true;
       if (entry.required && this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
         entry.failures = MAX_FAILURES;
@@ -430,9 +434,11 @@ export class TileStreamLayer {
           disposeResources(asset.resources);
           return;
         }
+        const observedRatio = asset.bytes / Math.max(rawEstimate, 1);
+        this.estimateRatio = this.estimateRatio * 0.8 + observedRatio * 0.2;
         const previous = this.largestAdmissionUnderestimate;
-        if (asset.bytes > estimate && (!previous || asset.bytes * previous.estimatedBytes > previous.decodedBytes * estimate)) {
-          this.largestAdmissionUnderestimate = { assetId: entry.def.id, estimatedBytes: estimate, decodedBytes: asset.bytes };
+        if (asset.bytes > rawEstimate && (!previous || asset.bytes * previous.estimatedBytes > previous.decodedBytes * rawEstimate)) {
+          this.largestAdmissionUnderestimate = { assetId: entry.def.id, estimatedBytes: rawEstimate, decodedBytes: asset.bytes };
         }
         entry.preparing = index;
         this.decodedAssets++;
@@ -630,7 +636,7 @@ export class TileStreamLayer {
           entryId: entry.def.id,
           index,
           bytes: asset.bytes,
-          score: entry.distance * unwanted,
+          score: entry.distance * unwanted + (this.opts.priorityBias ?? 0),
         });
       }
     }
