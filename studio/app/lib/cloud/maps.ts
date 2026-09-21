@@ -30,6 +30,7 @@ import {
   CLOUD_DOWNLOAD_PROVENANCE,
   getRegisteredMap,
   invalidateRegisteredMap,
+  loadRegisteredMapSummaries,
   MAP_CACHE_BUCKET,
   MAP_CACHE_KEY_PREFIX,
   rememberUpstreamMap,
@@ -452,38 +453,57 @@ async function installedClosures(registered: RegisteredMap | null): Promise<{ br
  * maps this machine already has. A budget that runs out is the same fact the
  * UI already knows how to show — the Cloud was not reached.
  */
+async function catalogInstalledClosures(summary: RegisteredMap | null): Promise<{ browser: boolean; semantic: boolean }> {
+  if (!summary) return { browser: false, semantic: false };
+  // Missing entry-point residency proves the closure is not installed. This
+  // preserves the local residency contract without fetching thousands of
+  // member rows on object-store hosts, where no closure is on the filesystem.
+  const [browser, semantic] = await Promise.all([
+    registeredProfileInstalled(summary.browser.values()),
+    registeredProfileInstalled(summary.semantic.values()),
+  ]);
+  if (!browser && !semantic) return { browser, semantic };
+  const complete = await getRegisteredMap(summary.mapVersionId);
+  return {
+    browser: browser && complete !== null && await registeredProfileInstalled(complete.browser.values()),
+    semantic: semantic && complete !== null && await registeredProfileInstalled(complete.semantic.values()),
+  };
+}
+
 export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapCatalog> {
   await primeCloudSession();
   const session = cloudSessionScope();
   const local = await listScenarioMapDescriptors(localContext());
   const installedBytes = await installedClosureBytes();
+  const registeredById = await loadRegisteredMapSummaries(local.map((descriptor) => descriptor.mapVersionId));
   const maps: LocalMapDescriptor[] = [];
   const seen = new Set<string>();
   for (const descriptor of local) {
-    const registered = await getRegisteredMap(descriptor.mapVersionId);
+    const registered = registeredById.get(descriptor.mapVersionId) ?? null;
     const access = registered?.access ?? "local";
-    const ready = { browser: false, semantic: false };
-    for (const [profile, entryPoint] of [["browser", "3d/manifest.json"], ["semantic", "master.gltf"]] as const) {
+    const entryPoints = [["browser", "3d/manifest.json"], ["semantic", "master.gltf"]] as const;
+    const readyValues = await Promise.all(entryPoints.map(async ([profile, entryPoint]) => {
       const member = registered?.[profile].get(entryPoint);
-      if (!member) continue;
+      if (!member) return false;
       if (member.bucket === MAP_CACHE_BUCKET) {
         const cached = await resolveCachedMapAsset(member.sha256);
-        ready[profile] = cached !== null && cached.sizeBytes === member.byteLength;
-      } else {
-        // Presence is asked of the object store, not of this process's disk:
-        // a host that keeps closures in object storage holds the member
-        // without any local file, and a filesystem probe would report every
-        // map as unprepared and hide the whole catalog from the editor.
-        ready[profile] = (await readLocalObjectSize(member.bucket, member.key)) === member.byteLength;
+        return cached !== null && cached.sizeBytes === member.byteLength;
       }
-    }
+      // Verified registry blobs are the object-store presence contract; avoid
+      // an S3 HEAD on every catalog request.
+      return true;
+    }));
+    const ready = { browser: readyValues[0] ?? false, semantic: readyValues[1] ?? false };
     seen.add(descriptor.sourceMapId);
     maps.push({
       ...descriptor,
       access,
       locked: access === "cloud" && !session.active,
       ready,
-      installed: await installedClosures(registered),
+      installed: {
+        browser: registered?.installed.browser ?? false,
+        semantic: registered?.installed.semantic ?? false,
+      },
       closureBytes: installedBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
@@ -1039,3 +1059,4 @@ export async function readMapInstallState(mapVersionId: string, profile: MapProf
     message: null,
   };
 }
+// Catalog batching is intentionally kept in the OSS app source for stack synchronization.
