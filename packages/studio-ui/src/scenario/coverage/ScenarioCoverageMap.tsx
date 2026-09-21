@@ -55,6 +55,10 @@ export type ScenarioCoverageMapProps = {
   maps: ScenarioMapGroup[];
   selectedMapVersionId: string | null;
   onSelectMap: (mapVersionId: string | null) => void;
+  /** Actions for the selected footprint, supplied by the scenario route. */
+  onCreateScenario?: (mapVersionId: string) => void;
+  onDriveHere?: (mapVersionId: string) => void;
+  creatingScenarioMapVersionId?: string | null;
   xstyle?: stylex.StyleXStyles;
 };
 
@@ -78,11 +82,14 @@ function boundsOf(polygons: Array<Array<[number, number]>>): LngLatBoundsLike | 
     [east, north],
   ];
 }
-
 export function ScenarioCoverageMap({
+
   maps,
   selectedMapVersionId,
   onSelectMap,
+  onCreateScenario,
+  onDriveHere,
+  creatingScenarioMapVersionId,
   xstyle,
 }: ScenarioCoverageMapProps) {
   const studioHost = useStudioHost();
@@ -279,6 +286,37 @@ export function ScenarioCoverageMap({
                 <span {...stylex.props(styles.labelCount)}>
                   {group.documents.length} {group.documents.length === 1 ? "scenario" : "scenarios"}
                 </span>
+                {selected && (onCreateScenario || onDriveHere) ? (
+                  <div {...stylex.props(styles.actions)}>
+                    {onCreateScenario ? (
+                      <button
+                        type="button"
+                        {...stylex.props(styles.action)}
+                        disabled={creatingScenarioMapVersionId === footprint.mapVersionId}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onCreateScenario(footprint.mapVersionId);
+                        }}
+                      >
+                        {creatingScenarioMapVersionId === footprint.mapVersionId
+                          ? "Creating…"
+                          : "Create a scenario here"}
+                      </button>
+                    ) : null}
+                    {onDriveHere ? (
+                      <button
+                        type="button"
+                        {...stylex.props(styles.action)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDriveHere(footprint.mapVersionId);
+                        }}
+                      >
+                        Drive here
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </Marker>
           );
