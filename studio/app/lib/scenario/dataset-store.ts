@@ -29,46 +29,58 @@ type DatasetRow = {
 };
 
 /**
- * Every count here is DERIVED, per §6.7.9. v1 needed eleven `stats_*` columns, two CHECKs, a
- * `stats_repair_state ∈ healthy|dirty|repairing` machine and app-code maintenance on every
- * membership change — with documented drift risk. These are correlated scalar subqueries rather
- * than `LEFT JOIN ... GROUP BY` on purpose: joining five one-to-many relations in one grouped
- * query multiplies the rows and silently inflates every count.
+ * Counts are aggregated once per workspace rather than as five correlated subqueries per dataset.
+ * The old shape rescanned dataset_items, documents, revisions/render_jobs and exports for every
+ * dataset row (35 datasets means 175 correlated scans). Keeping each one-to-many relation in its
+ * own CTE avoids row multiplication while allowing the database to scan each relation once.
  */
-const DATASET_SELECT = `SELECT d.id, d.workspace_id, d.name, d.description,
-  d.visibility, d.is_system_managed, d.system_slug, d.is_default,
-  d.created_at::text AS created_at, d.updated_at::text AS updated_at,
-  COALESCE(NULLIF(BTRIM(author.name), ''), NULLIF(BTRIM(author.email), '')) AS created_by_user_name,
-  COALESCE(NULLIF(BTRIM(editor.name), ''), NULLIF(BTRIM(editor.email), '')) AS updated_by_user_name,
-  (SELECT COUNT(*)::int FROM simforge.dataset_items di
-     WHERE di.workspace_id = d.workspace_id AND di.dataset_id = d.id) AS item_count,
-  (SELECT COUNT(*)::int FROM simforge.documents doc
-     WHERE doc.workspace_id = d.workspace_id AND doc.dataset_id = d.id
-       AND doc.deleted_at IS NULL) AS document_count,
-  (SELECT COUNT(*)::int FROM simforge.render_jobs rj
-     JOIN simforge.revisions rev
-       ON rev.id = rj.revision_id AND rev.workspace_id = rj.workspace_id
-     JOIN simforge.documents doc
-       ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
-     WHERE doc.workspace_id = d.workspace_id AND doc.dataset_id = d.id
-       AND doc.deleted_at IS NULL) AS render_submitted_count,
-  (SELECT COUNT(*)::int FROM simforge.render_jobs rj
-     JOIN simforge.revisions rev
-       ON rev.id = rj.revision_id AND rev.workspace_id = rj.workspace_id
-     JOIN simforge.documents doc
-       ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
-     WHERE doc.workspace_id = d.workspace_id AND doc.dataset_id = d.id
-       AND doc.deleted_at IS NULL AND rj.job_state = 'succeeded') AS render_completed_count,
-  (SELECT COUNT(*)::int FROM simforge.exports ex
-     JOIN simforge.revisions rev
-       ON rev.id = ex.revision_id AND rev.workspace_id = ex.workspace_id
-     JOIN simforge.documents doc
-       ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
-     WHERE doc.workspace_id = d.workspace_id AND doc.dataset_id = d.id
-       AND doc.deleted_at IS NULL AND ex.export_state = 'succeeded') AS export_completed_count
+const DATASET_SELECT = `WITH item_counts AS (
+    SELECT dataset_id, COUNT(*)::int AS item_count
+    FROM simforge.dataset_items
+    WHERE workspace_id = :workspace_id
+    GROUP BY dataset_id
+  ), document_counts AS (
+    SELECT dataset_id, COUNT(*)::int AS document_count
+    FROM simforge.documents
+    WHERE workspace_id = :workspace_id AND deleted_at IS NULL
+    GROUP BY dataset_id
+  ), render_counts AS (
+    SELECT doc.dataset_id,
+      COUNT(*)::int AS render_submitted_count,
+      COUNT(*) FILTER (WHERE rj.job_state = 'succeeded')::int AS render_completed_count
+    FROM simforge.render_jobs rj
+    JOIN simforge.revisions rev
+      ON rev.id = rj.revision_id AND rev.workspace_id = rj.workspace_id
+    JOIN simforge.documents doc
+      ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
+    WHERE doc.workspace_id = :workspace_id AND doc.deleted_at IS NULL
+    GROUP BY doc.dataset_id
+  ), export_counts AS (
+    SELECT doc.dataset_id, COUNT(*)::int AS export_completed_count
+    FROM simforge.exports ex
+    JOIN simforge.revisions rev
+      ON rev.id = ex.revision_id AND rev.workspace_id = ex.workspace_id
+    JOIN simforge.documents doc
+      ON doc.id = rev.document_id AND doc.workspace_id = rev.workspace_id
+    WHERE doc.workspace_id = :workspace_id AND doc.deleted_at IS NULL
+      AND ex.export_state = 'succeeded'
+    GROUP BY doc.dataset_id
+  )
+  SELECT d.id, d.workspace_id, d.name, d.description,
+    d.visibility, d.is_system_managed, d.system_slug, d.is_default,
+    d.created_at::text AS created_at, d.updated_at::text AS updated_at,
+    COALESCE(NULLIF(BTRIM(author.name), ''), NULLIF(BTRIM(author.email), '')) AS created_by_user_name,
+    COALESCE(NULLIF(BTRIM(editor.name), ''), NULLIF(BTRIM(editor.email), '')) AS updated_by_user_name,
+    COALESCE(ic.item_count, 0)::int AS item_count,
+    COALESCE(dc.document_count, 0)::int AS document_count,
+    COALESCE(rc.render_submitted_count, 0)::int AS render_submitted_count,
+    COALESCE(rc.render_completed_count, 0)::int AS render_completed_count,
+    COALESCE(ec.export_completed_count, 0)::int AS export_completed_count
   FROM simforge.datasets d
-  LEFT JOIN public.ba_user author ON author.id = d.created_by_user_id
-  LEFT JOIN public.ba_user editor ON editor.id = d.updated_by_user_id`;
+  LEFT JOIN item_counts ic ON ic.dataset_id = d.id
+  LEFT JOIN document_counts dc ON dc.dataset_id = d.id
+  LEFT JOIN render_counts rc ON rc.dataset_id = d.id
+  LEFT JOIN export_counts ec ON ec.dataset_id = d.id`;
 
 export const DEFAULT_SCENARIO_DATASET_NAME = "Uncategorized";
 export const DEFAULT_SCENARIO_DATASET_DESCRIPTION =
