@@ -123,7 +123,7 @@ async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
   }
   return result;
 }
-
+/**
  * Footprints of every map installed for the browser on this host.
  *
  * One map that cannot be placed never fails the request — the coverage map
