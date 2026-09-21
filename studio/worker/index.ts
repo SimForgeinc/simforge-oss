@@ -24,7 +24,7 @@ export const WORKER_CAPABILITIES = [
 export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
 
 function configuredCapabilities(): ReadonlySet<WorkerCapability> | null {
-  const raw = simforgeEnv("SIMFORGE_WORKER_CAPABILITIES")?.trim();
+  const raw = simforgeEnv("WORKER_CAPABILITIES")?.trim();
   if (!raw) return null;
   const values = raw.split(",").map((value) => value.trim()).filter(Boolean);
   const unknown = values.filter((value): value is string => !(WORKER_CAPABILITIES as readonly string[]).includes(value));
