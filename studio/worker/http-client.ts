@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, openAsBlob } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -168,10 +168,9 @@ export class CpuJobsClient {
     const response = await fetch(hostObjectUrl(reservation.uploadUrl, this.baseUrl), {
       method: "PUT",
       headers: reservation.headers,
-      body: createReadStream(artifact.path),
-      duplex: "half",
+      body: await openAsBlob(artifact.path),
       signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),
-    } as unknown as RequestInit & { duplex: "half" });
+    });
     if (!response.ok) {
       throw new Error(`artifact PUT returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
     }
@@ -293,14 +292,19 @@ export class CpuJobsClient {
     };
   }
 
+  /**
+   * The body is a file-backed Blob rather than a stream: its length is known up
+   * front, so the request carries `Content-Length` instead of chunked transfer
+   * encoding, which an object store's presigned PUT refuses (S3: 501
+   * NotImplemented for `Transfer-Encoding`). Nothing is read into memory.
+   */
   async uploadNativeArtifact(reservation: NativeArtifactReservation, path: string, signal: AbortSignal): Promise<void> {
     const response = await fetch(hostObjectUrl(reservation.upload.url, this.baseUrl), {
       method: reservation.upload.method,
       headers: reservation.upload.headers,
-      body: createReadStream(path),
-      duplex: "half",
+      body: await openAsBlob(path),
       signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),
-    } as unknown as RequestInit & { duplex: "half" });
+    });
     if (!response.ok) {
       throw new Error(`artifact PUT returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
     }
