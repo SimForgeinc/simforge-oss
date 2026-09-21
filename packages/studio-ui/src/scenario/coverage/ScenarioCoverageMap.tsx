@@ -82,8 +82,8 @@ function boundsOf(polygons: Array<Array<[number, number]>>): LngLatBoundsLike | 
     [east, north],
   ];
 }
-export function ScenarioCoverageMap({
 
+export function ScenarioCoverageMap({
   maps,
   selectedMapVersionId,
   onSelectMap,

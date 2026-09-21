@@ -65,13 +65,29 @@ export const styles = stylex.create({
     gap: space.xs,
     marginTop: space.xs,
   },
+  /** The plate's own two verbs: quiet text on the plate, accent under the pointer, like its edge. */
   action: {
-    border: 0,
+    appearance: "none",
+    backgroundColor: "transparent",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: {
+      default: colors.lineStrong,
+      ":hover": colors.accent,
+    },
     paddingInline: space.xs,
     paddingBlock: space.xxs,
     fontFamily: text.fontBody,
     fontSize: text.sizeXs,
     lineHeight: text.lineTight,
+    color: {
+      default: colors.textOnPlate,
+      ":hover": colors.accent,
+    },
+    cursor: {
+      default: "pointer",
+      ":disabled": "progress",
+    },
   },
   /** Bottom-left plate: load state and the maps that cannot be drawn. */
   legend: {

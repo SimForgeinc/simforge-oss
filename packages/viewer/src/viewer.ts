@@ -118,14 +118,6 @@ function layerCoverage(stats: LayerStats | undefined): LayerCoverage | null {
   };
 }
 
-function defaultByteBudget(): number {
-  const memory = typeof navigator !== 'undefined'
-    ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-    : undefined;
-  const deviceMemory = Number.isFinite(memory) ? memory! : 4;
-  return Math.max(1.5, Math.min(6, deviceMemory * 0.5)) * 1024 * 1024 * 1024;
-}
-
 const DEFAULTS = {
   maxPixelRatio: 2,
   antialias: true,
@@ -149,7 +141,7 @@ const DEFAULTS = {
    * above ~2 GB of live RGBA8 + mips, and the in-flight decode queue adds its
    * own copy on top of whatever is already resident.
    */
-  byteBudget: defaultByteBudget(),
+  byteBudget: 1.5 * 1024 * 1024 * 1024,
   textureMaxDimension: Infinity,
   mapTextureTier: 'medium' as MapTextureTier,
   resolveAssetUrls: null,

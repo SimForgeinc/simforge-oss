@@ -1,7 +1,7 @@
-import type { ScenarioDatasetDto } from "@/app/lib/scenario/contracts";
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ScenarioDatasetDto } from "@/app/lib/scenario/contracts";
 import {
   ScenarioDatasetsClient,
   type DatasetCloudHome,

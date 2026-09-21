@@ -18,10 +18,11 @@ import type { Readable } from "node:stream";
 
 import type { ScenarioMapCoverageDto, ScenarioMapFootprintDto } from "@simforge-oss/studio-host";
 
-import { queryRows } from "@/app/lib/db/data-api";
+import { execute, queryRows } from "@/app/lib/db/data-api";
 import { MapAccessError, resolveAuthorizedMapMember } from "@/app/lib/cloud/access";
+import { cloudSessionScope, primeCloudSession } from "@/app/lib/cloud/connection";
 import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
-import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
+import { CLOUD_DOWNLOAD_PROVENANCE, MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
 import { ensureMapAsset, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { streamLocalObject } from "@/app/lib/s3/s3-object";
 import { mapFootprintGeometry, type MapFootprintGeometry } from "./footprint-geometry";
@@ -85,51 +86,65 @@ async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): P
   return readPrefix(createReadStream(cached.path, { start: 0, end: HEADER_PREFIX_BYTES - 1 }), HEADER_PREFIX_BYTES);
 }
 
-/**
- * Persisted footprint metadata is served in one small query.
- */
 type PersistedFootprintRow = {
   id: string;
   source_map_id: string;
+  provenance_kind: string | null;
+  provenance_visibility: string | null;
   footprint: unknown;
 };
+
 /**
- * Footprints are immutable map-version metadata. Keep this read deliberately
- * independent of the catalog: the catalog also verifies every closure member
- * and performs remote discovery, neither of which is needed by this endpoint.
+ * The footprint each browser-installed map version carries in its descriptor
+ * (`descriptor.footprint`, written at publication), one row per source map —
+ * the same "newest available publication" the catalog ranks. Immutable
+ * geometry read in one statement; nothing here opens a closure member.
+ *
+ * `null` when any listed map predates persisted footprints: the caller then
+ * takes the compute-and-persist path for the whole list rather than showing a
+ * coverage map with holes.
  */
-async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
+async function readPersistedFootprints(): Promise<ScenarioMapCoverageDto | null> {
   const rows = await queryRows<PersistedFootprintRow>(
     `SELECT DISTINCT ON (mv.source_map_asset_id)
        mv.id, mv.source_map_asset_id AS source_map_id,
+       mv.descriptor->'provenance'->>'kind' AS provenance_kind,
+       mv.descriptor->'provenance'->>'visibility' AS provenance_visibility,
        mv.descriptor->'footprint' AS footprint
      FROM simforge.map_versions mv
-     JOIN simforge.browser_asset_sets bas
-       ON bas.id = mv.browser_asset_set_id
-      AND bas.workspace_id = mv.workspace_id
-      AND bas.asset_set_state = 'available'
+     JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+       AND bs.workspace_id = mv.workspace_id AND bs.asset_set_state = 'available'
      WHERE mv.retired_at IS NULL
        AND NULLIF(BTRIM(mv.source_map_asset_id), '') IS NOT NULL
      ORDER BY mv.source_map_asset_id, mv.created_at DESC, mv.id DESC`,
     {},
   );
-  const result: ScenarioMapFootprintDto[] = [];
+  const session = cloudSessionScope();
+  const footprints: ScenarioMapFootprintDto[] = [];
+  const unprojected: ScenarioMapCoverageDto["unprojected"] = [];
   for (const row of rows) {
-    let raw = row.footprint;
-    if (typeof raw === "string") {
-      try { raw = JSON.parse(raw) as unknown; } catch { raw = null; }
+    const identity = { mapVersionId: row.id, sourceMapId: row.source_map_id };
+    const downloaded = row.provenance_kind === CLOUD_DOWNLOAD_PROVENANCE;
+    if (downloaded && row.provenance_visibility !== "public" && !session.active) {
+      unprojected.push({ ...identity, reason: "needs a SimCloud connection" });
+      continue;
     }
-    const value = raw as { polygon?: unknown; center?: unknown } | null;
-    if (!Array.isArray(value?.polygon) || !Array.isArray(value?.center)) continue;
-    result.push({
-      mapVersionId: row.id,
-      sourceMapId: row.source_map_id,
+    const raw = typeof row.footprint === "string" ? JSON.parse(row.footprint) as unknown : row.footprint;
+    const value = raw as { polygon?: unknown; center?: unknown; reason?: unknown } | null;
+    if (typeof value?.reason === "string") {
+      unprojected.push({ ...identity, reason: value.reason });
+      continue;
+    }
+    if (!Array.isArray(value?.polygon) || !Array.isArray(value?.center)) return null;
+    footprints.push({
+      ...identity,
       polygon: value.polygon as Array<[number, number]>,
       center: value.center as [number, number],
     });
   }
-  return result;
+  return { footprints, unprojected };
 }
+
 /**
  * Footprints of every map installed for the browser on this host.
  *
@@ -142,13 +157,12 @@ async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
  * access gate's back.
  */
 export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioMapCoverageDto> {
+  await primeCloudSession();
   const persisted = await readPersistedFootprints();
-  if (persisted.length > 0) {
-    return { footprints: persisted, unprojected: [] };
-  }
-  // Compatibility path for maps published before descriptor footprints were
-  // introduced. It is intentionally retained as a one-time backfill path;
-  // newly published versions are expected to carry immutable geometry.
+  if (persisted) return persisted;
+  // A map published before footprints were persisted: compute every footprint
+  // from the closure once more and write each into its descriptor, so the next
+  // read is the one-statement path above.
   const maps = (await listLocalMapCatalog(signal)).filter((map) => map.ready.browser);
   const footprints: ScenarioMapFootprintDto[] = [];
   const unprojected: ScenarioMapCoverageDto["unprojected"] = [];
@@ -168,18 +182,17 @@ export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioM
         };
       }
       cache.set(map.xodr.sha256, entry);
-      if ("geometry" in entry) {
-        await queryRows(
+      // Geometry and "no georeference" are facts of the map version; "map bytes
+      // unavailable" is a fact of this moment and is not written down.
+      const persisted = "geometry" in entry
+        ? { polygon: entry.geometry.polygon, center: entry.geometry.center }
+        : entry.reason === "no georeference" ? { reason: entry.reason } : null;
+      if (persisted) {
+        await execute(
           `UPDATE simforge.map_versions
            SET descriptor = descriptor || CAST(:footprint AS jsonb)
-           WHERE id = :map_version_id AND retired_at IS NULL
-           RETURNING id`,
-          {
-            map_version_id: map.mapVersionId,
-            footprint: JSON.stringify({
-              footprint: { polygon: entry.geometry.polygon, center: entry.geometry.center },
-            }),
-          },
+           WHERE id = :map_version_id AND retired_at IS NULL`,
+          { map_version_id: map.mapVersionId, footprint: JSON.stringify({ footprint: persisted }) },
         );
       }
     }
