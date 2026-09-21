@@ -129,28 +129,42 @@ export function ScenarioWorldHost({
   );
   const [retryNonce, setRetryNonce] = useState(0);
   const directAssetUrlsRef = useRef(new Map<string, string>());
+  const pendingDirectUrlsRef = useRef(new Set<string>());
+  const directBatchPromiseRef = useRef<Promise<void> | null>(null);
   const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
     const unresolved = urls.filter((url) => !directAssetUrlsRef.current.has(url));
     if (unresolved.length > 0 && retainedTarget?.mapVersionId) {
-      const assets = unresolved.flatMap((url) => {
-        const parsed = new URL(url, window.location.origin);
-        const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
-        return match ? [{ mapVersionId: retainedTarget.mapVersionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
-      });
-      if (assets.length > 0) {
-        const response = await fetch("/api/simforge/maps/cache-download-urls", {
-          method: "POST", credentials: "same-origin",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ assets }), signal,
+      for (const url of unresolved) pendingDirectUrlsRef.current.add(url);
+      if (!directBatchPromiseRef.current) {
+        directBatchPromiseRef.current = new Promise<void>((resolve) => {
+          setTimeout(async () => {
+            const batchUrls = [...pendingDirectUrlsRef.current].splice(0, 256);
+            for (const url of batchUrls) pendingDirectUrlsRef.current.delete(url);
+            const assets = batchUrls.flatMap((url) => {
+              const parsed = new URL(url, window.location.origin);
+              const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
+              return match ? [{ mapVersionId: retainedTarget.mapVersionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
+            });
+            if (assets.length > 0) {
+              const response = await fetch("/api/simforge/maps/cache-download-urls", {
+                method: "POST", credentials: "same-origin",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ assets }), signal,
+              });
+              if (response.ok) {
+                const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
+                for (const asset of payload.assets ?? []) {
+                  const original = batchUrls.find((url) => url.endsWith(`/${asset.relativePath}`));
+                  if (original) directAssetUrlsRef.current.set(original, asset.url);
+                }
+              }
+            }
+            directBatchPromiseRef.current = null;
+            resolve();
+          }, 25);
         });
-        if (response.ok) {
-          const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
-          for (const asset of payload.assets ?? []) {
-            const original = unresolved.find((url) => url.endsWith(`/${asset.relativePath}`));
-            if (original) directAssetUrlsRef.current.set(original, asset.url);
-          }
-        }
       }
+      await directBatchPromiseRef.current;
     }
     return new Map(urls.flatMap((url) => {
       const resolved = directAssetUrlsRef.current.get(url);
@@ -532,6 +546,9 @@ export function ScenarioWorldHost({
       getViewer: () => viewerRef.current,
       mapId: effectiveTarget?.mapId,
       installedMaps: effectiveTarget?.installedMaps,
+      mapVersionId: effectiveTarget?.mapVersionId,
+      manifestUrl: effectiveTarget?.manifestUrl,
+      readinessAnnounced: Boolean(effectiveTarget && loadedMapVersionId === effectiveTarget.mapVersionId),
       requestedTier: preference,
       phase: transitionPhase,
       error,
