@@ -142,8 +142,8 @@ const DEFAULTS = {
    * own copy on top of whatever is already resident.
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
-  textureMaxDimension: Infinity,
   mapTextureTier: 'medium' as MapTextureTier,
+  resolveMapAssetUrls: null,
   resolveAssetUrls: null,
   maxConcurrentLoads: 2,
   uploadBudgetMs: 5,
@@ -1064,7 +1064,10 @@ export class CityViewer {
     expectedBytes?: number | null,
   ): Promise<ArrayBuffer> {
     const sessionId = this.downloadTracker.sessionId;
-    const res = await fetch(url, { signal });
+    const resolved = this.options.resolveMapAssetUrls
+      ? (await this.options.resolveMapAssetUrls([url], signal)).get(url) ?? url
+      : url;
+    const res = await fetch(resolved, { signal });
     if (!res.ok) throw new Error(`${res.status} ${url}`);
     return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes, sessionId);
   }
