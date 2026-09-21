@@ -23,6 +23,8 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     const registered = await getRegisteredMap(mapVersionId);
     if (registered) {
       assertMapUsable(registered);
+      const stored = await getScenarioMapThumbnail(auth.context, mapVersionId);
+      if (!stored) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
       // Published closures identify the preview by its stable path. The
       // thumbnail_artifact row is a publication record and may have a
       // different digest/storage copy than the browser closure member.
