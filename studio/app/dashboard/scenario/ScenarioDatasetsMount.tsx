@@ -1,3 +1,4 @@
+import type { ScenarioDatasetDto } from "@/app/lib/scenario/contracts";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -84,7 +85,11 @@ function useDatasetCloudHome(): DatasetCloudHome {
   return home;
 }
 
-export function ScenarioDatasetsMount() {
+export function ScenarioDatasetsMount({
+  initialDatasets,
+}: {
+  initialDatasets: ScenarioDatasetDto[];
+}) {
   const cloudHome = useDatasetCloudHome();
-  return <ScenarioDatasetsClient cloudHome={cloudHome} />;
+  return <ScenarioDatasetsClient initialDatasets={initialDatasets} cloudHome={cloudHome} />;
 }
