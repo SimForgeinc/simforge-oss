@@ -115,7 +115,11 @@ async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
   );
   const result: ScenarioMapFootprintDto[] = [];
   for (const row of rows) {
-    const value = row.footprint as { polygon?: unknown; center?: unknown } | null;
+    let raw = row.footprint;
+    if (typeof raw === "string") {
+      try { raw = JSON.parse(raw) as unknown; } catch { raw = null; }
+    }
+    const value = raw as { polygon?: unknown; center?: unknown } | null;
     if (!Array.isArray(value?.polygon) || !Array.isArray(value?.center)) continue;
     result.push({
       mapVersionId: row.id,
