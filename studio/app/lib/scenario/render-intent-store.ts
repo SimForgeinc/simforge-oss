@@ -385,9 +385,8 @@ export async function createRenderIntentJob(
            JOIN simforge.native_map_asset_blobs b
              ON b.id = m.blob_id AND b.verification_state = 'verified'
           WHERE mv.id = :map_version_id
-            AND mv.workspace_id = :workspace_id
           ORDER BY m.relative_path`,
-        { map_version_id: lineage.map_revision_id, workspace_id: context.workspaceId },
+        { map_version_id: lineage.map_revision_id },
       );
       const expectedCount = Number(nativeMembers[0]?.object_count ?? -1);
       if (expectedCount < 1 || nativeMembers.length !== expectedCount) {

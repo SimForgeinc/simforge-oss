@@ -164,17 +164,17 @@ export async function claimLocalNativeRenderSource(tx: JobTransaction, jobId: st
   return source;
 }
 
+/** A registered closure member under the input id the intent declares it by. */
+type RegisteredNativeMapClosureMember = RegisteredNativeMapMember & { inputId: string };
+
 /**
  * The map's registered native closure with the storage coordinates of every
  * member, so map preparation can issue one checksum-bound download per
  * member. Ordering and identity are the intent's: the claim's declarations
  * and the preparation's downloads are built from this one lookup.
  */
-/** A registered closure member under the input id the intent declares it by. */
-type RegisteredNativeMapClosureMember = RegisteredNativeMapMember & { inputId: string };
-
-async function registeredNativeMapClosure(mapVersionId: string, workspaceId: string): Promise<RegisteredNativeMapClosureMember[]> {
-  const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
+async function registeredNativeMapClosure(mapVersionId: string): Promise<RegisteredNativeMapClosureMember[]> {
+  const source = await getRegisteredNativeMapSource(mapVersionId);
   if (!source) throw new Error("native_map_asset_set_unavailable");
   assertNativeMapMemberCapacity(source.members.length);
   return source.members.map((member) => ({
@@ -192,8 +192,8 @@ async function registeredNativeMapClosure(mapVersionId: string, workspaceId: str
  * storage location is declared here; the worker verifies every byte it
  * downloads against these digests.
  */
-async function declaredNativeMapMembers(mapVersionId: string, workspaceId: string) {
-  const closure = await registeredNativeMapClosure(mapVersionId, workspaceId);
+async function declaredNativeMapMembers(mapVersionId: string) {
+  const closure = await registeredNativeMapClosure(mapVersionId);
   return closure.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, relativePath, sha256, sizeBytes }));
 }
 
@@ -220,7 +220,7 @@ export type LocalNativeClaimPayload = {
 export async function localNativeClaimPayload(source: LocalNativeRenderSource): Promise<LocalNativeClaimPayload> {
   const intent = ScenarioRenderIntentSchema.parse(parseJsonObject(source.render_intent));
   if (canonicalJsonSha256(intent) !== source.intent_sha256) throw new Error("render_intent_digest_mismatch");
-  const members = await declaredNativeMapMembers(source.map_version_id, source.workspace_id);
+  const members = await declaredNativeMapMembers(source.map_version_id);
   const actorClosure = nativeActorAssetsInput();
   const actorSource = resolveActorAssets();
   if (actorSource.state !== "available") throw new Error("native_actor_assets_unavailable");
@@ -419,7 +419,7 @@ export async function prepareLocalNativeMap(
   const existing = registry.get(fence.attemptId);
   if (existing) return existing.status;
   const startedAt = new Date().toISOString();
-  const closure = await registeredNativeMapClosure(owner.map_version_id, owner.workspace_id);
+  const closure = await registeredNativeMapClosure(owner.map_version_id);
   if (!closure.some((member) => member.bucket === MAP_CACHE_BUCKET)) {
     const members = await nativeMapMemberSources(owner.map_version_id, closure);
     return { state: "ready", mapVersionId: owner.map_version_id, startedAt, readyAt: new Date().toISOString(), members };

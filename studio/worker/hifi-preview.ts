@@ -123,13 +123,12 @@ function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
 
 /** Resolve the exact registry release pinned by the requested map version. */
 async function resolveMapPayloads(
-  workspaceId: string,
   mapVersionId: string,
   requestedMapId: string,
   signal: AbortSignal,
 ): Promise<NativeReadyMap> {
   const { directory } = await ensureLocalMap(mapVersionId, "semantic", signal);
-  const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
+  const source = await getRegisteredNativeMapSource(mapVersionId);
   if (!source) {
     throw new HifiPreviewFailure(
       "map_payload_unavailable",
@@ -171,7 +170,7 @@ export async function executeHifiPreview(
     );
   }
 
-  const nativeMap = await resolveMapPayloads(lease.workspaceId, request.mapVersionId, request.scene.mapId, signal);
+  const nativeMap = await resolveMapPayloads(request.mapVersionId, request.scene.mapId, signal);
   const worldBounds = await computePayloadWorldBounds([nativeMap.masterPath]);
   const framedCamera = framePayload(
     worldBounds,
