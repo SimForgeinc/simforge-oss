@@ -142,10 +142,11 @@ const DEFAULTS = {
    * own copy on top of whatever is already resident.
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
+  textureMaxDimension: Infinity,
   mapTextureTier: 'medium' as MapTextureTier,
   resolveMapAssetUrls: null,
   resolveAssetUrls: null,
-  maxConcurrentLoads: 2,
+  maxConcurrentLoads: 12,
   uploadBudgetMs: 5,
   /** ~one 2048px texture per frame; the pacer stops as soon as this is spent. */
   uploadPixelsPerFrame: 4.2e6,
