@@ -133,6 +133,7 @@ async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
  * A locked map (published to an account, no session right now) is installed
  * but not readable, and is reported as such rather than opened behind the
  * access gate's back.
+ */
 export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioMapCoverageDto> {
   const persisted = await readPersistedFootprints();
   if (persisted.length > 0) {
