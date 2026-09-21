@@ -43,22 +43,25 @@ id, engine list, capability document (when registered), and last heartbeat.
 - Browser and compiler inputs are checksum-bound URLs supplied in the claim;
   browser and native output uploads use reserve responses and presigned URLs.
   These paths are remote-safe.
-- A native claim's `prepareMap` response currently returns a directory path
-  materialized by the host. `native-render.ts` verifies members by reading that
-  path directly. This is a known local-only dependency: a remote worker cannot
-  read the host's map cache. The required fix is a map-cache/asset route that
-  returns checksum-bound member download URLs, followed by worker-side
-  materialization under its scratch root.
-- A claim input with a `file:` URL is copied directly from the worker's local
-  filesystem. This is safe only when the packaged actor closure is installed on
-  that worker; remote jobs must instead receive an HTTP object URL. The route
-  fix is to publish that closure through the existing artifact/input URL path.
+- A native claim's `prepareMap` response is URL-backed. `ready` carries the
+  map version, timestamps, and one entry per declared closure member with a
+  session-less, checksum-bound `download`; no host path is returned. The
+  worker materializes the closure under its own scratch root through a
+  content-addressed cache (`<LOCAL_WORKER_ROOT>/map-cache/sha256/<xx>/<sha>`),
+  so a repeated job on the same map downloads nothing, and then verifies the
+  materialized directory against the intent's declarations as before. On a
+  hosted deployment the member URLs are presigned object-store URLs and the
+  host downloads nothing; on a local host, whose map cache *is* its object
+  store, the closure is ensured on disk first and the members are served by
+  the map's `semantic-assets` route.
+- A claim input with a `file:` URL is copied from the worker's local
+  filesystem, which is the host's filesystem only when the host origin is
+  loopback. A worker that claimed from any other origin refuses such an input
+  by name instead of reading whatever sits at that path. The packaged actor
+  closure must therefore be published through the artifact/input URL path for
+  remote workers.
 - Scratch paths (`LOCAL_WORKER_ROOT`) are worker-local and are never sent to
   the host. The worker must not set or rely on `SIMFORGE_CLOUD_ROOT`.
-
-Until the map and `file:` inputs are URL-backed, remote workers should be used
-for URL-backed browser/compiler jobs or will fail closed on those local-only
-inputs; they must not silently use a host path.
 
 ## Adding a job family
 

@@ -143,6 +143,7 @@ async function runClaim(client: CpuJobsClient, claim: CpuJobClaim, workerSignal:
         client,
         { ...claim, payload: claim.payload },
         workspace,
+        join(root, "map-cache"),
         signal,
         reportProgress,
       );
@@ -158,7 +159,7 @@ async function runClaim(client: CpuJobsClient, claim: CpuJobClaim, workerSignal:
       })}\n`);
       return;
     }
-    const inputs = await downloadInputs(claim.payload.inputs, join(workspace, "inputs"), signal);
+    const inputs = await downloadInputs(claim.payload.inputs, join(workspace, "inputs"), signal, client.hostOrigin);
     const result = await executeRender({
       jobId: claim.jobId,
       attempt: 1,

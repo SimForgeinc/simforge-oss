@@ -21,7 +21,7 @@ async function fakeHost(capabilities: unknown) {
       return;
     }
     response.setHeader("content-type", "application/json");
-    if (request.url === "/api/simforge/host/capabilities") response.end(JSON.stringify(capabilities));
+    if (request.url === "/api/simforge/internal/host-protocol") response.end(JSON.stringify(capabilities));
     else response.writeHead(204).end();
   });
   server.listen(0, "127.0.0.1");
@@ -47,7 +47,7 @@ describe("render worker host protocol handshake", () => {
     const host = await fakeHost({ protocolVersion: STUDIO_HOST_PROTOCOL_VERSION, transports: ["http"] });
     try {
       await client(host.baseUrl).claim(AbortSignal.timeout(5_000));
-      assert.deepEqual(host.paths, ["/api/simforge/host/capabilities", "/api/simforge/internal/cpu-jobs/claim"]);
+      assert.deepEqual(host.paths, ["/api/simforge/internal/host-protocol", "/api/simforge/internal/cpu-jobs/claim"]);
     } finally {
       host.close();
     }
@@ -59,7 +59,7 @@ describe("render worker host protocol handshake", () => {
       const error = await client(host.baseUrl).claim(AbortSignal.timeout(5_000)).then(() => null, (reason: Error) => reason);
       assert.equal(error?.name, "HostProtocolMismatch");
       assert.match(error?.message ?? "", new RegExp(`protocol ${STUDIO_HOST_PROTOCOL_VERSION + 1}.*protocol ${STUDIO_HOST_PROTOCOL_VERSION}.*upgrade the client`));
-      assert.deepEqual(host.paths, ["/api/simforge/host/capabilities"], "the worker must not claim work from an incompatible host");
+      assert.deepEqual(host.paths, ["/api/simforge/internal/host-protocol"], "the worker must not claim work from an incompatible host");
     } finally {
       host.close();
     }
@@ -71,7 +71,7 @@ describe("render worker host protocol handshake", () => {
       const error = await client(host.baseUrl).claim(AbortSignal.timeout(5_000)).then(() => null, (reason: Error) => reason);
       assert.equal(error?.name, "HostProtocolMismatch");
       assert.match(error?.message ?? "", /predates protocol 1.*upgrade the host/);
-      assert.deepEqual(host.paths, ["/api/simforge/host/capabilities"]);
+      assert.deepEqual(host.paths, ["/api/simforge/internal/host-protocol"]);
     } finally {
       host.close();
     }
@@ -83,7 +83,7 @@ describe("render worker host protocol handshake", () => {
       const error = await client(host.baseUrl).claim(AbortSignal.timeout(5_000)).then(() => null, (reason: Error) => reason);
       assert.equal(error?.name, "HostProtocolMismatch");
       assert.match(error?.message ?? "", /unreadable Studio host protocol version.*upgrade the host/);
-      assert.deepEqual(host.paths, ["/api/simforge/host/capabilities"]);
+      assert.deepEqual(host.paths, ["/api/simforge/internal/host-protocol"]);
     } finally {
       host.close();
     }

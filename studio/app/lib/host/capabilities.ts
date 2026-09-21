@@ -16,7 +16,7 @@ import { probeNativeRuntime } from "@simforge-oss/studio-host/node";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { LOCAL_CLOUD_ROOT } from "@/app/lib/db/config";
 import { queryRows } from "@/app/lib/db/data-api";
-import { liveLocalWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
+import { liveCpuWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
 import { localRenderCapability, localRenderWorkers } from "./local-render";
 
 const HEARTBEAT_WINDOW = "90 seconds";
@@ -90,7 +90,7 @@ async function registeredWorkerNodes(): Promise<StudioWorkerNode[]> {
     lastHeartbeatAt: row.last_heartbeat_at,
   }));
   const known = new Set(nodes.map((node) => node.id));
-  for (const worker of liveLocalWorkers()) {
+  for (const worker of await liveCpuWorkers()) {
     if (known.has(worker.workerId)) continue;
     nodes.push({
       id: worker.workerId,
@@ -103,13 +103,13 @@ async function registeredWorkerNodes(): Promise<StudioWorkerNode[]> {
 }
 
 export async function getLocalHostCapabilities(context: AppContext): Promise<StudioHostCapabilities> {
-  const [version, fleetWorkers, nativeRuntime, workerNodes] = await Promise.all([
+  const [version, fleetWorkers, nativeRuntime, workerNodes, localRender] = await Promise.all([
     localStudioVersion(),
     registeredRenderWorkerCapabilities(),
     probeNativeRuntime(),
     registeredWorkerNodes(),
+    localRenderCapability(),
   ]);
-  const localRender = localRenderCapability();
   return {
     schema: STUDIO_HOST_CAPABILITIES_SCHEMA,
     protocolVersion: STUDIO_HOST_PROTOCOL_VERSION,
@@ -128,7 +128,7 @@ export async function getLocalHostCapabilities(context: AppContext): Promise<Stu
       // Registered fleet nodes (if any were approved against this host) first, then this
       // machine's own lanes, which are the truth for a local install.
       workerNodes,
-      renderWorkers: { ...fleetWorkers, ...localRenderWorkers(localRender) },
+      renderWorkers: { ...fleetWorkers, ...(await localRenderWorkers(localRender)) },
       nativeRuntime,
       localRender,
     },

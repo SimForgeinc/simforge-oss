@@ -22,10 +22,20 @@ export const NATIVE_MAP_ASSET_SET_CONTRACT = "simforge.native-map-asset-set.v1";
  */
 export const NATIVE_MAP_RELEASE_RECEIPT = ".map-release.json";
 
-export type RegisteredNativeMapMember = {
+/**
+ * What the intent declares and a worker verifies: the member's place in the
+ * closure and the identity of its bytes.
+ */
+export type NativeMapMemberIdentity = {
   relativePath: string;
   sha256: string;
   sizeBytes: number;
+};
+
+/** The identity plus where the verified bytes live, so a host can issue a download for them. */
+export type RegisteredNativeMapMember = NativeMapMemberIdentity & {
+  bucket: string;
+  key: string;
 };
 
 export type RegisteredNativeMapSource = {
@@ -45,6 +55,8 @@ type SourceRow = {
   relative_path: string | null;
   sha256: string | null;
   byte_length: number | string | null;
+  storage_bucket: string | null;
+  storage_key: string | null;
 };
 
 /**
@@ -59,7 +71,7 @@ export async function getRegisteredNativeMapSource(
 ): Promise<RegisteredNativeMapSource | null> {
   const rows = await queryRows<SourceRow>(
     `SELECT mv.source_map_asset_id, s.registry_release_digest, s.canonical_digest, s.object_count,
-            m.relative_path, b.sha256, b.byte_length
+            m.relative_path, b.sha256, b.byte_length, b.storage_bucket, b.storage_key
        FROM simforge.map_versions mv
        JOIN simforge.native_map_asset_sets s
          ON s.id = mv.native_map_asset_set_id
@@ -78,8 +90,12 @@ export async function getRegisteredNativeMapSource(
   const first = rows[0];
   if (!first) return null;
   const verified = rows.filter(
-    (row): row is SourceRow & { relative_path: string; sha256: string; byte_length: number | string } =>
-      row.relative_path !== null && row.sha256 !== null && row.byte_length !== null,
+    (row): row is SourceRow & {
+      relative_path: string; sha256: string; byte_length: number | string;
+      storage_bucket: string; storage_key: string;
+    } =>
+      row.relative_path !== null && row.sha256 !== null && row.byte_length !== null
+      && row.storage_bucket !== null && row.storage_key !== null,
   );
   const expectedCount = Number(first.object_count);
   if (expectedCount < 1 || verified.length !== expectedCount) throw new Error("native_map_asset_set_incomplete");
@@ -93,6 +109,8 @@ export async function getRegisteredNativeMapSource(
       relativePath: row.relative_path,
       sha256: row.sha256,
       sizeBytes: Number(row.byte_length),
+      bucket: row.storage_bucket,
+      key: row.storage_key,
     })),
   };
 }

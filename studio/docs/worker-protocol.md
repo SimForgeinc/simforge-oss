@@ -1,6 +1,12 @@
 # Local worker HTTP protocol
 
-All internal worker endpoints require `Authorization: Bearer <token>`. The token is `SIMFORGE_RENDER_WORKER_TOKEN`, defaulting locally to `simforge-local-worker`. Native render requests also require `x-simforge-worker-node-id: <id>`. JSON errors use HTTP 400 for invalid bodies, 401 for invalid tokens, and 409 when a lease/fence is invalid or expired.
+All internal worker endpoints require `Authorization: Bearer <token>`. The token is `SIMFORGE_RENDER_WORKER_TOKEN`; the supervisor sets it for a local host and a hosted deployment must configure it. Only the open-access development host (`SIMFORGE_LOCAL_OPEN_ACCESS=1`) falls back to `simforge-local-worker`; anywhere else an unset token admits no worker. Native render requests also require `x-simforge-worker-node-id: <id>`. JSON errors use HTTP 400 for invalid bodies, 401 for invalid tokens, and 409 when a lease/fence is invalid or expired.
+
+### Handshake
+
+`GET /api/simforge/internal/host-protocol` → `{ "protocolVersion": 1, "transports": ["http"] }`
+
+The first call a worker makes. It is worker-authenticated rather than session-authenticated, so a worker on another machine can check compatibility with `checkHostProtocolVersion` before it claims anything; `/api/simforge/host/capabilities` stays the account-session document for shells and the CLI.
 
 ## Browser render and CPU jobs
 
@@ -102,6 +108,53 @@ Every subsequent CPU request includes this fence:
   "fenceToken": "..."
 }
 ```
+
+### Native map preparation
+
+`POST /api/simforge/internal/cpu-jobs/{jobId}/map`
+
+The body is the fence alone. A native render claim declares its map closure
+member by member (`payload.map.members`) but carries no bytes for it; the
+worker polls this endpoint while it heartbeats until the host has a download
+for every member:
+
+```json
+{
+  "state": "ready",
+  "mapVersionId": "...",
+  "startedAt": "ISO-8601",
+  "readyAt": "ISO-8601",
+  "members": [
+    {
+      "inputId": "map.tile.000000",
+      "relativePath": "master.gltf",
+      "sha256": "64 lowercase hex characters",
+      "sizeBytes": 123,
+      "download": { "url": "...", "headers": {} }
+    }
+  ]
+}
+```
+
+The other states are `{"state":"preparing","startedAt":"..."}` and
+`{"state":"failed","code":"map_not_authorized","message":"...","startedAt":"..."}`;
+a failure is the attempt's failure, with the host's code. An invalid or
+expired fence answers 409.
+
+`members` is exactly the claim's declared closure — same input IDs, relative
+paths, digests and sizes — each with a session-less, checksum-bound URL. No
+filesystem path is ever returned. Members held in a real object store are
+ready immediately with presigned URLs; members in the local host's map cache,
+which is that host's object store, are ensured on disk first and served by
+`/api/simforge/maps/{mapVersionId}/semantic-assets/{relativePath}`. Relative
+URLs resolve against the host origin, and the worker sends its bearer only to
+that origin.
+
+The worker materializes the closure under its own scratch root
+(`<LOCAL_WORKER_ROOT>/map-cache/sha256/<xx>/<sha256>` is the per-worker
+content-addressed cache, so a repeated job on the same map re-downloads
+nothing), then verifies every materialized byte against the claim's
+declarations before the engine runs.
 
 ### Heartbeat and events
 
