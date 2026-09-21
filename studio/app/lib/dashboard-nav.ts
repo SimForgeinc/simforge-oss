@@ -192,11 +192,16 @@ export function dashboardUtilities(capabilities: StudioHostCapabilities | null):
 /**
  * The navigation as this host presents it: the three apps, the utilities the
  * host offers, and the entry the current path is inside.
+ *
+ * The host's own report comes back with it — `null` until it arrives — so a
+ * consumer that also has to say something about the host (who you are signed
+ * in as, say) asks for it once rather than fetching the document twice.
  */
 export function useDashboardNav(pathname: string): {
   apps: NavItem[];
   utilities: NavItem[];
   activeItem: NavItem | null;
+  capabilities: StudioHostCapabilities | null;
 } {
   const capabilities = useStudioHostCapabilities(studioHost);
   const report = capabilities.status === "ready" ? capabilities.capabilities : null;
@@ -206,6 +211,7 @@ export function useDashboardNav(pathname: string): {
       apps: DASHBOARD_APPS,
       utilities,
       activeItem: [...DASHBOARD_APPS, ...utilities].find((item) => item.match(pathname)) ?? null,
+      capabilities: report,
     };
   }, [report, pathname]);
 }
