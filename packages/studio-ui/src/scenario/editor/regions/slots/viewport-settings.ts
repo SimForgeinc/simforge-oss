@@ -43,6 +43,7 @@ export const SENSITIVITY_RANGE = { min: 25, max: 300 } as const;
 export const LOOK_SENSITIVITY_RANGE = { min: 25, max: 750 } as const;
 
 const STORAGE_KEY = "uniscenario.viewport-settings.v2";
+export const VIEWPORT_SETTINGS_CHANGE_EVENT = "simforge:viewport-settings-change";
 
 
 /**
@@ -155,6 +156,7 @@ export function saveViewportSettings(settings: ViewportSettings): void {
   } catch {
     // Storage full or blocked. The in-memory settings still drive this session.
   }
+  window.dispatchEvent(new Event(VIEWPORT_SETTINGS_CHANGE_EVENT));
 }
 
 /** Whether anything differs from the defaults — drives whether a reset is worth offering. */
