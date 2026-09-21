@@ -147,7 +147,7 @@ export function ScenarioWorldHost({
     while (unresolved.some(([, key]) => !directAssetUrlsRef.current.has(key))) {
       if (signal.aborted) throw signal.reason;
       if (!directBatchPromiseRef.current) {
-        directBatchPromiseRef.current = new Promise<void>((resolve) => {
+        directBatchPromiseRef.current = new Promise<void>((resolve, reject) => {
           setTimeout(async () => {
             const batchUrls = [...pendingDirectUrlsRef.current].splice(0, 256);
             for (const key of batchUrls) pendingDirectUrlsRef.current.delete(key);
@@ -171,6 +171,8 @@ export function ScenarioWorldHost({
                   if (original) directAssetUrlsRef.current.set(original, asset.url);
                 }
               }
+            } catch (error) {
+              reject(error);
             } finally {
               directBatchPromiseRef.current = null;
               resolve();
