@@ -1,3 +1,4 @@
+import { HOST_KIND } from "@/app/lib/host/kind";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { hostname } from "node:os";
 import type {
@@ -212,23 +213,6 @@ function isLoopbackHost(hostname: string) {
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]" || hostname === "::1";
 }
 
-/**
- * Hosted Studio authenticates through Better Auth and the platform data API;
- * it has no local desktop vault to prime. Keeping this distinction here makes
- * every cloud-asset caller cheap on the hosted deployment while preserving
- * vault priming for the local desktop service.
- */
-function runsAsHostedStudio(): boolean {
-  const candidate = process.env.NEXT_PUBLIC_BASE_URL?.trim() || process.env.BETTER_AUTH_URL?.trim();
-  if (!candidate) return false;
-  try {
-    const url = new URL(candidate);
-    return !isLoopbackHost(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
 /** HTTPS everywhere; literal loopback HTTP only for isolated qualification against a local Cloud. */
 export function normalizeCloudOrigin(candidate: string | undefined): string {
   const raw = candidate?.trim() || process.env.SIMFORGE_CLOUD_ORIGIN?.trim() || DEFAULT_CLOUD_ORIGIN;
@@ -403,11 +387,11 @@ export function cloudSessionScope(): { active: boolean; origin: string; scope: s
   return { active: true, origin, scope: `cloud:${origin}:${credential.user.id}:${credential.connectionId}` };
 }
 
+/** Whether the vault has been read at least once, so {@link cloudSessionScope} is meaningful. */
 export async function primeCloudSession(): Promise<void> {
-  // On hosted Studio the Better Auth session is the authority. There is no
-  // local desktop credential to load, so avoid opening the OS vault on every
-  // request path that shares this helper.
-  if (runsAsHostedStudio()) return;
+  // A cloud host authenticates each request itself and has no vault: opening
+  // one on every cloud-asset path was pure cost on the hosted deployment.
+  if (HOST_KIND === "cloud") return;
   await ensureLoaded();
 }
 

@@ -31,6 +31,7 @@ import {
   getRegisteredMap,
   invalidateRegisteredMap,
   loadRegisteredMapSummaries,
+  type RegisteredMapSummary,
   MAP_CACHE_BUCKET,
   MAP_CACHE_KEY_PREFIX,
   rememberUpstreamMap,
@@ -433,12 +434,27 @@ export type LocalMapCatalog = {
  * installed every time the daemon restarted, and offered the user a download
  * for 33 GB of maps already on the disk.
  */
-async function installedClosures(registered: RegisteredMap | null): Promise<{ browser: boolean; semantic: boolean }> {
-  if (!registered) return { browser: false, semantic: false };
-  return {
-    browser: await registeredProfileInstalled(registered.browser.values()),
-    semantic: await registeredProfileInstalled(registered.semantic.values()),
+/**
+ * Installed = the closure is resident where this host keeps closures. Members in
+ * the map cache are files this process can check — the entry point first, the
+ * whole closure only when the entry point is there. Members in an object store
+ * are resident as soon as the registry holds their asset set `available` (it
+ * becomes so only once every blob is verified); a filesystem probe would never
+ * find them on a host whose store is S3, which is why hosted catalogs used to
+ * report every map as not installed.
+ */
+async function installedClosures(summary: RegisteredMapSummary | null): Promise<{ browser: boolean; semantic: boolean }> {
+  if (!summary) return { browser: false, semantic: false };
+  const profile = async (name: "browser" | "semantic", entryPoint: string): Promise<boolean> => {
+    const member = summary[name].get(entryPoint);
+    if (!member) return false;
+    if (member.bucket !== MAP_CACHE_BUCKET) return summary.installed[name] === true;
+    if (!(await registeredProfileInstalled([member]))) return false;
+    const complete = await getRegisteredMap(summary.mapVersionId);
+    return complete !== null && registeredProfileInstalled(complete[name].values());
   };
+  const [browser, semantic] = await Promise.all([profile("browser", "3d/manifest.json"), profile("semantic", "master.gltf")]);
+  return { browser, semantic };
 }
 
 /**
@@ -453,23 +469,6 @@ async function installedClosures(registered: RegisteredMap | null): Promise<{ br
  * maps this machine already has. A budget that runs out is the same fact the
  * UI already knows how to show — the Cloud was not reached.
  */
-async function catalogInstalledClosures(summary: RegisteredMap | null): Promise<{ browser: boolean; semantic: boolean }> {
-  if (!summary) return { browser: false, semantic: false };
-  // Missing entry-point residency proves the closure is not installed. This
-  // preserves the local residency contract without fetching thousands of
-  // member rows on object-store hosts, where no closure is on the filesystem.
-  const [browser, semantic] = await Promise.all([
-    registeredProfileInstalled(summary.browser.values()),
-    registeredProfileInstalled(summary.semantic.values()),
-  ]);
-  if (!browser && !semantic) return { browser, semantic };
-  const complete = await getRegisteredMap(summary.mapVersionId);
-  return {
-    browser: browser && complete !== null && await registeredProfileInstalled(complete.browser.values()),
-    semantic: semantic && complete !== null && await registeredProfileInstalled(complete.semantic.values()),
-  };
-}
-
 export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapCatalog> {
   await primeCloudSession();
   const session = cloudSessionScope();
@@ -500,10 +499,7 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access,
       locked: access === "cloud" && !session.active,
       ready,
-      installed: {
-        browser: registered?.installed.browser ?? false,
-        semantic: registered?.installed.semantic ?? false,
-      },
+      installed: await installedClosures(registered),
       closureBytes: installedBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
@@ -1059,4 +1055,3 @@ export async function readMapInstallState(mapVersionId: string, profile: MapProf
     message: null,
   };
 }
-// Catalog batching is intentionally kept in the OSS app source for stack synchronization.
