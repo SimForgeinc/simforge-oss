@@ -77,6 +77,8 @@ const DATASET_SELECT = `WITH item_counts AS (
     COALESCE(rc.render_completed_count, 0)::int AS render_completed_count,
     COALESCE(ec.export_completed_count, 0)::int AS export_completed_count
   FROM simforge.datasets d
+  LEFT JOIN public.ba_user author ON author.id = d.created_by_user_id
+  LEFT JOIN public.ba_user editor ON editor.id = d.updated_by_user_id
   LEFT JOIN item_counts ic ON ic.dataset_id = d.id
   LEFT JOIN document_counts dc ON dc.dataset_id = d.id
   LEFT JOIN render_counts rc ON rc.dataset_id = d.id
