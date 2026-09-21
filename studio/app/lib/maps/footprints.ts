@@ -13,7 +13,8 @@
  * an author can see the map exists and why it is not on the map.
  */
 
-import { open } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import type { Readable } from "node:stream";
 
 import type { ScenarioMapCoverageDto, ScenarioMapFootprintDto } from "@simforge-oss/studio-host";
 
@@ -21,7 +22,7 @@ import { MapAccessError, resolveAuthorizedMapMember } from "@/app/lib/cloud/acce
 import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
 import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
 import { ensureMapAsset, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
-import { localObjectPath } from "@/app/lib/s3/s3-object";
+import { streamLocalObject } from "@/app/lib/s3/s3-object";
 import { mapFootprintGeometry, type MapFootprintGeometry } from "./footprint-geometry";
 
 /** The `.xodr` member every map closure carries. */
@@ -33,7 +34,32 @@ const CACHE_KEY = Symbol.for("simforge.map-footprints");
 type FootprintCache = Map<string, { geometry: MapFootprintGeometry } | { reason: string }>;
 const cache: FootprintCache = ((globalThis as Record<symbol, unknown>)[CACHE_KEY] ??= new Map()) as FootprintCache;
 
-/** The first `HEADER_PREFIX_BYTES` of the map's `.xodr`, as text. */
+/**
+ * The first `limit` bytes of a stream, as text. The stream is destroyed once
+ * the budget is met so a multi-megabyte object is not read past its header.
+ */
+async function readPrefix(stream: Readable, limit: number): Promise<string> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+    size += (chunk as Buffer).byteLength;
+    if (size >= limit) {
+      stream.destroy();
+      break;
+    }
+  }
+  return Buffer.concat(chunks).subarray(0, limit).toString("utf8");
+}
+
+/**
+ * The first `HEADER_PREFIX_BYTES` of the map's `.xodr`, as text.
+ *
+ * A member in the map cache's own bucket is ensured resident and read from
+ * the cache file; a member whose row names a real object store is read
+ * through the object seam, which is the only way a host without local
+ * object files can reach it.
+ */
 async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): Promise<string> {
   const { member } = await resolveAuthorizedMapMember({
     kind: "map",
@@ -41,31 +67,21 @@ async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): P
     profile: "browser",
     relativePath: XODR_MEMBER,
   });
-  let path: string;
-  if (member.bucket === MAP_CACHE_BUCKET) {
-    let cached = await resolveCachedMapAsset(member.sha256);
-    if (!cached) {
-      await ensureMapAsset({
-        requestId: `footprint:${member.sha256}`,
-        url: `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${XODR_MEMBER}`,
-        sha256: member.sha256,
-        sizeBytes: member.byteLength,
-      }, signal);
-      cached = await resolveCachedMapAsset(member.sha256);
-    }
-    if (!cached) throw new MapAccessError("MapCacheError", "map_asset_unavailable", `${XODR_MEMBER} is not resident`);
-    path = cached.path;
-  } else {
-    path = localObjectPath(member.bucket, member.key);
+  if (member.bucket !== MAP_CACHE_BUCKET) {
+    return readPrefix(streamLocalObject(member.bucket, member.key), HEADER_PREFIX_BYTES);
   }
-  const handle = await open(path, "r");
-  try {
-    const buffer = Buffer.allocUnsafe(Math.min(HEADER_PREFIX_BYTES, member.byteLength));
-    const { bytesRead } = await handle.read(buffer, 0, buffer.byteLength, 0);
-    return buffer.toString("utf8", 0, bytesRead);
-  } finally {
-    await handle.close();
+  let cached = await resolveCachedMapAsset(member.sha256);
+  if (!cached) {
+    await ensureMapAsset({
+      requestId: `footprint:${member.sha256}`,
+      url: `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${XODR_MEMBER}`,
+      sha256: member.sha256,
+      sizeBytes: member.byteLength,
+    }, signal);
+    cached = await resolveCachedMapAsset(member.sha256);
   }
+  if (!cached) throw new MapAccessError("MapCacheError", "map_asset_unavailable", `${XODR_MEMBER} is not resident`);
+  return readPrefix(createReadStream(cached.path, { start: 0, end: HEADER_PREFIX_BYTES - 1 }), HEADER_PREFIX_BYTES);
 }
 
 /**
