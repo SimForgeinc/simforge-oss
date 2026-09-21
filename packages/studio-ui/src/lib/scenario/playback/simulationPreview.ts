@@ -13,9 +13,14 @@ export async function encodeSimulationPreview(bundle: PlaybackBundle, draftVersi
   return { bytes, sha256: await sha256BytesAsync(bytes) };
 }
 
+/**
+ * `runtime` binds the saved run to the engine build that will replay it; a
+ * consumer that only needs the run as evidence of this draft version (the
+ * render freeze) passes `null`, exactly as the CLI's freeze does.
+ */
 export async function downloadSimulationPreview(
   descriptor: ScenarioSimulationPreviewDto,
-  runtime: SimulationPreviewRuntime,
+  runtime: SimulationPreviewRuntime | null,
   signal?: AbortSignal,
 ): Promise<PlaybackBundle> {
   const bytes = await fetchContentAddressedArtifact(
@@ -25,5 +30,5 @@ export async function downloadSimulationPreview(
   );
   const json = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   const value: unknown = JSON.parse(json);
-  return admitSimulationPreview(value, { draftVersion: descriptor.draftVersion, runtime });
+  return admitSimulationPreview(value, { draftVersion: descriptor.draftVersion, ...(runtime ? { runtime } : {}) });
 }
