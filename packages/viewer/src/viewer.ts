@@ -729,6 +729,7 @@ export class CityViewer {
       : this.options.vegetation
         ? this.loadVegetationInstances(manifest)
         : Promise.resolve();
+    await vegetationPromise;
 
     this.createRoadLayer(manifest);
     this.createCityLayer(manifest);
@@ -1498,7 +1499,9 @@ export class CityViewer {
       name: 'vegetation-layer',
       renderer: this.renderer,
       scene: this.scene,
-      // Vegetation is never required for a usable map.
+      // Vegetation is never required for a usable map and must remain
+      // evictable under the shared byte budget.
+      required: () => false,
       onError: (error) => this.recordDetailFailure(error),
       defs,
       maxConcurrent: 2,
@@ -2295,8 +2298,11 @@ export class CityViewer {
 
   setLayerVisible(layer: keyof CityViewerLayers | 'road', visible: boolean): void {
     if (layer === 'city') this.cityGroup.visible = visible;
-    else if (layer === 'vegetation') this.vegetationGroup.visible = visible;
-    else this.roadGroup.visible = visible;
+    else if (layer === 'vegetation') {
+      this.options.vegetation = visible;
+      this.vegetationGroup.visible = visible;
+      if (visible) void this.ensureVegetationLayer();
+    } else this.roadGroup.visible = visible;
   }
 
   setExposure(exposure: number): void {

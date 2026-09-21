@@ -131,43 +131,57 @@ export function ScenarioWorldHost({
   const directAssetUrlsRef = useRef(new Map<string, string>());
   const pendingDirectUrlsRef = useRef(new Set<string>());
   const directBatchPromiseRef = useRef<Promise<void> | null>(null);
+  const canonicalAssetKey = (url: string): string => {
+    const parsed = new URL(url, window.location.origin);
+    parsed.pathname = parsed.pathname.split('/').map((part) => {
+      try { return encodeURIComponent(decodeURIComponent(part)); } catch { return part; }
+    }).join('/');
+    return parsed.toString();
+  };
   const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
-    const unresolved = urls.filter((url) => !directAssetUrlsRef.current.has(url));
-    if (unresolved.length > 0 && retainedTarget?.mapVersionId) {
-      for (const url of unresolved) pendingDirectUrlsRef.current.add(url);
+    const mapVersionId = retainedTarget?.mapVersionId;
+    if (!mapVersionId) return new Map<string, string>();
+    const keys = urls.map((url) => [url, canonicalAssetKey(url)] as const);
+    const unresolved = keys.filter(([, key]) => !directAssetUrlsRef.current.has(key));
+    for (const [, key] of unresolved) pendingDirectUrlsRef.current.add(key);
+    while (unresolved.some(([, key]) => !directAssetUrlsRef.current.has(key))) {
+      if (signal.aborted) throw signal.reason;
       if (!directBatchPromiseRef.current) {
         directBatchPromiseRef.current = new Promise<void>((resolve) => {
           setTimeout(async () => {
             const batchUrls = [...pendingDirectUrlsRef.current].splice(0, 256);
-            for (const url of batchUrls) pendingDirectUrlsRef.current.delete(url);
-            const assets = batchUrls.flatMap((url) => {
-              const parsed = new URL(url, window.location.origin);
-              const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
-              return match ? [{ mapVersionId: retainedTarget.mapVersionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
-            });
-            if (assets.length > 0) {
-              const response = await fetch("/api/simforge/maps/cache-download-urls", {
-                method: "POST", credentials: "same-origin",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ assets }), signal,
+            for (const key of batchUrls) pendingDirectUrlsRef.current.delete(key);
+            try {
+              const assets = batchUrls.flatMap((key) => {
+                const parsed = new URL(key);
+                const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
+                return match ? [{ mapVersionId, relativePath: match[1]!.split('/').map(decodeURIComponent).join('/') }] : [];
               });
-              if (response.ok) {
+              if (assets.length > 0) {
+                const response = await fetch("/api/simforge/maps/cache-download-urls", {
+                  method: "POST", credentials: "same-origin",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ assets }), signal,
+                });
+                if (!response.ok) throw new Error(`URL resolver failed: ${response.status}`);
                 const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
                 for (const asset of payload.assets ?? []) {
-                  const original = batchUrls.find((url) => url.endsWith(`/${asset.relativePath}`));
+                  const expectedPath = `/browser-assets/${asset.relativePath.split('/').map(encodeURIComponent).join('/')}`;
+                  const original = batchUrls.find((key) => new URL(key).pathname.endsWith(expectedPath));
                   if (original) directAssetUrlsRef.current.set(original, asset.url);
                 }
               }
+            } finally {
+              directBatchPromiseRef.current = null;
+              resolve();
             }
-            directBatchPromiseRef.current = null;
-            resolve();
           }, 25);
         });
       }
       await directBatchPromiseRef.current;
     }
-    return new Map(urls.flatMap((url) => {
-      const resolved = directAssetUrlsRef.current.get(url);
+    return new Map(keys.flatMap(([url, key]) => {
+      const resolved = directAssetUrlsRef.current.get(key);
       return resolved ? [[url, resolved] as const] : [];
     }));
   }, [retainedTarget?.mapVersionId]);
