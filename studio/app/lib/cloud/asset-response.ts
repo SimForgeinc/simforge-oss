@@ -9,6 +9,8 @@ import type { RegistryMember } from "./map-registry";
 import { MAP_CACHE_BUCKET } from "./map-registry";
 import { getMapArtifactDownloadUrl } from "@/app/lib/s3/s3-presign";
 import { browserAssetRedirectCacheControl, objectRedirect } from "@/app/lib/s3/local-object-redirect";
+import { readLocalObjectSize, streamLocalObject } from "@/app/lib/s3/s3-object";
+import { requiresDigestAttestation } from "@/app/lib/scenario/contracts";
 
 /**
  * One authorized URL for installed and downloaded members alike. Admission
@@ -58,6 +60,45 @@ function parseRange(header: string | null, size: number): { start: number; end: 
 }
 
 /**
+ * Serve a member whose digest the client pins, through this app.
+ *
+ * `loadMapGraph` refuses a map-graph sidecar whose `x-content-sha256` does
+ * not match the descriptor's digest, and it is right to: a world built from
+ * the wrong topology is a silent wrong answer. Only something that has read
+ * the bytes can attest them, and an object store cannot — `response-*`
+ * overrides reach standard headers only, and these objects carry no stored
+ * checksum (a multipart ETag is not one). So the five sidecars come through
+ * here, read from the store the member's row names.
+ *
+ * Whole bodies, no range support: these are read start to finish by one
+ * caller, and a partial response cannot carry a digest for the whole object.
+ * Length is checked against the registry before a byte is sent, so a
+ * truncated or replaced object fails here rather than halfway through a
+ * parse.
+ */
+async function attestedObject(
+  member: Pick<RegistryMember, "sha256" | "byteLength" | "mediaType">,
+  storedAt: { bucket: string; key: string },
+  headOnly: boolean,
+): Promise<Response> {
+  const size = await readLocalObjectSize(storedAt.bucket, storedAt.key);
+  if (size === null) throw new MapAccessError("NotFound", "map_member_missing");
+  if (size !== member.byteLength) throw new MapAccessError("MapCacheError", "map_member_integrity");
+  const headers = new Headers({
+    "content-type": member.mediaType,
+    "content-length": String(size),
+    etag: `"${member.sha256}"`,
+    "x-content-sha256": member.sha256,
+    "cache-control": REVALIDATE,
+    "x-content-type-options": "nosniff",
+    "content-security-policy": "sandbox",
+  });
+  if (headOnly || size === 0) return new Response(null, { status: 200, headers });
+  const stream = streamLocalObject(storedAt.bucket, storedAt.key);
+  return new Response(Readable.toWeb(stream) as ReadableStream, { status: 200, headers });
+}
+
+/**
  * Stream a verified cache object with byte-range support. `sha256` is the
  * authorized member's identity; the path comes from the cache, never a caller.
  *
@@ -75,10 +116,11 @@ export async function streamCachedObject(
   member: Pick<RegistryMember, "sha256" | "byteLength" | "mediaType">,
   ensureUrl: string,
   headOnly: boolean,
-  storedAt?: { mapVersionId: string; bucket: string; key: string },
+  storedAt?: { mapVersionId: string; bucket: string; key: string; attestDigest: boolean },
 ): Promise<Response> {
   let cached = await resolveCachedMapAsset(member.sha256);
   if (!cached && storedAt && storedAt.bucket !== MAP_CACHE_BUCKET) {
+    if (storedAt.attestDigest) return attestedObject(member, storedAt, headOnly);
     const url = await getMapArtifactDownloadUrl(
       storedAt.mapVersionId,
       storedAt.key,
@@ -143,6 +185,7 @@ export async function serveLocalMapAsset(request: Request, headOnly: boolean): P
       mapVersionId: ref.mapVersionId,
       bucket: member.bucket,
       key: member.key,
+      attestDigest: requiresDigestAttestation(ref.relativePath),
     });
   } catch (error) {
     return mapAccessErrorResponse(error);
