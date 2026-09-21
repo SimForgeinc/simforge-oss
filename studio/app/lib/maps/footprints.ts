@@ -13,11 +13,9 @@
  * an author can see the map exists and why it is not on the map.
  */
 
-import { createReadStream } from "node:fs";
-import type { Readable } from "node:stream";
-
 import type { ScenarioMapCoverageDto, ScenarioMapFootprintDto } from "@simforge-oss/studio-host";
 
+import { queryRows } from "@/app/lib/db/data-api";
 import { MapAccessError, resolveAuthorizedMapMember } from "@/app/lib/cloud/access";
 import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
 import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
@@ -85,6 +83,47 @@ async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): P
 }
 
 /**
+ * Persisted footprint metadata is served in one small query.
+ */
+type PersistedFootprintRow = {
+  id: string;
+  source_map_id: string;
+  footprint: unknown;
+};
+/**
+ * Footprints are immutable map-version metadata. Keep this read deliberately
+ * independent of the catalog: the catalog also verifies every closure member
+ * and performs remote discovery, neither of which is needed by this endpoint.
+ */
+async function readPersistedFootprints(): Promise<ScenarioMapFootprintDto[]> {
+  const rows = await queryRows<PersistedFootprintRow>(
+    `SELECT DISTINCT ON (mv.source_map_asset_id)
+       mv.id, mv.source_map_asset_id AS source_map_id,
+       mv.descriptor->'footprint' AS footprint
+     FROM simforge.map_versions mv
+     JOIN simforge.browser_asset_sets bas
+       ON bas.id = mv.browser_asset_set_id
+      AND bas.workspace_id = mv.workspace_id
+      AND bas.asset_set_state = 'available'
+     WHERE mv.retired_at IS NULL
+       AND NULLIF(BTRIM(mv.source_map_asset_id), '') IS NOT NULL
+     ORDER BY mv.source_map_asset_id, mv.created_at DESC, mv.id DESC`,
+    {},
+  );
+  const result: ScenarioMapFootprintDto[] = [];
+  for (const row of rows) {
+    const value = row.footprint as { polygon?: unknown; center?: unknown } | null;
+    if (!Array.isArray(value?.polygon) || !Array.isArray(value?.center)) continue;
+    result.push({
+      mapVersionId: row.id,
+      sourceMapId: row.source_map_id,
+      polygon: value.polygon as Array<[number, number]>,
+      center: value.center as [number, number],
+    });
+  }
+  return result;
+}
+
  * Footprints of every map installed for the browser on this host.
  *
  * One map that cannot be placed never fails the request — the coverage map
@@ -94,8 +133,14 @@ async function readXodrHeaderText(mapVersionId: string, signal?: AbortSignal): P
  * A locked map (published to an account, no session right now) is installed
  * but not readable, and is reported as such rather than opened behind the
  * access gate's back.
- */
 export async function listMapFootprints(signal?: AbortSignal): Promise<ScenarioMapCoverageDto> {
+  const persisted = await readPersistedFootprints();
+  if (persisted.length > 0) {
+    return { footprints: persisted, unprojected: [] };
+  }
+  // Compatibility path for maps published before descriptor footprints were
+  // introduced. It is intentionally retained as a one-time backfill path;
+  // newly published versions are expected to carry immutable geometry.
   const maps = (await listLocalMapCatalog(signal)).filter((map) => map.ready.browser);
   const footprints: ScenarioMapFootprintDto[] = [];
   const unprojected: ScenarioMapCoverageDto["unprojected"] = [];

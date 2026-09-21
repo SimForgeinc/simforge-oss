@@ -60,6 +60,20 @@ export const styles = stylex.create({
     color: colors.textSubtle,
     lineHeight: text.lineTight,
   },
+  actions: {
+    display: "flex",
+    gap: space.xs,
+    marginTop: space.xs,
+  },
+  action: {
+    border: 0,
+    paddingInline: space.xs,
+    paddingBlock: space.xxs,
+    backgroundColor: colors.panelSolid,
+    color: colors.text,
+    cursor: "pointer",
+    font: text.label,
+  },
   /** Bottom-left plate: load state and the maps that cannot be drawn. */
   legend: {
     position: "absolute",

@@ -157,6 +157,7 @@ export function ScenarioDatasetsClient({
   const [mapGroups, setMapGroups] = useState<ScenarioMapGroup[]>([]);
   /** The coverage region whose scenarios the column has expanded. */
   const [selectedMapVersionId, setSelectedMapVersionId] = useState<string | null>(null);
+  const [creatingScenarioMapVersionId, setCreatingScenarioMapVersionId] = useState<string | null>(null);
   const [datasetRightPaneMode, setDatasetRightPaneMode] =
     useState<DatasetRightPaneMode>("map");
   const [renderTarget, setRenderTarget] = useState<RenderTarget | null>(null);
@@ -298,6 +299,33 @@ export function ScenarioDatasetsClient({
     scenarioListCache.selectedMapVersionIdByDataset = next;
     persistScenarioViewState();
   }, [openDatasetId]);
+  const createScenarioHere = useCallback(async (mapVersionId: string) => {
+    if (creatingScenarioMapVersionId) return;
+    setCreatingScenarioMapVersionId(mapVersionId);
+    try {
+      const response = await fetch(
+        `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/documents/default`,
+        { method: "POST" },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | { document?: { id: string; datasetId: string }; error?: string }
+        | null;
+      if (!response.ok || !payload?.document) {
+        throw new Error(payload?.error || "The scenario could not be created.");
+      }
+      router.push(
+        `/dashboard/scenario?dataset=${encodeURIComponent(payload.document.datasetId)}&document=${encodeURIComponent(payload.document.id)}`,
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The scenario could not be created.");
+    } finally {
+      setCreatingScenarioMapVersionId(null);
+    }
+  }, [creatingScenarioMapVersionId, router]);
+
+  const driveHere = useCallback((mapVersionId: string) => {
+    router.push(`/dashboard/map-assets/drive?map=${encodeURIComponent(mapVersionId)}`);
+  }, [router]);
 
   const toggleRenderPane = useCallback(
     (document: RenderTarget) => {
@@ -737,6 +765,9 @@ export function ScenarioDatasetsClient({
                 maps={mapGroups}
                 selectedMapVersionId={selectedMapVersionId}
                 onSelectMap={selectMap}
+                onCreateScenario={createScenarioHere}
+                onDriveHere={driveHere}
+                creatingScenarioMapVersionId={creatingScenarioMapVersionId}
               />
             ) : null}
           </div>
