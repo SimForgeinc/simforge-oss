@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import type { Readable } from "node:stream";
 import { withTransaction } from "@/app/lib/db/data-api";
+import { streamLocalObject } from "@/app/lib/s3/s3-object";
+import { mapFootprintGeometry, type MapFootprintGeometry } from "@/app/lib/maps/footprint-geometry";
 import type { PublishedMapSummary } from "@/app/lib/map-ingest/contracts";
 import {
   BROWSER_ASSET_SET_CONTRACT,
@@ -18,6 +21,21 @@ const COORDINATE_SYSTEM_SHA256 = createHash("sha256").update(JSON.stringify({
     heading: "ccw-about-y",
   },
 })).digest("hex");
+const XODR_HEADER_BYTES = 16_384;
+
+async function readPrefix(stream: Readable, limit: number): Promise<string> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+    size += (chunk as Buffer).byteLength;
+    if (size >= limit) {
+      stream.destroy();
+      break;
+    }
+  }
+  return Buffer.concat(chunks).subarray(0, limit).toString("utf8");
+}
 const MAP_THUMBNAIL_ARTIFACT_KIND = "map-thumbnail-v2";
 const SHA256 = /^[a-f0-9]{64}$/;
 
@@ -152,13 +170,7 @@ function assertPublicationInput(input: PublishUploadedMapVersionInput) {
       !member.bucket ||
       !member.key ||
       !member.blobId,
-    )
-  ) {
-    throw new Error("invalid_browser_asset_members");
-  }
-  // Browser-only downloads already carry their immutable registry identity.
-  // A native profile may be added later, but must match that same identity.
-  if (
+    ) ||
     (input.registryReleaseDigest !== undefined && !SHA256.test(input.registryReleaseDigest)) ||
     (input.nativePlan && (
       input.registryReleaseDigest === undefined ||
@@ -177,6 +189,18 @@ export async function publishUploadedMapVersion(
   assertPublicationInput(input);
   const { plan } = input;
   const producer = producerProvenance(input.draftId);
+  const xodr = plan.members.find((member) => member.relativePath === "map.xodr");
+  let footprint: MapFootprintGeometry | null = null;
+  if (xodr) {
+    try {
+      footprint = mapFootprintGeometry(
+        await readPrefix(streamLocalObject(xodr.bucket, xodr.key), XODR_HEADER_BYTES),
+      );
+    } catch {
+      // Maps without georeferencing remain publishable and are reported as
+      // unprojected by the coverage endpoint.
+    }
+  }
 
   return withTransaction(async (tx) => {
     const source = await tx.queryOne<IdRow>(
@@ -322,6 +346,7 @@ export async function publishUploadedMapVersion(
       ...(input.registryReleaseDigest
         ? { registryReleaseDigest: input.registryReleaseDigest }
         : {}),
+      ...(footprint ? { footprint: { polygon: footprint.polygon, center: footprint.center } } : {}),
       sumoRequired: false,
       artifactDigests: {
         xodrSha256: digest("map.xodr"),

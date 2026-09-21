@@ -13,6 +13,9 @@
  * an author can see the map exists and why it is not on the map.
  */
 
+import { createReadStream } from "node:fs";
+import type { Readable } from "node:stream";
+
 import type { ScenarioMapCoverageDto, ScenarioMapFootprintDto } from "@simforge-oss/studio-host";
 
 import { queryRows } from "@/app/lib/db/data-api";
