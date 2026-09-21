@@ -7,6 +7,7 @@ import { AsamExportError } from '@simforge-oss/openscenario';
 import {
   MapBundle,
   adaptTemplateNotesWith,
+  clampDeclaredAxisHolds,
   compileTemplateWith,
   materializationSemanticLosses,
   matchSitesWith,
@@ -306,16 +307,24 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
   const { graph, bundle, controls: mapControls, xodr, mapCollisions } = runtime;
   const isInteractiveCompile = request.kind === 'compile' || request.operation === 'materialize';
   const revision = request.revision ?? String(request.id);
+  // The compiler normalizes a template before it binds it (`resolveExecutionInput`):
+  // a declared axis hold that a later exact takeover preempts is truncated to the
+  // takeover. Runtime takeover wins either way, so the trace is the same, but the
+  // resolved input is not: this world's `inputHash` is the identity the saved
+  // simulation claims for its materialized traffic, and the compiler verifies that
+  // claim against its own resolution. Resolving the same template here is what
+  // makes those two digests one.
+  const { template } = clampDeclaredAxisHolds(request.template);
 
   // A blank editor still owns one normal concrete world. It has no authored
   // rows yet, but its ambient SimActors use the same routes, controls, physics,
   // collision handling and trace format as every later authored scenario.
-  if (request.template.roles.length === 0 && !request.baseInstance) {
+  if (template.roles.length === 0 && !request.baseInstance) {
     // Parked cars belong here too, so they do not blink out of the preview the
     // moment the last authored actor is deleted.
     const base = withParkedCarActors(
       withMapControls(withEditablePhysicsDefault(createEmptyAmbientInput(request.map.sourceMapId)), mapControls),
-      parkedCarsFromExtensions(request.template.extensions).baked,
+      parkedCarsFromExtensions(template.extensions).baked,
     );
     const populated = applyRequestedAmbientPopulation(engine, base, graph, request);
     // The core schema requires one actor. Keep a remote, non-render-authoritative
@@ -363,7 +372,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
         (actor) => !isAmbientSimActor(actor) && !isParkedSimActor(actor),
       ),
       interactions: repaired.interactions,
-    }), mapControls), request.template), parkedCarsFromExtensions(request.template.extensions).baked);
+    }), mapControls), template), parkedCarsFromExtensions(template.extensions).baked);
     const generated = applyRequestedAmbientPopulation(engine, editableInput, graph, request);
     const ambient = repaired.removed.length === 0 ? generated : {
       ...generated,
@@ -390,21 +399,21 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       siteId: String(replayKey?.['siteId'] ?? 'verified-base'),
       ambientTraffic: ambient.provenance,
       mapCollisions,
-      ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, request.template, instance, result.input, result.trace, graph, xodr) }),
+      ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, template, instance, result.input, result.trace, graph, xodr) }),
     };
   }
 
-  const isMapBound = request.template.roles.length > 0 && request.template.roles.every((role) => role.kind === 'scene_absolute');
+  const isMapBound = template.roles.length > 0 && template.roles.every((role) => role.kind === 'scene_absolute');
   if (isMapBound) {
     // Map-bound documents skip matching: the native compiler binds them at their pinned site.
-    const product = compileTemplateWith(engine.module, request.template, bundle, null, { drawIndex: -1 });
+    const product = compileTemplateWith(engine.module, template, bundle, null, { drawIndex: -1 });
     if (!product.manifest.feasible) {
       const errors = product.manifest.issues.filter((issue) => issue.severity === 'error');
       throw new Error(`Scenario is not feasible: ${errors.map((issue) => issue.reason).join(' · ')}`);
     }
     const controlledInput = withParkedCarActors(
-      withStudioBodyColorTags(withMapControls(product.input, mapControls), request.template),
-      parkedCarsFromExtensions(request.template.extensions).baked,
+      withStudioBodyColorTags(withMapControls(product.input, mapControls), template),
+      parkedCarsFromExtensions(template.extensions).baked,
     );
     const ambient = applyRequestedAmbientPopulation(engine, controlledInput, graph, request);
     if (request.operation === 'robustness') return robustnessResponse(engine, request, controlledInput, graph);
@@ -422,20 +431,20 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       siteId: product.manifest.replayKey.siteId,
       ambientTraffic: ambient.provenance,
       mapCollisions,
-      ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, request.template, instance, result.input, result.trace, graph, xodr) }),
+      ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, template, instance, result.input, result.trace, graph, xodr) }),
     };
   }
 
-  const notes = adaptTemplateNotesWith(engine.module, request.template);
+  const notes = adaptTemplateNotesWith(engine.module, template);
   if (notes.length > 0) {
     throw new Error(`Scenario uses constructs the matcher cannot preserve: ${notes.map((note) => `${note.path}: ${note.reason}`).join(' · ')}`);
   }
-  const { report } = matchSitesWith(engine.module, request.template, bundle);
+  const { report } = matchSitesWith(engine.module, template, bundle);
   if (!report.sites.some((candidate) => candidate.degradation.intentPreserved)) {
     throw new Error(`No intent-preserving site matches this scenario on ${request.map.sourceMapId}${report.failureSummary ? ` (${report.failureSummary})` : ''}`);
   }
   const selected = selectPlayableSite(report.sites, (candidate) => {
-    const candidateProduct = compileTemplateWith(engine.module, request.template, bundle, candidate, { drawIndex: -1 });
+    const candidateProduct = compileTemplateWith(engine.module, template, bundle, candidate, { drawIndex: -1 });
     const semanticLosses = materializationSemanticLosses(candidateProduct.manifest.notes);
     if (semanticLosses.length > 0) {
       throw new Error(`materialization would lose authored semantics: ${semanticLosses.map((note) => `${note.path}: ${note.reason}`).join(' · ')}`);
@@ -447,7 +456,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
     return candidateProduct;
   });
   const { site, product } = selected;
-  const controlledInput = withStudioBodyColorTags(withMapControls(product.input, mapControls), request.template);
+  const controlledInput = withStudioBodyColorTags(withMapControls(product.input, mapControls), template);
   const ambient = applyRequestedAmbientPopulation(engine, controlledInput, graph, request);
   if (request.operation === 'robustness') return robustnessResponse(engine, request, controlledInput, graph);
   const result = simulateForRequest(engine, ambient.input, graph, request.operation, request);
@@ -464,7 +473,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
     siteId: site.siteId,
     ambientTraffic: ambient.provenance,
     mapCollisions,
-    ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, request.template, instance, result.input, result.trace, graph, xodr) }),
+    ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, template, instance, result.input, result.trace, graph, xodr) }),
   };
 }
 
