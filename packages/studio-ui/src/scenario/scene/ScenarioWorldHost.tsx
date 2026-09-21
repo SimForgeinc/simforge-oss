@@ -128,35 +128,6 @@ export function ScenarioWorldHost({
     initialSceneLoadProgress(target?.label ?? "scene"),
   );
   const [retryNonce, setRetryNonce] = useState(0);
-  const directAssetUrlsRef = useRef(new Map<string, string>());
-  const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
-    const unresolved = urls.filter((url) => !directAssetUrlsRef.current.has(url));
-    if (unresolved.length > 0 && retainedTarget?.mapVersionId) {
-      const assets = unresolved.flatMap((url) => {
-        const parsed = new URL(url, window.location.origin);
-        const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
-        return match ? [{ mapVersionId: retainedTarget.mapVersionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
-      });
-      if (assets.length > 0) {
-        const response = await fetch("/api/simforge/maps/cache-download-urls", {
-          method: "POST", credentials: "same-origin",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ assets }), signal,
-        });
-        if (response.ok) {
-          const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
-          for (const asset of payload.assets ?? []) {
-            const original = unresolved.find((url) => url.endsWith(`/${asset.relativePath}`));
-            if (original) directAssetUrlsRef.current.set(original, asset.url);
-          }
-        }
-      }
-    }
-    return new Map(urls.flatMap((url) => {
-      const resolved = directAssetUrlsRef.current.get(url);
-      return resolved ? [[url, resolved] as const] : [];
-    }));
-  }, [retainedTarget?.mapVersionId]);
   const [tierSelection, setTierSelection] = useState<TierSelection | null>(null);
   const [preference, setPreference] = useState<RenderingPreference>(
     () => readRenderingPreference() ?? "medium",
@@ -532,8 +503,11 @@ export function ScenarioWorldHost({
       getViewer: () => viewerRef.current,
       mapId: effectiveTarget?.mapId,
       installedMaps: effectiveTarget?.installedMaps,
+      mapVersionId: effectiveTarget?.mapVersionId,
+      manifestUrl: effectiveTarget?.manifestUrl,
       requestedTier: preference,
       phase: transitionPhase,
+      readinessAnnounced: Boolean(effectiveTarget && loadedMapVersionId === effectiveTarget.mapVersionId),
       error,
     }} />,
   );
@@ -560,7 +534,7 @@ export function ScenarioWorldHost({
         <CityView
           key={`world-viewer:${retryNonce}`}
           manifestUrl={retainedTarget.manifestUrl}
-          initialOptions={{ ...sceneViewerOptions(preference), resolveMapAssetUrls }}
+          initialOptions={sceneViewerOptions(preference)}
           onReady={(viewer) => {
             viewerRef.current = viewer;
             startMetadataProgress(viewer, retainedTarget.label);
