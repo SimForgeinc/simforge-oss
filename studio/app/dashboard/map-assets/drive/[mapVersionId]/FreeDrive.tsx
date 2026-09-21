@@ -109,7 +109,7 @@ export function FreeDrive({
       <CloudLoadingSurface
         detail={error.message}
         role="alert"
-        scope="pane"
+        scope="screen"
         title="The drive could not start"
         diagnostics={loadingDiagnostics}
       />
@@ -119,8 +119,8 @@ export function FreeDrive({
     return (
       <CloudLoadingSurface
         detail={`Loading ${label} and its lane network.`}
-        scope="pane"
-        title="Starting the drive…"
+        scope="screen"
+        title="Loading map for drive…"
         diagnostics={loadingDiagnostics}
       />
     );
