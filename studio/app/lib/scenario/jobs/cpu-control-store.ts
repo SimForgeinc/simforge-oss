@@ -874,7 +874,11 @@ export async function claimCpuJob(input: {
 }) {
   const families = input.families ?? ["openscenario_compile", "openscenario_validate", "artifact_postprocess"];
   const engines = input.engines ?? ["browser"];
-  noteLocalWorkerPresence(input.workerId, engines);
+  // Liveness is reporting, not admission: a worker that can claim work must not be turned away
+  // because the presence row could not be written.
+  await noteLocalWorkerPresence(input.workerId, engines).catch((error: unknown) => {
+    console.warn(`cpu worker presence write failed for ${input.workerId}:`, error);
+  });
   // Compilation is the prerequisite for validation and render, so it is intentionally drained first.
   if (families.includes("openscenario_compile")) {
     const compile = await claimCompilerExport(input);

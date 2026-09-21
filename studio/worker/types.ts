@@ -36,11 +36,14 @@ export type NativeMapMember = {
   readonly sizeBytes: number;
 };
 
+/** A declared closure member plus the host-issued download the worker materializes it from. */
+export type NativeMapMemberSource = RemoteInput & { readonly relativePath: string };
+
 /**
  * A local native (Bevy) render claim. Small immutable inputs are fetched
- * per attempt; the map's native closure is served from the host's ensured
- * local map directory, declared here member by member so the worker can
- * refuse a directory whose bytes are not the intent's.
+ * per attempt; the map's native closure is declared here member by member,
+ * and its bytes are downloaded from the URLs map preparation issues, so the
+ * worker can refuse a closure whose bytes are not the intent's.
  */
 export type NativeRenderClaimPayload = {
   readonly mode: "native_render";
@@ -68,7 +71,13 @@ export type CpuFence = Pick<CpuJobClaim, "jobFamily" | "attemptId" | "fenceToken
 
 export type NativeMapPreparation =
   | { readonly state: "preparing"; readonly startedAt: string }
-  | { readonly state: "ready"; readonly directory: string; readonly mapVersionId: string; readonly startedAt: string; readonly readyAt: string }
+  | {
+    readonly state: "ready";
+    readonly mapVersionId: string;
+    readonly startedAt: string;
+    readonly readyAt: string;
+    readonly members: readonly NativeMapMemberSource[];
+  }
   | { readonly state: "failed"; readonly code: string; readonly message: string; readonly startedAt: string };
 
 export type NativeArtifactIdentity =

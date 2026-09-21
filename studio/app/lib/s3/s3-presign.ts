@@ -73,10 +73,15 @@ export async function getMapArtifactDownloadUrl(
   }
   const map = await getRegisteredMap(mapVersionId);
   if (map) {
-    for (const [relativePath, member] of map.browser) {
-      if (member.bucket === bucket && member.key === key
-        && member.sha256 === sha256 && member.byteLength === byteLength) {
-        return `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${relativePath.split("/").map(encodeURIComponent).join("/")}`;
+    // A member may be published for either profile; both are served by the
+    // route that authorizes that profile's members for this map version.
+    for (const [profile, members] of [["browser", map.browser], ["semantic", map.semantic]] as const) {
+      for (const [relativePath, member] of members) {
+        if (member.bucket === bucket && member.key === key
+          && member.sha256 === sha256 && member.byteLength === byteLength) {
+          const route = profile === "browser" ? "browser-assets" : "semantic-assets";
+          return `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/${route}/${relativePath.split("/").map(encodeURIComponent).join("/")}`;
+        }
       }
     }
   }

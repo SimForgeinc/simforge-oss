@@ -6,7 +6,7 @@ import type {
   ScenarioRendererEngine,
 } from "@simforge-oss/studio-host";
 import { probeLocalNativeRender, type LocalExecutable } from "@simforge-oss/render/native";
-import { liveLocalWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
+import { liveCpuWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
 
 /**
  * What this machine can render right now, from the same probe the worker
@@ -22,9 +22,9 @@ function dependency(executable: LocalExecutable): LocalRenderDependency {
     : { state: "missing", path: null, source: null };
 }
 
-export function localRenderCapability(): LocalRenderCapability {
+export async function localRenderCapability(): Promise<LocalRenderCapability> {
   const probe = probeLocalNativeRender();
-  const workers = liveLocalWorkers();
+  const workers = await liveCpuWorkers();
   const nativeWorker = workers.find((worker) => worker.engines.includes("native")) ?? workers[0] ?? null;
   const reasons = [...probe.reasons];
   if (!nativeWorker) reasons.push("The local render worker is not attached to this host.");
@@ -48,7 +48,7 @@ export function localRenderCapability(): LocalRenderCapability {
       attached: nativeWorker !== null,
       workerId: nativeWorker?.workerId ?? null,
       lastSeenAt: nativeWorker?.lastSeenAt ?? null,
-      engines: (nativeWorker?.engines ?? []).filter((engine): engine is ScenarioRendererEngine => engine === "browser" || engine === "native"),
+      engines: [...(nativeWorker?.engines ?? [])],
     },
     reasons,
   };
@@ -61,8 +61,10 @@ export function localRenderCapability(): LocalRenderCapability {
  * CARLA and cloud rendering are not offered by a local host: absent keys,
  * never "ready".
  */
-export function localRenderWorkers(local: LocalRenderCapability): Partial<Record<ScenarioRendererEngine, RenderWorkerCapability>> {
-  const workers = liveLocalWorkers();
+export async function localRenderWorkers(
+  local: LocalRenderCapability,
+): Promise<Partial<Record<ScenarioRendererEngine, RenderWorkerCapability>>> {
+  const workers = await liveCpuWorkers();
   const browserWorker = workers.find((worker) => worker.engines.includes("browser"));
   return {
     native: local.ready

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import type { RegisteredNativeMapMember } from "../../app/lib/map-ingest/native-map-source";
+import type { NativeMapMemberIdentity } from "../../app/lib/map-ingest/native-map-source";
 import { HifiPreviewFailure, resolveNativeReadyMap } from "../native-ready-map";
 
 const MAP_ID = "map_registered_source";
@@ -23,7 +23,7 @@ const MASTER = JSON.stringify({
 });
 const GEOMETRY = Buffer.from([1, 2, 3, 4]);
 
-const DECLARED: RegisteredNativeMapMember[] = [
+const DECLARED: NativeMapMemberIdentity[] = [
   { relativePath: "master.gltf", sha256: digest(MASTER), sizeBytes: Buffer.byteLength(MASTER) },
   { relativePath: "buffers/geometry.bin", sha256: digest(GEOMETRY), sizeBytes: GEOMETRY.byteLength },
 ];
@@ -37,7 +37,7 @@ async function preparedProfile(): Promise<string> {
   return directory;
 }
 
-function resolveWith(directory: string, members: readonly RegisteredNativeMapMember[] = DECLARED) {
+function resolveWith(directory: string, members: readonly NativeMapMemberIdentity[] = DECLARED) {
   return resolveNativeReadyMap({ directory, mapId: MAP_ID, releaseDigest: RELEASE_DIGEST, members });
 }
 
@@ -117,7 +117,7 @@ describe("native-ready map resolution", () => {
   });
 
   it("rejects unsafe declarations before touching the directory", async () => {
-    const unsafe: RegisteredNativeMapMember[][] = [
+    const unsafe: NativeMapMemberIdentity[][] = [
       [...DECLARED, { relativePath: "../escape.bin", sha256: digest(GEOMETRY), sizeBytes: 4 }],
       [...DECLARED, { relativePath: ".map-release.json", sha256: digest("{}"), sizeBytes: 2 }],
       [...DECLARED, { relativePath: "extra.bin", sha256: "not-a-digest", sizeBytes: 4 }],

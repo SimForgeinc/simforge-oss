@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { queryRows } from "@/app/lib/db/data-api";
+import { execute, queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { readLocalObject } from "@/app/lib/s3/s3-object";
 import {
@@ -11,7 +11,8 @@ import {
   headS3Object,
 } from "@/app/lib/s3/s3-presign";
 import { ensureLocalMap } from "@/app/lib/cloud/maps";
-import { getRegisteredNativeMapSource } from "@/app/lib/map-ingest/native-map-source";
+import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
+import { getRegisteredNativeMapSource, type RegisteredNativeMapMember } from "@/app/lib/map-ingest/native-map-source";
 import {
   NATIVE_ACTOR_ASSETS_INPUT_ID,
   NativeRenderManifestSchema,
@@ -164,11 +165,15 @@ export async function claimLocalNativeRenderSource(tx: JobTransaction, jobId: st
 }
 
 /**
- * The map's declared native closure, exactly as the intent bound it. Members
- * are served from the ensured local directory, so no storage location is
- * handed out; the worker verifies every byte against these digests.
+ * The map's registered native closure with the storage coordinates of every
+ * member, so map preparation can issue one checksum-bound download per
+ * member. Ordering and identity are the intent's: the claim's declarations
+ * and the preparation's downloads are built from this one lookup.
  */
-async function declaredNativeMapMembers(mapVersionId: string, workspaceId: string) {
+/** A registered closure member under the input id the intent declares it by. */
+type RegisteredNativeMapClosureMember = RegisteredNativeMapMember & { inputId: string };
+
+async function registeredNativeMapClosure(mapVersionId: string, workspaceId: string): Promise<RegisteredNativeMapClosureMember[]> {
   const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
   if (!source) throw new Error("native_map_asset_set_unavailable");
   assertNativeMapMemberCapacity(source.members.length);
@@ -177,7 +182,19 @@ async function declaredNativeMapMembers(mapVersionId: string, workspaceId: strin
     relativePath: member.relativePath,
     sha256: member.sha256,
     sizeBytes: member.sizeBytes,
+    bucket: member.bucket,
+    key: member.key,
   }));
+}
+
+/**
+ * The map's declared native closure, exactly as the intent bound it. No
+ * storage location is declared here; the worker verifies every byte it
+ * downloads against these digests.
+ */
+async function declaredNativeMapMembers(mapVersionId: string, workspaceId: string) {
+  const closure = await registeredNativeMapClosure(mapVersionId, workspaceId);
+  return closure.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, relativePath, sha256, sizeBytes }));
 }
 
 export type LocalNativeClaimPayload = {
@@ -316,9 +333,24 @@ function globalRegistry<T>(key: symbol, create: () => T): T {
 
 // ── Map preparation ──────────────────────────────────────────────────────────
 
+/** One closure member with the session-less, checksum-bound download the worker uses for it. */
+export type LocalNativeMapMemberSource = {
+  inputId: string;
+  relativePath: string;
+  sha256: string;
+  sizeBytes: number;
+  download: { url: string; headers: Record<string, string> };
+};
+
 export type LocalNativeMapPreparation =
   | { state: "preparing"; startedAt: string }
-  | { state: "ready"; directory: string; mapVersionId: string; startedAt: string; readyAt: string }
+  | {
+    state: "ready";
+    mapVersionId: string;
+    startedAt: string;
+    readyAt: string;
+    members: LocalNativeMapMemberSource[];
+  }
   | { state: "failed"; code: string; message: string; startedAt: string };
 
 type PreparationEntry = { attemptId: string; controller: AbortController; status: LocalNativeMapPreparation };
@@ -340,10 +372,39 @@ function mapFailure(error: unknown): { code: string; message: string } {
   return { code: "map_preparation_failed", message: message.slice(0, 2_000) };
 }
 
+/** One session-less, checksum-bound download per closure member. */
+function nativeMapMemberSources(
+  mapVersionId: string,
+  closure: readonly RegisteredNativeMapClosureMember[],
+): Promise<LocalNativeMapMemberSource[]> {
+  return Promise.all(closure.map(async (member) => ({
+    inputId: member.inputId,
+    relativePath: member.relativePath,
+    sha256: member.sha256,
+    sizeBytes: member.sizeBytes,
+    download: {
+      url: await getMapArtifactDownloadUrl(mapVersionId, member.key, member.bucket, member.sha256, member.sizeBytes),
+      headers: {},
+    },
+  })));
+}
+
 /**
- * Starts (or reports) the ensured semantic map for this attempt. The worker
- * polls while heartbeating; a lost fence aborts the preparation so a dead
- * attempt never keeps a download running on its behalf.
+ * Reports this attempt's map closure downloads. No filesystem path is ever
+ * returned: the worker materializes the closure under its own scratch root
+ * from these URLs, which is what lets it run on another machine.
+ *
+ * A member whose row names a real object store is already where the worker
+ * will read it, so such a closure is answered `ready` at once and without
+ * per-process state: a hosted Studio may route the worker's next poll to a
+ * different instance, and an answer that depended on memory would leave that
+ * worker `preparing` forever. Members in the map cache's own bucket are the
+ * local host's case: there the cache *is* the store, so the closure has to
+ * be ensured on disk before the asset route can serve a byte of it. That
+ * download runs behind the attempt's registry entry while the worker polls
+ * and heartbeats; a lost fence aborts it so a dead attempt never keeps a
+ * download running on its behalf. This is the rule `streamCachedObject`
+ * reads per member.
  */
 export async function prepareLocalNativeMap(
   jobId: string,
@@ -357,18 +418,25 @@ export async function prepareLocalNativeMap(
   }
   const existing = registry.get(fence.attemptId);
   if (existing) return existing.status;
-  const controller = new AbortController();
   const startedAt = new Date().toISOString();
+  const closure = await registeredNativeMapClosure(owner.map_version_id, owner.workspace_id);
+  if (!closure.some((member) => member.bucket === MAP_CACHE_BUCKET)) {
+    const members = await nativeMapMemberSources(owner.map_version_id, closure);
+    return { state: "ready", mapVersionId: owner.map_version_id, startedAt, readyAt: new Date().toISOString(), members };
+  }
+  const controller = new AbortController();
   const entry: PreparationEntry = { attemptId: fence.attemptId, controller, status: { state: "preparing", startedAt } };
   registry.set(fence.attemptId, entry);
-  void ensureLocalMap(owner.map_version_id, "semantic", controller.signal).then(
-    (ensured) => {
-      entry.status = { state: "ready", directory: ensured.directory, mapVersionId: owner.map_version_id, startedAt, readyAt: new Date().toISOString() };
-    },
-    (error: unknown) => {
-      entry.status = { state: "failed", ...mapFailure(error), startedAt };
-    },
-  );
+  void ensureLocalMap(owner.map_version_id, "semantic", controller.signal)
+    .then(() => nativeMapMemberSources(owner.map_version_id, closure))
+    .then(
+      (members) => {
+        entry.status = { state: "ready", mapVersionId: owner.map_version_id, startedAt, readyAt: new Date().toISOString(), members };
+      },
+      (error: unknown) => {
+        entry.status = { state: "failed", ...mapFailure(error), startedAt };
+      },
+    );
   return entry.status;
 }
 
@@ -750,20 +818,44 @@ export async function cancelLocalNativeReservations(tx: JobTransaction, jobId: s
 
 // ── Worker presence ───────────────────────────────────────────────────────────
 
-export type LocalWorkerPresence = { workerId: string; engines: readonly string[]; lastSeenAt: string };
+export type CpuWorkerPresence = { workerId: string; engines: readonly ("browser" | "native")[]; lastSeenAt: string };
 
-const PRESENCE_KEY = Symbol.for("simforge.local-worker-presence");
-function presence(): Map<string, LocalWorkerPresence> {
-  return globalRegistry(PRESENCE_KEY, () => new Map<string, LocalWorkerPresence>());
+/** UTC ISO-8601, the shape every wire contract here uses, formatted by the database. */
+const PRESENCE_SEEN_AT = `to_char(last_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+
+function presenceEngines(value: unknown): readonly ("browser" | "native")[] {
+  const parsed: unknown = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((engine): engine is "browser" | "native" => engine === "browser" || engine === "native");
 }
 
-/** Every claim is a liveness signal: the worker that polled most recently, per engine it offered. */
-export function noteLocalWorkerPresence(workerId: string, engines: readonly string[]): void {
-  presence().set(workerId, { workerId, engines, lastSeenAt: new Date().toISOString() });
+/**
+ * Every claim is a liveness signal: the worker that polled most recently, with the engines it
+ * offered. One row per worker in the database rather than per-process memory, because a hosted
+ * Studio answers the next capabilities read from a different instance than the one the worker
+ * polled, and a restarted host must not report a worker it never heard from.
+ */
+export async function noteLocalWorkerPresence(workerId: string, engines: readonly string[]): Promise<void> {
+  await execute(
+    `INSERT INTO simforge.cpu_worker_presence (worker_id, engines, last_seen_at)
+     VALUES (:worker_id, CAST(:engines AS jsonb), NOW())
+     ON CONFLICT (worker_id) DO UPDATE SET engines = EXCLUDED.engines, last_seen_at = NOW()`,
+    { worker_id: workerId, engines: JSON.stringify([...engines]) },
+  );
 }
 
 /** Workers seen within `windowMs`; a worker that died with the GUI drops out of this list, not into "ready". */
-export function liveLocalWorkers(windowMs = 15_000): LocalWorkerPresence[] {
-  const cutoff = Date.now() - windowMs;
-  return [...presence().values()].filter((worker) => Date.parse(worker.lastSeenAt) >= cutoff);
+export async function liveCpuWorkers(windowMs = 15_000): Promise<CpuWorkerPresence[]> {
+  const rows = await queryRows<{ worker_id: string; engines: unknown; last_seen_at: string }>(
+    `SELECT worker_id, engines, ${PRESENCE_SEEN_AT} AS last_seen_at
+       FROM simforge.cpu_worker_presence
+      WHERE last_seen_at >= NOW() - make_interval(secs => CAST(:window_seconds AS double precision))
+      ORDER BY worker_id`,
+    { window_seconds: windowMs / 1_000 },
+  );
+  return rows.map((row) => ({
+    workerId: row.worker_id,
+    engines: presenceEngines(row.engines),
+    lastSeenAt: row.last_seen_at,
+  }));
 }

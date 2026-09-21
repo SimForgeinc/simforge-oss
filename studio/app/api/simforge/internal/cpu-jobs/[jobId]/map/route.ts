@@ -7,9 +7,11 @@ import { prepareLocalNativeMap } from "@/app/lib/scenario/jobs/local-native-rend
 type Context = { params: Promise<{ jobId: string }> };
 
 /**
- * Starts or reports the ensured semantic map for a leased local native
- * render. The worker polls this while it heartbeats; the server owns the
- * map registry, credentials and disk store, so materialization happens here.
+ * Starts or reports the map closure downloads for a leased local native
+ * render. The worker polls this while it heartbeats; the server owns the map
+ * registry and its credentials, so it issues one checksum-bound, session-less
+ * URL per closure member. No host path is ever returned: the worker
+ * materializes the closure under its own scratch root.
  */
 export async function POST(request: Request, route: Context) {
   const unauthorized = rejectUnauthorizedWorker(request);

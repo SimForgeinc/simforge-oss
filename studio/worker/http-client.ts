@@ -19,6 +19,7 @@ import type {
   NativeArtifactReservation,
   NativeCompletionArtifact,
   NativeMapMember,
+  NativeMapMemberSource,
   NativeMapPreparation,
   RecordingArtifact,
   RemoteInput,
@@ -79,6 +80,11 @@ export class CpuJobsClient {
 
   offeredEngines(): readonly LocalRenderEngine[] {
     return typeof this.engines === "function" ? this.engines() : this.engines;
+  }
+
+  /** The host this worker claimed from; it is also the only origin whose bearer this client sends. */
+  get hostOrigin(): string {
+    return this.baseUrl.origin;
   }
 
   async claim(signal: AbortSignal, leaseSeconds = 300): Promise<CpuJobClaim | null> {
@@ -244,7 +250,7 @@ export class CpuJobsClient {
 
   // ── Local native (Bevy) lane ──────────────────────────────────────────────
 
-  /** Starts or polls the host's materialization of the job's semantic map. */
+  /** Starts or polls the host's checksum-bound downloads for the job's map closure. */
   async prepareMap(claim: CpuJobClaim, signal: AbortSignal): Promise<NativeMapPreparation> {
     const body = object(await this.request(
       `/api/simforge/internal/cpu-jobs/${encodeURIComponent(claim.jobId)}/map`,
@@ -255,7 +261,15 @@ export class CpuJobsClient {
     const startedAt = stringField(body, "startedAt");
     if (state === "preparing") return { state, startedAt };
     if (state === "ready") {
-      return { state, startedAt, directory: stringField(body, "directory"), mapVersionId: stringField(body, "mapVersionId"), readyAt: stringField(body, "readyAt") };
+      const members = body.members;
+      if (!Array.isArray(members) || members.length === 0) throw new Error("map preparation is ready without member downloads.");
+      return {
+        state,
+        startedAt,
+        mapVersionId: stringField(body, "mapVersionId"),
+        readyAt: stringField(body, "readyAt"),
+        members: members.map((member) => parseMapMemberSource(member, this.baseUrl, this.token)),
+      };
     }
     if (state === "failed") return { state, startedAt, code: stringField(body, "code"), message: stringField(body, "message") };
     throw new Error(`map preparation returned an unknown state ${state}`);
@@ -321,12 +335,12 @@ export class CpuJobsClient {
   private verifyHostProtocol(signal: AbortSignal): Promise<void> {
     if (!this.protocolHandshake) {
       const handshake = (async () => {
-        const response = await fetch(this.host.toURL(hostPath("/api/simforge/host/capabilities")), {
+        const response = await fetch(this.host.toURL(hostPath("/api/simforge/internal/host-protocol")), {
           headers: { authorization: `Bearer ${this.token}` },
           signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),
         });
         if (!response.ok) {
-          throw new Error(`worker API capabilities probe returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
+          throw new Error(`worker API protocol probe returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
         }
         const protocol = checkHostProtocolVersion(await response.json().catch(() => null));
         if (!protocol.ok) throw new HostProtocolMismatch(`the Studio host at ${this.baseUrl.origin} is incompatible with this worker: ${protocol.reason}`);
@@ -366,13 +380,13 @@ export class CpuJobsClient {
 
 /**
  * Materializes claim inputs under `directory`, hashing every byte against the
- * claim's declaration. `file:` sources (the packaged actor closure) are copied
- * rather than fetched; everything else is a checksum-bound HTTP download.
+ * claim's declaration.
  */
 export async function downloadInputs(
   inputs: readonly RemoteInput[],
   directory: string,
   signal: AbortSignal,
+  hostOrigin: string,
 ): Promise<ReadonlyMap<string, RenderInputFile>> {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const root = resolve(directory);
@@ -391,30 +405,60 @@ export async function downloadInputs(
     }
     paths.add(path);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-    const source = await openInputSource(input, signal);
-    const hash = createHash("sha256");
-    let sizeBytes = 0;
-    const verify = new Transform({
-      transform(chunk: Buffer, _encoding, callback) {
-        sizeBytes += chunk.byteLength;
-        hash.update(chunk);
-        callback(null, chunk);
-      },
-    });
-    await pipeline(source, verify, createWriteStream(path, { flags: "wx", mode: 0o600 }), { signal });
-    const sha256 = hash.digest("hex");
-    if (sha256 !== input.sha256 || sizeBytes !== input.sizeBytes) {
-      throw new Error(
-        `input ${input.inputId} integrity mismatch: expected ${input.sha256}/${input.sizeBytes}, got ${sha256}/${sizeBytes}`,
-      );
-    }
-    materialized.set(input.inputId, { inputId: input.inputId, path, sha256, sizeBytes, ...(input.relativePath === undefined ? {} : { relativePath: input.relativePath }) });
+    await downloadVerified(input, path, signal, hostOrigin);
+    materialized.set(input.inputId, { inputId: input.inputId, path, sha256: input.sha256, sizeBytes: input.sizeBytes, ...(input.relativePath === undefined ? {} : { relativePath: input.relativePath }) });
   }
   return materialized;
 }
 
-async function openInputSource(input: RemoteInput, signal: AbortSignal): Promise<Readable> {
-  if (input.download.url.startsWith("file:")) return createReadStream(fileURLToPath(input.download.url));
+/**
+ * Streams one checksum-bound source to a fresh `path`, refusing bytes whose
+ * digest or length is not the declared one. This is the only place the worker
+ * turns a host-issued URL into a file.
+ */
+export async function downloadVerified(
+  input: RemoteInput,
+  path: string,
+  signal: AbortSignal,
+  hostOrigin: string,
+): Promise<void> {
+  const source = await openInputSource(input, signal, hostOrigin);
+  const hash = createHash("sha256");
+  let sizeBytes = 0;
+  const verify = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      sizeBytes += chunk.byteLength;
+      hash.update(chunk);
+      callback(null, chunk);
+    },
+  });
+  await pipeline(source, verify, createWriteStream(path, { flags: "wx", mode: 0o600 }), { signal });
+  const sha256 = hash.digest("hex");
+  if (sha256 !== input.sha256 || sizeBytes !== input.sizeBytes) {
+    throw new Error(
+      `input ${input.inputId} integrity mismatch: expected ${input.sha256}/${input.sizeBytes}, got ${sha256}/${sizeBytes}`,
+    );
+  }
+}
+
+/** How a URL can spell this machine; `URL.hostname` brackets an IPv6 literal. */
+const LOOPBACK_HOSTNAMES: Record<string, true> = { localhost: true, "127.0.0.1": true, "[::1]": true };
+
+/**
+ * A `file:` input (the packaged actor closure) names a path on the machine
+ * running this worker, which is the host's machine only when the host is
+ * loopback. A remote worker that followed one would read whatever happens to
+ * sit at that path, so it is refused by name instead.
+ */
+async function openInputSource(input: RemoteInput, signal: AbortSignal, hostOrigin: string): Promise<Readable> {
+  if (input.download.url.startsWith("file:")) {
+    if (LOOPBACK_HOSTNAMES[new URL(hostOrigin).hostname] !== true) {
+      throw new Error(
+        `input ${input.inputId} is a file: URL, which only a worker on the host's own machine can read; this worker claimed from ${hostOrigin}`,
+      );
+    }
+    return createReadStream(fileURLToPath(input.download.url));
+  }
   const response = await fetch(input.download.url, { headers: input.download.headers, redirect: "error", signal });
   if (!response.ok || !response.body) throw new Error(`input ${input.inputId} download returned ${response.status}`);
   return Readable.fromWeb(response.body as NodeReadableStream);
@@ -509,6 +553,14 @@ function parseRemoteInput(value: unknown, baseUrl: URL, token: string): RemoteIn
       headers: url.origin === baseUrl.origin ? { ...headers, authorization: `Bearer ${token}` } : headers,
     },
   };
+}
+
+/** A map closure member: a claim input whose workspace-relative path is required. */
+function parseMapMemberSource(value: unknown, baseUrl: URL, token: string): NativeMapMemberSource {
+  const input = parseRemoteInput(value, baseUrl, token);
+  const { relativePath } = input;
+  if (relativePath === undefined) throw new Error(`map member ${input.inputId} has no relativePath.`);
+  return { ...input, relativePath };
 }
 
 function artifactKey(artifact: RecordingArtifact): string {

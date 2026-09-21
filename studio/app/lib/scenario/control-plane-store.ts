@@ -141,14 +141,26 @@ function apiBaseUrl() {
     .replace(/\/$/, "");
 }
 
+/**
+ * The bearer every internal worker route expects. A supervised local host and
+ * every hosted deployment configure `SIMFORGE_RENDER_WORKER_TOKEN`; the
+ * well-known development token exists only for the open-access `pnpm dev`
+ * host, where the proxy already admits everyone. Anywhere else an unset token
+ * admits no worker rather than a guessable one.
+ */
+export function expectedScenarioWorkerToken(env: NodeJS.ProcessEnv = process.env): string | null {
+  const configured = env.SIMFORGE_RENDER_WORKER_TOKEN?.trim();
+  if (configured) return configured;
+  return env.SIMFORGE_LOCAL_OPEN_ACCESS === "1" ? "simforge-local-worker" : null;
+}
+
 export function authorizeScenarioWorker(request: Request) {
-  const expected =
-    simforgeEnv("RENDER_WORKER_TOKEN")?.trim() || "simforge-local-worker";
+  const expected = expectedScenarioWorkerToken();
   const provided = request.headers
     .get("authorization")
     ?.match(/^Bearer\s+(.+)$/i)?.[1]
     ?.trim();
-  if (!provided) return false;
+  if (!expected || !provided) return false;
   const left = Buffer.from(sha256(expected), "hex");
   const right = Buffer.from(sha256(provided), "hex");
   return timingSafeEqual(left, right);

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { posix, resolve, sep } from "node:path";
-import { NATIVE_MAP_RELEASE_RECEIPT, type RegisteredNativeMapMember } from "../app/lib/map-ingest/native-map-source";
+import { NATIVE_MAP_RELEASE_RECEIPT, type NativeMapMemberIdentity } from "../app/lib/map-ingest/native-map-source";
 import { nativeMasterResources } from "../app/lib/map-ingest/native-master-resources";
 
 const SHA256 = /^[a-f0-9]{64}$/u;
@@ -41,7 +41,7 @@ function safeMemberPath(relativePath: string): boolean {
     && relativePath.split("/").every((part) => part.length > 0 && part !== "." && part !== "..");
 }
 
-function isDeclaration(value: RegisteredNativeMapMember): boolean {
+function isDeclaration(value: NativeMapMemberIdentity): boolean {
   return typeof value.relativePath === "string" && safeMemberPath(value.relativePath)
     && value.relativePath !== NATIVE_MAP_RELEASE_RECEIPT
     && typeof value.sha256 === "string" && SHA256.test(value.sha256)
@@ -103,7 +103,7 @@ export async function resolveNativeReadyMap(input: {
   directory: string;
   mapId: string;
   releaseDigest: string;
-  members: readonly RegisteredNativeMapMember[];
+  members: readonly NativeMapMemberIdentity[];
 }): Promise<NativeReadyMap> {
   if (typeof input.mapId !== "string" || input.mapId.length === 0 || !SHA256.test(input.releaseDigest)) {
     throw new HifiPreviewFailure("native_payload_identity_invalid", "native map identity is invalid", {
