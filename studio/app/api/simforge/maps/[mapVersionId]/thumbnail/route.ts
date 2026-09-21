@@ -45,7 +45,7 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
             mapVersionId,
             bucket: member.bucket,
             key: member.key,
-            attestDigest: true,
+            attestDigest: false,
           },
         );
         // Closure members are content-addressed and immutable.
@@ -79,7 +79,7 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
           mapVersionId,
           bucket: stored.bucket,
           key: stored.key,
-          attestDigest: true,
+          attestDigest: false,
         },
       );
       response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
