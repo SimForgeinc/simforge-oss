@@ -4,7 +4,6 @@ import { assertMapUsable, MapAccessError } from "@/app/lib/cloud/access";
 import { bundledMap, bundledMemberUrl } from "@/app/lib/cloud/bundled-maps";
 import { mapAccessErrorResponse, streamCachedObject } from "@/app/lib/cloud/asset-response";
 import { CloudConnectionError, primeCloudSession } from "@/app/lib/cloud/connection";
-import { getRegisteredMap } from "@/app/lib/cloud/map-registry";
 import { assertLocalMapAccess, upstreamGet } from "@/app/lib/cloud/maps";
 import { getScenarioMapThumbnail } from "@/app/lib/scenario/map-thumbnail-store";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
@@ -20,16 +19,23 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
   const { mapVersionId } = await route.params;
   try {
     await primeCloudSession();
-    const registered = await getRegisteredMap(mapVersionId);
+    const registered = await getScenarioMapThumbnail(auth.context, mapVersionId);
     if (registered) {
-      assertMapUsable(registered);
-      const stored = await getScenarioMapThumbnail(auth.context, mapVersionId);
+      assertMapUsable(registered.map);
+      const stored = registered.thumbnail;
       if (!stored) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-      const member = [...registered.browser.entries()].find(([, candidate]) => candidate.sha256 === stored.sha256);
-      if (!member) return NextResponse.json({ error: "map_thumbnail_not_found" }, { status: 404, headers: NO_STORE });
-      const ensureUrl = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${
-        member[0].split("/").map(encodeURIComponent).join("/")}`;
-      return await streamCachedObject(request, stored, ensureUrl, headOnly);
+      // The bound artifact is the preview's identity and storage location.
+      // It need not also occur in the browser closure (e.g. uploaded maps).
+      const response = await streamCachedObject(
+        request,
+        stored,
+        `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/derived/thumbnail.webp`,
+        headOnly,
+        { mapVersionId, bucket: stored.bucket, key: stored.key, attestDigest: true },
+      );
+      // Cache bytes privately, not an expiring signed redirect or an auth result.
+      response.headers.set("Cache-Control", "private, max-age=31536000, immutable");
+      return response;
     }
     // Not yet installed: the preview comes from the publishing Cloud under this
     // installation's access (anonymous RFS or the active account), never a

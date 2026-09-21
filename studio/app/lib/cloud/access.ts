@@ -132,7 +132,7 @@ export async function resolveAuthorizedMapMember(ref: Extract<LocalMapAssetRef, 
 }
 
 /** Maps published to accounts need this installation's Cloud session to be active right now. */
-export function assertMapUsable(map: RegisteredMap): void {
+export function assertMapUsable(map: Pick<RegisteredMap, "access" | "origin">): void {
   if (map.access !== "cloud") return;
   const session = cloudSessionScope();
   if (!session.active || (map.origin && map.origin !== session.origin)) {
