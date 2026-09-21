@@ -79,7 +79,11 @@ function boundsOf(polygons: Array<Array<[number, number]>>): LngLatBoundsLike | 
   if (west > east || south > north) return null;
   return [
     [west, south],
+    [east, north],
+  ];
+}
 export function ScenarioCoverageMap({
+
   maps,
   selectedMapVersionId,
   onSelectMap,
