@@ -60,13 +60,17 @@ type SourceRow = {
 };
 
 /**
+ * The registered native closure of a map version, wherever in the catalog it
+ * lives: a scenario references its map by version id, and the map's own
+ * workspace is the catalog's, not the author's — the same registry semantics
+ * every other map read uses.
+ *
  * Null when the map version binds no eligible native set. Throws
  * `native_map_asset_set_incomplete` when the bound set has fewer verified
  * members than it declares, and `native_map_master_unavailable` when the
  * closure lacks `master.gltf`.
  */
 export async function getRegisteredNativeMapSource(
-  workspaceId: string,
   mapVersionId: string,
 ): Promise<RegisteredNativeMapSource | null> {
   const rows = await queryRows<SourceRow>(
@@ -83,9 +87,9 @@ export async function getRegisteredNativeMapSource(
        LEFT JOIN simforge.native_map_asset_members m ON m.asset_set_id = s.id
        LEFT JOIN simforge.native_map_asset_blobs b
          ON b.id = m.blob_id AND b.verification_state = 'verified'
-      WHERE mv.id = :map_version_id AND mv.workspace_id = :workspace_id
+      WHERE mv.id = :map_version_id
       ORDER BY m.relative_path`,
-    { map_version_id: mapVersionId, workspace_id: workspaceId, contract: NATIVE_MAP_ASSET_SET_CONTRACT },
+    { map_version_id: mapVersionId, contract: NATIVE_MAP_ASSET_SET_CONTRACT },
   );
   const first = rows[0];
   if (!first) return null;
