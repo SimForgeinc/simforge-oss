@@ -18,6 +18,7 @@
 //! Contract: `docs/engineering/render-timeline.md`.
 
 pub mod height;
+pub mod parity;
 pub mod sampler;
 
 use std::collections::BTreeMap;
@@ -314,6 +315,9 @@ pub struct TimelineActor {
     pub kind: ActorKind,
     /// Mesh binding, identical to scene-state.v1 `ActorDesc.catalogId`.
     pub catalog_id: String,
+    /// `true` when `catalogId` came from an authored `catalog:<id>` tag,
+    /// `false` when it is the class default.
+    pub catalog_authored: bool,
     pub actor_class: ActorClass,
     pub dims: Dims,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -328,6 +332,11 @@ pub struct TimelineActor {
     pub track: TimelineTrack,
     /// Sorted by tick, then light.
     pub lights: Vec<LightChange>,
+    /// First tick at which the body is knocked off its feet (monotonic: it
+    /// stays down); absent while it stays upright. From the trace's
+    /// `downSinceS`, rounded up to the tick grid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub downed_since_tick: Option<u32>,
 }
 
 /// Actor provenance (`header.actorMetadata[id].origin` rule): tags `sumo` /
@@ -352,6 +361,76 @@ pub fn actor_origin(tags: &[String], listed_ambient: bool) -> ActorOrigin {
         ActorOrigin::NativeAmbient
     } else {
         ActorOrigin::Authored
+    }
+}
+
+/// Static description of an actor, without its per-tick channels.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineActorDesc<'a> {
+    pub id: &'a str,
+    pub kind: ActorKind,
+    pub catalog_id: &'a str,
+    pub catalog_authored: bool,
+    pub actor_class: ActorClass,
+    pub dims: Dims,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<&'a str>,
+    #[serde(rename = "static")]
+    pub is_static: bool,
+    pub origin: ActorOrigin,
+    pub lifecycle: &'a [PresenceInterval],
+}
+
+impl<'a> TimelineActorDesc<'a> {
+    pub fn of(actor: &'a TimelineActor) -> Self {
+        Self {
+            id: &actor.id,
+            kind: actor.kind,
+            catalog_id: &actor.catalog_id,
+            catalog_authored: actor.catalog_authored,
+            actor_class: actor.actor_class,
+            dims: actor.dims,
+            color: actor.color.as_deref(),
+            is_static: actor.is_static,
+            origin: actor.origin,
+            lifecycle: &actor.lifecycle,
+        }
+    }
+}
+
+/// The document minus per-tick channels (identity, time, environment).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineHeader<'a> {
+    pub version: &'a str,
+    pub identity: &'a TimelineIdentity,
+    pub trace: &'a CanonicalTraceIdentity,
+    pub height_source: &'a HeightSource,
+    pub map_id: &'a str,
+    pub frame: &'a str,
+    pub dt_s: f64,
+    pub tick_count: u32,
+    pub time: &'a TimeOrigin,
+    pub environment: &'a TimelineEnvironment,
+    pub props: &'a [TimelineProp],
+}
+
+impl<'a> TimelineHeader<'a> {
+    pub fn of(tl: &'a RenderTimeline) -> Self {
+        Self {
+            version: &tl.version,
+            identity: &tl.identity,
+            trace: &tl.trace,
+            height_source: &tl.height_source,
+            map_id: &tl.map_id,
+            frame: &tl.frame,
+            dt_s: tl.dt_s,
+            tick_count: tl.tick_count,
+            time: &tl.time,
+            environment: &tl.environment,
+            props: &tl.props,
+        }
     }
 }
 
@@ -400,6 +479,12 @@ impl RenderTimeline {
         let timeline: RenderTimeline = serde_json::from_slice(&bytes)?;
         timeline.validate()?;
         Ok(timeline)
+    }
+
+    /// `canonicalJson(timeline)`: the exact bytes whose sha256 is
+    /// [`RenderTimeline::sha256`]. Store and ship these.
+    pub fn to_canonical_json(&self) -> Result<String, TimelineError> {
+        crate::hash::canonical_json_of(self).map_err(|e| TimelineError::Hash(e.to_string()))
     }
 
     pub fn to_json(&self) -> Result<String, TimelineError> {
@@ -926,6 +1011,7 @@ pub fn build_render_timeline(
             id: id.clone(),
             kind,
             catalog_id: catalog_id_for(kind, &meta.tags),
+            catalog_authored: meta.tags.iter().any(|t| t.starts_with("catalog:")),
             actor_class: actor_class_of(kind),
             dims,
             color: meta
@@ -938,6 +1024,7 @@ pub fn build_render_timeline(
             lifecycle: lifecycle_of(&present),
             track: tr,
             lights: dedup,
+            downed_since_tick: src.down_since_s.map(|s| tick_at_or_after(&t, s)),
         });
     }
 

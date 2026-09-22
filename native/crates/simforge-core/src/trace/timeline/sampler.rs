@@ -68,6 +68,8 @@ pub struct TimelinePose {
     pub wheel_steer_rad: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wheel_spin_rad: Option<f64>,
+    /// Knocked off its feet at or before this tick (`downedSinceTick`).
+    pub downed: bool,
 }
 
 /// Width of [`TimelinePose::to_array`].
@@ -93,6 +95,7 @@ impl TimelinePose {
             body_roll_rad: 0.0,
             wheel_steer_rad: None,
             wheel_spin_rad: None,
+            downed: false,
         }
     }
 
@@ -219,6 +222,7 @@ pub fn sample_actor(
         body_roll_rad: ch(&tr.body_roll_rad),
         wheel_steer_rad: tr.wheel_steer_rad.as_ref().map(ch),
         wheel_spin_rad: tr.wheel_spin_rad.as_ref().map(ch),
+        downed: actor.downed_since_tick.is_some_and(|d| i >= d as usize),
     })
 }
 
