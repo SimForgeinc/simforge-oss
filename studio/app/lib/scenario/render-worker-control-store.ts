@@ -18,7 +18,7 @@ import {
   nativeRunExpectations,
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
-import { RENDER_INTENT_V1_SCHEMA, captureScheduleFps, fixedStepFrameCount, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
+import { RENDER_INTENT_V1_SCHEMA, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   isScenarioParityEvidenceAccepted,
   SCENARIO_PARITY_EVIDENCE_VERSION,
@@ -423,7 +423,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
       );
       if (!row) return null;
       const intent = ScenarioRenderIntentSchema.parse(parseObject(row.render_intent));
-      if (canonicalJsonSha256(intent) !== row.intent_sha256) throw new Error("render_intent_digest_mismatch");
+      if (hashRenderIntent(intent) !== row.intent_sha256) throw new Error("render_intent_digest_mismatch");
       const attempt = Number(row.attempt_count) + 1;
       const attemptId = scenarioId("usat");
       const leaseId = scenarioId("uslease");
