@@ -88,6 +88,16 @@ export const styles = stylex.create({
     overflowY: "auto",
     overscrollBehavior: "contain",
   },
+  /**
+   * A stage that is a fixed instrument rather than a document: the body never
+   * scrolls, its one row is the frame's height, and the page composes bounded
+   * panes (`plate.scroller`) that scroll their own lists inside it.
+   */
+  bodyFill: {
+    gridTemplateRows: "minmax(0, 1fr)",
+    alignContent: "stretch",
+    overflowY: "hidden",
+  },
 });
 
 /**
