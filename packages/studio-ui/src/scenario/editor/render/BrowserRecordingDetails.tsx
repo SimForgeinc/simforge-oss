@@ -14,6 +14,7 @@ import type { BrowserRecordingDetailDto } from "../../../lib/scenario/recording-
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./BrowserRecordingDetails.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -96,7 +97,7 @@ export function BrowserRecordingDetails({
         </Button>
         <div {...stylex.props(styles.fillNarrowable)}>
           <h3 {...stylex.props(styles.smSemibold)}>Three.js recording</h3>
-          <p {...stylex.props(styles.monoMicroMuted)}>{recordingId}</p>
+          <p {...stylex.props([textLayout.truncate, styles.monoMicroMuted])}>{recordingId}</p>
         </div>
         {detail ? <RecordingStatus status={detail.status} /> : null}
       </div>
@@ -175,7 +176,7 @@ export function BrowserRecordingDetails({
                       preload="metadata"
                       src={artifact.downloadUrl ?? undefined}
                     />
-                    <figcaption {...stylex.props(styles.monoMicroMuted3)}>
+                    <figcaption {...stylex.props([textLayout.truncate, styles.monoMicroMuted3])}>
                       {artifact.sensor?.sensorId} · {artifact.sensor?.modality}
                     </figcaption>
                   </figure>
@@ -205,7 +206,7 @@ export function BrowserRecordingDetails({
               <ul {...stylex.props(styles.listMt2)}>
                 {detail.artifacts.map((artifact, index) => (
                   <li {...stylex.props(styles.flexCenterXs, index > 0 && styles.rowStackedXs)} key={artifact.artifactId}>
-                    <span {...stylex.props(styles.fillTruncateNarrowable)}>
+                    <span {...stylex.props([textLayout.truncate, styles.fillTruncateNarrowable])}>
                       {formatPhase(artifact.role)}
                       {artifact.sensor
                         ? ` · ${artifact.sensor.actorId}/${artifact.sensor.sensorId}/${artifact.sensor.modality}`
@@ -213,7 +214,7 @@ export function BrowserRecordingDetails({
                       {" · "}{formatBytes(artifact.sizeBytes)}
                     </span>
                     {artifact.downloadUrl ? (
-                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className={stylex.props(styles.gridCenteredBordered, motionStyles.editorMotion).className} download href={artifact.downloadUrl}>
+                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className={stylex.props([focus.ring, styles.gridCenteredBordered], motionStyles.editorMotion).className} download href={artifact.downloadUrl}>
                         <Download aria-hidden="true" className={stylex.props(styles.size35).className} />
                       </a>
                     ) : <span {...stylex.props(styles.microMuted)}>{artifact.state}</span>}
@@ -233,7 +234,7 @@ function RecordingStatus({ status }: { status: BrowserRecordingDetailDto["status
 }
 
 function DetailValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.detailValueMono : styles.detailValue)}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? [textLayout.truncate, styles.detailValueMono] : [textLayout.truncate, styles.detailValue])}>{value}</dd></div>;
 }
 
 function formatPhase(value: string) {

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { text, space } from "../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 export const styles = stylex.create({
  /**
   * pointer-events-auto flex items-center gap-2 rounded-lg border
@@ -11,7 +11,7 @@ export const styles = stylex.create({
   * bridge is written out here at the utility's own opacity. `shadow-lg` is
   * Tailwind's two-layer value verbatim.
   */
- panel: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: space.md, borderWidth: "1px", borderStyle: "solid", borderColor: "hsl(var(--border) / 0.7)", backgroundColor: "rgba(0,0,0,0.85)", padding: "0.375rem 0.75rem", fontSize: text.sizeXs, lineHeight: "1rem", color: "white", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", backdropFilter: "blur(12px)" },
+ panel: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "hsl(var(--border) / 0.7)", backgroundColor: "rgba(0,0,0,0.85)", padding: "0.375rem 0.75rem", fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.ink, boxShadow: shadows.elevationLg, backdropFilter: motion.blurGlass },
  count: { fontWeight: text.weightSemibold },
  button: { height: "1.75rem" },
  resnapButton: {

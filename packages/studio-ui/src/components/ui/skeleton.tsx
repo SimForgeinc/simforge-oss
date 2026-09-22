@@ -2,6 +2,7 @@ import * as React from "react";
 import * as stylex from "@stylexjs/stylex";
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./skeleton.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 /**
  * Loading placeholder. Geometry and tint compose through xstyle; className
@@ -15,7 +16,7 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement> & { xstyle?: stylex.StyleXStyles }) {
   return (
     <div
-      {...mergeStyleProps(stylex.props(styles.base, xstyle), className, style)}
+      {...mergeStyleProps(stylex.props([motionRecipe.pulse, styles.base], xstyle), className, style)}
       {...props}
     />
   );

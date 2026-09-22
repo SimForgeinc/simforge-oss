@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   offscreenMapContainer: {
@@ -17,25 +12,21 @@ export const styles = stylex.create({
   thumbnailGenerator: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   thumbnailControls: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   generateThumbnailButton: {
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   loadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
   },
   thumbnailIcon: {
     width: "0.75rem",
@@ -48,7 +39,7 @@ export const styles = stylex.create({
   errorMessage: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: colors.danger,
   },

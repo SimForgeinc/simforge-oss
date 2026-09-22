@@ -21,7 +21,6 @@ export const styles = stylex.create({
   round: {
     width: "0.375rem",
     height: "0.375rem",
-    borderRadius: "0",
     boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
   },
 

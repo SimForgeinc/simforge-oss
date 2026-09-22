@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0
@@ -16,13 +16,13 @@ export const styles = stylex.create({
     minWidth: "188px",
     maxWidth: "320px",
     alignItems: "center",
-    gap: space.md,
-    borderWidth: "1px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
-    backdropFilter: "blur(24px)",
+    gap: space.s2,
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
+    backdropFilter: motion.blurPane,
   },
   // border-amber-300/80 bg-amber-400/25 text-amber-50 shadow-[0_10px_36px_rgba(251,191,36,.22)]
   hintWarning: {
@@ -33,9 +33,9 @@ export const styles = stylex.create({
   },
   // border-white/10 bg-black/70 text-white shadow-[0_10px_32px_rgba(0,0,0,.22)]
   hintNeutral: {
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
     backgroundColor: "rgb(0 0 0 / 0.7)",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     boxShadow: "0 10px 32px rgba(0,0,0,.22)",
   },
   // size-4 shrink-0
@@ -46,18 +46,18 @@ export const styles = stylex.create({
   },
   // text-amber-300
   iconWarning: {
-    color: "rgb(252 211 77 / 1)",
+    color: colors.warning,
   },
   // text-sky-300
   iconReady: {
-    color: "rgb(125 211 252 / 1)",
+    color: colors.info,
   },
   // block text-[11px] font-medium leading-tight
   headline: {
     display: "block",
     fontSize: "11px",
     fontWeight: text.weightMedium,
-    lineHeight: "1.25",
+    lineHeight: text.lineTight,
   },
   // text-amber-50
   headlineWarning: {
@@ -68,7 +68,7 @@ export const styles = stylex.create({
     display: "block",
     maxWidth: "280px",
     fontSize: "9px",
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
   },
   // text-amber-100/85
   detailWarning: {

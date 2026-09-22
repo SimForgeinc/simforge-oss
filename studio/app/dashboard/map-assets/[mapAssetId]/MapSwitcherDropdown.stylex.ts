@@ -1,30 +1,24 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   dropdownTrigger: {
     display: "flex",
     height: "2.5rem",
-    width: { default: "11rem", "@media (min-width: 640px)": "280px" },
+    width: { default: "11rem", [layout.bpSm]: "280px" },
     alignItems: "center",
-    gap: space.sm,
-    borderWidth: "1px",
+    gap: space.s1_5,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: "hsl(var(--muted) / 0.3)", ":hover": "hsl(var(--muted) / 0.5)" },
-    paddingInline: space.lg,
+    paddingInline: space.s3,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
   },
   currentMapName: {
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "left",
   },
   dropdownChevron: {
@@ -36,13 +30,13 @@ export const styles = stylex.create({
   },
   dropdownContent: {
     width: "280px",
-    padding: space.none,
+    padding: 0,
   },
   searchSection: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
   },
   searchFieldWrapper: {
     position: "relative",
@@ -59,34 +53,31 @@ export const styles = stylex.create({
   },
   searchInput: {
     height: "2rem",
-    paddingLeft: space.xxxl,
+    paddingLeft: space.s8,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   mapList: {
     maxHeight: "16rem",
     overflowY: "auto",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   noResultsMessage: {
-    paddingInline: space.lg,
-    paddingBlock: space.xl,
+    paddingInline: space.s3,
+    paddingBlock: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   switcherItem: {
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.md,
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    gap: space.s2,
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
   },
   switcherItemCurrent: {
     backgroundColor: "hsl(var(--primary) / 0.05)",
@@ -113,19 +104,13 @@ export const styles = stylex.create({
   },
   switcherLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    lineHeight: text.lineXs,
   },
   switcherLabelCurrent: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
   },
   mapLocation: {
     fontSize: "10px",
     color: colors.mutedForeground,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
 });

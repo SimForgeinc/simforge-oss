@@ -14,6 +14,7 @@ import { VideosSection } from "@/app/dashboard/map-assets/map-detail-sections/Vi
 import { FLYBY_PREVIEW_ARTIFACT_TYPE, flybyPreviewKeyForOriginalKey } from "@/app/lib/maps/flyby-preview";
 import { buildScenarioFamilyGroups } from "@/app/lib/scenario-intelligence-ui";
 import { getFamilyIcon } from "@/app/lib/scenario-family-icons";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Extract the bare S3 object key from an `s3://bucket/key` URI, or null. */
 function s3KeyFromUri(uri: string): string | null {
@@ -33,7 +34,7 @@ interface QuickStatCardProps {
 
 function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
   const card = (
-    <div {...stylex.props(styles.quickStatCard)}>
+    <div {...stylex.props([motionRecipe.colors, styles.quickStatCard])}>
       <div {...stylex.props(styles.quickStatLabelRow)}>
         {icon}
         <span {...stylex.props(styles.quickStatLabel)}>{label}</span>
@@ -253,7 +254,7 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => setDescExpanded((o) => !o)}
-              {...stylex.props(styles.descriptionToggle)}
+              {...stylex.props([motionRecipe.colors, styles.descriptionToggle])}
             >
               {descExpanded ? "Show less" : "Show more"}
             </button>
@@ -282,7 +283,7 @@ export function OverviewTab({
           <button
             type="button"
             onClick={onSwitchToStatsTab}
-            {...stylex.props(styles.viewAllButton)}
+            {...stylex.props([motionRecipe.colors, styles.viewAllButton])}
           >
             View all
             <ChevronRight {...stylex.props(styles.viewAllChevron)} />
@@ -364,7 +365,7 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => onSwitchToInsightsTab()}
-              {...stylex.props(styles.viewAllButton)}
+              {...stylex.props([motionRecipe.colors, styles.viewAllButton])}
             >
               View all
               <ChevronRight {...stylex.props(styles.viewAllChevron)} />
@@ -376,7 +377,7 @@ export function OverviewTab({
             <span {...stylex.props(styles.locationCount)}>
               {candidateLocationsLoading ? (
                 <>
-                  <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" />
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} aria-hidden="true" />
                   <span>Loading locations…</span>
                 </>
               ) : (
@@ -408,11 +409,11 @@ export function OverviewTab({
                       <button
                         type="button"
                         onClick={() => onSwitchToInsightsTab(group.family.id)}
-                        {...stylex.props(styles.familyCard)}
+                        {...stylex.props([motionRecipe.colors, styles.familyCard])}
                       >
                         <div {...stylex.props(styles.familyCardHeader)}>
                           <Icon {...stylex.props(styles.familyIcon)} />
-                          <span {...stylex.props(styles.familyName)}>{group.family.name}</span>
+                          <span {...stylex.props([textLayout.truncate, styles.familyName])}>{group.family.name}</span>
                         </div>
                         <p {...stylex.props(styles.familySummary)}>
                           {locCount} location{locCount !== 1 ? "s" : ""}, {tagCount} tag{tagCount !== 1 ? "s" : ""}
@@ -442,12 +443,12 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => setShowAllFamilies((o) => !o)}
-              {...stylex.props(styles.expandFamiliesButton)}
+              {...stylex.props([motionRecipe.colors, styles.expandFamiliesButton])}
             >
               {showAllFamilies
                 ? "Show fewer"
                 : `+${familyGroups.length - 6} more ${familyGroups.length - 6 !== 1 ? "families" : "family"}`}
-              <ChevronRight {...stylex.props(styles.chevronBare, showAllFamilies && styles.rotate90)} />
+              <ChevronRight {...stylex.props([motionRecipe.transform, styles.chevronBare], showAllFamilies && styles.rotate90)} />
             </button>
           )}
         </section>

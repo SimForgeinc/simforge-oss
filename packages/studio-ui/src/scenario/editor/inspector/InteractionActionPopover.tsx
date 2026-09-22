@@ -11,6 +11,7 @@ import { EditorDetailsPanel } from "./EditorDetailsPanel";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionActionPopover.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 /** Full v2 action editor in the shared right-side details surface. */
 export function InteractionActionPopover({
@@ -95,7 +96,7 @@ export function InteractionActionPopover({
           <span {...stylex.props(styles.caps)}>
             Editing interaction
           </span>
-          <strong {...stylex.props(styles.xsWhiteMedium2)}>{name}</strong>
+          <strong {...stylex.props([textLayout.truncate, styles.xsWhiteMedium2])}>{name}</strong>
         </div>
       )}
       testId="scenario-interaction-popover"

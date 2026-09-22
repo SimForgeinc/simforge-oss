@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenariosTab.stylex";
 
 import type { MapTemplateScenarioRow } from "@/app/lib/db/scenario-query-store";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface ScenariosTabProps {
   templateScenarios: MapTemplateScenarioRow[];
@@ -35,7 +36,7 @@ export function ScenariosTab({
             type="button"
             onClick={onCreateBlankScenario}
             disabled={!onCreateBlankScenario || createBlankBusy}
-            {...stylex.props(styles.scenarioActionButton)}
+            {...stylex.props([motionRecipe.colors, styles.scenarioActionButton])}
           >
             {createBlankBusy ? "Creating..." : "Create Scenario"}
           </button>
@@ -61,7 +62,7 @@ export function ScenariosTab({
                   {...stylex.props(styles.templateScenarioItem)}
                 >
                   <div {...stylex.props(styles.scenarioContentStack)}>
-                    <p {...stylex.props(styles.templateScenarioName)}>
+                    <p {...stylex.props([textLayout.truncate, styles.templateScenarioName])}>
                       {scenario.display_name ?? "Untitled Template"}
                     </p>
                     <p {...stylex.props(styles.templateActorCount)}>
@@ -72,7 +73,7 @@ export function ScenariosTab({
                     type="button"
                     onClick={() => onUseTemplate?.(scenario.id)}
                     disabled={busy}
-                    {...stylex.props(styles.scenarioActionButton)}
+                    {...stylex.props([motionRecipe.colors, styles.scenarioActionButton])}
                   >
                     {busy ? "Creating..." : "Use Template"}
                   </button>

@@ -7,6 +7,7 @@ import {
   type MapMarkerSizingMode,
 } from "@/app/lib/maps/frontend/map-marker-sizing";
 import { styles } from "../map-canvas.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const HOLD_RING_INSET = 6;
 const HOLD_RING_STROKE = 2.5;
@@ -114,7 +115,7 @@ export function HoverInfoCard({
       style={{ bottom: `${size + 8}px` }}
     >
       <div {...stylex.props(styles.actorCardPlate)}>
-        <div {...stylex.props(styles.actorCardTitle)}>{actor.label}</div>
+        <div {...stylex.props([textLayout.truncate, styles.actorCardTitle])}>{actor.label}</div>
         <div {...stylex.props(styles.actorCardHints)}>
           <span>
             <strong {...stylex.props(styles.actorCardKey)}>Right-click</strong>{" "}
