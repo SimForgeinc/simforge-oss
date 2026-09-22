@@ -3,16 +3,20 @@ import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { downloadInputs, type InputDownloadProgress } from './transfers.js';
 
 const cleanups: (() => Promise<unknown>)[] = [];
-afterEach(async () => { await Promise.all(cleanups.splice(0).map((cleanup) => cleanup())); });
+afterEach(async () => { vi.restoreAllMocks(); await Promise.all(cleanups.splice(0).map((cleanup) => cleanup())); });
 
 it('bounds concurrent downloads, refreshes queued expired URLs, and reuses verified cache', async () => {
   const root = await mkdtemp(join(tmpdir(), 'render-inputs-'));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   let active = 0; let peak = 0; let requests = 0; let refreshes = 0;
+  let now = Date.now();
+  vi.spyOn(Date, 'now').mockImplementation(() => now);
+  let releaseProgress!: () => void;
+  const progressGate = new Promise<void>((resolve) => { releaseProgress = resolve; });
   const pending: (() => void)[] = [];
   const server = createServer((request, response) => {
     if (request.url === '/refresh') {
@@ -25,7 +29,9 @@ it('bounds concurrent downloads, refreshes queued expired URLs, and reuses verif
     }
     requests++; active++; peak = Math.max(peak, active);
     pending.push(() => { active--; response.end(`input-${request.url?.slice(1)}`); });
-    if (pending.length === 2 || requests === 5) pending.splice(0).forEach((finish) => finish());
+    if (requests === 2) now += 1001;
+    if (requests >= 2) pending.splice(0).forEach((finish) => finish());
+    if (requests === 5) releaseProgress();
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   cleanups.push(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -37,7 +43,14 @@ it('bounds concurrent downloads, refreshes queued expired URLs, and reuses verif
   }));
   const progress: InputDownloadProgress[] = [];
   const cache = join(root, 'cache');
-  const result = await downloadInputs(inputs, join(root, 'first'), cache, AbortSignal.timeout(5000), { concurrency: 2, progress: async (p) => { progress.push(p); } });
+  const result = await downloadInputs(inputs, join(root, 'first'), cache, AbortSignal.timeout(5000), {
+    concurrency: 2,
+    progress: async (p) => {
+      progress.push(p);
+      // A slow control-plane ack occupies its reporter, not every download slot.
+      if (p.completed > 0 && p.completed < inputs.length) await progressGate;
+    },
+  });
   expect(peak).toBe(2); expect(requests).toBe(5); expect(refreshes).toBe(1);
   expect(await readFile(result.get('input-2')!.path, 'utf8')).toBe('input-2');
   expect(progress.at(-1)).toEqual({ completed: 5, total: 5, downloadedBytes: 35, totalBytes: 35 });
