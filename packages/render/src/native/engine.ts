@@ -435,6 +435,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       }
       const observedRelative = 'trace/observed-frames.jsonl';
       if (observedFrames.length > 0) {
+        await fs.mkdir(path.join(context.workspace, 'trace'), { recursive: true });
         await fs.writeFile(path.join(context.workspace, observedRelative), `${observedFrames.join('\n')}\n`);
       }
       await writeJson(tracePath, {
