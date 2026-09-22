@@ -25,7 +25,7 @@ function planFixture() {
     mapId: 'map.test',
     clipSeconds: 2,
     warmupSeconds: 0.5,
-    dt: 0.1,
+    dt: 0.02,
     physics: { mode: 'dynamic-v1' },
     operationalConditions: {
       weather: 'clear',

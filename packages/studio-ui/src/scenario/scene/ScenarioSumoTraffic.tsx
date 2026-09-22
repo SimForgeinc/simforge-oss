@@ -6,7 +6,7 @@ import { indexedWorldHeightSampler } from "@simforge-oss/viewer";
 import {
   allSumoSignalsGreenFromExtensions,
   ambientSignalCycleSettingsFromExtensions,
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForEditor,
   ambientTrafficProviderFromExtensions,
   BrowserMaterializedTrafficCapture,
   sumoOwnsPhysicalSignalStates,
@@ -89,7 +89,8 @@ export function SumoPreviewTraffic({
 }) {
   const playbackState = usePlaybackControllerState(playback.controller);
   const extensions = document.content.extensions;
-  const profile = useMemo(() => ambientTrafficProfileFromExtensions(extensions), [extensions]);
+  const content = document.content;
+  const profile = useMemo(() => ambientTrafficProfileForEditor(content), [content]);
   const provider = ambientTrafficProviderFromExtensions(extensions);
   // Display-only: once the loaded trace is the worker's authoritative trace
   // with SUMO traffic baked in, that traffic is replayed and the live preview

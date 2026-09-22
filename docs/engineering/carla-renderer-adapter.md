@@ -35,8 +35,28 @@ cannot be exposed through that API.
 
 ## Architecture
 
-The authoritative pipeline, implemented in
-`adapters/carla-exec/simforge_oss_carla_exec/runtime`, is:
+> **Current code vs. this design (corrected 2026-09-22).** Steps 2 and 5 below
+> describe the intended trace-authority bridge. What
+> `adapters/carla-exec/simforge_oss_carla_exec/runtime` does today:
+>
+> - It does not run the SimForge evaluator. It compiles the execution package's
+>   OpenSCENARIO 1.4 `trajectory-replay` document (`runtime/compiler.py`) into a
+>   50 Hz plan (`STEP_SECONDS = 0.02`), with frames starting at t=0.
+> - The execution mode defaults to `native-physics`. The local CLI hard-codes
+>   it (`local.py`), and so does the backend default (`backend.py`). In that
+>   mode the plan is authoritative only for walkers and props. Vehicles chase
+>   it under CARLA physics (see "Motion, collisions, and determinism").
+> - A cooked custom map is loaded **by name** (`identityMode:
+>   "cooked-map-name"`). The runtime OpenDRIVE digest is recorded as
+>   `xodrByteExact` in the map evidence, but a mismatch does not reject the
+>   job. `generate_opendrive_world` is used only for uncooked maps, and only
+>   with `SIMFORGE_CARLA_ALLOW_GENERATED_XODR=1`.
+>
+> The kinematic trace-replay design (physics off for every replayed actor,
+> exact map digest) is being implemented as a separate workstream. Until it
+> lands, read steps 2 and 5 as the target, not the behaviour.
+
+The authoritative pipeline, as designed, is:
 
 1. Validate the authored scenario and exact OpenDRIVE/controller/head bindings.
 2. Compile once with the SimForge evaluator into an immutable 50 Hz trace
@@ -73,7 +93,7 @@ blocking for the native ScenarioRunner gate.
 | SimForge semantic | ScenarioRunner 1.0 | Trace-authority bridge | Notes / gate |
 | --- | --- | --- | --- |
 | Initial/final actor lifecycle | Approximate | Exact | Spawn/destroy on frame edge; catalog/blueprint binding must be unique. |
-| World trajectory and heading | Approximate | Exact | Pose/velocity applied every fixed step; compare before accepting. |
+| World trajectory and heading | Approximate | Exact (walkers, props; vehicles only in `diagnostic-replay`) | Default `native-physics`: vehicles track the plan with CARLA throttle/brake/steer, so their pose is approximate; `diagnostic-replay` sets pose/velocity every fixed step. |
 | Speed actions | Exact subset | Exact | Native only for parser-supported absolute-speed shape/dynamics. |
 | Routes | Approximate | Exact result | Bridge replays compiled result; route identity remains provenance. |
 | Lane changes / pull-over | Approximate | Exact result | Native dynamics cannot inherit trace-parity status. |
@@ -144,23 +164,37 @@ the fail-safe label.
 
 ### Motion, collisions, and determinism
 
-Trajectory replay applies pose plus linear/angular velocity in a synchronous
-batch immediately before each tick. Physics/autopilot is disabled for replayed
-actors so CARLA cannot silently rewrite semantics. Collision sensors still
-record overlaps, but CARLA response does not alter the next authoritative pose.
-This is a renderer parity mode, not a CARLA-physics validation mode.
+The backend has two execution modes (`backend.configure_execution`):
 
-In the `native-physics` execution mode, vehicles are the only actors CARLA
-physics moves. Walkers and props are always replayed kinematically with
-physics off, grounded on the cooked mesh by a label-filtered ray, and verified
-by the pose gates (see `adapters/carla-exec/README.md`). CARLA 0.10 props ignore
-post-spawn transforms and never simulate physics, and `WalkerControl` reaches
-only about 5% of the commanded walker speed. Left to physics, props floated at
-their spawn lift and pedestrians stood still.
+- **`native-physics`** (the default; hard-coded by the local CLI):
+  - Vehicles are the only actors CARLA physics moves. Each tick, a controller
+    computes throttle, brake and steer from the along-track, lateral and
+    heading error against the plan frame (`VehicleControl`). CARLA's PhysX
+    produces the motion. This is the control-input mode, and its poses lag
+    the plan. SimCloud's pinned parity test expects about 1.65 m / 4.5° of lag.
+  - Walkers and props are always replayed kinematically with physics off,
+    grounded on the cooked mesh by a label-filtered ray, and verified by the
+    pose gates (see `adapters/carla-exec/README.md`). Walkers also get the
+    authored velocity and a matching `WalkerControl`, so their animation
+    follows the authored speed. CARLA 0.10 props ignore post-spawn transforms
+    and never simulate physics, and `WalkerControl` reaches only about 5% of
+    the commanded walker speed. Left to physics, props floated at their spawn
+    lift and pedestrians stood still.
+- **`diagnostic-replay`**: every actor gets `set_transform` to the plan pose
+  plus a linear target velocity, one actor at a time before each tick. No
+  batched command and no angular velocity. The mode is labelled
+  `diagnostic-replay-not-acceptance-eligible` and never counts as acceptance.
 
-For a later control-input mode, apply throttle/brake/steer or WalkerControl and
-let CARLA physics own motion. That mode needs a different capability label and
-looser comparator profile. Never show its result as trajectory replay.
+Collision sensors record contacts in both modes. In `native-physics`, CARLA's
+contact response changes the vehicles' subsequent motion. Divergence after an
+authored contact is reported as `native-physics:post-contact:*`.
+
+The design target is still the renderer parity mode: pose (and velocity)
+applied in one synchronous batch before each tick, physics and autopilot
+disabled for every replayed actor, and collision sensors that observe contacts
+without changing the next authoritative pose. CARLA-physics motion then
+becomes an opt-in validation mode with its own capability label and looser
+comparator profile, and its result must never be shown as trajectory replay.
 
 Deterministic reruns require identical CARLA server/client builds, map/assets,
 fixed delta, seeds, quality settings, sensor attributes, GPU/driver, and one tick
@@ -183,8 +217,24 @@ verdict.
 
 ## Acceptance and evidence
 
+> **Current code (corrected 2026-09-22).** The parity accumulator
+> (`runtime/parity.py`) records two threshold sets:
+>
+> - the reference thresholds of the gate below (0.25 m / 2° / 0.25 m/s);
+>   violations are reported as `expected-carla-physics` divergences;
+> - acceptance thresholds of **2.0 m / 5° / 1.0 m/s**.
+>
+> Only a `native-physics` run is acceptance-eligible. The verdict
+> (`accepted-native-physics`, `failed-native-physics` or `diagnostic-only`) is
+> written to the manifest and the job result, and the parity report carries the
+> verdict of each check. A failed verdict does not
+> fail the render, and SimCloud treats parity as diagnostic only. What does
+> fail a render is the pose gates (`SIMFORGE_CARLA_POSE_GATES=enforce`):
+> displaced, floating or buried actors; kinematic actors that do not read
+> back their pose; and vehicles that stall or go airborne.
+
 For every required fixture, run at least three fresh reruns and retain immutable
-receipts. The trajectory-replay gate is:
+receipts. The target trajectory-replay gate is:
 
 - initial pose equal at the first fixed frame;
 - planar position error <= **0.25 m** at every required sample;

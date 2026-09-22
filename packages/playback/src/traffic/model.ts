@@ -1,6 +1,9 @@
 import {
+  AmbientTrafficProfileError,
+  ambientTrafficProfileForDocument,
   contentHash,
   defaultAmbientTrafficProfile,
+  offAmbientTrafficProfile,
   resolveAmbientTrafficProfile,
   type AmbientTrafficProvenance,
   type AmbientTrafficProfile,
@@ -10,8 +13,34 @@ import {
 export {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
+  ambientProfileMissingDefault,
+  AmbientTrafficProfileError,
+  offAmbientTrafficProfile,
+  validateAmbientTrafficProfileExtension,
   defaultAmbientTrafficProfile,
 } from '@simforge-oss/engine';
+export type { AmbientProfileMissingDefault } from '@simforge-oss/engine';
+
+/**
+ * The profile an editor panel DISPLAYS for a document. A malformed stored
+ * profile shows as `off` here (so the panel still renders and the author can
+ * pick a valid one), while every simulation path resolves it with
+ * `ambientTrafficProfileForDocument`, which refuses it with
+ * `AmbientTrafficProfileError`. Never use this to feed a simulation.
+ */
+export function ambientTrafficProfileForEditor(document: {
+  readonly simulation?: unknown;
+  readonly extensions?: Readonly<Record<string, unknown>> | undefined;
+} | null | undefined): ResolvedAmbientTrafficProfile {
+  if (!document) return offAmbientTrafficProfile();
+  try {
+    return ambientTrafficProfileForDocument(document);
+  } catch (error) {
+    if (error instanceof AmbientTrafficProfileError) return offAmbientTrafficProfile();
+    throw error;
+  }
+}
 
 export const AMBIENT_TRAFFIC_STORAGE_KEY = 'uniscenarios.studio.ambient-traffic.v1';
 /**

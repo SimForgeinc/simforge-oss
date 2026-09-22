@@ -81,19 +81,25 @@ export interface RuntimeIdentity {
   readonly addonPath: string;
   /** SHA-256 of the addon bytes, for frozen receipts. */
   readonly addonSha256: string;
+  readonly engineSemVer: string;
+  /** Former name of `engineSemVer`. */
   readonly engineVersion: string;
   readonly abiVersion: number;
+  /** Build provenance digest (`engine().build().buildDigest`); never a key. */
+  readonly buildDigest: string;
 }
 
 /** Identity of the native runtime executing in this process. */
 export function runtimeIdentity(): RuntimeIdentity {
   const addonPath = addonCandidates().find((candidate) => existsSync(candidate));
   if (!addonPath) throw new Error('@simforge-oss/engine/node: no native addon is installed for this platform');
-  const { engineVersion, abiVersion } = engine().version();
+  const { engineSemVer, engineVersion, abiVersion } = engine().version();
   return {
     addonPath,
     addonSha256: createHash('sha256').update(readFileSync(addonPath)).digest('hex'),
+    engineSemVer,
     engineVersion,
     abiVersion,
+    buildDigest: engine().build().buildDigest,
   };
 }

@@ -625,6 +625,26 @@ export class EditorDocument {
     };
   }
 
+  /**
+   * Like {@link subscribe}, but only for authored changes: the listener runs
+   * when {@link revision} has advanced since it last ran (or since
+   * subscription), never for the save-status notification an autosave emits.
+   *
+   * A host that persists the document on change must use this. Opening a
+   * record schedules the local autosave, whose completion notifies
+   * subscribers with no edit behind it; a host that compared the (normalized)
+   * editor content against the raw stored record then wrote the document back
+   * to the server a minute after it was merely opened.
+   */
+  subscribeEdits(listener: () => void): () => void {
+    let seen = this.#revision;
+    return this.subscribe(() => {
+      if (this.#revision === seen) return;
+      seen = this.#revision;
+      listener();
+    });
+  }
+
   // ----------------------------------------------------------------- writes
 
   /**
