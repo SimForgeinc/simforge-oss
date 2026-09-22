@@ -535,6 +535,11 @@ export function actorRow(): number;
 export function adaptTemplateNotesJson(template_json: string): string;
 
 /**
+ * Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
+ */
+export function ambientTurnVerdictsJson(graph: LaneGraph): string;
+
+/**
  * `SituationTransactionResult` JSON (no simulation).
  */
 export function applySituationTransaction(document_json: string, transaction_json: string): string;
@@ -598,6 +603,11 @@ export function handoffActorRow(): number;
  * Row width of `TrafficHandoff.bodies()`.
  */
 export function handoffBodyRow(): number;
+
+/**
+ * Load persisted ambient turn verdicts into this module; returns the count. Refuses another ENGINE_SEM_VER.
+ */
+export function loadAmbientTurnVerdicts(json: string): number;
 
 /**
  * Ranked `SiteMatch` JSON; `optionsJson = {minScore?, maxSites?, exactCatalogSiteResolution?}`.
@@ -732,6 +742,7 @@ export interface InitOutput {
     readonly actionWidth: () => number;
     readonly actorRow: () => number;
     readonly adaptTemplateNotesJson: (a: number, b: number) => [number, number, number, number];
+    readonly ambientTurnVerdictsJson: (a: number) => [number, number];
     readonly applySituationTransaction: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly canonicalJson: (a: number, b: number) => [number, number, number, number];
     readonly cellSeed: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
@@ -788,6 +799,7 @@ export interface InitOutput {
     readonly lanegraph_sampleLane: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly lanegraph_successors: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly lanegraph_turnRelationOf: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly loadAmbientTurnVerdicts: (a: number, b: number) => [number, number, number];
     readonly mapbundle_closureDigest: (a: number) => [number, number];
     readonly mapbundle_controlPlanJson: (a: number) => [number, number, number, number];
     readonly mapbundle_digest: (a: number) => [number, number];

@@ -218,6 +218,96 @@ fn global_answers() -> &'static Mutex<HashMap<GlobalKey, bool>> {
 
 const GLOBAL_ANSWER_LIMIT: usize = 250_000;
 
+/// Schema of the persisted verdict table ([`turn_verdicts_json`]).
+pub const TURN_VERDICTS_SCHEMA: &str = "simforge.ambient-turn-verdicts/v1";
+
+/// Every directed transition of `graph` the generator can ask about.
+fn graph_transitions(graph: &LaneGraph) -> Vec<(DirectedLane, DirectedLane)> {
+    let mut out = Vec::new();
+    for lane in graph.lane_ids() {
+        for reversed in [false, true] {
+            let from = DirectedLane::new(lane, reversed);
+            for to in graph.successors(from) {
+                out.push((from, *to));
+            }
+        }
+    }
+    out
+}
+
+/// The verdicts the process memo holds for `graph`'s transitions, as a
+/// persisted table: `{schema, engineSemVer, verdicts: [[fingerprint, class,
+/// feasible], ...]}`, sorted, canonical JSON.
+///
+/// Probing is the expensive part of building an ambient candidate pool (the
+/// first build on a map runs the dynamic-v1 plant through every tight
+/// transition). A verdict is a pure function of its content fingerprint and
+/// class under one `ENGINE_SEM_VER`, so a host may persist this table beside
+/// the map closure (keyed by `closureDigest` and `ENGINE_SEM_VER`) and load it
+/// in a later session with [`load_turn_verdicts_json`]: the pool comes out
+/// byte-identical, only faster.
+pub fn turn_verdicts_json(graph: &LaneGraph) -> String {
+    let mut rows: Vec<(String, u8, bool)> = Vec::new();
+    let fingerprints: std::collections::BTreeSet<String> = graph_transitions(graph)
+        .into_iter()
+        .map(|(from, to)| transition_fingerprint(graph, from, to))
+        .collect();
+    if let Ok(global) = global_answers().lock() {
+        for (key, answer) in global.iter() {
+            if fingerprints.contains(&key.0) {
+                rows.push((key.0.clone(), key.1, *answer));
+            }
+        }
+    }
+    rows.sort();
+    let value = serde_json::json!({
+        "schema": TURN_VERDICTS_SCHEMA,
+        "engineSemVer": simforge_core::ENGINE_SEM_VER,
+        "verdicts": rows.iter().map(|(f, c, a)| serde_json::json!([f, c, a])).collect::<Vec<_>>(),
+    });
+    simforge_core::hash::canonical_json(&value).unwrap_or_default()
+}
+
+/// Seed the process memo from a table written by [`turn_verdicts_json`].
+/// Returns the number of verdicts loaded. A table from another schema or
+/// another `ENGINE_SEM_VER` is refused: its verdicts came from other probe
+/// semantics and would change the generated population.
+pub fn load_turn_verdicts_json(text: &str) -> Result<usize, String> {
+    let value: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("turn verdicts: {e}"))?;
+    if value.get("schema").and_then(|v| v.as_str()) != Some(TURN_VERDICTS_SCHEMA) {
+        return Err("turn verdicts: unsupported schema".into());
+    }
+    let semver = value.get("engineSemVer").and_then(|v| v.as_str()).unwrap_or("");
+    if semver != simforge_core::ENGINE_SEM_VER {
+        return Err(format!(
+            "turn verdicts were computed by engine {semver}, this is {}",
+            simforge_core::ENGINE_SEM_VER
+        ));
+    }
+    let rows = value.get("verdicts").and_then(|v| v.as_array()).ok_or("turn verdicts: no verdicts")?;
+    let mut parsed = Vec::with_capacity(rows.len());
+    for row in rows {
+        let (Some(f), Some(c), Some(a)) = (
+            row.get(0).and_then(|v| v.as_str()),
+            row.get(1).and_then(|v| v.as_u64()),
+            row.get(2).and_then(|v| v.as_bool()),
+        ) else {
+            return Err("turn verdicts: malformed row".into());
+        };
+        if f.len() != 64 || c > u64::from(u8::MAX) {
+            return Err("turn verdicts: malformed row".into());
+        }
+        parsed.push(((f.to_owned(), c as u8), a));
+    }
+    let mut global = global_answers().lock().map_err(|_| "turn verdicts: memo poisoned".to_string())?;
+    let count = parsed.len();
+    for (key, answer) in parsed {
+        global.insert(key, answer);
+    }
+    Ok(count)
+}
+
+
 /// The cruise a probe drives at: the faster posted limit of the two lanes
 /// (the cyclist cruise for bicycles and scooters) with
 /// [`TURN_PROBE_SPEED_MARGIN`] on top.
@@ -809,7 +899,7 @@ mod tests {
             ActorKind::Motorcycle,
             ActorKind::Bicycle,
         ] {
-            let speed = if kind == ActorKind::Bicycle {
+            let _speed = if kind == ActorKind::Bicycle {
                 5.5
             } else {
                 11.0
@@ -875,7 +965,7 @@ mod tests {
         let to = graph.successors(from)[0];
         let route = build_lane_path_route(&graph, &[from.lane, to.lane]).unwrap();
         let join = graph.length_of(from.lane);
-        let t0 = std::time::Instant::now();
+        let _t0 = std::time::Instant::now();
         for _ in 0..200 {
             std::hint::black_box(probe_route(
                 &route,
@@ -956,6 +1046,34 @@ mod tests {
             cache.probes_run() <= 1,
             "second ask is served from the cache"
         );
+    }
+
+    #[test]
+    fn persisted_verdicts_round_trip_and_refuse_other_semantics() {
+        // A radius no other test uses, so this test's verdicts are its own.
+        let graph = turn_graph(7.25, 90f64.to_radians());
+        let from = DirectedLane::new(graph.lane_id("1:0:-1").unwrap(), false);
+        let to = *graph.successors(from).first().expect("connector");
+        let mut cache = TurnFeasibilityCache::new();
+        let truck = turn_is_feasible(&graph, from, to, ActorKind::Truck, &mut cache);
+        let car = turn_is_feasible(&graph, from, to, ActorKind::Car, &mut cache);
+        let table = turn_verdicts_json(&graph);
+        let value: serde_json::Value = serde_json::from_str(&table).expect("json");
+        assert_eq!(value["schema"], TURN_VERDICTS_SCHEMA);
+        assert_eq!(value["engineSemVer"], simforge_core::ENGINE_SEM_VER);
+        let rows = value["verdicts"].as_array().expect("rows");
+        assert!(rows.len() >= 2, "{table}");
+        // Reloading is idempotent and changes no answer.
+        assert_eq!(load_turn_verdicts_json(&table).expect("load"), rows.len());
+        let mut fresh = TurnFeasibilityCache::new();
+        assert_eq!(turn_is_feasible(&graph, from, to, ActorKind::Truck, &mut fresh), truck);
+        assert_eq!(turn_is_feasible(&graph, from, to, ActorKind::Car, &mut fresh), car);
+        assert_eq!(fresh.probes_run(), 0, "answers came from the loaded table");
+        assert_eq!(turn_verdicts_json(&graph), table, "export is canonical and stable");
+        // Other probe semantics are refused.
+        let stale = table.replace(simforge_core::ENGINE_SEM_VER, "0.0.1");
+        assert!(load_turn_verdicts_json(&stale).is_err());
+        assert!(load_turn_verdicts_json("{}").is_err());
     }
 
     #[test]

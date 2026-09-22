@@ -45,6 +45,7 @@ import { bakedParkedCarsFromExtensions, withParkedCarActors } from './studio/par
 import { clampDeclaredAxisHolds, type AxisUntilClamp } from './template-axis-clamp.js';
 import type { MapBundle } from './types.js';
 import { buildXodrElevationResolver } from './xodr-elevation.js';
+import { persistAmbientTurnVerdictsToDisk } from './maps.js';
 
 export const EXECUTION_PACKAGE_CONTRACT = 'uniscenario.execution-package/v1';
 export const CAPABILITY_REPORT_CONTRACT = 'uniscenario.capability-report/v1';
@@ -232,6 +233,8 @@ function concreteInput(
       ? ambientTrafficProfileForDocument(template)
       : { version: 1, preset: 'off', seed: 'execution-provider-off' },
   );
+  // The next process on this closure skips the turn probes (timing only).
+  void persistAmbientTurnVerdictsToDisk(bundle);
   return {
     input: JSON.parse(ambient.scenario.toJson()) as SimScenarioInput,
     siteId: product.manifest.replayKey.siteId,

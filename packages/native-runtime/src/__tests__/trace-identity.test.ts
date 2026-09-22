@@ -62,6 +62,7 @@ interface Build {
   runSimulation(input: Scenario, graph: unknown, options?: string | null): string;
   materializeAmbientTraffic(input: Scenario, graph: unknown, profile: string, options?: string | null): [Scenario, string] | unknown[];
   compileTemplate(template: string, bundle: Bundle, site?: string | null, seed?: number | string | null, options?: string | null): { input: Scenario; manifestJson: string };
+  ambientTurnVerdictsJson?(graph: unknown): string;
 }
 interface Bundle { closureDigest?: string; graph: unknown; controlPlanJson(): string }
 interface Scenario { toJson(): string }
@@ -196,6 +197,13 @@ describe.skipIf(!existsSync(WASM) || selected.length === 0)('N-API and WASM buil
           return `${scenario.toJson()}\n${provenance}`;
         };
         expect(generated(wasm, pair.wasm)).toBe(generated(addon, pair.addon));
+        // The persisted turn-verdict table (a cross-session cache) is one table
+        // whichever build wrote it, so either build may load the other's.
+        if (addon.ambientTurnVerdictsJson && wasm.ambientTurnVerdictsJson) {
+          const table = addon.ambientTurnVerdictsJson(pair.addon.graph);
+          expect(JSON.parse(table).verdicts.length).toBeGreaterThan(0);
+          expect(wasm.ambientTurnVerdictsJson(pair.wasm.graph)).toBe(table);
+        }
       }, 300_000);
 
       it.skipIf(testCase.source.kind !== 'template')('compiles the template to the same input in both builds', () => {
