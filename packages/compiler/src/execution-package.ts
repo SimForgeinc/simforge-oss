@@ -101,6 +101,13 @@ export interface ResolvedExecutionInput {
   readonly concrete: ConcreteExecutionInput;
   /** The exact input the native engine executes; the export and the digest are taken from it. */
   readonly resolvedInput: SimScenarioInput;
+  /**
+   * The refined concrete input handed to the engine constructor (playback
+   * refinements applied, before the engine's own normalization). Running the
+   * clip from this is exactly what the editor's scenario worker runs, so the
+   * authoritative trace and the editor's local trace share one identity.
+   */
+  readonly executedInput: SimScenarioInput;
 }
 
 /**
@@ -249,9 +256,9 @@ function concreteInput(
  * projects stop lines onto the route's connecting lanes). Constructing the
  * world resolves it without running the clip.
  */
-function executionResolvedInput(input: SimScenarioInput, graph: LaneGraph): SimScenarioInput {
-  const refined = withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
-  return engine().simulation(refined, { graph, captureTrace: false }).input();
+function executionResolvedInput(input: SimScenarioInput, graph: LaneGraph): { executed: SimScenarioInput; resolved: SimScenarioInput } {
+  const executed = withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
+  return { executed, resolved: engine().simulation(executed, { graph, captureTrace: false }).input() };
 }
 
 /**
@@ -271,8 +278,8 @@ export function resolveExecutionInput(
   if (!validation.ok) throw new Error(`template_invalid:${JSON.stringify(validation.issues)}`);
   const concrete = concreteInput(normalizedTemplate, map, ambientMode, catalogEntries);
   assertRuntimeAssetIdentities(concrete.input);
-  const resolvedInput = executionResolvedInput(concrete.input, map.graph);
-  return { template, axisUntilClamps, concrete, resolvedInput };
+  const { executed, resolved } = executionResolvedInput(concrete.input, map.graph);
+  return { template, axisUntilClamps, concrete, resolvedInput: resolved, executedInput: executed };
 }
 
 /** Exact native resolved-input identity shared by the browser and every host. */
