@@ -70,7 +70,13 @@ function downloadProgress(downloads: NonNullable<MapModelLoadSnapshot["downloads
   // of the map the view has, not how much crossed the loopback this time.
   const metrics: Array<{ label: string; value: string }> = [];
   if (downloads.cachedBytes > 0) metrics.push({ label: "From cache", value: formatBytes(downloads.cachedBytes) });
-  metrics.push({ label: "Downloading", value: `${downloads.active} ${downloads.active === 1 ? "file" : "files"}` });
+  // Before the map's tiles exist there is exactly one file on the wire — the
+  // definition — and the tracker's active count does not include it, so a
+  // bare "0 files" while bytes climb would contradict the byte figure.
+  metrics.push({
+    label: "Downloading",
+    value: snapshot === null && downloads.active === 0 ? "map definition" : `${downloads.active} ${downloads.active === 1 ? "file" : "files"}`,
+  });
   if (snapshot) {
     metrics.push({ label: "Decoding", value: `${snapshot.loading} ${snapshot.loading === 1 ? "file" : "files"}` });
     metrics.push({ label: "Queued", value: `${snapshot.queued} ${snapshot.queued === 1 ? "file" : "files"}` });

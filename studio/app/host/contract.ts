@@ -42,4 +42,7 @@ export type MapInstallPanelProps = {
 };
 
 /** Dataset home is composed by the host before any connector effects mount. */
+/** Rendered in the switcher footer beside the account on hosts with tenants. */
+export type WorkspaceChipProps = { identity: import("@simforge-oss/studio-host").StudioHostIdentity; onNavigate?: () => void };
+
 export type DatasetHomeHook = () => import("@simforge-oss/studio-ui/scenario/ScenarioDatasetsClient").DatasetCloudHome;

@@ -16,4 +16,5 @@ export type {
   MapInstallPanelProps,
   RenderSettingsProps,
   RenderSettingsSurfaceType,
+  WorkspaceChipProps,
 } from "./contract";
