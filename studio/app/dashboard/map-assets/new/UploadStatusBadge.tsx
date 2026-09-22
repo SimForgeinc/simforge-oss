@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./UploadStatusBadge.stylex";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 
 export type UploadStatus = "hashing" | "uploading" | "done" | "error";
@@ -16,26 +16,26 @@ export function UploadStatusBadge({ upload }: { upload: TrackedUpload | undefine
   switch (upload.status) {
     case "hashing":
       return (
-        <span className={stylex.props(styles.s_357).className}>
-          <Loader2 className={stylex.props(styles.s_972).className} /> Hashing…
+        <span {...stylex.props(styles.hashingStatus)}>
+          <Loader2 {...stylex.props(styles.loadingIcon)} /> Hashing…
         </span>
       );
     case "uploading":
       return (
-        <span className={stylex.props(styles.s_359).className}>
-          <Loader2 className={stylex.props(styles.s_972).className} /> Uploading…
+        <span {...stylex.props(styles.uploadingStatus)}>
+          <Loader2 {...stylex.props(styles.loadingIcon)} /> Uploading…
         </span>
       );
     case "done":
       return (
-        <span className={stylex.props(styles.s_361).className}>
-          <Check className={stylex.props(styles.s_927).className} /> Uploaded
+        <span {...stylex.props(styles.successStatus)}>
+          <Check {...stylex.props(styles.statusIcon)} /> Uploaded
         </span>
       );
     case "error":
       return (
-        <span className={stylex.props(styles.s_363).className} title={upload.error ?? undefined}>
-          <AlertCircle className={stylex.props(styles.s_927).className} /> Failed
+        <span {...stylex.props(styles.errorStatus)} title={upload.error ?? undefined}>
+          <AlertCircle {...stylex.props(styles.statusIcon)} /> Failed
         </span>
       );
   }

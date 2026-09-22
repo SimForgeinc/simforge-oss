@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapMetadataSection.stylex";
 
 import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -42,15 +42,15 @@ export function MapMetadataSection({
 }: MapMetadataSectionProps) {
   return (
     <section>
-      <div className={stylex.props(styles.s_961).className}>
+      <div {...stylex.props(styles.sectionHeaderRow)}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className={stylex.props(styles.s_962).className}
+          {...stylex.props(styles.sectionToggleButton)}
           aria-expanded={open}
         >
           <ChevronRight
-            className={stylex.props(styles.chevron, open && styles.rotate90).className}
+            {...stylex.props(styles.chevron, open && styles.rotate90)}
           />
           {title}
         </button>
@@ -69,31 +69,31 @@ export function MapMetadataSection({
             }
             aria-label="Copy map metadata as JSON"
             title="Copy map metadata as JSON"
-            className={stylex.props(styles.s_713).className}
+            {...stylex.props(styles.copyMetadataButton)}
           >
             {copiedKey === "mapMetadata" ? (
-              <Check className={stylex.props(styles.s_714).className} />
+              <Check {...stylex.props(styles.copiedCheckIcon)} />
             ) : (
-              <Copy className={stylex.props(styles.s_927).className} />
+              <Copy {...stylex.props(styles.copyIcon)} />
             )}
           </button>
         )}
       </div>
       {open && (
-        <div className={stylex.props(styles.s_663).className}>
+        <div {...stylex.props(styles.metadataContent)}>
           {!hasExtractedMetadata && (
-            <p className={stylex.props(styles.s_664).className}>
+            <p {...stylex.props(styles.emptyMetadataNotice)}>
               No extracted fields yet. Upload geojson, xodr, and rrdata_xml for this map, then run{" "}
-              <span className={stylex.props(styles.s_665).className}>Populate metadata</span> below (or create a new map with all
+              <span {...stylex.props(styles.populateMetadataEmphasis)}>Populate metadata</span> below (or create a new map with all
               three files).
             </p>
           )}
           {asset.place_context && (
             <div>
-              <h4 className={stylex.props(styles.s_699).className}>
+              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
                 Location
               </h4>
-              <p className={stylex.props(styles.s_667).className}>
+              <p {...stylex.props(styles.locationValue)}>
                 {[
                   asset.place_context.city,
                   asset.place_context.state,
@@ -106,44 +106,44 @@ export function MapMetadataSection({
           )}
           {asset.map_source && (
             <div>
-              <h4 className={stylex.props(styles.s_699).className}>
+              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
                 Map source
               </h4>
-              <dl className={stylex.props(styles.s_700).className}>
+              <dl {...stylex.props(styles.metadataDefinitionList)}>
                 {asset.map_source.tool != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Tool</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.tool}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Tool</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_source.tool}</dd>
                   </>
                 )}
                 {asset.map_source.tool_version != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Version</dt>
-                    <dd className={stylex.props(styles.s_697).className}>{asset.map_source.tool_version}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Version</dt>
+                    <dd {...stylex.props(styles.metadataSecondaryValue)}>{asset.map_source.tool_version}</dd>
                   </>
                 )}
                 {asset.map_source.vendor != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Vendor</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.vendor}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Vendor</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_source.vendor}</dd>
                   </>
                 )}
                 {asset.map_source.opendrive_version != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>OpenDRIVE</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.opendrive_version}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>OpenDRIVE</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_source.opendrive_version}</dd>
                   </>
                 )}
                 {asset.map_source.rrdata_schema_version != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>RR schema</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.rrdata_schema_version}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>RR schema</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_source.rrdata_schema_version}</dd>
                   </>
                 )}
                 {asset.map_source.exported_at != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Exported</dt>
-                    <dd className={stylex.props(styles.s_697).className}>{asset.map_source.exported_at}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Exported</dt>
+                    <dd {...stylex.props(styles.metadataSecondaryValue)}>{asset.map_source.exported_at}</dd>
                   </>
                 )}
               </dl>
@@ -151,15 +151,15 @@ export function MapMetadataSection({
           )}
           {asset.map_coordinate_ref && (
             <div>
-              <h4 className={stylex.props(styles.s_699).className}>
+              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
                 Coordinate reference
               </h4>
-              <dl className={stylex.props(styles.s_700).className}>
+              <dl {...stylex.props(styles.metadataDefinitionList)}>
                 {asset.map_coordinate_ref.origin_lat != null &&
                   asset.map_coordinate_ref.origin_lon != null && (
                     <>
-                      <dt className={stylex.props(styles.s_705).className}>Origin</dt>
-                      <dd className={stylex.props(styles.s_706).className}>
+                      <dt {...stylex.props(styles.metadataLabel)}>Origin</dt>
+                      <dd {...stylex.props(styles.metadataValue)}>
                         {asset.map_coordinate_ref.origin_lat.toFixed(6)},{" "}
                         {asset.map_coordinate_ref.origin_lon.toFixed(6)}
                       </dd>
@@ -167,14 +167,14 @@ export function MapMetadataSection({
                   )}
                 {asset.map_coordinate_ref.utm_zone != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>UTM</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_coordinate_ref.utm_zone}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>UTM</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_coordinate_ref.utm_zone}</dd>
                   </>
                 )}
                 {asset.map_coordinate_ref.editor_offset_m != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Editor offset</dt>
-                    <dd className={stylex.props(styles.s_706).className}>
+                    <dt {...stylex.props(styles.metadataLabel)}>Editor offset</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>
                       {asset.map_coordinate_ref.editor_offset_m.x.toFixed(2)},{" "}
                       {asset.map_coordinate_ref.editor_offset_m.y.toFixed(2)} m
                     </dd>
@@ -182,14 +182,14 @@ export function MapMetadataSection({
                 )}
                 {asset.map_coordinate_ref.projection_type != null && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Projection</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{asset.map_coordinate_ref.projection_type}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Projection</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{asset.map_coordinate_ref.projection_type}</dd>
                   </>
                 )}
                 {asset.map_coordinate_ref.proj_string != null && (
                   <>
-                    <dt className={stylex.props(styles.s_692).className}>PROJ</dt>
-                    <dd className={stylex.props(styles.s_693).className}>
+                    <dt {...stylex.props(styles.projLabel)}>PROJ</dt>
+                    <dd {...stylex.props(styles.projStringValue)}>
                       {asset.map_coordinate_ref.proj_string}
                     </dd>
                   </>
@@ -199,42 +199,42 @@ export function MapMetadataSection({
           )}
           {asset.carla_map_name && (
             <div>
-              <h4 className={stylex.props(styles.s_699).className}>
+              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
                 CARLA Metadata
               </h4>
-              <dl className={stylex.props(styles.s_700).className}>
-                <dt className={stylex.props(styles.s_705).className}>Carla Map Name</dt>
-                <dd className={stylex.props(styles.s_697).className}>{asset.carla_map_name}</dd>
+              <dl {...stylex.props(styles.metadataDefinitionList)}>
+                <dt {...stylex.props(styles.metadataLabel)}>Carla Map Name</dt>
+                <dd {...stylex.props(styles.metadataSecondaryValue)}>{asset.carla_map_name}</dd>
               </dl>
             </div>
           )}
           {asset.metadata_last_populated_at && (
-            <p className={stylex.props(styles.s_698).className}>
+            <p {...stylex.props(styles.metadataTimestamp)}>
               Metadata last computed {new Date(asset.metadata_last_populated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </p>
           )}
           {enrichment && (
             <div>
-              <h4 className={stylex.props(styles.s_699).className}>
+              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
                 Third-Party Enrichment Source
               </h4>
-              <dl className={stylex.props(styles.s_700).className}>
+              <dl {...stylex.props(styles.metadataDefinitionList)}>
                 {enrichment.provider && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Provider</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{enrichment.provider}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Provider</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{enrichment.provider}</dd>
                   </>
                 )}
                 {enrichment.provider_release && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Snapshot</dt>
-                    <dd className={stylex.props(styles.s_706).className}>{enrichment.provider_release}</dd>
+                    <dt {...stylex.props(styles.metadataLabel)}>Snapshot</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>{enrichment.provider_release}</dd>
                   </>
                 )}
                 {enrichment.computed_at && (
                   <>
-                    <dt className={stylex.props(styles.s_705).className}>Computed</dt>
-                    <dd className={stylex.props(styles.s_706).className}>
+                    <dt {...stylex.props(styles.metadataLabel)}>Computed</dt>
+                    <dd {...stylex.props(styles.metadataValue)}>
                       {new Date(enrichment.computed_at).toLocaleDateString()}
                     </dd>
                   </>
@@ -243,25 +243,25 @@ export function MapMetadataSection({
             </div>
           )}
           {showPopulateMetadata && (
-            <div className={stylex.props(styles.s_707).className}>
+            <div {...stylex.props(styles.populateMetadataContainer)}>
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                xstyle={styles.s_708}
+                xstyle={styles.populateMetadataButton}
                 disabled={populateBusy}
                 onClick={onPopulateMetadata}
               >
                 {populateBusy ? (
                   <>
-                    <Loader2 className={stylex.props(styles.s_709).className} />
+                    <Loader2 {...stylex.props(styles.populateMetadataSpinner)} />
                     Populating…
                   </>
                 ) : (
                   "Populate metadata"
                 )}
               </Button>
-              {populateErr && <p className={stylex.props(styles.s_710).className}>{populateErr}</p>}
+              {populateErr && <p {...stylex.props(styles.populateMetadataError)}>{populateErr}</p>}
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./OverviewTab.stylex";
 
 import { useState, useMemo } from "react";
 import { Route, GitFork, PersonStanding, Footprints, Bike, SquareParking, ChevronRight, Loader2 } from "lucide-react";
@@ -33,12 +33,12 @@ interface QuickStatCardProps {
 
 function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
   const card = (
-    <div className={stylex.props(styles.s_825).className}>
-      <div className={stylex.props(styles.s_826).className}>
+    <div {...stylex.props(styles.quickStatCard)}>
+      <div {...stylex.props(styles.quickStatLabelRow)}>
         {icon}
-        <span className={stylex.props(styles.s_827).className}>{label}</span>
+        <span {...stylex.props(styles.quickStatLabel)}>{label}</span>
       </div>
-      <p className={stylex.props(styles.s_828).className}>{value}</p>
+      <p {...stylex.props(styles.quickStatValue)}>{value}</p>
     </div>
   );
 
@@ -48,7 +48,7 @@ function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="bottom" xstyle={styles.s_829}>
+        <TooltipContent side="bottom" xstyle={styles.quickStatTooltip}>
           {tooltip.map((line, i) => (
             <div key={i}>{line}</div>
           ))}
@@ -220,12 +220,12 @@ export function OverviewTab({
   const visibleFamilies = showAllFamilies ? familyGroups : familyGroups.slice(0, 6);
 
   return (
-    <div className={stylex.props(styles.s_993).className}>
+    <div {...stylex.props(styles.overviewContainer)}>
       {/* Map name + location + description */}
       <section>
-        <div className={stylex.props(styles.s_831).className}>
-          <div className={stylex.props(styles.s_919).className}>
-            <h2 className={stylex.props(styles.s_833).className}>{asset.name}</h2>
+        <div {...stylex.props(styles.assetHeader)}>
+          <div {...stylex.props(styles.assetTitleBlock)}>
+            <h2 {...stylex.props(styles.assetTitle)}>{asset.name}</h2>
             {(() => {
               const place = asset.place_context;
               const location = [place?.city, place?.state, place?.country]
@@ -233,7 +233,7 @@ export function OverviewTab({
                 .join(", ");
               if (!location) return null;
               return (
-                <p className={stylex.props(styles.s_834).className}>{location}</p>
+                <p {...stylex.props(styles.assetLocation)}>{location}</p>
               );
             })()}
           </div>
@@ -244,16 +244,16 @@ export function OverviewTab({
           />
         </div>
         {asset.description && (
-          <div className={stylex.props(styles.s_835).className}>
+          <div {...stylex.props(styles.descriptionBlock)}>
             <p
-              className={stylex.props(styles.overviewDescription, !descExpanded && styles.clamp2).className}
+              {...stylex.props(styles.overviewDescription, !descExpanded && styles.clamp2)}
             >
               {asset.description}
             </p>
             <button
               type="button"
               onClick={() => setDescExpanded((o) => !o)}
-              className={stylex.props(styles.s_836).className}
+              {...stylex.props(styles.descriptionToggle)}
             >
               {descExpanded ? "Show less" : "Show more"}
             </button>
@@ -275,22 +275,22 @@ export function OverviewTab({
 
       {/* Quick stats — same card for both 2D and 3D views */}
       <section>
-        <div className={stylex.props(styles.s_848).className}>
-          <h3 className={stylex.props(styles.s_849).className}>
+        <div {...stylex.props(styles.sectionHeader)}>
+          <h3 {...stylex.props(styles.sectionTitle)}>
             Quick Stats
           </h3>
           <button
             type="button"
             onClick={onSwitchToStatsTab}
-            className={stylex.props(styles.s_850).className}
+            {...stylex.props(styles.viewAllButton)}
           >
             View all
-            <ChevronRight className={stylex.props(styles.s_927).className} />
+            <ChevronRight {...stylex.props(styles.viewAllChevron)} />
           </button>
         </div>
-        <div className={stylex.props(styles.s_841).className}>
+        <div {...stylex.props(styles.quickStatsGrid)}>
           <QuickStatCard
-            icon={<Route className={stylex.props(styles.s_847).className} />}
+            icon={<Route {...stylex.props(styles.quickStatIcon)} />}
             value={mileageKm != null ? `${mileageKm.toFixed(1)} km` : "—"}
             label="Roads"
             tooltip={[
@@ -301,7 +301,7 @@ export function OverviewTab({
             ].filter((l): l is string => l != null)}
           />
           <QuickStatCard
-            icon={<GitFork className={stylex.props(styles.s_847).className} />}
+            icon={<GitFork {...stylex.props(styles.quickStatIcon)} />}
             value={junctions != null ? String(junctions) : "—"}
             label="Junctions"
             tooltip={signalJunctions != null ? [
@@ -311,12 +311,12 @@ export function OverviewTab({
             ].filter((l): l is string => l != null) : undefined}
           />
           <QuickStatCard
-            icon={<PersonStanding className={stylex.props(styles.s_847).className} />}
+            icon={<PersonStanding {...stylex.props(styles.quickStatIcon)} />}
             value={sidewalkKm != null ? `${sidewalkKm.toFixed(1)} km` : "—"}
             label="Sidewalks"
           />
           <QuickStatCard
-            icon={<Footprints className={stylex.props(styles.s_847).className} />}
+            icon={<Footprints {...stylex.props(styles.quickStatIcon)} />}
             value={crosswalks != null ? String(crosswalks) : "—"}
             label="Crosswalks"
             tooltip={
@@ -330,12 +330,12 @@ export function OverviewTab({
             }
           />
           <QuickStatCard
-            icon={<Bike className={stylex.props(styles.s_847).className} />}
+            icon={<Bike {...stylex.props(styles.quickStatIcon)} />}
             value={bikeLaneKm != null ? `${bikeLaneKm.toFixed(1)} km` : "—"}
             label="Bike Lns"
           />
           <QuickStatCard
-            icon={<SquareParking className={stylex.props(styles.s_847).className} />}
+            icon={<SquareParking {...stylex.props(styles.quickStatIcon)} />}
             value={parkingSpaces != null ? String(parkingSpaces) : "—"}
             label="Parking"
             tooltip={[
@@ -357,26 +357,26 @@ export function OverviewTab({
       {/* Scenario Insights */}
       {(tags.length > 0 || candidateLocations.length > 0 || candidateLocationsLoading) && (
         <section>
-          <div className={stylex.props(styles.s_848).className}>
-            <h3 className={stylex.props(styles.s_849).className}>
+          <div {...stylex.props(styles.sectionHeader)}>
+            <h3 {...stylex.props(styles.sectionTitle)}>
               Scenario Insights
             </h3>
             <button
               type="button"
               onClick={() => onSwitchToInsightsTab()}
-              className={stylex.props(styles.s_850).className}
+              {...stylex.props(styles.viewAllButton)}
             >
               View all
-              <ChevronRight className={stylex.props(styles.s_927).className} />
+              <ChevronRight {...stylex.props(styles.viewAllChevron)} />
             </button>
           </div>
 
           {/* Stats row */}
-          <div className={stylex.props(styles.s_852).className}>
-            <span className={stylex.props(styles.s_853).className}>
+          <div {...stylex.props(styles.insightsStatsRow)}>
+            <span {...stylex.props(styles.locationCount)}>
               {candidateLocationsLoading ? (
                 <>
-                  <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
+                  <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" />
                   <span>Loading locations…</span>
                 </>
               ) : (
@@ -385,11 +385,11 @@ export function OverviewTab({
                 </>
               )}
             </span>
-            <span className={stylex.props(styles.s_855).className}>
+            <span {...stylex.props(styles.familyCount)}>
               {familyGroups.length} scenario {familyGroups.length !== 1 ? "families" : "family"}
             </span>
             {totalHighConfidence > 0 && (
-              <span className={stylex.props(styles.s_856).className}>
+              <span {...stylex.props(styles.confidenceCount)}>
                 {totalHighConfidence} high-confidence
               </span>
             )}
@@ -397,7 +397,7 @@ export function OverviewTab({
 
           {/* Family summary cards — 2 columns */}
           <TooltipProvider delayDuration={200}>
-            <div className={stylex.props(styles.s_857).className}>
+            <div {...stylex.props(styles.familyGrid)}>
               {visibleFamilies.map((group) => {
                 const Icon = getFamilyIcon(group.family);
                 const tagCount = group.tags.length;
@@ -408,28 +408,28 @@ export function OverviewTab({
                       <button
                         type="button"
                         onClick={() => onSwitchToInsightsTab(group.family.id)}
-                        className={stylex.props(styles.s_858).className}
+                        {...stylex.props(styles.familyCard)}
                       >
-                        <div className={stylex.props(styles.s_908).className}>
-                          <Icon className={stylex.props(styles.s_977).className} />
-                          <span className={stylex.props(styles.s_861).className}>{group.family.name}</span>
+                        <div {...stylex.props(styles.familyCardHeader)}>
+                          <Icon {...stylex.props(styles.familyIcon)} />
+                          <span {...stylex.props(styles.familyName)}>{group.family.name}</span>
                         </div>
-                        <p className={stylex.props(styles.s_862).className}>
+                        <p {...stylex.props(styles.familySummary)}>
                           {locCount} location{locCount !== 1 ? "s" : ""}, {tagCount} tag{tagCount !== 1 ? "s" : ""}
                         </p>
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" xstyle={styles.s_863}>
+                    <TooltipContent side="top" xstyle={styles.familyTooltip}>
                       <div>
-                        <span className={stylex.props(styles.s_865).className}>Scenario Family:</span> {group.family.name}
+                        <span {...stylex.props(styles.tooltipLabel)}>Scenario Family:</span> {group.family.name}
                       </div>
                       <div>
-                        <span className={stylex.props(styles.s_865).className}>Description:</span> {group.family.description}
+                        <span {...stylex.props(styles.tooltipLabel)}>Description:</span> {group.family.description}
                       </div>
                       <div>
                         {tagCount} tag{tagCount !== 1 ? "s" : ""}, {locCount} location{locCount !== 1 ? "s" : ""}
                       </div>
-                      <div className={stylex.props(styles.s_1005).className}>Click to inspect candidate locations</div>
+                      <div {...stylex.props(styles.tooltipAction)}>Click to inspect candidate locations</div>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -442,12 +442,12 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => setShowAllFamilies((o) => !o)}
-              className={stylex.props(styles.s_867).className}
+              {...stylex.props(styles.expandFamiliesButton)}
             >
               {showAllFamilies
                 ? "Show fewer"
                 : `+${familyGroups.length - 6} more ${familyGroups.length - 6 !== 1 ? "families" : "family"}`}
-              <ChevronRight className={stylex.props(styles.chevronBare, showAllFamilies && styles.rotate90).className} />
+              <ChevronRight {...stylex.props(styles.chevronBare, showAllFamilies && styles.rotate90)} />
             </button>
           )}
         </section>

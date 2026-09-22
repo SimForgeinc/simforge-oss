@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./LocationOverrideFields.stylex";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { FieldLabel } from "./FieldLabel";
 
@@ -20,35 +20,35 @@ export function LocationOverrideFields({
   return (
     <div>
       <FieldLabel>Location</FieldLabel>
-      <p className={stylex.props(styles.s_327).className}>
+      <p {...stylex.props(styles.locationOverrideHint)}>
         Optional. Auto-filled from map coordinates. Override if the nearest city is incorrect.
       </p>
-      <div className={stylex.props(styles.s_291).className}>
+      <div {...stylex.props(styles.locationFieldsGrid)}>
         <div>
-          <label className={stylex.props(styles.s_296).className}>City</label>
+          <label {...stylex.props(styles.locationFieldLabel)}>City</label>
           <Input
             value={city}
             onChange={(e) => onCityChange(e.target.value)}
             placeholder="e.g. San Jose"
-            xstyle={styles.s_297}
+            xstyle={styles.locationFieldInput}
           />
         </div>
         <div>
-          <label className={stylex.props(styles.s_296).className}>State / Region</label>
+          <label {...stylex.props(styles.locationFieldLabel)}>State / Region</label>
           <Input
             value={state}
             onChange={(e) => onStateChange(e.target.value)}
             placeholder="e.g. California"
-            xstyle={styles.s_297}
+            xstyle={styles.locationFieldInput}
           />
         </div>
         <div>
-          <label className={stylex.props(styles.s_296).className}>Country</label>
+          <label {...stylex.props(styles.locationFieldLabel)}>Country</label>
           <Input
             value={country}
             onChange={(e) => onCountryChange(e.target.value)}
             placeholder="e.g. United States"
-            xstyle={styles.s_297}
+            xstyle={styles.locationFieldInput}
           />
         </div>
       </div>

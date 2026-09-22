@@ -1,6 +1,7 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./AddMapPageClient.stylex";
+import { useRouteHeader } from "@simforge-oss/studio-ui/components/TopBarSlot";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -105,7 +106,8 @@ const initialParsedMeta: ParsedMetaState = { xodr: null, geojson: null, rrdata_x
 // ─── Component ──────────────────────────────────────────────────────────────
 
 /** Multi-step form for uploading and registering a new map asset with metadata. */
-export default function AddMapForm() {
+export default function AddMapPageClient() {
+  useRouteHeader({ title: "Add new map" });
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialState);
   const [submitting, setSubmitting] = useState(false);
@@ -481,7 +483,7 @@ export default function AddMapForm() {
             });
           })
           .catch((err) => {
-            console.warn("[AddMapForm] reverse-geocode failed:", err);
+            console.warn("[AddMapPageClient] reverse-geocode failed:", err);
           });
       }
       // Kick off metadata parsing immediately
@@ -675,15 +677,15 @@ export default function AddMapForm() {
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit} className={stylex.props(styles.s_298).className}>
+    <form onSubmit={handleSubmit} {...stylex.props(styles.mapForm)}>
 
       {/* ── Top section: fields (left) + map preview (top-right) ─────── */}
-      <div className={stylex.props(styles.s_299).className}>
+      <div {...stylex.props(styles.topSection)}>
 
         {/* Left: basic map info fields */}
-        <div className={stylex.props(styles.s_300).className}>
+        <div {...stylex.props(styles.formFieldsColumn)}>
           {error && (
-            <p className={stylex.props(styles.s_301).className}>
+            <p {...stylex.props(styles.errorMessage)}>
               {error}
             </p>
           )}
@@ -691,21 +693,21 @@ export default function AddMapForm() {
           {/* GeoJSON upload — first step */}
           <div>
             <FieldLabel htmlFor="map-geojson" required>GeoJSON file</FieldLabel>
-            <p className={stylex.props(styles.s_327).className}>
+            <p {...stylex.props(styles.fieldHelperText)}>
               Required. Center and bounding box are computed automatically and previewed on the map.
             </p>
-            <div className={stylex.props(styles.s_329).className}>
+            <div {...stylex.props(styles.fileUploadRow)}>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => geojsonInputRef.current?.click()}
               >
-                <Paperclip className={stylex.props(styles.s_596).className} />
+                <Paperclip {...stylex.props(styles.attachmentIcon)} />
                 {form.geojsonFile ? "Replace file" : "Choose file"}
               </Button>
               {form.geojsonFile && (
-                <span className={stylex.props(styles.s_331).className}>{form.geojsonFile.name}</span>
+                <span {...stylex.props(styles.selectedFilename)}>{form.geojsonFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["geojson"]} />
             </div>
@@ -714,28 +716,28 @@ export default function AddMapForm() {
               type="file"
               accept=".geojson,.json"
               ref={geojsonInputRef}
-              className={stylex.props(styles.s_373).className}
+              {...stylex.props(styles.hiddenFileInput)}
               onChange={handleGeoJsonChange}
             />
             {form.geojsonParseError && (
-              <p className={stylex.props(styles.s_710).className}>{form.geojsonParseError}</p>
+              <p {...stylex.props(styles.parseErrorMessage)}>{form.geojsonParseError}</p>
             )}
             {form.computed && (
-              <div className={stylex.props(styles.s_333).className}>
-                <div className={stylex.props(styles.s_334).className}>
-                  <span className={stylex.props(styles.s_517).className}>Center</span>
-                  <span className={stylex.props(styles.s_940).className}>
+              <div {...stylex.props(styles.metadataSummary)}>
+                <div {...stylex.props(styles.metadataDetails)}>
+                  <span {...stylex.props(styles.metadataLabel)}>Center</span>
+                  <span {...stylex.props(styles.metadataValue)}>
                     {form.computed.center.lat.toFixed(6)}, {form.computed.center.lng.toFixed(6)}
                   </span>
-                  <span className={stylex.props(styles.s_517).className}>Bbox</span>
-                  <span className={stylex.props(styles.s_940).className}>
+                  <span {...stylex.props(styles.metadataLabel)}>Bbox</span>
+                  <span {...stylex.props(styles.metadataValue)}>
                     {form.computed.bbox.min_lat.toFixed(5)}, {form.computed.bbox.min_lng.toFixed(5)} →{" "}
                     {form.computed.bbox.max_lat.toFixed(5)}, {form.computed.bbox.max_lng.toFixed(5)}
                   </span>
                   {parsedMeta.geojson && (
                     <>
-                      <span className={stylex.props(styles.s_517).className}>Features</span>
-                      <span className={stylex.props(styles.s_940).className}>
+                      <span {...stylex.props(styles.metadataLabel)}>Features</span>
+                      <span {...stylex.props(styles.metadataValue)}>
                         {parsedMeta.geojson.parking_space_count > 0 && `${parsedMeta.geojson.parking_space_count} parking · `}
                         {(parsedMeta.geojson.turn_straight > 0 || parsedMeta.geojson.turn_left > 0 || parsedMeta.geojson.turn_right > 0) && (
                           `turns: ${parsedMeta.geojson.turn_straight}↑ ${parsedMeta.geojson.turn_left}← ${parsedMeta.geojson.turn_right}→`
@@ -755,16 +757,16 @@ export default function AddMapForm() {
 
           <div>
             <FieldLabel htmlFor="map-xodr" required>OpenDRIVE file (.xodr)</FieldLabel>
-            <p className={stylex.props(styles.s_327).className}>
+            <p {...stylex.props(styles.fieldHelperText)}>
               Required. Used for coordinate reference, provenance, and road-network statistics.
             </p>
-            <div className={stylex.props(styles.s_329).className}>
+            <div {...stylex.props(styles.fileUploadRow)}>
               <Button type="button" variant="outline" size="sm" onClick={() => xodrInputRef.current?.click()}>
-                <Paperclip className={stylex.props(styles.s_596).className} />
+                <Paperclip {...stylex.props(styles.attachmentIcon)} />
                 {form.xodrFile ? "Replace file" : "Choose file"}
               </Button>
               {form.xodrFile && (
-                <span className={stylex.props(styles.s_331).className}>{form.xodrFile.name}</span>
+                <span {...stylex.props(styles.selectedFilename)}>{form.xodrFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["xodr"]} />
             </div>
@@ -773,22 +775,22 @@ export default function AddMapForm() {
               type="file"
               accept=".xodr"
               ref={xodrInputRef}
-              className={stylex.props(styles.s_373).className}
+              {...stylex.props(styles.hiddenFileInput)}
               onChange={handleXodrChange}
             />
             {parsedMeta.xodr && (
-              <div className={stylex.props(styles.s_333).className}>
-                <div className={stylex.props(styles.s_334).className}>
-                  <span className={stylex.props(styles.s_517).className}>Road network</span>
-                  <span className={stylex.props(styles.s_940).className}>
+              <div {...stylex.props(styles.metadataSummary)}>
+                <div {...stylex.props(styles.metadataDetails)}>
+                  <span {...stylex.props(styles.metadataLabel)}>Road network</span>
+                  <span {...stylex.props(styles.metadataValue)}>
                     {parsedMeta.xodr.roadStats?.total_roads ?? 0} roads · {parsedMeta.xodr.roadStats?.total_junctions ?? 0} junctions · {parsedMeta.xodr.roadStats?.signal_count ?? 0} signals
                     {(parsedMeta.xodr.roadStats?.total_centerline_length_m ?? 0) > 0 &&
                       ` · ${(parsedMeta.xodr.roadStats.total_centerline_length_m / 1000).toFixed(1)} km`}
                   </span>
                   {parsedMeta.xodr.mapSource?.tool && (
                     <>
-                      <span className={stylex.props(styles.s_517).className}>Source</span>
-                      <span className={stylex.props(styles.s_940).className}>
+                      <span {...stylex.props(styles.metadataLabel)}>Source</span>
+                      <span {...stylex.props(styles.metadataValue)}>
                         {parsedMeta.xodr.mapSource.tool}
                         {parsedMeta.xodr.mapSource.tool_version && ` ${parsedMeta.xodr.mapSource.tool_version}`}
                       </span>
@@ -801,16 +803,16 @@ export default function AddMapForm() {
 
           <div>
             <FieldLabel htmlFor="map-rrdata" required>RoadRunner metadata (.xml)</FieldLabel>
-            <p className={stylex.props(styles.s_327).className}>
-              Required. Typically <span className={stylex.props(styles.s_940).className}>*_rrdata.xml</span> from the export. Used for signalization metadata.
+            <p {...stylex.props(styles.fieldHelperText)}>
+              Required. Typically <span {...stylex.props(styles.metadataValue)}>*_rrdata.xml</span> from the export. Used for signalization metadata.
             </p>
-            <div className={stylex.props(styles.s_329).className}>
+            <div {...stylex.props(styles.fileUploadRow)}>
               <Button type="button" variant="outline" size="sm" onClick={() => rrdataInputRef.current?.click()}>
-                <Paperclip className={stylex.props(styles.s_596).className} />
+                <Paperclip {...stylex.props(styles.attachmentIcon)} />
                 {form.rrdataXmlFile ? "Replace file" : "Choose file"}
               </Button>
               {form.rrdataXmlFile && (
-                <span className={stylex.props(styles.s_331).className}>{form.rrdataXmlFile.name}</span>
+                <span {...stylex.props(styles.selectedFilename)}>{form.rrdataXmlFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["rrdata_xml"]} />
             </div>
@@ -819,20 +821,20 @@ export default function AddMapForm() {
               type="file"
               accept=".xml,text/xml,application/xml"
               ref={rrdataInputRef}
-              className={stylex.props(styles.s_373).className}
+              {...stylex.props(styles.hiddenFileInput)}
               onChange={handleRrdataChange}
             />
             {parsedMeta.rrdata_xml && (
-              <div className={stylex.props(styles.s_333).className}>
-                <div className={stylex.props(styles.s_334).className}>
-                  <span className={stylex.props(styles.s_517).className}>Signalization</span>
-                  <span className={stylex.props(styles.s_940).className}>
+              <div {...stylex.props(styles.metadataSummary)}>
+                <div {...stylex.props(styles.metadataDetails)}>
+                  <span {...stylex.props(styles.metadataLabel)}>Signalization</span>
+                  <span {...stylex.props(styles.metadataValue)}>
                     {parsedMeta.rrdata_xml.signalization?.signal_controlled_object_count ?? 0} controlled junctions · phase timing: {parsedMeta.rrdata_xml.signalization?.has_signal_phase_timing ? "yes" : "no"}
                   </span>
                   {parsedMeta.rrdata_xml.schemaVersion && (
                     <>
-                      <span className={stylex.props(styles.s_517).className}>Schema</span>
-                      <span className={stylex.props(styles.s_940).className}>{parsedMeta.rrdata_xml.schemaVersion}</span>
+                      <span {...stylex.props(styles.metadataLabel)}>Schema</span>
+                      <span {...stylex.props(styles.metadataValue)}>{parsedMeta.rrdata_xml.schemaVersion}</span>
                     </>
                   )}
                 </div>
@@ -865,7 +867,7 @@ export default function AddMapForm() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="Brief description of the map area"
               rows={3}
-              className={stylex.props(styles.s_339).className}
+              {...stylex.props(styles.descriptionTextarea)}
             />
           </div>
 
@@ -877,9 +879,9 @@ export default function AddMapForm() {
               value={form.carlaMapName}
               onChange={(e) => setForm((f) => ({ ...f, carlaMapName: e.target.value }))}
               placeholder="e.g. Belmont_Office_Park_Belmont_CA"
-              xstyle={styles.s_940}
+              xstyle={styles.metadataValue}
             />
-            <p className={stylex.props(styles.s_953).className}>
+            <p {...stylex.props(styles.carlaMapHelperText)}>
               Identifier used by the CARLA simulator for this map. Optional.
             </p>
           </div>
@@ -899,7 +901,7 @@ export default function AddMapForm() {
             <FieldLabel htmlFor="map-crs">Coordinate reference system (CRS)</FieldLabel>
             <select
               id="map-crs"
-              className={stylex.props(styles.s_340).className}
+              {...stylex.props(styles.crsSelect)}
               value={form.crs}
               onChange={(e) => setForm((f) => ({ ...f, crs: e.target.value }))}
             >
@@ -912,28 +914,28 @@ export default function AddMapForm() {
         </div>
 
         {/* Right: 400x400 map preview square */}
-        <div className={stylex.props(styles.s_342).className}>
+        <div {...stylex.props(styles.mapPreview)}>
           {form.geojsonData ? (
             <>
               <AddMapPreviewMapDynamic geojson={form.geojsonData} bbox={form.computed?.bbox ?? null} onThumbnailReady={handleThumbnailReady} />
               {thumbnailCaptured && (
-                <div className={stylex.props(styles.s_343).className}>
-                  <Camera className={stylex.props(styles.s_927).className} />
+                <div {...stylex.props(styles.thumbnailStatus)}>
+                  <Camera {...stylex.props(styles.cameraIcon)} />
                   Thumbnail captured
                 </div>
               )}
             </>
           ) : (
-            <div className={stylex.props(styles.s_345).className}>
-              <MapPin className={stylex.props(styles.s_346).className} />
-              <p className={stylex.props(styles.s_347).className}>Upload a GeoJSON file to preview the map</p>
+            <div {...stylex.props(styles.emptyPreview)}>
+              <MapPin {...stylex.props(styles.mapPinIcon)} />
+              <p {...stylex.props(styles.emptyPreviewMessage)}>Upload a GeoJSON file to preview the map</p>
             </div>
           )}
         </div>
       </div>
 
       {/* ── Bottom section: scenario tags + artifacts + actions ─────── */}
-      <div className={stylex.props(styles.s_348).className}>
+      <div {...stylex.props(styles.bottomSection)}>
 
         {/* Scenario tags */}
         <ScenarioTagsPanel
@@ -954,7 +956,7 @@ export default function AddMapForm() {
         />
 
         {/* Actions */}
-        <div className={stylex.props(styles.s_349).className}>
+        <div {...stylex.props(styles.actionButtons)}>
           <Button type="submit" disabled={submitDisabled}>
             {submitLabel}
           </Button>
@@ -965,19 +967,19 @@ export default function AddMapForm() {
       </div>
 
       {/* ── Debug: full-width, outside scroll area ────────────────────── */}
-      <div className={stylex.props(styles.s_350).className}>
+      <div {...stylex.props(styles.debugSection)}>
         <button
           type="button"
           onClick={() => setDebugOpen((v) => !v)}
-          className={stylex.props(styles.s_351).className}
+          {...stylex.props(styles.debugToggle)}
         >
           <ChevronDown
-            className={stylex.props(styles.chevronLg, !debugOpen && styles.rotateMinus90).className}
+            {...stylex.props(styles.chevronLg, !debugOpen && styles.rotateMinus90)}
           />
           Debug: full map payload (asset + metadata + stats)
         </button>
         {debugOpen && (
-          <pre className={stylex.props(styles.s_352).className}>
+          <pre {...stylex.props(styles.debugPayload)}>
             {JSON.stringify(buildDebugPayload({ form, parsedMeta, autoTagSet, uploads }), null, 2)}
           </pre>
         )}

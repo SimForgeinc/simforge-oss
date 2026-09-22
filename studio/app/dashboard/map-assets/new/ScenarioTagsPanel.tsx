@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./ScenarioTagsPanel.stylex";
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
@@ -69,21 +69,21 @@ export function ScenarioTagsPanel({
 
   return (
     <div>
-      <div className={stylex.props(styles.s_267).className}>
-        <h2 className={stylex.props(styles.s_880).className}>Scenario tags</h2>
+      <div {...stylex.props(styles.sectionHeader)}>
+        <h2 {...stylex.props(styles.sectionTitle)}>Scenario tags</h2>
         <span
-          className={stylex.props(styles.tagCount, tags.length > 0 ? styles.tagCountFilled : styles.tagCountEmpty).className}
+          {...stylex.props(styles.tagCount, tags.length > 0 ? styles.tagCountFilled : styles.tagCountEmpty)}
         >
           {tags.length} tags
         </span>
         {autoTagsLoading && (
-          <span className={stylex.props(styles.s_973).className}>deriving...</span>
+          <span {...stylex.props(styles.loadingStatus)}>deriving...</span>
         )}
       </div>
 
       {/* Tag chips */}
       {tags.length > 0 && (
-        <div className={stylex.props(styles.s_270).className}>
+        <div {...stylex.props(styles.tagList)}>
           {tags.map((tagId) => {
             const descriptor = getMapAssetDescriptorTag(tagId);
             const isAuto = autoTagSet.has(tagId);
@@ -91,10 +91,10 @@ export function ScenarioTagsPanel({
               <span
                 key={tagId}
                 title={descriptor?.shortDefinition}
-                className={stylex.props(styles.tagChip, isAuto ? styles.tagChipAuto : styles.tagChipManual).className}
+                {...stylex.props(styles.tagChip, isAuto ? styles.tagChipAuto : styles.tagChipManual)}
               >
                 {isAuto && (
-                  <span className={stylex.props(styles.s_271).className}>
+                  <span {...stylex.props(styles.autoBadge)}>
                     auto
                   </span>
                 )}
@@ -102,10 +102,10 @@ export function ScenarioTagsPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveTag(tagId)}
-                  className={stylex.props(styles.tagRemove, isAuto ? styles.tagRemoveAuto : styles.tagRemoveManual).className}
+                  {...stylex.props(styles.tagRemove, isAuto ? styles.tagRemoveAuto : styles.tagRemoveManual)}
                   aria-label={`Remove ${tagId}`}
                 >
-                  <X className={stylex.props(styles.s_967).className} />
+                  <X {...stylex.props(styles.removeIcon)} />
                 </button>
               </span>
             );
@@ -114,30 +114,30 @@ export function ScenarioTagsPanel({
       )}
 
       {/* Add tag button + dropdown */}
-      <div className={stylex.props(styles.s_273).className} ref={tagDropdownRef}>
+      <div {...stylex.props(styles.addTagSection)} ref={tagDropdownRef}>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          xstyle={styles.s_288}
+          xstyle={styles.compactOutlineControl}
           onClick={() => { setTagDropdownOpen((o) => !o); setTagSearch(""); }}
         >
           + Add tag
         </Button>
         {tagDropdownOpen && (
-          <div className={stylex.props(styles.s_275).className}>
-            <div className={stylex.props(styles.s_276).className}>
+          <div {...stylex.props(styles.tagDropdownPanel)}>
+            <div {...stylex.props(styles.searchInputWrapper)}>
               <Input
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
                 placeholder="Search tags..."
-                xstyle={styles.s_288}
+                xstyle={styles.compactOutlineControl}
                 autoFocus
               />
             </div>
-            <ul className={stylex.props(styles.s_278).className}>
+            <ul {...stylex.props(styles.tagOptionsList)}>
               {filteredDropdownTags.length === 0 && (
-                <li className={stylex.props(styles.s_279).className}>No matching tags</li>
+                <li {...stylex.props(styles.noMatchingTags)}>No matching tags</li>
               )}
               {filteredDropdownTags.map((tagId) => {
                 const descriptor = getMapAssetDescriptorTag(tagId);
@@ -145,16 +145,16 @@ export function ScenarioTagsPanel({
                   <li key={tagId}>
                     <button
                       type="button"
-                      className={stylex.props(styles.s_280).className}
+                      {...stylex.props(styles.tagOptionButton)}
                       onClick={() => {
                         onAddTag(tagId);
                         setTagDropdownOpen(false);
                         setTagSearch("");
                       }}
                     >
-                      <span className={stylex.props(styles.s_281).className}>{displayTag(tagId)}</span>
+                      <span {...stylex.props(styles.tagOptionLabel)}>{displayTag(tagId)}</span>
                       {descriptor?.shortDefinition && (
-                        <span className={stylex.props(styles.s_1005).className}>{descriptor.shortDefinition}</span>
+                        <span {...stylex.props(styles.tagOptionDescription)}>{descriptor.shortDefinition}</span>
                       )}
                     </button>
                   </li>
@@ -170,15 +170,15 @@ export function ScenarioTagsPanel({
         <button
           type="button"
           onClick={() => setCsvOpen((o) => !o)}
-          className={stylex.props(styles.s_351).className}
+          {...stylex.props(styles.csvToggle)}
         >
           <ChevronDown
-            className={stylex.props(styles.chevron, !csvOpen && styles.rotateMinus90).className}
+            {...stylex.props(styles.chevron, !csvOpen && styles.rotateMinus90)}
           />
           Bulk-add via CSV paste
         </button>
         {csvOpen && (
-          <div className={stylex.props(styles.s_284).className}>
+          <div {...stylex.props(styles.csvPanel)}>
             <textarea
               value={csvInput}
               onChange={(e) => { setCsvInput(e.target.value); setCsvErrors([]); }}
@@ -188,19 +188,19 @@ export function ScenarioTagsPanel({
               placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
               spellCheck={false}
               rows={3}
-              className={stylex.props(styles.s_285, styles.stackY1_5).className}
+              {...stylex.props(styles.csvTextarea, styles.stackY1_5)}
             />
             {csvErrors.length > 0 && (
-              <p className={stylex.props(styles.s_451, styles.stackY1_5).className}>
+              <p {...stylex.props(styles.csvErrorMessage, styles.stackY1_5)}>
                 Unrecognised (ignored):{" "}
-                <span className={stylex.props(styles.s_940).className}>{csvErrors.join(", ")}</span>
+                <span {...stylex.props(styles.csvErrorList)}>{csvErrors.join(", ")}</span>
               </p>
             )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              xstyle={[styles.s_288, styles.stackY1_5]}
+              xstyle={[styles.compactOutlineControl, styles.stackY1_5]}
               disabled={!csvInput.trim()}
               onClick={applyCSV}
             >

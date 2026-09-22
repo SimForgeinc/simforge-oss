@@ -1,0 +1,161 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  collapsibleSectionToggle: {
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    gap: space.sm,
+    paddingBottom: space.sm,
+  },
+  chevronMutedShrink: {
+    width: "0.75rem",
+    height: "0.75rem",
+    flexShrink: 0,
+    color: colors.mutedForeground,
+    transitionProperty: "transform",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  rotate90: {
+    transform: "rotate(90deg)",
+  },
+  sectionIcon: {
+    width: "0.75rem",
+    height: "0.75rem",
+    color: colors.mutedForeground,
+    flexShrink: 0,
+  },
+  sectionLabel: {
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 600,
+  },
+  sectionContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.xxs,
+    marginLeft: "18px",
+  },
+  statRow: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.md,
+    paddingBlock: space.xxs,
+  },
+  statLabel: {
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: colors.mutedForeground,
+  },
+  statValue: {
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 500,
+    fontVariantNumeric: "tabular-nums",
+    textAlign: "right",
+  },
+  statsContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.lg,
+    paddingTop: space.xs,
+  },
+  expansionControls: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  expandCollapseButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.xs,
+    fontSize: "10px",
+    color: { default: colors.mutedForeground, ":hover": colors.text },
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  expandCollapseIcon: {
+    width: "0.75rem",
+    height: "0.75rem",
+  },
+  lodSummary: {
+    marginTop: space.md,
+    marginBottom: space.xs,
+  },
+  lodSummaryTitle: {
+    fontSize: "10px",
+    fontWeight: 500,
+    color: "hsl(var(--muted-foreground) / 0.7)",
+    textTransform: "uppercase",
+    letterSpacing: "0.025em",
+    marginBottom: space.sm,
+  },
+  lodSummaryRows: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.xxs,
+  },
+  readinessSignals: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.md,
+    paddingBlock: space.xs,
+  },
+  limitationsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.sm,
+    paddingBlock: space.xs,
+  },
+  limitationItem: {
+    fontSize: text.sizeXs,
+    lineHeight: 1.625,
+    color: colors.mutedForeground,
+  },
+  strengthStrong: {
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    color: "#4ade80",
+    borderColor: "rgba(34, 197, 94, 0.2)",
+  },
+  strengthModerate: {
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    color: "#fbbf24",
+    borderColor: "rgba(245, 158, 11, 0.2)",
+  },
+  strengthLimited: {
+    backgroundColor: colors.muted,
+    color: colors.mutedForeground,
+    borderColor: colors.border,
+  },
+  readinessSignalHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+    marginBottom: space.xxs,
+  },
+  strengthBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    paddingInline: space.sm,
+    paddingBlock: "1px",
+    fontSize: "10px",
+    fontWeight: 500,
+    borderWidth: "1px",
+    borderStyle: "solid",
+  },
+  readinessSignalLabel: {
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 500,
+  },
+  readinessSignalDescription: {
+    fontSize: "11px",
+    color: colors.mutedForeground,
+    lineHeight: 1.625,
+    marginLeft: space.xxs,
+  },
+});

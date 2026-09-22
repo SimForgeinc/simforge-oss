@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "./map-assets.stylex";
+import { styles } from "./MapMediaPanel.stylex";
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
@@ -95,31 +95,31 @@ export function MapMediaPanel({
   return (
     <div
       ref={panelRef}
-      className={stylex.props(styles.s_127).className}
+      {...stylex.props(styles.mediaPanel)}
       style={{ width }}
     >
       {/* Resize handle — top-left corner; drag toward the map center to grow. */}
       <div
         onMouseDown={onDragStart}
-        className={stylex.props(styles.s_128).className}
+        {...stylex.props(styles.resizeHandle)}
         title="Drag to resize"
       >
-        <div className={stylex.props(styles.s_129).className} />
+        <div {...stylex.props(styles.resizeGrip)} />
       </div>
 
       {/* Slim header */}
-      <div className={stylex.props(styles.s_130).className}>
-        <span className={stylex.props(styles.s_131).className}>
+      <div {...stylex.props(styles.header)}>
+        <span {...stylex.props(styles.title)}>
           {label ? `${assetName} — ${label}` : `${assetName} — fly-by video`}
         </span>
         <Button
           variant="ghost"
           size="icon"
-          xstyle={styles.s_132}
+          xstyle={styles.closeButton}
           onClick={onClose}
           aria-label="Close video panel"
         >
-          <X className={stylex.props(styles.s_991).className} />
+          <X {...stylex.props(styles.closeIcon)} />
         </Button>
       </div>
 
@@ -127,7 +127,7 @@ export function MapMediaPanel({
           letterbox. key remounts on URL change to reset playback + re-fire
           autoPlay; autoPlay is allowed (even with audio) because opening this
           panel is driven by the user's click on the preview's play overlay. */}
-      <div className={stylex.props(styles.s_134).className} style={{ height: videoHeight }}>
+      <div {...stylex.props(styles.videoContainer)} style={{ height: videoHeight }}>
         <video
           key={proxyUrl}
           controls
@@ -138,7 +138,7 @@ export function MapMediaPanel({
             const v = e.currentTarget;
             if (v.videoWidth && v.videoHeight) setAspect(v.videoWidth / v.videoHeight);
           }}
-          className={stylex.props(styles.s_135).className}
+          {...stylex.props(styles.video)}
         >
           <source src={proxyUrl} type="video/mp4" />
           Your browser does not support video playback.

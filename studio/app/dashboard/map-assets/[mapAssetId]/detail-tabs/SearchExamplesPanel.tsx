@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./SearchExamplesPanel.stylex";
 
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
 
@@ -18,20 +18,20 @@ interface SearchExamplesPanelProps {
  */
 export function SearchExamplesPanel({ onRunExample }: SearchExamplesPanelProps) {
   return (
-    <div className={stylex.props(styles.s_802).className}>
+    <div {...stylex.props(styles.searchExamplesPanel)}>
       {SEARCH_EXAMPLE_GROUPS.map((group) => (
-        <section key={group.id} className={stylex.props(styles.s_960).className}>
-          <header className={stylex.props(styles.s_908).className}>
-            <h3 className={stylex.props(styles.s_805).className}>
+        <section key={group.id} {...stylex.props(styles.exampleGroup)}>
+          <header {...stylex.props(styles.groupHeader)}>
+            <h3 {...stylex.props(styles.groupTitle)}>
               {group.title}
             </h3>
             {group.tier === "coming_soon" ? (
-              <span className={stylex.props(styles.s_806).className}>
+              <span {...stylex.props(styles.comingSoonBadge)}>
                 Coming soon
               </span>
             ) : null}
           </header>
-          <div className={stylex.props(styles.s_807).className}>
+          <div {...stylex.props(styles.exampleChipList)}>
             {group.examples.map((example) => (
               <Chip key={example.label} example={example} onRun={onRunExample} />
             ))}
@@ -54,7 +54,7 @@ function Chip({ example, onRun }: ChipProps) {
       type="button"
       disabled={!isAvailable}
       onClick={() => isAvailable && onRun(example.query)}
-      className={stylex.props(styles.examplePill, isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable).className}
+      {...stylex.props(styles.examplePill, isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable)}
       title={isAvailable ? `Run search: ${example.query}` : "Coming in the next release"}
     >
       {example.label}

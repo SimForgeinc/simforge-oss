@@ -4,7 +4,7 @@ import {
   formatTimestamp,
   generateMapAssetId,
 } from "@/app/lib/maps/frontend/add-map-utils";
-import type { FormState, ParsedMetaState } from "./AddMapForm";
+import type { FormState, ParsedMetaState } from "./AddMapPageClient";
 import type { TrackedUpload } from "./UploadStatusBadge";
 
 type DebugPreviewOpts = {

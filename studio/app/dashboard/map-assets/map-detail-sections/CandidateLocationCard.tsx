@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./CandidateLocationCard.stylex";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
@@ -44,20 +44,20 @@ export function CandidateLocationCard({
     <button
       type="button"
       onClick={() => onSelect(selected ? null : candidate.id)}
-      className={stylex.props(styles.candidateCard, selected ? styles.candidateCardSelected : styles.candidateCardIdle).className}
+      {...stylex.props(styles.candidateCard, selected ? styles.candidateCardSelected : styles.candidateCardIdle)}
     >
       {/* Row 1: Label + confidence */}
-      <div className={stylex.props(styles.s_831).className}>
-        <p className={stylex.props(styles.s_814).className}>{candidate.label}</p>
+      <div {...stylex.props(styles.candidateHeader)}>
+        <p {...stylex.props(styles.candidateLabel)}>{candidate.label}</p>
         <span
-          className={stylex.props(
+          {...stylex.props(
             styles.confidenceBadge,
             candidate.confidence >= 0.9
               ? styles.confidenceHigh
               : candidate.confidence >= 0.75
                 ? styles.confidenceMedium
                 : styles.confidenceLow,
-          ).className}
+          )}
         >
           {Math.round(candidate.confidence * 100)}%
         </span>
@@ -65,27 +65,27 @@ export function CandidateLocationCard({
 
       {/* Row 2: One-line explanation */}
       {explanation && (
-        <p className={stylex.props(styles.s_458).className}>{explanation}</p>
+        <p {...stylex.props(styles.candidateExplanation)}>{explanation}</p>
       )}
 
       {/* Row 3: Family chip + tag chips */}
       {(family || visibleTags.length > 0) && (
-        <div className={stylex.props(styles.s_459).className}>
+        <div {...stylex.props(styles.candidateTagsRow)}>
           {family && (
-            <span className={stylex.props(styles.s_460).className}>
+            <span {...stylex.props(styles.familyChip)}>
               {family.name}
             </span>
           )}
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className={stylex.props(styles.s_461).className}
+              {...stylex.props(styles.tagChip)}
             >
               {humanizeTag(tag)}
             </span>
           ))}
           {overflowCount > 0 && (
-            <span className={stylex.props(styles.s_462).className}>
+            <span {...stylex.props(styles.tagOverflowChip)}>
               +{overflowCount}
             </span>
           )}
@@ -94,12 +94,12 @@ export function CandidateLocationCard({
 
       {/* Row 4: Compact evidence */}
       {evidence && (
-        <p className={stylex.props(styles.s_463).className}>{evidence}</p>
+        <p {...stylex.props(styles.compactEvidence)}>{evidence}</p>
       )}
     </button>
     </TooltipTrigger>
     {tooltipText && (
-      <TooltipContent side="bottom" xstyle={styles.s_984}>
+      <TooltipContent side="bottom" xstyle={styles.tooltipContent}>
         {tooltipText}
       </TooltipContent>
     )}

@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./SearchInputBox.stylex";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
@@ -43,8 +43,8 @@ export function SearchInputBox({
   }
 
   return (
-    <div className={stylex.props(styles.s_987).className}>
-      <Search className={stylex.props(styles.s_988).className} />
+    <div {...stylex.props(styles.searchContainer)}>
+      <Search {...stylex.props(styles.searchIcon)} />
       <Input
         ref={inputRef}
         type="text"
@@ -94,7 +94,7 @@ export function SearchInputBox({
             onSubmitSearch();
           }
         }}
-        xstyle={styles.s_989}
+        xstyle={styles.searchInput}
         aria-label="Search this map"
         aria-autocomplete="list"
         aria-expanded={showSuggestions && suggestions.length > 0}
@@ -112,16 +112,16 @@ export function SearchInputBox({
             onDraftQueryChange("");
             onSubmitSearch("");
           }}
-          className={stylex.props(styles.s_990).className}
+          {...stylex.props(styles.clearButton)}
           aria-label="Clear search"
         >
-          <X className={stylex.props(styles.s_991).className} />
+          <X {...stylex.props(styles.clearIcon)} />
         </button>
       ) : null}
       {showSuggestions && suggestions.length > 0 ? (
         <div
           id="map-search-suggestions"
-          className={stylex.props(styles.s_992).className}
+          {...stylex.props(styles.suggestionsList)}
           role="listbox"
         >
           {suggestions.map((suggestion, index) => (
@@ -131,7 +131,7 @@ export function SearchInputBox({
               type="button"
               role="option"
               aria-selected={index === highlightedSuggestionIndex}
-              className={stylex.props(styles.suggestion, index === highlightedSuggestionIndex && styles.suggestionHighlighted).className}
+              {...stylex.props(styles.suggestion, index === highlightedSuggestionIndex && styles.suggestionHighlighted)}
               onMouseDown={(event) => {
                 event.preventDefault();
               }}

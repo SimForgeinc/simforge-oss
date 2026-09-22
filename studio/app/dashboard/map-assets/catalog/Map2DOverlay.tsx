@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles, bridge } from "../map-assets.stylex";
+import { styles } from "./Map2DOverlay.stylex";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
@@ -57,15 +57,15 @@ export function Map2DOverlay({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={stylex.props(styles.s_197).className + " " + bridge.s_197} />
+        <DialogPrimitive.Overlay {...stylex.props(styles.dialogOverlay)} />
         <DialogPrimitive.Content
-          className={stylex.props(styles.s_198).className + " " + bridge.s_198}
+          {...stylex.props(styles.dialogContent)}
           data-testid="map-gallery-2d-overlay"
         >
-          <DialogPrimitive.Title className={stylex.props(styles.s_997).className}>
+          <DialogPrimitive.Title {...stylex.props(styles.dialogText)}>
             {asset.name} 2D map
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className={stylex.props(styles.s_997).className}>
+          <DialogPrimitive.Description {...stylex.props(styles.dialogText)}>
             Explore road geometry, map layers, search results, and attributes for this map.
           </DialogPrimitive.Description>
           <MapDetailPageClient

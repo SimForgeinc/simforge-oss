@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapDetailPageClient.stylex";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -544,34 +544,32 @@ export function MapDetailPageClient({
   );
 
   return (
-    <div className={stylex.props(styles.s_780).className}>
+    <div {...stylex.props(styles.mapWorkspace)}>
       {/* Header bar */}
       {presentation === "page" ? <MapDetailHeader
         asset={currentAsset}
         allAssets={allAssets}
         onEdit={() => setEditMode(true)}
         onPopulateMetadata={() => void ops.handlePopulateMetadata()}
-        onEnrich={() => void ops.handleEnrich()}
         onRefreshSearchIndex={() => void ops.handleRefreshSearchIndex()}
         onGenerateThumbnail={() => thumbnailTriggerRef.current?.generate()}
         onSwitchMap={handleSwitchMap}
         onCreateBlankScenario={() => void handleCreateBlankScenario()}
         canCreateBlankScenario={scenariosReady}
         populateBusy={ops.populateBusy}
-        enrichBusy={ops.enrichBusy}
         refreshSearchIndexBusy={ops.refreshSearchIndexBusy}
         thumbnailBusy={thumbnailBusy}
         createBlankBusy={createBlankBusy}
       /> : (
-        <div className={stylex.props(styles.s_781).className}>
-          <span className={stylex.props(styles.s_973).className}>2D map workspace</span>
+        <div {...stylex.props(styles.overlayHeader)}>
+          <span {...stylex.props(styles.workspaceTitle)}>2D map workspace</span>
           <button
             type="button"
             aria-label="Close 2D map"
             onClick={onClose}
-            className={stylex.props(styles.s_783).className}
+            {...stylex.props(styles.closeButton)}
           >
-            <X className={stylex.props(styles.s_847).className} />
+            <X {...stylex.props(styles.controlIcon)} />
           </button>
         </div>
       )}
@@ -581,9 +579,9 @@ export function MapDetailPageClient({
         <div
           role="status"
           aria-live="polite"
-          className={stylex.props(styles.s_785).className}
+          {...stylex.props(styles.finalizingBanner)}
         >
-          <Loader2 className={stylex.props(styles.s_786).className} />
+          <Loader2 {...stylex.props(styles.loadingIcon)} />
           <span>
             Finalizing this map — extracting locations and building the search
             index. Locations and search results fill in automatically when
@@ -594,11 +592,11 @@ export function MapDetailPageClient({
       ) : null}
 
       {/* Main content: left search panel + map canvas + right panel */}
-      <div className={stylex.props(styles.s_787).className}>
+      <div {...stylex.props(styles.mainContent)}>
         {/* Left search panel */}
         {searchPanelOpen && !editMode ? (
-          <div className={stylex.props(styles.s_788).className}>
-            <div className={stylex.props(styles.s_789).className}>
+          <div {...stylex.props(styles.searchPanel)}>
+            <div {...stylex.props(styles.searchResultsContainer)}>
               <SearchResultsTab
                 key={searchPanelOpenNonce}
                 draftQuery={searchDraft}
@@ -623,38 +621,36 @@ export function MapDetailPageClient({
               type="button"
               onClick={() => setSearchPanelOpen(false)}
               aria-label="Collapse search panel"
-              className={stylex.props(styles.s_790).className}
+              {...stylex.props(styles.collapseSearchButton)}
             >
-              <PanelLeftClose className={stylex.props(styles.s_847).className} />
+              <PanelLeftClose {...stylex.props(styles.controlIcon)} />
             </button>
           </div>
         ) : null}
 
         {/* 2D map canvas */}
-        <div className={stylex.props(styles.s_792).className}>
+        <div {...stylex.props(styles.mapCanvas)}>
           {/* Floating reset-view control */}
-          <div className={stylex.props(styles.s_793).className}>
+          <div {...stylex.props(styles.mapControls)}>
             <button
               type="button"
               onClick={requestResetView}
-              className={stylex.props(styles.s_794).className}
+              {...stylex.props(styles.resetViewButton)}
               aria-label="Reset view"
               title="Reset view"
             >
-              <Home className={stylex.props(styles.s_991).className} />
+              <Home {...stylex.props(styles.resetViewIcon)} />
             </button>
-            <div className={stylex.props(styles.s_796).className}>
+            <div {...stylex.props(styles.viewModeToggle)}>
               {(["2d", "3d"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => setViewMode(mode)}
-                  className={
-                    stylex.props(
+                  {...stylex.props(
                       styles.viewModeSegment,
                       viewMode === mode ? styles.viewModeSegmentActive : styles.viewModeSegmentInactive,
-                    ).className
-                  }
+                    )}
                   aria-pressed={viewMode === mode}
                 >
                   {mode}
@@ -665,18 +661,18 @@ export function MapDetailPageClient({
 
           {/* Floating search bar */}
           {!searchPanelOpen && !editMode ? (
-            <div className={stylex.props(styles.s_797).className}>
+            <div {...stylex.props(styles.floatingSearchBar)}>
               <button
                 type="button"
                 onClick={openSearchPanel}
-                className={stylex.props(styles.s_798).className}
+                {...stylex.props(styles.openSearchButton)}
                 aria-label="Open search"
               >
-                <Search className={stylex.props(styles.s_799).className} />
+                <Search {...stylex.props(styles.searchIcon)} />
                 {searchDraft.trim() || "Search this map..."}
               </button>
               {searchQuery.trim() ? (
-                <p className={stylex.props(styles.s_800).className}>
+                <p {...stylex.props(styles.searchResultCount)}>
                   {searchLoading
                     ? "Searching…"
                     : `${searchState.results.length} ${
@@ -687,7 +683,7 @@ export function MapDetailPageClient({
             </div>
           ) : null}
 
-          <div className={stylex.props(styles.s_801).className}>
+          <div {...stylex.props(styles.mapRendererContainer)}>
             {viewMode === "3d" ? (
               <DigitalTwinViewerPanel
                 asset={currentAsset}

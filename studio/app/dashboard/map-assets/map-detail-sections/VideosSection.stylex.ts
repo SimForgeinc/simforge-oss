@@ -1,0 +1,197 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+
+export const hovered = stylex.defineVars({
+  videoScrimColor: "rgba(0, 0, 0, 0)",
+  videoLabelColor: "hsl(var(--muted-foreground))",
+  playScale: "1",
+});
+
+export const styles = stylex.create({
+  videosToggleButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.025em",
+    color: { default: colors.mutedForeground, ":hover": colors.text },
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  chevron: {
+    width: "0.75rem",
+    height: "0.75rem",
+    flexShrink: 0,
+    transitionProperty: "transform",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  rotate90: {
+    transform: "rotate(90deg)",
+  },
+  videosList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.md,
+    marginTop: space.md,
+  },
+  previewVideoButton: {
+    display: "block",
+    width: "100%",
+    overflow: "hidden",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.2)" },
+    backgroundColor: "hsl(var(--muted) / 0.3)",
+    textAlign: "left",
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+    /*
+     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
+     * `outline: none`: the focus ring above is a box-shadow, which
+     * forced-colours mode discards, and this transparent outline is what
+     * remains visible there.
+     */
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineColor: { default: null, ":focus-visible": "transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": "0 0 0 2px hsl(var(--ring))" },
+    [hovered.videoScrimColor]: "rgba(0, 0, 0, 0)",
+    [hovered.videoLabelColor]: colors.mutedForeground,
+    [hovered.playScale]: "1",
+    ":hover": {
+      [hovered.videoScrimColor]: "rgba(0, 0, 0, 0.1)",
+      [hovered.videoLabelColor]: colors.text,
+      [hovered.playScale]: "1.1",
+    },
+  },
+  previewVideoFrame: {
+    position: "relative",
+    aspectRatio: "16 / 9",
+    width: "100%",
+    backgroundColor: "hsl(var(--muted) / 0.3)",
+  },
+  previewVideo: {
+    height: "100%",
+    width: "100%",
+    objectFit: "cover",
+  },
+  previewPlayOverlay: {
+    position: "absolute",
+    inset: "0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: hovered.videoScrimColor,
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  previewPlayButton: {
+    display: "flex",
+    transform: `scale(${hovered.playScale})`,
+    width: "2.75rem",
+    height: "2.75rem",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "hsl(var(--foreground) / 0.8)",
+    color: colors.bg,
+    transitionProperty: "transform",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  previewPlayIcon: {
+    width: "1.25rem",
+    height: "1.25rem",
+    fill: "currentColor",
+  },
+  previewVideoLabel: {
+    display: "block",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    paddingInline: space.md,
+    paddingBlock: space.sm,
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: hovered.videoLabelColor,
+  },
+  compactVideoButton: {
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    gap: space.md,
+    overflow: "hidden",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.2)" },
+    backgroundColor: { default: "hsl(var(--muted) / 0.3)", ":hover": "hsl(var(--muted) / 0.5)" },
+    paddingBlock: space.sm,
+    paddingLeft: space.sm,
+    paddingRight: space.md,
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+    /*
+     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
+     * `outline: none`: the focus ring above is a box-shadow, which
+     * forced-colours mode discards, and this transparent outline is what
+     * remains visible there.
+     */
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineColor: { default: null, ":focus-visible": "transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": "0 0 0 2px hsl(var(--ring))" },
+    [hovered.videoLabelColor]: colors.mutedForeground,
+    [hovered.playScale]: "1",
+    ":hover": {
+      [hovered.videoLabelColor]: colors.text,
+      [hovered.playScale]: "1.1",
+    },
+  },
+  compactPlayContainer: {
+    display: "flex",
+    width: "3rem",
+    height: "3rem",
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "hsl(var(--muted) / 0.6)",
+  },
+  compactPlayButton: {
+    display: "flex",
+    transform: `scale(${hovered.playScale})`,
+    width: "1.75rem",
+    height: "1.75rem",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "hsl(var(--foreground) / 0.8)",
+    color: colors.bg,
+    transitionProperty: "transform",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  compactPlayIcon: {
+    width: "0.875rem",
+    height: "0.875rem",
+    fill: "currentColor",
+  },
+  compactVideoLabel: {
+    minWidth: 0,
+    flex: "1 1 0%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    textAlign: "left",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: hovered.videoLabelColor,
+  },
+});

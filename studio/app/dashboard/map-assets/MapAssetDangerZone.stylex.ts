@@ -1,0 +1,98 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  dangerZone: {
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "hsl(var(--destructive) / 0.4)",
+    backgroundColor: "hsl(var(--destructive) / 0.05)",
+    padding: space.lg,
+  },
+  dangerToggle: {
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    gap: space.md,
+    textAlign: "left",
+  },
+  dangerIcon: {
+    marginTop: space.xxs,
+    width: "1rem",
+    height: "1rem",
+    flexShrink: 0,
+    color: colors.danger,
+  },
+  dangerHeading: {
+    flex: "1 1 0%",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.025em",
+    color: colors.danger,
+  },
+  dangerChevron: {
+    width: "0.875rem",
+    height: "0.875rem",
+    flexShrink: 0,
+    color: "hsl(var(--destructive) / 0.7)",
+    transitionProperty: "transform",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+  },
+  dangerChevronOpen: { transform: "rotate(180deg)" },
+  dangerContent: {
+    marginTop: space.md,
+  },
+  deletionWarning: {
+    marginBottom: space.md,
+    fontSize: "11px",
+    lineHeight: 1.625,
+    color: colors.mutedForeground,
+  },
+  dangerMessage: {
+    marginBottom: space.md,
+    fontSize: "11px",
+    color: colors.danger,
+  },
+  emailConfirmationInstruction: {
+    marginBottom: space.sm,
+    fontSize: "11px",
+    color: colors.mutedForeground,
+  },
+  sessionEmailDisplay: {
+    marginBottom: space.md,
+    wordBreak: "break-all",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.border,
+    backgroundColor: "hsl(var(--muted) / 0.4)",
+    paddingInline: space.md,
+    paddingBlock: space.xs,
+    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontSize: "10px",
+    color: colors.text,
+  },
+  emailConfirmationLabel: {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: 0,
+  },
+  emailConfirmationInput: {
+    marginBottom: space.md,
+    height: "2rem",
+    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+  },
+  deleteButton: {
+    width: "100%",
+  },
+});

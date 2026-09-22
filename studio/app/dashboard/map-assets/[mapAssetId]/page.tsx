@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./page.stylex";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -38,7 +38,7 @@ async function MapDetailContent({ params }: Props) {
   });
 
   return (
-    <div className={stylex.props(styles.s_779).className}>
+    <div {...stylex.props(styles.pageContainer)}>
       <MapDetailPageClient
         asset={asset}
         allAssets={allAssets}

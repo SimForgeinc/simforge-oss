@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./ThumbnailGenerator.stylex";
 
 import { useState, useRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { Camera, Loader2, AlertCircle } from "lucide-react";
@@ -132,35 +132,35 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
     return (
       <div
         ref={containerRef}
-        {...stylex.props(styles.s_542, styles.thumbnailCanvas)}
+        {...stylex.props(styles.offscreenMapContainer, styles.thumbnailCanvas)}
       />
     );
   }
 
   return (
-    <div className={stylex.props(styles.s_960).className}>
-      <div className={stylex.props(styles.s_908).className}>
+    <div {...stylex.props(styles.thumbnailGenerator)}>
+      <div {...stylex.props(styles.thumbnailControls)}>
         <Button
           type="button"
           variant="outline"
           size="sm"
           disabled={busy}
           onClick={generate}
-          xstyle={styles.s_536}
+          xstyle={styles.generateThumbnailButton}
         >
           {busy ? (
-            <Loader2 className={stylex.props(styles.s_972).className} />
+            <Loader2 {...stylex.props(styles.loadingIcon)} />
           ) : (
-            <Camera className={stylex.props(styles.s_927).className} />
+            <Camera {...stylex.props(styles.thumbnailIcon)} />
           )}
           {hasThumbnail ? "Regenerate thumbnail" : "Generate thumbnail"}
         </Button>
         {busy && (
-          <span className={stylex.props(styles.s_539).className}>{STATUS_LABELS[status]}</span>
+          <span {...stylex.props(styles.progressStatus)}>{STATUS_LABELS[status]}</span>
         )}
         {status === "error" && (
-          <span className={stylex.props(styles.s_540).className}>
-            <AlertCircle className={stylex.props(styles.s_927).className} />
+          <span {...stylex.props(styles.errorMessage)}>
+            <AlertCircle {...stylex.props(styles.thumbnailIcon)} />
             {error}
           </span>
         )}
@@ -168,7 +168,7 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
       {/* Hidden container for offscreen MapLibre rendering (square for card thumbnails) */}
       <div
         ref={containerRef}
-        {...stylex.props(styles.s_542, styles.thumbnailCanvas)}
+        {...stylex.props(styles.offscreenMapContainer, styles.thumbnailCanvas)}
       />
     </div>
   );

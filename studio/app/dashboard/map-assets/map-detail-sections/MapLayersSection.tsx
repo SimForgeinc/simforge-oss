@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapLayersSection.stylex";
 
 import { ChevronRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -214,36 +214,36 @@ export function MapLayersSection(props: MapLayersSectionProps) {
       <button
         type="button"
         onClick={onToggleOpen}
-        className={stylex.props(styles.s_566).className}
+        {...stylex.props(styles.mapLayersToggle)}
         aria-expanded={open}
       >
         <ChevronRight
-          className={stylex.props(styles.chevron, open && styles.rotate90).className}
+          {...stylex.props(styles.chevron, open && styles.rotate90)}
         />
         Map Layers
       </button>
       {open && (
-        <ul className={stylex.props(styles.s_968).className}>
+        <ul {...stylex.props(styles.layerGroupsList)}>
           {/* ── Road Network group ── */}
           {onToggleFeatureType && (
             <>
-              <li className={stylex.props(styles.s_621).className}>
+              <li {...stylex.props(styles.groupHeaderRow)}>
                 <button
                   type="button"
                   onClick={onToggleRoadNetworkExpanded}
-                  className={stylex.props(styles.s_622).className}
+                  {...stylex.props(styles.groupExpandButton)}
                   aria-expanded={roadNetworkExpanded}
                   aria-label="Toggle Road Network"
                 >
                   <ChevronRight
-                    className={stylex.props(styles.chevronMuted, roadNetworkExpanded && styles.rotate90).className}
+                    {...stylex.props(styles.chevronMuted, roadNetworkExpanded && styles.rotate90)}
                   />
                 </button>
-                <span className={stylex.props(styles.s_623).className}>
+                <span {...stylex.props(styles.groupTitle)}>
                   Road Network
                 </span>
                 {geojsonLoading && (
-                  <Loader2 className={stylex.props(styles.s_615).className} />
+                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
                 )}
                 <Switch
                   checked={allFeatureTypesEnabled}
@@ -253,16 +253,16 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 />
               </li>
               {roadNetworkExpanded && (
-                <ul className={stylex.props(styles.s_625).className}>
+                <ul {...stylex.props(styles.groupItemsList)}>
                   {/* Lane display mode: filled lane polygons vs. centerlines.
                       Only meaningful when the map has a lane-polygon sidecar. */}
                   {lanePolygonsAvailable && (
-                    <li className={stylex.props(styles.s_621).className}>
-                      <span className={stylex.props(styles.s_630).className}>
+                    <li {...stylex.props(styles.groupHeaderRow)}>
+                      <span {...stylex.props(styles.layerLabel)}>
                         Lane display
                       </span>
                       <div
-                        className={stylex.props(styles.s_575).className}
+                        {...stylex.props(styles.laneModeToggleGroup)}
                         role="group"
                         aria-label="Lane display mode"
                       >
@@ -275,7 +275,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                             type="button"
                             onClick={() => onSetLaneRenderMode?.(mode)}
                             aria-pressed={laneRenderMode === mode}
-                            className={stylex.props(styles.laneModeButton, laneRenderMode === mode ? styles.laneModeButtonActive : styles.laneModeButtonIdle).className}
+                            {...stylex.props(styles.laneModeButton, laneRenderMode === mode ? styles.laneModeButtonActive : styles.laneModeButtonIdle)}
                           >
                             {label}
                           </button>
@@ -289,17 +289,17 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                     return (
                       <li
                         key={ft.id}
-                        className={stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty).className}
+                        {...stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty)}
                       >
                         <span
-                          className={stylex.props(styles.s_629).className}
+                          {...stylex.props(styles.layerColorDot)}
                           style={{ backgroundColor: ft.color }}
                           aria-hidden="true"
                         />
-                        <span className={stylex.props(styles.s_630).className}>
+                        <span {...stylex.props(styles.layerLabel)}>
                           {ft.label}
                         </span>
-                        <span className={stylex.props(styles.s_624).className}>
+                        <span {...stylex.props(styles.layerCount)}>
                           {count.toLocaleString()}
                         </span>
                         <Switch
@@ -315,19 +315,19 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       (the map's own data), labelled as US-style signs. Sits with
                       the road-network layers, distinct from the Overture one. */}
                   {onToggleInHouseSpeedLimits && (
-                    <li className={stylex.props(styles.s_628).className}>
+                    <li {...stylex.props(styles.compactLayerRow)}>
                       <span
-                        className={stylex.props(styles.s_629, styles.dotInHouseSpeedLimits).className}
+                        {...stylex.props(styles.layerColorDot, styles.dotInHouseSpeedLimits)}
                         aria-hidden="true"
                       />
                       <span
-                        className={stylex.props(styles.s_630).className}
+                        {...stylex.props(styles.layerLabel)}
                         title="XODR-authored per-lane speed limits, labelled in mph on driving lanes"
                       >
                         Speed limits (XODR)
                       </span>
                       {inHouseSpeedLimitsEnabled && inHouseSpeedLimitCount != null && (
-                        <span className={stylex.props(styles.s_624).className}>
+                        <span {...stylex.props(styles.layerCount)}>
                           {inHouseSpeedLimitCount}
                         </span>
                       )}
@@ -346,26 +346,26 @@ export function MapLayersSection(props: MapLayersSectionProps) {
           {/* ── Signals & Signs group ── */}
           {signalFeatureCount > 0 && onToggleSignalCategory && (
             <>
-              <li className={stylex.props(styles.s_621).className}>
+              <li {...stylex.props(styles.groupHeaderRow)}>
                 <button
                   type="button"
                   onClick={onToggleSignalsExpanded}
-                  className={stylex.props(styles.s_622).className}
+                  {...stylex.props(styles.groupExpandButton)}
                   aria-expanded={signalsLayerExpanded}
                   aria-label="Toggle Signals and Signs"
                 >
                   <ChevronRight
-                    className={stylex.props(styles.chevronMuted, signalsLayerExpanded && styles.rotate90).className}
+                    {...stylex.props(styles.chevronMuted, signalsLayerExpanded && styles.rotate90)}
                   />
                 </button>
-                <span className={stylex.props(styles.s_623).className}>
+                <span {...stylex.props(styles.groupTitle)}>
                   Signals & Signs
                 </span>
-                <span className={stylex.props(styles.s_624).className}>
+                <span {...stylex.props(styles.layerCount)}>
                   {signalFeatureCount}
                 </span>
                 {signalOverlayLoading && (
-                  <Loader2 className={stylex.props(styles.s_615).className} />
+                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
                 )}
                 <Switch
                   checked={allSignalsEnabled}
@@ -375,24 +375,24 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 />
               </li>
               {signalsLayerExpanded && (
-                <ul className={stylex.props(styles.s_625).className}>
+                <ul {...stylex.props(styles.groupItemsList)}>
                   {activeCats.map((cat) => {
                     const count = signalCategoryCounts[cat.id] ?? 0;
                     const isEnabled = enabledSignalCategories.has(cat.id);
                     return (
                       <li
                         key={cat.id}
-                        className={stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty).className}
+                        {...stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty)}
                       >
                         <span
-                          className={stylex.props(styles.s_629).className}
+                          {...stylex.props(styles.layerColorDot)}
                           style={{ backgroundColor: cat.color }}
                           aria-hidden="true"
                         />
-                        <span className={stylex.props(styles.s_630).className}>
+                        <span {...stylex.props(styles.layerLabel)}>
                           {cat.label}
                         </span>
-                        <span className={stylex.props(styles.s_624).className}>
+                        <span {...stylex.props(styles.layerCount)}>
                           {count.toLocaleString()}
                         </span>
                         <Switch
@@ -411,26 +411,26 @@ export function MapLayersSection(props: MapLayersSectionProps) {
 
           {/* ── Enrichment Layers group ── */}
           {enrichmentLayers.length === 0 && onEnrich && (
-            <li className={stylex.props(styles.s_592).className}>
-              <p className={stylex.props(styles.s_593).className}>
+            <li {...stylex.props(styles.enrichmentEmptyState)}>
+              <p {...stylex.props(styles.enrichmentEmptyMessage)}>
                 No enrichment layers yet. Run enrichment to add bus stops, schools, and hospitals.
               </p>
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                xstyle={styles.s_708}
+                xstyle={styles.enrichmentActionButton}
                 disabled={enrichBusy}
                 onClick={onEnrich}
               >
                 {enrichBusy ? (
                   <>
-                    <Loader2 className={stylex.props(styles.s_709).className} />
+                    <Loader2 {...stylex.props(styles.enrichmentLoadingIcon)} />
                     Enriching…
                   </>
                 ) : (
                   <>
-                    <Sparkles className={stylex.props(styles.s_596).className} />
+                    <Sparkles {...stylex.props(styles.enrichmentActionIcon)} />
                     Run Enrichment
                   </>
                 )}
@@ -439,19 +439,19 @@ export function MapLayersSection(props: MapLayersSectionProps) {
           )}
           {enrichmentLayers.length > 0 && (
             <>
-              <li className={stylex.props(styles.s_621).className}>
+              <li {...stylex.props(styles.groupHeaderRow)}>
                 <button
                   type="button"
                   onClick={onToggleEnrichmentExpanded}
-                  className={stylex.props(styles.s_622).className}
+                  {...stylex.props(styles.groupExpandButton)}
                   aria-expanded={enrichmentLayersExpanded}
                   aria-label="Toggle Enrichment Layers"
                 >
                   <ChevronRight
-                    className={stylex.props(styles.chevronMuted, enrichmentLayersExpanded && styles.rotate90).className}
+                    {...stylex.props(styles.chevronMuted, enrichmentLayersExpanded && styles.rotate90)}
                   />
                 </button>
-                <span className={stylex.props(styles.s_623).className}>
+                <span {...stylex.props(styles.groupTitle)}>
                   Enrichment Layers
                 </span>
                 <Switch
@@ -471,11 +471,11 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 />
               </li>
               {enrichmentLayersExpanded && (
-                <ul className={stylex.props(styles.s_625).className}>
+                <ul {...stylex.props(styles.groupItemsList)}>
                   {enrichmentProviderRelease && (
-                    <li className={stylex.props(styles.s_601).className}>
+                    <li {...stylex.props(styles.providerReleaseRow)}>
                       <span>Overture</span>
-                      <span className={stylex.props(styles.s_602).className}>
+                      <span {...stylex.props(styles.providerReleaseLabel)}>
                         ({enrichmentProviderRelease})
                       </span>
                     </li>
@@ -487,17 +487,17 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                     return (
                       <li
                         key={layer.layer_id}
-                        className={stylex.props(styles.layerRow, isEmpty && styles.layerRowEmpty).className}
+                        {...stylex.props(styles.layerRow, isEmpty && styles.layerRowEmpty)}
                       >
                         {glyphPath ? (
                           <span
-                            className={stylex.props(styles.s_603).className}
+                            {...stylex.props(styles.enrichmentGlyphDot)}
                             style={{ backgroundColor: dot }}
                             aria-hidden="true"
                           >
                             <svg
                               viewBox="0 0 15 15"
-                              className={stylex.props(styles.s_967).className}
+                              {...stylex.props(styles.enrichmentGlyphIcon)}
                               fill="#ffffff"
                             >
                               <path d={glyphPath} />
@@ -505,15 +505,15 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                           </span>
                         ) : (
                           <span
-                            className={stylex.props(styles.s_629).className}
+                            {...stylex.props(styles.layerColorDot)}
                             style={{ backgroundColor: dot }}
                             aria-hidden="true"
                           />
                         )}
-                        <span className={stylex.props(styles.s_630).className}>
+                        <span {...stylex.props(styles.layerLabel)}>
                           {layer.label}
                         </span>
-                        <span className={stylex.props(styles.s_624).className}>
+                        <span {...stylex.props(styles.layerCount)}>
                           {layer.feature_count}
                         </span>
                         <Switch
@@ -535,20 +535,20 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       A street fact (not an overlay_payload layer), so it rides
                       its own toggle/fetch but lives with the Overture layers. */}
                   {onToggleSpeedLimits && (
-                    <li className={stylex.props(styles.s_628).className}>
+                    <li {...stylex.props(styles.compactLayerRow)}>
                       <span
-                        className={stylex.props(styles.s_629, styles.dotOvertureSpeedLimits).className}
+                        {...stylex.props(styles.layerColorDot, styles.dotOvertureSpeedLimits)}
                         aria-hidden="true"
                       />
                       <span
-                        className={stylex.props(styles.s_630).className}
+                        {...stylex.props(styles.layerLabel)}
                         title="Overture posted speed limits (blue border), labelled on driving lanes"
                       >
                         Speed limits (Overture)
                       </span>
                       {speedLimitsEnabled && speedLimitCount != null && (
                         <span
-                          className={stylex.props(styles.s_624).className}
+                          {...stylex.props(styles.layerCount)}
                           title="driving lanes with a posted Overture limit"
                         >
                           {speedLimitCount}
@@ -569,23 +569,23 @@ export function MapLayersSection(props: MapLayersSectionProps) {
           {/* ── Scenario Candidates group ── */}
           {candidateFamilyLayers.length > 0 && (
             <>
-              <li className={stylex.props(styles.s_621).className}>
+              <li {...stylex.props(styles.groupHeaderRow)}>
                 <button
                   type="button"
                   onClick={onToggleCandidatesExpanded}
-                  className={stylex.props(styles.s_622).className}
+                  {...stylex.props(styles.groupExpandButton)}
                   aria-expanded={candidatesLayerExpanded}
                   aria-label="Toggle Scenario Candidates"
                 >
                   <ChevronRight
-                    className={stylex.props(styles.chevronMuted, candidatesLayerExpanded && styles.rotate90).className}
+                    {...stylex.props(styles.chevronMuted, candidatesLayerExpanded && styles.rotate90)}
                   />
                 </button>
-                <span className={stylex.props(styles.s_623).className}>
+                <span {...stylex.props(styles.groupTitle)}>
                   Scenario Candidates
                 </span>
                 {candidateLocationsLoading && (
-                  <Loader2 className={stylex.props(styles.s_615).className} />
+                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
                 )}
                 <Switch
                   checked={allCandidateFamiliesEnabled}
@@ -602,20 +602,20 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 />
               </li>
               {candidatesLayerExpanded && (
-                <ul className={stylex.props(styles.s_625).className}>
+                <ul {...stylex.props(styles.groupItemsList)}>
                   {candidateFamilyLayers.map((layer) => (
                     <li
                       key={layer.familyId}
-                      className={stylex.props(styles.s_628).className}
+                      {...stylex.props(styles.compactLayerRow)}
                     >
                       <span
-                        className={stylex.props(styles.s_629, styles.dotScenarioCandidate).className}
+                        {...stylex.props(styles.layerColorDot, styles.dotScenarioCandidate)}
                         aria-hidden="true"
                       />
-                      <span className={stylex.props(styles.s_630).className}>
+                      <span {...stylex.props(styles.layerLabel)}>
                         {layer.label}
                       </span>
-                      <span className={stylex.props(styles.s_624).className}>
+                      <span {...stylex.props(styles.layerCount)}>
                         {layer.count.toLocaleString()}
                       </span>
                       <Switch
@@ -633,23 +633,23 @@ export function MapLayersSection(props: MapLayersSectionProps) {
           {/* ── Twin Fidelity group (digital-twin-eval scorecard) ── */}
           {twinFidelityScorecard && (
             <>
-              <li className={stylex.props(styles.s_621).className}>
+              <li {...stylex.props(styles.groupHeaderRow)}>
                 <button
                   type="button"
                   onClick={onToggleTwinFidelityExpanded}
-                  className={stylex.props(styles.s_622).className}
+                  {...stylex.props(styles.groupExpandButton)}
                   aria-expanded={twinFidelityExpanded}
                   aria-label="Toggle Twin Fidelity"
                 >
                   <ChevronRight
-                    className={stylex.props(styles.chevronMuted, twinFidelityExpanded && styles.rotate90).className}
+                    {...stylex.props(styles.chevronMuted, twinFidelityExpanded && styles.rotate90)}
                   />
                 </button>
-                <span className={stylex.props(styles.s_623).className}>
+                <span {...stylex.props(styles.groupTitle)}>
                   Twin Fidelity
                 </span>
                 <span
-                  className={stylex.props(styles.s_624).className}
+                  {...stylex.props(styles.layerCount)}
                   title="scored cells / total cells with drive coverage"
                 >
                   {twinCellCounts.scored}/{twinCellCounts.total}
@@ -669,25 +669,25 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 />
               </li>
               {twinFidelityExpanded && (
-                <ul className={stylex.props(styles.s_625).className}>
-                  <li className={stylex.props(styles.s_626).className}>
+                <ul {...stylex.props(styles.groupItemsList)}>
+                  <li {...stylex.props(styles.twinMetadataRow)}>
                     {twinFidelityScorecard.properties.twin_build_id}
-                    <span className={stylex.props(styles.s_627).className}>
+                    <span {...stylex.props(styles.twinReferenceVersion)}>
                       vs {twinFidelityScorecard.properties.ref_version}
                     </span>
                   </li>
                   {TWIN_FIDELITY_SUBLAYERS.map((sub) => (
                     <li
                       key={sub.id}
-                      className={stylex.props(styles.s_628).className}
+                      {...stylex.props(styles.compactLayerRow)}
                     >
                       <span
-                        className={stylex.props(styles.s_629).className}
+                        {...stylex.props(styles.layerColorDot)}
                         style={{ backgroundColor: sub.dot }}
                         aria-hidden="true"
                       />
                       <span
-                        className={stylex.props(styles.s_630).className}
+                        {...stylex.props(styles.layerLabel)}
                         title={sub.description}
                       >
                         {sub.label}
@@ -699,8 +699,8 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       />
                     </li>
                   ))}
-                  <li className={stylex.props(styles.s_631).className}>
-                    <span className={stylex.props(styles.s_632).className}>
+                  <li {...stylex.props(styles.resolutionSelectorRow)}>
+                    <span {...stylex.props(styles.resolutionLabel)}>
                       Cell size
                     </span>
                     {TWIN_FIDELITY_RESOLUTIONS.map((r) => (
@@ -708,7 +708,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         key={r.res}
                         type="button"
                         onClick={() => onSetTwinFidelityRes?.(r.res)}
-                        className={stylex.props(styles.resolutionButton, twinFidelityRes === r.res ? styles.resolutionButtonActive : styles.resolutionButtonIdle).className}
+                        {...stylex.props(styles.resolutionButton, twinFidelityRes === r.res ? styles.resolutionButtonActive : styles.resolutionButtonIdle)}
                         aria-pressed={twinFidelityRes === r.res}
                         aria-label={`Set twin fidelity cell size to ${r.label}`}
                       >
@@ -716,7 +716,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       </button>
                     ))}
                   </li>
-                  <li className={stylex.props(styles.s_633).className}>
+                  <li {...stylex.props(styles.twinFidelityLegend)}>
                     0–100 = % of real lidar within 1 m of the twin · grey = no
                     twin coverage
                   </li>

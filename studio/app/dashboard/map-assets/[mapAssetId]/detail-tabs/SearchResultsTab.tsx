@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./SearchResultsTab.stylex";
 
 import { useMemo, useState } from "react";
 import {
@@ -288,8 +288,8 @@ function TopologyPathChain({
   // itself plus the `truncated` flag is enough to render it correctly.
   const headEnd = Math.floor(path.length / 2);
   return (
-    <div className={stylex.props(styles.s_868).className}>
-      <span className={stylex.props(styles.s_869).className}>
+    <div {...stylex.props(styles.pathChain)}>
+      <span {...stylex.props(styles.pathLabel)}>
         Path
       </span>
       {path.map((step, idx) => {
@@ -301,29 +301,29 @@ function TopologyPathChain({
         return (
           <div
             key={`${step.objectId}-${idx}`}
-            className={stylex.props(styles.s_961).className}
+            {...stylex.props(styles.pathStepWrapper)}
           >
             {showEllipsisBefore ? (
               <>
                 <MoreHorizontal
-                  className={stylex.props(styles.s_871).className}
+                  {...stylex.props(styles.pathEllipsisIcon)}
                   aria-label="path truncated"
                 />
                 <ChevronRight
-                  className={stylex.props(styles.s_872).className}
+                  {...stylex.props(styles.pathEllipsisSeparator)}
                   aria-hidden="true"
                 />
               </>
             ) : null}
             <div
-              className={stylex.props(styles.stepChip, stepHighlighted ? styles.stepChipOn : styles.stepChipOff).className}
+              {...stylex.props(styles.stepChip, stepHighlighted ? styles.stepChipOn : styles.stepChipOff)}
               title={`${step.title ?? step.objectId} (${step.cumulativeM} m from subject)`}
             >
-              <StepIcon className={stylex.props(styles.s_873).className} aria-hidden="true" />
-              <span className={stylex.props(styles.s_874).className}>
+              <StepIcon {...stylex.props(styles.pathStepIcon)} aria-hidden="true" />
+              <span {...stylex.props(styles.pathStepObjectId)}>
                 {step.objectId}
               </span>
-              <span className={stylex.props(styles.s_875).className}>
+              <span {...stylex.props(styles.pathStepDistance)}>
                 {step.cumulativeM}m
               </span>
               {onToggleHighlight ? (
@@ -343,7 +343,7 @@ function TopologyPathChain({
             </div>
             {!isLast ? (
               <ChevronRight
-                className={stylex.props(styles.s_876).className}
+                {...stylex.props(styles.pathStepSeparator)}
                 aria-hidden="true"
               />
             ) : null}
@@ -387,9 +387,9 @@ export function HighlightToggleButton({
       aria-pressed={active}
       aria-label={label}
       title={label}
-      className={stylex.props(styles.highlightToggle, dimensions, active ? styles.highlightToggleOn : styles.highlightToggleOff).className}
+      {...stylex.props(styles.highlightToggle, dimensions, active ? styles.highlightToggleOn : styles.highlightToggleOff)}
     >
-      <Target className={stylex.props(iconSize).className} aria-hidden="true" />
+      <Target {...stylex.props(iconSize)} aria-hidden="true" />
     </button>
   );
 }
@@ -438,8 +438,8 @@ export function SearchResultsTab({
 
   if (!query.trim()) {
     return (
-      <div className={stylex.props(styles.s_877).className}>
-        <div className={stylex.props(styles.s_878).className}>
+      <div {...stylex.props(styles.emptyQueryState)}>
+        <div {...stylex.props(styles.emptyQueryInputPanel)}>
           <SearchInputBox
             draftQuery={draftQuery}
             onDraftQueryChange={onDraftQueryChange}
@@ -447,16 +447,16 @@ export function SearchResultsTab({
             autoFocus={autoFocus}
           />
 
-          <div className={stylex.props(styles.s_879).className}>
-            <p className={stylex.props(styles.s_880).className}>Try a spatial query</p>
-            <p className={stylex.props(styles.s_881).className}>
+          <div {...stylex.props(styles.queryPrompt)}>
+            <p {...stylex.props(styles.queryPromptHeading)}>Try a spatial query</p>
+            <p {...stylex.props(styles.queryPromptDescription)}>
               Click a chip to run it, or build your own query — every junction,
               street, and feature on the map is indexed.
             </p>
           </div>
         </div>
 
-        <div className={stylex.props(styles.s_882).className}>
+        <div {...stylex.props(styles.searchExamplesPanel)}>
           <SearchExamplesPanel onRunExample={onSubmitSearch} />
         </div>
       </div>
@@ -465,8 +465,8 @@ export function SearchResultsTab({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className={stylex.props(styles.s_883).className}>
-        <div className={stylex.props(styles.s_884).className}>
+      <div {...stylex.props(styles.resultsPage)}>
+        <div {...stylex.props(styles.resultsHeader)}>
           <SearchInputBox
             draftQuery={draftQuery}
             onDraftQueryChange={onDraftQueryChange}
@@ -474,21 +474,21 @@ export function SearchResultsTab({
             autoFocus={autoFocus}
           />
           {showDebug ? (
-            <div className={stylex.props(styles.s_885).className}>
-              <p className={stylex.props(styles.s_1005).className}>
-                <span className={stylex.props(styles.s_887).className}>Parsed query</span>
+            <div {...stylex.props(styles.debugPanel)}>
+              <p {...stylex.props(styles.debugSectionLabel)}>
+                <span {...stylex.props(styles.parsedQueryLabel)}>Parsed query</span>
                 {" — "}
                 chips: {chips.length}, free-text: {freeText.length}, results: {results.length}
               </p>
               {chips.length > 0 ? (
                 <div>
-                  <p className={stylex.props(styles.s_1005).className}>Chips</p>
-                  <div className={stylex.props(styles.s_969).className}>
+                  <p {...stylex.props(styles.debugSectionLabel)}>Chips</p>
+                  <div {...stylex.props(styles.debugTokenList)}>
                     {chips.map((chip) => (
                       <Badge
                         key={`debug-${chip.id}`}
                         variant="outline"
-                        xstyle={styles.s_893}
+                        xstyle={styles.debugTokenBadge}
                       >
                         {chip.id}
                       </Badge>
@@ -498,13 +498,13 @@ export function SearchResultsTab({
               ) : null}
               {freeText.length > 0 ? (
                 <div>
-                  <p className={stylex.props(styles.s_1005).className}>Free-text tokens</p>
-                  <div className={stylex.props(styles.s_969).className}>
+                  <p {...stylex.props(styles.debugSectionLabel)}>Free-text tokens</p>
+                  <div {...stylex.props(styles.debugTokenList)}>
                     {freeText.map((token) => (
                       <Badge
                         key={`ft-${token}`}
                         variant="outline"
-                        xstyle={styles.s_893}
+                        xstyle={styles.debugTokenBadge}
                       >
                         {token}
                       </Badge>
@@ -515,7 +515,7 @@ export function SearchResultsTab({
             </div>
           ) : null}
           {chips.length > 0 || freeText.length > 0 ? (
-            <div className={stylex.props(styles.s_894).className}>
+            <div {...stylex.props(styles.filterChipsRow)}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -523,12 +523,12 @@ export function SearchResultsTab({
                     onClick={() => setShowDebug((prev) => !prev)}
                     aria-label="Toggle search debug"
                     aria-pressed={showDebug}
-                    className={stylex.props(styles.debugToggle, showDebug && styles.debugToggleOn).className}
+                    {...stylex.props(styles.debugToggle, showDebug && styles.debugToggleOn)}
                   >
-                    <Bug className={stylex.props(styles.s_927).className} />
+                    <Bug {...stylex.props(styles.compactContextIcon)} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" xstyle={styles.s_948}>
+                <TooltipContent side="bottom" xstyle={styles.tooltipContent}>
                   {showDebug ? "Hide debug" : "Show debug"}
                 </TooltipContent>
               </Tooltip>
@@ -536,13 +536,13 @@ export function SearchResultsTab({
                 chip.kind === "relation" && chip.operatorLabel && chip.objectLabel ? (
                   <span
                     key={chip.id}
-                    className={stylex.props(styles.s_897).className}
+                    {...stylex.props(styles.relationChip)}
                     title={`Spatial relation: ${chip.operatorLabel} ${chip.objectLabel}`}
                   >
-                    <span className={stylex.props(styles.s_898).className}>
+                    <span {...stylex.props(styles.relationOperator)}>
                       {chip.operatorLabel}
                     </span>
-                    <span className={stylex.props(styles.s_899).className}>
+                    <span {...stylex.props(styles.relationObject)}>
                       {chip.objectLabel}
                     </span>
                   </span>
@@ -550,7 +550,7 @@ export function SearchResultsTab({
                   <Badge
                     key={chip.id}
                     variant="secondary"
-                    xstyle={styles.s_900}
+                    xstyle={styles.structuredFilterBadge}
                   >
                     {chip.label}
                   </Badge>
@@ -560,7 +560,7 @@ export function SearchResultsTab({
                 <Badge
                   key={`free-${token}`}
                   variant="outline"
-                  xstyle={styles.s_901}
+                  xstyle={styles.freeTextBadge}
                   title="Free-text token — not matched to a structured filter"
                 >
                   {token}
@@ -570,13 +570,13 @@ export function SearchResultsTab({
           ) : null}
         </div>
 
-        <div className={stylex.props(styles.s_902).className}>
+        <div {...stylex.props(styles.resultsContent)}>
           {loading ? (
-            <p className={stylex.props(styles.s_903).className}>
-              <Loader2 className={stylex.props(styles.s_972).className} aria-hidden="true" /> Loading map data…
+            <p {...stylex.props(styles.loadingStatus)}>
+              <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" /> Loading map data…
             </p>
           ) : (
-            <div className={stylex.props(styles.s_905).className}>
+            <div {...stylex.props(styles.resultsHeaderActions)}>
               <span>Results ({results.length})</span>
               <CopyJsonButton
                 payload={{ query, chips, freeText: freeText ?? [], results }}
@@ -585,8 +585,8 @@ export function SearchResultsTab({
               />
             </div>
           )}
-          <div className={stylex.props(styles.s_906).className}>
-            <div className={stylex.props(styles.s_907).className}>
+          <div {...stylex.props(styles.resultList)}>
+            <div {...stylex.props(styles.resultCardsContainer)}>
               {results.map((result) => {
                 const selected = result.id === selectedResultId;
                 const ResultIcon = iconForSubtype(result.subtype);
@@ -607,45 +607,45 @@ export function SearchResultsTab({
                     onMouseLeave={() => onHoverResult?.(null)}
                     onFocus={() => onHoverResult?.(result.id)}
                     onBlur={() => onHoverResult?.(null)}
-                    className={stylex.props(styles.resultCard, selected ? styles.resultCardSelected : styles.resultCardIdle).className}
+                    {...stylex.props(styles.resultCard, selected ? styles.resultCardSelected : styles.resultCardIdle)}
                   >
-                    <div className={stylex.props(styles.s_908).className}>
+                    <div {...stylex.props(styles.resultCardHeader)}>
                       <ResultIcon
-                        className={stylex.props(styles.s_909).className}
+                        {...stylex.props(styles.resultTypeIcon)}
                         aria-label={`${result.subtype} icon`}
                       />
-                      <p className={stylex.props(styles.s_910).className}>
+                      <p {...stylex.props(styles.resultTitle)}>
                         {result.title}
                       </p>
-                      {selected ? <Check className={stylex.props(styles.s_911).className} /> : null}
+                      {selected ? <Check {...stylex.props(styles.selectedCheckIcon)} /> : null}
                     </div>
 
-                    <div className={stylex.props(styles.s_912).className}>
-                      <div className={stylex.props(styles.s_919).className}>
-                        <p className={stylex.props(styles.s_920).className}>Type</p>
-                        <p className={stylex.props(styles.s_918).className}>
+                    <div {...stylex.props(styles.resultMetadataGrid)}>
+                      <div {...stylex.props(styles.metadataItem)}>
+                        <p {...stylex.props(styles.metadataLabel)}>Type</p>
+                        <p {...stylex.props(styles.metadataValue)}>
                           {formatFamilyLabel(result.objectFamily)}
                         </p>
                       </div>
-                      <div className={stylex.props(styles.s_919).className}>
-                        <p className={stylex.props(styles.s_920).className}>SubType</p>
-                        <p className={stylex.props(styles.s_918).className}>{result.subtype}</p>
+                      <div {...stylex.props(styles.metadataItem)}>
+                        <p {...stylex.props(styles.metadataLabel)}>SubType</p>
+                        <p {...stylex.props(styles.metadataValue)}>{result.subtype}</p>
                       </div>
-                      <div className={stylex.props(styles.s_919).className}>
-                        <p className={stylex.props(styles.s_920).className}>Confidence</p>
-                        <p className={stylex.props(styles.s_921).className}>
+                      <div {...stylex.props(styles.metadataItem)}>
+                        <p {...stylex.props(styles.metadataLabel)}>Confidence</p>
+                        <p {...stylex.props(styles.confidenceValue)}>
                           {Math.round(result.candidateConfidence * 100)}%
                         </p>
                       </div>
                     </div>
 
                     {result.exactMapAttributes.length > 0 ? (
-                      <div className={stylex.props(styles.s_922).className}>
+                      <div {...stylex.props(styles.attributeBadgeRow)}>
                         {result.exactMapAttributes.map((fact) => (
                           <Badge
                             key={fact}
                             variant="secondary"
-                            xstyle={styles.s_923}
+                            xstyle={styles.attributeBadge}
                           >
                             {fact}
                           </Badge>
@@ -654,7 +654,7 @@ export function SearchResultsTab({
                     ) : null}
 
                     {result.relatedObjectRefs && result.relatedObjectRefs.length > 0 ? (
-                      <div className={stylex.props(styles.s_924).className}>
+                      <div {...stylex.props(styles.relatedRefsList)}>
                         {result.relatedObjectRefs.slice(0, 2).map((ref) => {
                           const RefIcon = ref.subtype ? iconForSubtype(ref.subtype) : MapPin;
                           const refHighlighted =
@@ -662,25 +662,25 @@ export function SearchResultsTab({
                           return (
                             <div
                               key={`${result.id}-rel-${ref.objectId}`}
-                              className={stylex.props(styles.s_925).className}
+                              {...stylex.props(styles.relatedRefItem)}
                             >
                               <div
-                                className={stylex.props(styles.refChip, refHighlighted ? styles.refChipOn : styles.refChipOff).className}
+                                {...stylex.props(styles.refChip, refHighlighted ? styles.refChipOn : styles.refChipOff)}
                                 title={`${formatRelation(ref.relation)} ${ref.title ?? ref.objectId}${ref.distance_m != null ? ` (${ref.distance_m} m)` : ""}`}
                               >
-                                <span className={stylex.props(styles.s_926).className}>
-                                  <ArrowRight className={stylex.props(styles.s_927).className} aria-hidden="true" />
-                                  <span className={stylex.props(styles.s_928).className}>{formatRelation(ref.relation)}</span>
+                                <span {...stylex.props(styles.relationLabelRow)}>
+                                  <ArrowRight {...stylex.props(styles.compactContextIcon)} aria-hidden="true" />
+                                  <span {...stylex.props(styles.relationText)}>{formatRelation(ref.relation)}</span>
                                 </span>
                                 <RefIcon
-                                  className={stylex.props(styles.s_929).className}
+                                  {...stylex.props(styles.relatedRefIcon)}
                                   aria-hidden="true"
                                 />
-                                <span className={stylex.props(styles.s_930).className}>
+                                <span {...stylex.props(styles.relatedRefTitle)}>
                                   {ref.title ?? ref.objectId}
                                 </span>
                                 {ref.distance_m != null ? (
-                                  <span className={stylex.props(styles.s_931).className}>
+                                  <span {...stylex.props(styles.relatedRefDistance)}>
                                     {ref.distance_m} m
                                   </span>
                                 ) : null}
@@ -718,14 +718,14 @@ export function SearchResultsTab({
                                 />
                               ) : null}
                               {showDebug ? (
-                                <div className={stylex.props(styles.s_932).className}>
-                                  <span className={stylex.props(styles.s_940).className}>{ref.objectId}</span>
+                                <div {...stylex.props(styles.relatedRefDebugMetadata)}>
+                                  <span {...stylex.props(styles.debugValue)}>{ref.objectId}</span>
                                   <span>·</span>
-                                  <span className={stylex.props(styles.s_940).className}>
+                                  <span {...stylex.props(styles.debugValue)}>
                                     {formatGeometryRef(ref.geometryReference)}
                                   </span>
                                   <span>·</span>
-                                  <span className={stylex.props(styles.s_940).className}>{formatCentroid(ref.centroid)}</span>
+                                  <span {...stylex.props(styles.debugValue)}>{formatCentroid(ref.centroid)}</span>
                                 </div>
                               ) : null}
                             </div>
@@ -735,41 +735,41 @@ export function SearchResultsTab({
                     ) : null}
 
                     {showDebug ? (
-                      <div className={stylex.props(styles.s_936).className}>
-                        <div className={stylex.props(styles.s_937).className}>
-                          <span className={stylex.props(styles.s_940).className}>{result.id}</span>
+                      <div {...stylex.props(styles.resultDebugPanel)}>
+                        <div {...stylex.props(styles.resultDebugIdentity)}>
+                          <span {...stylex.props(styles.debugValue)}>{result.id}</span>
                           <span>·</span>
-                          <span className={stylex.props(styles.s_940).className}>
+                          <span {...stylex.props(styles.debugValue)}>
                             {formatGeometryRef(result.geometryReference)}
                           </span>
                           <span>·</span>
-                          <span className={stylex.props(styles.s_940).className}>{formatCentroid(result.centroid)}</span>
+                          <span {...stylex.props(styles.debugValue)}>{formatCentroid(result.centroid)}</span>
                         </div>
                         {result.matchReasons.length > 0 ? (
-                          <div className={stylex.props(styles.s_941).className}>
+                          <div {...stylex.props(styles.matchReasons)}>
                             match: {result.matchReasons.slice(0, 3).join(", ")}
                           </div>
                         ) : null}
                       </div>
                     ) : null}
 
-                    <div className={stylex.props(styles.s_942).className}>
+                    <div {...stylex.props(styles.resultActions)}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
                             size="icon"
-                            xstyle={styles.s_946}
+                            xstyle={styles.resultActionButton}
                             onClick={(event) => {
                               event.stopPropagation();
                               onZoomToResult(result.id);
                             }}
                             aria-label="Zoom on Map"
                           >
-                            <Map className={stylex.props(styles.s_991).className} />
+                            <Map {...stylex.props(styles.resultActionIcon)} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" xstyle={styles.s_948}>
+                        <TooltipContent side="bottom" xstyle={styles.tooltipContent}>
                           Zoom on Map
                         </TooltipContent>
                       </Tooltip>
@@ -778,17 +778,17 @@ export function SearchResultsTab({
                           <Button
                             variant="outline"
                             size="icon"
-                            xstyle={styles.s_946}
+                            xstyle={styles.resultActionButton}
                             onClick={(event) => {
                               event.stopPropagation();
                               onUseInScenario(result.id);
                             }}
                             aria-label="Use in Scenario"
                           >
-                            <Play className={stylex.props(styles.s_991).className} />
+                            <Play {...stylex.props(styles.resultActionIcon)} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" xstyle={styles.s_948}>
+                        <TooltipContent side="bottom" xstyle={styles.tooltipContent}>
                           Use in Scenario
                         </TooltipContent>
                       </Tooltip>
@@ -797,21 +797,21 @@ export function SearchResultsTab({
                 );
               })}
               {results.length === 0 ? (
-                <div className={stylex.props(styles.s_949).className}>
+                <div {...stylex.props(styles.emptyResultsState)}>
                   {loading ? (
-                    <p className={stylex.props(styles.s_950).className}>
-                      <Loader2 className={stylex.props(styles.s_972).className} aria-hidden="true" /> Loading map data…
+                    <p {...stylex.props(styles.emptyResultsLoading)}>
+                      <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" /> Loading map data…
                     </p>
                   ) : (
                     <>
-                      <p className={stylex.props(styles.s_1006).className}>No matching locations</p>
-                      <p className={stylex.props(styles.s_953).className}>
+                      <p {...stylex.props(styles.noResultsHeading)}>No matching locations</p>
+                      <p {...stylex.props(styles.noResultsGuidance)}>
                         Try broadening the query or removing a few constraints.
                       </p>
                       {alternativeQueries.length > 0 ? (
-                        <div className={stylex.props(styles.s_954).className}>
-                          <p className={stylex.props(styles.s_955).className}>Or try each term on its own:</p>
-                          <div className={stylex.props(styles.s_956).className}>
+                        <div {...stylex.props(styles.alternativeQueriesSection)}>
+                          <p {...stylex.props(styles.alternativeQueriesHeading)}>Or try each term on its own:</p>
+                          <div {...stylex.props(styles.alternativeQueriesList)}>
                             {alternativeQueries.map((alt) => (
                               <button
                                 key={alt}
@@ -820,7 +820,7 @@ export function SearchResultsTab({
                                   onDraftQueryChange(alt);
                                   onSubmitSearch(alt);
                                 }}
-                                className={stylex.props(styles.s_957).className}
+                                {...stylex.props(styles.alternativeQueryButton)}
                               >
                                 {alt}
                               </button>

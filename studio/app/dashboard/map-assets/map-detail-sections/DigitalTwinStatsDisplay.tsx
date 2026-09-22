@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./DigitalTwinStatsDisplay.stylex";
 
 import { useState, useCallback } from "react";
 import {
@@ -57,25 +57,25 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className={stylex.props(styles.s_634).className}
+        {...stylex.props(styles.collapsibleSectionToggle)}
         aria-expanded={open}
       >
         <ChevronRight
-          className={stylex.props(styles.chevronMutedShrink, open && styles.rotate90).className}
+          {...stylex.props(styles.chevronMutedShrink, open && styles.rotate90)}
         />
-        <Icon className={stylex.props(styles.s_635).className} />
-        <span className={stylex.props(styles.s_636).className}>{label}</span>
+        <Icon {...stylex.props(styles.sectionIcon)} />
+        <span {...stylex.props(styles.sectionLabel)}>{label}</span>
       </button>
-      {open && <div className={stylex.props(styles.s_637).className}>{children}</div>}
+      {open && <div {...stylex.props(styles.sectionContent)}>{children}</div>}
     </div>
   );
 }
 
 function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className={stylex.props(styles.s_648).className}>
-      <span className={stylex.props(styles.s_973).className}>{label}</span>
-      <span className={stylex.props(styles.s_650).className}>{value}</span>
+    <div {...stylex.props(styles.statRow)}>
+      <span {...stylex.props(styles.statLabel)}>{label}</span>
+      <span {...stylex.props(styles.statValue)}>{value}</span>
     </div>
   );
 }
@@ -109,15 +109,15 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
   const coverageArea = stats.sceneDimensions.widthM * stats.sceneDimensions.depthM;
 
   return (
-    <div className={stylex.props(styles.s_641).className}>
+    <div {...stylex.props(styles.statsContainer)}>
       {/* Expand / Collapse all */}
-      <div className={stylex.props(styles.s_642).className}>
+      <div {...stylex.props(styles.expansionControls)}>
         <button
           type="button"
           onClick={toggleAll}
-          className={stylex.props(styles.s_643).className}
+          {...stylex.props(styles.expandCollapseButton)}
         >
-          <ChevronsUpDown className={stylex.props(styles.s_927).className} />
+          <ChevronsUpDown {...stylex.props(styles.expandCollapseIcon)} />
           {allExpanded ? "Collapse all" : "Expand all"}
         </button>
       </div>
@@ -157,17 +157,17 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         <StatRow label="LOD levels" value={String(stats.lodLevels)} />
 
         {/* Per-LOD summary table */}
-        <div className={stylex.props(styles.s_645).className}>
-          <p className={stylex.props(styles.s_646).className}>
+        <div {...stylex.props(styles.lodSummary)}>
+          <p {...stylex.props(styles.lodSummaryTitle)}>
             Per-LOD Summary
           </p>
-          <div className={stylex.props(styles.s_925).className}>
+          <div {...stylex.props(styles.lodSummaryRows)}>
             {stats.lodSummaries.map((lod) => (
-              <div key={lod.level} className={stylex.props(styles.s_648).className}>
-                <span className={stylex.props(styles.s_973).className}>
+              <div key={lod.level} {...stylex.props(styles.statRow)}>
+                <span {...stylex.props(styles.statLabel)}>
                   LOD{lod.level}
                 </span>
-                <span className={stylex.props(styles.s_650).className}>
+                <span {...stylex.props(styles.statValue)}>
                   {fmt(lod.totalTriangles)} tris &middot; {fmtBytes(lod.totalFileSize)}
                 </span>
               </div>
@@ -233,7 +233,7 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         open={openSections.has("readiness")}
         onToggle={() => toggle("readiness")}
       >
-        <div className={stylex.props(styles.s_651).className}>
+        <div {...stylex.props(styles.readinessSignals)}>
           <ReadinessSignal
             label="Visual richness"
             description={
@@ -279,11 +279,11 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         open={openSections.has("limitations")}
         onToggle={() => toggle("limitations")}
       >
-        <div className={stylex.props(styles.s_652).className}>
-          <p className={stylex.props(styles.s_664).className}>
+        <div {...stylex.props(styles.limitationsList)}>
+          <p {...stylex.props(styles.limitationItem)}>
             No object-level semantic counts available (buildings, props, signage).
           </p>
-          <p className={stylex.props(styles.s_664).className}>
+          <p {...stylex.props(styles.limitationItem)}>
             Material and texture inventory not included in manifest.
           </p>
         </div>
@@ -313,15 +313,15 @@ function ReadinessSignal({
 
   return (
     <div>
-      <div className={stylex.props(styles.s_655).className}>
+      <div {...stylex.props(styles.readinessSignalHeader)}>
         <span
-          className={stylex.props(styles.strengthBadge, colorMap[strength]).className}
+          {...stylex.props(styles.strengthBadge, colorMap[strength])}
         >
           {strength}
         </span>
-        <span className={stylex.props(styles.s_827).className}>{label}</span>
+        <span {...stylex.props(styles.readinessSignalLabel)}>{label}</span>
       </div>
-      <p className={stylex.props(styles.s_657).className}>
+      <p {...stylex.props(styles.readinessSignalDescription)}>
         {description}
       </p>
     </div>
