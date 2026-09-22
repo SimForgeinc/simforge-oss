@@ -12,7 +12,9 @@
  * 1. the map closure: both builds assemble the same bundle from the same files
  *    (same `closureDigest`), equal to the one the golden manifest recorded
  *    through the editor's own loader (`buildSimulationMapClosure`);
- * 2. ambient generation: `materializeAmbientTraffic` returns the same input;
+ * 2. input resolution: `materializeAmbientTraffic` and `compileTemplate` (at a
+ *    pinned site: catalog resolution, seeding, materialization) return the same
+ *    input in both builds;
  * 3. simulation: the canonical trace JSON is byte-identical, and its digest is
  *    the manifest's `traceSha256`.
  *
@@ -43,7 +45,10 @@ interface GoldenCase {
   id: string;
   tier: 'ci' | 'local';
   map: string;
-  source: { kind: 'input'; path: string } | { kind: 'ambient'; preset: string; seed: string; clipSeconds: number; maxActors?: number; radiusM?: number };
+  source:
+    | { kind: 'input'; path: string }
+    | { kind: 'template'; path: string; siteId: string; drawIndex: number }
+    | { kind: 'ambient'; preset: string; seed: string; clipSeconds: number; maxActors?: number; radiusM?: number };
 }
 interface GoldenResult { mapClosureDigest: string; traceSha256: string; inputHash: string }
 
@@ -56,6 +61,7 @@ interface Build {
   Trace: { parse(bytes: Uint8Array): { digest(): string; toJson(): string } };
   runSimulation(input: Scenario, graph: unknown, options?: string | null): string;
   materializeAmbientTraffic(input: Scenario, graph: unknown, profile: string, options?: string | null): [Scenario, string] | unknown[];
+  compileTemplate(template: string, bundle: Bundle, site?: string | null, seed?: number | string | null, options?: string | null): { input: Scenario; manifestJson: string };
 }
 interface Bundle { closureDigest?: string; graph: unknown; controlPlanJson(): string }
 interface Scenario { toJson(): string }
@@ -190,6 +196,21 @@ describe.skipIf(!existsSync(WASM) || selected.length === 0)('N-API and WASM buil
           return `${scenario.toJson()}\n${provenance}`;
         };
         expect(generated(wasm, pair.wasm)).toBe(generated(addon, pair.addon));
+      }, 300_000);
+
+      it.skipIf(testCase.source.kind !== 'template')('compiles the template to the same input in both builds', () => {
+        if (testCase.source.kind !== 'template') return;
+        const { source } = testCase;
+        const pair = bundlesFor(testCase);
+        const text = readFileSync(join(REPO, source.path), 'utf8');
+        const compiled = (build: Build, bundle: Bundle) => {
+          const result = build.compileTemplate(text, bundle, source.siteId, source.drawIndex, null);
+          return `${result.input.toJson()}\n${result.manifestJson}`;
+        };
+        const fromAddon = compiled(addon, pair.addon);
+        expect(compiled(wasm, pair.wasm)).toBe(fromAddon);
+        // The committed resolved input is what this build compiles today.
+        expect(JSON.parse(fromAddon.split('\n')[0]!)).toEqual(JSON.parse(inputDocument(testCase)));
       }, 300_000);
 
       it('simulates on the N-API addon to the manifest digest', () => {

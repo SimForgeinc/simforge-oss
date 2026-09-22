@@ -55,6 +55,8 @@ export type GoldenTier = 'ci' | 'local';
 
 export type GoldenSource =
   | { readonly kind: 'input'; readonly path: string }
+  /** A v2 template compiled natively at a pinned site (catalog resolution, seeding, materialization). */
+  | { readonly kind: 'template'; readonly path: string; readonly siteId: string; readonly drawIndex: number }
   | {
       readonly kind: 'ambient';
       readonly preset: 'light' | 'city' | 'heavy';
@@ -177,6 +179,14 @@ export async function resolveCaseInput(testCase: GoldenCase, bundle: MapBundle):
     // the TS schema's defaults are not part of what is being locked here.
     const document = readJsonMaybeGz(path.resolve(REPO_ROOT, source.path)) as Record<string, unknown>;
     return ('input' in document && 'manifest' in document ? document['input'] : document) as SimScenarioInput;
+  }
+  if (source.kind === 'template') {
+    // Raw template text straight to the native compiler, as the identity test does.
+    const text = readFileSync(path.resolve(REPO_ROOT, source.path), 'utf8');
+    const compiled = engine().module.compileTemplate(text, bundle.native, source.siteId, source.drawIndex, null);
+    const manifest = JSON.parse(compiled.manifestJson) as { feasible: boolean };
+    if (!manifest.feasible) throw new Error(`golden case ${testCase.id}: template is infeasible at site ${source.siteId}`);
+    return JSON.parse(compiled.input.toJson()) as SimScenarioInput;
   }
   const controls = bundle.controlPlan();
   const base = withEditablePhysicsDefault(blankWorldInput(testCase.map, source.clipSeconds));
@@ -317,7 +327,7 @@ export function writeManifest(run: GoldenRun, previous: GoldenManifest | null, c
   mkdirSync(path.join(GOLDEN_ROOT, 'inputs'), { recursive: true });
   for (const testCase of corpus.cases) {
     const input = run.inputs[testCase.id];
-    if (testCase.source.kind !== 'ambient' || !input) continue;
+    if (testCase.source.kind === 'input' || !input) continue;
     // gzip with no name/mtime: the same input always writes the same bytes.
     writeFileSync(resolvedInputPath(testCase), gzipSync(Buffer.from(`${JSON.stringify(input)}\n`), { level: 9 }));
   }

@@ -35,6 +35,20 @@
       "ticks": 1001,
       "traceSha256": "6b042fcab60de36b4c178218fb3dada0f020e4b5e3998d90eb4afaa1644b71d9"
     },
+    "rfs-template-ltap": {
+      "actors": 2,
+      "inputHash": "1dc509fd7f10042eb488d663dff06ec0ee09744cca8fc5e84124fa55ae25f60e",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 801,
+      "traceSha256": "2e3cc5fa92925defd5011df45a71e15782782cc1b67c7193f26d5871eced1851"
+    },
+    "rfs-template-ltap-pinned-seed": {
+      "actors": 2,
+      "inputHash": "1dc509fd7f10042eb488d663dff06ec0ee09744cca8fc5e84124fa55ae25f60e",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 801,
+      "traceSha256": "2e3cc5fa92925defd5011df45a71e15782782cc1b67c7193f26d5871eced1851"
+    },
     "rfs-uturn-car": {
       "actors": 1,
       "inputHash": "cedec770a66f28cfbada20701e1e20520262839e0a8142f733ff4f9948ac3aa0",
