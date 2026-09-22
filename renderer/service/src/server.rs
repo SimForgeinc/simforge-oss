@@ -548,6 +548,10 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                         size_bytes,
                         meta_bytes,
                     },
+                    capabilities: crate::proto::NATIVE_SERVICE_CAPABILITIES
+                        .iter()
+                        .map(|c| (*c).to_owned())
+                        .collect(),
                 },
             }
         }
