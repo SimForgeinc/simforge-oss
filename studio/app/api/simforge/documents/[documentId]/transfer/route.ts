@@ -43,7 +43,7 @@ export async function POST(request: Request, route: Context) {
       return NextResponse.json({ error: "transfer_refused", message: prepared.message }, { status: 422 });
     }
     const result = await createCrossMapScenarioDocument(auth.context, documentId, {
-      title: parsed.data.title,
+      title: prepared.title,
       targetMapVersionId: parsed.data.targetMapVersionId,
       content: prepared.content,
       receipt: prepared.receipt,
