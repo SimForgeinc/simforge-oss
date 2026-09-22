@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   emptyState: {
@@ -19,7 +19,7 @@ export const styles = stylex.create({
   },
   emptyStateMessage: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   inspectorContainer: {
     display: "flex",
@@ -33,8 +33,8 @@ export const styles = stylex.create({
   },
   selectionTitle: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     color: colors.mutedForeground,
   },
   clearSelectionButton: {
@@ -46,7 +46,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
   },
   clearSelectionIcon: {
@@ -59,12 +59,12 @@ export const styles = stylex.create({
     gap: space.s1,
   },
   elementCard: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   elementCardSelected: {
     borderColor: colors.primary,
@@ -79,11 +79,11 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     gap: space.s1_5,
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   chevronLg: {
@@ -92,7 +92,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -104,10 +104,10 @@ export const styles = stylex.create({
     whiteSpace: "nowrap",
   },
   expandedDetails: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.border,
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s2,
   },
   featureActionRow: {
@@ -122,14 +122,14 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   detailValue: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   copyGeoJsonButton: {
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s1_5,
@@ -138,7 +138,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
   },
   copiedIcon: {
@@ -158,9 +158,9 @@ export const styles = stylex.create({
   },
   streetFactsHeading: {
     fontSize: "11px",
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   detailRow: {
@@ -168,7 +168,7 @@ export const styles = stylex.create({
     alignItems: "baseline",
     gap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   detailLabel: {
     flexShrink: 0,
@@ -176,11 +176,11 @@ export const styles = stylex.create({
   },
   overtureSource: {
     marginLeft: space.s1,
-    fontWeight: 400,
+    fontWeight: text.weightNormal,
     color: colors.mutedForeground,
   },
   sectionDivider: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "hsl(var(--border) / 0.5)",
     paddingTop: space.s1,
@@ -192,7 +192,7 @@ export const styles = stylex.create({
     marginBottom: space.s2,
   },
   identifierValue: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     color: "hsl(var(--foreground) / 0.8)",
     fontSize: "10px",
     wordBreak: "break-all",
@@ -200,9 +200,9 @@ export const styles = stylex.create({
   propertiesHeading: {
     marginBottom: space.s1_5,
     fontSize: "11px",
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
 });

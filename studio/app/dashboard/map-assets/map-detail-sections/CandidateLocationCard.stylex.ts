@@ -1,17 +1,17 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   candidateCard: {
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s2,
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   candidateCardSelected: {
     borderColor: "rgba(251, 146, 60, 0.7)",
@@ -29,8 +29,8 @@ export const styles = stylex.create({
   },
   candidateLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   confidenceBadge: {
@@ -38,26 +38,26 @@ export const styles = stylex.create({
     paddingInline: space.s1,
     paddingBlock: space.s0_5,
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
   },
   confidenceHigh: {
     backgroundColor: "rgba(2, 44, 34, 0.4)",
-    color: "#34d399",
-    borderWidth: "1px",
+    color: colors.positive,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgba(4, 120, 87, 0.4)",
   },
   confidenceMedium: {
     backgroundColor: "rgba(23, 37, 84, 0.4)",
     color: "#60a5fa",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgba(29, 78, 216, 0.4)",
   },
   confidenceLow: {
     backgroundColor: colors.muted,
     color: colors.mutedForeground,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
   },
@@ -81,14 +81,14 @@ export const styles = stylex.create({
     paddingInline: space.s2,
     paddingBlock: "1px",
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.mutedForeground,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
   },
   tagChip: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.4)",
@@ -111,6 +111,6 @@ export const styles = stylex.create({
     maxWidth: "20rem",
     whiteSpace: "pre-line",
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
   },
 });

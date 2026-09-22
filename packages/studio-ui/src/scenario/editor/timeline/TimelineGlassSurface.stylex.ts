@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { layers } from "../../../stylex/tokens.stylex";
+import { layers, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]
@@ -63,7 +63,7 @@ export const styles = stylex.create({
     isolation: "isolate",
     overflow: "hidden",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.25)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
     boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 80px -24px rgba(0,0,0,0.85)",

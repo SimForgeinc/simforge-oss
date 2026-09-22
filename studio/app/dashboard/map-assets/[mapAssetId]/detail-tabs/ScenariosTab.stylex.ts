@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   scenariosContainer: {
@@ -8,7 +8,7 @@ export const styles = stylex.create({
     gap: space.s3,
   },
   newScenarioSection: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     padding: space.s3,
@@ -24,44 +24,44 @@ export const styles = stylex.create({
   },
   newScenarioTitle: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   newScenarioDescription: {
     marginTop: space.s1,
     fontSize: "11px",
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   scenarioActionButton: {
     flexShrink: 0,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s1,
     fontSize: "11px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.text,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": colors.muted },
     cursor: { default: null, ":disabled": "not-allowed" },
     opacity: { default: null, ":disabled": 0.6 },
   },
   templateScenariosTitle: {
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   emptyTemplatesMessage: {
     marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   templateScenariosList: {
@@ -75,7 +75,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s3,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     padding: space.s2,
@@ -85,8 +85,8 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   templateActorCount: {

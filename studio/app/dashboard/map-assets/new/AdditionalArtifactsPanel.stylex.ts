@@ -1,24 +1,24 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   artifactsPanel: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.border,
-    paddingTop: "1.25rem",
+    paddingTop: space.s5,
   },
   artifactsHeading: {
     marginBottom: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   artifactsDescription: {
     marginBottom: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   attachmentIcon: {
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   artifactFilename: {
@@ -50,7 +50,7 @@ export const styles = stylex.create({
   },
   artifactTypeBadge: {
     flexShrink: 0,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: "10px",
     lineHeight: "inherit",
   },

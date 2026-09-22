@@ -11,7 +11,7 @@ export const styles = stylex.create({
     padding: space.s6,
     textAlign: "center",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
 });

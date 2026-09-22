@@ -52,12 +52,12 @@ export const styles = stylex.create({
     minHeight: "2.75rem",
     flexShrink: 0,
     alignItems: "center",
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
     paddingTop: space.s2,
     paddingBottom: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
   },
   // bg-amber-400 text-black
@@ -92,7 +92,7 @@ export const styles = stylex.create({
       default: "rgb(0 0 0 / 1)",
       ":hover": "rgb(0 0 0 / 0.85)",
     },
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // text-primary-foreground hover:bg-primary-foreground/10 — deliberately does
   // not pin the hover colour, so the ghost button's own `hover:text-*` keeps

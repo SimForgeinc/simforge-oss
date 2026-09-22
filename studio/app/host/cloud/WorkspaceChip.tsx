@@ -16,11 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
+import { space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 type WorkspaceSummary = { id: string; name: string; slug: string; type: string };
 
 const styles = stylex.create({
-  meta: { marginLeft: "auto", paddingLeft: "0.75rem", fontSize: "10px", opacity: 0.5, textTransform: "capitalize" },
+  meta: { marginLeft: "auto", paddingLeft: space.s3, fontSize: "10px", opacity: 0.5, textTransform: "capitalize" },
 });
 
 /**

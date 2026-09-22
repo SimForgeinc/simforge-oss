@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "../../../stylex/tokens.stylex";
+import { colors, layers, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 // `animate-pulse`. Guarded for `prefers-reduced-motion` because the callsite
 // paired the utility with `motion-reduce:animate-none`.
@@ -53,7 +53,7 @@ export const styles = stylex.create({
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // absolute inset-y-0 z-40 -ml-1.5 w-3 cursor-col-resize touch-none
   // The `group` marker is gone: the hairline below reads `hovered` instead.
@@ -86,7 +86,7 @@ export const styles = stylex.create({
     backgroundColor: hovered.splitLineColor,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // relative z-10 grid h-12 shrink-0 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] overflow-hidden rounded-t-[24px] border-b border-white/10 bg-gradient-to-r from-[#E8E044]/[0.07] via-white/[0.025] to-transparent
   relGridTight: {
@@ -99,7 +99,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderTopLeftRadius: "24px",
     borderTopRightRadius: "24px",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: "linear-gradient(to right, rgb(232 224 68 / 0.07), rgb(255 255 255 / 0.025), transparent)",
   },
@@ -110,7 +110,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
   },
   // flex w-max flex-col items-center justify-center gap-0.5 px-2
@@ -182,7 +182,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
     [hovered.playheadScale]: "1",
     ":hover": {
@@ -202,7 +202,7 @@ export const styles = stylex.create({
     boxShadow: "0 0 10px rgba(232, 224, 68, 0.55)",
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // relative z-10 min-h-0 flex-1 overflow-hidden bg-black/10
   relFillClip: {
@@ -222,7 +222,7 @@ export const styles = stylex.create({
   // min-h-full pb-12
   minHFullPb12: {
     minHeight: "100%",
-    paddingBottom: "3rem",
+    paddingBottom: space.s12,
   },
   // m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35
   gridCenteredXs: {
@@ -230,14 +230,14 @@ export const styles = stylex.create({
     display: "grid",
     height: "6rem",
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: "rgb(255 255 255 / 0.15)",
     paddingLeft: space.s4,
     paddingRight: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.inkFaint,
   },
   // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-black/20
@@ -245,7 +245,7 @@ export const styles = stylex.create({
     display: "grid",
     height: "2.5rem",
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0, 1fr)",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(0 0 0 / 0.2)",
   },
@@ -255,7 +255,7 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "stretch",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.06)",
   },
@@ -290,7 +290,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": "rgb(232 224 68 / 0.1)",
+      ":hover": colors.accentWash,
     },
   },
   // size-3 shrink-0
@@ -319,11 +319,11 @@ export const styles = stylex.create({
     width: "1.5rem",
     flexShrink: "0",
     placeItems: "center",
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     color: {
       default: colors.inkFaint,
-      ":hover": "rgb(252 165 165 / 1)",
+      ":hover": colors.critical,
     },
     outline: {
       default: null,
@@ -359,7 +359,7 @@ export const styles = stylex.create({
   // grid border-b border-white/10
   gridRuleB2: {
     display: "grid",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
   },
   // relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.04] text-[#E8E044]/80
@@ -370,7 +370,7 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "flex-start",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.04)",
     color: "rgb(232 224 68 / 0.8)",
@@ -412,7 +412,7 @@ export const styles = stylex.create({
     },
     color: {
       default: null,
-      ":enabled:hover": "rgb(255 255 255 / 1)",
+      ":enabled:hover": colors.ink,
     },
     outline: {
       default: null,
@@ -443,12 +443,12 @@ export const styles = stylex.create({
     padding: 0,
     color: {
       default: colors.inkFaint,
-      ":focus-visible": "rgb(252 165 165 / 1)",
-      ":hover": "rgb(252 165 165 / 1)",
+      ":focus-visible": colors.critical,
+      ":hover": colors.critical,
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -473,7 +473,7 @@ export const styles = stylex.create({
     fontSize: "9px",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.25)",
+    color: colors.inkGhost,
   },
   // relative cursor-pointer bg-black/15
   relPointer: {
@@ -495,7 +495,7 @@ export const styles = stylex.create({
     display: "grid",
     height: "2.5rem",
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0, 1fr)",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.025)",
   },
@@ -505,7 +505,7 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "center",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     color: "rgb(232 224 68 / 0.8)",
   },
@@ -551,7 +551,7 @@ export const styles = stylex.create({
   whiteSemibold: {
     fontSize: "10px",
     fontWeight: text.weightSemibold,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // text-[8px] text-white/40
   textTextWhite40: {
@@ -570,7 +570,7 @@ export const styles = stylex.create({
     fontSize: "8px",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
   whiteBorderedWide: {
@@ -579,17 +579,17 @@ export const styles = stylex.create({
     width: "100%",
     minWidth: "0px",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.1)",
-      ":focus": "rgb(232 224 68 / 0.6)",
+      ":focus": colors.accentLine,
     },
     backgroundColor: colors.fillSubtle,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     fontSize: "10px",
     textTransform: "none",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
   },
@@ -599,7 +599,7 @@ export const styles = stylex.create({
     fontSize: "8px",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   whiteBorderedWide2: {
@@ -608,17 +608,17 @@ export const styles = stylex.create({
     width: "100%",
     resize: "vertical",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.1)",
-      ":focus": "rgb(232 224 68 / 0.6)",
+      ":focus": colors.accentLine,
     },
     backgroundColor: colors.fillSubtle,
     padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
-    lineHeight: "1.625",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineRelaxed,
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
   },
@@ -627,7 +627,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
     gap: space.s1_5,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     paddingTop: space.s3,
   },
@@ -654,13 +654,13 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s1_5,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(252 165 165 / 0.2)",
     fontSize: "9px",
     color: "rgb(254 202 202 / 1)",
     backgroundColor: {
       default: null,
-      ":hover": "rgb(252 165 165 / 0.1)",
+      ":hover": colors.criticalWash,
     },
   },
   // relative cursor-pointer overflow-hidden bg-black/15
@@ -681,7 +681,7 @@ export const styles = stylex.create({
     right: 0,
     top: "50%",
     height: "1px",
-    backgroundColor: "rgb(255 255 255 / 0.06)",
+    backgroundColor: colors.fill,
   },
   // pointer-events-none absolute inset-y-0 z-[5] w-px -translate-x-1/2 bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,0.45)] before:absolute before:left-1/2 before:top-0 before:size-1 before:-translate-x-1/2 before:rounded-full before:bg-amber-200
   absInert2: {
@@ -757,7 +757,7 @@ export const styles = stylex.create({
       },
       transitionProperty: "opacity",
       transitionTimingFunction: motion.easeStandard,
-      transitionDuration: "150ms",
+      transitionDuration: motion.durStandard,
     },
   },
   // flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden px-2 text-[8px] font-medium disabled:pointer-events-none
@@ -791,7 +791,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s0_5,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     backgroundColor: "rgb(0 0 0 / 0.15)",
     paddingLeft: space.s0_5,
     paddingRight: space.s0_5,
@@ -831,13 +831,13 @@ export const styles = stylex.create({
     zIndex: layers.editorTop,
     overflowY: "auto",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(150deg, rgba(30, 30, 27, 0.98), rgba(10, 10, 10, 0.98))",
     padding: space.s3,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     boxShadow: "0 24px 80px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(232, 224, 68, 0.12)",
-    backdropFilter: "blur(40px)",
+    backdropFilter: motion.blurLg,
   },
   // mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5
   flexStartRuleB: {
@@ -845,9 +845,9 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "flex-start",
     gap: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingBottom: "0.625rem",
+    paddingBottom: space.s2_5,
   },
   // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
   gridCenteredTight2: {
@@ -858,9 +858,9 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: "rgb(232 224 68 / 0.3)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    borderWidth: stroke.hairline,
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   // size-4
@@ -888,7 +888,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.6)",
   },
   // grid size-7 place-items-center rounded-lg text-lg leading-none text-white/45 hover:bg-white/10 hover:text-white
@@ -901,8 +901,8 @@ export const styles = stylex.create({
     fontSize: text.sizeLg,
     lineHeight: "1",
     color: {
-      default: "rgb(255 255 255 / 0.45)",
-      ":hover": "rgb(255 255 255 / 1)",
+      default: colors.inkMuted,
+      ":hover": colors.ink,
     },
     backgroundColor: {
       default: null,
@@ -915,7 +915,7 @@ export const styles = stylex.create({
     gap: space.s2,
     gridTemplateColumns: {
       default: null,
-      "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
+      [layout.bpSm]: "repeat(2, minmax(0, 1fr))",
     },
   },
   // flex items-center gap-1.5
@@ -934,13 +934,13 @@ export const styles = stylex.create({
   smColSpan2: {
     gridColumn: {
       default: null,
-      "@media (min-width: 640px)": "span 2 / span 2",
+      [layout.bpSm]: "span 2 / span 2",
     },
   },
   // rounded-xl border border-white/10 bg-white/[0.035] p-2
   borderedPad2: {
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.035)",
     padding: space.s2,
@@ -966,14 +966,14 @@ export const styles = stylex.create({
   borderedLeftText: {
     minHeight: "2rem",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "transparent",
       ":hover": "rgb(232 224 68 / 0.35)",
     },
     backgroundColor: {
       default: "rgb(0 0 0 / 0.2)",
-      ":hover": "rgb(232 224 68 / 0.1)",
+      ":hover": colors.accentWash,
     },
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -981,9 +981,9 @@ export const styles = stylex.create({
     paddingBottom: space.s1_5,
     textAlign: "left",
     fontSize: "10px",
-    lineHeight: "1.25",
+    lineHeight: text.lineTight,
     color: {
-      default: "rgb(255 255 255 / 0.7)",
+      default: colors.inkSecondary,
       ":hover": colors.accent,
     },
     outline: {
@@ -996,7 +996,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   // mt-0.5 size-4 shrink-0 text-[#E8E044]
@@ -1015,7 +1015,7 @@ export const styles = stylex.create({
     width: "100%",
     flexShrink: "0",
     flexDirection: "column",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // inline gridColumn: 2 gridRow: 1
   styleGridColumn2: {
@@ -1033,7 +1033,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     pointerEvents: {
       default: null,
       ":disabled": "none",
@@ -1061,12 +1061,12 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "flex-start",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderColor: colors.fillStrong,
   },
   // bg-[#E8E044]/10 text-[#E8E044]
   identityColumnSelected: {
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   // bg-black/20 text-white/75
@@ -1081,7 +1081,7 @@ export const styles = stylex.create({
     bottom: space.s1,
     overflow: "hidden",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     textAlign: "left",
@@ -1137,7 +1137,7 @@ export const styles = stylex.create({
     minWidth: "1rem",
     overflow: "visible",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     boxShadow: "var(--v1-clip-ring), var(--v1-clip-shadow)",
     [hovered.clipHandleOpacity]: "0",
     ":hover": {
@@ -1154,19 +1154,19 @@ export const styles = stylex.create({
     "--v1-clip-shadow": "0 0 12px rgba(248,113,113,0.45)",
     animationName: {
       default: pulse,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
-    borderColor: "rgb(252 165 165 / 1)",
+    borderColor: colors.critical,
     backgroundColor: "rgb(239 68 68 / 0.45)",
     color: "rgb(254 242 242 / 1)",
   },
   // border-red-300 bg-red-400/25 text-red-50 shadow-[0_0_8px_rgba(252,165,165,0.2)]
   clipConflict: {
     "--v1-clip-shadow": "0 0 8px rgba(252,165,165,0.2)",
-    borderColor: "rgb(252 165 165 / 1)",
+    borderColor: colors.critical,
     backgroundColor: "rgb(248 113 113 / 0.25)",
     color: "rgb(254 242 242 / 1)",
   },
@@ -1179,7 +1179,7 @@ export const styles = stylex.create({
   // border-dashed border-[#E8E044]/60 bg-[#E8E044]/15
   clipArmed: {
     borderStyle: "dashed",
-    borderColor: "rgb(232 224 68 / 0.6)",
+    borderColor: colors.accentLine,
     backgroundColor: "rgb(232 224 68 / 0.15)",
   },
   // border-[#E8E044]/80 bg-[#E8E044]/65 text-black
@@ -1196,14 +1196,14 @@ export const styles = stylex.create({
     width: "100%",
     flexShrink: 0,
     flexDirection: "column",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // absolute left-1/2 top-0 z-40 flex h-3 w-24 -translate-x-1/2 cursor-ns-resize touch-none items-start justify-center pt-1
   timelineHeightResizeHandle: {
     position: "absolute",
     left: "50%",
     top: "0",
-    zIndex: 40,
+    zIndex: layers.overlay,
     display: "flex",
     height: space.s3,
     width: "6rem",
@@ -1220,15 +1220,15 @@ export const styles = stylex.create({
     width: "2.5rem",
     backgroundColor: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(232 224 68 / 0.7)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
   },
   // group absolute inset-y-0 z-40 -ml-1.5 w-3 cursor-col-resize touch-none
   timelineSplitResizeHandle: {
     position: "absolute",
     top: "0",
     bottom: "0",
-    zIndex: 40,
+    zIndex: layers.overlay,
     marginLeft: `calc(-1 * ${space.s1_5})`,
     width: space.s3,
     cursor: "col-resize",
@@ -1243,7 +1243,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
     overflow: "hidden",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: `linear-gradient(to right, rgb(232 224 68 / 0.07), rgb(255 255 255 / 0.025), transparent)`,
@@ -1255,7 +1255,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
   },
@@ -1276,7 +1276,7 @@ export const styles = stylex.create({
     fontSize: "8px",
     fontWeight: text.weightBold,
     textTransform: "uppercase",
-    letterSpacing: "0.12em",
+    letterSpacing: text.trackingMetaTight,
     color: colors.accent,
   },
   // relative min-w-0 self-stretch cursor-pointer
@@ -1299,7 +1299,7 @@ export const styles = stylex.create({
     position: "absolute",
     top: "0",
     bottom: "0",
-    zIndex: 20,
+    zIndex: layers.float,
     width: "1px",
     backgroundColor: colors.accent,
     boxShadow: "0 0 10px rgba(232,224,68,0.65)",
@@ -1338,7 +1338,7 @@ export const styles = stylex.create({
   // min-h-full pb-12
   div: {
     minHeight: "100%",
-    paddingBottom: "3rem",
+    paddingBottom: space.s12,
   },
   // m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35
   pGridXs: {
@@ -1346,21 +1346,21 @@ export const styles = stylex.create({
     display: "grid",
     height: "6rem",
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: "rgb(255 255 255 / 0.15)",
     paddingInline: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 0.35)",
+    lineHeight: text.lineXs,
+    color: colors.inkFaint,
   },
   // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-black/20
   timelineSignalLane: {
     display: "grid",
     height: "2.5rem",
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(0 0 0 / 0.2)",
@@ -1371,7 +1371,7 @@ export const styles = stylex.create({
     minWidth: 0,
     alignItems: "stretch",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.06)",
@@ -1385,9 +1385,9 @@ export const styles = stylex.create({
   },
   // editor-motion flex items-center gap-1.5 px-2 text-left text-[9px] text-[#E8E044] hover:bg-[#E8E044]/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#E8E044]
   timelineFocusSignalButton: {
-    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", "@media (prefers-reduced-motion: reduce)": "none" },
-    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-    transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
+    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", [layout.reducedMotion]: "none" },
+    transitionTimingFunction: motion.easeSnappy,
+    transitionDuration: { default: motion.durStandard, [layout.reducedMotion]: "0s" },
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
@@ -1395,7 +1395,7 @@ export const styles = stylex.create({
     textAlign: "left",
     fontSize: "9px",
     color: colors.accent,
-    backgroundColor: { default: null, ":hover": "rgb(232 224 68 / 0.1)" },
+    backgroundColor: { default: null, ":hover": colors.accentWash },
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `inset 0 0 0 1px ${colors.accent}` },
@@ -1431,17 +1431,17 @@ export const styles = stylex.create({
   },
   // editor-motion grid w-6 shrink-0 place-items-center border-l border-white/10 text-white/35 hover:bg-red-500/15 hover:text-red-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-red-300
   timelineRemoveSignalControlButton: {
-    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", "@media (prefers-reduced-motion: reduce)": "none" },
-    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-    transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
+    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", [layout.reducedMotion]: "none" },
+    transitionTimingFunction: motion.easeSnappy,
+    transitionDuration: { default: motion.durStandard, [layout.reducedMotion]: "0s" },
     display: "grid",
     width: space.s6,
     flexShrink: 0,
     placeItems: "center",
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    color: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(252 165 165 / 1)" },
+    color: { default: colors.inkFaint, ":hover": colors.critical },
     backgroundColor: { default: null, ":hover": "rgb(239 68 68 / 0.15)" },
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -1463,7 +1463,7 @@ export const styles = stylex.create({
   // grid border-b border-white/10
   timelineWorldLane: {
     display: "grid",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
   },
@@ -1475,7 +1475,7 @@ export const styles = stylex.create({
     minWidth: 0,
     alignItems: "flex-start",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.04)",
@@ -1506,7 +1506,7 @@ export const styles = stylex.create({
   // grid border-b border-white/10
   timelineActorLane: {
     display: "grid",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
   },
@@ -1526,7 +1526,7 @@ export const styles = stylex.create({
     gap: space.s1_5,
     textAlign: "left",
     cursor: { default: null, ":enabled": "pointer" },
-    color: { default: null, ":enabled:hover": "rgb(255 255 255 / 1)" },
+    color: { default: null, ":enabled:hover": colors.ink },
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `0 0 0 1px ${colors.accent}` },
@@ -1547,10 +1547,10 @@ export const styles = stylex.create({
     justifyContent: "center",
     backgroundColor: { default: "transparent", ":hover": "transparent", ":focus-visible": "transparent" },
     padding: "0",
-    color: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(252 165 165 / 1)", ":focus-visible": "rgb(252 165 165 / 1)" },
+    color: { default: colors.inkFaint, ":hover": colors.critical, ":focus-visible": colors.critical },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },
@@ -1567,8 +1567,8 @@ export const styles = stylex.create({
     paddingInline: space.s2,
     fontSize: "9px",
     textTransform: "uppercase",
-    letterSpacing: "0.12em",
-    color: "rgb(255 255 255 / 0.25)",
+    letterSpacing: text.trackingMetaTight,
+    color: colors.inkGhost,
   },
   // relative cursor-pointer bg-black/15
   timelineInteractionGap: {
@@ -1590,7 +1590,7 @@ export const styles = stylex.create({
     display: "grid",
     height: "2.5rem",
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(232 224 68 / 0.025)",
@@ -1601,7 +1601,7 @@ export const styles = stylex.create({
     minWidth: 0,
     alignItems: "center",
     overflow: "hidden",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     color: "rgb(232 224 68 / 0.8)",
@@ -1668,7 +1668,7 @@ export const styles = stylex.create({
   reasoningTrace: {
     fontSize: "10px",
     fontWeight: text.weightSemibold,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // text-[8px] text-white/40
   observationAndAction: {
@@ -1686,8 +1686,8 @@ export const styles = stylex.create({
     minWidth: 0,
     fontSize: "8px",
     textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    color: "rgb(255 255 255 / 0.45)",
+    letterSpacing: text.trackingMetaNarrow,
+    color: colors.inkMuted,
   },
   // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
   input: {
@@ -1695,14 +1695,14 @@ export const styles = stylex.create({
     height: space.s8,
     width: "100%",
     minWidth: 0,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
-    backgroundColor: "rgb(255 255 255 / 0.04)",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    backgroundColor: colors.fillSubtle,
     paddingInline: space.s2,
     fontSize: "10px",
     textTransform: "none",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
   },
@@ -1711,8 +1711,8 @@ export const styles = stylex.create({
     display: "block",
     fontSize: "8px",
     textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    color: "rgb(255 255 255 / 0.45)",
+    letterSpacing: text.trackingMetaNarrow,
+    color: colors.inkMuted,
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   textarea: {
@@ -1720,15 +1720,15 @@ export const styles = stylex.create({
     minHeight: "6rem",
     width: "100%",
     resize: "vertical",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
-    backgroundColor: "rgb(255 255 255 / 0.04)",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    backgroundColor: colors.fillSubtle,
     padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
-    lineHeight: "1.625",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineRelaxed,
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
   },
@@ -1737,8 +1737,8 @@ export const styles = stylex.create({
     display: "block",
     fontSize: "8px",
     textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    color: "rgb(255 255 255 / 0.45)",
+    letterSpacing: text.trackingMetaNarrow,
+    color: colors.inkMuted,
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   textarea2: {
@@ -1746,15 +1746,15 @@ export const styles = stylex.create({
     minHeight: "6rem",
     width: "100%",
     resize: "vertical",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
-    backgroundColor: "rgb(255 255 255 / 0.04)",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    backgroundColor: colors.fillSubtle,
     padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
-    lineHeight: "1.625",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineRelaxed,
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
   },
@@ -1763,7 +1763,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
     gap: space.s1_5,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     paddingTop: space.s3,
@@ -1785,12 +1785,12 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s1_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(252 165 165 / 0.2)",
     fontSize: "9px",
     color: "rgb(254 202 202 / 1)",
-    backgroundColor: { default: null, ":hover": "rgb(252 165 165 / 0.1)" },
+    backgroundColor: { default: null, ":hover": colors.criticalWash },
   },
   // size-3
   deleteTraceTrash2: {
@@ -1815,7 +1815,7 @@ export const styles = stylex.create({
     right: "0",
     top: "50%",
     height: "1px",
-    backgroundColor: "rgb(255 255 255 / 0.06)",
+    backgroundColor: colors.fill,
   },
   // pointer-events-none absolute inset-y-0 z-[5] w-px -translate-x-1/2 bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,0.45)] before:absolute before:left-1/2 before:top-0 before:size-1 before:-translate-x-1/2 before:rounded-full before:bg-amber-200
   timelineTriggerDeadline: {
@@ -1851,7 +1851,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     gap: space.s0_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "color-mix(in srgb, currentColor 20%, transparent)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
@@ -1895,14 +1895,14 @@ export const styles = stylex.create({
     position: "fixed",
     zIndex: layers.editorTop,
     overflowY: "auto",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))",
     padding: space.s3,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     boxShadow: "0 24px 80px rgba(0,0,0,0.72),0 0 0 1px rgba(232,224,68,0.12)",
-    backdropFilter: "blur(40px)",
+    backdropFilter: motion.blurLg,
   },
   // mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5
   headerFlex: {
@@ -1910,10 +1910,10 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "flex-start",
     gap: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingBottom: "0.625rem",
+    paddingBottom: space.s2_5,
   },
   // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
   spanGridIcon: {
@@ -1923,10 +1923,10 @@ export const styles = stylex.create({
     height: "1.75rem",
     flexShrink: 0,
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgb(232 224 68 / 0.3)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   // size-4
@@ -1944,7 +1944,7 @@ export const styles = stylex.create({
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.16em",
+    letterSpacing: text.trackingMetaWide,
     color: colors.accent,
   },
   // mt-0.5 truncate text-xs text-white/60
@@ -1954,7 +1954,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.6)",
   },
   // grid size-7 place-items-center rounded-lg text-lg leading-none text-white/45 hover:bg-white/10 hover:text-white
@@ -1965,14 +1965,14 @@ export const styles = stylex.create({
     placeItems: "center",
     fontSize: text.sizeLg,
     lineHeight: "1",
-    color: { default: "rgb(255 255 255 / 0.45)", ":hover": "rgb(255 255 255 / 1)" },
-    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.1)" },
+    color: { default: colors.inkMuted, ":hover": colors.ink },
+    backgroundColor: { default: null, ":hover": colors.fillStrong },
   },
   // grid gap-2 sm:grid-cols-2
   divGrid3: {
     display: "grid",
     gap: space.s2,
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(2, minmax(0, 1fr))" },
   },
   // flex items-center gap-1.5
   spanFlex: {
@@ -1994,11 +1994,11 @@ export const styles = stylex.create({
   },
   // sm:col-span-2
   div3: {
-    gridColumn: { default: null, "@media (min-width: 640px)": "span 2 / span 2" },
+    gridColumn: { default: null, [layout.bpSm]: "span 2 / span 2" },
   },
   // rounded-xl border border-white/10 bg-white/[0.035] p-2
   timelineContextGroup: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.035)",
@@ -2023,16 +2023,16 @@ export const styles = stylex.create({
   // min-h-8 rounded-lg border border-transparent bg-black/20 px-2 py-1.5 text-left text-[10px] leading-tight text-white/70 hover:border-[#E8E044]/35 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   menuitemButton: {
     minHeight: space.s8,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: "transparent", ":hover": "rgb(232 224 68 / 0.35)" },
-    backgroundColor: { default: "rgb(0 0 0 / 0.2)", ":hover": "rgb(232 224 68 / 0.1)" },
+    backgroundColor: { default: "rgb(0 0 0 / 0.2)", ":hover": colors.accentWash },
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: "10px",
     lineHeight: text.lineTight,
-    color: { default: "rgb(255 255 255 / 0.7)", ":hover": colors.accent },
+    color: { default: colors.inkSecondary, ":hover": colors.accent },
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.accent}` },

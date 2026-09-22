@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /**
  * Opacity the hovered driver-profile button publishes for its artwork.
@@ -16,7 +16,7 @@ export const styles = stylex.create({
   // border-t border-white/[0.07] bg-black/15 px-3 py-2
   ruleT: {
     minWidth: 0,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.07)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
     paddingLeft: space.s3,
@@ -57,11 +57,11 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.45)",
     backgroundColor: "rgb(232 224 68 / 0.08)",
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingTop: space.s2,
     paddingBottom: space.s2,
   },
@@ -73,9 +73,9 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.25)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   // size-4
@@ -92,7 +92,7 @@ export const styles = stylex.create({
     display: "block",
     fontSize: "10px",
     fontWeight: text.weightSemibold,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // block text-[8px] leading-3 text-white/40
   block: {
@@ -119,8 +119,8 @@ export const styles = stylex.create({
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: colors.fillSubtle,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   // text-[9px] leading-3 text-white/35
   textLeading3TextWhite35: {
@@ -140,8 +140,8 @@ export const styles = stylex.create({
     backgroundColor: colors.fillSubtle,
     paddingRight: space.s8,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   // pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/35
   absInert: {
@@ -206,7 +206,7 @@ export const styles = stylex.create({
       width: "0.875rem",
       height: "0.875rem",
       borderRadius: "0",
-      borderWidth: "2px",
+      borderWidth: stroke.thick,
       borderColor: "rgb(10 10 10 / 1)",
       backgroundColor: colors.accent,
     },
@@ -221,7 +221,7 @@ export const styles = stylex.create({
       WebkitAppearance: "none",
       appearance: "none",
       borderRadius: "0",
-      borderWidth: "2px",
+      borderWidth: stroke.thick,
       borderColor: "rgb(10 10 10 / 1)",
       backgroundColor: colors.accent,
     },
@@ -246,7 +246,7 @@ export const styles = stylex.create({
     marginTop: space.s1_5,
     display: "block",
     fontSize: "9px",
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.inkFaint,
   },
   // h-14 w-14
@@ -275,7 +275,7 @@ export const styles = stylex.create({
     height: "18px",
     flexShrink: 0,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -286,7 +286,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   // border-[#E8E044] ring-1 ring-[#E8E044]
@@ -294,7 +294,7 @@ export const styles = stylex.create({
     borderColor: colors.accent,
     boxShadow: {
       default: "0 0 0 1px rgb(232 224 68 / 1)",
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   // border-white/20
@@ -310,7 +310,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
     paddingTop: space.s1,
@@ -318,7 +318,7 @@ export const styles = stylex.create({
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -329,13 +329,13 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   // border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]
   profileOptionActive: {
     borderColor: "rgb(232 224 68 / 0.7)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   // border-white/10 bg-white/[0.025] text-white/55 hover:border-white/25 hover:bg-white/[0.06] hover:text-white/85
@@ -348,7 +348,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: "rgb(255 255 255 / 0.025)",
-      ":hover": "rgb(255 255 255 / 0.06)",
+      ":hover": colors.fill,
     },
     color: {
       default: "rgb(255 255 255 / 0.55)",
@@ -367,7 +367,7 @@ export const styles = stylex.create({
     objectFit: "contain",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // opacity-100
   profileArtActive: {
@@ -382,7 +382,7 @@ export const styles = stylex.create({
     height: "5rem",
     paddingLeft: space.s8,
     paddingRight: space.s8,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
   },
 });

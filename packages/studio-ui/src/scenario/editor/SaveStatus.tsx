@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../../stylex/tokens.stylex";
+import { colors, space, text } from "../../stylex/tokens.stylex";
 import { Button } from "../../components/ui/button";
 
 /** Save feedback belongs beside the document/evidence, never in the notification dock. */
@@ -28,7 +28,7 @@ const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     color: colors.mutedForeground,
-    fontSize: "0.75rem",
+    fontSize: text.sizeXs,
     flexShrink: 0,
   },
 });

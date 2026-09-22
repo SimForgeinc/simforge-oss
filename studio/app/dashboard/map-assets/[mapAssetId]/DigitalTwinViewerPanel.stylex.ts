@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -26,7 +26,7 @@ export const styles = stylex.create({
     width: "4rem",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.5)",
@@ -35,8 +35,8 @@ export const styles = stylex.create({
     width: "2rem",
     height: "2rem",
     animationName: pulse,
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
@@ -44,8 +44,8 @@ export const styles = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
@@ -69,15 +69,15 @@ export const styles = stylex.create({
   },
   noAssetTitle: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   noAssetDescription: {
     marginTop: space.s1,
     maxWidth: "20rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   viewerErrorContainer: {
@@ -99,7 +99,7 @@ export const styles = stylex.create({
     maxWidth: "28rem",
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   viewerHostContainer: {

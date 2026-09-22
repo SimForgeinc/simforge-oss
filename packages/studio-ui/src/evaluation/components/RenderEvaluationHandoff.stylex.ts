@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
@@ -14,14 +14,14 @@ export const styles = stylex.create({
   // text-sm font-semibold text-foreground
   evaluateThisRender: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
   // text-xs leading-5 text-muted-foreground
   theRenderedCamerasBecomeTheC: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2
@@ -30,8 +30,8 @@ export const styles = stylex.create({
     columnGap: space.s8,
     rowGap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+    lineHeight: text.lineXs,
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(2, minmax(0, 1fr))" },
   },
   // min-w-0
   div: {
@@ -40,7 +40,7 @@ export const styles = stylex.create({
   // uppercase tracking-wide text-muted-foreground
   renderedCameras: {
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-1 font-mono text-foreground
@@ -56,7 +56,7 @@ export const styles = stylex.create({
   // uppercase tracking-wide text-muted-foreground
   renderJob: {
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-1 truncate font-mono text-foreground
@@ -71,7 +71,7 @@ export const styles = stylex.create({
   // text-xs leading-5 text-muted-foreground
   handoffReady: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // flex flex-wrap items-center gap-3
@@ -86,8 +86,8 @@ export const styles = stylex.create({
     width: space.s4,
     height: space.s4,
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   // size-4
@@ -98,13 +98,13 @@ export const styles = stylex.create({
   // text-xs text-muted-foreground
   handoffProgress: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // space-y-2 border-border border-t pt-3
   handoffProvenance: {
     borderColor: colors.border,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     paddingTop: space.s3,
     display: "flex",
@@ -114,16 +114,16 @@ export const styles = stylex.create({
   // text-xs font-semibold uppercase tracking-wide text-muted-foreground
   chainOfCustody: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // space-y-1.5 text-xs
   olXs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     display: "flex",
     flexDirection: "column",
     gap: space.s1_5,
@@ -139,7 +139,7 @@ export const styles = stylex.create({
     width: "8rem",
     flexShrink: 0,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // min-w-0 truncate font-mono text-foreground

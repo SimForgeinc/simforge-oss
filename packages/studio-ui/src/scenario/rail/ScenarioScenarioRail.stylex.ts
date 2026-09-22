@@ -1,9 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  row: { borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: colors.border, ":last-child": { borderBottomWidth: 0 } },
-  documentButton: { display: "flex", width: "100%", flexDirection: "column", gap: space.s0_5, borderLeftWidth: 2, borderLeftStyle: "solid", backgroundColor: "transparent", paddingInline: space.s2, paddingBlock: "0.625rem", textAlign: "left", outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` }, outlineOffset: 2 },
+  row: { borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.border, ":last-child": { borderBottomWidth: 0 } },
+  documentButton: { display: "flex", width: "100%", flexDirection: "column", gap: space.s0_5, borderLeftWidth: stroke.thick, borderLeftStyle: "solid", backgroundColor: "transparent", paddingInline: space.s2, paddingBlock: space.s2_5, textAlign: "left", outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` }, outlineOffset: 2 },
   activeDocument: { borderLeftColor: colors.accent, color: colors.text },
   idleDocument: { borderLeftColor: { default: "transparent", ":hover": colors.accent }, color: { default: colors.mutedForeground, ":hover": colors.text } },
   // flex h-full w-[220px] shrink-0 flex-col border-r border-white/15 bg-transparent
@@ -13,14 +13,14 @@ export const styles = stylex.create({
     width: "220px",
     flexShrink: 0,
     flexDirection: "column",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "transparent",
   },
   // space-y-2 border-b border-white/15 p-3
   scenarioScenarioHeader: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.15)",
     padding: space.s3,
@@ -52,7 +52,7 @@ export const styles = stylex.create({
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     fontVariantNumeric: "tabular-nums",
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // flex items-center justify-between gap-2
   divFlex2: {
@@ -78,8 +78,8 @@ export const styles = stylex.create({
     letterSpacing: text.trackingMetaWider,
     color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
@@ -110,8 +110,8 @@ export const styles = stylex.create({
     letterSpacing: text.trackingMetaWider,
     color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
@@ -163,15 +163,15 @@ export const styles = stylex.create({
   timeUntilTheNextScenario: {
     height: "1px",
     width: "100%",
-    backgroundColor: "rgb(255 255 255 / 0.15)",
+    backgroundColor: colors.fillStronger,
   },
   // h-full bg-primary transition-[width] duration-100 ease-linear motion-reduce:transition-none
   div: {
     height: "100%",
     backgroundColor: colors.primary,
-    transitionProperty: { default: "width", "@media (prefers-reduced-motion: reduce)": "none" },
+    transitionProperty: { default: "width", [layout.reducedMotion]: "none" },
     transitionDuration: "100ms",
-    transitionTimingFunction: "linear",
+    transitionTimingFunction: motion.easeLinear,
   },
   // scenario-glass-scrollbar min-h-0 flex-1 overflow-y-auto px-3
   div2: {
@@ -216,7 +216,7 @@ export const styles = stylex.create({
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // font-meta text-micro uppercase tracking-meta-tight text-green-400
   rendered: {

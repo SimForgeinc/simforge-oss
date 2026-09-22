@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -26,11 +26,11 @@ export const styles = stylex.create({
     gap: space.s1_5,
     paddingInline: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--foreground) / 0.08)" },
     /*
      * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
@@ -38,24 +38,24 @@ export const styles = stylex.create({
      * forced-colours mode discards, and this transparent outline is what
      * remains visible there.
      */
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": "0 0 0 2px hsl(var(--ring))" },
+    boxShadow: { default: null, ":focus-visible": shadows.ring },
   },
   sharedActionIcon: {
     width: "0.875rem",
     height: "0.875rem",
   },
   backToMapsLabel: {
-    display: { default: "none", "@media (min-width: 1024px)": "inline" },
+    display: { default: "none", [layout.bpLg]: "inline" },
   },
   backLabel: {
-    display: { default: null, "@media (min-width: 1024px)": "none" },
+    display: { default: null, [layout.bpLg]: "none" },
   },
   headerNavigationDivider: {
-    display: { default: "none", "@media (min-width: 768px)": "block" },
+    display: { default: "none", [layout.bpMd]: "block" },
     height: "1.25rem",
     width: "1px",
     flexShrink: 0,
@@ -72,7 +72,7 @@ export const styles = stylex.create({
     color: { default: "hsl(var(--foreground) / 0.7)", ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--foreground) / 0.08)" },
   },
   actionsMenuLabel: {
@@ -101,19 +101,19 @@ export const styles = stylex.create({
   },
   spinning: {
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   actionTooltip: {
     maxWidth: "20rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   pulsing: {
     animationName: pulse,
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
   },
 });

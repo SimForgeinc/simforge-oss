@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   frame: (height: string, maxHeight: string) => ({
@@ -26,20 +26,20 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderTopLeftRadius: "0",
     borderBottomLeftRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderRightWidth: "0px",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(155deg, rgba(24, 24, 22, 0.98), rgba(9, 9, 9, 0.98))",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     boxShadow: "-12px 20px 60px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(232, 224, 68, 0.1)",
-    backdropFilter: "blur(40px)",
+    backdropFilter: motion.blurLg,
   },
   // relative shrink-0 overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_75%_15%,rgba(232,224,68,0.14),transparent_42%),linear-gradient(145deg,#191a18,#0d0e0d)]
   relTightRuleB: {
     position: "relative",
     flexShrink: "0",
     overflow: "hidden",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: "radial-gradient(circle at 75% 15%, rgba(232, 224, 68, 0.14), transparent 42%), linear-gradient(145deg, #191a18, #0d0e0d)",
   },
@@ -54,8 +54,8 @@ export const styles = stylex.create({
     placeItems: "center",
     borderRadius: "0",
     color: {
-      default: "rgb(255 255 255 / 0.45)",
-      ":hover": "rgb(255 255 255 / 1)",
+      default: colors.inkMuted,
+      ":hover": colors.ink,
     },
     outline: {
       default: null,
@@ -67,7 +67,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
     backgroundColor: {
       default: null,
@@ -111,10 +111,10 @@ export const styles = stylex.create({
     display: "grid",
     placeItems: "center",
     backgroundColor: "rgb(0 0 0 / 0.7)",
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
     textAlign: "center",
-    backdropFilter: "blur(12px)",
+    backdropFilter: motion.blurGlass,
   },
   // flex flex-col items-center gap-2
   flexColCenter: {
@@ -133,8 +133,8 @@ export const styles = stylex.create({
   // text-xs leading-snug text-white
   xsWhiteSnug: {
     fontSize: text.sizeXs,
-    lineHeight: "1.375",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineSnug,
+    color: colors.ink,
   },
   // text-[10px] text-white/55
   textTextWhite55: {
@@ -151,8 +151,8 @@ export const styles = stylex.create({
   // h-24 px-10 py-3 — the default preview frame.
   previewDefault: {
     height: "6rem",
-    paddingLeft: "2.5rem",
-    paddingRight: "2.5rem",
+    paddingLeft: space.s10,
+    paddingRight: space.s10,
     paddingTop: space.s3,
     paddingBottom: space.s3,
   },

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   header: {
@@ -43,7 +43,7 @@ export const styles = stylex.create({
     paddingBlock: space.s2,
     textAlign: "left",
     cursor: "pointer",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
     backgroundColor: { default: "transparent", ":hover": colors.fillSubtle },

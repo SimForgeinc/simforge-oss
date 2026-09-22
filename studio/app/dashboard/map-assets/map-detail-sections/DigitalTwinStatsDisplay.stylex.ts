@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   collapsibleSectionToggle: {
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -29,8 +29,8 @@ export const styles = stylex.create({
   },
   sectionLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
   },
   sectionContent: {
     display: "flex",
@@ -47,13 +47,13 @@ export const styles = stylex.create({
   },
   statLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   statValue: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     fontVariantNumeric: "tabular-nums",
     textAlign: "right",
   },
@@ -76,7 +76,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   expandCollapseIcon: {
     width: "0.75rem",
@@ -88,10 +88,10 @@ export const styles = stylex.create({
   },
   lodSummaryTitle: {
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: "hsl(var(--muted-foreground) / 0.7)",
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     marginBottom: space.s1_5,
   },
   lodSummaryRows: {
@@ -113,7 +113,7 @@ export const styles = stylex.create({
   },
   limitationItem: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   strengthStrong: {
@@ -143,19 +143,19 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
-    fontWeight: 500,
-    borderWidth: "1px",
+    fontWeight: text.weightMedium,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
   },
   readinessSignalLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
   },
   readinessSignalDescription: {
     fontSize: "11px",
     color: colors.mutedForeground,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     marginLeft: space.s0_5,
   },
 });

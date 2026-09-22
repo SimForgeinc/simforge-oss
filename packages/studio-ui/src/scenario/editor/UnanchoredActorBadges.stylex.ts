@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { text, space, motion } from "../../stylex/tokens.stylex";
+import { motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-none fixed z-[85] -translate-x-1/2 -translate-y-full
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 0.9)",
     paddingLeft: space.s2,
@@ -25,15 +25,15 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     fontSize: "11px",
     fontWeight: text.weightMedium,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     color: "rgb(254 243 199 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // rounded-sm border border-amber-300/60 px-1.5 py-0.5 text-amber-50 transition-colors hover:bg-amber-300/20
   bordered: {
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.6)",
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
@@ -42,7 +42,7 @@ export const styles = stylex.create({
     color: "rgb(255 251 235 / 1)",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: {
       default: null,
       ":hover": "rgb(252 211 77 / 0.2)",

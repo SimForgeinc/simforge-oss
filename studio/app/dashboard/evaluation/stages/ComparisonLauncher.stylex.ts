@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
@@ -7,7 +7,7 @@ export const styles = stylex.create({
   // text-base
   runANewComparisonCardTitle: {
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
   },
   // flex flex-col gap-4
   cardcontentFlex: {
@@ -19,7 +19,7 @@ export const styles = stylex.create({
   divGrid: {
     display: "grid",
     gap: space.s3,
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(2, minmax(0, 1fr))" },
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs: {
@@ -27,7 +27,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   kind: {
@@ -35,13 +35,13 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 text-sm
   selectSm: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs2: {
@@ -49,7 +49,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   mode: {
@@ -57,13 +57,13 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 text-sm
   selectSm2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs sm:col-span-2
   labelFlexXs3: {
@@ -71,8 +71,8 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    gridColumn: { default: null, "@media (min-width: 640px)": "span 2 / span 2" },
+    lineHeight: text.lineXs,
+    gridColumn: { default: null, [layout.bpSm]: "span 2 / span 2" },
   },
   // text-muted-foreground
   episodeSpec: {
@@ -80,14 +80,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs sm:col-span-2
   labelFlexXs4: {
@@ -95,8 +95,8 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    gridColumn: { default: null, "@media (min-width: 640px)": "span 2 / span 2" },
+    lineHeight: text.lineXs,
+    gridColumn: { default: null, [layout.bpSm]: "span 2 / span 2" },
   },
   // text-muted-foreground
   frameSource: {
@@ -104,14 +104,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs5: {
@@ -119,7 +119,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   seeds: {
@@ -127,14 +127,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm3: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs6: {
@@ -142,7 +142,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   stepsPerEpisode: {
@@ -150,14 +150,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm4: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs7: {
@@ -165,7 +165,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   decisionRate: {
@@ -173,14 +173,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm5: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-1 text-xs
   labelFlexXs8: {
@@ -188,7 +188,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-muted-foreground
   deadline: {
@@ -196,14 +196,14 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 font-mono text-sm
   inputMonoSm6: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // flex flex-col gap-2
   divFlex: {
@@ -217,7 +217,7 @@ export const styles = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     padding: space.s2,
   },
@@ -228,35 +228,35 @@ export const styles = stylex.create({
   },
   // rounded border bg-transparent px-2 py-1 text-sm
   selectSm3: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // rounded border bg-transparent px-2 py-1 text-sm
   selectSm4: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // w-36 rounded border bg-transparent px-2 py-1 font-mono text-xs
   inputMonoXs: {
     width: "9rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     backgroundColor: "transparent",
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // ml-auto text-muted-foreground hover:text-foreground
   removeColumnButton: {
@@ -272,7 +272,7 @@ export const styles = stylex.create({
   pXs: {
     width: "100%",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(251 191 36 / 1)",
   },
   // self-start
@@ -288,9 +288,9 @@ export const styles = stylex.create({
   // list-disc pl-5 text-xs text-muted-foreground
   ulXs: {
     listStyleType: "disc",
-    paddingLeft: "1.25rem",
+    paddingLeft: space.s5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex items-center gap-3
@@ -305,14 +305,14 @@ export const styles = stylex.create({
     height: "0.875rem",
     width: "0.875rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   // text-xs hover:underline
   comparisonLink: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     textDecoration: { default: null, ":hover": "underline" },
   },
   // flex flex-col gap-1 rounded border p-2 text-xs
@@ -320,11 +320,11 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s1,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     padding: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-destructive
   p: {

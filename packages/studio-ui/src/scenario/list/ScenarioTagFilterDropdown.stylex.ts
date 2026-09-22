@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // size-3.5
@@ -25,7 +25,7 @@ export const styles = stylex.create({
   spanIcon: {
     width: space.s2,
     height: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
   },

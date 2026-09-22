@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex items-baseline justify-between gap-2
@@ -20,7 +20,7 @@ export const styles = stylex.create({
   mono: {
     fontFamily: text.fontMono,
     fontSize: "9px",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // text-[9px] leading-3 text-white/35
   textLeading3TextWhite35: {
@@ -32,7 +32,7 @@ export const styles = stylex.create({
   textLeading3TextWhite45: {
     fontSize: "9px",
     lineHeight: "0.75rem",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // mt-0.5 block text-white/30
   block: {
@@ -54,7 +54,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: "10px",
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // ml-1 text-[8px] text-white/30
   ml1TextTextWhite30: {
@@ -82,7 +82,7 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s1,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     backgroundColor: {
       default: "rgb(255 255 255 / 0.035)",
       ":hover": "rgb(232 224 68 / 0.08)",
@@ -94,8 +94,8 @@ export const styles = stylex.create({
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     color: {
-      default: "rgb(255 255 255 / 0.7)",
-      ":hover": "rgb(255 255 255 / 1)",
+      default: colors.inkSecondary,
+      ":hover": colors.ink,
     },
     outline: {
       default: null,
@@ -107,7 +107,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
     borderColor: {
       default: "rgb(255 255 255 / 0.12)",
@@ -127,10 +127,10 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s1,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.35)",
     backgroundColor: {
-      default: "rgb(232 224 68 / 0.1)",
+      default: colors.accentWash,
       ":hover": "rgb(232 224 68 / 0.2)",
     },
     paddingLeft: space.s2,
@@ -150,7 +150,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   /*

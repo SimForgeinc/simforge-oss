@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /*
  * A gallery tile's entrance, staggered by index via `--render-tile-index` set
@@ -15,10 +15,10 @@ export const styles = stylex.create({
   tileEnter: {
     animationName: {
       default: tileEnter,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     animationDuration: "280ms",
-    animationTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    animationTimingFunction: motion.easeSnappy,
     animationFillMode: "both",
     animationDelay: "calc(min(var(--render-tile-index, 0), 11) * 28ms)",
   },
@@ -28,7 +28,7 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     flexDirection: "column",
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     backdropFilter: "blur(40px) saturate(1.5)",
     backgroundImage: "linear-gradient(180deg, rgb(9 11 16 / 46%) 0%, rgb(9 11 16 / 62%) 100%)",
     borderColor: "rgb(255 255 255 / 10%)",
@@ -39,11 +39,11 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     gap: space.s2,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     paddingLeft: space.s4,
     paddingRight: space.s4,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // min-w-0 flex-1
@@ -57,7 +57,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -67,7 +67,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -89,11 +89,11 @@ export const styles = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     gap: space.s2,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     paddingLeft: space.s4,
     paddingRight: space.s4,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // flex items-center gap-1
@@ -121,14 +121,14 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.4)",
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
   },
   // size-3.5 shrink-0 text-muted-foreground
   tightMuted: {
@@ -145,7 +145,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // size-3
@@ -165,22 +165,22 @@ export const styles = stylex.create({
     gap: space.s2,
     paddingLeft: space.s6,
     paddingRight: space.s6,
-    paddingTop: "3rem",
-    paddingBottom: "3rem",
+    paddingTop: space.s12,
+    paddingBottom: space.s12,
     textAlign: "center",
   },
   // font-heavy text-2xl tracking-tight text-foreground/20
   xxlHeavy: {
     fontFamily: text.fontHeavy,
     fontSize: text.size2xl,
-    lineHeight: "2rem",
-    letterSpacing: "-0.025em",
+    lineHeight: text.lineXl,
+    letterSpacing: text.trackingTight,
     color: "hsl(var(--foreground) / 0.2)",
   },
   // text-xs text-muted-foreground
   xsMuted: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4
@@ -198,7 +198,7 @@ export const styles = stylex.create({
   microMuted: {
     marginTop: space.s3,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   /*
@@ -214,7 +214,7 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primary,
@@ -229,7 +229,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -239,7 +239,7 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: {
@@ -256,7 +256,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
 });

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a] p-3 text-white
@@ -9,7 +9,7 @@ export const styles = stylex.create({
     overflowY: "auto",
     backgroundColor: colors.panelSolid,
     padding: space.s3,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // mb-2 flex items-center text-micro font-semibold uppercase tracking-meta-wide text-white/45
   flexCenterCaps: {
@@ -17,11 +17,11 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // mr-2 size-3
   mr2Size3: {
@@ -55,7 +55,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "inset 0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ringInset,
     },
   },
   // w-24 truncate text-white/40
@@ -77,7 +77,7 @@ export const styles = stylex.create({
   monoPushRight: {
     marginLeft: "auto",
     fontFamily: text.fontMono,
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // motionStyles.editorMotion + mr-2 text-white/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   editorMotionMr2TextWhite30: {
@@ -96,7 +96,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
   },
   // size-3
@@ -107,7 +107,7 @@ export const styles = stylex.create({
   // col-span-2 border-t border-white/10 pt-3
   ruleT: {
     gridColumn: "span 2 / span 2",
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     paddingTop: space.s3,
   },
@@ -116,11 +116,11 @@ export const styles = stylex.create({
     display: "grid",
     height: "4rem",
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: "rgb(255 255 255 / 0.15)",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.inkFaint,
   },
   /*
@@ -140,21 +140,21 @@ export const styles = stylex.create({
     height: space.s8,
     width: "100%",
     alignItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // border-[#E8E044]/60 bg-[#E8E044]/10
   rowExpanded: {
-    borderColor: "rgb(232 224 68 / 0.6)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    borderColor: colors.accentLine,
+    backgroundColor: colors.accentWash,
   },
   // border-white/10 bg-white/[0.035] hover:bg-white/[0.06]
   rowCollapsed: {
     borderColor: colors.fillStrong,
     backgroundColor: {
       default: "rgb(255 255 255 / 0.035)",
-      ":hover": "rgb(255 255 255 / 0.06)",
+      ":hover": colors.fill,
     },
   },
   // grid grid-cols-2 gap-3 border-x border-b border-white/10 bg-[#111111] p-3
@@ -162,9 +162,9 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: space.s3,
-    borderLeftWidth: "1px",
-    borderRightWidth: "1px",
-    borderBottomWidth: "1px",
+    borderLeftWidth: stroke.hairline,
+    borderRightWidth: stroke.hairline,
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.fillStrong,
     backgroundColor: "rgb(17 17 17 / 1)",
     padding: space.s3,

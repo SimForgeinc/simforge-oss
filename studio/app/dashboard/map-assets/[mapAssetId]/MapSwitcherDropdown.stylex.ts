@@ -1,24 +1,24 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   dropdownTrigger: {
     display: "flex",
     height: "2.5rem",
-    width: { default: "11rem", "@media (min-width: 640px)": "280px" },
+    width: { default: "11rem", [layout.bpSm]: "280px" },
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: "hsl(var(--muted) / 0.3)", ":hover": "hsl(var(--muted) / 0.5)" },
     paddingInline: space.s3,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   currentMapName: {
     flex: "1 1 0%",
@@ -39,7 +39,7 @@ export const styles = stylex.create({
     padding: 0,
   },
   searchSection: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
     padding: space.s2,
@@ -61,7 +61,7 @@ export const styles = stylex.create({
     height: "2rem",
     paddingLeft: space.s8,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   mapList: {
     maxHeight: "16rem",
@@ -73,7 +73,7 @@ export const styles = stylex.create({
     paddingBlock: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   switcherItem: {
@@ -86,7 +86,7 @@ export const styles = stylex.create({
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   switcherItemCurrent: {
     backgroundColor: "hsl(var(--primary) / 0.05)",
@@ -113,13 +113,13 @@ export const styles = stylex.create({
   },
   switcherLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   switcherLabelCurrent: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
   },
   mapLocation: {
     fontSize: "10px",

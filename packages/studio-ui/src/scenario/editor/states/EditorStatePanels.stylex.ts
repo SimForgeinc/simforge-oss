@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // grid h-full min-h-editor-shell place-items-center bg-background p-8
@@ -14,7 +14,7 @@ export const styles = stylex.create({
   // max-w-md border border-border bg-card p-8 text-center
   borderedPad8CenterText: {
     maxWidth: "28rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.card,
     padding: space.s8,
@@ -24,7 +24,7 @@ export const styles = stylex.create({
   gridCenteredBold: {
     marginLeft: "auto",
     marginRight: "auto",
-    marginBottom: "1.25rem",
+    marginBottom: space.s5,
     display: "grid",
     width: "3rem",
     height: "3rem",
@@ -36,14 +36,14 @@ export const styles = stylex.create({
   // text-xl font-semibold
   xlSemibold: {
     fontSize: text.sizeXl,
-    lineHeight: "1.75rem",
+    lineHeight: text.lineLg,
     fontWeight: text.weightSemibold,
   },
   // mt-2 text-sm leading-6 text-muted-foreground
   smMuted: {
     marginTop: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     color: colors.mutedForeground,
   },
   // mt-6
@@ -70,7 +70,7 @@ export const styles = stylex.create({
   // text-xs font-semibold uppercase tracking-meta-wider text-primary
   capsXsAccent: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
@@ -80,14 +80,14 @@ export const styles = stylex.create({
   xxlSemibold: {
     marginTop: space.s2,
     fontSize: text.size2xl,
-    lineHeight: "2rem",
+    lineHeight: text.lineXl,
     fontWeight: text.weightSemibold,
   },
   // mt-2 text-sm text-muted-foreground
   smMuted2: {
     marginTop: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // mt-8 grid gap-3 md:grid-cols-2
@@ -97,18 +97,18 @@ export const styles = stylex.create({
     gap: space.s3,
     gridTemplateColumns: {
       default: null,
-      "@media (min-width: 768px)": "repeat(2, minmax(0, 1fr))",
+      [layout.bpMd]: "repeat(2, minmax(0, 1fr))",
     },
   },
   // motionStyles.editorMotion + border border-border bg-card p-5 text-left hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
   borderedPad5LeftText: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: colors.border,
       ":hover": "hsl(var(--primary) / 0.6)",
     },
     backgroundColor: colors.card,
-    padding: "1.25rem",
+    padding: space.s5,
     textAlign: "left",
     outline: {
       default: null,
@@ -133,7 +133,7 @@ export const styles = stylex.create({
     marginTop: space.s1,
     display: "block",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // mt-3 block break-all font-mono text-micro text-muted-foreground
@@ -143,7 +143,7 @@ export const styles = stylex.create({
     wordBreak: "break-all",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
 });

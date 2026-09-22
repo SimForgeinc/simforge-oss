@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /*
@@ -20,20 +20,20 @@ export const styles = stylex.create({
   metaNarrowable: {
     minWidth: "0px",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // font-semibold uppercase tracking-wider text-muted-foreground
   capsMutedSemibold: {
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   // h-8 text-xs
   xs: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // grid grid-cols-2 gap-2
   gridCols2Gap2: {
@@ -43,7 +43,7 @@ export const styles = stylex.create({
   },
   // border border-border bg-muted/20 p-2
   borderedPad2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     padding: space.s2,
@@ -56,7 +56,7 @@ export const styles = stylex.create({
   },
   // border border-border/70 p-2
   borderedPad22: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     padding: space.s2,
   },
@@ -66,7 +66,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     padding: space.s2,
   },

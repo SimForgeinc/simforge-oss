@@ -31,9 +31,9 @@ export const styles = stylex.create({
     },
     padding: 0,
     color: {
-      default: "rgb(255 255 255 / 1)",
+      default: colors.ink,
       ":enabled:hover": colors.accent,
-      ":disabled": "rgb(255 255 255 / 0.25)",
+      ":disabled": colors.inkGhost,
     },
     boxShadow: "none",
   },
@@ -42,6 +42,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
 });

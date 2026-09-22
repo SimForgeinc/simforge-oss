@@ -1,11 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // ml-4 border-l border-primary/30
   div: {
     marginLeft: space.s4,
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.3)",
   },
@@ -19,7 +19,7 @@ export const styles = stylex.create({
   },
   // border-b border-border px-3 py-3
   div2: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s3,
@@ -27,12 +27,12 @@ export const styles = stylex.create({
   },
   // border-l border-primary/60 pl-3 text-xs text-foreground
   thisIsASharedOrReadOnlyDatas: {
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.6)",
     paddingLeft: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // min-h-0 flex-1 overflow-y-auto
@@ -43,13 +43,13 @@ export const styles = stylex.create({
   },
   // border-b border-white/10 px-3 py-4 text-sm text-muted-foreground
   divSm: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     paddingInline: space.s3,
     paddingBlock: space.s4,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // space-y-0
@@ -60,7 +60,7 @@ export const styles = stylex.create({
   },
   // border-t border-white/10 p-3
   div4: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     padding: space.s3,
@@ -75,7 +75,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -87,7 +87,7 @@ export const styles = stylex.create({
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWidest,
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // size-4
   chevrondownIcon: {
@@ -96,7 +96,7 @@ export const styles = stylex.create({
   },
   // space-y-0 border-t border-white/10
   div6: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     display: "flex",
@@ -153,12 +153,12 @@ export const styles = stylex.create({
     top: space.s8,
     zIndex: layers.sticky,
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.4)",
     backgroundColor: colors.popover,
     padding: space.s1_5,
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+    boxShadow: shadows.elevationLg,
     display: "flex",
     flexDirection: "column",
     gap: space.s1_5,
@@ -186,7 +186,7 @@ export const styles = stylex.create({
   // text-meta leading-4 text-muted-foreground
   pMeta: {
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex flex-col gap-1.5
@@ -197,13 +197,13 @@ export const styles = stylex.create({
   },
   // border border-dashed border-border px-2 py-3 text-xs text-muted-foreground
   divXs: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // h-6 min-w-0 flex-1 border border-primary/50 bg-background px-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -211,13 +211,13 @@ export const styles = stylex.create({
     height: space.s6,
     minWidth: 0,
     flex: "1 1 0%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.5)",
     backgroundColor: colors.bg,
     paddingInline: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -258,15 +258,15 @@ export const styles = stylex.create({
     position: "absolute",
     right: "0",
     top: "1.75rem",
-    zIndex: 40,
+    zIndex: layers.overlay,
     width: "8rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.popover,
     padding: space.s1,
     color: "hsl(var(--popover-foreground))",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+    boxShadow: shadows.elevationLg,
     display: "flex",
     flexDirection: "column",
     gap: space.s1,
@@ -281,9 +281,9 @@ export const styles = stylex.create({
     paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
-    backgroundColor: { default: null, ":hover": "hsl(var(--accent))" },
+    backgroundColor: { default: null, ":hover": colors.hoverWash },
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
@@ -303,7 +303,7 @@ export const styles = stylex.create({
     paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
     backgroundColor: { default: null, ":hover": "hsl(var(--destructive) / 0.1)" },
     outline: { default: null, ":focus-visible": "2px solid transparent" },

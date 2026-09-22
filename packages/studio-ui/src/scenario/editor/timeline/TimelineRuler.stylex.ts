@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-red-300 bg-red-950 text-red-200 shadow-[0_0_8px_rgba(248,113,113,0.7)]
@@ -14,8 +14,8 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: "rgb(252 165 165 / 1)",
+    borderWidth: stroke.hairline,
+    borderColor: colors.critical,
     backgroundColor: "rgb(69 10 10 / 1)",
     color: "rgb(254 202 202 / 1)",
     boxShadow: "0 0 8px rgba(248, 113, 113, 0.7)",
@@ -45,7 +45,7 @@ export const styles = stylex.create({
     WebkitUserSelect: "none",
     MozUserSelect: "none",
     userSelect: "none",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(0 0 0 / 0.2)",
   },
@@ -71,16 +71,16 @@ export const styles = stylex.create({
     top: "50%",
     transform: "translate(0, -50%)",
     fontFamily: text.fontMono,
-    fontSize: "0.5625rem",
+    fontSize: text.sizeTag,
     lineHeight: "1",
   },
   // text-white
   tickLabelOrigin: {
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // text-white/35
   tickLabelMinor: {
-    color: "rgb(255 255 255 / 0.35)",
+    color: colors.inkFaint,
   },
   // left-0.5
   tickLabelStart: {

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   panel: {
@@ -9,12 +9,12 @@ export const styles = stylex.create({
   },
   qualityLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
   },
   qualityOptions: {
     display: "flex",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.3)",
@@ -28,33 +28,33 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   qualitySegmentActive: {
     backgroundColor: colors.bg,
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.text,
-    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+    boxShadow: shadows.elevationSm,
   },
   qualitySegmentInactive: {
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   qualityDescription: {
     fontSize: "11px",
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   layerStatusList: {
     display: "flex",
     flexDirection: "column",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--border) / 0.7)",
-    padding: "0.625rem",
+    padding: space.s2_5,
   },
   clearCacheButton: {
     display: "flex",
@@ -62,17 +62,17 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s1_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": colors.muted },
     opacity: { default: null, ":disabled": 0.5 },
   },
@@ -85,7 +85,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   layerIcon: {

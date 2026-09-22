@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   editorShell: { position: "relative", height: "100%", minWidth: 0, minHeight: 0, color: colors.text, pointerEvents: "auto", backgroundColor: colors.bg },
@@ -10,7 +10,7 @@ export const styles = stylex.create({
     height: "8rem",
     placeItems: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // pointer-events-auto
@@ -29,7 +29,7 @@ export const styles = stylex.create({
   xsWhiteBordered: {
     pointerEvents: "none",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "rgb(0 0 0 / 0.85)",
     paddingLeft: space.s3,
@@ -37,10 +37,10 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4
   absFlexMid: {
@@ -75,8 +75,8 @@ export const styles = stylex.create({
     top: "-1.5rem",
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   // pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl
   absInertRound: {
@@ -88,7 +88,7 @@ export const styles = stylex.create({
     height: "4rem",
     borderRadius: "0",
     backgroundColor: colors.scrim,
-    filter: "blur(40px)",
+    filter: motion.blurLg,
   },
   // pointer-events-none fixed z-[90] max-w-56 -translate-x-1/2 -translate-y-full pb-3
   fixedInert: {
@@ -102,7 +102,7 @@ export const styles = stylex.create({
   // relative border border-amber-300/80 bg-black/90 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md
   relMediumBordered: {
     position: "relative",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 0.9)",
     paddingLeft: space.s3,
@@ -112,10 +112,10 @@ export const styles = stylex.create({
     textAlign: "center",
     fontSize: "11px",
     fontWeight: text.weightMedium,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     color: "rgb(254 243 199 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-amber-300/80 bg-black
   absRuleBRuleR: {
@@ -125,8 +125,8 @@ export const styles = stylex.create({
     width: "0.5rem",
     height: "0.5rem",
     transform: "translate(-50%, -50%) rotate(45deg)",
-    borderBottomWidth: "1px",
-    borderRightWidth: "1px",
+    borderBottomWidth: stroke.hairline,
+    borderRightWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 1)",
   },
@@ -163,7 +163,7 @@ export const styles = stylex.create({
     height: "8rem",
     placeItems: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // pointer-events-auto
@@ -181,17 +181,17 @@ export const styles = stylex.create({
   // pointer-events-none rounded-md border border-border/70 bg-black/85 px-3 py-1 text-xs text-white shadow-lg backdrop-blur-md
   clipboardNotice: {
     pointerEvents: "none",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "rgb(0 0 0 / 0.85)",
     paddingInline: space.s3,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4
   floatingTimelineLayer: {
@@ -225,8 +225,8 @@ export const styles = stylex.create({
     top: `calc(-1 * ${space.s6})`,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   // pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl
   divAbsolute: {
@@ -236,8 +236,8 @@ export const styles = stylex.create({
     right: "2.5rem",
     bottom: "-1.25rem",
     height: "4rem",
-    backgroundColor: "rgb(0 0 0 / 0.45)",
-    filter: "blur(40px)",
+    backgroundColor: colors.scrim,
+    filter: motion.blurLg,
   },
   // pointer-events-none fixed z-[90] max-w-56 -translate-x-1/2 -translate-y-full pb-3
   routePointSpeedWarning: {
@@ -251,7 +251,7 @@ export const styles = stylex.create({
   // relative border border-amber-300/80 bg-black/90 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md
   divRelativeMedium: {
     position: "relative",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 0.9)",
@@ -260,10 +260,10 @@ export const styles = stylex.create({
     textAlign: "center",
     fontSize: "11px",
     fontWeight: text.weightMedium,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     color: "rgb(254 243 199 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-amber-300/80 bg-black
   spanAbsoluteIcon: {
@@ -273,9 +273,9 @@ export const styles = stylex.create({
     width: space.s2,
     height: space.s2,
     transform: "rotate(45deg)",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 1)",

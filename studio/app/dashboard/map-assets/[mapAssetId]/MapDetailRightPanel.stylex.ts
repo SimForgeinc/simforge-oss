@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const hovered = stylex.defineVars({
 railIconOpacity: "0"
@@ -8,13 +8,13 @@ railIconOpacity: "0"
 export const styles = stylex.create({
   openPanelButton: {
     flexShrink: 0,
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: colors.bg, ":hover": colors.muted },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     display: "flex",
     alignItems: "center",
     paddingInline: space.s1_5,
@@ -26,7 +26,7 @@ export const styles = stylex.create({
     writingMode: "vertical-lr",
     transform: "rotate(180deg)",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     paddingBlock: space.s3,
   },
@@ -49,12 +49,12 @@ export const styles = stylex.create({
     top: "0",
     bottom: "0",
     left: "0",
-    zIndex: 20,
+    zIndex: layers.float,
     width: "1rem",
     transform: "translateX(-50%)",
     transitionProperty: "all",
-    transitionTimingFunction: "linear",
-    transitionDuration: "150ms",
+    transitionTimingFunction: motion.easeLinear,
+    transitionDuration: motion.durStandard,
     cursor: "e-resize",
     display: "flex",
     alignItems: "center",
@@ -72,7 +72,7 @@ export const styles = stylex.create({
       transform: "translateX(-50%)",
       transitionProperty: "all",
       transitionTimingFunction: motion.easeStandard,
-      transitionDuration: "150ms",
+      transitionDuration: motion.durStandard,
       width: { default: "2px", ":hover": "0.25rem" },
       backgroundColor: { default: null, ":hover": "hsl(var(--primary) / 0.4)" },
     },
@@ -84,11 +84,11 @@ export const styles = stylex.create({
     opacity: hovered.railIconOpacity,
     transitionProperty: "opacity",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   panelContent: {
     width: "100%",
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
@@ -107,7 +107,7 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
     flexShrink: 0,
     width: "100%",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
     height: "2.5rem",
@@ -116,11 +116,11 @@ export const styles = stylex.create({
   },
   tabTrigger: {
     gap: space.s1,
-    borderBottomWidth: "2px",
+    borderBottomWidth: stroke.thick,
     borderBottomStyle: "solid",
     borderColor: { default: "transparent", "[data-state=active]": colors.primary },
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, "[data-state=active]": colors.text },
     backgroundColor: { default: null, "[data-state=active]": "transparent" },
     boxShadow: { default: null, "[data-state=active]": "none" },

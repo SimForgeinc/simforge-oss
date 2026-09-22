@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "../../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex min-h-[52px] shrink-0 items-center gap-3 overflow-hidden rounded-t-[10px] border-b border-white/10 bg-[linear-gradient(180deg,#171717_0%,#111111_100%)] px-3 py-2
@@ -12,7 +12,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderTopLeftRadius: "10px",
     borderTopRightRadius: "10px",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: "linear-gradient(180deg, #171717 0%, #111111 100%)",
     paddingLeft: space.s3,
@@ -43,7 +43,7 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: "1",
     fontWeight: text.weightSemibold,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // flex size-6 shrink-0 items-center justify-center rounded text-white/50 transition-colors hover:bg-white/10 hover:text-white
   flexCenterMid: {
@@ -56,11 +56,11 @@ export const styles = stylex.create({
     borderRadius: "0",
     color: {
       default: colors.textSubtle,
-      ":hover": "rgb(255 255 255 / 1)",
+      ":hover": colors.ink,
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: {
       default: null,
       ":hover": colors.fillStrong,
@@ -97,10 +97,10 @@ export const styles = stylex.create({
     flexDirection: "column",
     overflow: "visible",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.8)",
     backgroundImage: "linear-gradient(155deg,#111111 0%,#090909 58%,#0d0d0d 100%)",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     boxShadow: "0 28px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(232,224,68,0.12)",
   },
   // pointer-events-none absolute z-20 size-5 rotate-45 bg-[#0d0d0d]

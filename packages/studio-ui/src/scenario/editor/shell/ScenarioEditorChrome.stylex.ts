@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // shrink-0
@@ -24,14 +24,14 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: "rgb(242 242 242 / 1)",
   },
   // shrink-0 border border-editor-line bg-editor-panel2 px-1.5 py-0.5 font-meta text-micro uppercase tracking-meta text-editor-muted
   tightCapsMeta: {
     flexShrink: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.hairline,
     backgroundColor: colors.panel2,
     paddingLeft: space.s1_5,
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     paddingBottom: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
@@ -52,7 +52,7 @@ export const styles = stylex.create({
     whiteSpace: "nowrap",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
@@ -61,14 +61,14 @@ export const styles = stylex.create({
   hiddenCenterTight: {
     display: {
       default: "none",
-      "@media (min-width: 640px)": "flex",
+      [layout.bpSm]: "flex",
     },
     flexShrink: "0",
     alignItems: "center",
     gap: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
@@ -87,19 +87,19 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "center",
     gap: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.hairline,
     backgroundColor: "rgb(10 10 10 / 0.95)",
     paddingLeft: {
       default: space.s3,
-      "@media (min-width: 640px)": space.s4,
+      [layout.bpSm]: space.s4,
     },
     paddingRight: {
       default: space.s3,
-      "@media (min-width: 640px)": space.s4,
+      [layout.bpSm]: space.s4,
     },
     color: "rgb(242 242 242 / 1)",
-    backdropFilter: "blur(12px)",
+    backdropFilter: motion.blurGlass,
   },
   // size-1.5 rounded-full
   round: {
@@ -109,7 +109,7 @@ export const styles = stylex.create({
   },
   // border border-editor-line bg-editor-bg/90 px-3 py-2 font-meta text-micro uppercase tracking-meta text-editor-muted shadow-xl backdrop-blur-md
   capsMetaMicro2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.hairline,
     backgroundColor: "rgb(10 10 10 / 0.9)",
     paddingLeft: space.s3,
@@ -118,12 +118,12 @@ export const styles = stylex.create({
     paddingBottom: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
-    boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    boxShadow: shadows.elevationXl,
+    backdropFilter: motion.blurGlass,
   },
 
   // bg-editor-muted (#9a9a9a)

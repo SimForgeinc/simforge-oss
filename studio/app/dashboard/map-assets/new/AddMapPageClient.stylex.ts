@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, layout, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   mapForm: {
@@ -13,9 +13,9 @@ export const styles = stylex.create({
   },
   topSection: {
     display: "flex",
-    flexDirection: { default: "column", "@media (min-width: 1024px)": "row" },
+    flexDirection: { default: "column", [layout.bpLg]: "row" },
     flexShrink: 0,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
   },
@@ -23,29 +23,29 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s4,
-    flex: { default: "0 0 auto", "@media (min-width: 1024px)": "1 1 0%" },
+    flex: { default: "0 0 auto", [layout.bpLg]: "1 1 0%" },
     minWidth: 0,
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s6,
-    paddingBlock: "1.25rem",
+    paddingBlock: space.s5,
   },
   errorMessage: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.5)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
     paddingInline: space.s3,
     paddingBlock: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   fieldHelperText: {
     marginBottom: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   fileUploadRow: {
@@ -63,7 +63,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   hiddenFileInput: {
@@ -72,19 +72,19 @@ export const styles = stylex.create({
   parseErrorMessage: {
     marginTop: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   metadataSummary: {
     marginTop: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.3)",
     paddingInline: space.s3,
     paddingBlock: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   metadataDetails: {
@@ -94,32 +94,32 @@ export const styles = stylex.create({
     rowGap: space.s0_5,
   },
   metadataLabel: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   metadataValue: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
   },
   descriptionTextarea: {
     width: "100%",
     resize: "none",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
+    borderColor: colors.input,
     backgroundColor: colors.bg,
     paddingInline: space.s3,
     paddingBlock: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.text,
-    boxShadow: { default: "0 1px 2px 0 rgba(0, 0, 0, 0.05)", ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
+    boxShadow: { default: shadows.elevationSm, ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
     /*
      * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
      * `outline: none`: the focus ring above is a box-shadow, which
      * forced-colours mode discards, and this transparent outline is what
      * remains visible there.
      */
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -128,28 +128,28 @@ export const styles = stylex.create({
   carlaMapHelperText: {
     marginTop: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   crsSelect: {
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
+    borderColor: colors.input,
     backgroundColor: colors.bg,
     paddingInline: space.s3,
     paddingBlock: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.text,
-    boxShadow: { default: "0 1px 2px 0 rgba(0, 0, 0, 0.05)", ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
+    boxShadow: { default: shadows.elevationSm, ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
     /*
      * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
      * `outline: none`: the focus ring above is a box-shadow, which
      * forced-colours mode discards, and this transparent outline is what
      * remains visible there.
      */
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -157,7 +157,7 @@ export const styles = stylex.create({
   mapPreview: {
     position: "relative",
     aspectRatio: "1",
-    width: { default: "100%", "@media (min-width: 1024px)": "400px" },
+    width: { default: "100%", [layout.bpLg]: "400px" },
     maxWidth: "400px",
     flexShrink: 0,
     alignSelf: "flex-start",
@@ -174,7 +174,7 @@ export const styles = stylex.create({
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: "10px",
-    color: "#34d399",
+    color: colors.positive,
   },
   cameraIcon: {
     width: "0.75rem",
@@ -196,7 +196,7 @@ export const styles = stylex.create({
   },
   emptyPreviewMessage: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   bottomSection: {
     display: "flex",
@@ -210,14 +210,14 @@ export const styles = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     gap: space.s3,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.border,
     paddingTop: space.s4,
   },
   debugSection: {
     flexShrink: 0,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s6,
@@ -228,11 +228,11 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   chevronLg: {
     width: "0.875rem",
@@ -240,7 +240,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotateMinus90: {
     transform: "rotate(-90deg)",
@@ -249,13 +249,13 @@ export const styles = stylex.create({
     marginTop: space.s2,
     maxHeight: "24rem",
     overflow: "auto",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     padding: space.s3,
     fontSize: "11px",
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
 });

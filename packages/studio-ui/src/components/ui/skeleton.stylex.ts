@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors } from "../../stylex/tokens.stylex";
+import { colors, motion } from "../../stylex/tokens.stylex";
 
 /**
  * The placeholder's breathing cycle, matching Tailwind's `animate-pulse`
@@ -29,8 +29,8 @@ export const styles = stylex.create({
   base: {
     backgroundColor: colors.muted,
     animationName: pulse,
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
   },
 });

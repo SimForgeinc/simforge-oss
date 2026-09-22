@@ -19,9 +19,9 @@ export const styles = stylex.create({
   localPlatform: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-3 font-display text-4xl font-semibold

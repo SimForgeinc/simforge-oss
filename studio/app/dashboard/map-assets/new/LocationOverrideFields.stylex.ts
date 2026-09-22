@@ -5,7 +5,7 @@ export const styles = stylex.create({
   locationOverrideHint: {
     marginBottom: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   locationFieldsGrid: {
@@ -22,6 +22,6 @@ export const styles = stylex.create({
   locationFieldInput: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
 });

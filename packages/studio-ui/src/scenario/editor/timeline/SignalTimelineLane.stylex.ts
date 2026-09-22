@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0
@@ -30,7 +30,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
   },
   // size-3
@@ -46,7 +46,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.text,
   },
   // ml-1 text-muted-foreground
@@ -66,7 +66,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // relative h-4 min-w-0 bg-muted
@@ -98,7 +98,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "inset 0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ringInset,
     },
   },
   // absolute top-0 flex h-4 items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
@@ -120,7 +120,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "inset 0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ringInset,
     },
   },
   // cursor-pointer
@@ -133,8 +133,8 @@ export const styles = stylex.create({
   },
   // border-y border-dashed border-border
   dashed: {
-    borderTopWidth: "1px",
-    borderBottomWidth: "1px",
+    borderTopWidth: stroke.hairline,
+    borderBottomWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.border,
   },

@@ -16,6 +16,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 
 import { driveColors, driveLayer, driveRadius, driveText } from "./drive.stylex";
+import { motion, shadows, space, stroke, text } from "../stylex/tokens.stylex";
 
 /** Tailwind's colour transition, kept identical while both systems coexist. */
 const COLOR_TRANSITION =
@@ -51,9 +52,9 @@ export const driveChrome = stylex.create({
     zIndex: driveLayer.menu,
     display: "grid",
     placeItems: "center",
-    paddingInline: "1.5rem",
+    paddingInline: space.s6,
     backgroundColor: driveColors.scrim,
-    backdropFilter: "blur(4px)",
+    backdropFilter: motion.blurSm,
   },
 
   /** A full Drive screen outside a session: the pickers. */
@@ -69,17 +70,17 @@ export const driveChrome = stylex.create({
 
   /** The pause card: a control panel, so it holds back most of the world. */
   panelDialog: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
     borderRadius: driveRadius.dialog,
     backgroundColor: driveColors.dialog,
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
     color: driveColors.textPrimary,
   },
   /** A number that has to stay legible over bright sky. */
   panelReadout: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
     borderRadius: driveRadius.chip,
@@ -87,7 +88,7 @@ export const driveChrome = stylex.create({
   },
   /** The session's own line: loading, starting, or why it could not spawn. */
   panelStatus: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
     borderRadius: driveRadius.pill,
@@ -95,7 +96,7 @@ export const driveChrome = stylex.create({
   },
   /** An instrument face — round, dark, ruled. */
   panelDial: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.line,
     borderRadius: driveRadius.pill,
@@ -134,27 +135,27 @@ const controls = stylex.create({
     alignItems: "center",
     borderRadius: driveRadius.pill,
     transitionProperty: COLOR_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
   },
   /** A HUD toggle: instrument type, always uppercase. */
   hud: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: "0.75rem",
-    paddingBlock: "0.25rem",
+    paddingInline: space.s3,
+    paddingBlock: space.s1,
     fontSize: driveText.sizeMeta,
     textTransform: "uppercase",
     letterSpacing: driveText.trackControl,
   },
   /** A menu chip: the same shape at reading size, in the product face. */
   chip: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: "0.75rem",
-    paddingBlock: "0.25rem",
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
+    paddingInline: space.s3,
+    paddingBlock: space.s1,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
   },
   /** Live or selected. The yellow is the whole signal. */
   active: {
@@ -179,18 +180,18 @@ const controls = stylex.create({
   },
 
   action: {
-    gap: "0.5rem",
-    paddingBlock: "0.625rem",
-    fontSize: "0.875rem",
-    lineHeight: "1.25rem",
+    gap: space.s2,
+    paddingBlock: space.s2_5,
+    fontSize: text.sizeSm,
+    lineHeight: text.lineSm,
   },
   /** The way forward out of a screen: solid accent, black type. */
   primary: {
-    paddingInline: "1.5rem",
+    paddingInline: space.s6,
     borderStyle: "none",
     backgroundColor: driveColors.accent,
     fontFamily: driveText.fontDisplay,
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     color: driveColors.accentText,
     opacity: {
       default: 1,
@@ -201,8 +202,8 @@ const controls = stylex.create({
   },
   /** An alternative action: outlined, quiet until hovered. */
   secondary: {
-    paddingInline: "1rem",
-    borderWidth: "1px",
+    paddingInline: space.s4,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
       default: driveColors.line,
@@ -212,7 +213,7 @@ const controls = stylex.create({
   },
   /** The way out. Present, but never competing with the way forward. */
   quiet: {
-    paddingInline: "1rem",
+    paddingInline: space.s4,
     borderStyle: "none",
     backgroundColor: "transparent",
     color: {

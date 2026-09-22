@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "../../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // size-4
@@ -20,7 +20,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s2,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -31,7 +31,7 @@ export const styles = stylex.create({
   capsMetaMicro: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
     color: colors.mutedForeground,
@@ -63,7 +63,7 @@ export const styles = stylex.create({
   microMutedSnug: {
     marginTop: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     color: colors.mutedForeground,
   },
   // grid grid-cols-2 gap-1
@@ -90,7 +90,7 @@ export const styles = stylex.create({
     paddingRight: 0,
     maxWidth: {
       default: null,
-      "@media (min-width: 640px)": "420px",
+      [layout.bpSm]: "420px",
     },
   },
   // sr-only
@@ -110,7 +110,7 @@ export const styles = stylex.create({
     marginBottom: space.s1_5,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
     color: "hsl(var(--muted-foreground) / 0.7)",
@@ -126,14 +126,14 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     textAlign: "left",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -144,7 +144,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // py-1
@@ -162,14 +162,14 @@ export const styles = stylex.create({
   // text-meta text-muted-foreground
   metaMuted: {
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // font-meta text-micro tabular-nums text-muted-foreground/70
   metaMicroNums: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontVariantNumeric: "tabular-nums",
     color: "hsl(var(--muted-foreground) / 0.7)",
   },
@@ -194,7 +194,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // h-8 border-border bg-card/90 shadow-sm backdrop-blur gap-2 rounded-none px-3
@@ -206,8 +206,8 @@ export const styles = stylex.create({
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // h-8 border-border bg-card/90 shadow-sm backdrop-blur w-8 shadow-xl
   glassy: {
@@ -215,8 +215,8 @@ export const styles = stylex.create({
     width: "2rem",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",
-    boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationXl,
+    backdropFilter: motion.blurMd,
   },
   // flex flex-col min-h-0 flex-1
   flexColFill: {
@@ -234,16 +234,16 @@ export const styles = stylex.create({
     maxHeight: "calc(100% - 2rem)",
     width: "300px",
     flexDirection: "column",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.95)",
-    boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationXl,
+    backdropFilter: motion.blurMd,
   },
   // min-h-7 border px-1.5 font-meta text-[9px] font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-primary bg-primary/15 text-foreground
   capsMetaInk: {
     minHeight: "1.75rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.15)",
     paddingLeft: space.s1_5,
@@ -256,7 +256,7 @@ export const styles = stylex.create({
     color: colors.text,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -267,13 +267,13 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // min-h-7 border px-1.5 font-meta text-[9px] font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border bg-surface-raised text-muted-foreground hover:text-foreground
   capsMetaMuted: {
     minHeight: "1.75rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
     paddingLeft: space.s1_5,
@@ -289,7 +289,7 @@ export const styles = stylex.create({
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -300,25 +300,25 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // h-7 border font-meta text-micro font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-primary bg-primary/15 text-foreground
   capsMetaMicro3: {
     height: "1.75rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.15)",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.text,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -329,18 +329,18 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // h-7 border font-meta text-micro font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border bg-surface-raised text-muted-foreground hover:text-foreground
   capsMetaMicro4: {
     height: "1.75rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -350,7 +350,7 @@ export const styles = stylex.create({
     },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -361,13 +361,13 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // pb-3 mb-3 border-b border-border/60
   ruleB: {
     marginBottom: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.6)",
     paddingBottom: space.s3,
   },
@@ -381,12 +381,12 @@ export const styles = stylex.create({
     height: "0.875rem",
     width: "1.75rem",
     flexShrink: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.3)",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // relative h-3.5 w-7 shrink-0 border transition-colors border-border bg-surface-raised
   relTightBordered2: {
@@ -394,12 +394,12 @@ export const styles = stylex.create({
     height: "0.875rem",
     width: "1.75rem",
     flexShrink: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // absolute top-0.5 size-2 transition-all left-[calc(100%-0.625rem)] bg-primary
   abs2: {
@@ -411,7 +411,7 @@ export const styles = stylex.create({
     backgroundColor: colors.primary,
     transitionProperty: "all",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   // absolute top-0.5 size-2 transition-all left-0.5 bg-muted-foreground
   abs3: {
@@ -423,6 +423,6 @@ export const styles = stylex.create({
     backgroundColor: "hsl(var(--muted-foreground))",
     transitionProperty: "all",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
 });

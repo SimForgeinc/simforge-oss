@@ -1,36 +1,35 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, radii, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const SWITCH_WELL = "hsl(var(--muted) / 0.3)";
 const FOCUS_RING = `0 0 0 1px ${colors.bg}, 0 0 0 3px ${colors.ring}`;
-const SHADOW_SM = "0 1px 2px 0 rgb(0 0 0 / 0.05)";
 export const segmented = stylex.create({
   group: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "0.125rem",
-    borderWidth: 1,
+    gap: space.s0_5,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: SWITCH_WELL,
-    padding: "0.125rem",
+    padding: space.s0_5,
   },
   option: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "0.375rem",
+    gap: space.s1_5,
     borderRadius: radii.sm,
-    paddingInline: "0.75rem",
-    paddingBlock: "0.375rem",
+    paddingInline: space.s3,
+    paddingBlock: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     transitionProperty:
       "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },
@@ -38,8 +37,8 @@ export const segmented = stylex.create({
     backgroundColor: colors.bg,
     color: colors.text,
     boxShadow: {
-      default: SHADOW_SM,
-      ":focus-visible": `${FOCUS_RING}, ${SHADOW_SM}`,
+      default: shadows.elevationSm,
+      ":focus-visible": `${FOCUS_RING}, ${shadows.elevationSm}`,
     },
   },
   optionIdle: {

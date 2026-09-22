@@ -1,14 +1,14 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../stylex/tokens.stylex";
+import { colors, layers, layout, motion, shadows, space, stroke } from "../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  errorCover: { position: "absolute", inset: 0, zIndex: 30 },
+  errorCover: { position: "absolute", inset: 0, zIndex: layers.sticky },
   worldSurface: { position: "absolute", inset: 0, zIndex: 0 },
-  listSession: { position: "relative", zIndex: 10, display: "flex", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
+  listSession: { position: "relative", zIndex: layers.raised, display: "flex", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
   hiddenSession: { visibility: "hidden", pointerEvents: "none" },
-  coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: { default: "420ms", "@media (prefers-reduced-motion: reduce)": "0ms" } },
+  coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: { default: "420ms", [layout.reducedMotion]: "0ms" } },
   coverageBlurred: { transform: "scale(1.02)", filter: "blur(14px)" },
-  editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: 20, visibility: "visible", opacity: 1 },
+  editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: layers.float, visibility: "visible", opacity: 1 },
   // relative h-full min-h-0 overflow-hidden bg-background text-foreground
   scenarioDatasetIndex: {
     position: "relative",
@@ -55,13 +55,13 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.95)",
     padding: space.s2,
-    boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationXl,
+    backdropFilter: motion.blurMd,
   },
   // min-w-0 flex-1
   copyableerrormessage: {

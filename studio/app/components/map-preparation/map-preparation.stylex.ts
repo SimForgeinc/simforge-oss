@@ -8,7 +8,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
  * Completed fraction of one row, as a percentage string. The fill is one
@@ -33,13 +33,13 @@ export const preparation = stylex.create({
     marginTop: space.s3,
   },
   row: {
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
     paddingInline: space.s3,
-    paddingBlock: "0.625rem",
+    paddingBlock: space.s2_5,
   },
   rowHead: {
     display: "flex",
@@ -60,8 +60,8 @@ export const preparation = stylex.create({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontSize: "0.875rem",
-    lineHeight: "1.25rem",
+    fontSize: text.sizeSm,
+    lineHeight: text.lineSm,
     color: "rgba(255, 255, 255, 0.8)",
   },
   rowBytes: {
@@ -91,8 +91,8 @@ export const preparation = stylex.create({
   },
   rowMessage: {
     marginTop: space.s2,
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
 });

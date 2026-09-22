@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -11,15 +11,15 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    paddingBlock: "3rem",
+    paddingBlock: space.s12,
   },
   loadingSpinner: {
     width: "1.25rem",
     height: "1.25rem",
     color: colors.mutedForeground,
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   loadingMessage: {
@@ -38,7 +38,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    paddingBlock: "3rem",
+    paddingBlock: space.s12,
     textAlign: "center",
   },
   emptyStateIconWrapper: {
@@ -55,14 +55,14 @@ export const styles = stylex.create({
   },
   emptyStateTitle: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   emptyStateDescription: {
     marginTop: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
     maxWidth: "240px",
   },

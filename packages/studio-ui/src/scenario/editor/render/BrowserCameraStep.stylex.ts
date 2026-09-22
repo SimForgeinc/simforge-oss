@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // mb-3 flex shrink-0 items-start justify-between gap-4
@@ -18,37 +18,37 @@ export const styles = stylex.create({
   // text-sm font-bold tracking-tight text-foreground
   smInkBold: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightBold,
-    letterSpacing: "-0.025em",
+    letterSpacing: text.trackingTight,
     color: colors.text,
   },
   // mt-0.5 text-micro text-muted-foreground
   microMuted: {
     marginTop: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // border border-dashed render-hairline px-3 py-2 text-xs text-muted-foreground
   xsMutedBordered: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
     paddingBottom: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
     borderColor: "rgb(255 255 255 / 10%)",
   },
@@ -56,7 +56,7 @@ export const styles = stylex.create({
   borderedNarrowableScrollX: {
     minWidth: "0px",
     overflowX: "auto",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // w-full border-collapse text-left
@@ -67,7 +67,7 @@ export const styles = stylex.create({
   },
   // border-b render-hairline
   ruleB: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // px-3 py-1.5 text-micro font-bold uppercase tracking-meta text-muted-foreground
@@ -77,7 +77,7 @@ export const styles = stylex.create({
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -95,7 +95,7 @@ export const styles = stylex.create({
   // border-b render-hairline last:border-b-0
   ruleB2: {
     borderBottomWidth: {
-      default: "1px",
+      default: stroke.hairline,
       ":last-child": "0px",
     },
     borderColor: "rgb(255 255 255 / 10%)",
@@ -106,7 +106,7 @@ export const styles = stylex.create({
     paddingRight: space.s3,
     paddingTop: space.s2,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -138,7 +138,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // size-3.5 shrink-0 text-muted-foreground
@@ -156,7 +156,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -169,7 +169,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -183,7 +183,7 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     textAlign: "center",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: "hsl(var(--muted-foreground) / 0.4)",
   },
   // sr-only
@@ -216,7 +216,7 @@ export const styles = stylex.create({
   microMuted2: {
     marginTop: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // font-mono
@@ -231,7 +231,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -245,13 +245,13 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // border-t render-hairline first:border-t-0
   ruleT: {
     borderTopWidth: {
-      default: "1px",
+      default: stroke.hairline,
       ":first-child": "0px",
     },
     borderColor: "rgb(255 255 255 / 10%)",
