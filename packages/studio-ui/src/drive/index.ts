@@ -14,6 +14,14 @@ export {
   type EgoPose,
   type OrbitState,
 } from "./cameras";
+export {
+  DASHCAM_FALLBACK_FOV_DEG,
+  DASHCAM_FALLBACK_PITCH_RAD,
+  dashcamMountFor,
+  dashcamMountForDims,
+  verticalFovDeg,
+  type DashcamMount,
+} from "./dashcam";
 // Drive's chrome travels through this barrel; its *tokens* deliberately do
 // not. StyleX resolves `defineVars` through the importing module's own path,
 // so a var group re-exported from an index fails the compile — import

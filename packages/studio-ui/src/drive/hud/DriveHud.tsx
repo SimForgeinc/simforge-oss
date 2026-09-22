@@ -102,6 +102,22 @@ const styles = stylex.create({
     color: driveColors.textBody,
   },
 
+  /**
+   * The dashcam's burned-in stamp, where a real one prints it: top left,
+   * under the meta row, the mirror of the debug readout on the right.
+   */
+  dashcamStamp: {
+    position: "absolute",
+    left: "1.25rem",
+    top: "3.5rem",
+    paddingInline: "0.5rem",
+    paddingBlock: "0.25rem",
+    fontFamily: driveText.fontMono,
+    fontSize: driveText.sizeMeta,
+    fontVariantNumeric: "tabular-nums",
+    color: driveColors.textBody,
+  },
+
   minimapSlot: {
     position: "absolute",
     bottom: "1.25rem",
@@ -237,6 +253,7 @@ export const DriveHud = forwardRef<DriveHudHandle, {
   const surfaceRef = useRef<HTMLSpanElement | null>(null);
   const flashRef = useRef<HTMLDivElement | null>(null);
   const debugRef = useRef<HTMLSpanElement | null>(null);
+  const dashcamRef = useRef<HTMLSpanElement | null>(null);
   const minimapRef = useRef<MinimapHandle | null>(null);
   const unitsRef = useRef(units);
   const flashUntilRef = useRef(0);
@@ -275,6 +292,14 @@ export const DriveHud = forwardRef<DriveHudHandle, {
         clockRef.current.textContent = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
       }
       if (cameraRef.current) cameraRef.current.textContent = frame.cameraKind;
+      if (dashcamRef.current) {
+        const shown = frame.cameraKind === "dashcam";
+        dashcamRef.current.style.visibility = shown ? "visible" : "hidden";
+        if (shown) {
+          const units = unitsRef.current === "kmh" ? "km/h" : "mph";
+          dashcamRef.current.textContent = `REC  ${dashcamTimestamp(new Date())}  ${speed.toFixed(0)} ${units}`;
+        }
+      }
       if (surfaceRef.current) {
         surfaceRef.current.textContent = telemetry.offRoad ? "OFF ROAD" : "";
       }
@@ -326,6 +351,13 @@ export const DriveHud = forwardRef<DriveHudHandle, {
           Esc
         </DrivePill>
       </div>
+
+      <span
+        {...stylex.props(driveChrome.panelReadout, styles.dashcamStamp)}
+        data-testid="drive-dashcam-stamp"
+        ref={dashcamRef}
+        style={{ visibility: "hidden" }}
+      />
 
       {debug ? (
         <span
@@ -400,3 +432,10 @@ export const DriveHud = forwardRef<DriveHudHandle, {
     </div>
   );
 });
+
+/** `YYYY-MM-DD HH:MM:SS` in local time, the way a dashcam burns it in. */
+export function dashcamTimestamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+    + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
