@@ -13,7 +13,7 @@ import {
   type TruthSubscription,
   type WorldSession,
 } from '@simforge-oss/training-env/browser';
-import { loadMapGraph, type StaticColliderDiagnostics } from '@simforge-oss/playback';
+import { loadMapGraph, type MapGraphSources, type StaticColliderDiagnostics } from '@simforge-oss/playback';
 
 import type {
   LiveWorldWorkerRequest,
@@ -39,6 +39,7 @@ import {
   type AuthoredDriveMode,
   type ManualDriveSample,
 } from '../app/lib/live-world/authored-world-session';
+import { WorkerReadyGate } from '../app/lib/live-world/worker-ready-gate';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -75,16 +76,87 @@ const AUTHORED_CATCH_UP_INTERVALS = 1.5;
 const AUTHORED_LAG_WARNING_INTERVAL_MS = 5_000;
 
 
+type WorldCommand = Exclude<LiveWorldWorkerRequest, { type: 'init-authored' } | { type: 'preload-map' } | { type: 'close' }>;
+
+/**
+ * Commands that arrive while the world is still being built are held and
+ * replayed once it exists; see `WorkerReadyGate`. Pedals, transport, ego and
+ * control source state an intent, so only the newest of each is kept.
+ */
+const gate = new WorkerReadyGate<WorldCommand>((message) => {
+  switch (message.type) {
+    case 'driver-command':
+    case 'control':
+    case 'planner-action':
+    case 'control-source':
+    case 'set-ego':
+      return message.type;
+    case 'transport':
+      // A seek is a position, not a play state: keep it apart so a later
+      // play does not erase where the page asked to be.
+      return message.action === 'seek' ? 'transport:seek' : 'transport';
+    default:
+      return null;
+  }
+});
+
+/**
+ * The engine and the map's lane graph, started by `preload-map` while the page
+ * compiles the scenario, or by `init-authored` when nothing preloaded them.
+ * Neither depends on the scenario, so there is one load per worker.
+ */
+let mapLoad: Promise<{ sessions: SessionRuntime; graph: LaneGraph; collisions: StaticColliderDiagnostics }> | null = null;
+
+function loadMap(sources: MapGraphSources): NonNullable<typeof mapLoad> {
+  mapLoad ??= (async () => {
+    const runtime = await loadSessions();
+    // The drive is a simulation of the same world the editor previews, so its
+    // lane graph is built by the same shared builder and carries the same
+    // verified static colliders: a car must hit a building here too.
+    const mapGraph = await loadMapGraph({ module: runtime.engine.module, sources });
+    return { sessions: runtime, graph: mapGraph.graph, collisions: mapGraph.collision.diagnostics };
+  })();
+  return mapLoad;
+}
+
 scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   const message = event.data;
+  if (message.type === 'preload-map') {
+    // A failure here is reported by `init-authored`, which awaits the same load.
+    loadMap(message.mapSources).catch(() => {});
+    return;
+  }
   if (message.type === 'init-authored') {
-    void initializeAuthored(message).catch((error: unknown) => fail(error));
+    void initializeAuthored(message).then(
+      () => {
+        for (const held of gate.open()) handleCommand(held);
+      },
+      (error: unknown) => {
+        // The world never came up. This error is the one the page must see,
+        // so nothing sent after it is answered with a second one.
+        gate.fail();
+        fail(error);
+      },
+    );
     return;
   }
   if (message.type === 'close') {
     shutdown();
     return;
   }
+  const admission = gate.admit(message);
+  if (admission === 'run') {
+    handleCommand(message);
+    return;
+  }
+  // A request with an id has a caller waiting on it; everything else was an
+  // intent the failed world has no use for.
+  if (admission === 'dropped' && 'requestId' in message) {
+    fail(new Error('the live world did not start'), message.requestId);
+  }
+};
+
+function handleCommand(message: WorldCommand): void {
   if (!world || closed) {
     fail(new Error('live world is not running'), 'requestId' in message ? message.requestId : undefined);
     return;
@@ -254,7 +326,7 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
     }
     post({ type: 'result', requestId: message.requestId });
   }
-};
+}
 
 async function initializeAuthored(
   message: Extract<LiveWorldWorkerRequest, { type: 'init-authored' }>,
@@ -264,16 +336,11 @@ async function initializeAuthored(
     throw new Error(`tickHz must be positive, got ${String(message.tickHz)}`);
   }
   authoredInput = parseSimScenarioInput(message.input);
-  sessions = await loadSessions();
-  // The drive is a simulation of the same world the editor previews, so its
-  // lane graph is built by the same shared builder and carries the same
-  // verified static colliders: a car must hit a building here too.
-  const mapGraph = await loadMapGraph({
-    module: sessions.engine.module,
-    sources: message.mapSources,
-  });
-  authoredGraph = mapGraph.graph;
-  postCollisionDiagnostics(mapGraph.collision.diagnostics);
+  const loaded = await loadMap(message.mapSources);
+  if (closed) return;
+  sessions = loaded.sessions;
+  authoredGraph = loaded.graph;
+  postCollisionDiagnostics(loaded.collisions);
   authoredTickHz = message.tickHz;
   endless = message.endless === true;
   playing = false;

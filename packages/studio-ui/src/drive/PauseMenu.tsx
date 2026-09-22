@@ -11,6 +11,7 @@ const CAMERA_LABELS: Readonly<Record<DriveCameraKind, string>> = {
   chase: "Trailing",
   cockpit: "Driver",
   hood: "Hood",
+  dashcam: "Dashcam",
   birdseye: "Bird's-eye",
   orbit: "Orbit",
 };

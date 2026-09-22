@@ -1,22 +1,25 @@
 /**
  * Drive cameras.
  *
- * Five views over one car, all expressed as an eye/target pair so the viewer's
+ * Six views over one car, all expressed as an eye/target pair so the viewer's
  * camera rig can be driven with `setView` and nothing else. Chase, bird's-eye
  * and orbit are spring-damped: the target pose is recomputed every frame from
  * the car's pose and the camera is pulled towards it, which is what makes a
- * chase camera lag into corners and settle without ringing. Hood and cockpit
- * are rigidly bolted to the body — a spring there reads as a loose camera mount.
+ * chase camera lag into corners and settle without ringing. Hood, cockpit and
+ * dashcam are rigidly bolted to the body — a spring there reads as a loose
+ * camera mount.
  *
  * The springs are critically damped by construction (damping = 2*sqrt(k)), so
  * there is exactly one tuning number per view and no overshoot to chase.
  */
 
+import { dashcamMountForDims, verticalFovDeg, type DashcamMount } from './dashcam';
+
 /**
- * The five views, in the order the camera key cycles them: trailing (chase),
- * driver (cockpit), hood, bird's-eye, then the free orbit.
+ * The six views, in the order the camera key cycles them: trailing (chase),
+ * driver (cockpit), hood, dashcam, bird's-eye, then the free orbit.
  */
-export const DRIVE_CAMERA_KINDS = ['chase', 'cockpit', 'hood', 'birdseye', 'orbit'] as const;
+export const DRIVE_CAMERA_KINDS = ['chase', 'cockpit', 'hood', 'dashcam', 'birdseye', 'orbit'] as const;
 export type DriveCameraKind = (typeof DRIVE_CAMERA_KINDS)[number];
 
 /** Where the car is, this rendered frame. Ground-contact origin, as the renderer uses. */
@@ -84,6 +87,14 @@ export const ORBIT_MAX_DISTANCE_M = 60;
 export const ORBIT_MIN_PITCH_RAD = -0.15;
 export const ORBIT_MAX_PITCH_RAD = 1.35;
 
+/** How far ahead of the dashcam its target sits; any distance names the same ray. */
+const DASHCAM_TARGET_M = 20;
+
+/** Views bolted to the body: no spring, and a switch into one snaps. */
+function rigidView(kind: DriveCameraKind): boolean {
+  return kind === 'hood' || kind === 'cockpit' || kind === 'dashcam';
+}
+
 /** Spring stiffness, 1/s². Chase is deliberately looser than orbit. */
 const CHASE_EYE_STIFFNESS = 46;
 const CHASE_TARGET_STIFFNESS = 90;
@@ -102,6 +113,7 @@ export function desiredCameraPose(
   dims: EgoDims,
   orbit: OrbitState,
   into: DriveCameraPose,
+  dashcam?: { mount: DashcamMount; aspect: number },
 ): DriveCameraPose {
   const forwardX = Math.cos(pose.headingRad);
   const forwardZ = -Math.sin(pose.headingRad);
@@ -143,6 +155,24 @@ export function desiredCameraPose(
     into.targetY = into.eyeY - 0.45;
     into.targetZ = into.eyeZ + forwardZ * CHASE_LOOK_AHEAD_M;
     into.fov = COCKPIT_FOV;
+    return into;
+  }
+
+  if (kind === 'dashcam') {
+    // Sensor frame to scene: +X forward, +Y up, +Z left of the car.
+    const { mount, aspect } = dashcam ?? { mount: dashcamMountForDims(dims), aspect: 16 / 9 };
+    const leftX = -rightX;
+    const leftZ = -rightZ;
+    into.eyeX = pose.x + forwardX * mount.x + leftX * mount.z;
+    into.eyeY = pose.y + mount.y;
+    into.eyeZ = pose.z + forwardZ * mount.x + leftZ * mount.z;
+    const flat = Math.cos(mount.pitchRad);
+    const aimX = flat * (Math.cos(mount.yawRad) * forwardX + Math.sin(mount.yawRad) * leftX);
+    const aimZ = flat * (Math.cos(mount.yawRad) * forwardZ + Math.sin(mount.yawRad) * leftZ);
+    into.targetX = into.eyeX + aimX * DASHCAM_TARGET_M;
+    into.targetY = into.eyeY + Math.sin(mount.pitchRad) * DASHCAM_TARGET_M;
+    into.targetZ = into.eyeZ + aimZ * DASHCAM_TARGET_M;
+    into.fov = verticalFovDeg(mount.horizontalFovDeg, aspect);
     return into;
   }
 
@@ -206,6 +236,12 @@ export class DriveCameraRig {
   private readonly velocity = new Float64Array(6);
   private kind: DriveCameraKind = 'chase';
   private settled = false;
+  private dashcam: DashcamMount | null = null;
+  /** The box-derived mount used while none is set, and the box it was derived from. */
+  private fallbackDashcam: { dims: EgoDims; mount: DashcamMount } | null = null;
+
+  /** The viewport's width over height; the dashcam's lens is specified horizontally. */
+  aspect = 16 / 9;
 
   readonly orbit: OrbitState = { yawRad: -Math.PI / 2, pitchRad: 0.35, distanceM: 12 };
 
@@ -217,7 +253,15 @@ export class DriveCameraRig {
   setKind(kind: DriveCameraKind): void {
     if (kind === this.kind) return;
     this.kind = kind;
-    if (kind === 'hood' || kind === 'cockpit') this.settled = false;
+    if (rigidView(kind)) this.settled = false;
+  }
+
+  /**
+   * Where the dashcam view is mounted on the car (see `dashcamMountFor`);
+   * null derives a windscreen mount from the car's box.
+   */
+  setDashcamMount(mount: DashcamMount | null): void {
+    this.dashcam = mount;
   }
 
   /** Next view in the cycle order, already applied. */
@@ -225,6 +269,15 @@ export class DriveCameraRig {
     const index = DRIVE_CAMERA_KINDS.indexOf(this.kind);
     this.setKind(DRIVE_CAMERA_KINDS[(index + 1) % DRIVE_CAMERA_KINDS.length]!);
     return this.kind;
+  }
+
+  private dashcamMount(dims: EgoDims): DashcamMount {
+    if (this.dashcam) return this.dashcam;
+    const cached = this.fallbackDashcam;
+    if (cached && cached.dims.l === dims.l && cached.dims.w === dims.w && cached.dims.h === dims.h) return cached.mount;
+    const mount = dashcamMountForDims(dims);
+    this.fallbackDashcam = { dims: { ...dims }, mount };
+    return mount;
   }
 
   /** Drop all smoothing, so a respawn does not fly the camera across the map. */
@@ -235,11 +288,18 @@ export class DriveCameraRig {
 
   /** Advance the rig and return the pose to hand the viewer. Never allocates. */
   update(pose: EgoPose, dims: EgoDims, dtS: number): DriveCameraPose {
-    const desired = desiredCameraPose(this.kind, pose, dims, this.orbit, this.desired);
+    const desired = desiredCameraPose(
+      this.kind,
+      pose,
+      dims,
+      this.orbit,
+      this.desired,
+      this.kind === 'dashcam' ? { mount: this.dashcamMount(dims), aspect: this.aspect } : undefined,
+    );
     this.smoothed.fov = desired.fov;
-    // Interior views are bolted to the body, and the first frame after a spawn
+    // Mounted views are bolted to the body, and the first frame after a spawn
     // or a respawn has no meaningful previous pose to spring away from.
-    if (this.kind === 'hood' || this.kind === 'cockpit' || !this.settled) {
+    if (rigidView(this.kind) || !this.settled) {
       for (const axis of AXES) this.smoothed[axis] = desired[axis];
       this.velocity.fill(0);
       this.settled = true;
