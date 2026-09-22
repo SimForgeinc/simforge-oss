@@ -170,7 +170,12 @@ export class Prewarmer {
     let overBudget = false;
     for (const plan of planned) {
       let extra = 0;
-      for (const member of plan.members) if (!wanted.has(member.sha256)) extra += member.sizeBytes;
+      const counted = new Set<string>();
+      for (const member of plan.members) {
+        if (wanted.has(member.sha256) || counted.has(member.sha256)) continue;
+        counted.add(member.sha256);
+        extra += member.sizeBytes;
+      }
       if (wantedBytes + extra > budget) {
         overBudget = true;
         continue;
