@@ -845,6 +845,7 @@ export async function reserveRenderArtifactV2(input: {
      ON CONFLICT DO NOTHING RETURNING id`,
     {
       id: artifactId,
+      attempt_id: lease.attempt_id,
       artifact_kind: `${identityKind(input.identity)}-${lease.attempt_id}`,
       artifact_role: input.identity.role,
       actor_id: input.identity.actorId,
