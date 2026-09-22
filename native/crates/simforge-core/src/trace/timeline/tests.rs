@@ -397,3 +397,48 @@ fn knockdown_is_a_monotonic_downed_flag() {
     let canonical = tl.to_canonical_json().unwrap();
     assert_eq!(crate::hash::sha256(&canonical), tl.sha256().unwrap());
 }
+
+#[test]
+fn scene_state_document_projects_the_sampler() {
+    let tl = build_render_timeline(
+        &example(EXAMPLES[1]),
+        &HeightField::plane(3.0, 0.01, 0.02),
+        None,
+    )
+    .unwrap();
+    let times: Vec<f64> = (0..240)
+        .map(|k| k as f64 / 12.0)
+        .filter(|t| *t <= 20.0)
+        .collect();
+    let doc = sampler::scene_state_document(&tl, &times, false).unwrap();
+    assert_eq!(doc.frames.len(), times.len());
+    assert!((doc.dt - 1.0 / 12.0).abs() < 1e-12);
+    for (frame, t) in doc.frames.iter().zip(&times) {
+        for rec in &frame.actors {
+            let p = sampler::pose(&tl, &rec.id, *t).unwrap();
+            if !p.present {
+                assert_eq!(rec.kind, crate::trace::scene_state::ActorTickKind::Despawn);
+                continue;
+            }
+            assert_eq!(rec.position, [p.x, p.z, -p.y]);
+        }
+    }
+    let ambulance: Vec<_> = doc
+        .frames
+        .iter()
+        .filter_map(|f| {
+            f.actors
+                .iter()
+                .find(|a| a.id == "ambulance")
+                .map(|a| a.kind)
+        })
+        .collect();
+    assert_eq!(
+        ambulance.first(),
+        Some(&crate::trace::scene_state::ActorTickKind::Spawn)
+    );
+    assert_eq!(
+        ambulance.last(),
+        Some(&crate::trace::scene_state::ActorTickKind::Despawn)
+    );
+}

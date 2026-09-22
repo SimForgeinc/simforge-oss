@@ -184,6 +184,11 @@ pub enum RequestBody {
     /// Drop every registered camera, lidar and radar; the next render
     /// re-registers from its request.
     ResetCameras,
+    /// Read back what the renderer drew for every scene actor on the most
+    /// recently applied tick: world transforms of the canonical body and of
+    /// any attached catalog model. Observations, not echoed input poses —
+    /// the parity gate compares them with the shared timeline sampler.
+    ObserveActors,
     /// JPEG-encode cached pass payloads from the last rendered tick and
     /// publish the results into the shm ring as `jpeg` records.
     EncodeJpeg { items: Vec<JpegItem> },
@@ -318,6 +323,12 @@ pub enum ResponseBody {
     },
     ResetCameras {
         ok: bool,
+    },
+    ObserveActors {
+        ok: bool,
+        /// Scene-state frame index the observation belongs to.
+        tick: Option<u32>,
+        actors: Vec<ObservedActorPose>,
     },
     SetLighting {
         ok: bool,
@@ -603,4 +614,24 @@ mod tests {
             _ => panic!("wrong request variant"),
         }
     }
+}
+
+/// One actor as drawn (scene-yup world frame, metres).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObservedActorPose {
+    pub id: String,
+    /// Ground-contact origin of the drawn body: the cuboid's world centre
+    /// minus its rotated half height.
+    pub position: [f32; 3],
+    /// Drawn body rotation, y-up quaternion `[x, y, z, w]`.
+    pub rotation: [f32; 4],
+    /// World centre of the drawn canonical body (cuboid).
+    pub body_centre: [f32; 3],
+    /// World pose of the attached catalog model, when one is attached.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_position: Option<[f32; 3]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_rotation: Option<[f32; 4]>,
+    pub visible: bool,
 }

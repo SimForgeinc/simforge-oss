@@ -1,0 +1,111 @@
+{
+  "schema": "simforge-oss.render-determinism-manifest.v1",
+  "generatedAt": "2026-09-22T22:16:52.484Z",
+  "claim": "byte-exactness of the native (Bevy/wgpu) sensor-profile pass hashes across renders of one fixed scene state on pinned hardware",
+  "mode": "golden-record",
+  "profile": "sensor",
+  "scenario": {
+    "instanceId": null,
+    "mapId": "yale-street",
+    "sceneId": "yale-05-timeline",
+    "inputs": {
+      "sceneDefinition": "qualification/golden-harness/scenes/yale-05-timeline.json"
+    }
+  },
+  "rendererPath": {
+    "engine": "native-bevy",
+    "file": "../scen-play",
+    "sha256": "f24e914ef55b7295edcd0433f197e513ab6299faba44a421ee04e37c444178ba",
+    "invocation": {
+      "args": [
+        "--glbs",
+        "/work/maps/yale-street/master.gltf",
+        "--scene-state",
+        "/work/golden-artifacts/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
+        "--authored-height",
+        "--width",
+        "640",
+        "--height",
+        "360",
+        "--warmup",
+        "20",
+        "--out-dir",
+        "/work/golden-artifacts/record/yale-05-timeline/runA/yale-05-timeline"
+      ],
+      "passesRenderedSequentially": false
+    },
+    "versions": {
+      "bevy": "0.19.1",
+      "wgpu": "29.0.4",
+      "rustc": null,
+      "backend": "vulkan"
+    }
+  },
+  "hardware": {
+    "collectedAt": "2026-09-22T22:14:03.441Z",
+    "gpuFingerprint": "0c79cc9fe7b267f4",
+    "host": {
+      "osPrettyName": "Ubuntu 24.04.5 LTS",
+      "kernel": "6.8.0-138-generic",
+      "arch": "x64",
+      "cpuModel": "Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz",
+      "cpuCount": 24,
+      "hostname": "ebe2f0332287",
+      "gpus": [
+        {
+          "name": "NVIDIA GeForce RTX 3080",
+          "driverVersion": "595.91.07",
+          "vbiosVersion": "94.02.42.80.FF",
+          "pciBusId": "00000000:04:00.0"
+        }
+      ]
+    }
+  },
+  "passHashes": {
+    "frame60.rgb": {
+      "file": "frame-0060.rgb.png",
+      "sha256": "e7cdb5eb36e6a030e9ce356a5b22f90e09694edef0fdaa4c43e218893d9f5455",
+      "bytes": 339240
+    },
+    "frame60.id": {
+      "file": "frame-0060.id.png",
+      "sha256": "547e90fa406803e0e1c47fab4eb411e6259c5bd5d40b696126e2675de18c633e",
+      "bytes": 157241
+    }
+  },
+  "idPasses": {
+    "frame60.id": {
+      "distinctIds": 313,
+      "coveredFraction": 0.8673
+    }
+  },
+  "parity": {
+    "schema": "simforge.render-parity/v1",
+    "pass": true,
+    "profile": "bevy",
+    "comparedPoses": 480,
+    "maxPositionErrorM": 0.0000619115838227024,
+    "maxHeadingErrorDeg": 0.000006287285559104458,
+    "maxPitchErrorDeg": 9.573207414107099e-8,
+    "maxRollErrorDeg": 5.6589155028141516e-8,
+    "presenceMismatches": 0,
+    "timelineSha256": "93c624a9bedc1c65cc2a31fe6ddb71e1c64ee37d00887529d09b4cbd17f38570"
+  },
+  "sceneStateSha256": "810da45d41e37a006c8aea02cc7b18f4a13ee7a81bb2cab1fc4acaa05e3f92e9",
+  "corpusChecksums": [
+    {
+      "path": "master.gltf",
+      "sha256": "600f824537784bd9ca675ad8156f4ded5a66f5314158112c19cb66a013283495",
+      "bytes": 2364602
+    }
+  ],
+  "twoRunEvidence": {
+    "runsCompared": 2,
+    "byteStable": true
+  },
+  "verdict": {
+    "byteStable": true,
+    "driftedPasses": [],
+    "scope": "sensor-profile pass hashes, single GPU/driver/wgpu backend — cross-hardware reproducibility NOT claimed (docs/determinism-claim.md)"
+  }
+}
