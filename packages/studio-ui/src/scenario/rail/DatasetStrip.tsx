@@ -8,9 +8,6 @@ import { ChevronDown, ClipboardCheck, Cloud, Plus } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import type { DatasetCloudHome } from "./dataset-home";
-import { useStudioHost } from "../../host";
-import { isCloudHost } from "@simforge-oss/studio-host";
-import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
@@ -101,14 +98,8 @@ export function DatasetStrip({
   onEditDatasetDetails: (dataset: ScenarioDatasetDto) => void;
   onDeleteDataset: (dataset: ScenarioDatasetDto) => void;
 }) {
-  const hostCapabilities = useStudioHostCapabilities(useStudioHost());
-  const managed =
-    hostCapabilities.status === "ready" && isCloudHost(hostCapabilities.capabilities);
-  const workspaceName =
-    hostCapabilities.status === "ready"
-      ? hostCapabilities.capabilities.identity.displayName ??
-        hostCapabilities.capabilities.host.label
-      : "Workspace";
+  const managed = cloudHome.state === "managed" || cloudHome.state === "managed-loading" || cloudHome.state === "managed-unavailable";
+  const workspaceName = cloudHome.state === "managed" ? cloudHome.workspaceName : "Workspace";
   const [hoveredDatasetId, setHoveredDatasetId] = useState<string | null>(null);
   const [menuDatasetId, setMenuDatasetId] = useState<string | null>(null);
   const owned = datasets.filter(isDatasetEditable);
@@ -299,6 +290,8 @@ export function DatasetStrip({
    * them renders an unexplained gap.
    */
   const renderCloudSection = () => {
+    // The managed workspace's rows are the primary section, not a second home.
+    if (cloudHome.state === "managed" || cloudHome.state === "managed-loading" || cloudHome.state === "managed-unavailable") return null;
     if (cloudHome.state === "loading") {
       return (
         <>

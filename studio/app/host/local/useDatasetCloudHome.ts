@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ScenarioDatasetDto } from "@/app/lib/scenario/contracts";
-import {
-  ScenarioDatasetsClient,
-  type DatasetCloudHome,
-} from "@simforge-oss/studio-ui/scenario/ScenarioDatasetsClient";
+import type { DatasetCloudHome } from "@simforge-oss/studio-ui/scenario/ScenarioDatasetsClient";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
@@ -21,7 +17,7 @@ import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/
  * `cloud_dataset_links`: a link record is the mirror model the boundary document rejects, and
  * joining on it is what would put one dataset in two sections.
  */
-function useDatasetCloudHome(): DatasetCloudHome {
+export function useDatasetCloudHome(): DatasetCloudHome {
   const { status } = useStudioCloudStatus();
   const [home, setHome] = useState<DatasetCloudHome>({ state: "loading" });
   // The provider re-reads status on a timer and on window focus, handing back a fresh object each
@@ -85,11 +81,3 @@ function useDatasetCloudHome(): DatasetCloudHome {
   return home;
 }
 
-export function ScenarioDatasetsMount({
-  initialDatasets,
-}: {
-  initialDatasets: ScenarioDatasetDto[];
-}) {
-  const cloudHome = useDatasetCloudHome();
-  return <ScenarioDatasetsClient initialDatasets={initialDatasets} cloudHome={cloudHome} />;
-}

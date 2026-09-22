@@ -66,6 +66,18 @@ afterEach(() => {
 });
 
 describe("dataset strip home sections", () => {
+  it("never presents a connector or computer ownership while managed identity resolves", () => {
+    const pending = strip({ state: "managed-loading" });
+    expect(screen.queryByTestId("scenario-dataset-cloud-connect")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/this computer|signed out/i);
+    expect(screen.getByRole("button", { name: "Uncategorized" })).toBeTruthy();
+    pending.unmount();
+    strip({ state: "managed", workspaceId: "ws_1", organizationId: "org_1", workspaceName: "Acme workspace" });
+    expect(screen.queryByTestId("scenario-dataset-cloud-connect")).toBeNull();
+    expect(screen.queryByTestId("scenario-cloud-dataset-icon")).toBeNull();
+    expect(screen.getByRole("button", { name: "Uncategorized" })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/this computer|signed out/i);
+  });
   it("gives a dataset exactly one home, even when both homes hold the same name", () => {
     strip(
       {

@@ -39,3 +39,5 @@ export const MapInstallPanel: HostSurface<MapInstallPanelProps> = LocalMapPrepar
  */
 export const CloudConnectorChip: HostSurface<{ onNavigate?: () => void }> = CloudAccountChip;
 export const CloudConnectorSheet: HostSurface = CloudAccountSheet;
+
+export { useDatasetCloudHome } from "./useDatasetCloudHome";
