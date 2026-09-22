@@ -10,8 +10,18 @@ import {
 } from "./controls.stylex";
 
 type ButtonStyle = stylex.StyleXStyles;
-type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-type ButtonSize = "default" | "sm" | "lg" | "icon";
+export type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link"
+  | "accent"
+  | "plate"
+  | "accentOutline"
+  | "quiet";
+export type ButtonSize = "default" | "xs" | "sm" | "md" | "lg" | "xl" | "icon" | "iconXs" | "iconSm" | "iconMd";
 
 /**
  * These descendant selectors remain a deliberately tiny Tailwind bridge:

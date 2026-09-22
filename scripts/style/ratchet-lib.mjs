@@ -27,6 +27,12 @@ const ts = require("typescript");
 /** Trees that hold Studio styling, relative to the repository root. */
 export const STYLE_ROOTS = ["packages/studio-ui/src", "studio/app"];
 
+/**
+ * The token and recipe modules define the values everything else refers to,
+ * so they are where literals belong; they are not budgeted.
+ */
+export const FOUNDATION = /^packages\/studio-ui\/src\/stylex\//;
+
 /** Modules whose exports are design tokens or recipes: references to them are not literals. */
 export const TOKEN_MODULE = /(?:^|\/)(?:tokens|motion|recipes|drive)\.stylex(?:\.ts)?$|\/stylex\/(?:tokens|recipes|motion)(?:\.stylex)?$|studio-ui\/stylex\//;
 
@@ -284,6 +290,7 @@ export function analyzeSource(fileName, source) {
 export function analyzeRepository(repoRoot, roots = STYLE_ROOTS) {
   const files = [];
   for (const file of listStyleSources(repoRoot, roots)) {
+    if (FOUNDATION.test(file)) continue;
     const analysis = analyzeSource(file, readFileSync(join(repoRoot, file), "utf8"));
     if (analysis) files.push(analysis);
   }
