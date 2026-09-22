@@ -80,3 +80,23 @@ def test_other_dt_is_rejected() -> None:
     doc["header"]["dt"] = 0.05
     with pytest.raises(ValueError, match="dt"):
         st.build_timeline(json.dumps(doc), flat_z=0.0)
+
+
+def test_parity_comparator_grades_observations(timeline: st.Timeline) -> None:
+    import json as _json
+
+    lines = []
+    for k in range(40):
+        t = k * 0.1
+        actors = []
+        for actor_id, p in timeline.poses(t).items():
+            if p["present"]:
+                actors.append({"id": actor_id, "position": [p["x"], p["y"] + 0.003, p["z"]],
+                               "headingRad": p["headingRad"], "pitchRad": p["pitchRad"], "rollRad": p["rollRad"]})
+        lines.append(_json.dumps({"t": t, "actors": actors}))
+    report = st.compare_observed(timeline, "\n".join(lines), "carla")
+    assert report["schema"] == "simforge.render-parity/v1"
+    assert report["pass"] is True
+    assert report["maxHorizontalErrorM"] == pytest.approx(0.003, abs=1e-9)
+    strict = dict(report["profile"], positionToleranceM=0.001)
+    assert st.compare_observed(timeline, "\n".join(lines), strict)["pass"] is False
