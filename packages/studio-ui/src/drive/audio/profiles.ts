@@ -111,12 +111,14 @@ export interface CameraAcoustics {
   readonly engineScale: number;
 }
 
-export type DriveCamera = 'chase' | 'hood' | 'cockpit' | 'birdseye' | 'orbit';
+export type DriveCamera = 'chase' | 'hood' | 'cockpit' | 'dashcam' | 'birdseye' | 'orbit';
 
 export const CAMERA_ACOUSTICS: Readonly<Record<DriveCamera, CameraAcoustics>> = {
   chase: { cutoffHz: 18000, bodyScale: 1, engineScale: 1 },
   hood: { cutoffHz: 18000, bodyScale: 0.85, engineScale: 1.25 },
   cockpit: { cutoffHz: 900, bodyScale: 0.7, engineScale: 0.8 },
+  /** A dashcam records the cabin it is stuck inside. */
+  dashcam: { cutoffHz: 900, bodyScale: 0.7, engineScale: 0.8 },
   birdseye: { cutoffHz: 18000, bodyScale: 0.9, engineScale: 0.9 },
   orbit: { cutoffHz: 18000, bodyScale: 0.9, engineScale: 0.9 },
 };

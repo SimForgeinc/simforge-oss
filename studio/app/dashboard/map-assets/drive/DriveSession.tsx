@@ -26,6 +26,7 @@ import {
   ORBIT_MIN_PITCH_RAD,
   PauseMenu,
   createDriveInput,
+  dashcamMountFor,
   driveChrome,
   emptyDriveTelemetry,
   type DriveAction,
@@ -194,6 +195,12 @@ export function DriveSession({
       speedMps: 0,
     };
   }, [catalogId, content.roles, roleId]);
+  // The dashcam view sits where the driven actor's own forward camera is, so
+  // a take is watched through the lens its renders will be made with.
+  const dashcamMount = useMemo(() => {
+    const role = content.roles.find((candidate) => candidate.id === roleId);
+    return role ? dashcamMountFor(role.actor) : null;
+  }, [content.roles, roleId]);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const hudRef = useRef<DriveHudHandle | null>(null);
   const inputRef = useRef<DriveInput | null>(null);
@@ -210,6 +217,7 @@ export function DriveSession({
   const latestFrameRef = useRef<TruthFrame | null>(null);
   const onActionRef = useRef<(action: DriveAction) => void>(() => {});
   const world = useWorldSource(source);
+  rigRef.current.setDashcamMount(dashcamMount);
   pausedRef.current = paused;
   debugRef.current = debug;
 
@@ -704,6 +712,7 @@ export function DriveSession({
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
       if (frame) readEgoTelemetry(frame, egoActorId, telemetry);
+      rig.aspect = viewer.camera.aspect;
       const pose = rig.update(
         { x: actor.x, y: actor.y, z: actor.z, headingRad: actor.headingRad, speedMps: telemetry.speedMps },
         actor.dims,
