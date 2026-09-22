@@ -21,6 +21,8 @@ export const styles = stylex.create({
   compactLabel: { fontSize: text.sizeXs, letterSpacing: 0, whiteSpace: "normal", color: colors.textSubtle },
   compactStats: { flexDirection: "column", gap: space.xs, fontSize: text.sizeXs, letterSpacing: 0, textTransform: "none" },
   compactActions: { paddingLeft: 0 },
+  /** The one-line location wraps in the compact readout: the column is narrow and the text is short. */
+  compactLocation: { whiteSpace: "normal", overflow: "visible" },
   compactMessage: { marginLeft: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   head: {
     display: "flex",
