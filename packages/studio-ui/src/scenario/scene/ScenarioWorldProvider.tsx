@@ -18,7 +18,8 @@ type WorldContext = {
   update: (lease: Lease) => void;
 };
 const Context = createContext<WorldContext | null>(null);
-const EMPTY_STATE: ScenarioWorldState = { target: null, loadedMapVersionId: null, preparedMapVersionId: null, streaming: false, error: null };
+/** What a surface sees before the world it leased has published anything. */
+export const EMPTY_WORLD_STATE: ScenarioWorldState = { target: null, loadedMapVersionId: null, preparedMapVersionId: null, streaming: false, error: null };
 
 /**
  * Dashboard lifetime, page viewport. The portal container never changes identity;
@@ -36,7 +37,7 @@ export function ScenarioWorldProvider({ children, keepAlive = false }: { childre
   const leaseRef = useRef<Lease | null>(null);
   const viewerRef = useRef<CityViewer | null>(null);
   const actorsRef = useRef<ActorRenderer | null>(null);
-  const stateRef = useRef<ScenarioWorldState>(EMPTY_STATE);
+  const stateRef = useRef<ScenarioWorldState>(EMPTY_WORLD_STATE);
 
   const publish = useCallback(() => {
     const lease = leaseRef.current;
@@ -84,7 +85,7 @@ export function ScenarioWorldProvider({ children, keepAlive = false }: { childre
 
   const onViewerChange = useCallback((viewer: CityViewer | null) => {
     viewerRef.current = viewer;
-    if (!viewer) stateRef.current = EMPTY_STATE;
+    if (!viewer) stateRef.current = EMPTY_WORLD_STATE;
     publish();
   }, [publish]);
   const onActorRendererChange = useCallback((actors: ActorRenderer | null) => {

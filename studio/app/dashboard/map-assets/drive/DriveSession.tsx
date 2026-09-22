@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
 import { toast } from "sonner";
 import * as stylex from "@stylexjs/stylex";
-import type { CatalogId } from "@simforge-oss/asset-catalog";
+import { getEntry, type CatalogId } from "@simforge-oss/asset-catalog";
 import {
   EditorDocument,
   recordedManualDrive,
@@ -13,15 +13,10 @@ import {
 } from "@simforge-oss/editor";
 import type { ManualDriveRecording, ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
-import type { CityViewer } from "@simforge-oss/viewer";
-import { CityView } from "@simforge-oss/viewer/react";
-import { useDirectMapAssetUrlResolver } from "@simforge-oss/studio-ui/scenario/scene/direct-map-asset-urls";
+import type { ActorRenderState, CityViewer } from "@simforge-oss/viewer";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
-import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
-import { useRegisterRenderingBenchmarkTarget } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import {
   DriveCameraRig,
   DriveHud,
@@ -68,7 +63,15 @@ const HORN_PULSE_MS = 700;
 
 /**
  * One driving session: a scenario, the actor a human took over, a camera and a
- * HUD.
+ * HUD, played over a world somebody else owns.
+ *
+ * The session never mounts a renderer. It is handed the shared world's viewer
+ * — the one the gallery, the editor and the drive routes pass between them —
+ * and draws its car, its camera and its chrome over whatever that viewer is
+ * already showing, so entering a drive on a map that is on screen costs no
+ * reload and no second WebGL context. The map may still be streaming in when
+ * the session starts; the world boots regardless and the car appears the
+ * moment the ground is there to stand on.
  *
  * The game loop is the viewer's own frame hook, in this order: read the input
  * device, push the driver command to the physics runtime, move the camera to
@@ -97,6 +100,8 @@ export function DriveSession({
   quality,
   roleId,
   mode = "take",
+  viewer,
+  mapLoaded,
   onSaveClip,
   onSaved,
   onExit,
@@ -112,6 +117,10 @@ export function DriveSession({
   roleId: string;
   /** `take` records a clip and saves it; `free` just drives. Defaults to `take`. */
   mode?: AuthoredDriveMode;
+  /** The shared world's viewer, or null until the world has created one. */
+  viewer: CityViewer | null;
+  /** Whether that world shows `map`, loaded and revealed. Traffic and lighting wait for it. */
+  mapLoaded: boolean;
   /**
    * Persist the driven template. Rejecting leaves the take on screen,
    * retryable. Required for a `take`; a `free` drive never calls it.
@@ -121,17 +130,10 @@ export function DriveSession({
   onExit: () => void;
 }) {
   const isTake = mode === "take";
-  const resolveMapAssetUrls = useDirectMapAssetUrlResolver(map.versionId);
-  const graphicsTarget = useMemo(() => ({ manifestUrl: map.browserManifestUrl, label: map.label }), [map.browserManifestUrl, map.label]);
-  useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const [startError, setStartError] = useState<string | null>(null);
   const [document, setDocument] = useState<EditorDocument | null>(null);
   const [source, setSource] = useState<AuthoredWorldSource | null>(null);
-  const [viewer, setViewer] = useState<CityViewer | null>(null);
-  const activeViewerRef = useRef<CityViewer | null>(null);
   const [bridge, setBridge] = useState<TruthViewerBridge | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapLoadError, setMapLoadError] = useState<unknown>(null);
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
   const [takePhase, setTakePhase] = useState<
     { kind: "recording" } | { kind: "saving"; recording: ManualDriveRecording } | { kind: "failed" }
@@ -154,6 +156,34 @@ export function DriveSession({
   /** How far into the clip the simulation is, sampled for the countdown only. */
   const [clipElapsedS, setClipElapsedS] = useState(0);
   const clipSeconds = content.choreography.clipSeconds;
+  /**
+   * The driven car at its authored pose, drawn until the world's first frame:
+   * a session over a scene that is already on screen has its car and its
+   * camera on the first commit, while the physics world boots behind it.
+   * The role was placed through the editor, so it is scene-absolute with a
+   * catalog id and dims.
+   */
+  const spawn = useMemo<ActorRenderState | null>(() => {
+    const role = content.roles.find((candidate) => candidate.id === roleId);
+    if (!role || role.kind !== "scene_absolute") return null;
+    const spawnCatalogId = role.actor.catalogId ?? catalogId;
+    const dims = role.actor.dims
+      ? { l: role.actor.dims.length, w: role.actor.dims.width, h: role.actor.dims.height }
+      : getEntry(spawnCatalogId).dims;
+    return {
+      id: role.id,
+      catalogId: spawnCatalogId,
+      catalogIdAuthored: role.actor.catalogId !== undefined,
+      x: role.pose.position.x,
+      y: role.pose.position.y,
+      z: role.pose.position.z,
+      headingRad: role.pose.headingRad,
+      dims,
+      kind: role.actor.class,
+      speedMps: 0,
+    };
+  }, [catalogId, content.roles, roleId]);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const hudRef = useRef<DriveHudHandle | null>(null);
   const inputRef = useRef<DriveInput | null>(null);
   const rigRef = useRef(new DriveCameraRig());
@@ -252,6 +282,44 @@ export function DriveSession({
       setStartError(errorMessage(error));
     }
   }, [mode, isTake, roleId, source, world.status]);
+
+  // The car is drawn into the shared world through its own actor layer, hooked
+  // behind whatever frame work the world already does. One bridge per viewer:
+  // a world that replaces its viewer gets a fresh bridge with it.
+  useEffect(() => {
+    if (!viewer) return;
+    const next = createTruthViewerBridge(viewer, { layer: "drive-live", groundLift: true });
+    setBridge(next);
+    return () => {
+      setBridge((current) => (current === next ? null : current));
+      next.dispose();
+    };
+  }, [viewer]);
+
+  // The first commit already looks like the drive: the car at its spawn and
+  // the chase camera behind it, while the physics world is still booting. The
+  // rig's first update snaps, so when the world's own car arrives at the same
+  // pose the loop springs on from here rather than from wherever the gallery
+  // left the camera. The bridge drops the stand-in on the world's first frame.
+  useEffect(() => {
+    if (!viewer || !bridge || !spawn || !mapLoaded || egoActorId) return;
+    const drawn = bridge.standIn(spawn);
+    if (!drawn) return;
+    const pose = rigRef.current.update(
+      { x: drawn.x, y: drawn.y, z: drawn.z, headingRad: drawn.headingRad, speedMps: 0 },
+      drawn.dims,
+      0,
+    );
+    eyeRef.current.set(pose.eyeX, pose.eyeY, pose.eyeZ);
+    targetRef.current.set(pose.targetX, pose.targetY, pose.targetZ);
+    if (viewer.camera.fov !== pose.fov) {
+      viewer.camera.fov = pose.fov;
+      viewer.camera.updateProjectionMatrix();
+    }
+    viewer.controls.setEnabled(false);
+    viewer.controls.setView(eyeRef.current, targetRef.current);
+  }, [bridge, egoActorId, mapLoaded, spawn, viewer]);
+
   useEffect(() => {
     if (!source) return;
     latestFrameRef.current = null;
@@ -281,10 +349,6 @@ export function DriveSession({
     };
   }, [bridge, source]);
 
-  useEffect(() => {
-    if (!bridge) return;
-    bridge.setFollow(egoActorId, "dash");
-  }, [bridge, egoActorId]);
   // The take's outcome arrives once through the source: a sealed recording is
   // saved into the scenario, and a failure leaves the drive retryable with its
   // reason on screen.
@@ -324,7 +388,6 @@ export function DriveSession({
       abandoned = true;
     };
   }, [document, onSaveClip, onSaved, roleId, takePhase]);
-  useEffect(() => () => bridge?.dispose(), [bridge]);
 
   /** Drive the clip again: the same world, restarted at t = 0. */
   const retryTake = useCallback(() => {
@@ -378,20 +441,6 @@ export function DriveSession({
     jevRef.current = null;
     source?.setControlSource("human");
   }, [source]);
-
-  const onViewerReady = useCallback((ready: CityViewer) => {
-    activeViewerRef.current = ready;
-    setViewer(ready);
-    setMapLoadError(null);
-    setBridge(createTruthViewerBridge(ready, { layer: "drive-live", groundLift: true }));
-  }, []);
-  const onViewerDisposed = useCallback((disposed: CityViewer) => {
-    if (activeViewerRef.current !== disposed) return;
-    activeViewerRef.current = null;
-    setViewer(null);
-    setMapLoaded(false);
-    setBridge(null);
-  }, []);
 
   const ambientTraffic = useDriveAmbientTraffic({
     document,
@@ -547,15 +596,19 @@ export function DriveSession({
     };
   }, [source, takePhase.kind]);
 
-  /** Orbit view drag and zoom. The other views are fixed to the car. */
+  /**
+   * Orbit view drag and zoom, taken on the session's own frame: the world's
+   * canvas is not interactive while a drive owns its camera, and the frame is
+   * what lies over it. The other views are fixed to the car.
+   */
   useEffect(() => {
-    const canvas = viewer?.renderer.domElement;
-    if (!canvas) return;
+    const frame = frameRef.current;
+    if (!frame) return;
     let dragging = false;
     const onPointerDown = (event: PointerEvent) => {
-      if (rigRef.current.cameraKind !== "orbit") return;
+      if (rigRef.current.cameraKind !== "orbit" || event.target !== frame) return;
       dragging = true;
-      canvas.setPointerCapture(event.pointerId);
+      frame.setPointerCapture(event.pointerId);
     };
     const onPointerMove = (event: PointerEvent) => {
       if (!dragging) return;
@@ -568,7 +621,7 @@ export function DriveSession({
     };
     const onPointerUp = (event: PointerEvent) => {
       dragging = false;
-      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (frame.hasPointerCapture(event.pointerId)) frame.releasePointerCapture(event.pointerId);
     };
     const onWheel = (event: WheelEvent) => {
       if (rigRef.current.cameraKind !== "orbit") return;
@@ -580,17 +633,17 @@ export function DriveSession({
         Math.min(ORBIT_MAX_DISTANCE_M, orbit.distanceM * factor),
       );
     };
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerup", onPointerUp);
-    canvas.addEventListener("wheel", onWheel, { passive: false });
+    frame.addEventListener("pointerdown", onPointerDown);
+    frame.addEventListener("pointermove", onPointerMove);
+    frame.addEventListener("pointerup", onPointerUp);
+    frame.addEventListener("wheel", onWheel, { passive: false });
     return () => {
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointermove", onPointerMove);
-      canvas.removeEventListener("pointerup", onPointerUp);
-      canvas.removeEventListener("wheel", onWheel);
+      frame.removeEventListener("pointerdown", onPointerDown);
+      frame.removeEventListener("pointermove", onPointerMove);
+      frame.removeEventListener("pointerup", onPointerUp);
+      frame.removeEventListener("wheel", onWheel);
     };
-  }, [viewer]);
+  }, []);
 
   /** The game loop. */
   useEffect(() => {
@@ -603,6 +656,11 @@ export function DriveSession({
     const telemetry = telemetryRef.current;
     const hook = (dtS: number): void => {
       previous?.(dtS);
+      // The camera is ours for as long as the session drives. The shared world
+      // hands its own orbit/fly rig the camera back whenever it re-applies
+      // fidelity or resumes rendering, so ownership is re-asserted every frame
+      // rather than raced against those effects; the call is a few field writes.
+      viewer.controls.setEnabled(false);
       const input = inputRef.current;
       const frame = latestFrameRef.current;
       if (jevRef.current && frame && !pausedRef.current) {
@@ -677,12 +735,9 @@ export function DriveSession({
       });
     };
     viewer.onFrame = hook;
-    // The camera is ours while a session is driving; the orbit/fly rig would
-    // otherwise fight it for the same camera every frame.
     viewer.controls.setEnabled(false);
     return () => {
       if (viewer.onFrame === hook) viewer.onFrame = previous;
-      viewer.controls.setEnabled(true);
     };
   }, [bridge, egoActorId, source, viewer]);
 
@@ -700,51 +755,18 @@ export function DriveSession({
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
-    <div {...stylex.props(driveFrame.session)}>
-      <CityView
-        ariaLabel={`Driving ${vehicleLabel} on ${map.label}`}
-        {...stylex.props(driveFrame.canvas)}
-        key={quality}
-        manifestUrl={map.browserManifestUrl}
-        onError={(reason) => {
-          setMapLoaded(false);
-          setMapLoadError(reason);
-          setStartError(errorMessage(reason));
-        }}
-        onMapLoaded={() => setMapLoaded(true)}
-        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
-        onDisposed={onViewerDisposed}
-        role="application"
-        tabIndex={0}
-      />
+    <div
+      {...stylex.props(driveFrame.session)}
+      aria-label={`Driving ${vehicleLabel} on ${map.label}`}
+      data-testid="drive-session"
+      ref={frameRef}
+      role="application"
+    >
       <EditorSceneEnvironmentBridge
         active={mapLoaded}
         actorRenderer={bridge?.actors ?? null}
         document={document}
-        quality={quality}
-        viewer={viewer}
-      />
-      <CityView
-        ariaLabel={`Driving ${vehicleLabel} on ${map.label}`}
-        {...stylex.props(driveFrame.canvas)}
-        key={quality}
-        manifestUrl={map.browserManifestUrl}
-        onError={(reason) => {
-          setMapLoaded(false);
-          setMapLoadError(reason);
-          setStartError(errorMessage(reason));
-        }}
-        onMapLoaded={() => setMapLoaded(true)}
-        onReady={onViewerReady}
-        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
-        onDisposed={onViewerDisposed}
-        role="application"
-        tabIndex={0}
-      />
-      <EditorSceneEnvironmentBridge
-        active={mapLoaded}
-        actorRenderer={bridge?.actors ?? null}
-        document={document}
+        ownsViewer={false}
         quality={quality}
         viewer={viewer}
       />
@@ -792,16 +814,6 @@ export function DriveSession({
           ) : null}
         </div>
       ) : null}
-      {!mapLoaded || mapLoadError ? <MapLoadDebugPanel docked={false} source={{
-        getViewer: () => activeViewerRef.current,
-        mapId: map.sourceMapId,
-        mapVersionId: map.versionId,
-        manifestUrl: map.browserManifestUrl,
-        requestedTier: quality,
-        phase: mapLoadError ? "error" : "loading",
-        readinessAnnounced: mapLoaded,
-        error: mapLoadError,
-      }} /> : null}
       {paused ? (
         <PauseMenu
           cameraKind={cameraKind}

@@ -2,30 +2,44 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as stylex from "@stylexjs/stylex";
 import { toast } from "sonner";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
 import { LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
 import { loadEngine } from "@simforge-oss/engine/browser";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { resolveScenarioMap } from "@simforge-oss/studio-host";
+import type { CityViewer } from "@simforge-oss/viewer";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
-import { RENDERING_PREFERENCE_CHANGE_EVENT } from "@simforge-oss/studio-ui/components/rendering-preference";
-import { defaultAuthoringQuality } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import type {
+  ScenarioWorldState,
+  ScenarioWorldTarget,
+} from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldHost";
+import {
+  EMPTY_WORLD_STATE,
+  ScenarioWorldSurface,
+} from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldProvider";
 import { studioHost } from "@/app/lib/host";
-import type { ScenarioAuthoringQuality } from "@/app/lib/scenario/contracts";
 import { DriveSession } from "@/app/dashboard/map-assets/drive/DriveSession";
+import { driveFrame } from "@/app/dashboard/map-assets/drive/drive-session.stylex";
 
 /** The car the audio graph falls back to when the role names no catalog model. */
 const DEFAULT_VEHICLE = "vehicle.sedan" as CatalogId;
 
+/** A drive route draws its own car; the world's placed-actor renderer is not its concern. */
+function ignoreActorRenderer(): void {}
+
 /**
  * Driving one scenario's actor, and keeping the drive.
  *
- * Everything the session needs that only the browser can supply loads here: the
- * installed map entry and its lane topology. The recorded clip goes straight
- * into this document — the variation was created for exactly this drive — and
- * the drive leaves for the scenario list once it is saved.
+ * The drive plays on the dashboard's shared world, so the map the editor was
+ * just showing carries on without a reload. Everything else the session needs
+ * that only the browser can supply loads here: the installed map entry and its
+ * lane topology. The recorded clip goes straight into this document — the
+ * variation was created for exactly this drive — and the drive leaves for the
+ * scenario list once it is saved.
  */
 export function DriverInTheLoopDrive({
   content,
@@ -56,23 +70,17 @@ export function DriverInTheLoopDrive({
   } | null>(null);
   const completedResourcesRef = useRef<typeof resources>(null);
   const [error, setError] = useState<{ mapVersionId: string; message: string; cause: unknown } | null>(null);
-  const [quality, setQuality] = useState<ScenarioAuthoringQuality>("medium");
   const [installedMaps, setInstalledMaps] = useState<Array<{ sourceMapId: string; mapVersionId: string }> | undefined>();
-
-  // Follows the shared preference so a level picked in the app switcher changes
-  // this drive, not the next one.
-  useEffect(() => {
-    setQuality(defaultAuthoringQuality());
-    const onPreference = (event: Event) =>
-      setQuality((event as CustomEvent<ScenarioAuthoringQuality>).detail);
-    window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);
-    return () => window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);
-  }, []);
+  const [viewer, setViewer] = useState<CityViewer | null>(null);
+  const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
+  // The level picked in the app switcher applies to this drive, exactly as it
+  // does to the world it plays on.
+  const quality = useRenderingPreference() ?? "medium";
 
   useEffect(() => {
     // Activity resumes effects without discarding state. Keep the completed
-    // pair and its DriveSession/canvas mounted; a loading placeholder here
-    // would physically remove the canvas and defeat viewer retention.
+    // resources and the session mounted; a loading placeholder here would
+    // release the world's lease and restart the drive.
     if (completedResourcesRef.current?.mapVersionId === mapVersionId) return;
     const abort = new AbortController();
     completedResourcesRef.current = null;
@@ -132,16 +140,16 @@ export function DriverInTheLoopDrive({
     [documentId, draftVersion, quality, title],
   );
 
-  const loadingDiagnostics = <MapLoadDebugPanel source={{
-    getViewer: () => null,
-    mapVersionId,
-    mapId: mapSourceMapId,
+  const map = resources?.mapVersionId === mapVersionId ? resources.map : null;
+  const target = useMemo<ScenarioWorldTarget | null>(() => map && ({
+    mapId: map.sourceMapId,
     installedMaps,
-    requestedTier: quality,
-    phase: error?.mapVersionId === mapVersionId ? "error" : "resolving",
-    readinessAnnounced: false,
-    error: error?.mapVersionId === mapVersionId ? error.cause : null,
-  }} />;
+    mapVersionId: map.mapVersionId,
+    manifestUrl: map.browserManifestUrl,
+    label: map.label,
+    locality: map.locality,
+  }), [installedMaps, map]);
+
   if (error?.mapVersionId === mapVersionId) {
     return (
       <CloudLoadingSurface
@@ -149,32 +157,47 @@ export function DriverInTheLoopDrive({
         role="alert"
         scope="pane"
         title="The drive could not start"
-        diagnostics={loadingDiagnostics}
+        diagnostics={<MapLoadDebugPanel source={{
+          getViewer: () => null,
+          mapVersionId,
+          mapId: mapSourceMapId,
+          installedMaps,
+          requestedTier: quality,
+          phase: "error",
+          readinessAnnounced: false,
+          error: error.cause,
+        }} />}
       />
     );
   }
-  if (!resources || resources.mapVersionId !== mapVersionId) {
-    return (
-      <CloudLoadingSurface
-        detail="Loading the installed map and its lane network."
-        scope="pane"
-        title="Starting the drive…"
-        diagnostics={loadingDiagnostics}
-      />
-    );
-  }
+  const mapLoaded = worldState.loadedMapVersionId === mapVersionId;
   return (
-    <DriveSession
-      catalogId={catalogId}
-      content={content}
-      laneIndex={resources.laneIndex}
-      map={resources.map}
-      onExit={leave}
-      onSaved={leave}
-      onSaveClip={saveClip}
-      quality={quality}
-      roleId={roleId}
-      vehicleLabel={vehicleLabel}
-    />
+    <div {...stylex.props(driveFrame.route)}>
+      <ScenarioWorldSurface
+        className={stylex.props(driveFrame.world).className}
+        interactive={false}
+        onActorRendererChange={ignoreActorRenderer}
+        onStateChange={setWorldState}
+        onViewerChange={setViewer}
+        pendingTarget={target === null}
+        target={target}
+      />
+      {map && resources ? (
+        <DriveSession
+          catalogId={catalogId}
+          content={content}
+          laneIndex={resources.laneIndex}
+          map={map}
+          mapLoaded={mapLoaded}
+          onExit={leave}
+          onSaved={leave}
+          onSaveClip={saveClip}
+          quality={quality}
+          roleId={roleId}
+          vehicleLabel={vehicleLabel}
+          viewer={viewer}
+        />
+      ) : null}
+    </div>
   );
 }

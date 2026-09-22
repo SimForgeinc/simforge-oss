@@ -17,7 +17,21 @@ const MIN_RUNWAY_M = 60;
 const SPAWN_FRACTION = 0.15;
 
 /**
- * Pick where a free drive starts.
+ * How far from the point of interest a spawn lane may be, metres. A gallery
+ * camera rides the street it is touring, so the lane it means is usually
+ * within a carriageway; the radius only has to survive a look across a wide
+ * boulevard or a junction.
+ */
+const NEAR_SPAWN_RADIUS_M = 45;
+
+/** Where a free drive starts: a lane and the arc length along it. */
+export interface FreeDriveSpawn {
+  readonly lane: IndexedLane;
+  readonly s: number;
+}
+
+/**
+ * Pick where a free drive starts when nothing has been looked at yet.
  *
  * The longest non-junction driving lane is the friendliest spawn on an
  * arbitrary map: it is a real road rather than a connector, and it gives the
@@ -41,6 +55,39 @@ export function freeDriveSpawnLane(laneIndex: LaneIndex): IndexedLane {
   return lane;
 }
 
+/** The map's default spawn: early on its longest road. */
+export function defaultFreeDriveSpawn(laneIndex: LaneIndex): FreeDriveSpawn {
+  const lane = freeDriveSpawnLane(laneIndex);
+  return { lane, s: lane.length * SPAWN_FRACTION };
+}
+
+/**
+ * The spawn under a point the driver is already looking at.
+ *
+ * The lane is the one a placed vehicle would snap to there. When the road runs
+ * both ways and that lane travels against the look direction, the oncoming
+ * lane is taken instead, so the car starts pointed where the driver was
+ * looking rather than making them turn around first. Null when no driving
+ * lane is within reach — a rooftop, water, the middle of a park.
+ *
+ * @param lookHeadingRad Travel-heading convention (CCW about +Y from +X), the
+ *   direction the camera faces; null to accept the nearest lane as it is.
+ */
+export function freeDriveSpawnNear(
+  laneIndex: LaneIndex,
+  x: number,
+  z: number,
+  lookHeadingRad: number | null,
+): FreeDriveSpawn | null {
+  const hit = laneIndex.nearestForVehiclePlacement(x, z, NEAR_SPAWN_RADIUS_M);
+  if (!hit) return null;
+  if (lookHeadingRad !== null && Math.cos(hit.headingRad - lookHeadingRad) < 0) {
+    const oncoming = laneIndex.nearestOpposingForVehiclePlacement(x, z, hit.headingRad, NEAR_SPAWN_RADIUS_M);
+    if (oncoming) return { lane: oncoming.lane, s: oncoming.s };
+  }
+  return { lane: hit.lane, s: hit.s };
+}
+
 /**
  * A scenario holding one drivable car and nothing else.
  *
@@ -59,9 +106,9 @@ export async function createFreeDriveScenario(
   map: ScenarioMapEntry,
   laneIndex: LaneIndex,
   catalogId: CatalogId = FREE_DRIVE_VEHICLE,
+  spawn: FreeDriveSpawn = defaultFreeDriveSpawn(laneIndex),
 ): Promise<{ content: ScenarioTemplateV2; roleId: string }> {
-  const lane = freeDriveSpawnLane(laneIndex);
-  const s = lane.length * SPAWN_FRACTION;
+  const { lane, s } = spawn;
   const pose = laneIndex.poseAt(lane, s, 0);
   const document = await EditorDocument.openBlank(map, {
     store: new WebTemplateFileStore({ storage: new MemoryStorage() }),
