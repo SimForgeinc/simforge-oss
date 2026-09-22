@@ -129,6 +129,13 @@ function engineAvailability(
   if (!capabilities) return { offered: false, badge: "Checking host", reason: null };
   const worker = capabilities.execution.renderWorkers[engine];
   if (!worker) {
+    if (engine === "carla") {
+      return {
+        offered: true,
+        badge: "Unavailable",
+        reason: `${capabilities.host.label} has no approved CARLA render worker attached.`,
+      };
+    }
     return { offered: false, badge: "Not offered", reason: `${capabilities.host.label} does not accept ${engine} renders.` };
   }
   const nativeRuntime = capabilities.execution.nativeRuntime;
