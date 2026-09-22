@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { join } from "node:path";
+import { withAtomicDevEmit } from "./dev-atomic-emit.mjs";
 import { stylexBabelConfig, stylexCompileRoots } from "./stylex.config.mjs";
 
 /**
@@ -74,7 +75,9 @@ const nextConfig: NextConfig = {
    * Consequence: the studio must be built and served with `--webpack`, which
    * every script in `package.json` and the `simforge daemon` supervisor already do.
    */
-  webpack(config) {
+  webpack(config, context) {
+    // Dev only: a worker spawned mid-recompile must never load a half-written chunk.
+    withAtomicDevEmit(config, context);
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,
       ".js": [".ts", ".tsx", ".js"],
