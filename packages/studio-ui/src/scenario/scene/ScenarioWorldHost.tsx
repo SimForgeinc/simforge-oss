@@ -140,6 +140,7 @@ export function ScenarioWorldHost({
   };
   const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
     const mapVersionId = retainedTarget?.mapVersionId;
+    const keys = urls.map((url) => [url, canonicalAssetKey(url)] as const);
     if (!mapVersionId) return new Map<string, string>();
     const unresolved = keys.filter(([url, key]) => /^\/api\/simforge\/maps\/[^/]+\/browser-assets\//.test(new URL(url, window.location.origin).pathname)
       && !directAssetUrlsRef.current.has(key));
