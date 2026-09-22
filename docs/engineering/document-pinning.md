@@ -54,6 +54,18 @@ Renderers sample the timeline and never assume their own step.
 - A revision commit never re-resolves. It verifies that the pinned version is
   still published (`scenario_map_version_unavailable`) with the pinned closure
   and catalog (`scenario_map_pin_mismatch`).
+- The closure pin (`simforge.map-pin-closure/v1`) covers the version's
+  simulation members only: `map.xodr`, `topology-index.json.gz`,
+  `signals.geojson.gz`, `derived/topology-derived.json.gz`,
+  `derived/locations.json.gz` and the static-collider artifact. It is sha256
+  over `"<path> <sha256>\n"` lines in byte order of path
+  (`SIMULATION_CLOSURE_SHA256_SQL`, `studio/app/lib/scenario/map-pin.ts`). A
+  republication that only adds derived members (a SUMO network, the ambient
+  turn-verdict table, texture tiers) keeps every pin valid. Migration
+  `20260922180000_scenario_pin_simulation_closure.sql` rewrites the
+  browser-closure pins the first pinning migration wrote. A pin still holding a
+  browser-closure digest is honoured while that publication's simulation
+  members equal today's.
 
 ### Ambient traffic
 
