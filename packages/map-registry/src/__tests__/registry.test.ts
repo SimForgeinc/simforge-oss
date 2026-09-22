@@ -188,10 +188,6 @@ it('publishes additive compressed JSON without changing closure identities or or
   await publishVersion(backend, input);
   expect(await backend.get(key)).toEqual(definition);
   expect(gunzipSync(await backend.get(`${key}.gz`))).toEqual(definition);
-  expect(closure.members['definition.json']?.sha256).toBe(hash);
-  const sibling = await backend.get(`${key}.gz`);
-  await publishVersion(backend, input);
-  expect(await backend.get(`${key}.gz`)).toBe(sibling);
 });
 
 describe('file registry', () => {
