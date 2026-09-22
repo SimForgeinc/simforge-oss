@@ -592,6 +592,7 @@ function PlacementCard({
   onOpen: () => void;
 }) {
   const choosing = phase === "choosing";
+  const inert = !choosing && !job;
   const verdict = candidate.verdict === "exact" ? "Exact" : "Adapted";
   const warning = candidate.offRoadActors > 0
     ? `${candidate.offRoadActors} ${candidate.offRoadActors === 1 ? "actor" : "actors"} off road`
@@ -629,7 +630,7 @@ function PlacementCard({
         }
       }}
     >
-      <div {...stylex.props(styles.stage, !candidate.preview && styles.stageEmpty)}>
+      <div {...stylex.props(styles.stage, !candidate.preview && styles.stageEmpty, inert && styles.inertContent)}>
         {candidate.preview ? <TransferPreview preview={candidate.preview} /> : "No preview"}
         {choosing || selected ? (
           <span {...stylex.props(styles.check, selected && styles.checkOn)} aria-hidden="true">
@@ -638,7 +639,7 @@ function PlacementCard({
         ) : null}
         {job ? <JobStatus job={job} onOpen={onOpen} /> : null}
       </div>
-      <div {...stylex.props(styles.cardBody)}>
+      <div {...stylex.props(styles.cardBody, inert && styles.inertContent)}>
         <span {...stylex.props(styles.cardName)}>Placement {candidate.rank}</span>
         <span {...stylex.props(styles.cardMeta, warning ? styles.cardWarn : null)}>
           {warning ? <AlertTriangle {...stylex.props(styles.jobIcon)} aria-hidden="true" /> : null}
