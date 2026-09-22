@@ -734,9 +734,8 @@ export function DriveSession({
           setStartError(errorMessage(reason));
         }}
         onMapLoaded={() => setMapLoaded(true)}
-        onReady={onViewerReady}
+        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
         onDisposed={onViewerDisposed}
-        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls }}
         role="application"
         tabIndex={0}
       />
