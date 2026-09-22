@@ -1847,6 +1847,15 @@ impl WasmRenderTimeline {
         Ok(Float64Array::from(&out[..]))
     }
 
+    /// A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+    /// scene-state projection of the timeline for whole-document consumers.
+    #[wasm_bindgen(js_name = sceneStateJson)]
+    pub fn scene_state_json(&self, times: &[f64], yaw_only: bool) -> Result<String, JsValue> {
+        let doc = timeline_sampler::scene_state_document(&self.inner, times, yaw_only)
+            .map_err(timeline_err)?;
+        serde_json_string(&doc)
+    }
+
     /// Static actor descriptions (`id, kind, catalogId, actorClass, dims,
     /// color, static, origin, lifecycle`) as JSON, in `actorIds` order.
     #[wasm_bindgen(js_name = actorsJson)]
