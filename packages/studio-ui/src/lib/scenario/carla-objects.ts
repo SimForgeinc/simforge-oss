@@ -1,5 +1,7 @@
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import {
+  CARLA_PEDESTRIAN_MODELS,
+  CARLA_VEHICLE_MODELS,
   PROP_TAGS,
   registerExternalCatalogEntry,
   type CatalogActorClass,
@@ -89,9 +91,50 @@ function registerDto(dto: CarlaObjectDto): void {
     dims: dto.dims,
     tags: dto.tags.filter((tag): tag is PropTag => PROP_TAG_SET.has(tag)),
     defaultParams: {},
-    model: { kind: "proxy", tint: CLASS_TINTS[dto.class] },
+    model: carlaModelForBlueprint(dto.blueprintId) ?? { kind: "proxy", tint: CLASS_TINTS[dto.class] },
   };
   registerExternalCatalogEntry(entry);
+}
+
+/**
+ * Generated CARLA inventory blueprints are intentionally more specific than
+ * the bundled model ids. This checked table keeps the blueprint identity in
+ * the editor while reusing the exact native GLB/node contracts.
+ */
+const VEHICLE_MODEL_BY_BLUEPRINT: Readonly<Record<string, keyof typeof CARLA_VEHICLE_MODELS>> = {
+  "vehicle.ambulance.ford": "vehicle.ambulance",
+  "vehicle.carlacola.actors": "vehicle.box_truck",
+  "vehicle.dodge.charger": "vehicle.honda_civic",
+  "vehicle.dodgecop.charger": "vehicle.police_cruiser",
+  "vehicle.firetruck.actors": "vehicle.fire_engine",
+  "vehicle.fuso.mitsubishi": "vehicle.bus",
+  "vehicle.gazelle.omafiets": "vehicle.bicycle",
+  "vehicle.harley.lowrider": "vehicle.motorcycle",
+  "vehicle.kia.carnival": "vehicle.kia.carnival",
+  "vehicle.lincoln.mkz": "vehicle.sedan",
+  "vehicle.mini.cooper": "vehicle.hatchback",
+  "vehicle.nissan.patrol": "vehicle.suv",
+  "vehicle.sprinter.mercedes": "vehicle.van",
+  "vehicle.taxi.ford": "vehicle.taxi",
+  "vehicle.ue4.audi.tt": "vehicle.chevrolet_corvette",
+  "vehicle.ue4.bmw.grantourer": "vehicle.minivan",
+  "vehicle.ue4.chevrolet.impala": "vehicle.toyota_camry",
+  "vehicle.ue4.ford.crown": "vehicle.taxi",
+  "vehicle.ue4.ford.mustang": "vehicle.ford_mustang",
+  "vehicle.ue4.mercedes.ccc": "vehicle.delivery_van",
+  "vehicle.diamondback.century": "vehicle.bicycle",
+  "vehicle.bh.crossbike": "vehicle.bicycle",
+  "vehicle.yamaha.yzf": "vehicle.motorcycle",
+  "vehicle.vespa.zx125": "vehicle.motorcycle",
+  "vehicle.kawasaki.ninja": "vehicle.motorcycle",
+};
+
+function carlaModelForBlueprint(blueprintId: string): ExternalCatalogEntry["model"] | undefined {
+  if (blueprintId in CARLA_PEDESTRIAN_MODELS) {
+    return CARLA_PEDESTRIAN_MODELS[blueprintId as keyof typeof CARLA_PEDESTRIAN_MODELS];
+  }
+  const vehicleId = VEHICLE_MODEL_BY_BLUEPRINT[blueprintId];
+  return vehicleId ? CARLA_VEHICLE_MODELS[vehicleId] : undefined;
 }
 
 function collectCarlaCatalogIds(value: unknown): string[] {
