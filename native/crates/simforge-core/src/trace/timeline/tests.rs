@@ -378,3 +378,22 @@ fn road_attitude_on_an_incline_follows_openscenario_signs() {
     }
     assert!(checked > 100);
 }
+
+#[test]
+fn knockdown_is_a_monotonic_downed_flag() {
+    let mut trace = example(EXAMPLES[1]);
+    trace
+        .ticks
+        .actors
+        .get_mut("pedestrian")
+        .unwrap()
+        .down_since_s = Some(4.011);
+    let tl = build_render_timeline(&trace, &HeightField::flat(0.0), None).unwrap();
+    let ped = tl.actor("pedestrian").unwrap();
+    assert_eq!(ped.downed_since_tick, Some(201));
+    assert!(!sampler::pose(&tl, "pedestrian", 4.0).unwrap().downed);
+    assert!(sampler::pose(&tl, "pedestrian", 4.02).unwrap().downed);
+    assert!(sampler::pose(&tl, "pedestrian", 19.0).unwrap().downed);
+    let canonical = tl.to_canonical_json().unwrap();
+    assert_eq!(crate::hash::sha256(&canonical), tl.sha256().unwrap());
+}

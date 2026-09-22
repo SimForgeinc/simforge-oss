@@ -52,6 +52,7 @@ fn pose_dict<'py>(py: Python<'py>, p: &TimelinePose) -> PyResult<Bound<'py, PyDi
     d.set_item("bodyRollRad", p.body_roll_rad)?;
     d.set_item("wheelSteerRad", p.wheel_steer_rad)?;
     d.set_item("wheelSpinRad", p.wheel_spin_rad)?;
+    d.set_item("downed", p.downed)?;
     Ok(d)
 }
 
@@ -85,6 +86,11 @@ impl PyTimeline {
     /// Canonical JSON-serialisable document text.
     fn to_json(&self) -> PyResult<String> {
         self.inner.to_json().map_err(value_err)
+    }
+
+    /// `canonicalJson(timeline)`: the bytes whose sha256 is `sha256`.
+    fn to_canonical_json(&self) -> PyResult<String> {
+        self.inner.to_canonical_json().map_err(value_err)
     }
 
     /// `timelineSha256` (content digest of the document).
@@ -237,6 +243,37 @@ impl PyTimeline {
     }
 }
 
+/// Grade observed per-frame transforms (JSONL text) against the sampler.
+/// `profile` is `"bevy"`, `"carla"`, or a full profile dict
+/// (`name, positionToleranceM, angleToleranceDeg, frame, heightReference,
+/// compareAttitude`). Returns the `simforge.render-parity/v1` report dict.
+#[pyfunction]
+#[pyo3(signature = (timeline, observed_jsonl, profile=None))]
+fn compare_observed<'py>(
+    py: Python<'py>,
+    timeline: &Bound<'py, PyTimeline>,
+    observed_jsonl: &str,
+    profile: Option<Bound<'py, PyAny>>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let json = py.import("json")?;
+    let profile = match profile {
+        Some(p) => p,
+        None => "bevy".into_pyobject(py)?.into_any(),
+    };
+    let profile = if let Ok(name) = profile.extract::<String>() {
+        tl::parity::ParityProfile::named(&name)
+            .ok_or_else(|| PyValueError::new_err(format!("unknown parity profile {name:?}")))?
+    } else {
+        let text: String = json.call_method1("dumps", (profile,))?.extract()?;
+        serde_json::from_str(&text).map_err(value_err)?
+    };
+    let report =
+        tl::parity::compare_observed_jsonl(&timeline.get().inner, observed_jsonl, &profile)
+            .map_err(value_err)?;
+    let text = tl::to_json_string(&report).map_err(value_err)?;
+    json.call_method1("loads", (text,))
+}
+
 /// Module-level `pose(timeline, actor_id, t)`, the documented contract form.
 #[pyfunction]
 fn pose<'py>(
@@ -310,6 +347,7 @@ fn trace_sha256(trace: &Bound<'_, PyAny>) -> PyResult<String> {
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTimeline>()?;
     m.add_function(wrap_pyfunction!(pose, m)?)?;
+    m.add_function(wrap_pyfunction!(compare_observed, m)?)?;
     m.add_function(wrap_pyfunction!(build_timeline, m)?)?;
     m.add_function(wrap_pyfunction!(timeline_key, m)?)?;
     m.add_function(wrap_pyfunction!(trace_sha256, m)?)?;
