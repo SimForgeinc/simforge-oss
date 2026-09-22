@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { JobLeasedResponse } from '@simforge-oss/render';
 import { nativeMapMemberInputId } from '@simforge-oss/render/native';
 
-import { validateClaimedInputs } from './worker.js';
+import { createProgressForwarder, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
 
 type Input = JobLeasedResponse['inputs'][number];
 
@@ -87,5 +87,41 @@ describe('native map closure admission', () => {
     expect(() => validateClaimedInputs(lease([master, geometry], [master, { ...geometry, relativePath: undefined }]))).toThrow(
       `invalid native map member ${geometry.inputId} without relativePath`,
     );
+  });
+});
+
+describe('best-effort control-plane reporting', () => {
+  const record = (completed: number) => ({
+    schema: 'simforge.render-progress/v1', event: 'stage.progress', stage: 'downloading', unit: 'items',
+    jobId: 'usrj_x', attempt: 1, sequence: 0, timestamp: new Date().toISOString(), completed, total: 10,
+  }) as never;
+
+  it('drops failed progress records instead of failing, and coalesces queued snapshots', async () => {
+    const sent: number[] = [];
+    const logged: unknown[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const forwarder = createProgressForwarder(async (candidate) => {
+      const completed = (candidate as { completed: number }).completed;
+      if (completed === 1) {
+        await gate;
+        throw new Error('SimCloud control /events returned 409: {"error":"lease_invalid_or_expired"}');
+      }
+      sent.push(completed);
+    }, () => false, (event) => logged.push(event));
+    await forwarder.forward(record(1));
+    for (let completed = 2; completed <= 9; completed += 1) await forwarder.forward(record(completed));
+    release();
+    await forwarder.flush();
+    // Record 1 failed and was dropped; 2..8 were superseded by 9 while 1 was in flight.
+    expect(sent).toEqual([9]);
+    expect(logged).toHaveLength(1);
+  });
+
+  it('keeps a lease through heartbeat failures until its acknowledged expiry nears', () => {
+    const now = 1_000_000;
+    expect(heartbeatFailureIsFatal(new Error('fetch failed'), now + 600_000, 30_000, now)).toBe(false);
+    expect(heartbeatFailureIsFatal(new Error('fetch failed'), now + 20_000, 30_000, now)).toBe(true);
+    expect(heartbeatFailureIsFatal(new Error('control returned 409: lease_invalid_or_expired'), now + 600_000, 30_000, now)).toBe(true);
   });
 });
