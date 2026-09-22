@@ -238,7 +238,9 @@ describe("complete map closure cache planning", () => {
     ]);
   });
 
-  it("uses twelve parallel downloads on capable connections", () => {
+  it("uses the full 32 parallel downloads on a capable 4g connection", () => {
+    // Raised from 12 in 1ed2d1bc ("speed up map closure URL issuance and
+    // downloads"); the test kept asserting the old ceiling.
     Object.defineProperty(navigator, "hardwareConcurrency", {
       configurable: true,
       value: 12,
@@ -248,6 +250,19 @@ describe("complete map closure cache planning", () => {
       value: { effectiveType: "4g", saveData: false },
     });
 
-    expect(profileMapDownloadConcurrency()).toBe(12);
+    expect(profileMapDownloadConcurrency()).toBe(32);
+  });
+
+  it("falls back to the minimum on save-data or 2g connections", () => {
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      value: { effectiveType: "2g", saveData: false },
+    });
+    expect(profileMapDownloadConcurrency()).toBe(8);
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      value: { effectiveType: "4g", saveData: true },
+    });
+    expect(profileMapDownloadConcurrency()).toBe(8);
   });
 });
