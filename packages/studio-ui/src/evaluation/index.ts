@@ -38,7 +38,7 @@ export { TrajectoryPlot } from "./components/TrajectoryPlot";
 
 /** The master-detail workspace: section strip, grouped rail, stage. */
 export { EvaluationShell, EVALUATION_RAIL_WIDTH_KEY } from "./workspace/EvaluationShell";
-export { EvaluationSectionStrip } from "./workspace/EvaluationSectionStrip";
+export { EvaluationSectionStrip, type EvaluationStripLink } from "./workspace/EvaluationSectionStrip";
 export { LaunchStage } from "./workspace/LaunchStage";
 export { RailList, type RailGroup, type RailRow } from "./workspace/RailList";
 export {
