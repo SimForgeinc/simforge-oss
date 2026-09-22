@@ -210,7 +210,7 @@ export async function registerRenderWorkerV2(input: {
   };
 }
 
-type Candidate = {
+export type Candidate = {
   id: string;
   renderer_engine: "browser" | "carla" | "native";
   /** Only the intent's render spec: screening never reads its asset closure. */
@@ -221,7 +221,7 @@ type Candidate = {
   render_textures?: string | null;
 };
 
-type WorkerRow = {
+export type WorkerRow = {
   id: string;
   registration_id: string;
   worker_version: string;
@@ -301,7 +301,7 @@ export async function readRenderIntentText(
   return text;
 }
 
-function workerCanRun(worker: WorkerRow, candidate: Candidate) {
+export function workerCanRun(worker: WorkerRow, candidate: Candidate) {
   const capability = ScenarioRendererCapabilitySchema.safeParse(parseObject(worker.capabilities));
   const specValue = typeof candidate.render_spec === "string"
     ? JSON.parse(candidate.render_spec) as unknown
