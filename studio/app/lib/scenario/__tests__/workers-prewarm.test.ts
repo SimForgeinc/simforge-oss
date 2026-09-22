@@ -375,4 +375,25 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.equal(await signRenderInputsV2({
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: "wrong-fence", workerNodeId: WORKER_NODE_ID, inputIds: ["scenario.xosc"],
   }), null);
+
+  // The worker restarts mid-job: registering again releases its orphaned
+  // lease and requeues the job at once, instead of after the 15 min lease.
+  await registerRenderWorkerV2({
+    workerId: WORKER_NODE_ID, instanceId: "prewarm-1", engine: capability,
+    labels: { ...CARLA_LABELS, inputUrls: "batch-v1" },
+  });
+  assert.deepEqual(await queryOne(
+    `SELECT j.job_state, l.lease_state, a.attempt_state
+       FROM simforge.render_jobs j
+       JOIN simforge.worker_leases l ON l.render_job_id = j.id
+       JOIN simforge.render_attempts a ON a.id = l.render_attempt_id
+      WHERE j.id = :id`,
+    { id: job.id },
+  ), { job_state: "queued", lease_state: "expired", attempt_state: "expired" });
+  assert.equal(await signRenderInputsV2({
+    jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken, workerNodeId: WORKER_NODE_ID, inputIds: ["scenario.xosc"],
+  }), null, "the released lease no longer authorizes anything");
+  const retry = await claimResponseV2(registration.registrationId, WORKER_NODE_ID);
+  assert.equal(retry.type, "job.leased");
+  assert.equal(retry.type === "job.leased" ? retry.attempt : 0, 2);
 });

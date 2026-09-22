@@ -202,6 +202,7 @@ export async function registerRenderWorkerV2(input: {
     },
   );
   if (!rows[0]) throw new Error("worker_registration_not_approved");
+  await releaseOrphanedWorkerLeasesV2(input.workerId);
   return {
     schema: CONTROL_SCHEMA,
     type: "worker.registered" as const,
@@ -381,18 +382,20 @@ type ClaimedInput = StoredInput | {
   url: string;
 };
 
-async function reapExpiredRenderIntentLeasesV2() {
-  const expired = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
-    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
-       FROM simforge.worker_leases
-      WHERE lease_state = 'active' AND expires_at <= NOW()
-      ORDER BY expires_at LIMIT 100`,
-  );
-  for (const item of expired) {
+/**
+ * Ends active leases and puts their jobs back in the queue (or fails them
+ * when their attempts are spent). `force` ends leases that have not expired
+ * yet: used when the holder is known to be gone.
+ */
+async function releaseRenderLeasesV2(
+  items: readonly { lease_id: string; attempt_id: string; job_id: string }[],
+  force: boolean,
+) {
+  for (const item of items) {
     await withTransaction(async (tx) => {
       const released = await tx.queryOne<{ id: string }>(
         `UPDATE simforge.worker_leases SET lease_state = 'expired', released_at = NOW()
-          WHERE id = :lease_id AND lease_state = 'active' AND expires_at <= NOW()
+          WHERE id = :lease_id AND lease_state = 'active' ${force ? "" : "AND expires_at <= NOW()"}
           RETURNING id`,
         { lease_id: item.lease_id },
       );
@@ -425,6 +428,37 @@ async function reapExpiredRenderIntentLeasesV2() {
       );
     });
   }
+}
+
+async function reapExpiredRenderIntentLeasesV2() {
+  const expired = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
+    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
+       FROM simforge.worker_leases
+      WHERE lease_state = 'active' AND expires_at <= NOW()
+      ORDER BY expires_at LIMIT 100`,
+  );
+  await releaseRenderLeasesV2(expired, false);
+}
+
+/**
+ * A worker runs one job at a time and registers only when its process
+ * starts, so any lease still active for its node at registration belongs to
+ * a process that is gone (crash, restart, redeploy). Release those at once
+ * so the job is retried now instead of after the lease runs out (up to
+ * LEASE_SECONDS later).
+ */
+export async function releaseOrphanedWorkerLeasesV2(workerNodeId: string) {
+  const orphaned = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
+    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
+       FROM simforge.worker_leases
+      WHERE worker_node_id = :worker_node_id AND lease_state = 'active'`,
+    { worker_node_id: workerNodeId },
+  );
+  await releaseRenderLeasesV2(orphaned, true);
+  if (orphaned.length > 0) {
+    console.error(JSON.stringify({ event: "render_worker_orphaned_leases_released", workerNodeId, jobIds: orphaned.map((item) => item.job_id) }));
+  }
+  return orphaned.length;
 }
 
 export async function claimRenderJobV2(registrationId: string, workerNodeId: string): Promise<Claimed | null> {
