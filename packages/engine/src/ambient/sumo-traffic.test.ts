@@ -314,7 +314,7 @@ describe('merging SUMO traffic into the authoritative trace', () => {
       kind: 'car',
       dims: { l: 4.55, w: 1.82, h: 1.48 },
       static: false,
-      tags: ['catalog:vehicle.sedan', 'ambient', 'origin:sumo'],
+      tags: ['ambient', 'catalog:vehicle.sedan', 'sumo'],
       origin: 'sumo',
     });
     const track = merged.ticks.actors[id!]!;

@@ -6,12 +6,12 @@ import type { ScenarioMapOption } from "../../../../src/scenario/list/document-m
 import type { ScenarioSession } from "../../../../src/scenario/scene/useScenarioSession";
 
 const sumo = vi.hoisted(() => ({
-  calls: [] as Array<{ enabled: boolean; mode: string; mapVersionId: string }>,
+  calls: [] as Array<{ enabled: boolean; mode: string; mapVersionId: string; signalPrograms?: unknown }>,
   status: { phase: "running", actorCount: 7 } as { phase: string; actorCount: number },
 }));
 vi.mock("../../../../src/lib/scenario/ambient/useSumoTraffic", () => ({
-  useSumoTraffic: (options: { enabled: boolean; mode: string; map: { mapVersionId: string } }) => {
-    sumo.calls.push({ enabled: options.enabled, mode: options.mode, mapVersionId: options.map.mapVersionId });
+  useSumoTraffic: (options: { enabled: boolean; mode: string; map: { mapVersionId: string }; signalBook?: { programs: unknown } }) => {
+    sumo.calls.push({ enabled: options.enabled, mode: options.mode, mapVersionId: options.map.mapVersionId, signalPrograms: options.signalBook?.programs });
     return sumo.status;
   },
 }));
@@ -47,20 +47,26 @@ function map(sumoNetworkSha256: string | null): ScenarioMapOption {
   };
 }
 
-function session(provider: "sumo" | "native", sumoNetworkSha256: string | null) {
+const PROGRAMS = [{ id: "signal:1", phases: [{ phase: "green", durationS: 10 }], stopLines: [] }];
+
+function session(
+  provider: "sumo" | "native",
+  sumoNetworkSha256: string | null,
+  options: { mapSignalPlans?: unknown[]; traceActorMetadata?: Record<string, { tags: string[] }> } = {},
+) {
   const setSumoStatus = vi.fn();
   const document = {
     id: "doc_1",
     content: {
-      roles: [], props: [], invariants: [], variants: [], mapSignalPlans: [],
+      roles: [], props: [], invariants: [], variants: [], mapSignalPlans: options.mapSignalPlans ?? [],
       extensions: { "studio.ambientTraffic.provider.v1": provider },
       choreography: { interactions: [], clipSeconds: 20, warmupSeconds: 0 },
     },
   } as unknown as ScenarioDocumentDto;
   const bundle = {
     actors: [], startTime: 0, endTime: 20,
-    instance: { manifest: { inputHash: "input" } },
-    trace: { header: { dt: 0.05 } },
+    instance: { manifest: { inputHash: "input" }, input: { signalPrograms: PROGRAMS, roadControls: [] } },
+    trace: { header: { dt: 0.02, clipSeconds: 20, warmupSeconds: 0, actorMetadata: options.traceActorMetadata ?? {} }, ticks: { signals: {} } },
   };
   const value = {
     map: map(sumoNetworkSha256),
@@ -87,7 +93,7 @@ describe("editor SUMO host", () => {
   it("runs SUMO for a SUMO scenario on a map with a network and publishes its status", () => {
     const { value, setSumoStatus } = session("sumo", "a".repeat(64));
     render(<ScenarioSumoTraffic session={value} />);
-    expect(sumo.calls.at(-1)).toEqual({ enabled: true, mode: "authoring", mapVersionId: "usmap_1" });
+    expect(sumo.calls.at(-1)).toEqual({ enabled: true, mode: "authoring", mapVersionId: "usmap_1", signalPrograms: PROGRAMS });
     expect(setSumoStatus).toHaveBeenCalledWith(sumo.status);
   });
 
@@ -96,6 +102,18 @@ describe("editor SUMO host", () => {
     expect(sumo.calls.at(-1)?.enabled).toBe(false);
     cleanup();
     render(<ScenarioSumoTraffic session={session("native", "a".repeat(64)).value} />);
+    expect(sumo.calls.at(-1)?.enabled).toBe(false);
+  });
+
+  it("keeps running with authored map signal plans: SUMO obeys the compiled signal book", () => {
+    render(<ScenarioSumoTraffic session={session("sumo", "a".repeat(64), { mapSignalPlans: [{ id: "plan" }] }).value} />);
+    expect(sumo.calls.at(-1)).toMatchObject({ enabled: true, signalPrograms: PROGRAMS });
+  });
+
+  it("stands down when the loaded trace already carries the worker's SUMO traffic", () => {
+    render(<ScenarioSumoTraffic session={session("sumo", "a".repeat(64), {
+      traceActorMetadata: { "sumo:0badf00d": { tags: ["ambient", "catalog:vehicle.sedan", "sumo"] } },
+    }).value} />);
     expect(sumo.calls.at(-1)?.enabled).toBe(false);
   });
 });

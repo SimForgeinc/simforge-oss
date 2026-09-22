@@ -78,6 +78,20 @@ export async function trafficSumo(options: TrafficSumoOptions): Promise<number> 
     await writeFile(path.join(out, 'materialized-traffic.json'), first.traffic.artifact.bytes);
     await writeFile(path.join(out, 'trace.json'), JSON.stringify(first.trace));
     await writeFile(path.join(out, 'authored-trace.json'), JSON.stringify(first.authoredTrace));
+    // Everything the SUMO step consumed: replayable on any host with only the
+    // pinned runtime (no map assets, no native engine).
+    await writeFile(path.join(out, 'sumo-step-input.json'), JSON.stringify({
+      authoredTrace: first.authoredTrace,
+      authoredTraceSha256: first.authoredTraceSha256,
+      sourceInputDigest: scenario.sourceInputDigest,
+      signalPrograms: scenario.input.signalPrograms,
+      roadControls: scenario.input.roadControls,
+      profile: scenario.profile,
+      network: { manifest: network.manifest, base64: Buffer.from(network.bytes).toString('base64') },
+      map: { assetId: scenario.input.mapId, versionId: `installed:${network.manifest.sha256.slice(0, 16)}` },
+      ...(options.signalAuthority ? { signalAuthority: options.signalAuthority } : {}),
+      expected: { key: first.traffic.key, sha256: first.traffic.artifact.sha256 },
+    }));
     await writeFile(path.join(out, 'sumo-diagnostics.json'), `${JSON.stringify({ ...diagnostics, signalAudit: first.signalAudit }, null, 2)}\n`);
   }
   emit({
