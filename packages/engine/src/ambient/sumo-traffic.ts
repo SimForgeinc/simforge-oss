@@ -77,7 +77,7 @@ import {
 } from './sumo-signals.js';
 
 /** Bumped whenever the coupling, demand, signal rewrite or quantization changes output bytes. */
-export const SUMO_TRAFFIC_COUPLING_VERSION = 'simforge.sumo-traffic/v1';
+export const SUMO_TRAFFIC_COUPLING_VERSION = 'simforge.sumo-traffic/v2';
 export const SUMO_TRAFFIC_STEP_SECONDS = 0.02;
 export const SUMO_TRAFFIC_PRE_ROLL_SECONDS = SUMO_DEMAND_WARMUP_SECONDS;
 /** Largest float32 spacing tolerated for network coordinates (network extent < 4096 m). */
@@ -167,7 +167,7 @@ export interface SumoTrafficDiagnostics {
   /**
    * SUMO teleports (collision/jam resolution) seen in the clip. A teleported
    * vehicle is split: its track ends at the jump and the remainder becomes a
-   * new actor (`<id>~<n>`), so no rendered vehicle ever jumps.
+   * new actor (`<id>-t<n>`), so no rendered vehicle ever jumps.
    */
   readonly teleports: number;
   /** Steps where a vehicle moved > 0.25 m beyond its speed without teleporting (SUMO lane-shape seams). */
@@ -568,15 +568,18 @@ class SumoTrackContinuity {
         }
       }
       this.last.set(actor.id, { x: actor.x, z: actor.z, speedMps: actor.speedMps, frame: this.frame, segment });
-      return segment === 0 ? actor : { ...actor, id: `${actor.id}~${segment}` };
+      return segment === 0 ? actor : { ...actor, id: `${actor.id}-t${segment}` };
     });
     return result.sort((left, right) => compare(left.id, right.id));
   }
 }
 
-/** Trace id of a SUMO vehicle: its bridge FNV-1a hash, stable across identical runs. */
+/**
+ * Trace id of a SUMO vehicle: `sumo-<fnv1a32 hex>` of its SUMO id, stable across
+ * identical runs and URL-safe (render intents accept it as a sensor host id).
+ */
 export function sumoTrafficActorId(idHash: number): string {
-  return `sumo:${(idHash >>> 0).toString(16).padStart(8, '0')}`;
+  return `sumo-${(idHash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 /** The trace id a SUMO vehicle id (`sumo-<seed>-<n>` or a flow member) will carry. */

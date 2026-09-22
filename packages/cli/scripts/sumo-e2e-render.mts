@@ -97,12 +97,15 @@ const timelineDoc = JSON.parse(new TextDecoder().decode(timeline.bytes)) as {
 };
 const sumoInTimeline = timelineDoc.actors.filter((actor) => actor.origin === 'sumo');
 
-// 3. Camera: the authored mover whose forward view holds the most SUMO vehicles.
+// 3. Camera: the authored mover whose forward view holds the most SUMO
+//    vehicles (render intents accept only URL-safe host ids, so a `sumo:`
+//    actor cannot carry the camera), mounted high to see across junctions.
 const scene = traceToSceneFrame(worker.trace);
 const dt = worker.trace.header.dt;
-const sumoIds = Object.keys(scene.ticks.actors).filter((id) => id.startsWith('sumo:'));
+const isSumo = (id: string) => worker.trace.header.actorMetadata?.[id]?.tags.includes('sumo') ?? false;
+const sumoIds = Object.keys(scene.ticks.actors).filter(isSumo);
 const hosts = Object.keys(scene.ticks.actors).filter((id) =>
-  !id.startsWith('sumo:') && !worker.trace.header.actorMetadata?.[id]?.static
+  /^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$/.test(id) && !worker.trace.header.actorMetadata?.[id]?.static
   && ['car', 'vehicle', 'truck', 'van', 'bus'].includes(worker.trace.header.actorMetadata?.[id]?.kind ?? ''));
 let best = { host: hosts[0]!, start: 0, score: -1 };
 for (const host of hosts) {
@@ -112,20 +115,25 @@ for (const host of hosts) {
     for (let t = start; t < start + seconds; t += 0.5) {
       const tick = Math.round(t / dt);
       if (track.present[tick] !== 1) { score -= 100; continue; }
+      // Heading is measured in the xodr-local frame; scene z = -y.
       const hx = Math.cos(track.headingRad[tick]!);
-      const hz = Math.sin(track.headingRad[tick]!);
+      const hz = -Math.sin(track.headingRad[tick]!);
       for (const id of sumoIds) {
+        if (id === host) continue;
         const other = scene.ticks.actors[id]!;
         if (other.present[tick] !== 1) continue;
         const dx = other.x[tick]! - track.x[tick]!;
         const dz = other.z[tick]! - track.z[tick]!;
         const ahead = dx * hx + dz * hz;
-        if (ahead > 3 && ahead < 90 && Math.abs(dx * hz - dz * hx) < ahead) score += 1;
+        // Near vehicles dominate the frame; weight by proximity.
+        if (ahead > 3 && ahead < 80 && Math.abs(dx * hz - dz * hx) < ahead) score += 20 / (20 + ahead);
       }
     }
     if (score > best.score) best = { host, start, score };
   }
 }
+const hostArg = rest.includes('--host') ? rest[rest.indexOf('--host') + 1]! : null;
+if (hostArg) best = { host: hostArg, start: rest.includes('--start') ? flag('start', 0) : 0, score: -1 };
 const start = best.start;
 const end = start + seconds;
 
@@ -143,7 +151,8 @@ const xoscBytes = await fs.readFile(xoscPath);
 const xoscSha256 = createHash('sha256').update(xoscBytes).digest('hex');
 const intent: RenderIntentV1 = {
   schema: 'simforge.render-intent/v1',
-  renderTextures: 'uastc-full',
+  // Small texture tier: the render shares the GPU with other workloads.
+  renderTextures: 'bc7-512',
   nativeVramBudgetBytes: 4 * 1024 ** 3,
   intentId: 'sumo-e2e',
   executionPackage: { id: 'sumo-e2e-package', sourceInputDigest: executionSourceInputDigest(input) },
@@ -152,12 +161,15 @@ const intent: RenderIntentV1 = {
     openScenario: { sha256: xoscSha256, sizeBytes: xoscBytes.byteLength },
     map: { mapId, revisionId: 'installed', sha256: 'c'.repeat(64) },
   },
-  sensorHosts: [{ sourceId: 'front-rgb', actorId: best.host, vehicleAsset: { catalogAssetId: 'vehicle.sedan' } }],
+  sensorHosts: [{
+    sourceId: 'front-rgb', actorId: best.host,
+    vehicleAsset: { catalogAssetId: timelineDoc.actors.find((actor) => actor.id === best.host)?.catalogId ?? 'vehicle.sedan' },
+  }],
   renderSpec: {
     schema: 'simforge.render-spec/v3',
     sources: [{
       actorId: best.host, sensorId: 'front-camera', outputName: 'front-rgb', modality: 'rgb',
-      transform: { position: { x: -6, y: 4.5, z: 0 }, rotation: { yawRad: 0, pitchRad: -0.2, rollRad: 0 } },
+      transform: { position: { x: flag('cam-back', -8), y: flag('cam-height', 6), z: 0 }, rotation: { yawRad: flag('cam-yaw', 0), pitchRad: flag('cam-pitch', -0.25), rollRad: 0 } },
       attributes: { width, height, fps, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000 },
     }],
     clip: { startSeconds: start, endSeconds: end },
@@ -192,7 +204,14 @@ for (const entry of await fs.readdir(master, { recursive: true, withFileTypes: t
 }
 const workspace = path.join(out, 'render');
 let renderError: string | null = null;
-const manifest = await createRenderEngine({ binary: process.env.SIMFORGE_NATIVE_RENDER_BINARY, applyAttitude: attitude }).execute({
+const manifest = await createRenderEngine({
+  binary: process.env.SIMFORGE_NATIVE_RENDER_BINARY,
+  applyAttitude: attitude,
+  // The pinned actor closure's blobs, fetched and verified like a worker does.
+  actorAssetsBaseUrl: process.env.SIMFORGE_ACTOR_ASSETS_BASE_URL ?? new URL(closure.downloadUrl).origin,
+  // A packaged closure directory (`blobs/sha256/<xx>/<sha>`) is verified in place.
+  ...(process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR ? { actorAssetsCacheDir: process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR } : {}),
+}).execute({
   jobId: 'sumo-e2e', attempt: 1, intent, intentSha256: 'd'.repeat(64),
   executionPackageControlSha256: 'e'.repeat(64), schedules: createFixedSchedules(intent),
   inputs: new Map(inputs.map((item) => [item.inputId, item])), workspace,
@@ -204,6 +223,7 @@ const manifest = await createRenderEngine({ binary: process.env.SIMFORGE_NATIVE_
   return null;
 });
 const video = manifest?.artifacts.find((artifact) => artifact.identity.role === 'video');
+if (renderError) console.error(`native render: ${renderError}`);
 
 // 5. SUMO vehicles in the rendered frames vs the timeline.
 const sent = JSON.parse(await fs.readFile(path.join(workspace, 'trace', 'native-trace.json'), 'utf8')) as {
@@ -237,7 +257,7 @@ for (const [index, frame] of sent.frames.entries()) {
     if (body && body.catalogId !== 'vehicle.sedan') wrongBody.push(actor.id);
   }
 }
-const sumoPerActor = Object.fromEntries(Object.entries(parity.perActor).filter(([id]) => id.startsWith('sumo:')));
+const sumoPerActor = Object.fromEntries(Object.entries(parity.perActor).filter(([id]) => isSumo(id)));
 const stills: string[] = [];
 if (video) {
   for (const fraction of [0.1, 0.5, 0.9]) {
@@ -262,7 +282,7 @@ const report = {
   render: {
     host: best.host, clip: [start, end], frames: sent.frames.length,
     video: video?.relativePath ?? null, renderError, attitude,
-    sumoActorsDrawnPerFrame: sent.frames.map((frame) => frame.actors.filter((actor) => actor.id.startsWith('sumo:') && actor.kind !== 'despawn').length),
+    sumoActorsDrawnPerFrame: sent.frames.map((frame) => frame.actors.filter((actor) => isSumo(actor.id) && actor.kind !== 'despawn').length),
   },
   checks: {
     missingSumoActorsInFrames: missingSumo.length,

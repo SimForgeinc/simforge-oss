@@ -110,8 +110,9 @@ The artifact is `uniscenarios.materialized-traffic.v1` with provider
 `{ id: "sumo", version: "1.27.1-7717f237", seed }`, on the trace grid, with
 `signals: []`. The merge turns it into ordinary trace actors:
 
-- **id:** `sumo:<fnv1a32 of the SUMO vehicle id>`, stable across identical
-  runs. A teleported vehicle continues as `<id>~<n>` (see below).
+- **id:** `sumo-<fnv1a32 of the SUMO vehicle id>`, stable across identical
+  runs and URL-safe, so a SUMO vehicle can carry a render sensor. A teleported
+  vehicle continues as `<id>-t<n>` (see below).
 - **metadata:** `kind: "car"`, dims 4.55 × 1.82 × 1.48 m (the same body SUMO
   car-following uses), `static: false`, and tags
   `["ambient", "catalog:vehicle.sedan", "sumo"]`. The render timeline derives
