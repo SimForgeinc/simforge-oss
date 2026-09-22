@@ -26,6 +26,7 @@ import {
   notifyScenario,
   useScenarioWorkspaceStatus,
 } from "./status";
+import { SaveStatus } from "./SaveStatus";
 import type { ScenarioWorldTarget } from "../scene/ScenarioWorldHost";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "../scene/previewPolicy";
@@ -491,24 +492,6 @@ function ScenarioEditorWorkspace({
         }
       : null,
   );
-  // A failure *after* boot is not blocking: the editor still works, and an
-  // author who just lost one save must be able to keep the document they are
-  // looking at rather than being locked out of it.
-  useScenarioWorkspaceStatus(
-    "scenario-document-save",
-    error && maps
-      ? {
-          kind: "error",
-          label:
-            saveState === "conflict"
-              ? "This document changed elsewhere"
-              : "The last editor operation failed",
-          detail: error,
-          actionLabel: "Dismiss",
-          action: () => setError(null),
-        }
-      : null,
-  );
   const shell = (children: React.ReactNode) => (
     <div {...stylex.props(styles.relTallShrinkable)}>{children}</div>
   );
@@ -547,6 +530,14 @@ function ScenarioEditorWorkspace({
         map={map}
         record={record}
         datasetId={datasetId}
+        documentSaveStatus={
+          <SaveStatus
+            label="Draft"
+            status={saveState}
+            error={error}
+            onRetry={() => void persist()}
+          />
+        }
         onExitToList={onExitToList}
         injectedViewer={injectedViewer}
         loadedMapVersionId={loadedMapVersionId}

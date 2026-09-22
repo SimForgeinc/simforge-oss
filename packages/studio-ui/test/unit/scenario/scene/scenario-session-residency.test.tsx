@@ -109,6 +109,25 @@ afterEach(() => {
 });
 
 describe("scenario session trace residency", () => {
+  it("retries a failed preview save without rebuilding the playable trace", async () => {
+    const { services, saveSimulationPreview } = host(documentAt(1));
+    saveSimulationPreview.mockRejectedValueOnce(new Error("Publish unavailable"));
+    worker.prepare.mockImplementation(async () => fakeBundle("retry"));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <StudioHostProvider host={services}>{children}</StudioHostProvider>
+    );
+    const rendered = renderHook(() => useScenarioSession({
+      documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
+    }), { wrapper });
+    await waitFor(() => expect(rendered.result.current.playback.savedSimulationError).toBe("Publish unavailable"));
+    const trace = rendered.result.current.bundle;
+    act(() => rendered.result.current.playback.retrySimulationSave?.());
+    await waitFor(() => expect(rendered.result.current.playback.savedSimulationStatus).toBe("saved"));
+    expect(rendered.result.current.playback.savedSimulationError).toBeNull();
+    expect(rendered.result.current.bundle).toBe(trace);
+    expect(worker.prepare).toHaveBeenCalledTimes(1);
+  });
+
   it("opens a superseded draft on its source's current geometry-compatible map", async () => {
     const { services } = host({
       ...documentAt(1), mapVersionId: "retired-publication",

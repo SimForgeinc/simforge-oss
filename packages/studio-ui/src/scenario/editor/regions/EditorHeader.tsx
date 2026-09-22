@@ -21,6 +21,8 @@ import { ViewportSettingsPanel } from "./slots/ViewportSettingsPanel";
 import type { EditorExperience } from "../simple-timed-routes";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorHeader.stylex";
+import { SaveStatus } from "../SaveStatus";
+import type { ScenarioSharedPlayback } from "../../scene/useScenarioSession";
 
 const EXPECTED_MAP_BOUND_ISSUES = new Set([
   "non_portable_role",
@@ -43,6 +45,8 @@ export function EditorHeader({
   simulationIssues = [],
   experience = null,
   onExperienceToggle,
+  documentSaveStatus,
+  playback,
 }: {
   document?: EditorDocument | null;
   getDebugInformation?: () => string;
@@ -53,6 +57,8 @@ export function EditorHeader({
   simulationIssues?: readonly SimulationIssue[];
   experience?: EditorExperience | null;
   onExperienceToggle?: () => void;
+  documentSaveStatus?: React.ReactNode;
+  playback?: ScenarioSharedPlayback;
 }) {
   useRouteHeader({ title: "Editor" });
   useSetTopBarActionsAlignment("start");
@@ -106,6 +112,13 @@ export function EditorHeader({
               <span>Exit editor</span>
             </Button>
           ) : null}
+          {documentSaveStatus}
+          <SaveStatus
+            label="Simulation"
+            status={playback?.savedSimulationStatus}
+            error={playback?.savedSimulationError}
+            onRetry={playback?.retrySimulationSave}
+          />
         </div>
       </TopBarActionsPortal>
       <TopBarTrailingPortal>

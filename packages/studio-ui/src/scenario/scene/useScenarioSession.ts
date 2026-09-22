@@ -65,6 +65,7 @@ export type ScenarioSharedPlayback = {
   readonly savedSimulationError?: string | null;
   /** Honest state of the current draft's browser simulation artifact. */
   readonly savedSimulationStatus?: "saving" | "saved" | null;
+  readonly retrySimulationSave?: () => void;
   readonly inspecting: boolean;
   readonly setInspecting: (inspecting: boolean) => void;
   /** Status published by the one workspace-owned SUMO runtime. */
@@ -701,6 +702,9 @@ export function useScenarioSession({
       inspecting,
       savedSimulationError,
       savedSimulationStatus,
+      retrySimulationSave: () => {
+        if (bundle) publishPreviewRef.current?.(bundle);
+      },
       setInspecting,
       sumoStatus,
       setSumoStatus,

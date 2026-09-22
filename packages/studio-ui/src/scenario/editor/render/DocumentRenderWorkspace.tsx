@@ -7,6 +7,7 @@ import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/re
 import { savedSimulationRevisionEvidence } from "../../../lib/scenario/editor/saved-simulation-evidence";
 import { RenderWorkspace } from "./RenderWorkspace";
 import { useOptionalScenarioSession } from "../../scene/ScenarioSessionContext";
+import { SaveStatus } from "../SaveStatus";
 
 /**
  * The one entry point into the render workspace, for every route that opens it.
@@ -109,6 +110,15 @@ export function DocumentRenderWorkspace({
   );
 
   return (
+    <>
+      {!initialRevisionId && scenarioSession?.document?.id === document.id ? (
+        <SaveStatus
+          label="Simulation evidence"
+          status={scenarioSession.playback.savedSimulationStatus}
+          error={scenarioSession.playback.savedSimulationError}
+          onRetry={scenarioSession.playback.retrySimulationSave}
+        />
+      ) : null}
     <RenderWorkspace
       revisionId={initialRevisionId}
       documentId={document.id}
@@ -121,5 +131,6 @@ export function DocumentRenderWorkspace({
       onRenderActivityChange={onRenderActivityChange}
       onImmersiveChange={onImmersiveChange}
     />
+    </>
   );
 }
