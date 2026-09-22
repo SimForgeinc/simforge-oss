@@ -44,8 +44,6 @@ export function useRouteHeader(header: RouteHeader) {
   useEffect(() => () => { release?.(owner); }, [owner, release]);
 }
 
-/** Legacy title-only declarations retained for world/drive integrations outside the shell cutover. */
-export function useSetPageTitle(title: string | null | undefined) { useRouteHeader({ title: title?.trim() ?? "" }); }
 export function useSetTopBarActionsAlignment(alignment: "start" | "end") {
   const set = useContext(TopBarSlotContext)?.setActionsAlignment;
   useEffect(() => { set?.(alignment); return () => set?.("end"); }, [alignment, set]);

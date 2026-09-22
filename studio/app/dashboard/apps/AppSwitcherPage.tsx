@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
-import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { useRouteHeader } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { AppSwitcherPanel } from "@/app/components/AppSwitcherPanel";
 import type { SwitcherInlineView } from "@/app/lib/dashboard-nav";
 import { styles } from "./AppSwitcherPage.stylex";
@@ -15,7 +15,7 @@ import { styles } from "./AppSwitcherPage.stylex";
 export function AppSwitcherPage() {
   const pathname = usePathname();
   const view = useSearchParams().get("view");
-  useSetPageTitle("Apps");
+  useRouteHeader({ title: "Apps" });
 
   return (
     <div {...stylex.props(styles.page)} data-testid="app-switcher-page" data-visual-surface="flat">

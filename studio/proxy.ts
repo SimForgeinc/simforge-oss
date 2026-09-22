@@ -8,6 +8,7 @@ import {
   secretsEqual,
 } from "@simforge-oss/studio-host/node";
 import { isUnservedRoute } from "@/app/host/routes";
+import { UNSERVED_ROUTE_HTML } from "@/app/components/unserved-route";
 
 /**
  * Local service access gate. Loopback is not authorization: any process or
@@ -52,7 +53,10 @@ export function proxy(request: NextRequest) {
   // Routes this host does not serve answer like routes that were never
   // written. Empty on a local installation, which serves all of them.
   if (isUnservedRoute(request.nextUrl.pathname)) {
-    return new NextResponse(null, { status: 404 });
+    return new NextResponse(request.method === "HEAD" ? null : UNSERVED_ROUTE_HTML, {
+      status: 404,
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
+    });
   }
   if (process.env.SIMFORGE_LOCAL_OPEN_ACCESS === "1") return NextResponse.next();
   if (EXEMPT_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
