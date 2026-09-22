@@ -518,7 +518,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                   s.object_count
              FROM simforge.revisions r
              JOIN simforge.map_versions mv
-               ON mv.id = r.map_version_id AND mv.workspace_id = r.workspace_id
+               ON mv.id = r.map_version_id
              JOIN simforge.native_map_asset_sets s
                ON s.id = mv.native_map_asset_set_id
               AND s.workspace_id = mv.workspace_id
