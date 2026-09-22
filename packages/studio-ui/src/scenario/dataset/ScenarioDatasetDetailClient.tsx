@@ -25,7 +25,7 @@ import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
 import { ScenarioMapPickerDialog } from "../list/ScenarioMapPickerDialog";
-import { ScenarioTransferDialog } from "../list/ScenarioTransferDialog";
+import { ScenarioTransferOverlay } from "../list/transfer/ScenarioTransferOverlay";
 import { ScenarioTagFilterDropdown } from "../list/ScenarioTagFilterDropdown";
 import {
   documentCreatorKey,
@@ -667,18 +667,17 @@ export function ScenarioDatasetDetailClient({
         onSelectMap={(map) => void actions.createDocumentOnMap(map)}
       />
       {openScenarioImport.dialog}
-      <ScenarioTransferDialog
-        open={Boolean(transferDocument)}
+      <ScenarioTransferOverlay
         document={transferDocument}
-        busy={Boolean(
-          transferDocument &&
-          actions.busyDocumentId === transferDocument.id,
-        )}
         onClose={() => setTransferDocument(null)}
-        onTransfer={async (input) => {
-          if (!transferDocument) return false;
-          return actions.transferDocument(transferDocument, input);
-        }}
+        onCreated={actions.recordTransferredDocument}
+        onOpenDocument={(created) =>
+          onEditDocument({
+            ...documentSummaryFromDocument(created),
+            derivationKind: "cross_map_variation",
+            derivedFromDocumentId: transferDocument?.id ?? null,
+          })
+        }
       />
       <MetadataDetailsDialog
         open={Boolean(actions.detailsDraft)}

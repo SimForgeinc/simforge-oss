@@ -34,7 +34,13 @@ export async function POST(request: Request, route: Context) {
 
   const source = await getScenarioDocument(auth.context, documentId);
   if (!source) return NextResponse.json({ error: "document_not_found" }, { status: 404 });
-  return NextResponse.json(
-    await transferOptions(auth.context, source, parsed.data.targetMapVersionIds),
-  );
+  try {
+    return NextResponse.json(await transferOptions(auth.context, source, parsed.data));
+  } catch (error) {
+    console.error(`[transfer] options for ${documentId} failed`, error);
+    return NextResponse.json(
+      { error: "transfer_options_failed", message: "Transfer candidates could not be loaded. Try again." },
+      { status: 500 },
+    );
+  }
 }
