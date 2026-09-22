@@ -3,6 +3,9 @@ import * as stylex from "@stylexjs/stylex";
 export const styles = stylex.create({
   // flex h-full min-h-0 flex-col
   flexColTall: {
+    position: "relative",
+    minWidth: 0,
+    overflow: "hidden",
     display: "flex",
     height: "100%",
     minHeight: "0px",
@@ -10,6 +13,7 @@ export const styles = stylex.create({
   },
   // min-h-0 flex-1
   fillShrinkable: {
+    minWidth: 0,
     minHeight: "0px",
     flex: "1 1 0%",
   },

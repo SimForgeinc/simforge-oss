@@ -2,6 +2,13 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, space } from "../stylex/tokens.stylex";
 
 export const styles = stylex.create({
+  errorCover: { position: "absolute", inset: 0, zIndex: 30 },
+  worldSurface: { position: "absolute", inset: 0, zIndex: 0 },
+  listSession: { position: "relative", zIndex: 10, display: "flex", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
+  hiddenSession: { visibility: "hidden", pointerEvents: "none" },
+  coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: "300ms" },
+  coverageBlurred: { transform: "scale(1.02)", filter: "blur(14px)" },
+  editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: 20, visibility: "visible", opacity: 1 },
   // relative h-full min-h-0 overflow-hidden bg-background text-foreground
   scenarioDatasetIndex: {
     position: "relative",
@@ -10,11 +17,6 @@ export const styles = stylex.create({
     overflow: "hidden",
     backgroundColor: colors.bg,
     color: colors.text,
-  },
-  // pointer-events-auto h-full
-  resizablepanel: {
-    pointerEvents: "auto",
-    height: "100%",
   },
   /** Dataset strip on the left at its fixed width; the scenario column takes the rest. */
   panelGrid: {
@@ -35,6 +37,8 @@ export const styles = stylex.create({
     pointerEvents: "none",
     position: "relative",
     minWidth: 0,
+    minHeight: 0,
+    height: "100%",
     flex: "1 1 0%",
   },
   // pointer-events-auto

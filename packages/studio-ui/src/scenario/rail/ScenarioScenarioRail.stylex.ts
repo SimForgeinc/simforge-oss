@@ -2,6 +2,10 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, space, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
+  row: { borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: colors.border, ":last-child": { borderBottomWidth: 0 } },
+  documentButton: { display: "flex", width: "100%", flexDirection: "column", gap: space.xxs, borderLeftWidth: 2, borderLeftStyle: "solid", backgroundColor: "transparent", paddingInline: space.md, paddingBlock: "0.625rem", textAlign: "left", outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` }, outlineOffset: 2 },
+  activeDocument: { borderLeftColor: colors.accent, color: colors.text },
+  idleDocument: { borderLeftColor: { default: "transparent", ":hover": colors.accent }, color: { default: colors.mutedForeground, ":hover": colors.text } },
   // flex h-full w-[220px] shrink-0 flex-col border-r border-white/15 bg-transparent
   scenarioScenarioRail: {
     display: "flex",

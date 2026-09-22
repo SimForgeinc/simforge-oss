@@ -1,141 +1,34 @@
 "use client";
 
-import * as stylex from "@stylexjs/stylex";
-import { styles } from "./route-states.stylex";
-import { useEffect } from "react";
-import Link from "next/link";
-import { Button } from "../components/ui/button";
-import { control } from "./scenario-controls.stylex";
 import { CloudLoadingSurface } from "../components/CloudLoadingSurface";
-import { CopyableErrorMessage } from "./list/CopyableErrorMessage";
-import { ScenarioWorkspaceErrorState } from "./editor/status";
+import { RouteErrorState } from "../components/state-frames";
 
-/**
- * Everything a host's `loading.tsx` / `error.tsx` under `/dashboard/scenario`
- * renders. Hosts keep the Next route files themselves (they own auth and
- * segment config) and mount these so both products fail and load identically.
- */
+type RouteErrorProps = { error: Error & { digest?: string }; reset: () => void };
 
-type RouteErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
-};
-
-/**
- * A route segment's cover. `priority` is the segment's depth above the route
- * band: while a nested segment resolves both loaders are mounted, and the
- * deeper one's message is the specific one.
- */
 export function ScenarioIndexLoading() {
   return <ScenarioRouteLoading detail="Loading your scenarios…" label="scenarios" priority={11} />;
 }
-
 export function ScenarioDatasetLoading() {
   return <ScenarioRouteLoading detail="Loading dataset scenarios…" label="scenarios" priority={12} />;
 }
-
 export function ScenarioEditorLoading() {
   return <ScenarioRouteLoading detail="Preparing the editor…" label="scenario editor" priority={12} />;
 }
-
 export function ScenarioReviewLoading() {
   return <ScenarioRouteLoading detail="Loading scenarios to review…" label="review queue" priority={12} />;
 }
-
 function ScenarioRouteLoading({ detail, label, priority }: { detail: string; label: string; priority: number }) {
-  return (
-    <CloudLoadingSurface
-      detail={`Opening ${label} in your workspace.`}
-      priority={priority}
-      progress={null}
-      scope="screen"
-      title={detail}
-    />
-  );
+  return <CloudLoadingSurface detail={`Opening ${label} in your workspace.`} priority={priority} progress={null} scope="screen" title={detail} />;
 }
-
-/**
- * Segment-root error boundary — manifest item 171.
- *
- * Two things happen here, and they are not redundant. The visible block is what a user reads and acts
- * on. `ScenarioWorkspaceErrorState` renders nothing: it publishes the same failure into the workspace
- * status stream as a blocking error, which is what the boot gate paints and what any other surface
- * listening to the stream can see.
- *
- * `statusKey` is stable per boundary rather than derived from the message, so a retry that fails again
- * replaces the entry instead of stacking a second one that says the same thing.
- */
-export function ScenarioSegmentError({ error, reset }: RouteErrorProps) {
-  const detail = error.message || "The scenario workspace is temporarily unavailable.";
-
-  return (
-    <div {...stylex.props(styles.divFlex)}>
-      <ScenarioWorkspaceErrorState
-        statusKey="scenario:segment-error"
-        label="Scenario workspace failed to load"
-        detail={detail}
-        actionHref={null}
-      />
-      <h2 {...stylex.props(styles.scenarioWorkspaceFailedToLoa)}>Scenario workspace failed to load</h2>
-      <p {...stylex.props(styles.pSm)}>{detail}</p>
-      {/*
-        `error.digest` is the only handle on the server-side stack, and it is the one thing a user can
-        usefully quote in a report. Rendered only when present — an empty "Reference:" line reads as
-        something having gone wrong with the error page itself.
-      */}
-      {error.digest ? (
-        <p {...stylex.props(styles.reference)}>Reference: {error.digest}</p>
-      ) : null}
-      <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>
-        Try again
-      </Button>
-    </div>
-  );
+function ScenarioError({ error, reset, title, exitHref = "/dashboard/scenario", exitLabel = "Back to datasets" }: RouteErrorProps & { title: string; exitHref?: string; exitLabel?: string }) {
+  return <RouteErrorState title={title} description={error.message || "The scenario workspace is temporarily unavailable."} details={error.digest ? `Reference: ${error.digest}` : undefined} onRetry={reset} exitHref={exitHref} exitLabel={exitLabel} />;
 }
-
-/**
- * The dataset list's own error boundary.
- *
- * Without one, a throw in the server read escapes to the dashboard boundary, which knows nothing about
- * this route and offers no way back to the dataset index. The `digest` is the only handle a bug report
- * can use to find the server-side trace, so it is copyable.
- */
-export function ScenarioDatasetError({ error, reset }: RouteErrorProps) {
-  useEffect(() => {
-    console.error("[scenario] dataset list failed", error);
-  }, [error]);
-
-  return (
-    <section {...stylex.props(styles.sectionFlex)}>
-      <div {...stylex.props(styles.div)}>
-        <h1 {...stylex.props(styles.thisDatasetCouldNotBeLoaded)}>This dataset could not be loaded.</h1>
-        <CopyableErrorMessage
-          message={error.message || "The scenario list failed to load."}
-          copyText={error.digest ? `${error.message}\ndigest: ${error.digest}` : error.message}
-        />
-        <div {...stylex.props(styles.divFlex2)}>
-          <Button type="button" onClick={reset}>
-            Try again
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/dashboard/scenario">Back to datasets</Link>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
+export function ScenarioSegmentError(props: RouteErrorProps) {
+  return <ScenarioError {...props} title="Scenario workspace failed to load" exitHref="/dashboard/apps" exitLabel="Back to Apps" />;
 }
-
-export function ScenarioReviewError({ error, reset }: RouteErrorProps) {
-  return (
-    <div {...stylex.props(styles.divFlex3)}>
-      <h2 {...stylex.props(styles.failedToOpenTheScenarioRevie)}>Failed to open the scenario review queue</h2>
-      <p {...stylex.props(styles.pSm2)}>
-        {error.message || "The review queue is temporarily unavailable."}
-      </p>
-      <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>
-        Try again
-      </Button>
-    </div>
-  );
+export function ScenarioDatasetError(props: RouteErrorProps) {
+  return <ScenarioError {...props} title="This dataset could not be loaded" />;
+}
+export function ScenarioReviewError(props: RouteErrorProps) {
+  return <ScenarioError {...props} title="Failed to open the scenario review queue" />;
 }

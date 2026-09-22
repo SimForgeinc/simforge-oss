@@ -2,6 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, space } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
+  errorCover: { position: "absolute", inset: 0, zIndex: 60 },
   // size-5
   size5: {
     width: "1.25rem",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CloudLoadingHost } from "../../../../src/components/CloudLoadingHost";
 import { ScenarioBootGate } from "../../../../src/scenario/editor/status/ScenarioBootGate";
 import { useScenarioNotificationStore } from "../../../../src/scenario/editor/status/notification-store";
@@ -41,8 +41,10 @@ describe("ScenarioBootGate cloud loading", () => {
   });
 
   it("keeps actionable boot failures as an error surface", () => {
+    const retry = vi.fn();
     useScenarioNotificationStore.getState().publish({
       key: "editor-boot-error",
+      action: { label: "Retry", run: retry },
       severity: "error",
       source: "scenario",
       message: "Scenario could not be loaded",
@@ -56,15 +58,11 @@ describe("ScenarioBootGate cloud loading", () => {
       </CloudLoadingHost>,
     );
 
-    const gate = screen.getByTestId("cloud-loading-surface");
-    expect(screen.getByRole("alert")).toBe(gate);
-    expect(gate.getAttribute("data-load-kind")).toBe("boot");
-    // An actionable failure still covers the viewport, but it stops claiming to be busy and
-    // announces itself assertively instead of politely.
-    expect(gate.getAttribute("data-cloud-loading-scope")).toBe("screen");
-    expect(gate.getAttribute("aria-busy")).toBe("false");
-    expect(gate.getAttribute("aria-live")).toBe("assertive");
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(screen.queryByTestId("scenario-boot-gate")).toBeNull();
+    const alert = screen.getByRole("alert");
+    expect(within(alert).queryByRole("progressbar")).toBeNull();
+    expect(alert.getAttribute("aria-busy")).not.toBe("true");
+    fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(within(alert).getByRole("link", { name: "Back to scenarios" }).getAttribute("href")).toBe("/dashboard/scenario");
   });
 });

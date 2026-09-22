@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { CircleAlert } from "lucide-react";
+import { RouteErrorState } from "../../../components/state-frames";
 import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import { Button } from "../../../components/ui/button";
 import { resolveBlockingNotification } from "./notification-model";
@@ -9,7 +9,6 @@ import {
   undismissedNotifications,
   useScenarioNotificationStore,
 } from "./notification-store";
-import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioBootGate.stylex";
 
 /**
@@ -33,14 +32,17 @@ export function ScenarioBootGate() {
   );
 
   if (!blocking) return null;
-  const isError = blocking.severity === "error";
+  if (blocking.severity === "error") return (
+    <RouteErrorState title={blocking.message} description={blocking.detail}
+      onRetry={blocking.action?.run ?? (() => window.location.reload())}
+      exitHref="/dashboard/scenario" exitLabel="Back to scenarios" xstyle={styles.errorCover} />
+  );
   return (
     <CloudLoadingSurface
       detail={blocking.detail}
-      icon={isError ? <CircleAlert className={stylex.props(styles.size5).className} aria-hidden="true" /> : undefined}
       kind="boot"
-      progress={isError ? undefined : (blocking.progress ?? null)}
-      role={isError ? "alert" : "status"}
+      progress={blocking.progress ?? null}
+      role="status"
       scope="screen"
       title={blocking.message}
     >
