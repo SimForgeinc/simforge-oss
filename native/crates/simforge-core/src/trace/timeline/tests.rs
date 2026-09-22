@@ -397,3 +397,20 @@ fn knockdown_is_a_monotonic_downed_flag() {
     let canonical = tl.to_canonical_json().unwrap();
     assert_eq!(crate::hash::sha256(&canonical), tl.sha256().unwrap());
 }
+
+#[test]
+fn header_origin_wins_over_the_tag_rule() {
+    let mut trace = example(EXAMPLES[0]);
+    trace
+        .header
+        .actor_metadata
+        .get_mut("worker")
+        .unwrap()
+        .origin = Some(ActorOrigin::Sumo);
+    let tl = build_render_timeline(&trace, &HeightField::flat(0.0), None).unwrap();
+    assert_eq!(tl.actor("worker").unwrap().origin, ActorOrigin::Sumo);
+    assert_eq!(
+        tl.actor("focus-vehicle").unwrap().origin,
+        ActorOrigin::Authored
+    );
+}
