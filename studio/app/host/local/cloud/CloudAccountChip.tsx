@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import * as stylex from "@stylexjs/stylex";
+import { ChevronDown, UserRound } from "lucide-react";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import {
   Sheet,
@@ -10,6 +11,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@simforge-oss/studio-ui/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import type { XStyle } from "@simforge-oss/studio-ui/components/stylex";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
 import { CloudAccountPanel } from "./CloudAccountPanel";
@@ -39,39 +48,55 @@ function stateLampStyle(state: StudioCloudStatus["state"] | null): XStyle {
 }
 
 /**
- * One-line account summary for the app switcher, and the one link to the
- * SimCloud surface. Signed in or out, the action goes to the same place:
- * `/dashboard/simcloud` is where every account flow lives.
+ * The SimCloud connection as one segment of the switcher's bar: who you are
+ * (or the connection's state) is the button, and its menu holds the one link
+ * to the SimCloud surface. Signed in or out, that link goes to the same
+ * place: `/dashboard/simcloud` is where every account flow lives.
  */
 export function CloudAccountChip({ onNavigate }: { onNavigate?: () => void }) {
   const { status, error } = useStudioCloudStatus();
   const state = status?.state ?? null;
-  const summary =
-    status?.state === "connected"
-      ? status.user?.email ?? status.user?.name ?? "SimCloud account"
-      : error ?? (state ? CLOUD_STATE_LABELS[state] : "Checking…");
+  const connected = status?.state === "connected";
+  const summary = connected
+    ? status.user?.name ?? status.user?.email ?? "SimCloud account"
+    : error ?? (state ? CLOUD_STATE_LABELS[state] : "Checking…");
+  const detail = connected ? status.user?.email ?? CLOUD_STATE_LABELS.connected : "Not signed in to SimCloud";
+  const action = connected ? "Manage account" : state === "expired" ? "Sign in again" : "Sign in";
 
   return (
-    <div
-      {...stylex.props(chip.root)}
-      data-testid="cloud-account-chip"
-      data-cloud-state={state ?? "loading"}
-    >
-      <span aria-hidden="true" {...stylex.props(lamp.base, stateLampStyle(state))} />
-      <div {...stylex.props(chip.body)}>
-        <p {...stylex.props(chip.eyebrow)}>SimCloud</p>
-        <p {...stylex.props(card.truncate, chip.summary)} title={summary}>
-          {summary}
-        </p>
-      </div>
-      <Link
-        {...stylex.props(chip.action, state === "connected" ? chip.manage : chip.connect)}
-        href="/dashboard/simcloud"
-        onClick={onNavigate}
-      >
-        {state === "connected" ? "Manage" : state === "expired" ? "Sign in again" : "Sign in"}
-      </Link>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          {...stylex.props(chip.root, chip.trigger)}
+          aria-label={`SimCloud: ${summary}. Open account menu`}
+          data-testid="cloud-account-chip"
+          data-cloud-state={state ?? "loading"}
+          type="button"
+        >
+          <span aria-hidden="true" {...stylex.props(lamp.base, stateLampStyle(state))} />
+          <span {...stylex.props(chip.body)}>
+            <span {...stylex.props(chip.eyebrow)}>SimCloud</span>
+            <span {...stylex.props(card.truncate, chip.summary)} title={summary}>
+              {summary}
+            </span>
+          </span>
+          <ChevronDown {...stylex.props(chip.chevron)} aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" xstyle={chip.menu} data-testid="account-menu">
+        <DropdownMenuLabel>
+          <span {...stylex.props(chip.menuName)}>{summary}</span>
+          <span {...stylex.props(chip.menuMeta)}>{detail}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/simcloud" onClick={onNavigate}>
+            <UserRound {...stylex.props(chip.menuIcon)} aria-hidden="true" />
+            {action}
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

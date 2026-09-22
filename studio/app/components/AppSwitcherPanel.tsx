@@ -32,7 +32,7 @@ export function AppSwitcherPanel({
   /** Called when a tab or utility is chosen; the overlay closes itself here. */
   onNavigate: () => void;
 }) {
-  const { apps, utilities, capabilities } = useDashboardNav(pathname);
+  const { apps, utilities, accountItems, capabilities } = useDashboardNav(pathname);
   const [view, setView] = useState<SwitcherInlineView | null>(initialView);
   useEffect(() => setView(initialView), [initialView]);
 
@@ -81,7 +81,7 @@ export function AppSwitcherPanel({
           ))}
         </nav>
         <div {...stylex.props(styles.footerAside)}>
-          <SwitcherAccount capabilities={capabilities} onNavigate={onNavigate} />
+          <SwitcherAccount accountItems={accountItems} capabilities={capabilities} onNavigate={onNavigate} />
         </div>
       </div>
     </div>

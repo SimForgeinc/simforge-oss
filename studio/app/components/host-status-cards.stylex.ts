@@ -18,7 +18,7 @@
  * accepts arbitrary child SVGs and cannot style them through inherited values.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /** `sm:` — the one breakpoint these cards respond to. */
 const SM = "@media (min-width: 640px)";
@@ -47,9 +47,8 @@ const ACCENT_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
 const BAR_HAIRLINE = "rgba(255, 255, 255, 0.08)";
 const XL = "@media (min-width: 1200px)";
 
-/** `bg-[#E8E044]/10`, `/20`, `border-[#E8E044]/30`, and the connected glow. */
+/** `bg-[#E8E044]/10`, `border-[#E8E044]/30`, and the connected glow. */
 const ACCENT_10 = `color-mix(in srgb, ${colors.accent} 10%, transparent)`;
-const ACCENT_20 = `color-mix(in srgb, ${colors.accent} 20%, transparent)`;
 const ACCENT_30 = `color-mix(in srgb, ${colors.accent} 30%, transparent)`;
 const ACCENT_GLOW = `0 0 14px color-mix(in srgb, ${colors.accent} 35%, transparent)`;
 
@@ -347,40 +346,23 @@ export const chip = stylex.create({
     flexShrink: 0,
     color: "rgba(255, 255, 255, 0.45)",
   },
-  /** An action cell inside a segment: full height, divided by a hairline. */
-  action: {
-    display: "flex",
-    flexShrink: 0,
-    alignItems: "center",
-    alignSelf: "stretch",
-    paddingInline: "0.875rem",
-    borderWidth: 0,
-    borderInlineStartWidth: 1,
-    borderStyle: "solid",
-    borderColor: BAR_HAIRLINE,
-    fontSize: "11px",
-    whiteSpace: "nowrap",
-    cursor: "pointer",
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-    outlineWidth: { default: null, ":focus-visible": "2px" },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "-2px" },
-    boxShadow: { default: null, ":focus-visible": ACCENT_RING_INSET },
-    opacity: { default: null, ":disabled": 0.5 },
-  },
-  manage: {
-    fontWeight: 500,
-    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.04)" },
-    color: { default: "rgba(255, 255, 255, 0.55)", ":hover": "#ffffff" },
-  },
-  connect: {
-    backgroundColor: { default: ACCENT_10, ":hover": ACCENT_20 },
+  /** A segment's menu: above the switcher overlay, which is itself above dialogs. */
+  menu: { zIndex: layers.appSwitcherTop, minWidth: "14rem" },
+  /** The menu's header: who, then where or how. */
+  menuName: {
+    display: "block",
+    fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
     fontWeight: 600,
-    color: colors.accent,
   },
+  menuMeta: {
+    display: "block",
+    fontSize: "11px",
+    lineHeight: "1rem",
+    fontWeight: 400,
+    color: "rgba(255, 255, 255, 0.5)",
+  },
+  menuIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0, marginInlineEnd: "0.5rem" },
 });
 
 /** The local execution card. */

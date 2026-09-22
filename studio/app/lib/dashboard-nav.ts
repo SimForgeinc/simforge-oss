@@ -184,8 +184,7 @@ const HOST_NAV_ICONS: Record<StudioHostNavIcon, LucideIcon> = {
 
 /**
  * The utilities for one host: Studio's own minus the ones that are about the
- * machine this installation runs on, plus whatever the host itself
- * contributes through the capability document's `navItems`.
+ * machine this installation runs on.
  *
  * `null` capabilities — the report has not arrived, or the host could not be
  * reached — render Studio's own set unchanged. That is the set every
@@ -194,24 +193,29 @@ const HOST_NAV_ICONS: Record<StudioHostNavIcon, LucideIcon> = {
  */
 export function dashboardUtilities(capabilities: StudioHostCapabilities | null): NavItem[] {
   const cloud = capabilities !== null && isCloudHost(capabilities);
-  const own = cloud ? DASHBOARD_UTILITIES.filter((item) => item.localOnly !== true) : DASHBOARD_UTILITIES;
-  const contributed = capabilities?.navItems ?? [];
-  if (contributed.length === 0) return own;
-  return [
-    ...own,
-    ...contributed.map((item) => ({
-      href: item.href,
-      label: item.label,
-      description: item.description,
-      icon: HOST_NAV_ICONS[item.icon],
-      match: (pathname: string) => pathname.startsWith(item.matchPrefix),
-    })),
-  ];
+  return cloud ? DASHBOARD_UTILITIES.filter((item) => item.localOnly !== true) : DASHBOARD_UTILITIES;
+}
+
+/**
+ * The surfaces the host itself contributes through the capability document's
+ * `navItems` — an account, a tenant. They are about who you are on this host,
+ * so the switcher lists them in the account menu rather than beside Studio's
+ * own utilities.
+ */
+export function hostNavItems(capabilities: StudioHostCapabilities | null): NavItem[] {
+  return (capabilities?.navItems ?? []).map((item) => ({
+    href: item.href,
+    label: item.label,
+    description: item.description,
+    icon: HOST_NAV_ICONS[item.icon],
+    match: (pathname: string) => pathname.startsWith(item.matchPrefix),
+  }));
 }
 
 /**
  * The navigation as this host presents it: the three apps, the utilities the
- * host offers, and the entry the current path is inside.
+ * host offers, the host's own account surfaces, and the entry the current
+ * path is inside.
  *
  * The host's own report comes back with it — `null` until it arrives — so a
  * consumer that also has to say something about the host (who you are signed
@@ -220,6 +224,8 @@ export function dashboardUtilities(capabilities: StudioHostCapabilities | null):
 export function useDashboardNav(pathname: string): {
   apps: NavItem[];
   utilities: NavItem[];
+  /** See {@link hostNavItems}. */
+  accountItems: NavItem[];
   activeItem: NavItem | null;
   capabilities: StudioHostCapabilities | null;
 } {
@@ -227,10 +233,12 @@ export function useDashboardNav(pathname: string): {
   const report = capabilities.status === "ready" ? capabilities.capabilities : null;
   return useMemo(() => {
     const utilities = dashboardUtilities(report);
+    const accountItems = hostNavItems(report);
     return {
       apps: DASHBOARD_APPS,
       utilities,
-      activeItem: [...DASHBOARD_APPS, ...utilities].find((item) => item.match(pathname)) ?? null,
+      accountItems,
+      activeItem: [...DASHBOARD_APPS, ...utilities, ...accountItems].find((item) => item.match(pathname)) ?? null,
       capabilities: report,
     };
   }, [report, pathname]);

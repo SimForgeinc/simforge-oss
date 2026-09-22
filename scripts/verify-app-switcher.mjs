@@ -2,7 +2,8 @@
  * Proves the minimal app switcher against a running Studio host: the overlay
  * offers exactly the three product tabs with their capability lines, the
  * utilities keep every other surface reachable, and the bar under the tabs is
- * one frame with no graphics-level control (Render Settings owns that).
+ * one frame with no graphics-level control (Render Settings owns that). The
+ * account is one button in that bar whose menu holds its surfaces.
  *
  *   node scripts/verify-app-switcher.mjs [--data-root ~/.simforge/cloud] [--out /tmp/ss-switcher]
  *
@@ -101,6 +102,21 @@ const levelControls = await page.getByTestId("app-switcher-graphics-level").coun
 check(levelControls === 0, `the bar has no graphics-level control, got ${levelControls}`);
 const footers = await dialog.getByTestId("app-switcher-footer").count();
 check(footers === 1, `utilities and account share one bar, got ${footers}`);
+const accountLinks = await dialog
+  .getByRole("navigation", { name: "App utilities" })
+  .locator('a[href^="/dashboard/account"]')
+  .count();
+check(accountLinks === 0, `the account is not a utility link, got ${accountLinks}`);
+const account = dialog.locator('[data-testid="account-chip"], [data-testid="cloud-account-chip"]');
+const accountButtons = await account.count();
+check(accountButtons === 1, `the account is one button, got ${accountButtons}`);
+await account.click();
+const accountMenu = page.getByTestId("account-menu");
+await accountMenu.waitFor({ state: "visible", timeout: 10_000 });
+const menuText = (await accountMenu.textContent()) ?? "";
+check(/Sign out|Manage account|Sign in/.test(menuText), `account menu offers its actions, got ${JSON.stringify(menuText)}`);
+await page.screenshot({ path: join(out, "account-menu.png") });
+await page.keyboard.press("Escape");
 check(
   consoleErrors.length === 0,
   `no page errors on the switcher, got ${consoleErrors.slice(0, 3).join(" | ")}`,
