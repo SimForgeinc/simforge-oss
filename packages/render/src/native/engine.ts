@@ -19,7 +19,9 @@ import {
 } from '../index.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
-import { lowerOpenScenarioToNative } from './lowering.js';
+import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
+import { lowerTimelineToNative } from './timeline-lowering.js';
+import { RENDER_TIMELINE_INPUT_ID } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
@@ -53,6 +55,12 @@ export interface NativeRenderEngineOptions {
   readonly actorAssetsBaseUrl?: string;
   readonly actorAssetsCacheDir?: string;
   readonly nativeCacheDirectory?: string;
+  /**
+   * Send the timeline's road + body pitch/roll to the service. Only a
+   * service that applies full actor rotations may enable it; the released
+   * service applies yaw only.
+   */
+  readonly applyAttitude?: boolean;
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -230,8 +238,27 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             : process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR ?? path.join(tmpdir(), 'simforge-actor-assets')),
       });
 
-      const xosc = await fs.readFile(xoscInput.path);
-      const lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
+      // The render contract is the render timeline: sample the authoritative
+      // trace through the shared sampler. Re-lowering the derived xosc is a
+      // labelled fallback for execution packages that predate the timeline.
+      const timelineInput = context.inputs.get(RENDER_TIMELINE_INPUT_ID);
+      const warnings: { code: string; message: string }[] = [];
+      let lowering: NativeSceneLowering;
+      let timelineSha256: string | undefined;
+      if (timelineInput) {
+        const timelineLowering = await lowerTimelineToNative(
+          await fs.readFile(timelineInput.path), rgbSchedules, { attitude: options.applyAttitude === true },
+        );
+        if (timelineLowering.timelineSha256 !== timelineInput.sha256) {
+          throw new Error(`render_timeline_digest_mismatch: ${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineLowering.timelineSha256}`);
+        }
+        lowering = timelineLowering;
+        timelineSha256 = timelineLowering.timelineSha256;
+      } else {
+        const xosc = await fs.readFile(xoscInput.path);
+        lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
+        warnings.push({ code: 'scene_source_openscenario_legacy', message: 'no render.timeline input; poses were re-lowered from the derived OpenSCENARIO export' });
+      }
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
@@ -246,8 +273,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
-        mapId: lowering.plan.mapId,
-        fixedTimestepSeconds: lowering.plan.dt,
+        sceneSource: lowering.source,
+        ...(timelineSha256 ? { timelineSha256 } : {}),
+        mapId: lowering.mapId,
+        fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frames: lowering.states,
       });
       const traceDigest = await hashFile(tracePath);
@@ -426,6 +455,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
+        sceneSource: lowering.source,
+        ...(timelineSha256 ? { timelineSha256 } : {}),
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
         look: {
@@ -453,8 +484,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
+        sceneSource: lowering.source,
+        ...(timelineSha256 ? { timelineSha256 } : {}),
         actorAssetsSha256: actorAssets.digest,
-        fixedTimestepSeconds: lowering.plan.dt,
+        fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frameCount: lowering.states.length,
         traceSha256: traceDigest.sha256,
         videoCount: videoRecords.length,
@@ -477,7 +510,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         startedAt,
         completedAt: new Date().toISOString(),
         artifacts,
-        warnings: [],
+        warnings,
       };
     },
   };
