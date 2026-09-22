@@ -1,0 +1,5 @@
+# maturin develop writes the extension beside the package
+simforge_oss_timeline/*.so
+simforge_oss_timeline/*.pyd
+.pytest_cache/
+__pycache__/

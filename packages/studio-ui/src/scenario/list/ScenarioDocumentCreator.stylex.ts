@@ -1,11 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // ml-4 border-l border-primary/30
   div: {
-    marginLeft: space.xl,
-    borderLeftWidth: "1px",
+    marginLeft: space.s4,
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.3)",
   },
@@ -19,20 +19,20 @@ export const styles = stylex.create({
   },
   // border-b border-border px-3 py-3
   div2: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
-    paddingInline: space.lg,
-    paddingBlock: space.lg,
+    paddingInline: space.s3,
+    paddingBlock: space.s3,
   },
   // border-l border-primary/60 pl-3 text-xs text-foreground
   thisIsASharedOrReadOnlyDatas: {
-    borderLeftWidth: "1px",
+    borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.6)",
-    paddingLeft: space.lg,
+    paddingLeft: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // min-h-0 flex-1 overflow-y-auto
@@ -43,13 +43,13 @@ export const styles = stylex.create({
   },
   // border-b border-white/10 px-3 py-4 text-sm text-muted-foreground
   divSm: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingInline: space.lg,
-    paddingBlock: space.xl,
+    paddingInline: space.s3,
+    paddingBlock: space.s4,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // space-y-0
@@ -60,10 +60,10 @@ export const styles = stylex.create({
   },
   // border-t border-white/10 p-3
   div4: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.lg,
+    padding: space.s3,
   },
   // min-w-0
   div5: {
@@ -71,32 +71,29 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-foreground
   divTruncateSmSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
   // mt-1 font-meta text-micro uppercase tracking-meta-widest text-white/70
   divMetaMicroUppercase: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWidest,
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // size-4
   chevrondownIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
   // space-y-0 border-t border-white/10
   div6: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     display: "flex",
@@ -107,27 +104,27 @@ export const styles = stylex.create({
   div7: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
   },
   // relative space-y-1.5
   sectionRelative: {
     position: "relative",
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex items-center justify-between gap-2
   divFlex2: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // flex items-center gap-2 font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   divFlexMetaMicro: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -143,36 +140,36 @@ export const styles = stylex.create({
   },
   // size-3
   plusIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // absolute right-0 top-8 z-30 w-full space-y-1.5 border border-primary/40 bg-popover p-1.5 shadow-lg
   scenarioTagCreateForm: {
     position: "absolute",
     right: "0",
-    top: space.xxxl,
+    top: space.s8,
     zIndex: layers.sticky,
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.4)",
     backgroundColor: colors.popover,
-    padding: space.sm,
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+    padding: space.s1_5,
+    boxShadow: shadows.elevationLg,
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex gap-1.5
   divFlex3: {
     display: "flex",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // space-y-1.5
   section: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   divMetaMicroUppercase2: {
@@ -186,50 +183,44 @@ export const styles = stylex.create({
   // text-meta leading-4 text-muted-foreground
   pMeta: {
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex flex-col gap-1.5
   divFlex4: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // border border-dashed border-border px-2 py-3 text-xs text-muted-foreground
   divXs: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.border,
-    paddingInline: space.md,
-    paddingBlock: space.lg,
+    paddingInline: space.s2,
+    paddingBlock: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // h-6 min-w-0 flex-1 border border-primary/50 bg-background px-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   renameTheInput: {
-    height: space.xxl,
+    height: space.s6,
     minWidth: 0,
     flex: "1 1 0%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.5)",
     backgroundColor: colors.bg,
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // min-w-0 flex-1 truncate text-left
   buttonTruncate: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "left",
   },
   // relative
@@ -239,14 +230,11 @@ export const styles = stylex.create({
   // flex size-6 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   tagActionsForButton: {
     display: "flex",
-    width: space.xxl,
-    height: space.xxl,
+    width: space.s6,
+    height: space.s6,
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3.5
   morehorizontalIcon: {
@@ -258,62 +246,56 @@ export const styles = stylex.create({
     position: "absolute",
     right: "0",
     top: "1.75rem",
-    zIndex: 40,
+    zIndex: layers.overlay,
     width: "8rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.popover,
-    padding: space.xs,
+    padding: space.s1,
     color: "hsl(var(--popover-foreground))",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+    boxShadow: shadows.elevationLg,
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   buttonFlexXs: {
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.md,
-    paddingInline: space.md,
-    paddingBlock: space.sm,
+    gap: space.s2,
+    paddingInline: space.s2,
+    paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
-    backgroundColor: { default: null, ":hover": "hsl(var(--accent))" },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
+    backgroundColor: { default: null, ":hover": colors.hoverWash },
   },
   // size-3
   renamePencil: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   buttonFlexXs2: {
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.md,
-    paddingInline: space.md,
-    paddingBlock: space.sm,
+    gap: space.s2,
+    paddingInline: space.s2,
+    paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
     backgroundColor: { default: null, ":hover": "hsl(var(--destructive) / 0.1)" },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3
   deleteTrash2: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // font-meta text-micro uppercase tracking-meta text-muted-foreground
   showing: {
@@ -328,6 +310,6 @@ export const styles = stylex.create({
   group: {
     display: "flex",
     flexWrap: "wrap",
-    gap: space.xs,
+    gap: space.s1,
   },
 });

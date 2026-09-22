@@ -26,6 +26,10 @@ const NativeRunLineageSchema = z.strictObject({
   executionPackageControlSha256: Sha256Schema,
   sourceXoscSha256: Sha256Schema,
   loweringSha256: Sha256Schema,
+  /** What the scene states were lowered from; absent on pre-timeline evidence. */
+  sceneSource: z.enum(['render-timeline', 'openscenario-legacy']).optional(),
+  /** `timelineSha256` of the `render.timeline` input (render-timeline source). */
+  timelineSha256: Sha256Schema.optional(),
   /** Digest of the pinned actor appearance closure the run rendered with. */
   actorAssetsSha256: Sha256Schema,
   /** Rendered ticks: the union of every RGB source's frame timestamps. */

@@ -48,6 +48,7 @@ import { SelectMenuField } from "../../../components/ui/select-menu";
 import { Readout } from "../regions/Readout";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorDetailsPanel.stylex";
+import { a11y, focus, textLayout } from "../../../stylex/recipes.stylex";
 
 const PAINTS: readonly { value: string; label: string }[] = [
   { value: "#2f4f74", label: "Navy" },
@@ -127,7 +128,7 @@ export function ActorDetailsPanel({
       closeTestId="actor-details-close"
       headerFooter={(
         <fieldset disabled={!tintable} {...stylex.props(styles.ruleT)}>
-          <legend {...stylex.props(styles.srOnly)}>Color</legend>
+          <legend {...stylex.props(a11y.srOnly)}>Color</legend>
           {!tintable ? <p>Authored livery — colour is fixed.</p> : null}
           <div {...stylex.props(styles.flexCenterBetween)}>
             {PAINTS.map((option) => {
@@ -137,7 +138,7 @@ export function ActorDetailsPanel({
                   aria-label={option.label}
                   aria-pressed={active}
                   disabled={!tintable}
-                  {...stylex.props(styles.paintSwatch, active ? styles.paintSwatchActive : styles.paintSwatchIdle)}
+                  {...stylex.props([focus.ringAccent, styles.paintSwatch], active ? styles.paintSwatchActive : styles.paintSwatchIdle)}
                   key={option.value}
                   onClick={() => controller?.updateActorAppearance(actor.id, { bodyColor: option.value })}
                   style={{ backgroundColor: option.value }}
@@ -296,7 +297,7 @@ export function ActorDetailsPanel({
                   <button
                     aria-checked={active}
                     aria-label={`${DRIVER_PROFILES[id].label} behavior`}
-                    className={stylex.props(styles.profileOption, active ? styles.profileOptionActive : styles.profileOptionIdle).className}
+                    className={stylex.props([focus.ringAccent, styles.profileOption], active ? styles.profileOptionActive : styles.profileOptionIdle).className}
                     key={id}
                     onClick={() => controller?.updateActorAppearance(actor.id, { driverProfile: id })}
                     role="radio"
@@ -311,7 +312,7 @@ export function ActorDetailsPanel({
                       unoptimized
                       width={32}
                     />
-                    <span {...stylex.props(styles.mediumTruncate)}>{DRIVER_PROFILES[id].label}</span>
+                    <span {...stylex.props([textLayout.truncate, styles.mediumTruncate])}>{DRIVER_PROFILES[id].label}</span>
                   </button>
                 );
               })}

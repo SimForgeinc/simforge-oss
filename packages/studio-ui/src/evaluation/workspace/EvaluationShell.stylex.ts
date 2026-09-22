@@ -54,6 +54,6 @@ export const styles = stylex.create({
     maxHeight: "40%",
     overflowY: "auto",
     minWidth: 0,
-    padding: space.md,
+    padding: space.s2,
   },
 });

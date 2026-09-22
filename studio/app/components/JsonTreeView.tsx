@@ -12,6 +12,7 @@ import {
   isSimple,
 } from "@/app/lib/json-tree-utils";
 import { styles } from "./JsonTreeView.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 // ---------------------------------------------------------------------------
 // Components
@@ -119,7 +120,7 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
         {label && (
           <span {...stylex.props(styles.label)}>{label}</span>
         )}
-        {!expanded && <span {...stylex.props(styles.preview)}>{collapsedPreview(parsed)}</span>}
+        {!expanded && <span {...stylex.props([textLayout.truncate, styles.preview])}>{collapsedPreview(parsed)}</span>}
         {expanded && effectiveIsArray && <span {...stylex.props(styles.count)}>[{count}]</span>}
       </button>
 

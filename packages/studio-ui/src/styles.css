@@ -393,11 +393,14 @@ html {
  * (including arbitrary values), Radix/portal-rendered components,
  * inline styles, and third-party CSS (map popups, embeds) — hence
  * the universal selector with !important. Add per-element radii
- * nowhere; the only sanctioned exception is below.
+ * nowhere. The sanctioned exceptions are round by construction: the
+ * `Spinner` and `Dot` primitives render `data-shape="round"`, which this
+ * reset skips so their `radii.full` applies, and the Tailwind spinner
+ * below.
  * ───────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
+*:not([data-shape="round"]),
+*:not([data-shape="round"])::before,
+*:not([data-shape="round"])::after {
   border-radius: 0 !important;
 }
 

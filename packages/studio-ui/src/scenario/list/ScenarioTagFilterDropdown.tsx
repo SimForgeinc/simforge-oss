@@ -15,6 +15,7 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
 import { chip, control, menu } from "../scenario-controls.stylex";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 export type ScenarioCreatorFilterOption = {
   value: string;
@@ -102,7 +103,7 @@ export function ScenarioTagFilterDropdown({
                 )}
                 aria-hidden="true"
               />
-              <span {...stylex.props(styles.spanTruncate)}>{creator.label}</span>
+              <span {...stylex.props([textLayout.truncate, styles.spanTruncate])}>{creator.label}</span>
               <span {...stylex.props(styles.spanMicro)}>{creator.count}</span>
             </DropdownMenuItem>
           ))
@@ -133,7 +134,7 @@ export function ScenarioTagFilterDropdown({
                 style={tag.color ? { backgroundColor: tag.color } : undefined}
                 aria-hidden="true"
               />
-              <span {...stylex.props(styles.spanTruncate2)}>{tag.label}</span>
+              <span {...stylex.props([textLayout.truncate, styles.spanTruncate2])}>{tag.label}</span>
               <span {...stylex.props(styles.spanMicro2)}>{tag.documentCount}</span>
             </DropdownMenuItem>
           ))

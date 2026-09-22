@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /**
@@ -8,10 +8,9 @@ export const styles = stylex.create({
    * No font-size on purpose: Tailwind's preflight sets `font-size: inherit`
    * on `h1`-`h6`, so the baseline heading took the tools panel's `text-xs`.
    */
-  heading: { color: colors.textMuted, fontWeight: text.weightSemibold, textTransform: "uppercase", letterSpacing: text.trackingMeta },
+  heading: { color: colors.mutedForeground, fontWeight: text.weightSemibold, textTransform: "uppercase", letterSpacing: text.trackingMeta },
   row: { display: "flex", alignItems: "center" },
   mono: { fontFamily: text.fontMono },
-  truncate: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   /**
    * mt-2 bg-muted/30 p-2
    *
@@ -19,24 +18,24 @@ export const styles = stylex.create({
    * bridges at full opacity; the tinted form is written out because a StyleX
    * variable has no channel left to apply the utility's alpha to.
    */
-  item: { marginTop: space.md, backgroundColor: "hsl(var(--muted) / 0.3)", padding: space.md },
+  item: { marginTop: space.s2, backgroundColor: "hsl(var(--muted) / 0.3)", padding: space.s2 },
   /** mt-2 border border-border bg-muted/20 p-2 */
-  itemBorder: { marginTop: space.md, borderWidth: "1px", borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / 0.2)", padding: space.md },
+  itemBorder: { marginTop: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / 0.2)", padding: space.s2 },
   /** mt-1 h-8 font-mono text-micro */
-  monoInput: { marginTop: space.xs, height: "2rem", fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: text.lineMicro },
-  stack: { marginTop: space.md, display: "flex", flexDirection: "column", gap: space.md },
-  description: { marginTop: space.md },
+  monoInput: { marginTop: space.s1, height: "2rem", fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: text.lineMicro },
+  stack: { marginTop: space.s2, display: "flex", flexDirection: "column", gap: space.s2 },
+  description: { marginTop: space.s2 },
   grid: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   fieldWrap: { minWidth: 0 },
-  label: { display: "block", color: colors.textMuted },
-  input: { marginTop: space.xs, height: "2rem" },
+  label: { display: "block", color: colors.mutedForeground },
+  input: { marginTop: space.s1, height: "2rem" },
   /** h-8 text-xs */
-  selectField: { height: "2rem", fontSize: text.sizeXs, lineHeight: "1rem" },
+  selectField: { height: "2rem", fontSize: text.sizeXs, lineHeight: text.lineXs },
   /**
    * motionStyles.editorMotion + ml-auto text-primary hover:text-primary/80
    * focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -53,18 +52,6 @@ export const styles = stylex.create({
       default: null,
       ":disabled": 0.3,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
-    },
   },
   /**
    * motionStyles.editorMotion + ml-auto text-muted-foreground
@@ -75,20 +62,8 @@ export const styles = stylex.create({
   iconButtonMuted: {
     marginLeft: "auto",
     color: {
-      default: colors.textMuted,
+      default: colors.mutedForeground,
       ":hover": colors.danger,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
     },
   },
   icon: { width: "0.75rem", height: "0.75rem" },

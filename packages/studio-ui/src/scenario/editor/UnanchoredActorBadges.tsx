@@ -20,6 +20,7 @@ import {
 import type { CityViewer } from "@simforge-oss/viewer";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./UnanchoredActorBadges.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 export function UnanchoredActorBadges({
   viewer,
@@ -96,7 +97,7 @@ export function UnanchoredActorBadges({
             <div {...stylex.props(styles.flexCenterMedium)}>
               <span>Unanchored</span>
               <button
-                {...stylex.props(styles.bordered)}
+                {...stylex.props([motionRecipe.colors, styles.bordered])}
                 data-testid="unanchored-resnap"
                 onClick={() => controller?.resnapToLane([actor.id])}
                 type="button"

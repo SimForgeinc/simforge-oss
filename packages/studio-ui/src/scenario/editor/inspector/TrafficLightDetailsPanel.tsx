@@ -13,6 +13,7 @@ import type {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./TrafficLightDetailsPanel.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 export type TrafficLightCycleSnapshot = {
   readonly timing: ReferenceCycleTiming;
@@ -58,7 +59,7 @@ export function TrafficLightDetailsPanel({
           <span {...stylex.props(styles.caps)}>
             Junction {authoring.junctionId}
           </span>
-          <strong {...stylex.props(styles.xsWhiteMedium)}>
+          <strong {...stylex.props([textLayout.truncate, styles.xsWhiteMedium])}>
             Traffic light {authoring.headId}
           </strong>
         </div>
@@ -97,7 +98,7 @@ export function TrafficLightDetailsPanel({
       />
       {authoring.hasPlan ? (
         <button
-          className={stylex.props(styles.flexCenterMid, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ringAccent, styles.flexCenterMid], motionStyles.editorMotion).className}
           data-testid="traffic-light-details-reset"
           onClick={() => authoring.onReset(openingSnapshot.current)}
           type="button"

@@ -21,10 +21,7 @@
  * inert; carrying them over would be inventing a value, not preserving one.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, text } from "../stylex/tokens.stylex";
-
-/** `hover:text-accent-foreground`, which `Button`'s ghost/outline variants own. */
-const ACCENT_FOREGROUND = "hsl(var(--accent-foreground))";
+import { colors, space, stroke, text } from "../stylex/tokens.stylex";
 /** Tailwind's `font-[Share_Tech_Mono,IBM_Plex_Mono,monospace]`. */
 const CHIP_FONT = "Share Tech Mono, IBM Plex Mono, monospace";
 
@@ -39,11 +36,9 @@ export const control = stylex.create({
   /** `w-full` */
   fullWidth: { width: "100%" },
   /** `mt-1.5` */
-  spaceAbove15: { marginTop: "0.375rem" },
+  spaceAbove15: { marginTop: space.s1_5 },
   /** `mt-4` */
-  spaceAbove4: { marginTop: "1rem" },
-  /** `mt-5` */
-  spaceAbove5: { marginTop: "1.25rem" },
+  spaceAbove4: { marginTop: space.s4 },
 });
 
 /**
@@ -112,7 +107,7 @@ export const list = stylex.create({
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
     color: { default: null, ":hover": colors.primary },
@@ -125,7 +120,7 @@ export const list = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     borderColor: "hsl(var(--primary) / 0.4)",
-    color: { default: colors.primary, ":hover": ACCENT_FOREGROUND },
+    color: { default: colors.primary, ":hover": colors.hoverWashText },
   },
   /** `h-7 min-w-0 flex-1 px-2 text-meta` */
   tagNameInput: {
@@ -134,29 +129,29 @@ export const list = stylex.create({
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: "0%",
-    paddingInline: "0.5rem",
+    paddingInline: space.s2,
     fontSize: text.sizeMeta,
-    lineHeight: text.lineMeta,
+    lineHeight: text.lineXs,
   },
   /** `h-7 border-primary/60 px-2 text-micro uppercase tracking-meta text-primary` */
   tagSubmit: {
     height: "1.75rem",
     borderColor: "hsl(var(--primary) / 0.6)",
-    paddingInline: "0.5rem",
+    paddingInline: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: { default: colors.primary, ":hover": ACCENT_FOREGROUND },
+    color: { default: colors.primary, ":hover": colors.hoverWashText },
   },
   /** `h-8 w-full justify-start px-3 text-xs` */
   allScenarios: {
     height: "2rem",
     width: "100%",
     justifyContent: "flex-start",
-    paddingInline: "0.75rem",
+    paddingInline: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   /** `h-9 pl-9` — the map search field, cleared of the leading icon. */
   mapSearchInput: { height: "2.25rem", paddingLeft: "2.25rem" },
@@ -168,17 +163,17 @@ export const list = stylex.create({
     height: "1rem",
     borderColor: "rgb(248 113 113 / 0.4)",
     backgroundColor: "rgb(248 113 113 / 0.1)",
-    paddingInline: "0.375rem",
+    paddingInline: space.s1_5,
     paddingBlock: 0,
     fontFamily: text.fontMeta,
     fontSize: "8px",
     lineHeight: "inherit",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
-    color: "rgb(252 165 165)",
+    color: colors.critical,
   },
   /** `w-full gap-2` on the `.xosc` file chooser. */
-  fileChooser: { width: "100%", gap: "0.5rem" },
+  fileChooser: { width: "100%", gap: space.s2 },
 });
 
 /** The row-level icon buttons in `ScenarioDocumentRow`. */
@@ -188,7 +183,7 @@ export const row = stylex.create({
   /** `text-primary`, beside the row base's own `hover:text-foreground`. */
   activeInk: { color: { default: colors.primary, ":hover": colors.text } },
   /** `text-primary` where the ghost variant still supplies the hover ink. */
-  accentInk: { color: { default: colors.primary, ":hover": ACCENT_FOREGROUND } },
+  accentInk: { color: { default: colors.primary, ":hover": colors.hoverWashText } },
   /**
    * `cursor-not-allowed opacity-50` — the hover ink is dropped by pairing this
    * with a `renderFlat*` key rather than by restating `hover:text-current`,
@@ -205,8 +200,8 @@ export const row = stylex.create({
  */
 export const renderInk = stylex.create({
   /** `text-red-300`, with the row base's `hover:text-foreground`. */
-  active: { color: { default: "rgb(252 165 165)", ":hover": colors.text } },
-  activeFlat: { color: "rgb(252 165 165)" },
+  active: { color: { default: colors.critical, ":hover": colors.text } },
+  activeFlat: { color: colors.critical },
   /** `text-yellow-400 hover:text-yellow-300` */
   running: { color: { default: "rgb(250 204 21)", ":hover": "rgb(253 224 71)" } },
   runningFlat: { color: "rgb(250 204 21)" },
@@ -214,7 +209,7 @@ export const renderInk = stylex.create({
   complete: { color: { default: "rgb(74 222 128)", ":hover": "rgb(134 239 172)" } },
   completeFlat: { color: "rgb(74 222 128)" },
   /** `text-red-400 hover:text-red-300` */
-  none: { color: { default: "rgb(248 113 113)", ":hover": "rgb(252 165 165)" } },
+  none: { color: { default: "rgb(248 113 113)", ":hover": colors.critical } },
   noneFlat: { color: "rgb(248 113 113)" },
 });
 
@@ -230,15 +225,15 @@ export const chip = stylex.create({
    */
   base: {
     height: "2rem",
-    gap: "0.5rem",
+    gap: space.s2,
     borderColor: "hsl(var(--border) / 0.8)",
-    paddingInline: "0.75rem",
+    paddingInline: space.s3,
     fontFamily: CHIP_FONT,
     fontSize: "10px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     lineHeight: "inherit",
-    letterSpacing: "0.16em",
+    letterSpacing: text.trackingMetaWide,
   },
   /** `bg-foreground text-background hover:bg-foreground/90` */
   on: {
@@ -256,65 +251,18 @@ export const chip = stylex.create({
 export const scene = stylex.create({
   /** `mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]` */
   retry: {
-    marginTop: "1.5rem",
+    marginTop: space.s6,
     height: "2.5rem",
-    backgroundColor: { default: "#E8E044", ":hover": "#f1ea55" },
-    paddingInline: "1.25rem",
+    backgroundColor: { default: colors.accent, ":hover": "#f1ea55" },
+    paddingInline: space.s5,
     color: "black",
   },
-  /**
-   * `pointer-events-none absolute right-4 top-4 z-10 text-xs text-white/70`
-   */
-  idleStatus: {
-    pointerEvents: "none",
-    position: "absolute",
-    right: "1rem",
-    top: "1rem",
-    zIndex: layers.raised,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 0.7)",
-  },
-  /**
-   * `h-auto min-h-10 w-full justify-start rounded-full border border-[#E8E044]
-   * bg-[#E8E044] px-4 py-2 text-left text-xs font-semibold text-neutral-950
-   * shadow-[0_0_24px_rgba(232,224,68,0.16)] hover:bg-[#F3EB4F]
-   * hover:text-black focus-visible:ring-[#E8E044] focus-visible:ring-offset-2
-   * focus-visible:ring-offset-black`
-   *
-   * The glow rides Tailwind's `--tw-shadow` slot rather than replacing
-   * `box-shadow` outright, so the focus ring `Button` composes from
-   * `--tw-ring-*` still draws on top of it exactly as it did.
-   */
-  cacheAll: {
-    height: "auto",
-    minHeight: "2.5rem",
-    width: "100%",
-    justifyContent: "flex-start",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#E8E044",
-    backgroundColor: { default: "#E8E044", ":hover": "#F3EB4F" },
-    paddingInline: "1rem",
-    paddingBlock: "0.5rem",
-    textAlign: "left",
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
-    color: { default: "rgb(10 10 10)", ":hover": "black" },
-    "--tw-shadow": "0 0 24px rgba(232, 224, 68, 0.16)",
-    boxShadow: "var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)",
-    "--tw-ring-color": { default: null, ":focus-visible": "#E8E044" },
-    "--tw-ring-offset-color": { default: null, ":focus-visible": "#000" },
-  },
-  /** `size-4 text-neutral-950` on the spinner inside that button. */
-  cacheAllSpinner: { width: "1rem", height: "1rem", color: "rgb(10 10 10)" },
 });
 
 /** `scenario/rail` — the in-editor scenario rail. */
 export const rail = stylex.create({
   /** `text-primary` on a rail toggle that is on. */
-  toggleOn: { color: { default: colors.primary, ":hover": ACCENT_FOREGROUND } },
+  toggleOn: { color: { default: colors.primary, ":hover": colors.hoverWashText } },
   /**
    * `h-7 flex-1 gap-1.5 bg-transparent px-2 font-meta text-micro font-bold
    * uppercase tracking-meta hover:bg-transparent hover:text-primary`
@@ -324,13 +272,13 @@ export const rail = stylex.create({
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: "0%",
-    gap: "0.375rem",
+    gap: space.s1_5,
     backgroundColor: { default: "transparent", ":hover": "transparent" },
-    paddingInline: "0.5rem",
+    paddingInline: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: { default: null, ":hover": colors.primary },
@@ -347,17 +295,17 @@ export const rail = stylex.create({
     height: "2.25rem",
     width: "100%",
     justifyContent: "center",
-    gap: "0.375rem",
+    gap: space.s1_5,
     borderWidth: 0,
-    borderTopWidth: 1,
+    borderTopWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: { default: "#E8E044", ":hover": "#f1e949" },
+    backgroundColor: { default: colors.accent, ":hover": "#f1e949" },
     paddingInline: 0,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: { default: "black", ":hover": "black" },
@@ -372,9 +320,9 @@ export const review = stylex.create({
   idBadge: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" },
   /** `ml-1 text-xs text-muted-foreground` */
   saving: {
-    marginLeft: "0.25rem",
+    marginLeft: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
 });

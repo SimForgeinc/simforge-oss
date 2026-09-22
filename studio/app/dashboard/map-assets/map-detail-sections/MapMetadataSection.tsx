@@ -6,6 +6,7 @@ import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 
 import type { MapAsset, MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapMetadataSection component. */
 type MapMetadataSectionProps = {
@@ -46,11 +47,11 @@ export function MapMetadataSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.sectionToggleButton)}
+          {...stylex.props([motionRecipe.colors, styles.sectionToggleButton])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           {title}
         </button>
@@ -69,7 +70,7 @@ export function MapMetadataSection({
             }
             aria-label="Copy map metadata as JSON"
             title="Copy map metadata as JSON"
-            {...stylex.props(styles.copyMetadataButton)}
+            {...stylex.props([motionRecipe.colors, styles.copyMetadataButton])}
           >
             {copiedKey === "mapMetadata" ? (
               <Check {...stylex.props(styles.copiedCheckIcon)} />
@@ -254,7 +255,7 @@ export function MapMetadataSection({
               >
                 {populateBusy ? (
                   <>
-                    <Loader2 {...stylex.props(styles.populateMetadataSpinner)} />
+                    <Loader2 {...stylex.props([motionRecipe.spin, styles.populateMetadataSpinner])} />
                     Populating…
                   </>
                 ) : (

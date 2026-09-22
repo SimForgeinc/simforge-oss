@@ -13,6 +13,7 @@ import {
   parseUserGeoJson,
   type UserGeoJsonLayer,
 } from "@/app/lib/maps/frontend/user-geojson-layers";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the UserGeoJsonSection component. */
 export type UserGeoJsonSectionProps = {
@@ -129,7 +130,7 @@ export function UserGeoJsonSection({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          {...stylex.props(styles.uploadButton)}
+          {...stylex.props([motionRecipe.colors, styles.uploadButton])}
           data-testid="upload-geojson-button"
         >
           <Upload {...stylex.props(styles.uploadIcon)} />
@@ -181,7 +182,7 @@ export function UserGeoJsonSection({
                     <Palette {...stylex.props(styles.paletteIcon)} />
                   </button>
                   <span
-                    {...stylex.props(styles.layerName)}
+                    {...stylex.props([textLayout.truncate, styles.layerName])}
                     title={layer.name}
                   >
                     {layer.name}
@@ -197,7 +198,7 @@ export function UserGeoJsonSection({
                   <button
                     type="button"
                     onClick={() => onRemoveLayer(layer.id)}
-                    {...stylex.props(styles.removeButton)}
+                    {...stylex.props([motionRecipe.colors, styles.removeButton])}
                     title="Remove layer"
                     aria-label={`Remove ${layer.name}`}
                   >
@@ -215,7 +216,7 @@ export function UserGeoJsonSection({
                           onSetColor(layer.id, c);
                           setOpenColorId(null);
                         }}
-                        {...stylex.props(styles.colorSwatch, layer.color === c && styles.colorSwatchSelected)}
+                        {...stylex.props([motionRecipe.transform, styles.colorSwatch], layer.color === c && styles.colorSwatchSelected)}
                         style={{ backgroundColor: c }}
                         aria-label={`Set color ${c}`}
                         aria-pressed={layer.color === c}
