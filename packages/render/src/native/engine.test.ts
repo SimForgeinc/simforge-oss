@@ -7,7 +7,12 @@ import {
   UnsupportedRenderIntentError,
   assertEngineSupportsIntent,
 } from '../capabilities.js';
-import { createRenderEngine, resolveBinary } from './engine.js';
+import {
+  createRenderEngine,
+  resolveBinary,
+  resolveEffectiveCameraProfile,
+  resolveNativeCaptureProfile,
+} from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
 const profile = CameraProfileSchema.parse({});
@@ -76,6 +81,29 @@ describe('native retained engine adapter', () => {
 
   it('resolves the retained service binary from explicit options', () => {
     expect(resolveBinary({ binary: '/opt/native-render-service' })).toBe('/opt/native-render-service');
+  });
+
+  it('uses a stable sensor profile for dataset capture and cinematic metering for review', () => {
+    expect(resolveNativeCaptureProfile('dataset')).toEqual({ profile: 'sensor', autoMeter: false });
+    expect(resolveNativeCaptureProfile('review')).toEqual({ profile: 'cinematic', autoMeter: true });
+    expect(resolveNativeCaptureProfile('dataset', true)).toEqual({ profile: 'sensor', autoMeter: false });
+    expect(resolveNativeCaptureProfile('review', false)).toEqual({ profile: 'cinematic', autoMeter: false });
+  });
+
+  it('reports the generic sensor profile instead of overstating a custom request', () => {
+    const custom = CameraProfileSchema.parse({
+      profileId: 'device-x@1',
+      fidelity: 'device-fitted',
+      encoding: { transfer: 'linear', bitDepth: 12 },
+    });
+    expect(resolveEffectiveCameraProfile(custom, 'sensor')).toMatchObject({
+      effective: { profileId: 'generic-rgb@1', fidelity: 'generic-uncalibrated' },
+      differences: ['cameraProfile: generic-rgb@1 sensor profile used instead of requested profile'],
+    });
+    expect(resolveEffectiveCameraProfile(custom, 'cinematic')).toEqual({
+      effective: null,
+      differences: ['cameraProfile: not applied by cinematic review capture'],
+    });
   });
 
   it('rejects rolling shutter with a stable capability reason', () => {

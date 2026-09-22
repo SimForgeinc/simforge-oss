@@ -18,7 +18,12 @@ import {
   type RenderExecutionContext,
   type RenderInputFile,
 } from '../index.js';
-import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
+import {
+  GENERIC_CAMERA_PROFILE,
+  parseRenderIntent,
+  type CameraProfile,
+  type RenderSourceV3,
+} from '@simforge-oss/scenario';
 import { assertEngineSupportsIntent } from '../capabilities.js';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
@@ -47,12 +52,37 @@ export interface NativeRenderEngineOptions {
    * Meter the sky through each frame's camera (the Lookdev Lab's
    * highlight-priority meter), so a sunward low sun stops the camera down
    * instead of printing a white sky. Default on; off leaves the incident
-   * meter alone, which is what the pre-rev23 platform did.
+   * meter alone. Dataset capture always disables it.
    */
   readonly autoMeter?: boolean;
   /** Where the pinned actor closure's blobs come from; defaults to the installed closure (`resolveActorAssets`). */
   readonly actorAssetsBaseUrl?: string;
   readonly actorAssetsCacheDir?: string;
+}
+
+export function resolveNativeCaptureProfile(
+  fidelity: 'review' | 'dataset',
+  autoMeter?: boolean,
+): { profile: 'cinematic' | 'sensor'; autoMeter: boolean } {
+  return {
+    profile: fidelity === 'dataset' ? 'sensor' : 'cinematic',
+    autoMeter: fidelity === 'dataset' ? false : autoMeter ?? true,
+  };
+}
+
+export function resolveEffectiveCameraProfile(
+  requested: CameraProfile,
+  captureProfile: 'cinematic' | 'sensor',
+): { effective: CameraProfile | null; differences: string[] } {
+  if (captureProfile === 'cinematic') {
+    return { effective: null, differences: ['cameraProfile: not applied by cinematic review capture'] };
+  }
+  return {
+    effective: GENERIC_CAMERA_PROFILE,
+    differences: JSON.stringify(requested) === JSON.stringify(GENERIC_CAMERA_PROFILE)
+      ? []
+      : ['cameraProfile: generic-rgb@1 sensor profile used instead of requested profile'],
+  };
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -203,6 +233,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       assertEngineSupportsIntent(capabilities, intent);
+      const captureProfile = resolveNativeCaptureProfile(
+        intent.renderSpec.capabilityIntent.fidelity,
+        options.autoMeter,
+      );
       const sources = intent.renderSpec.sources;
       const unsupported = sources.find((source) => source.modality !== 'rgb' && source.modality !== 'lidar' && source.modality !== 'radar');
       if (unsupported) throw new Error(`native retained engine does not render ${unsupported.modality} sources`);
@@ -284,19 +318,17 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const traceDigest = await hashFile(tracePath);
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
-      // The scenario's environment as the renderer's physical lighting and
-      // the Lookdev Lab's cinematic look: same weather presets, same solar
-      // model, same profile. The service meters the sky through each
-      // frame's camera on top (`autoMeter`).
+      // Dataset capture uses the non-temporal sensor profile; review capture
+      // retains the cinematic look. The effective choice is recorded below.
       const look = resolveNativeLighting(intent.renderSpec.authoredEnvironment, {
         cloudFixedStepS: 1 / Math.max(1, ...rgbSchedules.map((schedule) => schedule.framesPerSecond)),
       });
       await writeJson(scenePath, {
         glbs: [masterPath],
-        profile: 'cinematic',
+        profile: captureProfile.profile,
         lighting: look.lighting,
         profileConfig: look.profileConfig,
-        autoMeter: options.autoMeter ?? true,
+        autoMeter: captureProfile.autoMeter,
         nearM: Math.min(...sources.map((source) => source.modality === 'rgb' ? source.attributes.nearM : 0.05)),
         farM: Math.max(...sources.map((source) => source.modality === 'rgb' ? source.attributes.farM : 1_000)),
         warmupFrames: 20,
@@ -453,10 +485,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
         look: {
-          profile: 'cinematic',
+          profile: captureProfile.profile,
           lighting: look.lighting,
           profileConfig: look.profileConfig,
-          autoMeter: options.autoMeter ?? true,
+          autoMeter: captureProfile.autoMeter,
           provenance: look.provenance,
         },
         fidelityMode: intent.renderSpec.capabilityIntent.fidelity,
@@ -465,9 +497,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           sensorId: source.sensorId,
           outputName: source.outputName,
           requested: source.attributes.cameraProfile,
-          effective: null,
+          ...resolveEffectiveCameraProfile(source.attributes.cameraProfile, captureProfile.profile),
           approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
-          differences: ['cameraProfile: not applied by cinematic capture'],
         }] : []),
         warnings: [FULL_MOUNT_ROTATION_APPROXIMATION.reason],
         videos: videoRecords,

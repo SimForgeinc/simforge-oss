@@ -122,7 +122,7 @@ describe('native run expectations', () => {
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
         requested: profile, effective: null,
         approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
-        differences: ['cameraProfile: not applied by cinematic capture'],
+        differences: ['cameraProfile: not applied by cinematic review capture'],
       }],
       warnings: [FULL_MOUNT_ROTATION_APPROXIMATION.reason],
     });
@@ -136,6 +136,24 @@ describe('native run expectations', () => {
       approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
     });
     expect(parsed.warnings).toContain(FULL_MOUNT_ROTATION_APPROXIMATION.reason);
+  });
+
+  it('records the generic profile as effective for dataset sensor capture', () => {
+    const profile = CameraProfileSchema.parse({});
+    const parsed = NativeRenderManifestSchema.parse({
+      ...evidence().manifest,
+      fidelityMode: 'dataset',
+      look: { profile: 'sensor', lighting: {}, profileConfig: {}, autoMeter: false, provenance: {} },
+      cameraProfiles: [{
+        actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
+        requested: profile, effective: profile,
+        approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
+        differences: [],
+      }],
+    });
+
+    expect(parsed.look).toMatchObject({ profile: 'sensor', autoMeter: false });
+    expect(parsed.cameraProfiles[0]).toMatchObject({ requested: profile, effective: profile, differences: [] });
   });
 
   it('derives each source schedule, the union tick count and the pinned actor closure from the intent', () => {

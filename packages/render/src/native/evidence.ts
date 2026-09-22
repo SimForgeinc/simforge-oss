@@ -36,7 +36,7 @@ const NativeRunLineageSchema = z.strictObject({
 export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
   schema: z.literal(NATIVE_RENDER_MANIFEST_V1_SCHEMA),
   look: z.strictObject({
-    profile: z.literal('cinematic'),
+    profile: z.enum(['sensor', 'cinematic']),
     lighting: z.record(z.string(), z.unknown()),
     profileConfig: z.record(z.string(), z.unknown()),
     autoMeter: z.boolean(),
