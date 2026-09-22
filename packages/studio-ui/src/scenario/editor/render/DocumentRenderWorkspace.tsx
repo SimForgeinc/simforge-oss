@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../../host";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ScenarioDocumentDto } from "@simforge-oss/studio-host";
 import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/recording-client";
 import { savedSimulationRevisionEvidence } from "../../../lib/scenario/editor/saved-simulation-evidence";
@@ -49,6 +49,43 @@ export function DocumentRenderWorkspace({
 }) {
   const studioHost = useStudioHost();
   const scenarioSession = useOptionalScenarioSession();
+  const liveSession = scenarioSession?.document?.id === document.id ? scenarioSession : null;
+  const [savedEvidence, setSavedEvidence] = useState<{
+    documentId: string;
+    draftVersion: number;
+    status: "saving" | "saved" | null;
+    error: string | null;
+  } | null>(null);
+  useEffect(() => {
+    if (initialRevisionId || liveSession) return;
+    const abort = new AbortController();
+    const identity = { documentId: document.id, draftVersion: document.draftVersion };
+    setSavedEvidence(null);
+    void studioHost.projects.getSimulationPreview(document.id, abort.signal).then((preview) => {
+      if (abort.signal.aborted) return;
+      const saved = preview?.draftVersion === document.draftVersion;
+      setSavedEvidence({
+        ...identity,
+        status: saved ? "saved" : null,
+        error: saved ? null : "No saved simulation for this version. Retry to prepare it in the background.",
+      });
+    }).catch((reason: unknown) => {
+      if (!abort.signal.aborted) setSavedEvidence({ ...identity, status: null, error: String(reason) });
+    });
+    return () => abort.abort();
+  }, [document.id, document.draftVersion, initialRevisionId, liveSession, studioHost]);
+  const retryEvidenceSave = async () => {
+    const identity = { documentId: document.id, draftVersion: document.draftVersion };
+    setSavedEvidence({ ...identity, status: "saving", error: null });
+    try {
+      await savedSimulationRevisionEvidence(studioHost, document);
+      setSavedEvidence({ ...identity, status: "saved", error: null });
+    } catch (reason) {
+      setSavedEvidence({ ...identity, status: null, error: String(reason) });
+    }
+  };
+  const currentEvidence = savedEvidence?.documentId === document.id
+    && savedEvidence.draftVersion === document.draftVersion ? savedEvidence : null;
 
   /**
    * Freeze the open draft into an immutable snapshot and return its id.
@@ -76,6 +113,9 @@ export function DocumentRenderWorkspace({
       const evidence = scenarioSession?.document?.id === document.id
         ? await scenarioSession.prepareRevisionEvidence(document.id)
         : await savedSimulationRevisionEvidence(studioHost, document, signal);
+      if (scenarioSession?.document?.id !== document.id && !signal?.aborted) {
+        setSavedEvidence({ documentId: document.id, draftVersion: document.draftVersion, status: "saved", error: null });
+      }
       const result = await studioHost.projects.ensureRevision({
         documentId: document.id,
         expectedDraftVersion: document.draftVersion,
@@ -111,12 +151,12 @@ export function DocumentRenderWorkspace({
 
   return (
     <>
-      {!initialRevisionId && scenarioSession?.document?.id === document.id ? (
+      {!initialRevisionId ? (
         <SaveStatus
           label="Simulation evidence"
-          status={scenarioSession.playback.savedSimulationStatus}
-          error={scenarioSession.playback.savedSimulationError}
-          onRetry={scenarioSession.playback.retrySimulationSave}
+          status={liveSession ? liveSession.playback.savedSimulationStatus : currentEvidence?.status}
+          error={liveSession ? liveSession.playback.savedSimulationError : currentEvidence?.error}
+          onRetry={liveSession ? liveSession.playback.retrySimulationSave : () => void retryEvidenceSave()}
         />
       ) : null}
     <RenderWorkspace

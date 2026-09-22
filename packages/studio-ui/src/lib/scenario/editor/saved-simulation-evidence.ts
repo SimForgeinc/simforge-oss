@@ -12,7 +12,7 @@ import {
   type StudioHostServices,
 } from "@simforge-oss/studio-host";
 import { playbackMapEntry } from "../maps";
-import { downloadSimulationPreview } from "../playback/simulationPreview";
+import { downloadSimulationPreview, encodeSimulationPreview } from "../playback/simulationPreview";
 import { ScenarioWorkerClient } from "../playback/scenarioWorkerClient";
 import { uploadAndConsumeMaterializedTraffic } from "./materialized-traffic";
 
@@ -57,6 +57,12 @@ export async function savedSimulationRevisionEvidence(
         undefined,
         { backgroundPreview: true },
       );
+      if (!map.browserClosureSha256) throw new Error("The map's browser runtime closure is unavailable.");
+      const { bytes, sha256 } = await encodeSimulationPreview(bundle, document.draftVersion, {
+        engine: await client.engineIdentity(),
+        mapClosureSha256: map.browserClosureSha256,
+      });
+      await host.projects.saveSimulationPreview(document, bytes, sha256, signal);
     }
     const traffic = browserRevisionTraffic(document.content, map, bundle);
     if (!traffic) {
