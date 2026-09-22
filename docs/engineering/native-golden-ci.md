@@ -232,6 +232,10 @@ duplicates, and unnamed meshes are named `unnamed_mesh`. Evidence on the RTX
 | before (entity-bit order) | 3 (`b82aee85…`, `713742cf…` ×4, `92d28b92…`) | 1 | 1 |
 | after | 1 (`b3feedec…`, 12/12 runs) | 1 | 1 |
 
-Instance ids of existing scenes are renumbered once by this change (goldens
-that hash an ID pass must be re-recorded). `richmond-frame0` is committed as a
+The same ordering now applies to `scen-play` (`playback.rs`) and the
+sensor-capture registry no longer names unnamed meshes after their entity.
+Instance ids of existing scenes are renumbered once by this change: goldens
+that hash an ID pass must be re-recorded (the two render-timeline goldens
+above were recorded before it; scen-play id0 is 3/3 stable after it on the
+5080). `richmond-frame0` is committed as a
 scene; record its golden per GPU with a quiet window.
