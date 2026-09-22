@@ -27,6 +27,7 @@ describe("CloudLoadingSurface", () => {
   it("normalizes progress and shows transfer telemetry", () => {
     const html = renderToString(
       <CloudLoadingSurface
+        scope="pane"
         progress={104.4}
         telemetry={{
           transferred: "18 MB",

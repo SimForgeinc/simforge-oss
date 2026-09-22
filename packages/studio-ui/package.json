@@ -53,6 +53,18 @@
         "types": "./dist/components/CloudLoadingSurface.d.ts",
         "default": "./dist/components/CloudLoadingSurface.js"
       },
+      "./components/WorkspacePanes": {
+        "types": "./dist/components/WorkspacePanes.d.ts",
+        "default": "./dist/components/WorkspacePanes.js"
+      },
+      "./components/ListSkeleton": {
+        "types": "./dist/components/ListSkeleton.d.ts",
+        "default": "./dist/components/ListSkeleton.js"
+      },
+      "./components/state-frames": {
+        "types": "./dist/components/state-frames.d.ts",
+        "default": "./dist/components/state-frames.js"
+      },
       "./components/MapAssetCacheStorage": {
         "types": "./dist/components/MapAssetCacheStorage.d.ts",
         "default": "./dist/components/MapAssetCacheStorage.js"
@@ -480,6 +492,21 @@
       "development": "./src/components/CloudLoadingSurface.tsx",
       "types": "./dist/components/CloudLoadingSurface.d.ts",
       "default": "./dist/components/CloudLoadingSurface.js"
+    },
+    "./components/WorkspacePanes": {
+      "development": "./src/components/WorkspacePanes.tsx",
+      "types": "./dist/components/WorkspacePanes.d.ts",
+      "default": "./dist/components/WorkspacePanes.js"
+    },
+    "./components/ListSkeleton": {
+      "development": "./src/components/ListSkeleton.tsx",
+      "types": "./dist/components/ListSkeleton.d.ts",
+      "default": "./dist/components/ListSkeleton.js"
+    },
+    "./components/state-frames": {
+      "development": "./src/components/state-frames.tsx",
+      "types": "./dist/components/state-frames.d.ts",
+      "default": "./dist/components/state-frames.js"
     },
     "./components/MapAssetCacheStorage": {
       "development": "./src/components/MapAssetCacheStorage.tsx",

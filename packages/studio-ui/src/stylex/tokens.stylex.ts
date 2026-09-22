@@ -182,6 +182,16 @@ export const space = stylex.defineVars({
   shellWidth: "38.75rem",
 });
 
+/** Compile-time geometry: media queries cannot reference CSS custom properties. */
+export const layout = stylex.defineConsts({
+  gutterNarrow: "16px",
+  gutter: "24px",
+  gutterWide: "32px",
+  utilityFrame: "940px",
+  formMeasure: "32rem",
+  workspaceBreakpoint: "@media (min-width: 1024px)",
+});
+
 /**
  * Radii. The product is strictly rectangular and the global stylesheet
  * enforces `border-radius: 0 !important` on every element, so these exist to

@@ -3,7 +3,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ResizablePanel.stylex";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "../lib/utils";
+import { mergeStyleProps } from "../components/stylex/surface";
 
 /**
  * A resizable left panel with a persisted width.
@@ -56,6 +56,9 @@ export function ResizablePanel({
   variant = "solid",
   collapsed = false,
   className,
+  xstyle,
+  resizable = true,
+  inert = false,
   children,
 }: {
   /** `localStorage` key for the width. Distinct keys let two panels remember separate widths. */
@@ -73,6 +76,9 @@ export function ResizablePanel({
    */
   collapsed?: boolean;
   className?: string;
+  xstyle?: stylex.StyleXStyles;
+  resizable?: boolean;
+  inert?: boolean;
   children: React.ReactNode;
 }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -145,24 +151,14 @@ export function ResizablePanel({
   return (
     <div
       ref={panelRef}
-      className={cn(
-        "render-surface-motion relative flex h-full shrink-0 flex-col",
-        variant === "blur-gradient"
-          ? "isolate overflow-visible border-0 bg-transparent before:pointer-events-none before:absolute before:inset-y-0 before:-left-[25vw] before:w-screen before:-z-10 before:bg-[linear-gradient(75deg,rgba(5,6,8,0.76)_0%,rgba(5,6,8,0.64)_34%,rgba(5,6,8,0.32)_56%,rgba(5,6,8,0.1)_70%,transparent_82%)] before:backdrop-blur-[64px] before:[mask-image:linear-gradient(75deg,#000_0%,#000_45%,rgba(0,0,0,0.82)_60%,rgba(0,0,0,0.3)_76%,transparent_90%)] before:[-webkit-mask-image:linear-gradient(75deg,#000_0%,#000_45%,rgba(0,0,0,0.82)_60%,rgba(0,0,0,0.3)_76%,transparent_90%)] before:content-['']"
-          : "border-r border-border bg-background",
-        // Off-screen and inert. Focus must not survive in here, or tabbing would land the author on
-        // a scenario row they cannot see.
-        collapsed ? "pointer-events-none -translate-x-4 opacity-0" : null,
-        className,
-      )}
-      style={{ width, marginLeft: collapsed ? -width : 0 }}
+      {...mergeStyleProps(stylex.props(styles.panel, variant === "blur-gradient" ? styles.gradient : styles.solid, collapsed && styles.collapsed, !resizable && styles.singlePane, xstyle), className ? `render-surface-motion ${className}` : "render-surface-motion", resizable ? { width, marginLeft: collapsed ? -width : 0 } : undefined)}
       data-testid="scenario-resizable-panel"
       data-panel-visual={variant}
       data-panel-collapsed={collapsed ? "true" : undefined}
-      inert={collapsed ? true : undefined}
+      inert={inert || collapsed || undefined}
     >
       {children}
-      <div
+      {resizable ? <div
         role="separator"
         aria-label={label}
         aria-orientation="vertical"
@@ -175,7 +171,7 @@ export function ResizablePanel({
         // Sits just outside the border so it does not overlap the list's own scrollbar.
         {...stylex.props(styles.scenarioPanelResizeHandle)}
         data-testid="scenario-panel-resize-handle"
-      />
+      /> : null}
     </div>
   );
 }
