@@ -476,6 +476,11 @@ impl WasmMapBundle {
     pub fn digest(&self) -> String {
         self.inner.digest().to_owned()
     }
+    /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+    #[wasm_bindgen(getter, js_name = closureDigest)]
+    pub fn closure_digest(&self) -> String {
+        self.inner.bundle().closure_digest().to_owned()
+    }
     #[wasm_bindgen(getter)]
     pub fn graph(&self) -> WasmLaneGraph {
         WasmLaneGraph {
