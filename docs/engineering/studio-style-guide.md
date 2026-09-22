@@ -55,6 +55,40 @@ events) are in [`studio-stylex-migration.md`](./studio-stylex-migration.md).
     namesake component or by siblings in the same folder family. Anything
     wider is promoted to a recipe or primitive.
 
+## Tokens
+
+`packages/studio-ui/src/stylex/tokens.stylex.ts`. Inside `packages/studio-ui`
+import it relatively; from `studio/app` import
+`@simforge-oss/studio-ui/stylex/tokens.stylex`.
+
+| Group | What it holds | Reach for |
+| --- | --- | --- |
+| `colors` | theme bridges (`bg`, `card`, `text`, `mutedForeground`, `border`), the plate (`panel*`), the ladders below, accent, status | the ladder step for the role, never an alpha |
+| `text` | faces, sizes, line heights, weights, tracking | a `type` recipe first; these for one-off layout of text |
+| `space` | `s0_5` … `s12`, the 0.25rem grid (`s3` = 0.75rem), plus shell widths | every gap, padding and margin |
+| `layout` | gutters, measures, breakpoints (`bpSm`, `bpMd`, `bpLg`, `bpXl`, `bp2xl`), `reducedMotion` | computed keys: `{ default: x, [layout.bpSm]: y }` |
+| `stroke` | `hairline` (1px), `thick` (2px) | border and rule widths |
+| `shadows` | focus rings, the few elevations | the `focus` recipe; elevation only for things that float |
+| `layers` | the global stacking bands | every `zIndex` |
+| `motion` | durations, curves, blurs | the `motion` recipes first |
+
+The colour ladders, strongest step first:
+
+- **Ink** (text on the dark plate): `ink`, `inkSecondary`, `inkMuted`,
+  `inkFaint`, `inkGhost`.
+- **Hairlines**: `hairlineSubtle`, `hairline`, `hairlineStrong`.
+- **Fills**: `fillFaint`, `fillSubtle`, `fill`, `fillStrong`, `fillStronger`.
+- **Scrims** (black, behind modals and over bright frames): `scrimLight`,
+  `scrim`, `scrimHeavy`.
+- **Accent**: `accent` (text, rules, the primary action), `accentWash` (behind
+  the current item), `accentLine`/`accentLineSubtle` (its edge),
+  `accentText` (ink on a solid accent).
+- **Status**: `positive`, `warning`, `critical`, `info`, each with a `…Wash`.
+  Traffic-signal lamp colours (`signal*`) are physical colours, never status.
+
+Names marked `@deprecated` in the token file still compile; do not add new
+uses.
+
 ## The look
 
 Studio is a dark, square, hairline-ruled instrument. The app switcher is the

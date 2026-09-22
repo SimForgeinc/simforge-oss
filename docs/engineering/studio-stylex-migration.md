@@ -551,11 +551,12 @@ wherever no token had that exact value.
 | Token | Value | Occupants |
 | --- | --- | --- |
 | `base`, `raised`, `sticky` | 0, 10, 30 | in-flow chrome, map controls, marker pills |
+| `float`, `overlay` | 20, 40 | controls floating inside one surface; an overlay or veil inside one surface |
 | `popover` | 50 | the shadcn portals: dropdown menus, tooltips, sheets and the sheet scrim, all written against Tailwind's `z-50` and deliberately *below* the editor chrome |
 | `editorChrome` → `editorTop` | 60, 80, 90 | editor resize handles, details panel, popovers, badges, notification dock, editor-local modals |
 | `dropdown` | 100 | pickers and menus — `ScenarioMapPickerDialog`, still a `z-[100]` residual |
 | `tutorial`, `tutorialTop` | 140, 150 | interactive tutorial overlays and guides |
-| `dialog`, `dialogTop` | 200, 220 | app dialogs and their scrims; `RenderingBenchmark` at the top of the band |
+| `dialog`, `dialogTop` | 200, 210 | app dialogs: the scrim, then the content |
 | `loading`, `loadingTop` | 240, 250 | `CloudLoadingSurface`, `CloudLoadingHost` |
 | `topbar` | 260 | `AppTopBar` |
 | `appSwitcher`, `appSwitcherTop` | 300, 310 | app-switcher scrim and content |
