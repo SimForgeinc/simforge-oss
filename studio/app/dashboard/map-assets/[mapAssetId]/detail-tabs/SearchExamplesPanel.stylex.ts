@@ -1,55 +1,52 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchExamplesPanel: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   exampleGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   groupHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   groupTitle: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   comingSoonBadge: {
     backgroundColor: "hsl(var(--secondary) / 0.4)",
-    paddingInline: space.sm,
-    paddingBlock: space.xxs,
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontSize: "9px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   exampleChipList: {
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   examplePill: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: "0.625rem",
-    paddingBlock: space.xs,
+    paddingInline: space.s2_5,
+    paddingBlock: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    lineHeight: text.lineXs,
   },
   examplePillAvailable: {
     borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },

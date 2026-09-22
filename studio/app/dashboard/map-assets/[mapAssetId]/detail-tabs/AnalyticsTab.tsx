@@ -12,6 +12,7 @@ import type { ThreeDStats as ThreeDStatsResponse } from "@/app/lib/3d-manifest-s
 import type { ViewMode } from "../MapDetailHeader";
 import { MapStatsDisplay } from "@/app/dashboard/map-assets/map-detail-sections/MapStatsDisplay";
 import { DigitalTwinStatsDisplay } from "@/app/dashboard/map-assets/map-detail-sections/DigitalTwinStatsDisplay";
+import { a11y, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface AnalyticsTabProps {
   asset: MapAsset;
@@ -39,8 +40,8 @@ export function AnalyticsTab({
     if (threeDStatsLoading) {
       return (
         <div {...stylex.props(styles.loadingState)} role="status" aria-live="polite">
-          <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
-          <span {...stylex.props(styles.loadingMessage)}>Loading 3D statistics</span>
+          <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingSpinner])} aria-hidden="true" />
+          <span {...stylex.props(a11y.srOnly)}>Loading 3D statistics</span>
         </div>
       );
     }

@@ -76,7 +76,8 @@ this repo, which have no relative path to use.
 | --- | --- | --- |
 | Design tokens | `packages/studio-ui/src/stylex/tokens.stylex.ts` | relative inside the package; `@simforge-oss/studio-ui/stylex/tokens.stylex` from `studio/app` |
 | Token barrel | `packages/studio-ui/src/stylex/index.ts` | same objects, same `defineVars` identity |
-| Primitives | `packages/studio-ui/src/components/stylex/index.ts` | relative inside the package |
+| Recipes | `packages/studio-ui/src/stylex/recipes.stylex.ts` | relative inside the package; `@simforge-oss/studio-ui/stylex/recipes.stylex` from `studio/app` |
+| Primitives | `packages/studio-ui/src/components/ui/*.tsx` | relative inside the package; `@simforge-oss/studio-ui/components/ui/<name>` from `studio/app` |
 | Primitive vocabulary | `packages/studio-ui/src/components/stylex/surface.ts` | — |
 | Component styles | co-located `*.stylex.ts` beside the component | relative |
 | Component styles read from the other tree | co-located `*.stylex.ts` | its own subpath export, e.g. `@simforge-oss/studio-ui/components/SkyCloudBackdrop.stylex` |
@@ -285,36 +286,25 @@ runtime expressions do not belong in a static style object.
 > Static styles come from `stylex.create`. Runtime numbers travel as CSS custom
 > properties on the element's inline `style`.
 
-The declared properties are named once in `surface.ts`:
-
-| Variable | Meaning |
-| --- | --- |
-| `--sfx-progress` | fill fraction, unitless `0`–`1` |
-| `--sfx-overlay-inset` | distance a `WorldOverlay` is held off its anchored edges |
-
-Clamp caller-supplied fractions with `clampFraction`. Shared runtime properties
-belong in `surface.ts` under the `--sfx-` prefix. Component-local inherited
-properties may stay in their owning style module, as the asset card's
-hover/focus values do.
+Name a runtime property after its component (`--asset-card-hover`) and keep
+it in the owning style module.
 
 Dynamic (function) styles exist in StyleX, but prefer a custom property: it
 stays inspectable, overridable, and animatable.
 
 ## Primitives
 
-`packages/studio-ui/src/components/stylex/` holds the shared primitives, built
-on two axes: `surface` (`"technical"` — flat, hairline-ruled, instrument type;
-versus `"expressive"` — glass, blur, soft elevation, product type) and `tone`.
+The primitives, what each is for and which props set their look are listed in
+[`studio-style-guide.md`](./studio-style-guide.md#primitives). They live in
+`packages/studio-ui/src/components/ui/` (one subpath export each), with the
+shared `Tone`/`PlacementStyle` vocabulary and `mergeStyleProps` in
+`packages/studio-ui/src/components/stylex/`.
 
-Keep them small. A primitive exists to remove repetition, so a divider or a
-label should compile to a couple of rules — a trivial component carrying a
-multi-kilobyte variant table is a worse outcome than the markup it replaced.
-
-Every primitive accepts `className`, `style`, and `xstyle`. `xstyle` is the
-composition seam: caller styles apply last and win on conflict, matching
-`stylex.props()` argument precedence. `className` exists so a primitive
-composes with unmigrated Tailwind — a transition affordance, not the preferred
-API.
+Every primitive accepts `xstyle`, applied last so the caller wins on
+conflict, and typed `PlacementStyle` on the newer primitives so it can only
+place, not reskin. The shadcn-derived primitives also accept `className`,
+which exists so a primitive composes with unmigrated Tailwind — a transition
+affordance, not the preferred API.
 
 `mergeStyleProps` merges the two. **It deliberately does not run `twMerge`:**
 StyleX's atomic class names are opaque to it and would be dropped as phantom

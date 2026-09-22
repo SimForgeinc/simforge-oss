@@ -75,6 +75,8 @@ export declare class MapBundle {
   static fromTopology(mapId: string, topology: Uint8Array): MapBundle
   get mapId(): string
   get digest(): string
+  /** `simforge.map-closure/v1`: identity of everything a simulation reads from this map. */
+  get closureDigest(): string
   get graph(): LaneGraph
   /** Bundle from in-memory sources: `sourcesJson = {mapId, derived?, locations?, searchIndex?, xodr?, signalsGeojson?}` plus the topology sidecar bytes. */
   static fromSources(sourcesJson: string, topology: Uint8Array): MapBundle
@@ -383,6 +385,12 @@ export declare function contentHash(document: string): string
 export const DEFAULT_MAX_OBJECTS: number
 
 export const ENGINE_HZ: number
+
+/** Build provenance JSON (never a cache key). */
+export declare function engineBuild(): string
+
+/** Engine semantics version; `engineVersion()` is its former name. */
+export declare function engineSemVer(): string
 
 export declare function engineVersion(): string
 

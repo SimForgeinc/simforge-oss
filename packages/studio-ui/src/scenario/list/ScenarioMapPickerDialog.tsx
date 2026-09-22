@@ -11,6 +11,7 @@ import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
 import { control, list } from "../scenario-controls.stylex";
 import type { ScenarioMapOption } from "./document-map-groups";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 function searchableText(map: ScenarioMapOption) {
   return [map.label, map.locality, map.mapVersionId].filter(Boolean).join(" ").toLowerCase();
@@ -176,7 +177,7 @@ export function ScenarioMapPickerDialog({
                         {map.locality ? (
                           <div {...stylex.props(styles.divFlex3)}>
                             <MapPin {...stylex.props(styles.mappinIcon)} aria-hidden="true" />
-                            <p {...stylex.props(styles.pTruncateXs)}>{map.locality}</p>
+                            <p {...stylex.props([textLayout.truncate, styles.pTruncateXs])}>{map.locality}</p>
                           </div>
                         ) : null}
                         <p {...stylex.props(styles.pBaseBold)}>

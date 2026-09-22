@@ -26,8 +26,16 @@ import { builtinRules } from "eslint/use-at-your-own-risk";
 const SOURCES = ["packages/studio-ui/src/**/*.{ts,tsx}", "studio/app/**/*.{ts,tsx}"];
 const NOT_TESTS = ["**/__tests__/**", "**/*.test.*", "**/*.d.ts"];
 
-/** The token and recipe modules are the only places allowed to hold the banned forms. */
-const FOUNDATION = ["packages/studio-ui/src/stylex/**", "packages/studio-ui/src/drive/drive.stylex.ts"];
+/**
+ * The token and recipe modules are the only places allowed to hold the banned
+ * forms, plus the two primitives that are round by construction.
+ */
+const FOUNDATION = [
+  "packages/studio-ui/src/stylex/**",
+  "packages/studio-ui/src/drive/drive.stylex.ts",
+  "packages/studio-ui/src/components/ui/spinner.tsx",
+  "packages/studio-ui/src/components/ui/dot.tsx",
+];
 
 /**
  * Sources carry `eslint-disable` comments for rules from the Next/React/TS
@@ -56,7 +64,9 @@ const banned = [
     message: "Studio is square: the global reset zeroes every radius. Use <Spinner>/<Dot> for round things.",
   },
   {
-    selector: "CallExpression[callee.property.name='create'] Property[key.type='Literal'][key.value=/^@media \\((min|max)-width/]",
+    // Only a property's single width query: several on one property stay
+    // literal so StyleX can turn them into ranges (see the style guide).
+    selector: "CallExpression[callee.property.name='create'] > ObjectExpression > Property > ObjectExpression > Property > ObjectExpression:not(:has(> Property[key.value=/^@media \\((min|max)-width/] ~ Property[key.value=/^@media \\((min|max)-width/])) > Property[key.type='Literal'][key.value=/^@media \\((min|max)-width/]",
     message: "Literal breakpoint. Use `[layout.bpSm]` (bpMd, bpLg, bpXl) from tokens.stylex.",
   },
   {

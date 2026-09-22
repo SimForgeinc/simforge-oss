@@ -1,53 +1,46 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
-
-/** `animate-pulse`. */
-const pulse = stylex.keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.5 },
-});
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // text-[9px] leading-relaxed text-white/45
   relaxed: {
     fontSize: "9px",
-    lineHeight: "1.625",
-    color: "rgb(255 255 255 / 0.45)",
+    lineHeight: text.lineRelaxed,
+    color: colors.inkMuted,
   },
   // h-8 w-full rounded-md border border-white/15 bg-black/25 px-2.5 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30
   whiteBorderedWide: {
     height: "2rem",
     width: "100%",
-    borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.15)",
       ":focus": "rgb(255 255 255 / 0.3)",
     },
-    backgroundColor: colors.overlayMat,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    backgroundColor: colors.scrimLight,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     fontSize: "11px",
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
     "::-moz-placeholder": {
-      color: colors.textFaint,
+      color: colors.inkFaint,
     },
     "::placeholder": {
-      color: colors.textFaint,
+      color: colors.inkFaint,
     },
   },
   // flex gap-1
   flexGap1: {
     display: "flex",
-    gap: space.xs,
+    gap: space.s1,
   },
   // grid grid-cols-2 gap-2
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // aspect-square w-full bg-black/20 object-contain
   wideSquareContain: {
@@ -59,17 +52,14 @@ export const styles = stylex.create({
   // min-w-0 px-2 py-1.5
   narrowable: {
     minWidth: "0px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   // block truncate text-[10px] font-semibold text-white/85
   blockSemiboldTruncate: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     color: "rgb(255 255 255 / 0.85)",
@@ -77,27 +67,20 @@ export const styles = stylex.create({
   // block truncate text-[8px] text-white/40
   blockTruncate: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "8px",
     color: "rgb(255 255 255 / 0.4)",
   },
   // mt-1.5
   mt15: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
   },
   // absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-[#f08a43]
   absPulsing: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: "0.125rem",
-    animationName: pulse,
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
-    animationIterationCount: "infinite",
     backgroundColor: "rgb(240 138 67 / 1)",
   },
   // py-16 text-center text-[10px] text-white/45
@@ -106,23 +89,22 @@ export const styles = stylex.create({
     paddingBottom: "4rem",
     textAlign: "center",
     fontSize: "10px",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // text-[9px] leading-relaxed text-red-300
   relaxed2: {
     fontSize: "9px",
-    lineHeight: "1.625",
-    color: "rgb(252 165 165 / 1)",
+    lineHeight: text.lineRelaxed,
+    color: colors.critical,
   },
   // w-full rounded-md border border-white/10 bg-white/[0.05] py-2 text-[10px] text-white/65 disabled:opacity-50
   borderedWide: {
     width: "100%",
-    borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: "10px",
     color: "rgb(255 255 255 / 0.65)",
     opacity: {
@@ -132,8 +114,8 @@ export const styles = stylex.create({
   },
   // py-2 text-center text-[9px] text-white/40
   centerText2: {
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     textAlign: "center",
     fontSize: "9px",
     color: "rgb(255 255 255 / 0.4)",
@@ -148,19 +130,18 @@ export const styles = stylex.create({
    */
   stackedLg: {
     marginTop: {
-      default: space.lg,
-      ":first-child": space.none,
+      default: space.s3,
+      ":first-child": 0,
     },
   },
 
   // rounded-full border px-2.5 py-1 text-[9px]
   ownershipChip: {
-    borderRadius: "0",
-    borderWidth: "1px",
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: "9px",
   },
   // border-[#d56d27] bg-[#5a3521] text-[#ffd2b2]
@@ -171,8 +152,8 @@ export const styles = stylex.create({
   },
   // border-white/10 bg-white/[0.04] text-white/55
   ownershipChipIdle: {
-    borderColor: colors.chip,
-    backgroundColor: colors.glass,
+    borderColor: colors.fillStrong,
+    backgroundColor: colors.fillSubtle,
     color: "rgb(255 255 255 / 0.55)",
   },
   // relative overflow-hidden rounded-md border bg-white/[0.04]
@@ -181,9 +162,8 @@ export const styles = stylex.create({
   tile: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: "0",
-    borderWidth: "1px",
-    backgroundColor: colors.glass,
+    borderWidth: stroke.hairline,
+    backgroundColor: colors.fillSubtle,
   },
   // border-[#f08a43] bg-[#4a3020]
   tileActive: {
@@ -192,7 +172,7 @@ export const styles = stylex.create({
   },
   // border-white/10
   tileIdle: {
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
   },
   // cursor-grab outline-none
   tileGrip: {
@@ -208,20 +188,19 @@ export const styles = stylex.create({
   // absolute right-1 top-1 grid size-6 place-items-center rounded bg-black/55 text-sm
   favoriteToggle: {
     position: "absolute",
-    right: space.xs,
-    top: space.xs,
+    right: space.s1,
+    top: space.s1,
     display: "grid",
     width: "1.5rem",
     height: "1.5rem",
     placeItems: "center",
-    borderRadius: "0",
     backgroundColor: "rgb(0 0 0 / 0.55)",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // text-amber-300
   favoriteToggleOn: {
-    color: "rgb(252 211 77 / 1)",
+    color: colors.warning,
   },
   // text-white/55
   favoriteToggleOff: {

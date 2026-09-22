@@ -12,6 +12,7 @@ import type {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioJobDetails.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 /**
  * The provenance panel for a submitted render or 2D-interaction job.
@@ -62,7 +63,7 @@ export function ScenarioJobDetails({
         <button
           type="button"
           aria-label="Close job details"
-          className={stylex.props(styles.inlineFlexCenterMid, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ringOffset, styles.inlineFlexCenterMid], motionStyles.editorMotion).className}
           onClick={onClose}
         >
           <X aria-hidden="true" className={stylex.props(styles.size4).className} />
@@ -159,7 +160,7 @@ export function ScenarioJobDetails({
               <button
                 type="button"
                 onClick={() => void studioHost.artifacts.openArtifact(artifact.id)}
-                className={stylex.props(styles.fillNarrowableLeftText, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ringOffset, styles.fillNarrowableLeftText], motionStyles.editorMotion).className}
               >
                 <span {...stylex.props(styles.accent)}>{artifact.kind}</span>
                 <span {...stylex.props(styles.muted)}>

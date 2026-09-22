@@ -1,0 +1,49 @@
+{
+  "sceneId": "yale-05-timeline",
+  "mapId": "yale-street",
+  "profile": "sensor",
+  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler.",
+  "binary": "renderer/target/release/scen-play",
+  "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
+  "corpusFiles": [
+    "master.gltf"
+  ],
+  "sceneState": {
+    "gz": "qualification/golden-harness/fixtures/yale-05.scene-state.json.gz"
+  },
+  "invocationTemplate": [
+    "--glbs",
+    "{glbs}",
+    "--scene-state",
+    "{sceneState}",
+    "--authored-height",
+    "--width",
+    "640",
+    "--height",
+    "360",
+    "--warmup",
+    "20",
+    "--out-dir",
+    "{out}"
+  ],
+  "expectedPasses": [
+    "frame60.rgb",
+    "frame60.id"
+  ],
+  "passPaths": {
+    "frame60.rgb": "frame-0060.rgb.png",
+    "frame60.id": "frame-0060.id.png"
+  },
+  "idPass": {
+    "keys": [
+      "frame60.id"
+    ],
+    "minInstances": 20,
+    "minCoverage": 0.2
+  },
+  "parity": {
+    "timeline": "qualification/golden-harness/fixtures/yale-05.timeline.json.gz",
+    "observed": "observed-frames.jsonl",
+    "profile": "bevy"
+  }
+}

@@ -24,6 +24,7 @@ import {
   DEFAULT_SCENARIO_TAG_COLOR,
   DEFAULT_SCENARIO_TAG_COLORS,
 } from "./scenarioListCache";
+import { focus, textLayout } from "../../stylex/recipes.stylex";
 
 type SharedRowHandlers = Pick<
   React.ComponentProps<typeof ScenarioDocumentRow>,
@@ -365,7 +366,7 @@ function MapDocumentGroup({
           )}
         >
           <div {...stylex.props(styles.div5)}>
-            <div {...stylex.props(styles.divTruncateSmSemibold)}>
+            <div {...stylex.props([textLayout.truncate, styles.divTruncateSmSemibold])}>
               {group.displayLabel}
             </div>
             <div {...stylex.props(styles.divMetaMicroUppercase)}>
@@ -587,7 +588,7 @@ function ScenarioTagTools({
                         }}
                         onBlur={commitTagRename}
                         aria-label={`Rename the ${tag.label} tag`}
-                        {...stylex.props(styles.renameTheInput)}
+                        {...stylex.props([focus.ring, styles.renameTheInput])}
                       />
                     ) : (
                       <button
@@ -595,7 +596,7 @@ function ScenarioTagTools({
                         onClick={() => onSelectTagFilter(tag.id)}
                         disabled={tagEditorMode}
                         aria-pressed={isFilter}
-                        {...stylex.props(styles.buttonTruncate)}
+                        {...stylex.props([textLayout.truncate, styles.buttonTruncate])}
                       >
                         {tag.label}
                       </button>
@@ -612,7 +613,7 @@ function ScenarioTagTools({
                           }
                           aria-label={`Tag actions for ${tag.label}`}
                           aria-expanded={openTagMenuId === tag.id}
-                          {...stylex.props(styles.tagActionsForButton)}
+                          {...stylex.props([focus.ring, styles.tagActionsForButton])}
                         >
                           <MoreHorizontal {...stylex.props(styles.morehorizontalIcon)} aria-hidden="true" />
                         </button>
@@ -625,7 +626,7 @@ function ScenarioTagTools({
                             />
                             <button
                               type="button"
-                              {...stylex.props(styles.buttonFlexXs)}
+                              {...stylex.props([focus.ring, styles.buttonFlexXs])}
                               onClick={() => {
                                 setEditingTagId(tag.id);
                                 setEditingTagName(tag.label);
@@ -637,7 +638,7 @@ function ScenarioTagTools({
                             </button>
                             <button
                               type="button"
-                              {...stylex.props(styles.buttonFlexXs2)}
+                              {...stylex.props([focus.ring, styles.buttonFlexXs2])}
                               onClick={() => {
                                 onDeleteTag(tag.id);
                                 setOpenTagMenuId(null);

@@ -8,6 +8,7 @@ import type { EditorDocument } from "@simforge-oss/editor";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorCameras.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -59,7 +60,7 @@ export function ActorCameras({
                 key={sensor.id}
                 {...stylex.props(styles.flexCenterMeta)}
               >
-                <span {...stylex.props(styles.fillTruncateNarrowable)}>
+                <span {...stylex.props([textLayout.truncate, styles.fillTruncateNarrowable])}>
                   {name}
                   <span {...stylex.props(styles.microMuted)}>
                     {kind}
@@ -79,7 +80,7 @@ export function ActorCameras({
                 <button
                   type="button"
                   aria-label={`Remove ${controlName} from timeline`}
-                  className={stylex.props(styles.muted, motionStyles.editorMotion).className}
+                  className={stylex.props([focus.ring, styles.muted], motionStyles.editorMotion).className}
                   onClick={() => document.removeActorSensor(role.id, sensor.id)}
                 >
                   <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />

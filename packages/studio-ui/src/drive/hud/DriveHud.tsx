@@ -8,6 +8,7 @@ import { DrivePill, driveChrome } from "../chrome";
 import { driveColors, driveRadius, driveText } from "../drive.stylex";
 import type { DriveTelemetry } from "../telemetry";
 import { Minimap, type MinimapHandle, type MinimapLane } from "./Minimap";
+import { motion, space, text } from "../../stylex/tokens.stylex";
 
 /** Everything the HUD shows that is not telemetry. */
 export interface DriveHudFrame {
@@ -63,7 +64,7 @@ const styles = stylex.create({
     backgroundColor: driveColors.impact,
     transitionProperty: "opacity",
     transitionDuration: "100ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionTimingFunction: motion.easeStandard,
   },
 
   metaRow: {
@@ -72,13 +73,13 @@ const styles = stylex.create({
     top: "1rem",
     display: "flex",
     alignItems: "center",
-    gap: "0.75rem",
+    gap: space.s3,
   },
   vehicle: { color: driveColors.textVehicle },
   camera: { color: driveColors.textFaint },
   /** Off the drivable surface — the one warning the HUD shows inline. */
   surface: {
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     color: driveColors.offRoad,
   },
 
@@ -88,14 +89,14 @@ const styles = stylex.create({
     top: "1rem",
     display: "flex",
     alignItems: "center",
-    gap: "0.5rem",
+    gap: space.s2,
   },
   debug: {
     position: "absolute",
     right: "1.25rem",
     top: "3.5rem",
-    paddingInline: "0.5rem",
-    paddingBlock: "0.25rem",
+    paddingInline: space.s2,
+    paddingBlock: space.s1,
     fontFamily: driveText.fontMono,
     fontSize: driveText.sizeMeta,
     fontVariantNumeric: "tabular-nums",
@@ -129,14 +130,14 @@ const styles = stylex.create({
     right: "1.25rem",
     display: "flex",
     alignItems: "flex-end",
-    gap: "1.25rem",
+    gap: space.s5,
   },
 
   gMeter: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "0.25rem",
+    gap: space.s1,
   },
   dial: {
     position: "relative",
@@ -170,7 +171,6 @@ const styles = stylex.create({
     marginTop: "-3px",
     width: "6px",
     height: "6px",
-    borderRadius: driveRadius.pill,
     backgroundColor: driveColors.accent,
   },
   gReadout: { color: driveColors.textMeta },
@@ -210,7 +210,7 @@ const styles = stylex.create({
     bottom: "-0.25rem",
     right: "0.25rem",
     fontFamily: driveText.fontHeavy,
-    fontSize: "1.25rem",
+    fontSize: text.sizeXl,
     lineHeight: 1,
     color: driveColors.accent,
   },
