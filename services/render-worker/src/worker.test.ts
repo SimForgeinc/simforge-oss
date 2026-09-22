@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { JobLeasedResponse } from '@simforge-oss/render';
 import { nativeMapMemberInputId } from '@simforge-oss/render/native';
 
-import { createProgressForwarder, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
+import { boundedFailureMessage, createProgressForwarder, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
 
 type Input = JobLeasedResponse['inputs'][number];
 
@@ -123,5 +123,16 @@ describe('best-effort control-plane reporting', () => {
     expect(heartbeatFailureIsFatal(new Error('fetch failed'), now + 600_000, 30_000, now)).toBe(false);
     expect(heartbeatFailureIsFatal(new Error('fetch failed'), now + 20_000, 30_000, now)).toBe(true);
     expect(heartbeatFailureIsFatal(new Error('control returned 409: lease_invalid_or_expired'), now + 600_000, 30_000, now)).toBe(true);
+  });
+});
+
+describe('failure reporting', () => {
+  it('bounds failure messages under the control plane cap and strips colour codes', () => {
+    const long = `native render service did not become ready\n${'\u001b[33m WARN\u001b[0m wgpu validation '.repeat(400)}tail-marker`;
+    const bounded = boundedFailureMessage(long);
+    expect(bounded.length).toBeLessThanOrEqual(2000);
+    expect(bounded).toContain('native render service did not become ready');
+    expect(bounded).toContain('tail-marker');
+    expect(bounded).not.toContain('\u001b[');
   });
 });
