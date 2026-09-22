@@ -51,6 +51,7 @@ const seconds = flag('seconds', 3);
 const width = flag('width', 640);
 const height = flag('height', 360);
 const fps = flag('fps', 10);
+const attitude = rest.includes('--attitude');
 const out = path.resolve(outArg);
 await fs.rm(out, { recursive: true, force: true });
 await fs.mkdir(path.join(out, 'inputs'), { recursive: true });
@@ -190,13 +191,19 @@ for (const entry of await fs.readdir(master, { recursive: true, withFileTypes: t
   });
 }
 const workspace = path.join(out, 'render');
-const manifest = await createRenderEngine({ binary: process.env.SIMFORGE_NATIVE_RENDER_BINARY }).execute({
+let renderError: string | null = null;
+const manifest = await createRenderEngine({ binary: process.env.SIMFORGE_NATIVE_RENDER_BINARY, applyAttitude: attitude }).execute({
   jobId: 'sumo-e2e', attempt: 1, intent, intentSha256: 'd'.repeat(64),
   executionPackageControlSha256: 'e'.repeat(64), schedules: createFixedSchedules(intent),
   inputs: new Map(inputs.map((item) => [item.inputId, item])), workspace,
   signal: new AbortController().signal, reportProgress: async () => undefined,
+}).catch((error: unknown) => {
+  // The engine's blocking parity gate throws after writing its evidence; keep
+  // going so the report shows exactly which SUMO actors disagreed.
+  renderError = error instanceof Error ? error.message : String(error);
+  return null;
 });
-const video = manifest.artifacts.find((artifact) => artifact.identity.role === 'video');
+const video = manifest?.artifacts.find((artifact) => artifact.identity.role === 'video');
 
 // 5. SUMO vehicles in the rendered frames vs the timeline.
 const sent = JSON.parse(await fs.readFile(path.join(workspace, 'trace', 'native-trace.json'), 'utf8')) as {
@@ -204,12 +211,21 @@ const sent = JSON.parse(await fs.readFile(path.join(workspace, 'trace', 'native-
 };
 const frameTimes = Array.from({ length: sent.frames.length }, (_, index) => start + index / fps);
 const handle = await openRenderTimeline(timeline.bytes);
-const observed = sent.frames.map((frame, index) => JSON.stringify({
-  t: Number(frameTimes[index]!.toFixed(6)),
-  actors: frame.actors.filter((actor) => actor.kind !== 'despawn').map((actor) => ({ id: actor.id, position: actor.transform.position, rotation: actor.transform.rotation })),
-})).join('\n');
+// Prefer what Bevy reports it drew (`observe_actors` → trace/observed-frames.jsonl);
+// a service without that op leaves only the poses the engine sent it.
+const observedPath = path.join(workspace, 'trace', 'observed-frames.jsonl');
+const observedSource = await fs.access(observedPath).then(() => 'bevy-observed' as const, () => 'sent-to-service' as const);
+const observed = observedSource === 'bevy-observed'
+  ? (await fs.readFile(observedPath, 'utf8')).trim()
+  : sent.frames.map((frame, index) => JSON.stringify({
+    t: Number(frameTimes[index]!.toFixed(6)),
+    actors: frame.actors.filter((actor) => actor.kind !== 'despawn').map((actor) => ({ id: actor.id, position: actor.transform.position, rotation: actor.transform.rotation })),
+  })).join('\n');
 await fs.writeFile(path.join(out, 'observed.jsonl'), `${observed}\n`);
-const parity = compareObserved(handle, observed, 'bevy');
+const parity = compareObserved(handle, observed, {
+  name: 'bevy', positionToleranceM: 1e-3, angleToleranceDeg: 0.05,
+  frame: 'scene-yup', heightReference: 'ground', compareAttitude: attitude,
+});
 const missingSumo: { t: number; id: string }[] = [];
 const wrongBody: string[] = [];
 for (const [index, frame] of sent.frames.entries()) {
@@ -245,13 +261,14 @@ const report = {
   timeline: { key: timeline.timelineKey, sha256: timeline.timelineSha256, sumoActors: sumoInTimeline.length },
   render: {
     host: best.host, clip: [start, end], frames: sent.frames.length,
-    video: video?.relativePath ?? null, sceneSource: (manifest as { sceneSource?: string }).sceneSource ?? null,
+    video: video?.relativePath ?? null, renderError, attitude,
     sumoActorsDrawnPerFrame: sent.frames.map((frame) => frame.actors.filter((actor) => actor.id.startsWith('sumo:') && actor.kind !== 'despawn').length),
   },
   checks: {
     missingSumoActorsInFrames: missingSumo.length,
     sumoWithWrongBody: [...new Set(wrongBody)],
     parity: {
+      observedSource,
       profile: parity.profile.name, pass: parity.pass, comparedPoses: parity.comparedPoses,
       maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
       presenceMismatches: parity.presenceMismatches,
