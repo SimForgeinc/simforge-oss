@@ -15,14 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
-import { layers } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
 
 type WorkspaceSummary = { id: string; name: string; slug: string; type: string };
 
 const styles = stylex.create({
-  /** The menu sits above the switcher overlay, which is itself above dialogs. */
-  menu: { zIndex: layers.appSwitcherTop, minWidth: "14rem" },
   meta: { marginLeft: "auto", paddingLeft: "0.75rem", fontSize: "10px", opacity: 0.5, textTransform: "capitalize" },
 });
 
@@ -91,7 +88,7 @@ export function WorkspaceChip({ identity, onNavigate }: { identity: StudioHostId
           <ChevronDown {...stylex.props(chip.chevron)} aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" xstyle={styles.menu}>
+      <DropdownMenuContent align="end" xstyle={chip.menu}>
         <DropdownMenuLabel>Your workspaces</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={identity.workspaceId} onValueChange={activate}>
           {(workspaces ?? []).map((workspace) => (
