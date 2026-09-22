@@ -172,6 +172,7 @@ export function ScenarioEditorSurface({
   sharedPlayback,
   sharedActorRenderer,
   active = true,
+  documentSaveStatus,
 }: {
   map: ScenarioMapEntry;
   record: ScenarioDocumentDto | null;
@@ -187,6 +188,7 @@ export function ScenarioEditorSurface({
   sharedActorRenderer?: ActorRenderer | null;
   /** Presentation changes never unmount the editor runtime. */
   active?: boolean;
+  documentSaveStatus?: React.ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [localViewer, setLocalViewer] = useState<CityViewer | null>(null);
@@ -837,7 +839,6 @@ export function ScenarioEditorSurface({
           catalogId: actor.catalogId,
         })),
         preparationMessage: sharedPlayback?.preparationMessage,
-        savedSimulationError: sharedPlayback?.savedSimulationError,
         playbackError: sharedPlayback?.error,
         bundle: sharedPlayback?.bundle,
         materializationNotes: sharedPlayback?.bundle?.instance.manifest["notes"],
@@ -850,7 +851,6 @@ export function ScenarioEditorSurface({
       sharedPlayback?.bundle,
       sharedPlayback?.error,
       sharedPlayback?.preparationMessage,
-      sharedPlayback?.savedSimulationError,
       editorDocument,
       experience,
       state?.actors,
@@ -924,9 +924,6 @@ export function ScenarioEditorSurface({
       <SimulationIssueNotifications
         issues={simulationIssues.filter((issue) => issue.severity === "error")}
       />
-      <SimulationSaveStatusNotification
-        status={sharedPlayback?.savedSimulationStatus ?? null}
-      />
       <EditorSceneEnvironmentBridge
         active={active && environmentSceneReady}
         document={editorDocument}
@@ -940,6 +937,8 @@ export function ScenarioEditorSurface({
       {active ? (
         <EditorHeader
           document={editorDocument}
+          documentSaveStatus={documentSaveStatus}
+          playback={sharedPlayback}
           getDebugInformation={getDebugInformation}
           onExit={onExitToList}
           quality={quality}
@@ -1247,24 +1246,6 @@ function routeGroundPoint(
   return { x: point.x, z: point.z };
 }
 
-function SimulationSaveStatusNotification({
-  status,
-}: {
-  status: "saving" | "saved" | null;
-}) {
-  useScenarioNotification("scenario-simulation-save-status", status
-    ? {
-        severity: status === "saving" ? "progress" : "success",
-        source: "simulation",
-        message: status === "saving"
-          ? "Saving simulation…"
-          : "Simulation saved for this version",
-        detail: null,
-        ttlMs: status === "saved" ? 3_000 : null,
-      }
-    : null);
-  return null;
-}
 
 function SimulationIssueNotifications({
   issues,
