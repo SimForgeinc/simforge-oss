@@ -18,7 +18,7 @@ export const styles = stylex.create({
     color: "white",
   },
   compact: { borderTopWidth: 0, borderBottomWidth: 0, paddingBlock: 0, minWidth: 0 },
-  compactLabel: { fontSize: text.sizeXs, letterSpacing: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: colors.textSubtle },
+  compactLabel: { fontSize: text.sizeXs, letterSpacing: 0, whiteSpace: "normal", color: colors.textSubtle },
   compactStats: { flexDirection: "column", gap: space.xs, fontSize: text.sizeXs, letterSpacing: 0, textTransform: "none" },
   compactActions: { paddingLeft: 0 },
   compactMessage: { marginLeft: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },

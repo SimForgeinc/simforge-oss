@@ -20,7 +20,7 @@ export const styles = stylex.create({
   },
   choiceCurrent: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   choiceLabel: { fontSize: text.sizeSm, lineHeight: text.lineTight, fontWeight: text.weightSemibold },
-  choiceCopy: { fontSize: text.sizeXs, color: colors.textSubtle, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" },
+  choiceCopy: { fontSize: text.sizeXs, lineHeight: text.lineNormal, color: colors.textSubtle, minWidth: 0 },
   choiceTag: { fontFamily: text.fontMeta, fontSize: text.sizeXs, color: colors.accent },
   cache: { minWidth: 0, borderWidth: 1, borderStyle: "solid", borderColor: colors.lineStrong, padding: space.lg, backgroundColor: colors.glass },
 });
