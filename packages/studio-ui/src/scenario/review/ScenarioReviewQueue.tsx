@@ -6,14 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ClipboardCheck, RefreshCw } from "lucide-react";
 import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
-import { useSetPageTitle } from "../../components/TopBarSlot";
+import { RouteErrorState } from "../../components/state-frames";
+import { Keycap } from "../../components/Keycap";
 import { VideoPreviewTile } from "../../components/VideoPreviewTile";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { EmptyState } from "../../components/ui/empty-state";
 import { PageHeader } from "../../components/ui/page-header";
-import { cn } from "../../lib/utils";
-import { paneLoading, review } from "../scenario-controls.stylex";
+import { review } from "../scenario-controls.stylex";
 import {
   SCENARIO_REVIEW_QUEUE_PAGE_SIZE,
   ScenarioReviewQueuePageSchema,
@@ -53,12 +53,12 @@ async function fetchQueuePage(cursor?: string | null) {
 }
 
 export function ScenarioReviewQueue() {
-  useSetPageTitle("Scenario Review");
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const [items, setItems] = useState<ScenarioReviewQueueItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +73,7 @@ export function ScenarioReviewQueue() {
       setItems(page.items);
       setNextCursor(page.nextCursor);
       setActiveId(page.items[0]?.documentId ?? null);
+      setInitialized(true);
     } catch (loadError) {
       setError(errorMessage(loadError, "Failed to load the review queue."));
     } finally {
@@ -212,7 +213,7 @@ export function ScenarioReviewQueue() {
               disabled={loading}
               onClick={() => void loadInitial()}
             >
-              <RefreshCw className={cn(loading && "animate-spin")} />
+              <RefreshCw {...stylex.props(loading && styles.refreshing)} />
               Refresh
             </Button>
           </>
@@ -226,21 +227,17 @@ export function ScenarioReviewQueue() {
         >
           <span {...stylex.props(styles.shortcuts)}>Shortcuts</span>
           <span>
-            <kbd {...stylex.props(styles.kbdMono)}>
-              1–5
-            </kbd>{" "}
+            <Keycap>1–5</Keycap>{" "}
             rate selected
           </span>
           <span>
-            <kbd {...stylex.props(styles.kbdMono2)}>
-              n
-            </kbd>{" "}
+            <Keycap>n</Keycap>{" "}
             next scenario
           </span>
         </div>
       </div>
 
-      {error && (
+      {error && initialized && (
         <div
           role="alert"
           {...stylex.props(styles.alert)}
@@ -250,13 +247,14 @@ export function ScenarioReviewQueue() {
       )}
 
       <div {...stylex.props(styles.div2)}>
-        {loading ? (
+        {!initialized && loading ? (
           <CloudLoadingSurface
-          scope="pane"
-            xstyle={paneLoading.h420}
+            scope="screen"
             detail="Collecting unrated scenarios from this workspace."
             title="Loading the review queue…"
           />
+        ) : !initialized && error ? (
+          <RouteErrorState title="Could not load the review queue" description={error} onRetry={() => void loadInitial()} exitHref="/dashboard/scenario" exitLabel="Back to datasets" />
         ) : items.length === 0 ? (
           <EmptyState
             icon={<ClipboardCheck {...stylex.props(styles.clipboardcheckIcon)} aria-hidden />}
@@ -278,12 +276,7 @@ export function ScenarioReviewQueue() {
                     tabIndex={0}
                     aria-current={isActive ? "true" : undefined}
                     onFocus={() => setActiveId(item.documentId)}
-                    className={cn(
-                      "flex h-full flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      isActive && "border-primary/60 bg-card/80",
-                      ratingErrorId === item.documentId && "border-destructive/60",
-                    )}
+                    {...stylex.props(styles.reviewCard, isActive && styles.activeCard, ratingErrorId === item.documentId && styles.failedCard)}
                   >
                     <VideoPreviewTile
                       label={item.title}

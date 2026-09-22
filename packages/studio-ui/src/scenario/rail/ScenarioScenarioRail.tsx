@@ -15,11 +15,11 @@ import {
   Play,
   Plus,
 } from "lucide-react";
-import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
+import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
+import { ListSkeleton } from "../../components/ListSkeleton";
 import type { ScenarioDocumentSummaryDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
-import { cn } from "../../lib/utils";
-import { control, paneLoading, rail } from "../scenario-controls.stylex";
+import { control, rail } from "../scenario-controls.stylex";
 import { documentMapLabel, documentName } from "../list/document-list-utils";
 
 /**
@@ -219,33 +219,23 @@ export function ScenarioScenarioRail({
           </p>
         ) : null}
         {loading && documents.length === 0 ? (
-          <CloudLoadingSurface
-          scope="pane"
-            xstyle={paneLoading.h52}
-            detail="Reading scenarios in this dataset."
-            title="Loading scenarios"
-          />
-        ) : documents.length === 0 ? (
+          <ListSkeleton label="Loading scenarios" />
+        ) : error && documents.length === 0 ? null : documents.length === 0 ? (
           <p {...stylex.props(styles.noScenariosInThisDatasetYet)}>
             No scenarios in this dataset yet.
           </p>
         ) : (
-          <ul className="divide-y divide-white/10">
+          <ul>
             {documents.map((document) => {
               const active = document.id === activeDocumentId;
               return (
-                <li key={document.id}>
+                <li key={document.id} {...stylex.props(styles.row)}>
                   <button
                     ref={active ? activeRef : undefined}
                     type="button"
                     aria-current={active ? "true" : undefined}
                     onClick={() => onSelectDocument(document.id)}
-                    className={cn(
-                      "flex w-full flex-col gap-0.5 border-l-2 bg-transparent px-2 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      active
-                        ? "border-l-primary text-foreground"
-                        : "border-l-transparent text-white/75 hover:border-l-primary/60 hover:text-white",
-                    )}
+                    {...stylex.props(styles.documentButton, active ? styles.activeDocument : styles.idleDocument)}
                     data-document-id={document.id}
                   >
                     <span {...stylex.props(styles.spanMetaMedium)}>

@@ -97,10 +97,6 @@ export const menu = stylex.create({
 export const paneLoading = stylex.create({
   /** `min-h-24` */
   h24: { minHeight: "6rem" },
-  /** `min-h-52` */
-  h52: { minHeight: "13rem" },
-  /** `min-h-[420px]` */
-  h420: { minHeight: "420px" },
 });
 
 /** `Button` overrides in `scenario/list`. */

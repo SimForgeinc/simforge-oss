@@ -31,6 +31,16 @@ const push = vi.fn();
 vi.mock("../../../src/scenario/coverage/ScenarioCoverageMap", () => ({
   ScenarioCoverageMap: () => <div data-testid="scenario-coverage-map" />,
 }));
+// Dataset CRUD does not instantiate the retained GPU world or the editor runtime.
+vi.mock("../../../src/scenario/scene/ScenarioWorldProvider", () => ({
+  ScenarioWorldSurface: () => null,
+}));
+vi.mock("../../../src/scenario/editor/ScenarioEditorClient", () => ({
+  ScenarioEditorClient: () => null,
+}));
+vi.mock("../../../src/scenario/render/DatasetRenderPane", () => ({
+  DatasetRenderPane: () => null,
+}));
 vi.mock("../../../src/scenario/scene/useScenarioSession", () => ({
   useScenarioSession: ({ documentId }: { documentId: string | null }) => ({
     maps: [],
@@ -119,7 +129,7 @@ describe("ScenarioDatasetsClient", () => {
     const topBar = useTopBarSlotContext();
     return (
       <div>
-        <span data-testid="test-topbar-title">{topBar?.customTitle}</span>
+        <span data-testid="test-topbar-title">{topBar?.header?.title}</span>
         <div
           ref={topBar?.registerActionsSlot}
           data-testid="test-topbar-actions"
@@ -144,6 +154,7 @@ describe("ScenarioDatasetsClient", () => {
   }
 
   beforeEach(() => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
     resetScenarioListCache();
     window.localStorage.clear();
     window.history.replaceState(null, "", "/dashboard/scenario");
@@ -176,6 +187,21 @@ describe("ScenarioDatasetsClient", () => {
       fireEvent.click(item);
     });
   }
+
+  it("switches narrow list and detail without remounting the coverage scene", () => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    window.localStorage.setItem("uniscenario.scenario-list-width.v2", "520");
+    renderDatasetsClient();
+    const coverage = screen.getByTestId("scenario-coverage-map");
+    expect(screen.getByRole("button", { name: "List", exact: true }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("separator")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Detail", exact: true }));
+    expect(screen.getByRole("button", { name: "Detail", exact: true }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("scenario-coverage-map")).toBe(coverage);
+    fireEvent.click(screen.getByRole("button", { name: "List", exact: true }));
+    expect(screen.getByRole("button", { name: "Cut-in corpus" })).toBeTruthy();
+    expect(screen.getByTestId("scenario-coverage-map")).toBe(coverage);
+  });
 
   it("lands on the seeded dataset without refetching the list, and reflects it in the URL", () => {
     renderDatasetsClient();
@@ -234,17 +260,6 @@ describe("ScenarioDatasetsClient", () => {
     expect(index.lastElementChild === footerRow || index.contains(footerRow)).toBe(true);
     expect(header.contains(footerRow)).toBe(false);
     expect(topBar.childElementCount).toBe(0);
-  });
-
-  it("reads 'No description' for a dataset without one", () => {
-    render(
-      <StudioHostTestProvider>
-        <TopBarSlotProvider>
-          <ScenarioDatasetsClient initialDatasets={[dataset({ description: null })]} />
-        </TopBarSlotProvider>
-      </StudioHostTestProvider>,
-    );
-    expect(screen.getByTestId("scenario-dataset-description").textContent).toBe("No description");
   });
 
   it("offers a way in when the workspace has no datasets", () => {

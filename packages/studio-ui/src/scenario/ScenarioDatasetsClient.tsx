@@ -10,14 +10,16 @@ import type {
 } from "../lib/scenario/contracts";
 import type { CityViewer } from "@simforge-oss/viewer";
 import type { ActorRenderer } from "@simforge-oss/viewer";
-import { useSetPageTitle } from "../components/TopBarSlot";
+import { useRouteHeader } from "../components/TopBarSlot";
 import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/ui/empty-state";
 import { CloudLoadingSurface } from "../components/CloudLoadingSurface";
 import { CopyableErrorMessage } from "./list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "./list/MetadataDetailsDialog";
 import { NewDatasetDialog } from "./list/NewDatasetDialog";
-import { ResizablePanel } from "./ResizablePanel";
+import { WorkspacePanes, type WorkspacePane } from "../components/WorkspacePanes";
+import { ListSkeleton } from "../components/ListSkeleton";
+import { RouteErrorState } from "../components/state-frames";
 import { ScenarioDatasetDetailClient } from "./dataset/ScenarioDatasetDetailClient";
 import { ScenarioEditorClient } from "./editor/ScenarioEditorClient";
 import { DatasetRenderPane } from "./render/DatasetRenderPane";
@@ -41,7 +43,6 @@ import {
   hydrateScenarioViewStateFromStorage,
   persistScenarioViewState,
 } from "./list/scenarioViewState";
-import { paneLoading } from "./scenario-controls.stylex";
 import { runDatasetMorph } from "./list/datasetMorph";
 import { driveHref } from "./drive-route";
 
@@ -110,6 +111,7 @@ export function ScenarioDatasetsClient({
         ? scenarioListCache.datasets
         : null),
   );
+  const [activePane, setActivePane] = useState<WorkspacePane>(() => searchParams.get("pane") === "render" ? "detail" : "list");
   const [newDatasetOpen, setNewDatasetOpen] = useState(false);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [newDatasetError, setNewDatasetError] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export function ScenarioDatasetsClient({
   const openDataset = openDatasetId
     ? (datasets?.find((dataset) => dataset.id === openDatasetId) ?? null)
     : null;
-  useSetPageTitle(openDocumentId ? "Editor" : openDataset?.name ?? "Dataset");
+  useRouteHeader({ title: openDocumentId ? "Editor" : openDataset?.name ?? "Datasets" });
 
   // Return to the edited map's group even on a gallery deep link: the hidden
   // list deliberately defers its fetch, so it cannot be the identity authority.
@@ -332,6 +334,7 @@ export function ScenarioDatasetsClient({
       const closing =
         datasetRightPaneMode === "render" && renderTarget?.id === document.id;
       const nextMode: DatasetRightPaneMode = closing ? "map" : "render";
+      setActivePane("detail");
       setDatasetRightPaneMode(nextMode);
       setRenderTarget(closing ? null : document);
       // A different scenario starts at its own gallery, never inside the previous one's theater.
@@ -453,6 +456,7 @@ export function ScenarioDatasetsClient({
 
   const loadDatasets = useCallback(
     async (signal?: AbortSignal) => {
+      setError(null);
       try {
         const next = await studioHost.projects.listDatasets(signal);
         if (signal?.aborted) return;
@@ -650,7 +654,7 @@ export function ScenarioDatasetsClient({
           absent while editing, rather than rendering invisibly behind it. */}
       {editing ? (
         <ScenarioWorldSurface
-          className="absolute inset-0 z-0"
+          {...stylex.props(styles.worldSurface)}
           target={worldTarget}
           pendingTarget={worldTarget === null}
           frameOnEnter
@@ -663,21 +667,18 @@ export function ScenarioDatasetsClient({
 
       {/* Keep the list's data and scroll position, not a second GPU scene. */}
       <div
-        className={`pointer-events-none relative z-10 flex h-full min-h-0 w-full flex-row ${
-          editing ? "invisible pointer-events-none" : ""
-        }`}
+        {...stylex.props(styles.listSession, editing && styles.hiddenSession)}
         aria-hidden={editing ? "true" : undefined}
         data-testid="scenario-list-session"
       >
-        <ResizablePanel
+        <WorkspacePanes
           storageKey={SCENARIO_LIST_WIDTH_KEY}
-          label="Resize the scenario list"
-          variant="blur-gradient"
-          collapsed={renderImmersive}
-          {...stylex.props(styles.resizablepanel)}
-        >
-          {/* Strip and column share one gradient panel, so switching datasets moves nothing but the
-              column's contents and never remounts the world beneath. */}
+          railLabel="Resize the scenario list"
+          railVariant="blur-gradient"
+          railCollapsed={renderImmersive}
+          activePane={activePane}
+          onActivePaneChange={setActivePane}
+          rail={
           <div {...stylex.props(styles.panelGrid)}>
             <DatasetStrip
               datasets={orderedDatasets}
@@ -721,12 +722,7 @@ export function ScenarioDatasetsClient({
                 onMapGroupsChange={setMapGroups}
               />
             ) : datasets === null ? (
-              <CloudLoadingSurface
-                scope="pane"
-                xstyle={paneLoading.h52}
-                detail="Reading this workspace."
-                title="Loading datasets"
-              />
+              <ListSkeleton label="Loading datasets" />
             ) : (
               <EmptyState
                 xstyle={styles.emptyColumn}
@@ -746,7 +742,8 @@ export function ScenarioDatasetsClient({
               />
             )}
           </div>
-        </ResizablePanel>
+        }
+          stage={
 
         <div {...stylex.props(styles.divRelative)}>
           {/* The browsing surface: coverage regions, not a city. The blur is the render tab's
@@ -756,9 +753,7 @@ export function ScenarioDatasetsClient({
               control (hover a region, click to select, click bare basemap to clear), so this
               surface takes pointer events back. */}
           <div
-            className={`pointer-events-auto absolute inset-0 render-surface-motion ${
-              renderPaneOpen ? "scale-[1.02] blur-[14px]" : ""
-            }`}
+            {...stylex.props(styles.coverageSurface, renderPaneOpen && styles.coverageBlurred)}
           >
             {!editing ? (
               <ScenarioCoverageMap
@@ -785,7 +780,7 @@ export function ScenarioDatasetsClient({
           ) : null}
           {/* Errors float over the scene rather than sitting in the rail: a failed delete belongs next to
             nothing in particular, and the rail is 220px wide — too narrow for a message plus a retry. */}
-          {error ? (
+          {error && datasets !== null ? (
             <div {...stylex.props(styles.divAbsoluteFlex)}>
               <CopyableErrorMessage
                 message={error}
@@ -804,6 +799,8 @@ export function ScenarioDatasetsClient({
             </div>
           ) : null}
         </div>
+          }
+        />
         <NewDatasetDialog
           open={newDatasetOpen}
           name={newDatasetName}
@@ -855,9 +852,7 @@ export function ScenarioDatasetsClient({
       && scenarioSession.maps ? (
         <div
           aria-busy={editorReady ? undefined : true}
-          className={`pointer-events-none absolute inset-0 z-20 visible opacity-100 ${
-            editorReady ? "editor-mode-main-enter" : ""
-          }`}
+          className={[stylex.props(styles.editorSession).className, editorReady ? "editor-mode-main-enter" : ""].filter(Boolean).join(" ")}
           data-editor-ready={String(editorReady)}
           data-testid="scenario-editor-session"
         >
@@ -880,15 +875,17 @@ export function ScenarioDatasetsClient({
         </div>
       ) : null}
 
+      {datasets === null && !editing ? (
+        error ? <RouteErrorState xstyle={styles.errorCover} title="Could not load datasets" description={error} onRetry={retryFailedOperation} /> :
+        <CloudLoadingSurface scope="screen" title="Loading datasets" detail="Reading this workspace." />
+      ) : null}
       {editing && !editorReady ? (
-        <CloudLoadingSurface
-          scope="screen"
-          title={scenarioSession.failed ? "The scenario could not be opened" : "Opening the scenario"}
-          detail={scenarioSession.message ?? "Reading the scenario and its map."}
-          role={scenarioSession.failed ? "alert" : "status"}
-        >
-          {scenarioSession.failed ? <Button onClick={() => openDocument(null)}>Back to scenarios</Button> : null}
-        </CloudLoadingSurface>
+        scenarioSession.failed ? (
+          <RouteErrorState xstyle={styles.errorCover} title="The scenario could not be opened" description={scenarioSession.message}
+            onRetry={() => window.location.reload()} exitHref="/dashboard/scenario" exitLabel="Back to scenarios" />
+        ) : (
+          <CloudLoadingSurface scope="screen" title="Opening the scenario" detail={scenarioSession.message ?? "Reading the scenario and its map."} />
+        )
       ) : null}
     </section>
     </ScenarioSessionProvider>
