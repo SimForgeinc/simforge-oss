@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { RenderIntentV1 } from '@simforge-oss/scenario';
+import { RenderSourceTransformSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID } from './actor-assets.js';
@@ -55,6 +55,13 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
   videos: z.array(z.strictObject({
     actorId: IdentifierSchema,
     sensorId: IdentifierSchema,
+    /** Physical sensor metadata retained independently of generated identifiers. */
+    sensor: z.strictObject({
+      label: z.string().trim().min(1).max(200).optional(),
+      role: z.enum(['camera', 'lidar', 'radar']),
+      modality: z.enum(['rgb', 'depth', 'semantic', 'instance', 'lidar', 'radar']),
+      mount: RenderSourceTransformSchema,
+    }).optional(),
     relativePath: IdentifierSchema,
     width: z.number().int().positive(),
     height: z.number().int().positive(),

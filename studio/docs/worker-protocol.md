@@ -344,6 +344,15 @@ own frame count, dimensions, and frame rate, while the run's tick count is the
 union of every source's frame timestamps. Any mismatch answers 409
 `native_diagnostics_evidence_mismatch`.
 
+New native manifests retain each video's `sensor` metadata: physical `role`
+(`camera`, `lidar`, or `radar`), modality, mount, and the authored label when
+present. The label is pinned in the render source's `sensorLabel`; it is not a
+generated sensor ID. Older manifests remain readable. Artifact DTOs resolve
+names from the immutable render source/revision (including the canonical chase
+camera), and expose the clip's simulated `durationSeconds` for sensor outputs.
+The render pane groups each physical sensor's video/archive together; IDs remain
+internal keys, not display labels.
+
 `POST /api/simforge/internal/render-jobs/{jobId}/fail`
 
 ```json

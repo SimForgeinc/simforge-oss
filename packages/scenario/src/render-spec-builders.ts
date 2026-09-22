@@ -143,6 +143,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
         const common = {
           actorId: selection.actorId,
           sensorId: sensor.id,
+          ...(sensor.label?.trim() ? { sensorLabel: sensor.label.trim() } : {}),
           outputName: `${selection.actorId}-${sensor.id}-${modality}`,
           transform: {
             position: sensor.mount.position,

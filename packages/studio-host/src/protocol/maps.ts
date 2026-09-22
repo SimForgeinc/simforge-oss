@@ -8,7 +8,7 @@ import type {
   ScenarioRenderArtifactDto,
 } from "../contracts";
 import { endpoint } from "./endpoint";
-import { array, nullable, number, object, passthrough, record, string, tuple, type Shape } from "./schema";
+import { array, nullable, number, object, optional, passthrough, record, string, tuple, type Shape } from "./schema";
 
 // ── DTO decoders ─────────────────────────────────────────────────────────────
 
@@ -84,6 +84,8 @@ export const renderArtifactShape: Shape<ScenarioRenderArtifactDto> = {
   relationship: nullable(string()),
   renderAttemptId: nullable(string()),
   identity: nullable(ScenarioArtifactIdentitySchema),
+  sensorLabel: optional(nullable(string())),
+  durationSeconds: optional(nullable(number())),
   createdAt: string(),
   verifiedAt: nullable(string()),
 };

@@ -10,6 +10,7 @@ import { SelectMenuField } from "../../../components/ui/select-menu";
 import { useScenarioNotification } from "../status";
 import { RenderArtifactList } from "./RenderArtifactList";
 import { VideoPreviewModal } from "./VideoPreviewModal";
+import { artifactDisplayName } from "./render-view-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ArtifactsWorkspacePanel.stylex";
 
@@ -89,7 +90,7 @@ export function ArtifactsWorkspacePanel() {
     const query = search.trim().toLowerCase();
     if (!query) return artifacts;
     return artifacts.filter((artifact) =>
-      [artifact.artifactKind, artifact.mediaType, artifact.relationship, artifact.renderJobId, artifact.sha256]
+      [artifactDisplayName(artifact), artifact.artifactKind, artifact.mediaType, artifact.relationship, artifact.renderJobId, artifact.sha256]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -167,7 +168,7 @@ export function ArtifactsWorkspacePanel() {
         mediaType={preview?.mediaType ?? ""}
         onClose={() => setPreview(null)}
         open={preview != null}
-        title={preview?.artifactKind ?? "Preview"}
+        title={preview ? artifactDisplayName(preview) : "Preview"}
         url={preview && "url" in preview ? preview.url : null}
       />
     </div>

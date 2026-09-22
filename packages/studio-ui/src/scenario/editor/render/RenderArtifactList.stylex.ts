@@ -65,11 +65,9 @@ export const styles = stylex.create({
     minWidth: "0px",
     flex: "1 1 0%",
   },
-  // truncate text-xs font-medium text-foreground
+  // Names wrap inside the row; metadata can truncate with its full title.
   xsInkMedium: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    overflowWrap: "anywhere",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: text.weightMedium,

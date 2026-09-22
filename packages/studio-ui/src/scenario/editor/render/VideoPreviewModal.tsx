@@ -60,7 +60,7 @@ export function VideoPreviewModal({
                 {eyebrow}
               </p>
             ) : null}
-            <h2 {...stylex.props(styles.smSemiboldTruncate)}>{title}</h2>
+            <h2 {...stylex.props(styles.smSemiboldTruncate)} title={title}>{title}</h2>
           </div>
           <Button aria-label="Close preview" onClick={onClose} size="icon" variant="ghost">
             <X aria-hidden="true" className={stylex.props(styles.size4).className} />

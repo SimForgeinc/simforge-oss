@@ -15,6 +15,7 @@ import type {
   ScenarioRenderArtifactDto,
   ScenarioRendererEngine,
   ScenarioRenderJobMode,
+  ScenarioRenderJobDetailDto,
   ScenarioRenderJobState,
 } from "@simforge-oss/studio-host";
 
@@ -296,56 +297,66 @@ export function formatElapsed(fromIso: string | null, toIso: string | null): str
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-/**
- * The managed pipeline's linear stages, in the order the control plane emits them.
- *
- * Only the kinds that happen once and mean "we got this far". `progress` is excluded because it
- * repeats and carries the percentage instead; `retry_queued`, `failed` and `cancelled` are outcomes
- * rather than steps. Both are shown, just not as rungs on this ladder.
- */
-export const RENDER_PIPELINE_STAGES: readonly { kind: string; label: string; hint: string }[] = [
-  { kind: "accepted", label: "Accepted", hint: "The control plane took the request" },
-  { kind: "assets_validated", label: "Assets checked", hint: "Map and actor assets resolved" },
-  { kind: "plan_compiled", label: "Plan compiled", hint: "The frozen scenario became a run plan" },
-  { kind: "render_started", label: "Rendering", hint: "A worker is producing frames" },
-  { kind: "artifact_uploaded", label: "Artifacts uploaded", hint: "Output is landing in storage" },
-  { kind: "completed", label: "Completed", hint: "Every artifact is verified" },
-];
+/** Worker stages, including preparation/encoding rather than calling all work "rendering". */
+export const RENDER_PIPELINE_STAGES = [
+  { kind: "queued", label: "Queued", hint: "Waiting for a worker" },
+  { kind: "leased", label: "Leased", hint: "Worker assigned" },
+  { kind: "downloading", label: "Downloading inputs", hint: "Fetching and verifying input files" },
+  { kind: "preparing", label: "Preparing", hint: "Loading the scene" },
+  { kind: "rendering", label: "Rendering", hint: "Producing simulation ticks" },
+  { kind: "encoding", label: "Encoding", hint: "Finishing videos and sensor archives" },
+  { kind: "uploading", label: "Uploading artifacts", hint: "Sending outputs to storage" },
+  { kind: "finalizing", label: "Finalizing", hint: "Verifying stored outputs" },
+  { kind: "completed", label: "Done", hint: "Every artifact is verified" },
+] as const;
 
 export type RenderStageState = "done" | "active" | "pending" | "stopped";
 
-/**
- * Which pipeline stages a job has reached, from its real event stream.
- *
- * The point is to answer "is anything happening" without inventing anything. A stage is `done` only
- * when an event says so, and it carries that event's own timestamp.
- *
- * Progress along the ladder is monotonic, so `active` — the one thing being waited on — is the first
- * unreported stage *after the furthest one reached*, not the first unreported stage overall. A job
- * that reported `render_started` without `plan_compiled` has plainly passed the plan, and pointing
- * at it as the current step would send the author looking for a problem that is behind them. An
- * earlier gap like that is left `stopped`: no event said it happened, and nothing is waiting on it.
- *
- * Once the job stops moving, everything unreported is `stopped` rather than left looking imminent.
- */
-export function renderPipelineStages(
-  events: readonly { eventKind: string; createdAt: string }[],
-  jobState: ScenarioRenderJobState,
-): { kind: string; label: string; hint: string; at: string | null; state: RenderStageState }[] {
-  const live = renderStateVisual(jobState).live;
-  const reached = RENDER_PIPELINE_STAGES.map((stage) =>
-    events.find((candidate) => candidate.eventKind === stage.kind) ?? null);
-  const furthest = reached.reduce((last, event, index) => (event ? index : last), -1);
-  const activeIndex = live
-    ? reached.findIndex((event, index) => event === null && index > furthest)
-    : -1;
-  return RENDER_PIPELINE_STAGES.map((stage, index) => {
-    const event = reached[index];
-    if (event) return { ...stage, at: event.createdAt, state: "done" as const };
-    if (index === activeIndex) return { ...stage, at: null, state: "active" as const };
-    if (!live || index < furthest) return { ...stage, at: null, state: "stopped" as const };
-    return { ...stage, at: null, state: "pending" as const };
+/** Header, stages and counters share the current attempt's durable worker records. */
+export function renderPipelineStages(detail: ScenarioRenderJobDetailDto) {
+  const live = renderStateVisual(detail.jobState).live;
+  const attempt = detail.attempts.find((item) => item.attemptNumber === detail.attemptCount);
+  const records = [...(detail.progressRecords ?? []), ...(detail.progressDetail ? [detail.progressDetail] : [])]
+    .filter((record) => record.attempt === detail.attemptCount
+      && (record.event === "stage.started" || record.event === "stage.progress"));
+  const newest = records.reduce<(typeof records)[number] | null>(
+    (last, record) => !last || record.sequence > last.sequence ? record : last, null,
+  );
+  const currentKind = detail.jobState === "succeeded" ? "completed"
+    : detail.jobState === "queued" ? "queued"
+    : newest && "stage" in newest ? newest.stage : attempt ? "leased" : "queued";
+  const currentIndex = RENDER_PIPELINE_STAGES.findIndex((stage) => stage.kind === currentKind);
+  const stages = RENDER_PIPELINE_STAGES.map((stage, index) => {
+    const record = records.filter((item) => "stage" in item && item.stage === stage.kind)
+      .reduce<(typeof records)[number] | null>((last, item) => !last || item.sequence > last.sequence ? item : last, null);
+    let hint: string = stage.kind === "leased" && attempt ? attempt.workerNodeId : stage.hint;
+    if (record?.event === "stage.progress") {
+      const unit = stage.kind === "downloading" ? "files" : stage.kind === "uploading" ? "artifacts"
+        : stage.kind === "rendering" ? "ticks" : record.unit;
+      hint = `${record.completed}/${record.total} ${unit}`;
+      if (stage.kind === "rendering") hint += ` · ${Math.round(100 * record.completed / record.total)}%`;
+      if (record.downloadedBytes !== undefined && record.totalBytes !== undefined) {
+        hint += ` · ${formatBytes(record.downloadedBytes)} / ${formatBytes(record.totalBytes)}`;
+      }
+    }
+    const at = stage.kind === "queued" ? detail.createdAt
+      : stage.kind === "leased" ? attempt?.leasedAt ?? null
+      : stage.kind === "completed" ? detail.completedAt : record?.timestamp ?? null;
+    const state: RenderStageState = detail.jobState === "succeeded" ? at !== null ? "done" : "stopped"
+      : index === currentIndex && live ? "active"
+      : index < currentIndex && (at !== null || stage.kind === "queued") ? "done"
+      : !live || index < currentIndex ? "stopped" : "pending";
+    return { ...stage, hint, at, state };
   });
+  const current = stages[currentIndex]!;
+  const progress = newest?.event === "stage.progress" ? newest : null;
+  return {
+    stages,
+    label: live ? current.label : renderStateVisual(detail.jobState).label,
+    percent: detail.jobState === "succeeded" ? 100
+      : live && detail.jobState !== "queued" && progress ? 100 * progress.completed / progress.total : null,
+    updatedAt: newest?.timestamp ?? attempt?.leasedAt ?? detail.createdAt,
+  };
 }
 
 /** The newest event, by ordinal rather than array order. Drives the "last heard from" line. */
@@ -363,27 +374,52 @@ export function formatCostCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-/**
- * Group artifacts for display: videos first, then images, then everything else, each alphabetical by
- * kind. Videos lead because that is what an author opened the tab for; the rest is evidence.
- */
+/** A sensor's authored name belongs to the immutable revision, not its generated ID. */
+export function artifactSensorName(artifact: ScenarioRenderArtifactDto): string | null {
+  if (!artifact.identity?.sensorId) return null;
+  const label = artifact.sensorLabel?.trim();
+  const modality = artifact.identity.modality;
+  const role = modality === "lidar" ? "Lidar" : modality === "radar" ? "Radar" : "Camera";
+  if (label && label !== artifact.identity.sensorId && label !== artifact.identity.actorId) {
+    return label.toLowerCase().includes(role.toLowerCase()) ? label : `${label} ${role.toLowerCase()}`;
+  }
+  return role;
+}
+
+export function artifactDisplayName(artifact: ScenarioRenderArtifactDto): string {
+  const sensor = artifactSensorName(artifact);
+  const role = artifact.identity?.role ?? artifact.artifactKind;
+  const modality = artifact.identity?.modality;
+  const kind = role === "sensorArchive" ? "point archive"
+    : role === "video" && modality === "rgb" ? "RGB video"
+    : role === "video" && modality && !["lidar", "radar"].includes(modality) ? `${humanizeCode(modality)} video`
+    : humanizeCode(role);
+  return sensor ? `${sensor} · ${kind}` : kind;
+}
+
+/** Keep each physical sensor's video and point archive together. IDs are keys only. */
 export function groupArtifacts<T extends ScenarioRenderArtifactDto & { url?: string | null }>(
   artifacts: readonly T[],
-): { title: string; items: T[] }[] {
-  const videos: T[] = [];
-  const images: T[] = [];
-  const others: T[] = [];
+): { key: string; title: string; items: T[] }[] {
+  const groups = new Map<string, { key: string; title: string; items: T[] }>();
   for (const artifact of artifacts) {
-    if (artifact.mediaType.startsWith("video/")) videos.push(artifact);
-    else if (isImage(artifact)) images.push(artifact);
-    else others.push(artifact);
+    const sensor = artifactSensorName(artifact);
+    const key = sensor ? `${artifact.identity!.actorId}\u0000${artifact.identity!.sensorId}` : "evidence";
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, title: sensor ?? "Render evidence", items: [] };
+      groups.set(key, group);
+    }
+    group.items.push(artifact);
   }
-  const byKind = (left: T, right: T) => left.artifactKind.localeCompare(right.artifactKind);
-  return [
-    { title: "Videos", items: videos.sort(byKind) },
-    { title: "Images", items: images.sort(byKind) },
-    { title: "Files", items: others.sort(byKind) },
-  ].filter((group) => group.items.length > 0);
+  return [...groups.values()].sort((a, b) =>
+    Number(a.key === "evidence") - Number(b.key === "evidence") || a.title.localeCompare(b.title),
+  ).map((group) => ({
+    ...group,
+    items: group.items.sort((a, b) =>
+      Number(b.mediaType.startsWith("video/")) - Number(a.mediaType.startsWith("video/"))
+      || artifactDisplayName(a).localeCompare(artifactDisplayName(b))),
+  }));
 }
 
 /**
