@@ -120,6 +120,28 @@ export function DriveSession({
   onExit: () => void;
 }) {
   const isTake = mode === "take";
+  const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
+    const assets = urls.flatMap((url) => {
+      const parsed = new URL(url, window.location.origin);
+      const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
+      return match ? [{ mapVersionId: map.versionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
+    });
+    if (assets.length === 0) return new Map<string, string>();
+    const response = await fetch("/api/simforge/maps/cache-download-urls", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ assets }),
+      signal,
+    });
+    if (!response.ok) throw new Error(`URL resolver failed: ${response.status}`);
+    const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
+    return new Map(urls.flatMap((url) => {
+      const parsed = new URL(url, window.location.origin);
+      const asset = payload.assets?.find((candidate) => parsed.pathname.endsWith(`/browser-assets/${candidate.relativePath.split("/").map(encodeURIComponent).join("/")}`));
+      return asset ? [[url, asset.url] as const] : [];
+    }));
+  }, [map.versionId]);
   const graphicsTarget = useMemo(() => ({ manifestUrl: map.browserManifestUrl, label: map.label }), [map.browserManifestUrl, map.label]);
   useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const [startError, setStartError] = useState<string | null>(null);
@@ -691,7 +713,6 @@ export function DriveSession({
     if (actorIsPresent(world.latestFrame, egoActorId)) return;
     setStartError("The driven vehicle left the world. Driving the clip again is the way back.");
   }, [egoActorId, world.latestFrame]);
-
   const status = startError
     ?? (world.status === "error" ? world.error : null)
     ?? (takePhase.kind === "failed" ? `The drive was not recorded: ${takeError ?? "unknown reason"}` : null)
@@ -713,7 +734,7 @@ export function DriveSession({
         onMapLoaded={() => setMapLoaded(true)}
         onReady={onViewerReady}
         onDisposed={onViewerDisposed}
-        initialOptions={sceneViewerOptions(quality)}
+        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls }}
         role="application"
         tabIndex={0}
       />
