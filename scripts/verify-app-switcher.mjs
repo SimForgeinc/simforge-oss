@@ -1,8 +1,8 @@
 /**
  * Proves the minimal app switcher against a running Studio host: the overlay
  * offers exactly the three product tabs with their capability lines, the
- * utilities keep every other surface reachable, and the graphics level is one
- * button that advances a level per click.
+ * utilities keep every other surface reachable, and the bar under the tabs is
+ * one frame with no graphics-level control (Render Settings owns that).
  *
  *   node scripts/verify-app-switcher.mjs [--data-root ~/.simforge/cloud] [--out /tmp/ss-switcher]
  *
@@ -97,27 +97,10 @@ for (const href of [
   check(utilities.includes(href), `utility link reaches ${href}`);
 }
 
-const level = page.getByTestId("app-switcher-graphics-level");
-const buttons = await level.evaluateAll((nodes) => nodes.length);
-check(buttons === 1, `graphics level is one control, got ${buttons}`);
-const order = ["minimal", "high"];
-const start = await level.getAttribute("data-quality");
-const seen = [start];
-for (let step = 0; step < order.length; step += 1) {
-  await level.click();
-  seen.push(await level.getAttribute("data-quality"));
-}
-const expected = [...Array(order.length + 1)].map(
-  (_unused, step) => order[(order.indexOf(start) + step) % order.length],
-);
-check(
-  JSON.stringify(seen) === JSON.stringify(expected),
-  `clicks advance levels ${JSON.stringify(seen)} == ${JSON.stringify(expected)}`,
-);
-const stored = await page.evaluate(() =>
-  window.localStorage.getItem("simforge.rendering-preference.v1"),
-);
-check(stored === seen[seen.length - 1], `preference persisted as ${stored}`);
+const levelControls = await page.getByTestId("app-switcher-graphics-level").count();
+check(levelControls === 0, `the bar has no graphics-level control, got ${levelControls}`);
+const footers = await dialog.getByTestId("app-switcher-footer").count();
+check(footers === 1, `utilities and account share one bar, got ${footers}`);
 check(
   consoleErrors.length === 0,
   `no page errors on the switcher, got ${consoleErrors.slice(0, 3).join(" | ")}`,

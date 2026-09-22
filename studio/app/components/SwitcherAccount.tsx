@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioHostCapabilities, StudioHostIdentity } from "@simforge-oss/studio-host";
-import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
+import { card, chip } from "@/app/components/host-status-cards.stylex";
 import { CloudConnectorChip, WorkspaceChip } from "@/app/host";
 import { signOutOfHost, switcherAccountKind } from "@/app/lib/host/account-session";
 
@@ -33,7 +33,6 @@ export function AccountChip({
 
   return (
     <div {...stylex.props(chip.root)} data-testid="account-chip">
-      <span aria-hidden="true" {...stylex.props(lamp.base, lamp.connected)} />
       <div {...stylex.props(chip.body)}>
         <p {...stylex.props(chip.eyebrow)}>Account</p>
         <p {...stylex.props(card.truncate, chip.summary)} title={name}>
