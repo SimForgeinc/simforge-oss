@@ -1600,6 +1600,15 @@ export class CityViewer {
     if (!this.renderingSuspended && !this.benchmarkActive) this.controls.update(dt);
     this.phaseStats.controls.push(performance.now() - phaseStart);
 
+    // Integrations move actors and the camera for *this* frame, so they run
+    // before anything reads the camera and before the draw. Run after the
+    // draw, whatever they wrote was shown a frame late — and anything written
+    // between frames (a message handler) was shown against the previous
+    // frame's camera, which is how a followed car came to shake on screen.
+    phaseStart = performance.now();
+    this.onFrame?.(dt);
+    this.phaseStats.integration.push(performance.now() - phaseStart);
+
     if (!this.renderingSuspended) {
       this.camera.updateMatrixWorld();
       this.camera.getWorldPosition(_cameraPos);
@@ -1694,13 +1703,15 @@ export class CityViewer {
     // the display actually did, including time lost to the compositor.
     this.frameStats.push(Math.min(1000, dt * 1000));
     this.fps = 1000 / Math.max(0.001, this.frameStats.avg());
-    phaseStart = performance.now();
-    this.onFrame?.(dt);
-    this.phaseStats.integration.push(performance.now() - phaseStart);
     this.benchmarkFrameHook?.();
   };
 
-  /** Optional per-frame hook (used by the benchmark and by integrations). */
+  /**
+   * Optional per-frame hook (used by the benchmark and by integrations). Runs
+   * once per animation frame after the camera controls and before the draw,
+   * with the frame's wall-clock delta in seconds (capped at 0.1), so anything
+   * it moves is on screen in the same frame.
+   */
   onFrame: ((dt: number) => void) | null = null;
 
   private updateCityFrustum(): void {
