@@ -6,7 +6,7 @@ export const styles = stylex.create({
   worldSurface: { position: "absolute", inset: 0, zIndex: 0 },
   listSession: { position: "relative", zIndex: 10, display: "flex", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
   hiddenSession: { visibility: "hidden", pointerEvents: "none" },
-  coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: "300ms" },
+  coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: { default: "420ms", "@media (prefers-reduced-motion: reduce)": "0ms" } },
   coverageBlurred: { transform: "scale(1.02)", filter: "blur(14px)" },
   editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: 20, visibility: "visible", opacity: 1 },
   // relative h-full min-h-0 overflow-hidden bg-background text-foreground
