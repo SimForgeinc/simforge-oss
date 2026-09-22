@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { WelcomeScreen } from "@simforge-oss/studio-ui/onboarding";
-import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
+import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
-import { inlineSignIn } from "../onboarding-layout.stylex";
+import { inlineSignIn } from "@/app/onboarding/onboarding-layout.stylex";
 
 const MAPS_PATH = "/onboarding/maps";
 
@@ -19,7 +19,7 @@ const MAPS_PATH = "/onboarding/maps";
  * data root that is already connected still shows this screen, because the
  * user may well want to review it before downloading anything.
  */
-export function OnboardingWelcomeClient() {
+export function OnboardingWelcomeSurface() {
   const router = useRouter();
   const cloud = useStudioCloudStatus();
   const [revealed, setRevealed] = useState(false);

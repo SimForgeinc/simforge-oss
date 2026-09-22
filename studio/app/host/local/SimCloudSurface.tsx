@@ -28,13 +28,13 @@ import {
   CloudSignInForm,
   CloudSignOutAction,
   CloudVerifyEmailBanner,
-} from "@/app/components/cloud/CloudAccountPanel";
-import { form } from "@/app/components/cloud/cloud-account.stylex";
+} from "./cloud/CloudAccountPanel";
+import { form } from "./cloud/cloud-account.stylex";
 import {
   CloudAccountDeletedNotice,
   CloudDeleteAccountAction,
-} from "@/app/components/simcloud/CloudDeleteAccountAction";
-import { SimCloudStorage } from "@/app/components/simcloud/SimCloudStorage";
+} from "./simcloud/CloudDeleteAccountAction";
+import { SimCloudStorage } from "./simcloud/SimCloudStorage";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
@@ -76,7 +76,7 @@ function formatWhen(iso: string | null): string {
   return Number.isNaN(at.getTime()) ? iso : at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function SimCloudPanel() {
+export function SimCloudSurface() {
   const cloud = useStudioCloudStatus();
   const state = cloud.status?.state ?? null;
   const connected = state === "connected";

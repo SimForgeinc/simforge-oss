@@ -36,6 +36,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@simforge-oss/studio-ui/components/ui/card";
+import { HOST_KIND } from "@/app/lib/host/kind";
 
 type ModelVersion = {
   id: string;
@@ -213,8 +214,14 @@ export function ComparisonLauncher({
   // loop reserves the native renderer, and whether a model fits alone is a
   // different question from whether it fits with the renderer resident. Refetched
   // when the kind changes, because the answer changes with it.
+  //
+  // A cloud host has no model store to ask: there is no local column to refuse.
   useEffect(() => {
     let cancelled = false;
+    if (HOST_KIND === "cloud") {
+      setLocal({});
+      return;
+    }
     void (async () => {
       try {
         const reserve = kind === "closedloop-episode" ? "?reserveRenderer=1" : "";
@@ -267,7 +274,7 @@ export function ComparisonLauncher({
       {
         key: `col-${String(Date.now())}-${String(current.length)}`,
         modelVersionId: version?.id ?? "",
-        target: "local",
+        target: HOST_KIND === "local" ? "local" : "cloud",
         rigProfile: "alpamayo-4cam",
         quant: version?.quant ?? "nf4",
       },
@@ -455,7 +462,7 @@ export function ComparisonLauncher({
                     )
                   }
                 >
-                  <option value="local">This machine</option>
+                  {HOST_KIND === "local" ? <option value="local">This machine</option> : null}
                   <option value="cloud">Cloud</option>
                 </select>
                 <input

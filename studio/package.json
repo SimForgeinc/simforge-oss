@@ -49,6 +49,7 @@
     "test:onboarding": "tsx --test app/lib/host/__tests__/onboarding-gate.test.ts app/components/map-preparation/__tests__/useMapPreparation.test.ts",
     "test:connections": "node --test desktop/__tests__/connections.test.mjs && tsx --test app/lib/host/__tests__/pairing.test.ts",
     "test:worker-presence": "tsx --test app/lib/scenario/__tests__/cpu-worker-presence.test.ts",
+    "test:host-modules": "tsx --test app/host/__tests__/host-modules.test.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "test:eval-compare": "tsx --test app/lib/evaluation/__tests__/model-comparison.test.ts",
     "test:eval-launch": "tsx --test app/lib/evaluation/__tests__/comparison-launch.test.ts"

@@ -37,6 +37,7 @@ import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import type { ModelRunRecord, ModelVersionRecord } from "@/app/lib/models/contracts";
 import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
 import { LocalRunUnavailable, startLocalRun } from "@/app/lib/host/local-runs";
+import { HOST_KIND } from "@/app/lib/host/kind";
 import { CampaignRail } from "./rails/CampaignRail";
 import { ModelRail } from "./rails/ModelRail";
 import { RunRail } from "./rails/RunRail";
@@ -63,7 +64,12 @@ export function EvaluationPageClient() {
   const host = useHostExecutionSnapshot(organizationId);
   const { jobs, error: jobsError } = useJobList(gateway, submittedJobId);
 
-  const localRuns = useJsonFetch<{ runs: ModelRunRecord[] }>("/api/models/runs", localRunsRefresh);
+  // Local runs are a desktop concept: staged on that machine's disk and leased
+  // by its model-run queue. A cloud host has no such queue to list.
+  const localRuns = useJsonFetch<{ runs: ModelRunRecord[] }>(
+    HOST_KIND === "local" ? "/api/models/runs" : null,
+    localRunsRefresh,
+  );
   const campaigns = useJsonFetch<{ campaigns: EvalCampaignSummary[] }>("/api/evaluation/campaigns");
   const versions = useJsonFetch<{ versions: ModelVersionRecord[] }>("/api/models/versions");
 
@@ -314,7 +320,7 @@ export function EvaluationPageClient() {
     }
 
     if (selection.run) return <RunDetailClient jobId={selection.run} />;
-    if (selection.local) return <LocalRunClient runId={selection.local} />;
+    if (selection.local && HOST_KIND === "local") return <LocalRunClient runId={selection.local} />;
     // A failed list is not a loading list: the organization may have no SimCloud
     // account at all, and starting a run is still the thing to offer. The
     // failure itself is on the overlay.
@@ -336,7 +342,7 @@ export function EvaluationPageClient() {
           setSubmittedJobId(job.id);
           selectRun(job.id);
         }}
-        onRunLocally={runLocally}
+        onRunLocally={HOST_KIND === "local" ? runLocally : undefined}
         recent={(jobs ?? []).filter((job) => !jobStatusPresentation(job.status).live)}
         onSelectRun={selectRun}
       />

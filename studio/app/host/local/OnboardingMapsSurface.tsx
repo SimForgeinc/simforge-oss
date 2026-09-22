@@ -8,7 +8,7 @@ import {
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapSelectionScreen, type OnboardingMapOption } from "@simforge-oss/studio-ui/onboarding";
-import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
+import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { completeStudioSetup } from "@/app/lib/host/setup";
@@ -16,7 +16,7 @@ import {
   DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
   type ScenarioAuthoringQuality,
 } from "@/app/lib/scenario/contracts";
-import { inlineSignIn } from "../onboarding-layout.stylex";
+import { inlineSignIn } from "@/app/onboarding/onboarding-layout.stylex";
 
 const NATIVE_RENDER_PATH = "/onboarding/native-render";
 
@@ -50,7 +50,7 @@ const CacheStatusSchema = z.object({ availableBytes: z.number().nullable() });
  * here again (the setup row is still incomplete) and `useMapPreparation`
  * rejoins whatever is still running instead of starting over.
  */
-export function OnboardingMapsClient() {
+export function OnboardingMapsSurface() {
   const router = useRouter();
   const cloud = useStudioCloudStatus();
   const [maps, setMaps] = useState<OnboardingMapOption[]>([]);

@@ -200,7 +200,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
           Re-check
         </Button>
         <Button asChild xstyle={action.outline} variant="outline">
-          <Link href="/dashboard/render-settings">
+          <Link href="/dashboard/apps?view=render-settings">
             <MonitorCog {...stylex.props(action.icon)} aria-hidden="true" />
             Rendering profile &amp; map preparation
           </Link>

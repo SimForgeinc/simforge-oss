@@ -1,5 +1,6 @@
+import { notFound } from "next/navigation";
 import { requireAppContext } from "@/app/lib/db/app-context";
-import { OnboardingWelcomeClient } from "./OnboardingWelcomeClient";
+import { OnboardingWelcomeSurface } from "@/app/host";
 
 /**
  * Opt the route out of instant-navigation prerendering.
@@ -13,7 +14,13 @@ import { OnboardingWelcomeClient } from "./OnboardingWelcomeClient";
  */
 export const instant = false;
 
+/**
+ * First-run: sign in to SimCloud, or continue locally. Both answers are
+ * already made on a cloud host — the deployment IS the cloud and there is no
+ * "locally" to continue to — so the step does not exist there.
+ */
 export default async function OnboardingWelcomePage() {
+  if (OnboardingWelcomeSurface === null) notFound();
   await requireAppContext("/onboarding/welcome");
-  return <OnboardingWelcomeClient />;
+  return <OnboardingWelcomeSurface />;
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioHostCapabilities, StudioHostIdentity } from "@simforge-oss/studio-host";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
-import { CloudAccountChip } from "@/app/components/cloud/CloudAccountChip";
+import { CloudConnectorChip } from "@/app/host";
 import { signOutOfHost, switcherAccountKind } from "@/app/lib/host/account-session";
 
 /**
@@ -56,13 +56,14 @@ export function AccountChip({
  * The switcher's account line, chosen by what the host reports.
  *
  * On a local install the account is a SimCloud connection this computer may
- * or may not have, which is what {@link CloudAccountChip} is about. On a
- * cloud host there is nothing to connect to — you are already signed in to
- * the thing the chip would offer to sign you in to — so the host's own
- * identity is shown instead.
+ * or may not have, which is what the connector chip is about. On a cloud host
+ * there is nothing to connect — you are already signed in to the thing the
+ * chip would offer to sign you in to, and that host ships no connector at all
+ * — so the host's own identity is shown instead.
  *
- * A cloud host that reports a fixed-local identity shows neither: it has not
- * claimed an account, and inventing one would be a claim about who you are.
+ * A host that reports a fixed-local identity and has no connector shows
+ * neither: it has not claimed an account, and inventing one would be a claim
+ * about who you are.
  */
 export function SwitcherAccount({
   capabilities,
@@ -71,9 +72,9 @@ export function SwitcherAccount({
   capabilities: StudioHostCapabilities | null;
   onNavigate?: () => void;
 }) {
-  if (capabilities === null) return <CloudAccountChip onNavigate={onNavigate} />;
-  const kind = switcherAccountKind(capabilities);
-  if (kind === "cloud-connection") return <CloudAccountChip onNavigate={onNavigate} />;
-  if (kind === "none") return null;
+  if (capabilities === null || switcherAccountKind(capabilities) === "cloud-connection") {
+    return CloudConnectorChip ? <CloudConnectorChip onNavigate={onNavigate} /> : null;
+  }
+  if (switcherAccountKind(capabilities) === "none") return null;
   return <AccountChip identity={capabilities.identity} onNavigate={onNavigate} />;
 }

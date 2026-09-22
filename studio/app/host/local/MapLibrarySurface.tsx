@@ -7,7 +7,7 @@ import {
   MapLibraryScreen,
   type MapLibraryMap,
 } from "@simforge-oss/studio-ui/onboarding";
-import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
+import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 // The library is a screen of the hero flow, so it composes the account panel
@@ -48,7 +48,7 @@ type CatalogMap = z.infer<typeof CatalogSchema>["maps"][number];
  * finishing installs nothing else. Setup completion belongs to onboarding; a
  * user who adds a map two months later is not being onboarded.
  */
-export function MapLibraryClient() {
+export function MapLibrarySurface() {
   const cloud = useStudioCloudStatus();
   const [catalog, setCatalog] = useState<CatalogMap[]>([]);
   const [freeBytes, setFreeBytes] = useState<number | null>(null);

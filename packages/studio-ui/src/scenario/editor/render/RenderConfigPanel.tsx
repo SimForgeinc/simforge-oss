@@ -3,6 +3,7 @@
 import { ALPAMAYO_RENDER_WIDTH, ALPAMAYO_RENDER_HEIGHT } from "@simforge-oss/scenario";
 import { useStudioHost } from "../../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
+import { isCloudHost } from "@simforge-oss/studio-host";
 import type { ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -118,8 +119,13 @@ const ENGINE_OPTIONS: {
  * The host's truthful answer for one engine card. esmini runs on the CPU job lane and is not a
  * registered renderer. Every other engine is either not offered by this host at all (no
  * capability key: submission would be rejected), offered without healthy capacity right now, or
- * ready. A host that runs the native renderer from a binary on this machine additionally reports
- * whether that runtime is installed; a host whose native lane is managed capacity does not.
+ * ready.
+ *
+ * A LOCAL host runs the native renderer from a binary it installed on its own machine, so it
+ * additionally reports whether that runtime is present and the card says when it is not. A cloud
+ * host has no such binary and no way for anyone to install one: there, the only question a render
+ * engine has is whether a worker is serving it, and "not installed" would be a claim about a
+ * machine that is not in this deployment.
  */
 function engineAvailability(
   engine: RenderBackend,
@@ -139,7 +145,12 @@ function engineAvailability(
     return { offered: false, badge: "Not offered", reason: `${capabilities.host.label} does not accept ${engine} renders.` };
   }
   const nativeRuntime = capabilities.execution.nativeRuntime;
-  if (engine === "native" && nativeRuntime.state === "unavailable" && nativeRuntime.code !== "not_offered") {
+  if (
+    engine === "native"
+    && !isCloudHost(capabilities)
+    && nativeRuntime.state === "unavailable"
+    && nativeRuntime.code !== "not_offered"
+  ) {
     return { offered: true, badge: "Runtime not installed", reason: nativeRuntime.reason };
   }
   return worker.available

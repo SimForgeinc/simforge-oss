@@ -6,7 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { plate } from "@/app/components/AppStage.stylex";
-import { form } from "@/app/components/cloud/cloud-account.stylex";
+import { form } from "../cloud/cloud-account.stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**

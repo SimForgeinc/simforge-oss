@@ -24,6 +24,7 @@ import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import type { ModelRunRecord } from "@/app/lib/models/contracts";
+import { HOST_KIND } from "@/app/lib/host/kind";
 import { StatusBadge } from "../shared";
 import { styles } from "./rails.stylex";
 
@@ -135,10 +136,14 @@ export function RunRail({
         // The cloud list failing is true of the section whether or not this
         // machine has runs of its own. Saying it only in the empty state hid
         // it behind the first local run: the list looked complete and was not.
+        //
+        // The reassurance about local runs belongs to a host that executes
+        // them; a cloud host has none to still be showing.
         listError ? (
           <p {...stylex.props(styles.status)}>
             <span {...stylex.props(styles.statusTitle)}>Cloud runs are unavailable</span>
-            {listError} Runs started on this machine still appear here.
+            {listError}
+            {HOST_KIND === "local" ? " Runs started on this machine still appear here." : null}
           </p>
         ) : null
       }

@@ -162,11 +162,17 @@ export type ExecutionOffer = {
 };
 
 /**
- * The two execution offers for a family/quant on this host.
+ * The execution offers for a family/quant on this host.
  *
- * Local is refused for a stack of independent reasons — no desktop, no native
- * runtime, weights not installed, hardware not qualified — and the user is told
- * all of them at once rather than discovering them one failed run at a time.
+ * A desktop host offers two, and local is refused for a stack of independent
+ * reasons — no native runtime, weights not installed, hardware not qualified —
+ * with the user told all of them at once rather than discovering them one
+ * failed run at a time.
+ *
+ * The browser portal offers one. There is no model store on a disk here and no
+ * native runner to start, so "local" is not a target in a refused state: it is
+ * not a target. Listing it disabled advertised a machine-bound feature on a
+ * host that has no machine.
  */
 export function executionOffers(
   host: HostExecutionSnapshot,
@@ -186,11 +192,7 @@ export function executionOffers(
   const localReasons: string[] = [];
   let qualification: ExecutionOffer["qualification"] = null;
 
-  if (host.host === "browser") {
-    localReasons.push(
-      "This is the web portal. Local execution needs the SimForge desktop app, which manages the model store and the native runtime.",
-    );
-  } else {
+  if (host.host !== "browser") {
     if (host.nativeRuntime && !host.nativeRuntime.available) {
       localReasons.push(
         host.nativeRuntime.reason ?? "The native runtime is not installed on this machine.",
@@ -242,6 +244,14 @@ export function executionOffers(
     }
   }
 
+  const cloudOffer: ExecutionOffer = {
+    target: "runpod",
+    available: cloudReasons.length === 0,
+    reasons: cloudReasons,
+    qualification: null,
+  };
+  if (host.host === "browser") return [cloudOffer];
+
   return [
     {
       target: "local",
@@ -249,12 +259,7 @@ export function executionOffers(
       reasons: localReasons,
       qualification,
     },
-    {
-      target: "runpod",
-      available: cloudReasons.length === 0,
-      reasons: cloudReasons,
-      qualification: null,
-    },
+    cloudOffer,
   ];
 }
 

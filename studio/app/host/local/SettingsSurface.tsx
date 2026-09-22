@@ -6,8 +6,8 @@ import Link from "next/link";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { AppStage } from "@/app/components/AppStage";
 import { plate } from "@/app/components/AppStage.stylex";
-import { AiProviderSettings } from "@/app/components/settings/AiProviderSettings";
-import { LocalExecutionCard } from "@/app/components/LocalExecutionCard";
+import { AiProviderSettings } from "./AiProviderSettings";
+import { LocalExecutionCard } from "./LocalExecutionCard";
 
 /**
  * Settings, in the app switcher's chrome: the same backdrop and hairline
@@ -15,7 +15,7 @@ import { LocalExecutionCard } from "@/app/components/LocalExecutionCard";
  * pane inside it that does. Everything about this computer is here; the
  * SimCloud account has its own surface and is linked, not duplicated.
  */
-export function SettingsPageClient() {
+export function SettingsSurface() {
   return (
     <AppStage
       eyebrow="Utility"
@@ -34,7 +34,7 @@ export function SettingsPageClient() {
         </p>
         <div {...stylex.props(plate.row)}>
           <Button asChild xstyle={plate.button} variant="outline">
-            <Link href="/dashboard/render-settings">
+            <Link href="/dashboard/apps?view=render-settings">
               <MonitorCog {...stylex.props(plate.icon)} aria-hidden="true" />
               Rendering profile &amp; map cache
             </Link>
