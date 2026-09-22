@@ -28,8 +28,9 @@ import { uploadAndConsumeMaterializedTraffic } from "./materialized-traffic";
  * render be created from the dataset list, where the editor session that
  * simulated the scenario has already been torn down.
  *
- * If the preview is missing or belongs to an older draft, the browser worker
- * prepares the exact current document here. Rendering therefore does not
+ * If the preview is missing, belongs to an older draft, or was produced by a
+ * different engine build or map closure than this browser runs, the browser
+ * worker prepares the exact current document here. Rendering therefore does not
  * require an author to perform a separate simulation ritual.
  */
 export async function savedSimulationRevisionEvidence(
@@ -39,13 +40,27 @@ export async function savedSimulationRevisionEvidence(
 ): Promise<ScenarioRevisionEvidenceDto> {
   const map = resolveScenarioMap(document, await host.artifacts.listMaps(signal));
   const descriptor = await host.projects.getSimulationPreview(document.id, signal);
-  let bundle: PlaybackBundle;
-  let client: ScenarioWorkerClient | null = null;
+  let bundle: PlaybackBundle | null = null;
+  const client = new ScenarioWorkerClient();
   try {
-    if (descriptor?.draftVersion === document.draftVersion) {
-      bundle = await downloadSimulationPreview(descriptor, null, signal);
-    } else {
-      client = new ScenarioWorkerClient();
+    // The saved run is evidence only for the engine semantics that would
+    // produce it now. Bind the download to this browser's engine build and map
+    // closure, exactly as the editor does; a run from an older engine (a trace
+    // saved before a physics fix) is re-simulated rather than frozen into the
+    // revision.
+    const runtime = map.browserClosureSha256
+      ? { engine: await client.engineIdentity(), mapClosureSha256: map.browserClosureSha256 }
+      : null;
+    if (runtime && descriptor?.draftVersion === document.draftVersion) {
+      try {
+        bundle = await downloadSimulationPreview(descriptor, runtime, signal);
+      } catch (error) {
+        if ((error as { name?: string } | null)?.name === "AbortError") throw error;
+        // Stale engine, stale map closure or unreadable bytes: recompute below.
+        bundle = null;
+      }
+    }
+    if (!bundle) {
       bundle = await client.prepare(
         document.content,
         playbackMapEntry(map),
@@ -57,11 +72,8 @@ export async function savedSimulationRevisionEvidence(
         undefined,
         { backgroundPreview: true },
       );
-      if (!map.browserClosureSha256) throw new Error("The map's browser runtime closure is unavailable.");
-      const { bytes, sha256 } = await encodeSimulationPreview(bundle, document.draftVersion, {
-        engine: await client.engineIdentity(),
-        mapClosureSha256: map.browserClosureSha256,
-      });
+      if (!runtime) throw new Error("The map's browser runtime closure is unavailable.");
+      const { bytes, sha256 } = await encodeSimulationPreview(bundle, document.draftVersion, runtime);
       await host.projects.saveSimulationPreview(document, bytes, sha256, signal);
     }
     const traffic = browserRevisionTraffic(document.content, map, bundle);
@@ -84,6 +96,6 @@ export async function savedSimulationRevisionEvidence(
       materializedTraffic: reference,
     };
   } finally {
-    client?.dispose();
+    client.dispose();
   }
 }
