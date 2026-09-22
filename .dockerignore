@@ -25,6 +25,11 @@ scripts/*
 adapters/*
 !adapters/carla-exec/
 !adapters/carla-exec/**
+# pnpm-workspace.yaml patchedDependencies, and the CARLA object catalog that
+# @simforge-oss/asset-catalog generates from at build time.
+!patches/
+!patches/**
+!studio/app/generated/carla-object-catalog.json
 # Host build outputs and checkout-local derivatives never enter the image
 # context: every native artifact is rebuilt from source inside the build, and
 # the sky plates arrive through the explicit `sky` build context.
@@ -53,3 +58,6 @@ packages/native-runtime/wasm
 **/*.test.mjs
 **/.DS_Store
 services/render-worker/docker
+# The CLI depends on the Studio app package, which is not in this context;
+# it is not part of the render-worker closure.
+packages/cli
