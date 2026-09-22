@@ -155,6 +155,44 @@ describe('essential streaming assets', () => {
     expect(layer.stats().queued).toBe(0);
     layer.dispose();
   });
+  it('falls back to a coarser city LOD when the selected detail is over budget', async () => {
+    const build = vi.fn(async (_def, lod) => ({
+      ...emptyAsset(),
+      bytes: lod.level === 0 ? 66 : 660,
+    }));
+    let allowFine = false;
+    const layer = new TileStreamLayer({
+      name: 'city-lod-fallback',
+      renderer: { compileAsync: async () => undefined } as never,
+      scene: new Scene(),
+      defs: [{
+        id: 'tile',
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [
+          { level: 0, file: 'coarse.glb', triangles: 1, fileSize: 10, geometricError: 100 },
+          { level: 1, file: 'fine.glb', triangles: 2, fileSize: 100, geometricError: 0 },
+        ],
+      }],
+      build,
+      maxConcurrent: 1,
+      memory: { admit: (bytes) => allowFine || bytes <= 100, maxAssetBytes: () => 1000 },
+      pinCoarsest: false,
+    });
+
+    layer.update(new Vector3(), 1, 1);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    expect(build).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ level: 0 }), expect.anything());
+    expect(layer.stats().missingTiles).toBe(0);
+    expect(layer.stats().budgetBlockedTiles).toBe(0);
+
+    allowFine = true;
+    layer.update(new Vector3(), 1, 1);
+    expect(build).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ level: 1 }), expect.anything());
+    layer.dispose();
+  });
+
 
   it('starts the pinned road/ground load even when the optional-detail budget refuses it', async () => {
     const build = vi.fn(async () => emptyAsset());
