@@ -147,6 +147,22 @@ describe('authored world source', () => {
     vi.useRealTimers();
   });
 
+  it('keeps the first worker error on screen instead of a later consequence of it', async () => {
+    const document = await fixtureDocument();
+    const source = await createAuthoredWorldSource({ document, map: TEST_MAP });
+    const worker = FakeWorker.instances.at(-1)!;
+    const emit = (message: LiveWorldWorkerResponse) =>
+      worker.onmessage?.({ data: message } as MessageEvent<LiveWorldWorkerResponse>);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    emit({ type: 'error', message: 'lane graph has no drivable lanes' });
+    emit({ type: 'error', message: 'live world is not running' });
+    expect(source.status).toBe('error');
+    expect(source.lastError).toBe('lane graph has no drivable lanes');
+    warn.mockRestore();
+    source.close();
+    document.dispose();
+  });
+
   it('repeatedly designates and releases the same authored ego without stale routing state', async () => {
     const { source, document, worker } = await createFixtureSource();
     for (let cycle = 0; cycle < 3; cycle += 1) {

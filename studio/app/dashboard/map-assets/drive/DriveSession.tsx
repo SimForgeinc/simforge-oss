@@ -588,13 +588,17 @@ export function DriveSession({
   }, [egoActorId, paused, source, world.status]);
 
   // A clip is driven, not watched: a tab that loses focus mid-take would record
-  // a car nobody was steering, so the world holds until focus comes back.
+  // a car nobody was steering, so the world holds until focus comes back. Only
+  // a take, only once the world runs, and never over the pause menu: a focus
+  // change while the world was still starting used to reach the worker before
+  // it had a world, and a returning focus used to un-pause a paused game.
   useEffect(() => {
-    if (!source || takePhase.kind !== "recording") return;
+    if (!source || !isTake || !egoActorId || takePhase.kind !== "recording") return;
     const pause = () => {
-      if (source.transport.playing) source.transport.stop();
+      if (source.status === "running" && source.transport.playing) source.transport.stop();
     };
     const resume = () => {
+      if (source.status !== "running" || pausedRef.current) return;
       if (globalThis.document.visibilityState === "visible") source.transport.play();
     };
     window.addEventListener("blur", pause);
@@ -605,7 +609,7 @@ export function DriveSession({
       window.removeEventListener("pagehide", pause);
       window.removeEventListener("focus", resume);
     };
-  }, [source, takePhase.kind]);
+  }, [egoActorId, isTake, source, takePhase.kind]);
 
   /**
    * Orbit view drag and zoom, taken on the session's own frame: the world's

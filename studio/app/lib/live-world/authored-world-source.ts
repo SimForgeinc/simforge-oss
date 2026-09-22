@@ -417,6 +417,12 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     }
     if (message.type === 'error') {
       clearTimeout(this.readyTimeout);
+      // The first error is the cause; anything after it is a consequence (a
+      // command the broken world could not take). Keep the cause on screen.
+      if (this.currentStatus === 'error') {
+        console.warn('[drive] later worker error after', this.currentError, '→', message.message);
+        return;
+      }
       this.setStatus('error', message.message);
     }
   }
