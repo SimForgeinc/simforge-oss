@@ -63,7 +63,7 @@ describe("the scene load cover", () => {
     expect(screen.queryByTestId("scene-loading-transition")).toBeNull();
   });
 
-  it("shows how much of the map is loaded and calls out a stall without network framing", async () => {
+  it("shows how much of the map is loaded and calls out a stall without a rate", async () => {
     renderTransition(
       <SceneCover
         progress={{
@@ -83,7 +83,8 @@ describe("the scene load cover", () => {
 
     const telemetry = await screen.findByTestId("cloud-loading-telemetry");
     expect(telemetry.textContent).toContain("37.0 MB of 400 MB");
-    expect(telemetry.textContent).not.toMatch(/\/s|download/i);
+    // A stalled load has no rate to show; showing a stale one would claim data is arriving.
+    expect(telemetry.textContent).not.toMatch(/\/s/);
     expect(telemetry.textContent).toContain("No data received for 8s");
   });
 

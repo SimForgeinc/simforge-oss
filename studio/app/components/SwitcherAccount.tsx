@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioHostCapabilities, StudioHostIdentity } from "@simforge-oss/studio-host";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
-import { CloudConnectorChip } from "@/app/host";
+import { CloudConnectorChip, WorkspaceChip } from "@/app/host";
 import { signOutOfHost, switcherAccountKind } from "@/app/lib/host/account-session";
 
 /**
@@ -76,5 +76,10 @@ export function SwitcherAccount({
     return CloudConnectorChip ? <CloudConnectorChip onNavigate={onNavigate} /> : null;
   }
   if (switcherAccountKind(capabilities) === "none") return null;
-  return <AccountChip identity={capabilities.identity} onNavigate={onNavigate} />;
+  return (
+    <>
+      {WorkspaceChip ? <WorkspaceChip identity={capabilities.identity} onNavigate={onNavigate} /> : null}
+      <AccountChip identity={capabilities.identity} onNavigate={onNavigate} />
+    </>
+  );
 }

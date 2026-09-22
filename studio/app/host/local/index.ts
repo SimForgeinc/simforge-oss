@@ -1,4 +1,4 @@
-import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType } from "@/app/host/contract";
+import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
 import { RenderSettings } from "./RenderSettings";
 import { SettingsSurface as Settings } from "./SettingsSurface";
 import { MapLibrarySurface as MapLibrary } from "./MapLibrarySurface";
@@ -41,6 +41,8 @@ export const MapInstallPanel: HostSurface<MapInstallPanelProps> = LocalMapPrepar
  * no second account to connect, nor a vault to put one in.
  */
 export const CloudConnectorChip: HostSurface<{ onNavigate?: () => void }> = CloudAccountChip;
+/** A local install is one fixed owner in one place; there is no tenant to switch. */
+export const WorkspaceChip: HostSurface<WorkspaceChipProps> = null;
 export const CloudConnectorSheet: HostSurface = CloudAccountSheet;
 
 export { useDatasetCloudHome } from "./useDatasetCloudHome";

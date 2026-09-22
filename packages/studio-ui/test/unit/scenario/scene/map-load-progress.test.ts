@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  mapMetadataLoadProgress,
   sceneLoadProgressFromSnapshot,
 } from "../../../../src/scenario/scene/map-load-progress";
 
@@ -51,7 +52,7 @@ describe("scene map loading progress", () => {
     });
   });
 
-  it("reports how much of the map is loaded, without a transfer rate", () => {
+  it("reports how much of the map is loaded, its rate, and what the loader is doing with it", () => {
     const next = sceneLoadProgressFromSnapshot(
       "Belmont",
       {
@@ -74,12 +75,19 @@ describe("scene map loading progress", () => {
 
     expect(next.progress.message).toBe("Loading Belmont");
     expect(next.progress.detail).toBe("1 file to go…");
-    expect(next.progress.download).toEqual({
+    expect(next.progress.download).toMatchObject({
       transferred: "320 MB",
       total: "480 MB",
+      speed: "18.4 MB/s",
       stalled: false,
       stalledFor: null,
     });
+    expect(next.progress.download?.metrics).toEqual([
+      { label: "Downloading", value: "1 file" },
+      { label: "Decoding", value: "1 file" },
+      { label: "Queued", value: "0 files" },
+      { label: "To GPU", value: "0 files" },
+    ]);
     expect(next.progress.activity).toBe(320 * 1024 * 1024);
     expect(next.progress.percent).toBe(78);
     expect(next.progress.percentExact).toBe(true);
@@ -135,5 +143,20 @@ describe("scene map loading progress", () => {
       "No map data has arrived for 8s. The local host may be busy; the load resumes on its own when it answers.",
     );
     expect(next.progress.detail).not.toMatch(/connection|download/i);
+  });
+
+  it("names the map definition as the file on the wire before any tile exists", () => {
+    const progress = mapMetadataLoadProgress("Belmont", {
+      active: 0,
+      transferredBytes: 36 * 1024 * 1024,
+      cachedBytes: 0,
+      discoveryComplete: false,
+      totalBytes: null,
+      bytesPerSecond: 1.2 * 1024 * 1024,
+      stalledForMs: 0,
+    });
+
+    expect(progress.detail).toMatch(/^Reading the map definition/);
+    expect(progress.download?.metrics).toContainEqual({ label: "Downloading", value: "map definition" });
   });
 });

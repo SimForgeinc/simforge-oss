@@ -1,6 +1,7 @@
-import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType } from "@/app/host/contract";
+import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
 import { RenderSettings } from "./RenderSettings";
 import { MapLibrarySurface as MapLibrary } from "./MapLibrarySurface";
+import { WorkspaceChip as CloudWorkspaceChip } from "./WorkspaceChip";
 import type { ReactNode } from "react";
 
 /**
@@ -34,5 +35,7 @@ export const MapInstallPanel: HostSurface<MapInstallPanelProps> = null;
 /** No second account to connect, and no vault to keep its credential in. */
 export const CloudConnectorChip: HostSurface<{ onNavigate?: () => void }> = null;
 export const CloudConnectorSheet: HostSurface = null;
+/** The tenant you act in, with a quick switch to any other you belong to. */
+export const WorkspaceChip: HostSurface<WorkspaceChipProps> = CloudWorkspaceChip;
 
 export { useDatasetCloudHome } from "./useDatasetCloudHome";
