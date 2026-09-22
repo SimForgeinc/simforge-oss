@@ -71,6 +71,18 @@ export function DatasetExportWorkspace() {
           </button>
         }
       />
+      {loading && datasets.length === 0 ? (
+        // Nothing in the workspace means anything until the datasets exist, so
+        // the cover spans the sidebar and the main pane together rather than
+        // squeezing into the list column.
+        <div {...stylex.props(styles.workspace, styles.workspaceLoading)}>
+          <CloudLoadingSurface
+            detail="Reading the datasets in this workspace."
+            scope="pane"
+            title="Loading datasets…"
+          />
+        </div>
+      ) : (
       <div {...stylex.props(styles.workspace)}>
         <aside {...stylex.props(styles.sidebar)}>
           <div {...stylex.props(styles.sidebarHeader)}>
@@ -78,13 +90,7 @@ export function DatasetExportWorkspace() {
             <span {...stylex.props(styles.count)}>{datasets.length}</span>
           </div>
           <div {...stylex.props(styles.datasetScroll)}>
-            {loading && datasets.length === 0 ? (
-              <CloudLoadingSurface
-                detail="Reading the datasets in this workspace."
-                scope="pane"
-                title="Loading datasets…"
-              />
-            ) : error ? (
+            {error ? (
               <div {...stylex.props(styles.error)}>{error}</div>
             ) : datasets.length === 0 ? (
               <div {...stylex.props(styles.datasetEmpty)}>No datasets.</div>
@@ -126,6 +132,7 @@ export function DatasetExportWorkspace() {
           )}
         </main>
       </div>
+      )}
     </div>
   );
 }
