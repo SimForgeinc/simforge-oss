@@ -9,6 +9,7 @@ import type { RenderProgressRecord } from "@simforge-oss/render";
 import { probeLocalBrowserRender, probeLocalNativeRender, NativeTextureCapacityError, NativeMapCapacityError } from "@simforge-oss/render/native";
 
 import { runCompilerLoop } from "./compiler.js";
+import { runSimulationLoop } from "./simulate.js";
 import { executeRender } from "./executor.js";
 import { CpuJobsClient, downloadInputs } from "./http-client.js";
 import { NativeMapFailure, runNativeClaim } from "./native-render.js";
@@ -19,6 +20,7 @@ export const WORKER_CAPABILITIES = [
   "browser-render",
   "carla-render",
   "compile",
+  "simulate",
   "model-run",
 ] as const;
 export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
@@ -83,6 +85,12 @@ export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
     return now.engines;
   });
   const loops: Promise<void>[] = [runClaimLoop(client, controller.signal)];
+  // A compiler also serves queued authoritative simulations: they are the
+  // same CPU work on the same map closures, and a host that cannot simulate a
+  // request inline must never be left without a runner.
+  if (!configured || configured.has("compile") || configured.has("simulate")) {
+    loops.push(runSimulationLoop(baseUrl, token, controller.signal));
+  }
   if (!configured || configured.has("compile")) {
     loops.push(runCompilerLoop(baseUrl, token, controller.signal));
   }
