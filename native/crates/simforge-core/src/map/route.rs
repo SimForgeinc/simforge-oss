@@ -424,21 +424,50 @@ impl Route {
     /// [`Route::project_point`] with an explicit coarse step (signal stop-line
     /// binding uses 0.5 m). `step_m` must be positive and finite.
     pub fn project_point_with_step(&self, p: Vec2, step_m: f64) -> RouteProjection {
+        self.project_point_in(p, 0.0, self.length_m, step_m)
+    }
+
+    /// Nearest route arc length to `p` within `[s_hint - behind_m, s_hint +
+    /// ahead_m]`, clamped to the route.
+    ///
+    /// A body that is driving its route advances along it continuously, so
+    /// where it is on the route is found near where it was. The global
+    /// [`Route::project_point`] answers a different question — the closest
+    /// point anywhere — and on a route that passes near itself (a U-turn, a
+    /// loop, an out-and-back) that jumps between the two passes: the body
+    /// would be "at" the far end of its route, reach its end early and be
+    /// treated as arrived. Tracking a moving body must use this.
+    pub fn project_point_near(
+        &self,
+        p: Vec2,
+        s_hint: f64,
+        behind_m: f64,
+        ahead_m: f64,
+    ) -> RouteProjection {
+        let lo = clamp(s_hint - behind_m.max(0.0), 0.0, self.length_m);
+        let hi = clamp(s_hint + ahead_m.max(0.0), 0.0, self.length_m);
+        self.project_point_in(p, lo, hi, PROJECT_STEP_M)
+    }
+
+    /// Coarse scan of `[from_s, to_s]` at `step_m`, then a ternary refine over
+    /// `±step_m` around the best sample (clamped to the same interval).
+    fn project_point_in(&self, p: Vec2, from_s: f64, to_s: f64, step_m: f64) -> RouteProjection {
         let step = step_m;
+        let span = (to_s - from_s).max(0.0);
         let mut best = RouteProjection {
-            s: 0.0,
+            s: from_s,
             d: f64::INFINITY,
         };
-        let n = ((self.length_m / step).ceil() as usize + 1).max(2);
+        let n = ((span / step).ceil() as usize + 1).max(2);
         for i in 0..n {
-            let s = self.length_m * i as f64 / (n - 1) as f64;
+            let s = from_s + span * i as f64 / (n - 1) as f64;
             let d = dist(self.pose_at(s).point, p);
             if d < best.d {
                 best = RouteProjection { s, d };
             }
         }
-        let mut lo = (best.s - step).max(0.0);
-        let mut hi = (best.s + step).min(self.length_m);
+        let mut lo = (best.s - step).max(from_s);
+        let mut hi = (best.s + step).min(to_s);
         for _ in 0..24 {
             let m1 = lo + (hi - lo) / 3.0;
             let m2 = hi - (hi - lo) / 3.0;
@@ -1234,4 +1263,50 @@ pub fn point_to_polyline(p: Vec2, poly: &[Vec2]) -> f64 {
         }
     }
     best.sqrt()
+}
+
+#[cfg(test)]
+mod projection_tests {
+    use super::*;
+
+    /// Out 40 m along +x, a tight U-turn, and back along -x 4 m to the side:
+    /// the two passes are closer to each other than to anything else.
+    fn out_and_back() -> Route {
+        let mut points = Vec::new();
+        for i in 0..=20 {
+            points.push(Vec2 { x: 2.0 * f64::from(i), y: 0.0 });
+        }
+        for i in 1..12 {
+            let a = -std::f64::consts::FRAC_PI_2 + std::f64::consts::PI * f64::from(i) / 12.0;
+            points.push(Vec2 { x: 40.0 + 2.0 * a.cos(), y: 2.0 + 2.0 * a.sin() });
+        }
+        for i in 0..=20 {
+            points.push(Vec2 { x: 40.0 - 2.0 * f64::from(i), y: 4.0 });
+        }
+        Route::from_polyline(points)
+    }
+
+    #[test]
+    fn tracking_projection_stays_on_the_pass_the_body_is_driving() {
+        let route = out_and_back();
+        // A body on the outbound pass that has drifted 2.3 m left of it is
+        // 1.7 m from the return pass: the global projection puts it ~50 m
+        // further along its route, on the way back.
+        let drifted = Vec2 { x: 12.0, y: 2.3 };
+        let global = route.project_point(drifted);
+        assert!(global.s > route.length_m() / 2.0, "global projection jumps: {}", global.s);
+        let tracked = route.project_point_near(drifted, 12.0, 6.0, 6.0);
+        assert!((tracked.s - 12.0).abs() < 0.5, "tracked projection {}", tracked.s);
+    }
+
+    #[test]
+    fn a_full_window_projection_matches_the_global_one() {
+        let route = out_and_back();
+        for p in [Vec2 { x: 5.0, y: 0.3 }, Vec2 { x: 41.0, y: 2.0 }, Vec2 { x: 30.0, y: 3.9 }] {
+            assert_eq!(
+                route.project_point(p),
+                route.project_point_near(p, 0.0, 0.0, route.length_m())
+            );
+        }
+    }
 }

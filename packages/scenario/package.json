@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/scenario",
-  "version": "0.1.0-rc.69",
+  "version": "0.1.0-rc.71",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
@@ -17,6 +17,10 @@
       "./contracts": {
         "types": "./dist/contracts.d.ts",
         "default": "./dist/contracts.js"
+      },
+      "./canonical-json": {
+        "types": "./dist/canonical-json.d.ts",
+        "default": "./dist/canonical-json.js"
       },
       "./schema.json": "./schema/scenario.v1.schema.json",
       "./schema/template.v2.json": "./schema/scenario-template.v2.schema.json",
@@ -39,6 +43,11 @@
       "types": "./dist/contracts.d.ts",
       "default": "./dist/contracts.js"
     },
+    "./canonical-json": {
+      "development": "./src/canonical-json.ts",
+      "types": "./dist/canonical-json.d.ts",
+      "default": "./dist/canonical-json.js"
+    },
     "./schema.json": "./schema/scenario.v1.schema.json",
     "./schema/template.v2.json": "./schema/scenario-template.v2.schema.json",
     "./schema/anchor.v2.json": "./schema/logical-anchor.v2.schema.json",
@@ -60,7 +69,7 @@
     "vitest": "^3.0.0"
   },
   "scripts": {
-    "build": "pnpm run schema && tsup src/index.ts src/contracts.ts --format esm --dts --sourcemap --clean --out-dir dist",
+    "build": "pnpm run schema && tsup src/index.ts src/contracts.ts src/canonical-json.ts --format esm --dts --sourcemap --clean --out-dir dist",
     "schema": "tsx scripts/generate-json-schema.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

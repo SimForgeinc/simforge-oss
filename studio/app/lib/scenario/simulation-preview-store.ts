@@ -13,6 +13,10 @@ import {
   finalizeLocalArtifactProducer,
 } from "./jobs/local-artifact-producer-store";
 import { simforgeEnv } from "@/lib/simforge-env";
+import { gunzipToUtf8 } from "@/app/lib/s3/gzip";
+import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
+import { serverEngineIdentity } from "./engine-identity.server";
+import { simulationPreviewEngine, type SimulationPreviewEngine } from "./simulation-preview-engine";
 /** Stored media type of saved browser simulations; artifact metadata binds to it. */
 const COMPRESSED_PLAYBACK_MEDIA_TYPE = "application/vnd.simforge.uniscenario-playback+json+gzip";
 
@@ -180,6 +184,11 @@ export async function completeSimulationPreview(
   const checksum = head.checksumSha256 ? Buffer.from(head.checksumSha256, "base64").toString("hex") : null;
   if (head.contentLength !== input.sizeBytes || checksum !== input.sha256)
     throw new Error("simulation_preview_upload_mismatch");
+  // The engine that produced these bytes, read from the bytes: current-ness is
+  // scoped to engine semantics (`getCurrentSimulationPreview`). It describes
+  // the content, so it belongs on the shared row's metadata whichever
+  // reservation completes it.
+  const engine = await storedPreviewEngine(row.storage_bucket, row.storage_key);
   try {
     return await withTransaction(async (tx) => {
       const finalization = await finalizeLocalArtifactProducer(
@@ -187,6 +196,11 @@ export async function completeSimulationPreview(
         tx,
       );
       if (!finalization) return null;
+      await tx.execute(
+        `UPDATE simforge.artifacts SET metadata = COALESCE(metadata, '{}'::jsonb) || CAST(:engine AS jsonb)
+          WHERE id = :artifact_id AND workspace_id = :workspace_id`,
+        { artifact_id: input.artifactId, workspace_id: context.workspaceId, engine: engineMetadata(engine) },
+      );
       if (finalization.alreadySucceeded) {
         // The producer job already succeeded, so the artifact is finalized and
         // must not be re-validated against a draft that has moved since — that
@@ -257,9 +271,34 @@ export async function completeSimulationPreview(
   }
 }
 
+/** `metadata.engineSemVer`/`engineAbiVersion`; JSON null when the bytes record no consistent engine. */
+function engineMetadata(engine: SimulationPreviewEngine | null) {
+  return { engineSemVer: engine?.engineSemVer ?? null, engineAbiVersion: engine?.abiVersion ?? null };
+}
+
+async function storedPreviewEngine(bucket: string, key: string): Promise<SimulationPreviewEngine | null> {
+  try {
+    return simulationPreviewEngine(JSON.parse(await gunzipToUtf8(await getS3ObjectBytes(bucket, key))));
+  } catch {
+    // Unreadable bytes are not current for any engine; the browser recomputes.
+    return null;
+  }
+}
+
+/**
+ * The saved simulation that is current for this document: same draft version,
+ * same content digest, same map version, AND produced by the engine semantics
+ * this deployment runs (`engine`, defaulting to the server's own engine). A
+ * run saved by an older engine, or one whose bytes record no engine, is not
+ * current, so every consumer (the editor, render evidence, `simforge render
+ * submit`) recomputes it instead of replaying a trace the engine no longer
+ * produces. `engine = null` (no native engine on this host) skips only the
+ * engine scope.
+ */
 export async function getCurrentSimulationPreview(
   context: AppContext,
   documentId: string,
+  engine: SimulationPreviewEngine | null = serverEngineIdentity(),
 ): Promise<ScenarioSimulationPreviewDto | null> {
   const rows = await queryRows<{
     artifact_id: string;
@@ -271,8 +310,12 @@ export async function getCurrentSimulationPreview(
     storage_key: string;
     created_at: string;
   }>(
-    `SELECT p.artifact_id,p.source_draft_version,a.sha256,a.byte_length,a.media_type,a.storage_bucket,a.storage_key,p.created_at::text created_at FROM simforge.simulation_previews p JOIN simforge.documents d ON d.id=p.document_id AND d.workspace_id=p.workspace_id JOIN simforge.drafts dr ON dr.document_id=d.id AND dr.workspace_id=d.workspace_id JOIN simforge.artifacts a ON a.id=p.artifact_id AND a.workspace_id=p.workspace_id WHERE p.document_id=:document_id AND p.workspace_id=:workspace_id AND d.deleted_at IS NULL AND a.artifact_state='available' AND p.source_draft_version=dr.draft_version AND p.source_content_sha256=dr.content_sha256 AND p.map_version_id=dr.map_version_id LIMIT 1`,
-    { document_id: documentId, workspace_id: context.workspaceId },
+    `SELECT p.artifact_id,p.source_draft_version,a.sha256,a.byte_length,a.media_type,a.storage_bucket,a.storage_key,p.created_at::text created_at FROM simforge.simulation_previews p JOIN simforge.documents d ON d.id=p.document_id AND d.workspace_id=p.workspace_id JOIN simforge.drafts dr ON dr.document_id=d.id AND dr.workspace_id=d.workspace_id JOIN simforge.artifacts a ON a.id=p.artifact_id AND a.workspace_id=p.workspace_id WHERE p.document_id=:document_id AND p.workspace_id=:workspace_id AND d.deleted_at IS NULL AND a.artifact_state='available' AND p.source_draft_version=dr.draft_version AND p.source_content_sha256=dr.content_sha256 AND p.map_version_id=dr.map_version_id${engine ? ` AND a.metadata->>'engineSemVer'=:engine_sem_ver AND a.metadata->>'engineAbiVersion'=:engine_abi_version` : ""} LIMIT 1`,
+    {
+      document_id: documentId,
+      workspace_id: context.workspaceId,
+      ...(engine ? { engine_sem_ver: engine.engineSemVer, engine_abi_version: String(engine.abiVersion) } : {}),
+    },
   );
   const row = rows[0];
   if (!row) {

@@ -47,6 +47,32 @@ pub struct ResolvedVehiclePhysicsProfile {
     pub max_yaw_rate_radps: f64,
 }
 
+impl ResolvedVehiclePhysicsProfile {
+    /// The largest yaw rate rolling can produce at `rolling_speed_mps`, or
+    /// `None` for a class that is allowed to turn on the spot.
+    ///
+    /// A wheeled body is non-holonomic: its tyres roll, they do not slide
+    /// sideways, so the body can only turn about a point on the rear-axle line
+    /// and `|yaw rate| = |u| * tan(steer) / wheelbase` at most, with `u` the
+    /// rolling (longitudinal) speed. At `u = 0` that is zero however far the
+    /// wheels are turned: a stopped car cannot rotate in place. Point agents
+    /// (walkers, animals, sidewalk robots, drones) have no such constraint and
+    /// return `None`.
+    ///
+    /// `dynamic-v1` enforces this on every substep for tyre-driven motion and
+    /// the trace plausibility audit checks it on every published tick, so the
+    /// two share this one definition.
+    #[inline]
+    pub fn rolling_yaw_rate_limit_radps(&self, rolling_speed_mps: f64) -> Option<f64> {
+        match self.dynamics_model {
+            DynamicsModel::SingleTrack => Some(
+                rolling_speed_mps.abs() * crate::math::tan(self.max_steer_rad) / self.wheelbase_m,
+            ),
+            DynamicsModel::PedestrianAgent => None,
+        }
+    }
+}
+
 /// Calibrated generic 1.5-tonne passenger car; not a make/model claim.
 pub const GENERIC_PASSENGER_CAR_PROFILE: ResolvedVehiclePhysicsProfile =
     ResolvedVehiclePhysicsProfile {
@@ -510,6 +536,18 @@ pub fn resolve_actor_physics_profile(
             base.max_yaw_rate_radps,
         )?,
     };
+    // The rolling envelope is `tan(maxSteerRad)`: a steering lock at or past
+    // a right angle has no rolling interpretation (the wheel would push the
+    // body sideways), so a wheeled class must stay below it.
+    if profile.dynamics_model == DynamicsModel::SingleTrack
+        && profile.max_steer_rad >= std::f64::consts::FRAC_PI_2
+    {
+        return Err(PhysicsError::InvalidProfileValue {
+            field: "maxSteerRad",
+            requirement: "below pi/2 for a wheeled class",
+            value: profile.max_steer_rad,
+        });
+    }
     if profile.cg_to_front_m >= profile.wheelbase_m {
         return Err(PhysicsError::InvalidAxleGeometry {
             cg_to_front_m: profile.cg_to_front_m,

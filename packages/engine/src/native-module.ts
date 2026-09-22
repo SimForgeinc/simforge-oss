@@ -96,6 +96,12 @@ export interface NativeScenarioInput {
 export interface NativeMapBundle {
   readonly mapId: string;
   readonly digest: string;
+  /**
+   * `simforge.map-closure/v1`: identity of everything a simulation reads from
+   * this map (topology with speed limits, static colliders after the
+   * road-boundary rule, signal catalog). Absent on runtimes built before 0.8.0.
+   */
+  readonly closureDigest?: string;
   readonly graph: NativeLaneGraph;
   /** `MapControlPlan` JSON derived from the bundle's signal catalog. */
   controlPlanJson(): string;
@@ -451,7 +457,12 @@ export interface NativeModule {
   parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;
   sha256Hex(data: Uint8Array): string;
+  /** Former name of `engineSemVer()`; always the same value. */
   engineVersion(): string;
+  /** Engine semantics version (absent on runtimes built before 0.8.0; use `engineVersion()`). */
+  engineSemVer?(): string;
+  /** Build provenance JSON (absent on runtimes built before 0.8.0). Never a cache key. */
+  engineBuild?(): string;
   abiVersion(): number;
   actionFields(): string[];
 }

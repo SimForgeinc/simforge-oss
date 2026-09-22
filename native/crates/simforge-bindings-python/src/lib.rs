@@ -1612,7 +1612,9 @@ fn _native(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
         "ACTION_FIELDS",
         PyTuple::new(py, action::ACTION_FIELD_NAMES)?,
     )?;
-    m.add("ENGINE_VERSION", simforge_bindings_common::ENGINE_VERSION)?;
+    m.add("ENGINE_VERSION", simforge_bindings_common::ENGINE_SEM_VER)?;
+    m.add("ENGINE_SEM_VER", simforge_bindings_common::ENGINE_SEM_VER)?;
+    m.add("ENGINE_BUILD", simforge_bindings_common::engine_build_json())?;
     m.add(
         "DEFAULT_MAX_OBJECTS",
         simforge_bindings_common::DEFAULT_MAX_OBJECTS,

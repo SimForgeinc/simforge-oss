@@ -18,6 +18,7 @@
 /* ------------------------------------------------------------- the contract */
 export {
   simScenarioInputSchema,
+  SIMULATION_DT_S,
   parseSimScenarioInput,
   safeParseSimScenarioInput,
   normalizeSimScenarioInput,
@@ -152,7 +153,7 @@ export type {
 } from './trace/trace.js';
 export { decodeTraceGz, encodeTraceGz, gunzipBytes, gzipBytes, isGzipBytes } from './trace/gzip.js';
 export { DEFAULT_MAX_DECEL_MPS2, DEFAULT_TRIVIAL_PET_S, DEFAULT_TRIVIAL_TTC_S } from './trace/evaluate.js';
-export type { EvaluateFilters, InvariantCheckOptions, InvariantResidualReport, RejectCode, RejectFinding, TraceEvaluation } from './trace/evaluate.js';
+export type { EvaluateFilters, InvariantCheckOptions, InvariantResidualReport, MotionFinding, MotionFindingCode, RejectCode, RejectFinding, TraceEvaluation } from './trace/evaluate.js';
 export { intentCriterionSchema, intentRubricSchema } from './trace/intent-rubric.js';
 export type {
   BehaviorSummary,
@@ -241,11 +242,17 @@ export type { Obb, Vec2 } from './core/math.js';
 export {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
+  ambientProfileMissingDefault,
+  AmbientTrafficProfileError,
+  offAmbientTrafficProfile,
+  validateAmbientTrafficProfileExtension,
   ambientTrafficProfileSchema,
   defaultAmbientTrafficProfile,
   resolveAmbientTrafficProfile,
 } from './ambient/profile.js';
 export type {
+  AmbientProfileMissingDefault,
   AmbientActorProvenance,
   AmbientCandidate,
   AmbientCandidatePool,
@@ -351,4 +358,4 @@ export type {
 
 /* ------------------------------------------------------ host-neutral façade */
 export { EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
-export type { LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';
+export type { EngineBuildInfo, EngineVersionInfo, LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';
