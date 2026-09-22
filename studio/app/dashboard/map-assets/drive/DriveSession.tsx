@@ -54,7 +54,16 @@ import { JevController } from "./jev-controller";
 import type { DriveControlSource } from "@/app/lib/live-world/types";
 import type { AuthoredDriveMode } from "@/app/lib/live-world/authored-world-session";
 
-const WORLD_TICK_HZ = 20;
+/**
+ * How often the world's worker wakes to step physics: once per 20 ms engine
+ * step. The worker steps by wall clock whatever this is, so it does not change
+ * the simulation — it sets how fresh the newest step is when a frame is drawn
+ * and how long a pedal press waits to reach the physics. At 20 Hz the steps
+ * came in bursts of two or three every 50 ms, which the renderer then had to
+ * hold ~70 ms behind to draw smoothly; at the engine's own rate the hold is a
+ * step or two.
+ */
+const WORLD_TICK_HZ = 50;
 /** Orbit drag sensitivity, radians per pixel. */
 const ORBIT_DRAG_RAD_PER_PX = 0.006;
 const ORBIT_ZOOM_PER_NOTCH = 1.1;
@@ -73,12 +82,14 @@ const HORN_PULSE_MS = 700;
  * the session starts; the world boots regardless and the car appears the
  * moment the ground is there to stand on.
  *
- * The game loop is the viewer's own frame hook, in this order: read the input
- * device, push the driver command to the physics runtime, move the camera to
- * where the car was just drawn, then write the HUD. That order matters —
- * sampling input after the camera would add a frame of lag to every control,
- * and reading the car's pose before the truth bridge has applied the frame
- * would make the camera chase a stale position.
+ * The game loop is the viewer's own frame hook, which runs before the viewer
+ * draws, in this order: the truth bridge places the car at the render clock's
+ * interpolated pose, then this session reads the input device, pushes the
+ * driver command to the physics runtime, moves the camera to where the car is
+ * about to be drawn, and writes the HUD. That order matters — sampling input
+ * after the camera would add a frame of lag to every control, and reading the
+ * car's pose before the bridge has placed it would make the camera chase a
+ * stale position, which on screen is a car shaking against its own camera.
  *
  * Nothing in that loop causes a React render. The HUD is written through refs,
  * and the component re-renders only when a human changes something.
@@ -650,7 +661,7 @@ export function DriveSession({
     if (!viewer || !bridge || !source || !egoActorId) return;
     // The viewer's own frame hook, chained after the truth bridge's: the bridge
     // installs itself the same way, so calling the previous hook first means the
-    // car has already been drawn at this frame's interpolated pose.
+    // car has already been placed at this frame's interpolated pose.
     const previous = viewer.onFrame;
     const rig = rigRef.current;
     const telemetry = telemetryRef.current;

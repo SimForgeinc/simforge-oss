@@ -147,9 +147,18 @@ describe('truth viewer bridge', () => {
       onFrame: null as ((dt: number) => void) | null,
       getGroundIndex: vi.fn(() => ({ sample: vi.fn(), sampleNear: vi.fn(), bounds: vi.fn() })),
     };
-    const bridge = createTruthViewerBridge(viewer as never, { groundLift: true, layer: 'drive' });
+    // A render clock that runs at exactly wall rate, so the drawn moment is
+    // known: both steps arrive together at 0 ms and the frame is drawn 25 ms on.
+    let wallMs = 0;
+    const bridge = createTruthViewerBridge(viewer as never, {
+      groundLift: true,
+      layer: 'drive',
+      now: () => wallMs,
+      clock: { gainPerS: 0 },
+    });
     bridge.apply(frame(1, 0, 0));
     bridge.apply(frame(2, 0.05, 10));
+    wallMs = 25;
     viewer.onFrame?.(0.025);
 
     const actor = viewerMocks.batches.at(-1)!.actors[0]!;
@@ -176,7 +185,8 @@ describe('truth viewer bridge', () => {
       onFrame: null as ((dt: number) => void) | null,
       getGroundIndex: vi.fn(() => null),
     };
-    const bridge = createTruthViewerBridge(viewer as never, { groundLift: true, layer: 'drive' });
+    let wallMs = 0;
+    const bridge = createTruthViewerBridge(viewer as never, { groundLift: true, layer: 'drive', now: () => wallMs });
     bridge.apply(frame(1, 0, 0));
     bridge.apply(frame(2, 0.05, 10));
     expect(bridge.rendered('ego')).not.toBeNull();
@@ -188,6 +198,7 @@ describe('truth viewer bridge', () => {
 
     bridge.apply(frame(1, 0, 60, 'ego-2'));
     bridge.apply(frame(2, 0.05, 70, 'ego-2'));
+    wallMs += 1_000;
     viewer.onFrame?.(0.05);
 
     const drawn = bridge.rendered('ego-2');

@@ -52,19 +52,23 @@ function frame(tick: number, x: number, actorClass: 'car' | 'truck' = 'car'): Tr
 
 function bridgeWithSpy(options: TruthViewerBridgeOptions = {}) {
   const viewer = headlessViewer();
-  const bridge = createTruthViewerBridge(viewer, { layer: 'test', ...options });
+  const wall = { ms: 0 };
+  const bridge = createTruthViewerBridge(viewer, { layer: 'test', now: () => wall.ms, ...options });
   const sync = vi.spyOn(bridge.actors, 'syncLayer');
   /**
-   * x as shown once the interpolation window has elapsed: the viewer's frame
-   * hook is driven with a large dt so the display settles on the latest frame.
+   * x as shown once the render clock has had long enough to reach the newest
+   * frame: two displayed frames, ten seconds of wall time apart.
    */
   const renderedX = () => {
-    viewer.onFrame?.(10);
+    for (let frameIndex = 0; frameIndex < 2; frameIndex += 1) {
+      wall.ms += 10_000;
+      viewer.onFrame?.(0.1);
+    }
     const call = sync.mock.calls.at(-1);
     return call ? call[1].find((actor) => actor.id === 'ego')?.x ?? null : null;
   };
   const renderedCatalog = () => sync.mock.calls.at(-1)?.[1].find((actor) => actor.id === 'ego')?.catalogId ?? null;
-  return { bridge, sync, renderedX, renderedCatalog };
+  return { bridge, sync, renderedX, renderedCatalog, viewer, wall };
 }
 
 describe('truth viewer bridge', () => {
@@ -135,5 +139,127 @@ describe('truth viewer bridge', () => {
     bridge.standIn(null);
     expect(clear).toHaveBeenLastCalledWith('test:stand-in');
     bridge.dispose();
+  });
+});
+
+/**
+ * The drive's channel, reproduced: a worker wakes on a jittery interval, steps
+ * the 20 ms world by however much wall time passed (the authored playback
+ * budget, capped catch-up and all), and posts every step; the page draws at the
+ * display's rate. The car cruises at 25 m/s, so every displayed frame should
+ * move it by `25 * frameDt` — any freeze or leap is the jitter a driver sees.
+ */
+function simulateDrive(opts: {
+  displayHz: number;
+  workerHz: number;
+  seconds: number;
+  draw: (wallMs: number) => number;
+  deliver: (frame: TruthFrame, wallMs: number) => void;
+}): { wallMs: number; x: number }[] {
+  const speed = 25;
+  let seed = 7;
+  const random = () => ((seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648) / 2_147_483_648);
+  let tick = 0;
+  let remainder = 0;
+  let lastWorkerWake = 0;
+  let nextWorkerWake = 1000 / opts.workerHz;
+  let nextDisplay = 0;
+  const maxTicks = Math.max(1, Math.ceil(1.5 / opts.workerHz / 0.02));
+  const drawn: { wallMs: number; x: number }[] = [];
+  const cruise = (t: number): TruthFrame => {
+    const base = frame(t, speed * t * 0.02);
+    const actor = base.scene.actors[0] as unknown as { velocity: number[] };
+    actor.velocity = [speed, 0, 0];
+    return base;
+  };
+  opts.deliver(cruise(0), 0);
+  for (let wall = 0; wall < opts.seconds * 1000; wall += 0.25) {
+    if (wall >= nextWorkerWake) {
+      const available = remainder + (wall - lastWorkerWake) / 1000;
+      const steps = Math.min(Math.floor((available + 1e-12) / 0.02), maxTicks);
+      remainder = Math.min(available - steps * 0.02, 0.02);
+      lastWorkerWake = wall;
+      // setInterval in a busy worker: late by up to 4 ms, never early.
+      nextWorkerWake += 1000 / opts.workerHz + random() * 4 - 2;
+      for (let k = 0; k < steps; k += 1) opts.deliver(cruise((tick += 1)), wall + 0.3);
+    }
+    if (wall >= nextDisplay) {
+      drawn.push({ wallMs: wall, x: opts.draw(wall) });
+      // A compositor that is mostly on time, with the odd late frame.
+      nextDisplay += (1000 / opts.displayHz) * (random() < 0.03 ? 2 : 1);
+    }
+  }
+  return drawn;
+}
+
+/** How far each displayed frame's motion departs from the car's real motion, as a fraction. */
+function motionError(drawn: { wallMs: number; x: number }[], speed = 25): { worst: number; frozenFrames: number } {
+  let worst = 0;
+  let frozenFrames = 0;
+  // Skip the first second: the clock is still learning the channel.
+  const settled = drawn.filter((sample) => sample.wallMs > 1000);
+  for (let index = 1; index < settled.length; index += 1) {
+    const expected = speed * (settled[index]!.wallMs - settled[index - 1]!.wallMs) / 1000;
+    const moved = settled[index]!.x - settled[index - 1]!.x;
+    worst = Math.max(worst, Math.abs(moved - expected) / expected);
+    if (moved < expected * 0.25) frozenFrames += 1;
+  }
+  return { worst, frozenFrames };
+}
+
+describe('truth viewer bridge at display rate', () => {
+  for (const displayHz of [60, 120, 144]) {
+    for (const workerHz of [50, 20]) {
+      it(`draws a cruising car without freezes or leaps at ${displayHz} Hz over a ${workerHz} Hz worker`, () => {
+        const { bridge, sync, viewer, wall } = bridgeWithSpy();
+        const drawn = simulateDrive({
+          displayHz,
+          workerHz,
+          seconds: 6,
+          deliver: (next, wallMs) => {
+            wall.ms = wallMs;
+            bridge.apply(next);
+          },
+          draw: (wallMs) => {
+            wall.ms = wallMs;
+            viewer.onFrame?.(1 / displayHz);
+            return sync.mock.calls.at(-1)![1].find((actor) => actor.id === 'ego')!.x;
+          },
+        });
+        const { worst, frozenFrames } = motionError(drawn);
+        expect(frozenFrames).toBe(0);
+        // Rate trimming is at most 10 %, and only while the clock converges.
+        expect(worst).toBeLessThan(0.12);
+        bridge.dispose();
+      });
+    }
+  }
+
+  it('fails the same check the way the drive used to draw: the newest pair, blended from its arrival', () => {
+    // The pre-fix bridge, reduced to its timing: on every arrival the blend
+    // restarted from the previous newest step, over the steps' 20 ms spacing.
+    let earlier: TruthFrame | null = null;
+    let latest: TruthFrame | null = null;
+    let arrivedAt = 0;
+    const drawn = simulateDrive({
+      displayHz: 60,
+      workerHz: 20,
+      seconds: 6,
+      deliver: (next, wallMs) => {
+        earlier = latest;
+        latest = next;
+        arrivedAt = wallMs;
+      },
+      draw: (wallMs) => {
+        const to = latest!.scene.actors[0]!.position[0];
+        if (!earlier) return to;
+        const from = (earlier as TruthFrame).scene.actors[0]!.position[0];
+        const alpha = Math.min(1, (wallMs - arrivedAt) / 1000 / (latest!.timeSec - (earlier as TruthFrame).timeSec));
+        return from + (to - from) * alpha;
+      },
+    });
+    const { worst, frozenFrames } = motionError(drawn);
+    expect(frozenFrames).toBeGreaterThan(drawn.length * 0.2);
+    expect(worst).toBeGreaterThan(0.9);
   });
 });
