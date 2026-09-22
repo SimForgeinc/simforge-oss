@@ -12,6 +12,7 @@
 import { useMemo } from "react";
 import {
   createHttpEvaluationGateway,
+  COMPUTE_API_PATH,
   DESKTOP_COMPUTE_PROXY_PATH,
   type EvaluationGateway,
 } from "@simforge-oss/evaluation/client";
@@ -20,6 +21,9 @@ import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { studioHost } from "@/app/lib/host";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { HOST_KIND } from "@/app/lib/host/kind";
+
+export const HOST_COMPUTE_API_PATH =
+  HOST_KIND === "cloud" ? COMPUTE_API_PATH : DESKTOP_COMPUTE_PROXY_PATH;
 
 /**
  * Without a selection the call acts in the session's active organization; a
@@ -30,7 +34,7 @@ export function useEvaluationGateway(organizationId: string | null = null): Eval
   return useMemo(
     () =>
       createHttpEvaluationGateway({
-        basePath: DESKTOP_COMPUTE_PROXY_PATH,
+        basePath: HOST_COMPUTE_API_PATH,
         organizationId,
       }),
     [organizationId],
