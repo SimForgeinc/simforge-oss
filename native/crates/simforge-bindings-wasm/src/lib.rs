@@ -717,6 +717,16 @@ pub fn compile_situation(
     Ok(out)
 }
 
+/// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
+#[wasm_bindgen(js_name = ambientTurnVerdictsJson)]
+pub fn ambient_turn_verdicts_json(graph: &WasmLaneGraph) -> String {
+    rt::ambient_turn_verdicts_json(&graph.inner)
+}
+/// Load persisted ambient turn verdicts into this module; returns the count. Refuses another ENGINE_SEM_VER.
+#[wasm_bindgen(js_name = loadAmbientTurnVerdicts)]
+pub fn load_ambient_turn_verdicts(json: &str) -> Result<u32, JsValue> {
+    rt::load_ambient_turn_verdicts(json).map(|n| n as u32).js()
+}
 /// Returns `[ScenarioInput, provenanceJson]`.
 #[wasm_bindgen(js_name = materializeAmbientTraffic)]
 pub fn materialize_ambient_traffic(

@@ -8,7 +8,7 @@
  */
 
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -200,7 +200,60 @@ export async function readInstalledMapClosureFiles(dir: string, mapId = path.bas
  */
 export async function createSimulationMapBundle(files: MapClosureFiles): Promise<MapBundle> {
   const graph = await buildSimulationMapClosure<DerivedTopology, LocationCatalog>(engine().module, files);
-  return new MapBundle(graph.bundle, { derived: graph.derived, catalog: graph.locations });
+  const bundle = new MapBundle(graph.bundle, { derived: graph.derived, catalog: graph.locations });
+  await restoreAmbientTurnVerdictsFromDisk(bundle);
+  return bundle;
+}
+
+/**
+ * Disk cache of the ambient generator's turn-feasibility verdicts, per map
+ * closure and engine semantics:
+ * `<SIMFORGE_AMBIENT_TURN_CACHE | map cache>/derived-cache/ambient-turn-verdicts/<engineSemVer>/<closureDigest>.json`.
+ * Workers restore it when they build a simulation map (`createSimulationMapBundle`)
+ * and persist it after generating ambient traffic, so the probes run once per
+ * closure and engine, not once per process. A hit changes timing, never the
+ * population (see `EngineRuntime.ambientTurnVerdicts`).
+ */
+export function ambientTurnVerdictCachePath(bundle: MapBundle): string {
+  const root = process.env['SIMFORGE_AMBIENT_TURN_CACHE']
+    ?? path.join(path.dirname(DEV_ASSETS), 'derived-cache', 'ambient-turn-verdicts');
+  return path.join(root, engine().version().engineSemVer, `${bundle.closureDigest}.json`);
+}
+
+const restoredVerdicts = new Map<string, number>();
+
+/** Load this closure's persisted turn verdicts into the addon, once per process. Returns the count. */
+export async function restoreAmbientTurnVerdictsFromDisk(bundle: MapBundle): Promise<number> {
+  let file: string;
+  try { file = ambientTurnVerdictCachePath(bundle); } catch { return 0; }
+  const known = restoredVerdicts.get(file);
+  if (known !== undefined) return known;
+  restoredVerdicts.set(file, 0);
+  try {
+    const count = engine().loadAmbientTurnVerdicts(await readFile(file, 'utf8'));
+    restoredVerdicts.set(file, count);
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/** Write the verdicts the addon holds for this closure when they outgrew the stored table. */
+export async function persistAmbientTurnVerdictsToDisk(bundle: MapBundle): Promise<void> {
+  try {
+    const json = engine().ambientTurnVerdicts(bundle.graph);
+    if (!json) return;
+    const file = ambientTurnVerdictCachePath(bundle);
+    const count = (JSON.parse(json) as { verdicts: unknown[] }).verdicts.length;
+    if (count <= (restoredVerdicts.get(file) ?? 0)) return;
+    await mkdir(path.dirname(file), { recursive: true });
+    const temporary = `${file}.${process.pid}.tmp`;
+    await writeFile(temporary, json);
+    await rename(temporary, file);
+    restoredVerdicts.set(file, count);
+  } catch {
+    // A read-only cache or a full disk costs only the probes next time.
+  }
 }
 
 /** Resolve `--map` / `--maps` / `--all-maps` into an ordered map id list. */

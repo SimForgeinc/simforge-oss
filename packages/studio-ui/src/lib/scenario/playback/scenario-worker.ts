@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { persistAmbientTurnVerdicts, restoreAmbientTurnVerdicts } from './ambient-turn-cache';
 import { exportOpenScenarioXml14 } from '@simforge-oss/openscenario';
 import { AsamExportError } from '@simforge-oss/openscenario';
 import {
@@ -545,6 +546,10 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
     });
     const graph = bundle.graph;
     const controls = bundle.controlPlan();
+    // Turn verdicts from an earlier session on this closure make the first
+    // ambient generation as fast as a warm one (see ambient-turn-cache.ts).
+    closureDigestByGraph.set(graph, mapGraph.closureDigest);
+    await restoreAmbientTurnVerdicts(engine, mapGraph.closureDigest);
     const identity: MapRuntimeIdentity = {
       mapId: map.sourceMapId,
       assetDigest,
@@ -690,6 +695,9 @@ function postPrepareProgress(
 }
 
 /** Generate the requested background population natively; the population is a pure function of map graph, profile and base input. */
+/** Closure digest of each map runtime's graph, for the turn-verdict cache. */
+const closureDigestByGraph = new WeakMap<LaneGraph, string>();
+
 function applyRequestedAmbientPopulation(
   engine: EngineRuntime,
   base: SimScenarioInput,
@@ -697,6 +705,8 @@ function applyRequestedAmbientPopulation(
   request: ScenarioWorkerRequest,
 ): AmbientTrafficResult {
   const generated = engine.materializeAmbientTraffic(base, graph, request.ambientTraffic);
+  const closureDigest = closureDigestByGraph.get(graph);
+  if (closureDigest) void persistAmbientTurnVerdicts(engine, graph, closureDigest);
   return { input: JSON.parse(generated.scenario.toJson()) as SimScenarioInput, provenance: generated.provenance };
 }
 
