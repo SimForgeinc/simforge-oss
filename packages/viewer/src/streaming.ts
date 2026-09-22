@@ -389,22 +389,42 @@ export class TileStreamLayer {
     for (const entry of this.entries.values()) {
       if (entry.loading || entry.preparing !== null || entry.budgetBlocked || entry.desired < 0) continue;
       if (entry.desired <= this.finestResident(entry)) continue;
-      if (entry.resident.has(entry.desired)) continue;
       wanted.push(entry);
     }
     if (wanted.length === 0) return;
     // Biggest screen-space win first; not-yet-loaded tiles (gain Infinity) lead.
+    // Required/in-view tiles sort ahead of prefetch and vegetation.
     wanted.sort((a, b) => Number(b.required) - Number(a.required) || b.gain - a.gain || a.distance - b.distance);
 
     for (const entry of wanted) {
       if (active >= this.opts.maxConcurrent
         || active + this.uploadQueue.length + this.compiling.size >= MAX_UPLOAD_BACKLOG) break;
-      // Admission can refuse (budget full); try the next tile instead of stalling.
-      if (this.startLoad(entry, entry.desired)) active++;
+
+      // If the selected detail cannot fit, walk toward the coarsest LOD. A
+      // resident fallback is immediately usable; otherwise try to admit the
+      // cheapest candidate before declaring the tile blocked. This keeps
+      // buildings visible under pressure and lets the next update re-promote
+      // them when budget is released.
+      let admitted = false;
+      for (let index = entry.desired; index >= 0; index--) {
+        if (entry.resident.has(index)) {
+          entry.desired = index;
+          entry.budgetBlocked = false;
+          admitted = true;
+          break;
+        }
+        if (this.startLoad(entry, index, false)) {
+          entry.desired = index;
+          admitted = true;
+          active++;
+          break;
+        }
+      }
+      if (!admitted) entry.budgetBlocked = true;
     }
   }
 
-  private startLoad(entry: Entry, index: number): boolean {
+  private startLoad(entry: Entry, index: number, markBudgetBlocked = true): boolean {
     const lod = entry.def.lods[index];
     if (!lod) return false;
     const rawEstimate = estimateLodBytes(lod);
@@ -413,7 +433,7 @@ export class TileStreamLayer {
       || (this.opts.essentialCoarsest === true && index === 0);
     const priority = (entry.required ? -Infinity : entry.distance) + (this.opts.priorityBias ?? 0);
     if (!essential && !this.opts.memory.admit(estimate, priority)) {
-      entry.budgetBlocked = true;
+      if (markBudgetBlocked) entry.budgetBlocked = true;
       if (entry.required && this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
         entry.failures = MAX_FAILURES;
         this.reportFailure(entry, index, new RequiredAssetBudgetError(this.opts.name, entry.def.id, this, this.generation, estimate));
@@ -444,19 +464,20 @@ export class TileStreamLayer {
         this.decodedAssets++;
         this.pending += asset.bytes;
         this.uploadQueue.push({ entry, index, asset });
+        this.pumpFetches();
       })
       .catch((err: unknown) => {
         if (entry.loading?.controller === controller) entry.loading = null;
         this.pending -= estimate;
-        if (!controller.signal.aborted && !this.disposed && generation === this.generation) {
-          entry.failures++;
-          const error = new Error(`[${this.opts.name}] downloading/decoding ${entry.def.id} lod${lod.level} failed`, { cause: err });
-          console.error(error);
-          if (entry.failures >= MAX_FAILURES) this.reportFailure(entry, index, error);
-        }
+        if (controller.signal.aborted || generation !== this.generation) return;
+        entry.failures++;
+        const error = new Error(`[${this.opts.name}] downloading/decoding ${entry.def.id} lod${lod.level} failed`, { cause: err });
+        console.error(error);
+        if (entry.failures >= MAX_FAILURES) this.reportFailure(entry, index, error);
       });
     return true;
   }
+
 
   /**
    * Pushes queued textures to the GPU under a per-frame time budget so a 140 MB
