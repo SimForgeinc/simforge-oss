@@ -7,7 +7,7 @@ process.env.SIMFORGE_ENV = "dev";
 
 import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
 import { loadBuiltinRenderEngine } from "@simforge-oss/render";
-import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
+import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
@@ -311,6 +311,8 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.equal(lease.type, "job.leased");
   assert.equal("jobId" in lease ? lease.jobId : null, job.id);
   assert.ok("lease" in lease && lease.lease.fenceToken.length >= 32);
+  assert.ok("intent" in lease && "intentSha256" in lease);
+  assert.equal(hashRenderIntent(lease.intent), lease.intentSha256, "the worker must accept the leased multi-camera intent digest");
 
   // The lease is real in the ledger: the trigger that refuses ineligible
   // hardware profiles let it through.

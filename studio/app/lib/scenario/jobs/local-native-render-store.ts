@@ -26,7 +26,7 @@ import {
   resolveActorAssets,
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
-import { RENDER_INTENT_V1_SCHEMA, parseRenderIntent } from "@simforge-oss/scenario";
+import { RENDER_INTENT_V1_SCHEMA, hashRenderIntent, parseRenderIntent } from "@simforge-oss/scenario";
 import { simforgeEnv } from "@/lib/simforge-env";
 import { canonicalJsonSha256, sha256, scenarioId } from "../core";
 import {
@@ -219,7 +219,7 @@ export type LocalNativeClaimPayload = {
 
 export async function localNativeClaimPayload(source: LocalNativeRenderSource): Promise<LocalNativeClaimPayload> {
   const intent = ScenarioRenderIntentSchema.parse(parseJsonObject(source.render_intent));
-  if (canonicalJsonSha256(intent) !== source.intent_sha256) throw new Error("render_intent_digest_mismatch");
+  if (hashRenderIntent(intent) !== source.intent_sha256) throw new Error("render_intent_digest_mismatch");
   const members = await declaredNativeMapMembers(source.map_version_id);
   const actorClosure = nativeActorAssetsInput();
   const actorSource = resolveActorAssets();
