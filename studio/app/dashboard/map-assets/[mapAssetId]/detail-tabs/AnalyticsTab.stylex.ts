@@ -48,7 +48,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "hsl(var(--muted) / 0.5)",
-    marginBottom: space.lg,
+    marginBottom: space.s3,
   },
   emptyStateIcon: {
     color: colors.mutedForeground,
@@ -60,7 +60,7 @@ export const styles = stylex.create({
     color: colors.text,
   },
   emptyStateDescription: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,

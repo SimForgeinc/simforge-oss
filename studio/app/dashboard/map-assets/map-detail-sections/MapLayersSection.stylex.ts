@@ -10,7 +10,7 @@ export const styles = stylex.create({
   mapLayersToggle: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -35,8 +35,8 @@ export const styles = stylex.create({
   layerGroupsList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
-    marginTop: space.md,
+    gap: space.s2,
+    marginTop: space.s2,
   },
   groupHeaderRow: {
     display: "flex",
@@ -47,7 +47,7 @@ export const styles = stylex.create({
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     paddingInline: "0.625rem",
-    paddingBlock: space.sm,
+    paddingBlock: space.s1_5,
   },
   groupExpandButton: {
     flexShrink: 0,
@@ -87,8 +87,8 @@ export const styles = stylex.create({
   groupItemsList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    marginLeft: space.xl,
+    gap: space.s1_5,
+    marginLeft: space.s4,
   },
   layerLabel: {
     minWidth: 0,
@@ -109,8 +109,8 @@ export const styles = stylex.create({
     borderColor: colors.border,
   },
   laneModeButton: {
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontSize: "11px",
     fontWeight: 500,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -134,7 +134,7 @@ export const styles = stylex.create({
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     paddingInline: "0.625rem",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   layerRowEmpty: {
     opacity: 0.4,
@@ -159,7 +159,7 @@ export const styles = stylex.create({
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     paddingInline: "0.625rem",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   dotInHouseSpeedLimits: { backgroundColor: "#111111" },
   enrichmentEmptyState: {
@@ -173,13 +173,13 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
-    marginBottom: space.md,
+    marginBottom: space.s2,
   },
   enrichmentActionButton: {
     width: "100%",
   },
   enrichmentLoadingIcon: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
@@ -188,15 +188,15 @@ export const styles = stylex.create({
     animationIterationCount: "infinite",
   },
   enrichmentActionIcon: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
   },
   providerReleaseRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingInline: space.xs,
+    gap: space.s1_5,
+    paddingInline: space.s1,
     fontSize: "10px",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
@@ -221,22 +221,22 @@ export const styles = stylex.create({
   dotOvertureSpeedLimits: { backgroundColor: "#2563eb" },
   dotScenarioCandidate: { backgroundColor: "#f97316" },
   twinMetadataRow: {
-    paddingInline: space.xs,
+    paddingInline: space.s1,
     fontSize: "10px",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     color: colors.mutedForeground,
   },
   twinReferenceVersion: {
-    marginLeft: space.xs,
+    marginLeft: space.s1,
     fontFamily: "var(--font-mono), ui-monospace, monospace",
     color: "hsl(var(--muted-foreground) / 0.7)",
   },
   resolutionSelectorRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingInline: space.xs,
+    gap: space.s1_5,
+    paddingInline: space.s1,
   },
   resolutionLabel: {
     fontSize: "10px",
@@ -247,8 +247,8 @@ export const styles = stylex.create({
   resolutionButton: {
     borderWidth: "1px",
     borderStyle: "solid",
-    paddingInline: space.sm,
-    paddingBlock: space.xxs,
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontSize: "10px",
     fontFamily: "var(--font-mono), ui-monospace, monospace",
   },
@@ -263,7 +263,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   twinFidelityLegend: {
-    paddingInline: space.xs,
+    paddingInline: space.s1,
     fontSize: "10px",
     color: colors.mutedForeground,
   },

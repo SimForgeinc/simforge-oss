@@ -10,7 +10,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    paddingInline: space.xl,
+    paddingInline: space.s4,
   },
   // absolute inset-0 bg-black/70 backdrop-blur-sm
   closeOpenSCENARIODialogButton: {
@@ -31,11 +31,11 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    padding: space.xxl,
+    padding: space.s6,
     boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   // text-lg font-semibold text-foreground
   xoscImportTitle: {
@@ -46,7 +46,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-sm text-muted-foreground
   createANewScenarioFromThePar: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
@@ -57,8 +57,8 @@ export const styles = stylex.create({
   },
   // size-4
   fileupIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
   // border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive
   alert: {
@@ -66,7 +66,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.6)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
-    padding: space.lg,
+    padding: space.s3,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: colors.danger,
@@ -75,17 +75,17 @@ export const styles = stylex.create({
   xoscImportReport: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   // grid gap-2 border border-border bg-surface-deep p-3 text-sm sm:grid-cols-2
   divGridSm: {
     display: "grid",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.surfaceDeep,
-    padding: space.lg,
+    padding: space.s3,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
@@ -111,27 +111,27 @@ export const styles = stylex.create({
   div2: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // flex items-center gap-2 text-sm font-medium
   divFlexSmMedium: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: text.weightMedium,
   },
   // size-4 text-emerald-500
   checkcircle2Icon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
     color: "rgb(16 185 129 / 1)",
   },
   // size-4 text-amber-500
   alerttriangleIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
     color: "rgb(245 158 11 / 1)",
   },
   // block text-sm
@@ -142,7 +142,7 @@ export const styles = stylex.create({
   },
   // mb-1 block text-muted-foreground
   map: {
-    marginBottom: space.xs,
+    marginBottom: space.s1,
     display: "block",
     color: colors.mutedForeground,
   },
@@ -154,7 +154,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "hsl(var(--input))",
     backgroundColor: colors.bg,
-    paddingInline: space.lg,
+    paddingInline: space.s3,
   },
   // text-xs text-amber-600
   multipleMapsMatchedNoMapWasS: {
@@ -179,7 +179,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    padding: space.lg,
+    padding: space.s3,
   },
   // text-sm font-semibold
   whatWillBeConverted: {
@@ -189,27 +189,27 @@ export const styles = stylex.create({
   },
   // mt-2 space-y-1 text-xs
   ulXs: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // mt-3 flex items-start gap-2 text-xs
   labelFlexXs: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "flex",
     alignItems: "flex-start",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
   // mt-0.5 size-4
   xoscUnsupportedAcknowledgemeInput: {
-    marginTop: space.xxs,
-    width: space.xl,
-    height: space.xl,
+    marginTop: space.s0_5,
+    width: space.s4,
+    height: space.s4,
   },
   // cursor-pointer text-sm font-medium
   technicalConversionDetails: {
@@ -220,17 +220,17 @@ export const styles = stylex.create({
   },
   // mt-2 space-y-2
   openscenarioImportDiagnostic: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // border border-border p-2 text-xs
   liXs: {
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
@@ -240,13 +240,13 @@ export const styles = stylex.create({
   },
   // mt-1 text-muted-foreground
   div3: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     color: colors.mutedForeground,
   },
   // flex justify-end gap-2
   divFlex: {
     display: "flex",
     justifyContent: "flex-end",
-    gap: space.md,
+    gap: space.s2,
   },
 });

@@ -8,7 +8,7 @@ export const styles = stylex.create({
    * follows a sibling.
    */
   mt4: {
-    marginTop: space.xl,
+    marginTop: space.s4,
   },
   // flex min-h-0 overflow-hidden border border-white/10
   flexBorderedClip: {

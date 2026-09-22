@@ -7,10 +7,10 @@ export const styles = stylex.create({
     display: "grid",
     minWidth: "0px",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.lg,
+    gap: space.s3,
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // text-meta font-semibold uppercase tracking-wider text-muted-foreground
   capsMetaMuted: {
@@ -27,17 +27,17 @@ export const styles = stylex.create({
   },
   // mt-0.5 text-meta leading-4 text-white/35
   meta: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeMeta,
     lineHeight: "1rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // mt-2 grid grid-cols-1 gap-1.5
   gridCols1Gap15: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // block text-[10px] font-medium
   blockMedium: {
@@ -47,7 +47,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 block text-[9px] leading-3.5 opacity-70
   block: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     display: "block",
     fontSize: "9px",
     lineHeight: "0.875rem",
@@ -55,10 +55,10 @@ export const styles = stylex.create({
   },
   // mt-1.5 text-meta leading-4 text-white/35
   meta2: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeMeta,
     lineHeight: "1rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // text-meta text-red-300
   meta3: {
@@ -77,7 +77,7 @@ export const styles = stylex.create({
   },
   // mt-1 h-8
   mt1H8: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
   },
 
@@ -85,10 +85,10 @@ export const styles = stylex.create({
   styleOption: {
     borderRadius: "0",
     borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
     transitionTimingFunction: motion.easeStandard,
@@ -115,7 +115,7 @@ export const styles = stylex.create({
   // border-white/10 bg-white/[0.025] text-white/60 hover:border-white/25 hover:bg-white/[0.06] hover:text-white/90
   styleOptionIdle: {
     borderColor: {
-      default: colors.chip,
+      default: colors.fillStrong,
       ":hover": "rgb(255 255 255 / 0.25)",
     },
     backgroundColor: {

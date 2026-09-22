@@ -11,7 +11,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    paddingInline: space.xl,
+    paddingInline: space.s4,
   },
   // absolute inset-0 bg-black/70 backdrop-blur-sm
   closeButton: {
@@ -42,14 +42,14 @@ export const styles = stylex.create({
   },
   // mt-1 text-xs text-muted-foreground
   pXs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
   },
   // mt-4 block font-meta text-micro uppercase tracking-meta-wide text-muted-foreground
   labelMetaMicroUppercase: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "block",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
@@ -60,7 +60,7 @@ export const styles = stylex.create({
   },
   // mt-4 block font-meta text-micro uppercase tracking-meta-wide text-muted-foreground
   labelMetaMicroUppercase2: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "block",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
@@ -71,7 +71,7 @@ export const styles = stylex.create({
   },
   // mt-1.5 min-h-28 w-full resize-y border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50
   textareaSm: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     minHeight: "7rem",
     width: "100%",
     resize: "vertical",
@@ -79,8 +79,8 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "hsl(var(--input))",
     backgroundColor: colors.bg,
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: { default: colors.text, "::placeholder": colors.mutedForeground },
@@ -92,7 +92,7 @@ export const styles = stylex.create({
   },
   // mt-3 text-xs
   copyableerrormessageXs: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
@@ -101,6 +101,6 @@ export const styles = stylex.create({
     marginTop: "1.25rem",
     display: "flex",
     justifyContent: "flex-end",
-    gap: space.md,
+    gap: space.s2,
   },
 });

@@ -8,14 +8,14 @@ export const styles = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     MozColumnGap: "0.25rem",
-    columnGap: space.xs,
-    rowGap: space.xs,
+    columnGap: space.s1,
+    rowGap: space.s1,
   },
   // flex items-center gap-1
   flexCenterGap1: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // w-3 border-t render-hairline
   ruleT: {
@@ -38,14 +38,14 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.xl,
+    gap: space.s4,
     borderTopWidth: "1px",
-    paddingLeft: space.xxl,
-    paddingRight: space.xxl,
+    paddingLeft: space.s6,
+    paddingRight: space.s6,
     paddingTop: "0.875rem",
     paddingBottom: "0.875rem",
     backgroundColor: colors.glassRaised,
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
   },
   // min-w-0 text-micro text-muted-foreground
   microMutedNarrowable: {
@@ -59,17 +59,17 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // motionStyles.editorMotion + inline-flex h-9 items-center gap-1.5 border render-hairline render-glass px-3 text-micro font-bold uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   inlineFlexCenterCaps: {
     display: "inline-flex",
     height: "2.25rem",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: "1px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -79,7 +79,7 @@ export const styles = stylex.create({
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
     outline: {
       default: null,
@@ -105,7 +105,7 @@ export const styles = stylex.create({
     width: "100%",
     minWidth: "0px",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 flex-1 truncate text-xs font-semibold text-foreground
   fillXsInk: {
@@ -129,11 +129,11 @@ export const styles = stylex.create({
   inlineFlexCenterCaps2: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    gap: space.s1_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -159,8 +159,8 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     flexDirection: "column",
     overflow: "hidden",
-    paddingLeft: space.xxl,
-    paddingRight: space.xxl,
+    paddingLeft: space.s6,
+    paddingRight: space.s6,
     paddingTop: "1.25rem",
     paddingBottom: "1.25rem",
   },
@@ -170,7 +170,7 @@ export const styles = stylex.create({
     height: "2.25rem",
     cursor: "not-allowed",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: "1px",
     paddingLeft: "1.25rem",
     paddingRight: "1.25rem",
@@ -180,7 +180,7 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
     outline: {
       default: null,
@@ -200,7 +200,7 @@ export const styles = stylex.create({
     display: "inline-flex",
     height: "2.25rem",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     backgroundColor: {
       default: colors.primary,
       ":hover": "hsl(var(--primary) / 0.9)",
@@ -246,9 +246,9 @@ export const styles = stylex.create({
     minWidth: "0px",
     flexDirection: "column",
     alignItems: "flex-start",
-    gap: space.xs,
+    gap: space.s1,
     borderWidth: "1px",
-    padding: space.lg,
+    padding: space.s3,
     textAlign: "left",
     outline: {
       default: null,
@@ -270,7 +270,7 @@ export const styles = stylex.create({
   },
   // render-glass hover:border-primary/40
   renderGlassHoverBorderPrimary40: {
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: {
       default: "rgb(255 255 255 / 10%)",
       ":hover": "hsl(var(--primary) / 0.4)",

@@ -7,7 +7,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--muted) / 0.3)",
-    padding: space.md,
+    padding: space.s2,
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
@@ -19,7 +19,7 @@ export const styles = stylex.create({
   },
   // mt-1 truncate font-mono text-foreground/90
   monoTruncate: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",

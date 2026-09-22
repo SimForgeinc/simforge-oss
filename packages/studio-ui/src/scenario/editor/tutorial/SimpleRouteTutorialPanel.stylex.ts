@@ -5,14 +5,14 @@ export const styles = stylex.create({
   // fixed inset-0 z-[150] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm
   fixedFlexCenter: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.tutorialTop,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgb(0 0 0 / 0.55)",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
     backdropFilter: "blur(4px)",
   },
   // w-full max-w-md border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.7)]
@@ -30,7 +30,7 @@ export const styles = stylex.create({
   flexStartGap3: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
   },
   // flex size-10 shrink-0 items-center justify-center bg-[#E8E044] text-black
   flexCenterMid: {
@@ -64,7 +64,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-lg font-semibold
   lgSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeLg,
     lineHeight: "1.75rem",
     fontWeight: text.weightSemibold,
@@ -111,20 +111,20 @@ export const styles = stylex.create({
   mt5StackLg: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     marginTop: "1.25rem",
   },
   // flex gap-3 border-t border-white/10 pt-3
   flexRuleTGap3: {
     display: "flex",
-    gap: space.lg,
+    gap: space.s3,
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // mt-0.5 size-4 shrink-0 text-[#E8E044]
   tight: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "1rem",
     height: "1rem",
     flexShrink: "0",
@@ -147,10 +147,10 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.lg,
+    gap: space.s3,
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.xl,
+    paddingTop: space.s4,
   },
   // font-mono text-[9px] uppercase tracking-[0.12em] text-white/40
   capsMono: {

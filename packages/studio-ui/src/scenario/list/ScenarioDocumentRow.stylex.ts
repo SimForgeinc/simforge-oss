@@ -8,7 +8,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: space.xs,
+    gap: space.s1,
   },
   // size-3.5
   morehorizontalIcon: {
@@ -17,30 +17,30 @@ export const styles = stylex.create({
   },
   // mr-2 size-3.5
   downloadJSONDownload: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.875rem",
     height: "0.875rem",
   },
   // mr-2 size-3.5
   editDetailsPencil: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.875rem",
     height: "0.875rem",
   },
   // mr-2 size-3.5
   duplicateCopyPlus: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.875rem",
     height: "0.875rem",
   },
   transferMapPin: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.875rem",
     height: "0.875rem",
   },
   // mr-2 size-3.5
   deleteTrash2: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.875rem",
     height: "0.875rem",
   },
@@ -52,7 +52,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: { default: "hsl(var(--primary) / 0.4)", ":focus": colors.primary },
     backgroundColor: colors.bg,
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: text.weightMedium,
@@ -78,14 +78,14 @@ export const styles = stylex.create({
   // absolute -right-0.5 -top-0.5 flex min-w-3 items-center justify-center bg-primary px-0.5 font-meta text-micro font-bold leading-3 text-primary-foreground
   spanAbsoluteFlexMeta: {
     position: "absolute",
-    right: `calc(-1 * ${space.xxs})`,
-    top: `calc(-1 * ${space.xxs})`,
+    right: `calc(-1 * ${space.s0_5})`,
+    top: `calc(-1 * ${space.s0_5})`,
     display: "flex",
-    minWidth: space.lg,
+    minWidth: space.s3,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,
-    paddingInline: space.xxs,
+    paddingInline: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: "0.75rem",
@@ -104,15 +104,15 @@ export const styles = stylex.create({
   },
   // mt-1 mr-1 inline-flex rounded-full border border-sky-400/45 bg-sky-400/10 px-1.5 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-sky-300
   variation: {
-    marginTop: space.xs,
-    marginRight: space.xs,
+    marginTop: space.s1,
+    marginRight: space.s1,
     display: "inline-flex",
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: "rgb(56 189 248 / 0.45)",
     backgroundColor: "rgb(56 189 248 / 0.1)",
-    paddingInline: space.sm,
-    paddingBlock: space.xxs,
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     textTransform: "uppercase",
@@ -121,7 +121,7 @@ export const styles = stylex.create({
   },
   // mt-1 line-clamp-2 text-[12px] leading-snug text-white/70
   div2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "-webkit-box",
     WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
@@ -132,10 +132,10 @@ export const styles = stylex.create({
   },
   // mt-2 flex flex-wrap gap-1.5
   tagsFor: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // rounded-full border border-primary/70 bg-primary/15 px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-primary
   letGoToApplyTag: {
@@ -143,8 +143,8 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.7)",
     backgroundColor: "hsl(var(--primary) / 0.15)",
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     textTransform: "uppercase",
@@ -155,8 +155,8 @@ export const styles = stylex.create({
   spanMetaUppercase: {
     borderWidth: "1px",
     borderStyle: "solid",
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     textTransform: "uppercase",
@@ -167,8 +167,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderStyle: "dashed",
     borderColor: colors.border,
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     textTransform: "uppercase",
@@ -177,10 +177,10 @@ export const styles = stylex.create({
   },
   // mt-1 flex flex-col gap-0.5 font-meta text-micro uppercase tracking-meta text-white/70
   divFlexMetaMicro: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "flex",
     flexDirection: "column",
-    gap: space.xxs,
+    gap: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,

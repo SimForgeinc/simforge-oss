@@ -3,10 +3,10 @@ import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/toke
 
 export const styles = stylex.create({
   sectionHeader: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   sectionTitle: {
     fontSize: text.sizeSm,
@@ -16,7 +16,7 @@ export const styles = stylex.create({
   },
   tagCount: {
     paddingInline: "0.625rem",
-    paddingBlock: space.xxs,
+    paddingBlock: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -36,19 +36,19 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   tagList: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   tagChip: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     borderWidth: "1px",
     borderStyle: "solid",
-    paddingInline: space.sm,
-    paddingBlock: space.xxs,
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontFamily: "var(--font-mono), ui-monospace, monospace",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -65,7 +65,7 @@ export const styles = stylex.create({
   },
   autoBadge: {
     backgroundColor: "rgba(30, 64, 175, 0.5)",
-    paddingInline: space.xs,
+    paddingInline: space.s1,
     paddingBlock: "1px",
     fontSize: "9px",
     fontWeight: 600,
@@ -74,7 +74,7 @@ export const styles = stylex.create({
     color: "#93c5fd",
   },
   tagRemove: {
-    marginLeft: space.xxs,
+    marginLeft: space.s0_5,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
     transitionDuration: "150ms",
@@ -91,7 +91,7 @@ export const styles = stylex.create({
   },
   addTagSection: {
     position: "relative",
-    marginBottom: space.lg,
+    marginBottom: space.s3,
   },
   compactOutlineControl: {
     height: "1.75rem",
@@ -111,15 +111,15 @@ export const styles = stylex.create({
     boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
   },
   searchInputWrapper: {
-    padding: space.md,
+    padding: space.s2,
   },
   tagOptionsList: {
     maxHeight: "12rem",
     overflowY: "auto",
   },
   noMatchingTags: {
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -128,9 +128,9 @@ export const styles = stylex.create({
     display: "flex",
     width: "100%",
     alignItems: "flex-start",
-    gap: space.md,
-    paddingInline: space.lg,
-    paddingBlock: space.sm,
+    gap: space.s2,
+    paddingInline: space.s3,
+    paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -148,7 +148,7 @@ export const styles = stylex.create({
   csvToggle: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: { default: colors.mutedForeground, ":hover": colors.text },
@@ -168,7 +168,7 @@ export const styles = stylex.create({
     transform: "rotate(-90deg)",
   },
   csvPanel: {
-    marginTop: space.md,
+    marginTop: space.s2,
     maxWidth: "32rem",
   },
   csvTextarea: {
@@ -179,7 +179,7 @@ export const styles = stylex.create({
     borderColor: "hsl(var(--input))",
     backgroundColor: colors.bg,
     paddingInline: "0.625rem",
-    paddingBlock: space.sm,
+    paddingBlock: space.s1_5,
     fontFamily: "var(--font-mono), ui-monospace, monospace",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -197,7 +197,7 @@ export const styles = stylex.create({
     boxShadow: { default: null, ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
     "::placeholder": { color: "hsl(var(--muted-foreground) / 0.5)" },
   },
-  stackY1_5: { marginTop: { default: space.sm, ":first-child": space.none } },
+  stackY1_5: { marginTop: { default: space.s1_5, ":first-child": 0 } },
   csvErrorMessage: {
     fontSize: text.sizeXs,
     lineHeight: "1rem",

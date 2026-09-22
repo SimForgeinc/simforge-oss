@@ -8,7 +8,7 @@ export const styles = stylex.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    padding: space.xxl,
+    padding: space.s6,
     textAlign: "center",
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",

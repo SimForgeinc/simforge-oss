@@ -11,7 +11,7 @@ export const styles = stylex.create({
     display: "flex",
     minWidth: "0px",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // motionStyles.editorMotion + shrink-0 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card
   tightMuted: {
@@ -51,13 +51,13 @@ export const styles = stylex.create({
   },
   // ml-1 text-muted-foreground
   muted: {
-    marginLeft: space.xs,
+    marginLeft: space.s1,
     color: colors.mutedForeground,
   },
   // min-w-0 pl-4
   narrowable2: {
     minWidth: "0px",
-    paddingLeft: space.xl,
+    paddingLeft: space.s4,
   },
   // block truncate text-micro text-muted-foreground
   blockMicroMuted: {
@@ -79,7 +79,7 @@ export const styles = stylex.create({
   // motionStyles.editorMotion + absolute top-0 h-4 w-1.5 -translate-x-1/2 cursor-col-resize bg-foreground/40 hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
   abs: {
     position: "absolute",
-    top: space.none,
+    top: 0,
     height: "1rem",
     width: "0.375rem",
     transform: "translate(-50%, 0)",
@@ -104,7 +104,7 @@ export const styles = stylex.create({
   // absolute top-0 flex h-4 items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
   absFlexCenter: {
     position: "absolute",
-    top: space.none,
+    top: 0,
     display: "flex",
     height: "1rem",
     alignItems: "center",

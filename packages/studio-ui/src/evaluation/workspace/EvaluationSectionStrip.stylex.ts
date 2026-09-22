@@ -14,9 +14,9 @@ export const styles = stylex.create({
     minWidth: space.datasetStripWidth,
     borderRightWidth: "1px",
     borderRightStyle: "solid",
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.22)",
-    paddingBlock: space.md,
+    paddingBlock: space.s2,
   },
   list: {
     minHeight: 0,
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     position: "relative",
     display: "flex",
     justifyContent: "center",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   /** The selection pill: a bar on the open section, nothing otherwise. */
   pill: {
@@ -86,19 +86,19 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
-    paddingTop: space.md,
-    marginTop: space.xs,
+    gap: space.s1,
+    paddingTop: space.s2,
+    marginTop: space.s1,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    borderColor: colors.line,
+    borderColor: colors.hairline,
   },
   tooltipTitle: {
     fontWeight: text.weightSemibold,
   },
   tooltipMeta: {
     fontSize: text.sizeMeta,
-    lineHeight: text.lineMeta,
-    color: colors.textMuted,
+    lineHeight: text.lineXs,
+    color: colors.mutedForeground,
   },
 });

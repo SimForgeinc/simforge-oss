@@ -8,12 +8,12 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     overflowY: "auto",
     backgroundColor: colors.panelSolid,
-    padding: space.lg,
+    padding: space.s3,
     color: "rgb(255 255 255 / 1)",
   },
   // mb-2 flex items-center text-micro font-semibold uppercase tracking-meta-wide text-white/45
   flexCenterCaps: {
-    marginBottom: space.md,
+    marginBottom: space.s2,
     display: "flex",
     alignItems: "center",
     fontSize: text.sizeMicro,
@@ -25,7 +25,7 @@ export const styles = stylex.create({
   },
   // mr-2 size-3
   mr2Size3: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.75rem",
     height: "0.75rem",
   },
@@ -42,8 +42,8 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     alignSelf: "stretch",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     textAlign: "left",
     outline: {
       default: null,
@@ -81,7 +81,7 @@ export const styles = stylex.create({
   },
   // motionStyles.editorMotion + mr-2 text-white/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   editorMotionMr2TextWhite30: {
-    marginRight: space.md,
+    marginRight: space.s2,
     color: {
       default: "rgb(255 255 255 / 0.3)",
       ":hover": "rgb(248 113 113 / 1)",
@@ -109,7 +109,7 @@ export const styles = stylex.create({
     gridColumn: "span 2 / span 2",
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // grid h-16 place-items-center border border-dashed border-white/15 text-xs text-white/35
   gridCenteredXs: {
@@ -121,7 +121,7 @@ export const styles = stylex.create({
     borderColor: "rgb(255 255 255 / 0.15)",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   /*
    * The row list's old `space-y-1`. `space-y` is a `> * + *` rule with no
@@ -131,13 +131,13 @@ export const styles = stylex.create({
   stackXs: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
 
   // flex h-8 w-full items-center border text-xs
   row: {
     display: "flex",
-    height: space.xxxl,
+    height: space.s8,
     width: "100%",
     alignItems: "center",
     borderWidth: "1px",
@@ -151,7 +151,7 @@ export const styles = stylex.create({
   },
   // border-white/10 bg-white/[0.035] hover:bg-white/[0.06]
   rowCollapsed: {
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
     backgroundColor: {
       default: "rgb(255 255 255 / 0.035)",
       ":hover": "rgb(255 255 255 / 0.06)",
@@ -161,13 +161,13 @@ export const styles = stylex.create({
   inspector: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.lg,
+    gap: space.s3,
     borderLeftWidth: "1px",
     borderRightWidth: "1px",
     borderBottomWidth: "1px",
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
     backgroundColor: "rgb(17 17 17 / 1)",
-    padding: space.lg,
+    padding: space.s3,
   },
   // hidden
   inspectorCollapsed: {

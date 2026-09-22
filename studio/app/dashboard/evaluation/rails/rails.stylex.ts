@@ -6,7 +6,7 @@ export const styles = stylex.create({
   actions: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   /**
    * The row's leading square. A run has no cheap thumbnail — the result media
@@ -21,7 +21,7 @@ export const styles = stylex.create({
     width: "2rem",
     height: "2rem",
     borderRadius: radii.md,
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
     color: colors.text,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
@@ -36,13 +36,13 @@ export const styles = stylex.create({
     bottom: "-2px",
     width: "0.75rem",
     height: "0.75rem",
-    color: colors.textMuted,
+    color: colors.mutedForeground,
   },
   cost: {
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    color: colors.textMuted,
+    color: colors.mutedForeground,
   },
   /** The report-ready dot on a campaign row. */
   reportDot: {
@@ -56,10 +56,10 @@ export const styles = stylex.create({
     margin: 0,
     display: "flex",
     flexDirection: "column",
-    gap: space.xxs,
+    gap: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: text.lineMeta,
-    color: colors.textMuted,
+    lineHeight: text.lineXs,
+    color: colors.mutedForeground,
   },
   /**
    * Set as written, not upper-cased like a group heading: this is a sentence

@@ -26,7 +26,7 @@ const styles = stylex.create({
   line: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     color: colors.mutedForeground,
     fontSize: "0.75rem",
     flexShrink: 0,

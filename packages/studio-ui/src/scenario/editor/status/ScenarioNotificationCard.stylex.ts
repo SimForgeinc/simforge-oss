@@ -12,7 +12,7 @@ export const styles = stylex.create({
   flexStartGap2: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -23,7 +23,7 @@ export const styles = stylex.create({
   flexCenterGap15: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // text-micro font-bold uppercase tracking-meta opacity-70
   capsMicroBold: {
@@ -39,8 +39,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--muted) / 0.4)",
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -57,21 +57,21 @@ export const styles = stylex.create({
   },
   // mt-0.5 text-sm font-medium leading-snug
   smMediumSnug: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeSm,
     lineHeight: "1.375",
     fontWeight: text.weightMedium,
   },
   // mt-0.5 text-xs leading-snug opacity-70
   xsSnug: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: "1.375",
     opacity: "0.7",
   },
   // mt-2 h-7 px-2.5 text-xs
   xs: {
-    marginTop: space.md,
+    marginTop: space.s2,
     height: "1.75rem",
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
@@ -86,9 +86,9 @@ export const styles = stylex.create({
   // absolute inset-x-0 bottom-0 h-0.5 bg-muted
   abs: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: "0.125rem",
     backgroundColor: colors.muted,
   },
@@ -150,10 +150,10 @@ export const styles = stylex.create({
   card: {
     pointerEvents: "auto",
     borderWidth: "1px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
     backdropFilter: "blur(12px)",
   },

@@ -7,7 +7,7 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     textAlign: "center",
   },
   // size-9 text-[#E8E044]
@@ -37,8 +37,8 @@ export const styles = stylex.create({
       default: colors.accent,
       ":hover": "rgb(244 237 93 / 1)",
     },
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: text.weightSemibold,
@@ -86,13 +86,13 @@ export const styles = stylex.create({
   gridCols1Gap3: {
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.lg,
+    gap: space.s3,
   },
   // border-t border-white/10 pt-3
   ruleT: {
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // motionStyles.editorMotion + flex w-full items-center justify-center gap-2 border border-red-400/30 px-3 py-2 text-xs text-red-300 hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300
   flexCenterMid2: {
@@ -100,13 +100,13 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: "rgb(248 113 113 / 0.3)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgb(252 165 165 / 1)",
@@ -140,6 +140,6 @@ export const styles = stylex.create({
   stackXl: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
 });

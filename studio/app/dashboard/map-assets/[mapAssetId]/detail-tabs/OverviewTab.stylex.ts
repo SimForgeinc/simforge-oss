@@ -8,7 +8,7 @@ const spin = stylex.keyframes({
 
 export const styles = stylex.create({
   quickStatCard: {
-    padding: space.lg,
+    padding: space.s3,
     backgroundColor: { default: "hsl(var(--secondary) / 0.5)", ":hover": "hsl(var(--secondary) / 0.7)" },
     borderWidth: "1px",
     borderStyle: "solid",
@@ -20,9 +20,9 @@ export const styles = stylex.create({
   quickStatLabelRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     color: colors.mutedForeground,
-    marginBottom: space.md,
+    marginBottom: space.s2,
   },
   quickStatLabel: {
     fontSize: text.sizeXs,
@@ -49,7 +49,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   assetTitleBlock: {
     minWidth: 0,
@@ -60,12 +60,12 @@ export const styles = stylex.create({
     fontWeight: 600,
   },
   assetLocation: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: "11px",
     color: colors.mutedForeground,
   },
   descriptionBlock: {
-    marginTop: space.xs,
+    marginTop: space.s1,
   },
   overviewDescription: {
     fontSize: text.sizeXs,
@@ -79,7 +79,7 @@ export const styles = stylex.create({
     WebkitLineClamp: 2,
   },
   descriptionToggle: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: "10px",
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -90,7 +90,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: space.md,
+    marginBottom: space.s2,
   },
   sectionTitle: {
     fontSize: "10px",
@@ -102,7 +102,7 @@ export const styles = stylex.create({
   viewAllButton: {
     display: "flex",
     alignItems: "center",
-    gap: space.xxs,
+    gap: space.s0_5,
     fontSize: "10px",
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -125,16 +125,16 @@ export const styles = stylex.create({
   insightsStatsRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
-    marginBottom: space.lg,
+    gap: space.s1_5,
+    marginBottom: space.s3,
   },
   locationCount: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     backgroundColor: "hsl(var(--muted) / 0.5)",
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontSize: "10px",
     color: colors.mutedForeground,
   },
@@ -150,8 +150,8 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: "hsl(var(--muted) / 0.5)",
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontSize: "10px",
     color: colors.mutedForeground,
   },
@@ -159,8 +159,8 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: "rgba(2, 44, 34, 0.4)",
-    paddingInline: space.md,
-    paddingBlock: space.xxs,
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontSize: "10px",
     color: "#34d399",
     borderWidth: "1px",
@@ -170,7 +170,7 @@ export const styles = stylex.create({
   familyGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   familyCard: {
     minWidth: 0,
@@ -178,7 +178,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: "hsl(var(--muted) / 0.2)", ":hover": "hsl(var(--muted) / 0.4)" },
-    paddingInline: space.lg,
+    paddingInline: space.s3,
     paddingBlock: "0.625rem",
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -188,7 +188,7 @@ export const styles = stylex.create({
   familyCardHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   familyIcon: {
     width: "0.875rem",
@@ -206,14 +206,14 @@ export const styles = stylex.create({
     color: colors.text,
   },
   familySummary: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: "10px",
     color: "hsl(var(--muted-foreground) / 0.7)",
   },
   familyTooltip: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
     maxWidth: "20rem",
     fontSize: text.sizeXs,
     lineHeight: 1.625,
@@ -225,10 +225,10 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   expandFamiliesButton: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     alignItems: "center",
-    gap: space.xxs,
+    gap: space.s0_5,
     fontSize: "10px",
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",

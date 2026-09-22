@@ -10,8 +10,8 @@ export const styles = stylex.create({
   // absolute right-4 top-4
   abs: {
     position: "absolute",
-    right: space.xl,
-    top: space.xl,
+    right: space.s4,
+    top: space.s4,
   },
   // flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-1.5
   flexCenterBetween: {
@@ -19,13 +19,13 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
     borderBottomWidth: "1px",
     borderColor: colors.border,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   // font-meta text-micro uppercase tracking-meta-wider text-muted-foreground
   capsMetaMicro: {
@@ -40,7 +40,7 @@ export const styles = stylex.create({
   flexCenterGap05: {
     display: "flex",
     alignItems: "center",
-    gap: space.xxs,
+    gap: space.s0_5,
   },
   // size-6
   size6: {
@@ -57,11 +57,11 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    padding: space.md,
+    padding: space.s2,
   },
   // mt-1.5 text-micro leading-snug text-muted-foreground
   microMutedSnug: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeMicro,
     lineHeight: "1.375",
     color: colors.mutedForeground,
@@ -70,7 +70,7 @@ export const styles = stylex.create({
   gridCols2Gap1: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.xs,
+    gap: space.s1,
   },
   // w-full justify-start
   startWide: {
@@ -82,12 +82,12 @@ export const styles = stylex.create({
     display: "flex",
     width: "min(420px, calc(100vw - 1rem))",
     flexDirection: "column",
-    gap: space.none,
+    gap: 0,
     overflow: "hidden",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    padding: space.none,
-    paddingRight: space.none,
+    padding: 0,
+    paddingRight: 0,
     maxWidth: {
       default: null,
       "@media (min-width: 640px)": "420px",
@@ -98,7 +98,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "1px",
     height: "1px",
-    padding: space.none,
+    padding: 0,
     margin: "-1px",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
@@ -107,7 +107,7 @@ export const styles = stylex.create({
   },
   // mb-1.5 font-meta text-micro uppercase tracking-meta-wider text-muted-foreground/70
   capsMetaMicro2: {
-    marginBottom: space.sm,
+    marginBottom: space.s1_5,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
@@ -121,9 +121,9 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    gap: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     textAlign: "left",
     fontSize: text.sizeMeta,
     lineHeight: "1rem",
@@ -149,15 +149,15 @@ export const styles = stylex.create({
   },
   // py-1
   py1: {
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
   },
   // flex items-baseline justify-between gap-2
   flexBetweenBaseline: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-meta text-muted-foreground
   metaMuted: {
@@ -175,7 +175,7 @@ export const styles = stylex.create({
   },
   // mt-1 h-1 w-full cursor-pointer appearance-none bg-muted accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   widePointer: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "0.25rem",
     width: "100%",
     cursor: "pointer",
@@ -200,12 +200,12 @@ export const styles = stylex.create({
   // h-8 border-border bg-card/90 shadow-sm backdrop-blur gap-2 rounded-none px-3
   glassyGap2: {
     height: "2rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
     backdropFilter: "blur(8px)",
   },
@@ -228,8 +228,8 @@ export const styles = stylex.create({
   // flex flex-col absolute right-4 top-4 max-h-[calc(100%-2rem)] w-[300px] border border-border bg-card/95 shadow-xl backdrop-blur
   absFlexCol: {
     position: "absolute",
-    right: space.xl,
-    top: space.xl,
+    right: space.s4,
+    top: space.s4,
     display: "flex",
     maxHeight: "calc(100% - 2rem)",
     width: "300px",
@@ -246,8 +246,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.15)",
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     fontWeight: text.weightBold,
@@ -276,8 +276,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     fontWeight: text.weightBold,
@@ -366,14 +366,14 @@ export const styles = stylex.create({
   },
   // pb-3 mb-3 border-b border-border/60
   ruleB: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     borderBottomWidth: "1px",
     borderColor: "hsl(var(--border) / 0.6)",
-    paddingBottom: space.lg,
+    paddingBottom: space.s3,
   },
   // pb-3
   pb3: {
-    paddingBottom: space.lg,
+    paddingBottom: space.s3,
   },
   // relative h-3.5 w-7 shrink-0 border transition-colors border-primary bg-primary/30
   relTightBordered: {
@@ -405,7 +405,7 @@ export const styles = stylex.create({
   abs2: {
     position: "absolute",
     left: "calc(100% - 0.625rem)",
-    top: space.xxs,
+    top: space.s0_5,
     width: "0.5rem",
     height: "0.5rem",
     backgroundColor: colors.primary,
@@ -416,8 +416,8 @@ export const styles = stylex.create({
   // absolute top-0.5 size-2 transition-all left-0.5 bg-muted-foreground
   abs3: {
     position: "absolute",
-    left: space.xxs,
-    top: space.xxs,
+    left: space.s0_5,
+    top: space.s0_5,
     width: "0.5rem",
     height: "0.5rem",
     backgroundColor: "hsl(var(--muted-foreground))",

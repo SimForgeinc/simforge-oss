@@ -4,7 +4,7 @@ import { colors, layout, space, text } from "../../stylex/tokens.stylex";
 const spin = stylex.keyframes({ to: { transform: "rotate(360deg)" } });
 export const styles = stylex.create({
   refreshing: { animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
-  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.lg, borderWidth: 1, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.xl, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
+  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, borderWidth: 1, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
   activeCard: { borderColor: colors.accent },
   failedCard: { borderColor: colors.danger },
   divFlex: {
@@ -22,14 +22,14 @@ export const styles = stylex.create({
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.25)",
     paddingInline: { default: layout.gutterNarrow, "@media (min-width: 640px)": layout.gutter },
-    paddingBlock: space.lg,
+    paddingBlock: space.s3,
   },
   reviewQueueKeyboardShortcuts: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     columnGap: "1.25rem",
-    rowGap: space.md,
+    rowGap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -44,7 +44,7 @@ export const styles = stylex.create({
     borderColor: "hsl(var(--destructive) / 0.4)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
     paddingInline: { default: layout.gutterNarrow, "@media (min-width: 640px)": layout.gutter },
-    paddingBlock: space.lg,
+    paddingBlock: space.s3,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: colors.danger,
@@ -57,19 +57,19 @@ export const styles = stylex.create({
     paddingBlock: "1.25rem",
   },
   clipboardcheckIcon: {
-    width: space.xxl,
-    height: space.xxl,
+    width: space.s6,
+    height: space.s6,
   },
   ulGrid: {
     display: "grid",
-    gap: space.xl,
+    gap: space.s4,
     gridTemplateColumns: { default: null, "@media (min-width: 1024px)": "repeat(2, minmax(0, 1fr))", "@media (min-width: 1280px)": "repeat(3, minmax(0, 1fr))" },
   },
   div3: {
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   h3TruncateSmSemibold: {
     overflow: "hidden",
@@ -98,13 +98,13 @@ export const styles = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   rate: {
     marginTop: "auto",
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   divFlex3: {
     marginTop: "1.25rem",

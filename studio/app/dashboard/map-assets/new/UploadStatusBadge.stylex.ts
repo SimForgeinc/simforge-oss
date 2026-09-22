@@ -10,7 +10,7 @@ export const styles = stylex.create({
   hashingStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: colors.mutedForeground,
   },
@@ -25,14 +25,14 @@ export const styles = stylex.create({
   uploadingStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: "#60a5fa",
   },
   successStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: "#34d399",
   },
@@ -43,7 +43,7 @@ export const styles = stylex.create({
   errorStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: colors.danger,
   },

@@ -12,7 +12,7 @@ export const styles = stylex.create({
     display: "flex",
     width: "min(380px, calc(100vw - 2rem))",
     flexDirection: "column-reverse",
-    gap: space.md,
+    gap: space.s2,
   },
   // pointer-events-auto h-auto justify-center border-border/70 bg-background/95 py-1.5 text-xs text-muted-foreground shadow-lg backdrop-blur-md hover:text-foreground
   midXsMuted: {
@@ -21,8 +21,8 @@ export const styles = stylex.create({
     justifyContent: "center",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--background) / 0.95)",
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: {

@@ -17,15 +17,15 @@ export const styles = stylex.create({
   thumbnailGenerator: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   thumbnailControls: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   generateThumbnailButton: {
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
@@ -48,7 +48,7 @@ export const styles = stylex.create({
   errorMessage: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: colors.danger,
   },

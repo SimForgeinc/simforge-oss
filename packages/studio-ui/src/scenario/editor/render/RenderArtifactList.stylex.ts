@@ -4,10 +4,10 @@ import { colors, text, space } from "../../../stylex/tokens.stylex";
 export const styles = stylex.create({
   // px-1 py-6 text-center text-xs text-muted-foreground
   xsMutedCenterText: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xxl,
-    paddingBottom: space.xxl,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s6,
+    paddingBottom: space.s6,
     textAlign: "center",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -17,13 +17,13 @@ export const styles = stylex.create({
   flexColGap4: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   // flex flex-col gap-1
   flexColGap1: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
@@ -42,7 +42,7 @@ export const styles = stylex.create({
   // render-glass border
   borderedDivided: {
     borderWidth: "1px",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // (was the list's render-divide divide-y)
@@ -54,11 +54,11 @@ export const styles = stylex.create({
   flexCenterGap3: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -96,7 +96,7 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // size-3.5
   size35: {

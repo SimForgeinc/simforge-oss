@@ -10,13 +10,13 @@ export const styles = stylex.create({
   sectionHeaderContainer: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   candidateLocationsToggle: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -40,7 +40,7 @@ export const styles = stylex.create({
   },
   candidateCountBadge: {
     backgroundColor: "rgba(67, 20, 7, 0.6)",
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
     fontWeight: 600,
@@ -49,13 +49,13 @@ export const styles = stylex.create({
   candidateLocationsContent: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
-    marginTop: space.md,
+    gap: space.s2,
+    marginTop: space.s2,
   },
   loadingMessage: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -76,6 +76,6 @@ export const styles = stylex.create({
   candidateLocationsList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
 });

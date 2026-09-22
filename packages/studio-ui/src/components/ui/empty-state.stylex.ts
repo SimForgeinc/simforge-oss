@@ -27,7 +27,7 @@ export const styles = stylex.create({
   // mb-4 text-muted-foreground
   icon: {
     marginBottom: "1rem",
-    color: colors.textMuted,
+    color: colors.mutedForeground,
   },
   // text-base font-semibold text-foreground
   title: {
@@ -42,7 +42,7 @@ export const styles = stylex.create({
     maxWidth: "28rem",
     fontSize: text.sizeSm,
     lineHeight: "1.5rem",
-    color: colors.textMuted,
+    color: colors.mutedForeground,
   },
   // mt-5
   action: {

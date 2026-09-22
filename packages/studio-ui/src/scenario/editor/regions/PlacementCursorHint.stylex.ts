@@ -16,12 +16,12 @@ export const styles = stylex.create({
     minWidth: "188px",
     maxWidth: "320px",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     backdropFilter: "blur(24px)",
   },
   // border-amber-300/80 bg-amber-400/25 text-amber-50 shadow-[0_10px_36px_rgba(251,191,36,.22)]
@@ -33,7 +33,7 @@ export const styles = stylex.create({
   },
   // border-white/10 bg-black/70 text-white shadow-[0_10px_32px_rgba(0,0,0,.22)]
   hintNeutral: {
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
     backgroundColor: "rgb(0 0 0 / 0.7)",
     color: "rgb(255 255 255 / 1)",
     boxShadow: "0 10px 32px rgba(0,0,0,.22)",

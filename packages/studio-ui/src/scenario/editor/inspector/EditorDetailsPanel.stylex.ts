@@ -9,7 +9,7 @@ export const styles = stylex.create({
   // Dock within the editor stage, not a viewport-width offset from a portal.
   fixedFlexCol: {
     position: "absolute",
-    right: space.none,
+    right: 0,
     top: "50%",
     zIndex: "82",
     display: "flex",
@@ -71,7 +71,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-3.5
@@ -92,21 +92,21 @@ export const styles = stylex.create({
   fillScrollYShrinkable: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     minHeight: "0px",
     minWidth: "0px",
     overflowWrap: "anywhere",
     flex: "1 1 0%",
     overflowY: "auto",
     overflowX: "hidden",
-    padding: space.lg,
+    padding: space.s3,
     fontSize: "11px",
     scrollbarWidth: "thin",
   },
   // absolute inset-0 z-50 grid place-items-center bg-black/70 px-5 text-center backdrop-blur-md
   absGridCentered2: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: "50",
     display: "grid",
     placeItems: "center",
@@ -121,7 +121,7 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // size-5 fill-[#E8E044] text-[#E8E044]
   size5FillText: {
@@ -153,7 +153,7 @@ export const styles = stylex.create({
     height: "6rem",
     paddingLeft: "2.5rem",
     paddingRight: "2.5rem",
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
 });

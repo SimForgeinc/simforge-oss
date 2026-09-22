@@ -11,12 +11,12 @@ export const styles = stylex.create({
   },
   // size-3
   checkIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // size-3
   copyIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
 });

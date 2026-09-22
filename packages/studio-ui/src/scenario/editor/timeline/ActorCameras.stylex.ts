@@ -13,7 +13,7 @@ export const styles = stylex.create({
     borderLeftWidth: "1px",
     borderColor: colors.border,
     backgroundColor: colors.card,
-    padding: space.lg,
+    padding: space.s3,
     color: colors.text,
   },
   // flex items-center text-micro font-semibold uppercase tracking-meta-wide text-muted-foreground
@@ -29,13 +29,13 @@ export const styles = stylex.create({
   },
   // mr-2 size-3
   mr2Size3: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.75rem",
     height: "0.75rem",
   },
   // mt-3 flex items-center text-xs
   flexCenterXs: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "flex",
     alignItems: "center",
     fontSize: text.sizeXs,
@@ -52,17 +52,17 @@ export const styles = stylex.create({
   },
   // mt-1 flex items-center gap-2 border border-border bg-muted/30 px-2 py-1.5 text-meta
   flexCenterMeta: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.3)",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     fontSize: text.sizeMeta,
     lineHeight: "1rem",
   },
@@ -76,7 +76,7 @@ export const styles = stylex.create({
   },
   // ml-2 text-micro text-muted-foreground
   microMuted: {
-    marginLeft: space.md,
+    marginLeft: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.mutedForeground,
@@ -107,7 +107,7 @@ export const styles = stylex.create({
   },
   // mt-3 text-xs text-muted-foreground
   xsMuted: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,

@@ -13,7 +13,7 @@ export const styles = stylex.create({
     borderRightWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(13 13 13 / 1)",
-    padding: space.lg,
+    padding: space.s3,
     color: "rgb(255 255 255 / 1)",
   },
   // block text-micro font-semibold uppercase tracking-meta-wide text-white/45
@@ -28,9 +28,9 @@ export const styles = stylex.create({
   },
   // mt-2 flex gap-2
   flexGap2: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8 w-20 border-white/15 bg-white/5 text-xs text-white
   xsWhite: {
@@ -51,14 +51,14 @@ export const styles = stylex.create({
   },
   // mt-1 text-micro leading-4 text-white/35
   micro: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeMicro,
     lineHeight: "1rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // mt-2 block text-micro font-semibold uppercase tracking-meta-wide text-white/45
   blockCapsMicro2: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "block",
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
@@ -69,7 +69,7 @@ export const styles = stylex.create({
   },
   // mt-1 h-8 border-white/15 bg-white/5 text-xs text-white
   xsWhite2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
@@ -79,18 +79,18 @@ export const styles = stylex.create({
   },
   // mt-3
   mt3: {
-    marginTop: space.lg,
+    marginTop: space.s3,
   },
   // mt-2 text-micro leading-4 text-amber-200
   refusal: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "1rem",
     color: "rgb(253 230 138 / 1)",
   },
   // mt-2 max-h-36 overflow-y-auto
   scrollY: {
-    marginTop: space.md,
+    marginTop: space.s2,
     maxHeight: "9rem",
     overflowY: "auto",
   },
@@ -102,8 +102,8 @@ export const styles = stylex.create({
   },
   // motionStyles.editorMotion + mr-1 mt-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-meta text-white/70 hover:border-[#E8E044]/60 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d0d0d]
   metaBordered: {
-    marginRight: space.xs,
-    marginTop: space.xs,
+    marginRight: space.s1,
+    marginTop: space.s1,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: {
@@ -114,10 +114,10 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.05)",
       ":hover": "rgb(232 224 68 / 0.1)",
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: text.sizeMeta,
     lineHeight: "1rem",
     color: {

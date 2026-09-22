@@ -3,9 +3,9 @@ import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.style
 
 export const styles = stylex.create({
   /** Fills the switcher's content column; the confirmation overlays cover it. */
-  root: { position: "relative", minWidth: 0, minHeight: 0, overflow: "hidden", color: colors.textOnPlate },
-  footer: { display: "grid", gap: space.md, minWidth: 0 },
-  footerRow: { display: "flex", flexDirection: "column", alignItems: "stretch", gap: space.xs },
+  root: { position: "relative", minWidth: 0, minHeight: 0, overflow: "hidden", color: colors.ink },
+  footer: { display: "grid", gap: space.s2, minWidth: 0 },
+  footerRow: { display: "flex", flexDirection: "column", alignItems: "stretch", gap: space.s1 },
   current: { fontSize: text.sizeXs, color: colors.textSubtle },
   overlay: {
     position: "absolute",
@@ -34,7 +34,7 @@ export const styles = stylex.create({
     height: "2.5rem",
     borderColor: "rgba(255,255,255,.15)",
     backgroundColor: "transparent",
-    paddingInline: space.md,
+    paddingInline: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgba(255,255,255,.65)",

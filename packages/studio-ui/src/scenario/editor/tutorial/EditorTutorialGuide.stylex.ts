@@ -5,13 +5,13 @@ export const styles = stylex.create({
   // h-8 gap-2 rounded-none border border-border bg-card/90 px-3 shadow-sm backdrop-blur
   borderedGlassyGap2: {
     height: "2rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
     backdropFilter: "blur(8px)",
   },
@@ -23,12 +23,12 @@ export const styles = stylex.create({
   // fixed inset-0 z-[145] grid place-items-center bg-black/60 p-4 backdrop-blur-sm
   fixedGridCentered: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: "145",
     display: "grid",
     placeItems: "center",
     backgroundColor: "rgb(0 0 0 / 0.6)",
-    padding: space.xl,
+    padding: space.s4,
     backdropFilter: "blur(4px)",
   },
   // w-full max-w-xl border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72)]
@@ -46,7 +46,7 @@ export const styles = stylex.create({
   flexStartGap3: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -64,14 +64,14 @@ export const styles = stylex.create({
   },
   // mt-1 text-lg font-semibold
   lgSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeLg,
     lineHeight: "1.75rem",
     fontWeight: text.weightSemibold,
   },
   // mt-1 text-xs leading-5 text-white/55
   xs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: "rgb(255 255 255 / 0.55)",
@@ -104,7 +104,7 @@ export const styles = stylex.create({
   gridGap3: {
     marginTop: "1.25rem",
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
@@ -118,7 +118,7 @@ export const styles = stylex.create({
       default: "rgb(232 224 68 / 0.07)",
       ":hover": "rgb(232 224 68 / 0.13)",
     },
-    padding: space.xl,
+    padding: space.s4,
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
@@ -144,7 +144,7 @@ export const styles = stylex.create({
   },
   // mt-3 block text-sm text-white
   blockSmWhite: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "block",
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
@@ -152,7 +152,7 @@ export const styles = stylex.create({
   },
   // mt-1.5 block text-xs leading-5 text-white/55
   blockXs: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     display: "block",
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
@@ -166,7 +166,7 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.03)",
       ":hover": colors.glassRaised,
     },
-    padding: space.xl,
+    padding: space.s4,
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
@@ -193,11 +193,11 @@ export const styles = stylex.create({
   // fixed inset-0 z-[140] bg-black/45 p-3 md:p-7
   fixedInset0Pad3: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.tutorial,
-    backgroundColor: colors.overlayScrim,
+    backgroundColor: colors.scrim,
     padding: {
-      default: space.lg,
+      default: space.s3,
       "@media (min-width: 768px)": "1.75rem",
     },
   },
@@ -224,20 +224,20 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.xl,
+    gap: space.s4,
     borderBottomWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: {
       default: "1.25rem",
-      "@media (min-width: 768px)": space.xxxl,
+      "@media (min-width: 768px)": space.s8,
     },
     paddingRight: {
       default: "1.25rem",
-      "@media (min-width: 768px)": space.xxxl,
+      "@media (min-width: 768px)": space.s8,
     },
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
     backdropFilter: "blur(8px)",
   },
   // size-5 text-primary
@@ -273,14 +273,14 @@ export const styles = stylex.create({
       "@media (min-width: 1024px)": "flex",
     },
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground
   xsMuted: {
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: {
@@ -305,13 +305,13 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--background) / 0.6)",
-    padding: space.xxs,
+    padding: space.s0_5,
   },
   // ml-auto size-8 shrink-0 gap-2 px-0 sm:h-8 sm:w-auto sm:px-3 lg:ml-2
   tightPushRightGap2: {
     marginLeft: {
       default: "auto",
-      "@media (min-width: 1024px)": space.md,
+      "@media (min-width: 1024px)": space.s2,
     },
     width: {
       default: "2rem",
@@ -322,14 +322,14 @@ export const styles = stylex.create({
       "@media (min-width: 640px)": "2rem",
     },
     flexShrink: "0",
-    gap: space.md,
+    gap: space.s2,
     paddingLeft: {
-      default: space.none,
-      "@media (min-width: 640px)": space.lg,
+      default: 0,
+      "@media (min-width: 640px)": space.s3,
     },
     paddingRight: {
-      default: space.none,
-      "@media (min-width: 640px)": space.lg,
+      default: 0,
+      "@media (min-width: 640px)": space.s3,
     },
   },
   // size-3.5
@@ -348,7 +348,7 @@ export const styles = stylex.create({
   tightPushRight: {
     marginLeft: {
       default: "auto",
-      "@media (min-width: 768px)": space.md,
+      "@media (min-width: 768px)": space.s2,
     },
     width: "2rem",
     height: "2rem",
@@ -378,26 +378,26 @@ export const styles = stylex.create({
     maxWidth: "72rem",
     paddingLeft: {
       default: "1.25rem",
-      "@media (min-width: 768px)": space.xxxl,
+      "@media (min-width: 768px)": space.s8,
     },
     paddingRight: {
       default: "1.25rem",
-      "@media (min-width: 768px)": space.xxxl,
+      "@media (min-width: 768px)": space.s8,
     },
     paddingTop: {
-      default: space.xxxl,
+      default: space.s8,
       "@media (min-width: 768px)": "3rem",
     },
     paddingBottom: {
-      default: space.xxxl,
+      default: space.s8,
       "@media (min-width: 768px)": "3rem",
     },
   },
   // mt-6 grid gap-3 lg:grid-cols-3
   gridGap32: {
-    marginTop: space.xxl,
+    marginTop: space.s6,
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 1024px)": "repeat(3, minmax(0, 1fr))",
@@ -408,7 +408,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "hsl(var(--primary) / 0.3)",
     backgroundColor: "hsl(var(--primary) / 0.06)",
-    padding: space.xl,
+    padding: space.s4,
   },
   // flex min-h-9 flex-wrap items-center gap-1.5
   flexCenterWrap: {
@@ -416,27 +416,27 @@ export const styles = stylex.create({
     minHeight: "2.25rem",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // mt-4 text-sm font-semibold
   smSemibold: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: text.weightSemibold,
   },
   // mt-1.5 text-xs leading-5 text-muted-foreground
   xsMuted2: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
   },
   // mt-3 grid gap-3 md:grid-cols-3
   gridGap33: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 768px)": "repeat(3, minmax(0, 1fr))",
@@ -445,15 +445,15 @@ export const styles = stylex.create({
   // flex gap-3 border border-border bg-card/60 p-4
   flexBorderedGap3: {
     display: "flex",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.6)",
-    padding: space.xl,
+    padding: space.s4,
   },
   // mt-0.5 size-4 shrink-0 text-primary
   tightAccent: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "1rem",
     height: "1rem",
     flexShrink: "0",
@@ -467,7 +467,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-xs leading-5 text-muted-foreground
   xsMuted3: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
@@ -480,7 +480,7 @@ export const styles = stylex.create({
   // grid gap-4 lg:grid-cols-3
   gridGap4: {
     display: "grid",
-    gap: space.xl,
+    gap: space.s4,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 1024px)": "repeat(3, minmax(0, 1fr))",
@@ -493,18 +493,18 @@ export const styles = stylex.create({
     backgroundColor: "hsl(var(--card) / 0.5)",
     padding: {
       default: "1.25rem",
-      "@media (min-width: 768px)": space.xxl,
+      "@media (min-width: 768px)": space.s6,
     },
   },
   // flex items-start gap-4
   flexStartGap4: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.xl,
+    gap: space.s4,
   },
   // mt-1 size-5 shrink-0 text-primary
   tightAccent2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     width: "1.25rem",
     height: "1.25rem",
     flexShrink: "0",
@@ -514,7 +514,7 @@ export const styles = stylex.create({
   gridGap34: {
     marginTop: "1.25rem",
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 768px)": "repeat(2, minmax(0, 1fr))",
@@ -530,7 +530,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-xl font-semibold tracking-tight md:text-2xl
   xlSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: {
       default: text.sizeXl,
       "@media (min-width: 768px)": text.size2xl,
@@ -544,7 +544,7 @@ export const styles = stylex.create({
   },
   // mt-2 max-w-2xl text-sm leading-6 text-muted-foreground
   smMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     maxWidth: "42rem",
     fontSize: text.sizeSm,
     lineHeight: "1.5rem",
@@ -558,10 +558,10 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "hsl(var(--primary) / 0.5)",
     backgroundColor: colors.bg,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -580,7 +580,7 @@ export const styles = stylex.create({
   flexCenterAccent: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     color: colors.primary,
   },
   // font-mono text-[10px] font-semibold tracking-[0.16em]
@@ -592,17 +592,17 @@ export const styles = stylex.create({
   },
   // mt-4 text-lg font-semibold
   lgSemibold2: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     fontSize: text.sizeLg,
     lineHeight: "1.75rem",
     fontWeight: text.weightSemibold,
   },
   // mt-4
   mt4StackLg: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
   },
   // flex gap-2.5 text-xs leading-5 text-muted-foreground
   flexXsMuted: {
@@ -614,7 +614,7 @@ export const styles = stylex.create({
   },
   // mt-2 size-1 shrink-0 bg-primary
   tight: {
-    marginTop: space.md,
+    marginTop: space.s2,
     width: "0.25rem",
     height: "0.25rem",
     flexShrink: "0",
@@ -625,13 +625,13 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--background) / 0.6)",
-    padding: space.xl,
+    padding: space.s4,
   },
   // flex items-center gap-2 text-sm font-semibold
   flexCenterSm: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: text.weightSemibold,
@@ -642,7 +642,7 @@ export const styles = stylex.create({
   },
   // mt-2 text-xs leading-5 text-muted-foreground
   xsMuted4: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
@@ -664,7 +664,7 @@ export const styles = stylex.create({
   },
   // mt-3 text-xs leading-5 text-muted-foreground
   xsMuted5: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,

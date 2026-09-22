@@ -7,7 +7,7 @@ export const styles = stylex.create({
     marginLeft: "auto",
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex items-center rounded-md bg-black/15 p-0.5
   flexCenterPad05: {
@@ -15,7 +15,7 @@ export const styles = stylex.create({
     alignItems: "center",
     borderRadius: "0",
     backgroundColor: "rgb(0 0 0 / 0.15)",
-    padding: space.xxs,
+    padding: space.s0_5,
   },
   // size-3.5
   size35: {
@@ -54,8 +54,8 @@ export const styles = stylex.create({
     alignItems: "center",
     paddingLeft: "1.25rem",
     paddingRight: "1.25rem",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: text.weightSemibold,
@@ -74,7 +74,7 @@ export const styles = stylex.create({
   // it is one of the animation utilities styles.css keeps behind a
   // reduced-motion guard.
   pulseDot: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.5rem",
     height: "0.5rem",
   },

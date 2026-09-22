@@ -5,13 +5,13 @@ export const styles = stylex.create({
   statisticsHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   statisticsToggle: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -50,10 +50,10 @@ export const styles = stylex.create({
     height: "0.75rem",
   },
   statisticsContent: {
-    marginTop: space.md,
+    marginTop: space.s2,
   },
   noStatisticsMessage: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: 1.625,
     color: colors.mutedForeground,

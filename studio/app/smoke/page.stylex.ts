@@ -12,7 +12,7 @@ export const styles = stylex.create({
   main: {
     marginInline: "auto",
     maxWidth: "64rem",
-    paddingInline: space.xxl,
+    paddingInline: space.s6,
     paddingBlock: "4rem",
   },
   // font-meta text-xs uppercase tracking-wide text-muted-foreground
@@ -26,7 +26,7 @@ export const styles = stylex.create({
   },
   // mt-3 font-display text-4xl font-semibold
   simforgeChromeSmokeSurface: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontFamily: text.fontDisplay,
     fontSize: "2.25rem",
     lineHeight: "2.5rem",

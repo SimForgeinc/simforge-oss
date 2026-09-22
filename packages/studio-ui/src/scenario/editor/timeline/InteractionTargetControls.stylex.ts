@@ -6,7 +6,7 @@ export const styles = stylex.create({
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8 text-xs
   xs: {
@@ -28,11 +28,11 @@ export const styles = stylex.create({
   borderedPad2: {
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // mt-2 text-micro text-red-300
   micro2: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: "rgb(252 165 165 / 1)",
@@ -47,10 +47,10 @@ export const styles = stylex.create({
   gridBorderedCols2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // col-span-2 text-left text-micro text-red-300
   microLeftText: {
@@ -64,17 +64,17 @@ export const styles = stylex.create({
   gridBorderedCols3: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // col-span-3 text-micro text-white/35
   micro4: {
     gridColumn: "span 3 / span 3",
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // col-span-3 text-left text-micro text-red-300
   microLeftText2: {
@@ -93,7 +93,7 @@ export const styles = stylex.create({
   },
   // mt-1 h-8 border-white/15 bg-white/5 text-xs text-white
   xsWhite: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
@@ -106,11 +106,11 @@ export const styles = stylex.create({
     display: "block",
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // mt-1 h-8 border-white/10 bg-white/[0.02] text-xs text-white/50
   xs2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.02)",
@@ -145,12 +145,12 @@ export const styles = stylex.create({
   stackMd: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   stackedMd: {
     marginTop: {
-      default: space.md,
-      ":first-child": space.none,
+      default: space.s2,
+      ":first-child": 0,
     },
   },
 });

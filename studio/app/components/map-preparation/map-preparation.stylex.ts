@@ -25,12 +25,12 @@ export const preparation = stylex.create({
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   list: {
     display: "grid",
-    gap: space.md,
-    marginTop: space.lg,
+    gap: space.s2,
+    marginTop: space.s3,
   },
   row: {
     borderWidth: 1,
@@ -38,13 +38,13 @@ export const preparation = stylex.create({
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
-    paddingInline: space.lg,
+    paddingInline: space.s3,
     paddingBlock: "0.625rem",
   },
   rowHead: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   stateIcon: {
     display: "grid",
@@ -72,14 +72,14 @@ export const preparation = stylex.create({
   rowActions: {
     display: "flex",
     flexShrink: 0,
-    gap: space.md,
+    gap: space.s2,
   },
   track: {
-    marginTop: space.md,
+    marginTop: space.s2,
     height: "0.25rem",
     overflow: "hidden",
     borderRadius: radii.none,
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   fill: {
     height: "100%",
@@ -90,7 +90,7 @@ export const preparation = stylex.create({
     transitionDuration: "500ms",
   },
   rowMessage: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: "0.75rem",
     lineHeight: "1rem",
     color: colors.danger,

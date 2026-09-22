@@ -12,13 +12,13 @@ export const styles = stylex.create({
   fixedInertInset0: {
     pointerEvents: "none",
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: "130",
   },
   // absolute inset-0 bg-black/20
   absInset0: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     backgroundColor: "rgb(0 0 0 / 0.2)",
   },
   // absolute border-2 border-[#E8E044] shadow-[0_0_0_4px_rgba(232,224,68,0.16),0_0_24px_rgba(232,224,68,0.3)]
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(232 224 68 / 0.55)",
     backgroundColor: "rgb(17 18 15 / 0.95)",
-    padding: space.xl,
+    padding: space.s4,
     color: "rgb(255 255 255 / 1)",
     boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
     backdropFilter: "blur(24px)",
@@ -53,7 +53,7 @@ export const styles = stylex.create({
   flexStartGap3: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -71,7 +71,7 @@ export const styles = stylex.create({
   },
   // mt-1.5 text-base font-semibold
   semiboldBase: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeBase,
     lineHeight: "1.5rem",
     fontWeight: text.weightSemibold,
@@ -101,7 +101,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-4
@@ -111,22 +111,22 @@ export const styles = stylex.create({
   },
   // mt-2 text-xs leading-5 text-white/60
   xs: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: "rgb(255 255 255 / 0.6)",
   },
   // mt-4 flex items-center gap-2 border border-[#E8E044]/30 bg-[#E8E044]/[0.08] px-3 py-2.5
   flexCenterBordered: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: "rgb(232 224 68 / 0.3)",
     backgroundColor: "rgb(232 224 68 / 0.08)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     paddingTop: "0.625rem",
     paddingBottom: "0.625rem",
   },
@@ -161,13 +161,13 @@ export const styles = stylex.create({
   },
   // mt-4 h-8 w-full
   wide: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     height: "2rem",
     width: "100%",
   },
   // mt-3 text-[10px] leading-4 text-white/40
   mt3TextLeading4: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: "10px",
     lineHeight: "1rem",
     color: "rgb(255 255 255 / 0.4)",

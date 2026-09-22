@@ -9,7 +9,7 @@ export const styles = stylex.create({
     minHeight: space.shellWidth,
     placeItems: "center",
     backgroundColor: colors.bg,
-    padding: space.xxxl,
+    padding: space.s8,
   },
   // max-w-md border border-border bg-card p-8 text-center
   borderedPad8CenterText: {
@@ -17,7 +17,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: colors.card,
-    padding: space.xxxl,
+    padding: space.s8,
     textAlign: "center",
   },
   // mx-auto mb-5 grid size-12 place-items-center bg-primary font-bold text-primary-foreground
@@ -41,14 +41,14 @@ export const styles = stylex.create({
   },
   // mt-2 text-sm leading-6 text-muted-foreground
   smMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.5rem",
     color: colors.mutedForeground,
   },
   // mt-6
   mt6: {
-    marginTop: space.xxl,
+    marginTop: space.s6,
   },
   // text-center
   centerText: {
@@ -60,7 +60,7 @@ export const styles = stylex.create({
     minHeight: space.shellWidth,
     placeItems: "center",
     backgroundColor: colors.bg,
-    padding: space.xxxl,
+    padding: space.s8,
   },
   // w-full max-w-3xl
   wide: {
@@ -78,23 +78,23 @@ export const styles = stylex.create({
   },
   // mt-2 text-2xl font-semibold
   xxlSemibold: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.size2xl,
     lineHeight: "2rem",
     fontWeight: text.weightSemibold,
   },
   // mt-2 text-sm text-muted-foreground
   smMuted2: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
   },
   // mt-8 grid gap-3 md:grid-cols-2
   gridGap3: {
-    marginTop: space.xxxl,
+    marginTop: space.s8,
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 768px)": "repeat(2, minmax(0, 1fr))",
@@ -130,7 +130,7 @@ export const styles = stylex.create({
   },
   // mt-1 block text-xs text-muted-foreground
   blockXsMuted: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "block",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -138,7 +138,7 @@ export const styles = stylex.create({
   },
   // mt-3 block break-all font-mono text-micro text-muted-foreground
   blockMonoMicro: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "block",
     wordBreak: "break-all",
     fontFamily: text.fontMono,

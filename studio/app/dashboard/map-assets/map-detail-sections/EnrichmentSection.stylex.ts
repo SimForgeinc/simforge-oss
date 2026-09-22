@@ -10,13 +10,13 @@ export const styles = stylex.create({
   headerRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   sectionToggle: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -74,8 +74,8 @@ export const styles = stylex.create({
   contentPanel: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
-    marginTop: space.md,
+    gap: space.s3,
+    marginTop: space.s2,
   },
   statusText: {
     fontSize: text.sizeXs,
@@ -87,12 +87,12 @@ export const styles = stylex.create({
     lineHeight: 1.625,
     color: colors.mutedForeground,
   },
-  stackY2: { marginTop: { default: space.md, ":first-child": space.none } },
+  stackY2: { marginTop: { default: space.s2, ":first-child": 0 } },
   enrichButton: {
     width: "100%",
   },
   buttonLoadingIcon: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
@@ -101,7 +101,7 @@ export const styles = stylex.create({
     animationIterationCount: "infinite",
   },
   buttonSparklesIcon: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
   },
@@ -114,7 +114,7 @@ export const styles = stylex.create({
     color: "hsl(var(--foreground) / 0.8)",
   },
   loadedError: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.danger,
