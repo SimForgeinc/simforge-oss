@@ -23,7 +23,7 @@ export function WorkspacePanes({ rail, stage, inspector, mode = "auto", activePa
   const [selected, setSelected] = useState(defaultActivePane);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const query = window.matchMedia(layout.workspaceBreakpoint.replace("@media ", ""));
+    const query = window.matchMedia(layout.bpLg.replace("@media ", ""));
     const update = () => setWide(query.matches);
     update();
     query.addEventListener("change", update);

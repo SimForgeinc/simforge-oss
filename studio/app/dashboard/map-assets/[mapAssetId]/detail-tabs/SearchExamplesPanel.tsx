@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SearchExamplesPanel.stylex";
 
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchExamplesPanelProps {
   /** Submit a query — usually the page's `onSubmitSearch`. Available-tier
@@ -54,7 +55,7 @@ function Chip({ example, onRun }: ChipProps) {
       type="button"
       disabled={!isAvailable}
       onClick={() => isAvailable && onRun(example.query)}
-      {...stylex.props(styles.examplePill, isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable)}
+      {...stylex.props([motionRecipe.colors, styles.examplePill], isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable)}
       title={isAvailable ? `Run search: ${example.query}` : "Coming in the next release"}
     >
       {example.label}

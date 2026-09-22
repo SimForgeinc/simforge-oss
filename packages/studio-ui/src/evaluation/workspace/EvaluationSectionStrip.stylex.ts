@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const ICON_SIZE = "2.5rem";
 const TRANSITION_PROPERTY = "opacity, background-color, transform, height, color, box-shadow";
@@ -12,11 +12,11 @@ export const styles = stylex.create({
     height: "100%",
     width: space.datasetStripWidth,
     minWidth: space.datasetStripWidth,
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.22)",
-    paddingBlock: space.md,
+    paddingBlock: space.s2,
   },
   list: {
     minHeight: 0,
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     position: "relative",
     display: "flex",
     justifyContent: "center",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   /** The selection pill: a bar on the open section, nothing otherwise. */
   pill: {
@@ -86,19 +86,19 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
-    paddingTop: space.md,
-    marginTop: space.xs,
-    borderTopWidth: "1px",
+    gap: space.s1,
+    paddingTop: space.s2,
+    marginTop: space.s1,
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.line,
+    borderColor: colors.hairline,
   },
   tooltipTitle: {
     fontWeight: text.weightSemibold,
   },
   tooltipMeta: {
     fontSize: text.sizeMeta,
-    lineHeight: text.lineMeta,
-    color: colors.textMuted,
+    lineHeight: text.lineXs,
+    color: colors.mutedForeground,
   },
 });

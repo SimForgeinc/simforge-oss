@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { colors } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
  * The switcher's dialog geometry (`AppSwitcherOverlay.stylex.ts` `dialog`)
@@ -11,6 +12,6 @@ export const styles = stylex.create({
     height: "100%",
     minHeight: 0,
     overflow: "hidden",
-    color: "#fff",
+    color: colors.ink,
   },
 });

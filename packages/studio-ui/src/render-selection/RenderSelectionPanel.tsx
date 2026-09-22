@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { RENDERING_PREFERENCE_CHOICES, type RenderingPreference } from "../components/rendering-preference";
 import { styles } from "./RenderSelectionPanel.stylex";
+import { textLayout } from "../stylex/recipes.stylex";
 
 /** A device preference, not a benchmark or a render-job quality setting. */
 export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descriptionId, footer }: {
@@ -18,7 +19,7 @@ export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descri
       <div {...stylex.props(styles.content)} data-testid="render-selection-content">
         <header {...stylex.props(styles.header)}>
           <h2 id={titleId} {...stylex.props(styles.title)}>Render settings</h2>
-          <p id={descriptionId} {...stylex.props(styles.lede)} title="The initial setting follows this device’s GPU capabilities. Texture targets may be reduced by the viewer when memory or format support is limited. Render jobs have their own quality settings.">
+          <p id={descriptionId} {...stylex.props([textLayout.truncate, styles.lede])} title="The initial setting follows this device’s GPU capabilities. Texture targets may be reduced by the viewer when memory or format support is limited. Render jobs have their own quality settings.">
             Graphics for this device. Change any time.
           </p>
         </header>

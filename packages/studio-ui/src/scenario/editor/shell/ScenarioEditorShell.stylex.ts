@@ -1,5 +1,4 @@
 import * as stylex from "@stylexjs/stylex";
-import { space } from "../../../stylex/tokens.stylex";
 
 /**
  * The editor shell's geometry, migrated verbatim from
@@ -60,10 +59,10 @@ export const styles = stylex.create({
     height: "100%",
     pointerEvents: "auto",
     position: "absolute",
-    top: space.none,
+    top: 0,
     right: "auto",
-    bottom: space.none,
-    left: space.none,
+    bottom: 0,
+    left: 0,
     zIndex: "20",
     minWidth: "0",
     minHeight: "0",
@@ -89,7 +88,7 @@ export const styles = stylex.create({
     display: "flex",
     pointerEvents: "auto",
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     minWidth: "0",
     minHeight: "0",
     overflow: "hidden",
@@ -107,7 +106,7 @@ export const styles = stylex.create({
   statusLayer: {
     pointerEvents: "none",
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: "35",
     minWidth: "0",
     minHeight: "0",
@@ -115,7 +114,7 @@ export const styles = stylex.create({
   floatingLayer: {
     pointerEvents: "none",
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: "34",
     minWidth: "0",
     minHeight: "0",

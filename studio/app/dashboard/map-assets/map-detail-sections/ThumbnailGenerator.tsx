@@ -13,6 +13,7 @@ import {
   fetchMonochromeBasemapStyle,
 } from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import { sha256Blob } from "@simforge-oss/engine/hash";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type Props = {
   asset: MapAsset;
@@ -149,7 +150,7 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
           xstyle={styles.generateThumbnailButton}
         >
           {busy ? (
-            <Loader2 {...stylex.props(styles.loadingIcon)} />
+            <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} />
           ) : (
             <Camera {...stylex.props(styles.thumbnailIcon)} />
           )}

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /*
@@ -20,55 +20,55 @@ export const styles = stylex.create({
   metaNarrowable: {
     minWidth: "0px",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // font-semibold uppercase tracking-wider text-muted-foreground
   capsMutedSemibold: {
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   // h-8 text-xs
   xs: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // grid grid-cols-2 gap-2
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // border border-border bg-muted/20 p-2
   borderedPad2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
-    padding: space.md,
+    padding: space.s2,
   },
   // px-1 text-muted-foreground
   muted: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
     color: colors.mutedForeground,
   },
   // border border-border/70 p-2
   borderedPad22: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
-    padding: space.md,
+    padding: space.s2,
   },
   // col-span-2 grid grid-cols-2 gap-2 border border-border/70 p-2
   gridBorderedCols2: {
     gridColumn: "span 2 / span 2",
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
-    borderWidth: "1px",
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
-    padding: space.md,
+    padding: space.s2,
   },
   // block min-w-0 text-muted-foreground
   blockMutedNarrowable: {
@@ -78,14 +78,14 @@ export const styles = stylex.create({
   },
   // mt-1 h-8
   mt1H8: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
   },
   // (was each stack's space-y-2)
   stackedMd: {
     marginTop: {
-      default: space.md,
-      ":first-child": space.none,
+      default: space.s2,
+      ":first-child": 0,
     },
   },
 });

@@ -28,6 +28,7 @@ pub mod perception;
 pub mod plausibility;
 pub mod recorder;
 pub mod scene_state;
+pub mod timeline;
 
 use std::collections::BTreeMap;
 

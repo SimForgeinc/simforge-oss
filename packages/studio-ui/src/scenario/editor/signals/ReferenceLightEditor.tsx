@@ -19,6 +19,7 @@ import {
 import { formatSeconds, indicationSwatch } from "./indication-style";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ReferenceLightEditor.stylex";
+import { a11y, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * The whole authoring surface for one traffic light: three sortable phase rows.
@@ -76,7 +77,7 @@ export function ReferenceLightEditor({
   return (
     <section aria-label="Traffic light timing" {...stylex.props(styles.narrowable)}>
       <div {...stylex.props(styles.flexCenterBetween)}>
-        <p {...stylex.props(styles.metaInkSemibold)}>{label}</p>
+        <p {...stylex.props([textLayout.truncate, styles.metaInkSemibold])}>{label}</p>
         {headerAction}
       </div>
 
@@ -109,7 +110,7 @@ export function ReferenceLightEditor({
           <span aria-label="Order" role="columnheader" />
           <span role="columnheader">Phase</span>
           <span {...stylex.props(styles.rightText)} role="columnheader">Seconds</span>
-          <span {...stylex.props(styles.srOnly)} role="columnheader">Reorder</span>
+          <span {...stylex.props(a11y.srOnly)} role="columnheader">Reorder</span>
         </div>
         {phaseOrder.map((phase, at) => (
           <TimingRow
@@ -208,7 +209,7 @@ function TimingRow({
           aria-hidden="true"
           {...stylex.props(styles.phaseDot, indicationSwatch(phase).fill)}
         />
-        <label {...stylex.props(styles.metaInkTruncate)} htmlFor={id}>
+        <label {...stylex.props([textLayout.truncate, styles.metaInkTruncate])} htmlFor={id}>
           {label}
         </label>
       </div>

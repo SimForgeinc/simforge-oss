@@ -17,6 +17,10 @@
         "types": "./dist/stylex/tokens.stylex.d.ts",
         "default": "./dist/stylex/tokens.stylex.js"
       },
+      "./stylex/recipes.stylex": {
+        "types": "./dist/stylex/recipes.stylex.d.ts",
+        "default": "./dist/stylex/recipes.stylex.js"
+      },
       "./components/stylex": {
         "types": "./dist/components/stylex/index.d.ts",
         "default": "./dist/components/stylex/index.js"
@@ -97,6 +101,18 @@
         "types": "./dist/components/ui/card.d.ts",
         "default": "./dist/components/ui/card.js"
       },
+      "./components/ui/chip": {
+        "types": "./dist/components/ui/chip.d.ts",
+        "default": "./dist/components/ui/chip.js"
+      },
+      "./components/ui/dialog": {
+        "types": "./dist/components/ui/dialog.d.ts",
+        "default": "./dist/components/ui/dialog.js"
+      },
+      "./components/ui/dot": {
+        "types": "./dist/components/ui/dot.d.ts",
+        "default": "./dist/components/ui/dot.js"
+      },
       "./components/ui/dropdown-menu": {
         "types": "./dist/components/ui/dropdown-menu.d.ts",
         "default": "./dist/components/ui/dropdown-menu.js"
@@ -105,6 +121,10 @@
         "types": "./dist/components/ui/empty-state.d.ts",
         "default": "./dist/components/ui/empty-state.js"
       },
+      "./components/ui/icon-button": {
+        "types": "./dist/components/ui/icon-button.d.ts",
+        "default": "./dist/components/ui/icon-button.js"
+      },
       "./components/ui/input": {
         "types": "./dist/components/ui/input.d.ts",
         "default": "./dist/components/ui/input.js"
@@ -112,6 +132,14 @@
       "./components/ui/page-header": {
         "types": "./dist/components/ui/page-header.d.ts",
         "default": "./dist/components/ui/page-header.js"
+      },
+      "./components/ui/page-shell": {
+        "types": "./dist/components/ui/page-shell.d.ts",
+        "default": "./dist/components/ui/page-shell.js"
+      },
+      "./components/ui/progress": {
+        "types": "./dist/components/ui/progress.d.ts",
+        "default": "./dist/components/ui/progress.js"
       },
       "./components/ui/select-menu": {
         "types": "./dist/components/ui/select-menu.d.ts",
@@ -128,6 +156,10 @@
       "./components/ui/skeleton": {
         "types": "./dist/components/ui/skeleton.d.ts",
         "default": "./dist/components/ui/skeleton.js"
+      },
+      "./components/ui/spinner": {
+        "types": "./dist/components/ui/spinner.d.ts",
+        "default": "./dist/components/ui/spinner.js"
       },
       "./components/ui/switch": {
         "types": "./dist/components/ui/switch.d.ts",
@@ -445,6 +477,11 @@
       "types": "./dist/stylex/tokens.stylex.d.ts",
       "default": "./dist/stylex/tokens.stylex.js"
     },
+    "./stylex/recipes.stylex": {
+      "development": "./src/stylex/recipes.stylex.ts",
+      "types": "./dist/stylex/recipes.stylex.d.ts",
+      "default": "./dist/stylex/recipes.stylex.js"
+    },
     "./components/stylex": {
       "development": "./src/components/stylex/index.ts",
       "types": "./dist/components/stylex/index.d.ts",
@@ -545,6 +582,21 @@
       "types": "./dist/components/ui/card.d.ts",
       "default": "./dist/components/ui/card.js"
     },
+    "./components/ui/chip": {
+      "development": "./src/components/ui/chip.tsx",
+      "types": "./dist/components/ui/chip.d.ts",
+      "default": "./dist/components/ui/chip.js"
+    },
+    "./components/ui/dialog": {
+      "development": "./src/components/ui/dialog.tsx",
+      "types": "./dist/components/ui/dialog.d.ts",
+      "default": "./dist/components/ui/dialog.js"
+    },
+    "./components/ui/dot": {
+      "development": "./src/components/ui/dot.tsx",
+      "types": "./dist/components/ui/dot.d.ts",
+      "default": "./dist/components/ui/dot.js"
+    },
     "./components/ui/dropdown-menu": {
       "development": "./src/components/ui/dropdown-menu.tsx",
       "types": "./dist/components/ui/dropdown-menu.d.ts",
@@ -555,6 +607,11 @@
       "types": "./dist/components/ui/empty-state.d.ts",
       "default": "./dist/components/ui/empty-state.js"
     },
+    "./components/ui/icon-button": {
+      "development": "./src/components/ui/icon-button.tsx",
+      "types": "./dist/components/ui/icon-button.d.ts",
+      "default": "./dist/components/ui/icon-button.js"
+    },
     "./components/ui/input": {
       "development": "./src/components/ui/input.tsx",
       "types": "./dist/components/ui/input.d.ts",
@@ -564,6 +621,16 @@
       "development": "./src/components/ui/page-header.tsx",
       "types": "./dist/components/ui/page-header.d.ts",
       "default": "./dist/components/ui/page-header.js"
+    },
+    "./components/ui/page-shell": {
+      "development": "./src/components/ui/page-shell.tsx",
+      "types": "./dist/components/ui/page-shell.d.ts",
+      "default": "./dist/components/ui/page-shell.js"
+    },
+    "./components/ui/progress": {
+      "development": "./src/components/ui/progress.tsx",
+      "types": "./dist/components/ui/progress.d.ts",
+      "default": "./dist/components/ui/progress.js"
     },
     "./components/ui/select-menu": {
       "development": "./src/components/ui/select-menu.tsx",
@@ -584,6 +651,11 @@
       "development": "./src/components/ui/skeleton.tsx",
       "types": "./dist/components/ui/skeleton.d.ts",
       "default": "./dist/components/ui/skeleton.js"
+    },
+    "./components/ui/spinner": {
+      "development": "./src/components/ui/spinner.tsx",
+      "types": "./dist/components/ui/spinner.d.ts",
+      "default": "./dist/components/ui/spinner.js"
     },
     "./components/ui/switch": {
       "development": "./src/components/ui/switch.tsx",
