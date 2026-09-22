@@ -182,6 +182,8 @@ export async function templateNew(options: TemplateNewOptions): Promise<number> 
     ...(options.mapId === undefined
       ? {}
       : { sourceMap: { mapId: options.mapId, mapName: options.mapId } }),
+    // Pinned at birth: renaming the template never changes its simulation.
+    simulation: { seed: 'new-template', dtS: 0.02 },
     anchor: {
       id: 'new-template',
       corridor: {},

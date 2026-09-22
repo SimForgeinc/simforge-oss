@@ -17,7 +17,7 @@ import {
   DISABLED_SUMO_STATUS,
   type SumoTrafficStatus,
 } from "@simforge-oss/playback/traffic";
-import { ambientTrafficProfileFromExtensions } from "@simforge-oss/playback/traffic";
+import { ambientProfileMissingDefault, ambientTrafficProfileForDocument, ambientTrafficProfileForEditor } from "@simforge-oss/playback/traffic";
 import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { contentHash, type MaterializedTrafficArtifactEnvelope } from "@simforge-oss/engine";
 import {
@@ -361,15 +361,25 @@ export function useScenarioSession({
       compilingKeyRef.current = simulationKey;
       const provider = ambientTrafficProviderFromExtensions(document.content.extensions);
       setBundle(null);
+      let ambientProfile: ReturnType<typeof previewAmbientTrafficProfile>;
+      try {
+        ambientProfile = previewAmbientTrafficProfile(
+          provider,
+          document.content.extensions,
+          document.content.mapSignalPlans.length > 0,
+          ambientProfileMissingDefault(document.content),
+        );
+      } catch (reason) {
+        // A malformed ambient profile is a validation error, never a silent City fallback.
+        if (compilingKeyRef.current === simulationKey) compilingKeyRef.current = null;
+        setMessage(`Preview unavailable: ${reason instanceof Error ? reason.message : String(reason)}`);
+        return;
+      }
       setMessage("Preparing scenario preview…");
       void client.prepare(
         document.content as ScenarioTemplateV2,
         playbackMapEntry(nextMap),
-        previewAmbientTrafficProfile(
-          provider,
-          document.content.extensions,
-          document.content.mapSignalPlans.length > 0,
-        ),
+        ambientProfile,
         undefined,
         { backgroundPreview: true },
       ).then((nextBundle) => {
@@ -455,7 +465,7 @@ export function useScenarioSession({
     // an edit must not abort a multi-megabyte runtime download mid-flight.
     void loadSumoAssets(
       playbackMapEntry(map),
-      ambientTrafficProfileFromExtensions(current.content.extensions),
+      ambientTrafficProfileForEditor(current.content),
       fetch,
       [],
       false,
@@ -593,7 +603,7 @@ export function useScenarioSession({
     }
     pending.uploading = true;
     const runtimeMap = playbackMapEntry(map);
-    const profile = ambientTrafficProfileFromExtensions(document.content.extensions);
+    const profile = ambientTrafficProfileForDocument(document.content);
     const replaceActorIds = new Set(bundle.ambientTraffic?.actors.map((actor) => actor.id) ?? []);
     void uploadAndConsumeMaterializedTraffic(
       studioHost,
@@ -655,7 +665,7 @@ export function useScenarioSession({
       try {
         const artifact = materializeBrowserRevisionTraffic(
           executionProvider,
-          ambientTrafficProfileFromExtensions(document.content.extensions),
+          ambientTrafficProfileForDocument(document.content),
           playbackMapEntry(map),
           bundle,
         );
