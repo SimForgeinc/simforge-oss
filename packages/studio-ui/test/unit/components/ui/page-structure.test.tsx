@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
+import { cleanup, render as renderDom, screen } from "@testing-library/react";
 import { PageHeader } from "../../../../src/components/ui/page-header";
+import { TopBarSlotProvider, useTopBarSlotContext } from "../../../../src/components/TopBarSlot";
 import { Toolbar, ToolbarGroup } from "../../../../src/components/ui/toolbar";
 import { EmptyState } from "../../../../src/components/ui/empty-state";
 
@@ -14,32 +16,51 @@ function render(element: React.ReactElement): HTMLElement {
   return root;
 }
 
+/** What the top bar would show: the registered title, context and actions. */
+function RouteHeaderReadout() {
+  const header = useTopBarSlotContext()?.header;
+  return (
+    <div>
+      <h1>{header?.title ?? ""}</h1>
+      <span data-testid="route-context">{header?.context}</span>
+      {header?.actions}
+    </div>
+  );
+}
+
 describe("standard page structure", () => {
-  it("renders a page title, description, and action zone with heading semantics", () => {
-    const header = render(
-      <PageHeader
-        eyebrow="Library"
-        title="Maps"
-        description="Browse environments."
-        actions={<button type="button">Add map</button>}
-      />,
+  afterEach(cleanup);
+
+  it("publishes the title, context and actions to the route header and keeps only the description in the body", () => {
+    const { container } = renderDom(
+      <TopBarSlotProvider>
+        <RouteHeaderReadout />
+        <PageHeader
+          eyebrow="Library"
+          title="Maps"
+          description="Browse environments."
+          actions={<button type="button">Add map</button>}
+        />
+      </TopBarSlotProvider>,
     );
 
-    expect(header.tagName).toBe("HEADER");
-    expect(header.querySelector("h1")?.textContent).toBe("Maps");
-    expect(header.textContent).toContain("Library");
-    expect(header.textContent).toContain("Browse environments.");
-
-    const action = header.querySelector("button");
-    expect(action?.textContent).toBe("Add map");
-    expect(action?.closest("h1")).toBeNull();
+    expect(screen.getByRole("heading").textContent).toBe("Maps");
+    expect(screen.getByTestId("route-context").textContent).toBe("Library");
+    expect(screen.getByRole("button", { name: "Add map" }).closest("h1")).toBeNull();
+    expect(container.querySelector("p")?.textContent).toBe("Browse environments.");
+    expect(container.querySelector("header")).toBeNull();
   });
 
-  it("omits the optional eyebrow and description when they are not supplied", () => {
-    const header = render(<PageHeader title="Maps" />);
+  it("renders nothing in the body when there is no description", () => {
+    const { container } = renderDom(
+      <TopBarSlotProvider>
+        <RouteHeaderReadout />
+        <PageHeader title="Maps" />
+      </TopBarSlotProvider>,
+    );
 
-    expect(header.querySelector("h1")?.textContent).toBe("Maps");
-    expect(header.querySelector("p")).toBeNull();
+    expect(screen.getByRole("heading").textContent).toBe("Maps");
+    expect(container.querySelector("p")).toBeNull();
   });
 
   it("renders grouped toolbar controls inside a nested group", () => {
