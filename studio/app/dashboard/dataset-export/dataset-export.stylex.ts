@@ -8,6 +8,8 @@ const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { trans
 export const styles = stylex.create({
   shell: { display: "flex", minHeight: "100%", flexDirection: "column", backgroundColor: "hsl(var(--background))" },
   workspace: { display: "flex", minHeight: 0, flex: 1, flexDirection: "column", overflow: "hidden", [LG]: { display: "grid", gridTemplateColumns: "320px minmax(0,1fr)" } },
+  /** While the datasets load the workspace is one pane: the cover fills it. */
+  workspaceLoading: { display: "block", [LG]: { display: "block" } },
   sidebar: { maxHeight: "36vh", minHeight: 0, borderBottomWidth: "1px", borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border) / .7)", backgroundColor: "hsl(var(--card) / .25)", [LG]: { maxHeight: "none", borderBottomWidth: 0, borderRightWidth: "1px", borderRightStyle: "solid", borderRightColor: "hsl(var(--border) / .7)" } },
   main: { minHeight: 0, overflowY: "auto", padding: "1.25rem" },
   panel: { borderWidth: "1px", borderStyle: "solid", borderColor: "hsl(var(--border) / .6)", backgroundColor: "hsl(var(--card) / .4)" },
