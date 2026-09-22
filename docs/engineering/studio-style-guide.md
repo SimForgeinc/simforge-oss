@@ -89,6 +89,65 @@ The colour ladders, strongest step first:
 Names marked `@deprecated` in the token file still compile; do not add new
 uses.
 
+## Recipes
+
+`packages/studio-ui/src/stylex/recipes.stylex.ts` (from `studio/app`:
+`@simforge-oss/studio-ui/stylex/recipes.stylex`). Each is a few declarations
+of look, built only from tokens, composed first in `stylex.props`.
+
+| Recipe | Keys | Use for |
+| --- | --- | --- |
+| `focus` | `ring`, `ringInset`, `ringAccent`, `ringAccentInset`, `ringOffset`, `outline`, `within` | every focusable element that is not a primitive; exactly one |
+| `motionRecipe` | `colors`, `opacity`, `transform`, `spin`, `pulse`, `fadeIn` | every transition or animation; all stop under reduced motion |
+| `hairline` | `all`, `top`, `bottom`, `start`, `end`; modifiers `subtle`, `strong`, `hover` | every border and divider |
+| `surface` | `plate`, `raised`, `card`, `glass`, `chip`, `scrim` | what a region is made of |
+| `interactive` | `base`, `hoverFill`, `hoverInk`, `selected` | clickable rows, tiles and items that are not a `Button` |
+| `typography` | `eyebrow`, `meta`, `label`, `body`, `bodySm`, `title`, `heading`, `numeric` | every piece of text: pick the role |
+| `control` | `xs`, `sm`, `md`, `lg`, `iconXs` … `iconLg` | the height/padding/size of a custom control, so it lines up with the primitives |
+| `a11y` | `srOnly` | text for assistive technology only |
+| `textLayout` | `truncate`, `clamp2` | text that must not overflow |
+
+A recipe earns its place by being used in unrelated places. A look that only
+one family needs belongs in that family's style module.
+
+## Primitives
+
+Reach for these before writing styles. Their look is set by props; `xstyle`
+is typed `PlacementStyle` (or `ControlPlacementStyle` for controls) so a
+caller can place one but not reskin it.
+
+| Primitive | Import | Props for the look |
+| --- | --- | --- |
+| `Button` | `components/ui/button` | `variant`: `accent` (the one primary action), `plate`, `accentOutline`, `quiet`, and the shadcn set; `size`: `xs`, `sm`, `md`, `lg`, `xl`, `icon*` |
+| `IconButton` | `components/ui/icon-button` | `label` (required), `variant`: `ghost`, `plate`, `accent`; `size`; `active` |
+| `Input` | `components/ui/input` | `size`: `xs`, `sm`, `md`, `lg`; `variant`: `default`, `plate` |
+| `Chip`, `ChipButton` | `components/ui/chip` | `tone`, `size`, `leading`; `selected` on the button |
+| `Dialog` + parts | `components/ui/dialog` | `DialogContent size`: `sm`, `md`, `lg`, `xl`; `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, `DialogFooter`, `DialogClose` |
+| `Spinner` | `components/ui/spinner` | `size`, `tone`, `label` |
+| `Dot` | `components/ui/dot` | `tone`, `size`, `pulse`, `label` |
+| `MetaLabel` | `components/stylex` | `tone`, `as` |
+| `PageShell` | `components/ui/page-shell` | `title`, `eyebrow`, `description`, `actions`, `fill` |
+| `Card`, `Tabs`, `Sheet`, `DropdownMenu`, `Tooltip`, `Switch`, `Table`, `Badge`, `EmptyState`, `Skeleton`, `SelectMenu` | `components/ui/*` | see each file |
+
+`tone` is the shared status axis: `neutral`, `muted`, `accent`, `positive`,
+`warning`, `critical`. Add a tone mapping to a primitive rather than passing
+a colour.
+
+## The template
+
+Start a component from
+[`packages/studio-ui/src/components/template/TemplatePanel.tsx`](../../packages/studio-ui/src/components/template/TemplatePanel.tsx)
+and its
+[`TemplatePanel.stylex.ts`](../../packages/studio-ui/src/components/template/TemplatePanel.stylex.ts).
+It is compiled, typechecked, linted and tested with the package, and shows
+every rule above in about a hundred lines: primitives with props, recipes for
+the rest, a layout-only style module with no literals, the composition order,
+a `PlacementStyle` `xstyle`, a tone lookup, and a child reacting to its row's
+hover through a marker.
+
+In `studio/app`, the same shapes apply; import the recipes, tokens and
+primitives by their `@simforge-oss/studio-ui/…` subpaths.
+
 ## The look
 
 Studio is a dark, square, hairline-ruled instrument. The app switcher is the

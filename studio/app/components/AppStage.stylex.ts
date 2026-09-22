@@ -1,6 +1,6 @@
 /**
- * StyleX styles for `AppStage` — the app switcher's chrome, applied to a
- * route instead of to a dialog.
+ * The app switcher's plate, tab and fact atoms, for utility routes rendered
+ * in `PageShell` (the frame itself now lives in studio-ui).
  *
  * Every value here is one the switcher already ships
  * (`AppSwitcherOverlay.stylex.ts`): the same hairline plates over the same
@@ -10,16 +10,11 @@
  * atoms are exported from here as `plate` for the routes that build rows of
  * their own.
  *
- * The geometry is the one rule the switcher's dialog did not need: the frame
- * is exactly the height of its container and never taller, and the only
- * scroller is `body`. The page itself therefore cannot scroll — an app is a
- * fixed stage with panes inside it, not a document.
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
-const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
 const REDUCED = "@media (prefers-reduced-motion: reduce)";
 
@@ -30,75 +25,6 @@ const COLOR_TRANSITION =
 
 const FOCUS_RING = `0 0 0 2px ${colors.accent}`;
 const FOCUS_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
-
-export const styles = stylex.create({
-  /**
-   * The stage: the full height of the dashboard's main area, clipped. Nothing
-   * inside can make the document scroll.
-   */
-  stage: {
-    position: "relative",
-    height: "100%",
-    minHeight: 0,
-    overflow: "hidden",
-    color: "#fff",
-  },
-
-  /** A single bounded body; route chrome belongs to AppTopBar. */
-  frame: {
-    position: "relative",
-    zIndex: layers.raised,
-    display: "grid",
-    gridTemplateRows: "minmax(0, 1fr)",
-    height: "100%",
-    minHeight: 0,
-    width: "100%",
-    maxWidth: layout.utilityFrame,
-    marginInline: "auto",
-    padding: { default: layout.gutterNarrow, [SM]: layout.gutter, [LG]: layout.gutterWide },
-  },
-
-  description: {
-    marginTop: "0.25rem",
-    fontSize: text.sizeSm,
-    lineHeight: text.lineNormal,
-    color: colors.textSubtle,
-  },
-
-  /**
-   * The one scroller on the stage. `overscrollBehavior: contain` keeps a
-   * flicked pane from handing the gesture to whatever is behind the stage.
-   *
-   * The `minmax(0, 1fr)` track is what keeps a pane inside the frame. A grid
-   * item defaults to `min-width: auto` and so refuses to shrink below its own
-   * min-content, so a single row that cannot wrap - a flex card header, a
-   * filesystem path, a target triple - widens the track past the frame, and
-   * the frame hides overflow rather than scrolling it, so the excess is
-   * silently clipped. An explicit `minmax(0, ...)` lets the pane shrink and
-   * leaves the wrapping rules inside it to decide what happens next.
-   */
-  body: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr)",
-    alignContent: "start",
-    gap: "0.75rem",
-    height: "100%",
-    minHeight: 0,
-    minWidth: 0,
-    overflowY: "auto",
-    overscrollBehavior: "contain",
-  },
-  /**
-   * A stage that is a fixed instrument rather than a document: the body never
-   * scrolls, its one row is the frame's height, and the page composes bounded
-   * panes (`plate.scroller`) that scroll their own lists inside it.
-   */
-  bodyFill: {
-    gridTemplateRows: "minmax(0, 1fr)",
-    alignContent: "stretch",
-    overflowY: "hidden",
-  },
-});
 
 /**
  * The switcher's plate, tab and fact atoms, for routes that lay out rows of

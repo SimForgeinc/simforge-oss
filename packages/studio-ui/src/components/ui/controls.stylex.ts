@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, text } from "../../stylex/tokens.stylex";
+import { colors, radii, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const TRANSITION = "color, background-color, border-color, text-decoration-color, fill, stroke";
 const RING_OFFSET = "var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)";
@@ -65,6 +65,32 @@ export const buttonVariants = stylex.create({
     textUnderlineOffset: "4px",
     textDecorationLine: { default: null, ":hover": "underline" },
   },
+  /** The one primary action on a surface: solid accent. */
+  accent: {
+    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
+    color: colors.accentText,
+  },
+  /** A standalone secondary control: a faint plate with a hairline edge. */
+  plate: {
+    borderWidth: stroke.hairline,
+    borderStyle: "solid",
+    borderColor: { default: colors.hairlineStrong, ":hover": colors.hairlineStrong },
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fill },
+    color: colors.ink,
+  },
+  /** A secondary action that belongs to the current item: accent ink on a wash. */
+  accentOutline: {
+    borderWidth: stroke.hairline,
+    borderStyle: "solid",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: { default: colors.accentWash, ":hover": colors.accentWash },
+    color: colors.accent,
+  },
+  /** Quiet: no plate until hovered, muted ink that brightens. */
+  quiet: {
+    backgroundColor: { default: "transparent", ":hover": colors.fill },
+    color: { default: colors.inkMuted, ":hover": colors.ink },
+  },
 });
 
 export const buttonSizes = stylex.create({
@@ -72,6 +98,14 @@ export const buttonSizes = stylex.create({
   sm: { height: "2.25rem", paddingInline: "0.75rem", borderRadius: radii.md },
   lg: { height: "2.75rem", paddingInline: "1.5rem", borderRadius: radii.md },
   icon: { height: "2.5rem", width: "2.5rem" },
+  // The control scale (recipes `control`): one height per step, shared with
+  // Input, IconButton and Chip so a row of mixed controls lines up.
+  xs: { height: "1.5rem", paddingInline: space.s2, fontSize: text.sizeMicro, gap: space.s1 },
+  md: { height: "2rem", paddingInline: space.s3, fontSize: text.sizeXs, gap: space.s1_5 },
+  xl: { height: "3rem", paddingInline: space.s6, fontSize: text.sizeSm },
+  iconXs: { height: "1.5rem", width: "1.5rem" },
+  iconSm: { height: "1.75rem", width: "1.75rem" },
+  iconMd: { height: "2rem", width: "2rem" },
 });
 
 export const badge = stylex.create({

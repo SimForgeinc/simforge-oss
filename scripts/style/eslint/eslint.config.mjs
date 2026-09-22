@@ -26,8 +26,16 @@ import { builtinRules } from "eslint/use-at-your-own-risk";
 const SOURCES = ["packages/studio-ui/src/**/*.{ts,tsx}", "studio/app/**/*.{ts,tsx}"];
 const NOT_TESTS = ["**/__tests__/**", "**/*.test.*", "**/*.d.ts"];
 
-/** The token and recipe modules are the only places allowed to hold the banned forms. */
-const FOUNDATION = ["packages/studio-ui/src/stylex/**", "packages/studio-ui/src/drive/drive.stylex.ts"];
+/**
+ * The token and recipe modules are the only places allowed to hold the banned
+ * forms, plus the two primitives that are round by construction.
+ */
+const FOUNDATION = [
+  "packages/studio-ui/src/stylex/**",
+  "packages/studio-ui/src/drive/drive.stylex.ts",
+  "packages/studio-ui/src/components/ui/spinner.tsx",
+  "packages/studio-ui/src/components/ui/dot.tsx",
+];
 
 /**
  * Sources carry `eslint-disable` comments for rules from the Next/React/TS
