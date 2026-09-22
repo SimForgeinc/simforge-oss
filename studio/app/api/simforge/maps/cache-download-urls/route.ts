@@ -65,13 +65,10 @@ export async function POST(request: Request) {
       // Account maps without an active session are simply not deliverable now.
       return null;
     }
-    // Cache-resident members are delivered by the first-party route itself,
-    // which streams the verified object; installed members keep the object-store
-    // URL and therefore never proxy large bodies through this function.
-    const url = asset.bucket === MAP_CACHE_BUCKET
-      ? `/api/simforge/maps/${encodeURIComponent(asset.mapVersionId)}/browser-assets/${
-        asset.relativePath.split("/").map(encodeURIComponent).join("/")}`
-      : await getPresignedGetUrl(asset.key, asset.bucket, SIGNED_URL_TTL_SECONDS);
+    // Always return the signed object-store URL. Returning the first-party
+    // cache route here reintroduces one 302 per asset before the browser
+    // reaches the same private object.
+    const url = await getPresignedGetUrl(asset.key, asset.bucket, SIGNED_URL_TTL_SECONDS);
     return { mapVersionId: asset.mapVersionId, relativePath: asset.relativePath, url };
   }))).filter((asset): asset is { mapVersionId: string; relativePath: string; url: string } => asset !== null);
   return NextResponse.json(
