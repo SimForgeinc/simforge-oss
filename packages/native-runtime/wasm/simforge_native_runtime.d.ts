@@ -544,6 +544,11 @@ export function ambientTurnVerdictsJson(graph: LaneGraph): string;
  */
 export function applySituationTransaction(document_json: string, transaction_json: string): string;
 
+/**
+ * Complete verdict table of a map (every transition, every steered class), with `closureDigest`.
+ */
+export function buildAmbientTurnVerdicts(bundle: MapBundle): string;
+
 export function canonicalJson(document: string): string;
 
 /**
@@ -744,6 +749,7 @@ export interface InitOutput {
     readonly adaptTemplateNotesJson: (a: number, b: number) => [number, number, number, number];
     readonly ambientTurnVerdictsJson: (a: number) => [number, number];
     readonly applySituationTransaction: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly buildAmbientTurnVerdicts: (a: number) => [number, number, number, number];
     readonly canonicalJson: (a: number, b: number) => [number, number, number, number];
     readonly cellSeed: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly checkFeasibility: (a: number, b: number) => [number, number, number, number];

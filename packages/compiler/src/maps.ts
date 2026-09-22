@@ -12,12 +12,12 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
-import type { StaticMapCollider, TopologyIndex } from '@simforge-oss/engine';
+import { ambientTurnVerdictCount, canonicalJson, type AmbientTurnVerdictTable, type StaticMapCollider, type TopologyIndex } from '@simforge-oss/engine';
 import { engine } from '@simforge-oss/engine/node';
 import type { DerivedTopology, LocationCatalog } from '@simforge-oss/maps';
-import { buildSimulationMapClosure, type MapClosureFiles } from '@simforge-oss/playback';
+import { AMBIENT_TURN_VERDICTS_PATH, buildSimulationMapClosure, type MapClosureFiles } from '@simforge-oss/playback';
 
 import { CliError } from './errors.js';
 import { MapBundle, type InstalledMapBundle } from './types.js';
@@ -161,10 +161,17 @@ export function createMapBundle(sources: MapBundleSources): MapBundle {
  * collider artifact it names). `.gz` siblings are accepted for the text files,
  * which is how the golden-trace fixtures are stored.
  */
-export async function readInstalledMapClosureFiles(dir: string, mapId = path.basename(dir)): Promise<MapClosureFiles> {
+export async function readInstalledMapClosureFiles(
+  dir: string,
+  mapId = path.basename(dir),
+  options: { readonly closure3dDir?: string } = {},
+): Promise<MapClosureFiles> {
+  // A map build keeps `3d/*` (web-runtime stage) apart from the master sidecars.
+  const threeD = options.closure3dDir ?? dir;
   const plain = async (relative: string): Promise<Uint8Array> => {
+    const base = relative.startsWith(`3d${path.sep}`) || relative.startsWith('3d/') ? threeD : dir;
     for (const candidate of [relative, `${relative}.gz`]) {
-      const file = path.join(dir, candidate);
+      const file = path.join(base, candidate);
       if (!existsSync(file)) continue;
       const bytes = await readFile(file);
       return new Uint8Array(bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes);
@@ -177,6 +184,9 @@ export async function readInstalledMapClosureFiles(dir: string, mapId = path.bas
   if (typeof variant?.file !== 'string') {
     throw new CliError('map_not_present', `map "${mapId}" has no published static-collider derivative`, { path: dir });
   }
+  const verdictsFile = path.join(dir, ...AMBIENT_TURN_VERDICTS_PATH.split('/'));
+  const shipped = existsSync(verdictsFile) ? await readFile(verdictsFile) : null;
+  const ambientTurnVerdicts = shipped ? new Uint8Array(shipped[0] === 0x1f && shipped[1] === 0x8b ? gunzipSync(shipped) : shipped) : null;
   const [topology, derivedTopology, locations, xodr, signals, sourceManifest, artifact] = await Promise.all([
     plain(ARTIFACTS.topology.replace(/\.gz$/, '')),
     plain(ARTIFACTS.derived.replace(/\.gz$/, '')),
@@ -186,7 +196,7 @@ export async function readInstalledMapClosureFiles(dir: string, mapId = path.bas
     plain(path.join('3d', 'manifest.json')),
     plain(path.join('3d', 'variants', variant.file)),
   ]);
-  return { mapId, topology, derivedTopology, locations, xodr, signals, colliders: { sourceManifest, derivativeManifest, artifact } };
+  return { mapId, topology, derivedTopology, locations, xodr, signals, colliders: { sourceManifest, derivativeManifest, artifact }, ambientTurnVerdicts };
 }
 
 /**
@@ -244,7 +254,7 @@ export async function persistAmbientTurnVerdictsToDisk(bundle: MapBundle): Promi
     const json = engine().ambientTurnVerdicts(bundle.graph);
     if (!json) return;
     const file = ambientTurnVerdictCachePath(bundle);
-    const count = (JSON.parse(json) as { verdicts: unknown[] }).verdicts.length;
+    const count = ambientTurnVerdictCount(JSON.parse(json) as AmbientTurnVerdictTable);
     if (count <= (restoredVerdicts.get(file) ?? 0)) return;
     await mkdir(path.dirname(file), { recursive: true });
     const temporary = `${file}.${process.pid}.tmp`;
@@ -253,6 +263,53 @@ export async function persistAmbientTurnVerdictsToDisk(bundle: MapBundle): Promi
     restoredVerdicts.set(file, count);
   } catch {
     // A read-only cache or a full disk costs only the probes next time.
+  }
+}
+
+/**
+ * Build the map's complete ambient turn-verdict table (every transition, every
+ * steered class) and its closure member bytes. A map publish runs this once per
+ * `(closureDigest, engineSemVer)` and ships the bytes as
+ * `derived/ambient/turn-verdicts.json`; every host that loads the closure then
+ * skips the probes. Canonical JSON, so equal inputs give equal bytes.
+ */
+export function buildAmbientTurnVerdictArtifact(bundle: MapBundle): { bytes: Uint8Array; table: AmbientTurnVerdictTable } {
+  const table = engine().buildAmbientTurnVerdicts(bundle.native);
+  // Gzipped like the other sidecars (no name or mtime: equal tables, equal bytes).
+  return { bytes: new Uint8Array(gzipSync(Buffer.from(`${canonicalJson(table)}\n`), { level: 9 })), table };
+}
+
+/**
+ * The ambient turn-verdict producer the map pipeline runs in its web-runtime
+ * stage (`runMapPipeline({ ambientTurnVerdicts })`): builds the simulation
+ * closure from the master sidecars and the stage's colliders, exactly as every
+ * simulating host does, then the complete table. Its fingerprint is the engine
+ * semantics, so an `ENGINE_SEM_VER` bump rebuilds the table.
+ */
+export function createAmbientTurnVerdictBuilder(): {
+  readonly fingerprint: string;
+  build(input: { mapId: string; masterDir: string; runtimeDir: string }): Promise<Uint8Array>;
+} {
+  return {
+    fingerprint: `simforge.ambient-turn-verdicts/v1:${engine().version().engineSemVer}`,
+    async build({ mapId, masterDir, runtimeDir }) {
+      const bundle = await createSimulationMapBundle(await readInstalledMapClosureFiles(masterDir, mapId, { closure3dDir: runtimeDir }));
+      return buildAmbientTurnVerdictArtifact(bundle).bytes;
+    },
+  };
+}
+
+/** `current` when `bytes` is a table for this bundle's closure under this engine, else why not. */
+export function ambientTurnVerdictStatus(bundle: MapBundle, bytes: Uint8Array | null): 'current' | 'missing' | 'stale' {
+  if (!bytes) return 'missing';
+  try {
+    const plain = bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
+    const table = JSON.parse(new TextDecoder().decode(plain)) as Partial<AmbientTurnVerdictTable>;
+    return table.schema === 'simforge.ambient-turn-verdicts/v1'
+      && table.engineSemVer === engine().version().engineSemVer
+      && table.closureDigest === bundle.closureDigest ? 'current' : 'stale';
+  } catch {
+    return 'stale';
   }
 }
 

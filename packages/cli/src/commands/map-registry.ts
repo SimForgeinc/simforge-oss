@@ -21,6 +21,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 import { CliError, EXIT } from '../errors.js';
 import { emit, emitLines } from '../output.js';
+import { createAmbientTurnVerdictBuilder } from '@simforge-oss/compiler/node';
 
 function defaultRegistryUrl(): string {
   return `file://${join(homedir(), 'simforge-assets', 'registry')}`;
@@ -72,6 +73,15 @@ export interface MapBuildOptions {
  * `maps ingest` publishes the same stages. Prints where the stage content
  * landed and the master/web reports.
  */
+/**
+ * Every scenario-ready map ships its ambient turn-verdict table in the web
+ * closure (docs/engineering/engine-semver.md). SIMFORGE_MAP_AMBIENT_VERDICTS=skip
+ * opts a build out explicitly.
+ */
+function ambientTurnVerdictOption(): { ambientTurnVerdicts?: ReturnType<typeof createAmbientTurnVerdictBuilder> } {
+  return process.env['SIMFORGE_MAP_AMBIENT_VERDICTS'] === 'skip' ? {} : { ambientTurnVerdicts: createAmbientTurnVerdictBuilder() };
+}
+
 export async function registryMapsBuild(options: MapBuildOptions): Promise<number> {
   const started = Date.now();
   const pipeline = await runMapPipeline({
@@ -84,6 +94,7 @@ export async function registryMapsBuild(options: MapBuildOptions): Promise<numbe
     workDir: resolve(options.workDir),
     ...(options.cellSize ? { cellSize: options.cellSize } : {}),
     ...(options.donorLibrary ? { donorLibrary: options.donorLibrary } : {}),
+    ...ambientTurnVerdictOption(),
   });
   emit({
     name: options.name,
@@ -169,6 +180,7 @@ export async function registryMapsIngest(options: RegistryIngestOptions): Promis
       workDir: resolve(workDir),
       ...(options.cellSize ? { cellSize: options.cellSize } : {}),
       ...(options.donorLibrary ? { donorLibrary: options.donorLibrary } : {}),
+      ...ambientTurnVerdictOption(),
     });
     canonical = pipelineArtifactInput(pipeline.canonical);
     derived = pipeline.derived.map(pipelineArtifactInput);

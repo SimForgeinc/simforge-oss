@@ -32,6 +32,11 @@ export interface ScenarioMapEntry {
    * Absent from older servers.
    */
   readonly sumoStatus?: ScenarioMapSumoStatus | null;
+  /**
+   * The published ambient turn-verdict table, when the version ships one
+   * (`derived/ambient/turn-verdicts.json.gz`). Absent from older servers.
+   */
+  readonly ambientTurnVerdicts?: { readonly engineSemVer: string; readonly closureDigest: string; readonly sha256: string } | null;
   /** Compatibility aliases retained for existing editor consumers. */
   readonly manifestUrl: string;
   readonly topologyUrl: string;

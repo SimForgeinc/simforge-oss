@@ -364,6 +364,12 @@ export type ScenarioMapDescriptorDto = {
   sumoNetworkSha256: string | null;
   /** SUMO derivative state and, when unavailable, the reason to show. */
   sumoStatus?: { state: string; reason: string | null } | null;
+  /**
+   * The published ambient turn-verdict table (`derived/ambient/turn-verdicts.json.gz`
+   * in the browser closure), when this version ships one: the engine
+   * semantics and simulation closure it was built for. Absent from older servers.
+   */
+  ambientTurnVerdicts?: { engineSemVer: string; closureDigest: string; sha256: string } | null;
   topologyArtifactUrl: string;
   /** Presigned gzipped derived topology; null when the map version has no available artifact. */
   derivedTopologyUrl: string | null;

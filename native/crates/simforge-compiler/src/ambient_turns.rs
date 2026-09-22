@@ -235,43 +235,84 @@ fn graph_transitions(graph: &LaneGraph) -> Vec<(DirectedLane, DirectedLane)> {
     out
 }
 
+/// Every class the generator can steer through a junction.
+pub const STEERED_CLASSES: [ActorKind; 8] = [
+    ActorKind::Vehicle,
+    ActorKind::Car,
+    ActorKind::Van,
+    ActorKind::Truck,
+    ActorKind::Bus,
+    ActorKind::Motorcycle,
+    ActorKind::Bicycle,
+    ActorKind::Scooter,
+];
+
+/// Probe every transition of `graph` for every steered class, so the memo
+/// (and [`turn_verdicts_json`]) holds the complete table for the map. This is
+/// what a map publish runs once, per `(closureDigest, ENGINE_SEM_VER)`; hosts
+/// that load the table never probe that map again. Returns the number of
+/// transitions actually probed (cache misses).
+pub fn compute_all_turn_verdicts(graph: &Arc<LaneGraph>) -> usize {
+    let mut cache = TurnFeasibilityCache::new();
+    for (from, to) in graph_transitions(graph) {
+        for kind in STEERED_CLASSES {
+            turn_is_feasible(graph, from, to, kind, &mut cache);
+        }
+    }
+    cache.probes_run()
+}
+
 /// The verdicts the process memo holds for `graph`'s transitions, as a
-/// persisted table: `{schema, engineSemVer, verdicts: [[fingerprint, class,
-/// feasible], ...]}`, sorted, canonical JSON.
+/// persisted table (canonical JSON):
 ///
-/// Probing is the expensive part of building an ambient candidate pool (the
-/// first build on a map runs the dynamic-v1 plant through every tight
-/// transition). A verdict is a pure function of its content fingerprint and
-/// class under one `ENGINE_SEM_VER`, so a host may persist this table beside
-/// the map closure (keyed by `closureDigest` and `ENGINE_SEM_VER`) and load it
-/// in a later session with [`load_turn_verdicts_json`]: the pool comes out
-/// byte-identical, only faster.
+/// ```json
+/// {"schema":"simforge.ambient-turn-verdicts/v1","engineSemVer":"0.9.0",
+///  "classes":["vehicle","car","van","truck","bus","motorcycle","bicycle","scooter"],
+///  "verdicts":[["<transition fingerprint>", knownMask, feasibleMask], ...]}
+/// ```
+///
+/// One row per transition, sorted by fingerprint; bit `i` of the masks is
+/// `classes[i]`. Probing is the expensive part of building an ambient
+/// candidate pool (the first build on a map runs the dynamic-v1 plant through
+/// every tight transition). A verdict is a pure function of its content
+/// fingerprint and class under one `ENGINE_SEM_VER`, so a host may persist
+/// this table beside the map closure (keyed by `closureDigest` and
+/// `ENGINE_SEM_VER`) and load it with [`load_turn_verdicts_json`]: the pool
+/// comes out byte-identical, only faster.
 pub fn turn_verdicts_json(graph: &LaneGraph) -> String {
-    let mut rows: Vec<(String, u8, bool)> = Vec::new();
     let fingerprints: std::collections::BTreeSet<String> = graph_transitions(graph)
         .into_iter()
         .map(|(from, to)| transition_fingerprint(graph, from, to))
         .collect();
+    let mut rows: BTreeMap<String, (u32, u32)> = BTreeMap::new();
     if let Ok(global) = global_answers().lock() {
-        for (key, answer) in global.iter() {
-            if fingerprints.contains(&key.0) {
-                rows.push((key.0.clone(), key.1, *answer));
+        for ((fingerprint, code), answer) in global.iter() {
+            if !fingerprints.contains(fingerprint) {
+                continue;
+            }
+            let Some(bit) = STEERED_CLASSES.iter().position(|k| *k as u8 == *code) else {
+                continue;
+            };
+            let row = rows.entry(fingerprint.clone()).or_insert((0, 0));
+            row.0 |= 1 << bit;
+            if *answer {
+                row.1 |= 1 << bit;
             }
         }
     }
-    rows.sort();
     let value = serde_json::json!({
         "schema": TURN_VERDICTS_SCHEMA,
         "engineSemVer": simforge_core::ENGINE_SEM_VER,
-        "verdicts": rows.iter().map(|(f, c, a)| serde_json::json!([f, c, a])).collect::<Vec<_>>(),
+        "classes": STEERED_CLASSES.iter().map(|k| k.as_str()).collect::<Vec<_>>(),
+        "verdicts": rows.iter().map(|(f, (known, feasible))| serde_json::json!([f, known, feasible])).collect::<Vec<_>>(),
     });
     simforge_core::hash::canonical_json(&value).unwrap_or_default()
 }
 
 /// Seed the process memo from a table written by [`turn_verdicts_json`].
-/// Returns the number of verdicts loaded. A table from another schema or
-/// another `ENGINE_SEM_VER` is refused: its verdicts came from other probe
-/// semantics and would change the generated population.
+/// Returns the number of verdicts (transition × class) loaded. A table from
+/// another schema or another `ENGINE_SEM_VER` is refused: its verdicts came
+/// from other probe semantics and would change the generated population.
 pub fn load_turn_verdicts_json(text: &str) -> Result<usize, String> {
     let value: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("turn verdicts: {e}"))?;
     if value.get("schema").and_then(|v| v.as_str()) != Some(TURN_VERDICTS_SCHEMA) {
@@ -284,20 +325,34 @@ pub fn load_turn_verdicts_json(text: &str) -> Result<usize, String> {
             simforge_core::ENGINE_SEM_VER
         ));
     }
+    let classes = value
+        .get("classes")
+        .and_then(|v| v.as_array())
+        .ok_or("turn verdicts: no classes")?
+        .iter()
+        .map(|c| c.as_str().and_then(ActorKind::parse).ok_or("turn verdicts: unknown class"))
+        .collect::<Result<Vec<ActorKind>, _>>()?;
+    if classes.len() > 32 {
+        return Err("turn verdicts: too many classes".into());
+    }
     let rows = value.get("verdicts").and_then(|v| v.as_array()).ok_or("turn verdicts: no verdicts")?;
-    let mut parsed = Vec::with_capacity(rows.len());
+    let mut parsed = Vec::with_capacity(rows.len() * classes.len());
     for row in rows {
-        let (Some(f), Some(c), Some(a)) = (
+        let (Some(fingerprint), Some(known), Some(feasible)) = (
             row.get(0).and_then(|v| v.as_str()),
             row.get(1).and_then(|v| v.as_u64()),
-            row.get(2).and_then(|v| v.as_bool()),
+            row.get(2).and_then(|v| v.as_u64()),
         ) else {
             return Err("turn verdicts: malformed row".into());
         };
-        if f.len() != 64 || c > u64::from(u8::MAX) {
+        if fingerprint.len() != 64 || feasible & !known != 0 || known >> classes.len() != 0 {
             return Err("turn verdicts: malformed row".into());
         }
-        parsed.push(((f.to_owned(), c as u8), a));
+        for (bit, kind) in classes.iter().enumerate() {
+            if known & (1 << bit) != 0 {
+                parsed.push(((fingerprint.to_owned(), *kind as u8), feasible & (1 << bit) != 0));
+            }
+        }
     }
     let mut global = global_answers().lock().map_err(|_| "turn verdicts: memo poisoned".to_string())?;
     let count = parsed.len();
@@ -306,7 +361,6 @@ pub fn load_turn_verdicts_json(text: &str) -> Result<usize, String> {
     }
     Ok(count)
 }
-
 
 /// The cruise a probe drives at: the faster posted limit of the two lanes
 /// (the cyclist cruise for bicycles and scooters) with
@@ -1062,9 +1116,9 @@ mod tests {
         assert_eq!(value["schema"], TURN_VERDICTS_SCHEMA);
         assert_eq!(value["engineSemVer"], simforge_core::ENGINE_SEM_VER);
         let rows = value["verdicts"].as_array().expect("rows");
-        assert!(rows.len() >= 2, "{table}");
-        // Reloading is idempotent and changes no answer.
-        assert_eq!(load_turn_verdicts_json(&table).expect("load"), rows.len());
+        assert_eq!(rows.len(), 1, "one row per transition: {table}");
+        // Reloading is idempotent and changes no answer: truck and car are known.
+        assert_eq!(load_turn_verdicts_json(&table).expect("load"), 2);
         let mut fresh = TurnFeasibilityCache::new();
         assert_eq!(turn_is_feasible(&graph, from, to, ActorKind::Truck, &mut fresh), truck);
         assert_eq!(turn_is_feasible(&graph, from, to, ActorKind::Car, &mut fresh), car);

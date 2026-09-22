@@ -15,7 +15,7 @@
  * no-op and the in-worker memo still covers the session.
  */
 
-import type { EngineRuntime, LaneGraph } from '@simforge-oss/engine';
+import { ambientTurnVerdictCount, type AmbientTurnVerdictTable, type EngineRuntime, type LaneGraph } from '@simforge-oss/engine';
 
 const CACHE_NAME = 'simforge-ambient-turn-verdicts-v1';
 const restored = new Map<string, number>();
@@ -35,8 +35,8 @@ function cacheStorage(): CacheStorage | null {
 
 function verdictCount(json: string): number {
   try {
-    const rows = (JSON.parse(json) as { verdicts?: unknown[] }).verdicts;
-    return Array.isArray(rows) ? rows.length : 0;
+    const table = JSON.parse(json) as AmbientTurnVerdictTable;
+    return Array.isArray(table.verdicts) ? ambientTurnVerdictCount(table) : 0;
   } catch {
     return 0;
   }
