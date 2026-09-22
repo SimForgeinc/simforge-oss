@@ -32,6 +32,7 @@ export function formatCacheBytes(bytes: number): string {
 export function MapAssetCacheStorage({
   refreshKey,
   allowClear = true,
+  compact = false,
   onCleared,
   onError,
   className,
@@ -41,6 +42,8 @@ export function MapAssetCacheStorage({
   refreshKey?: unknown;
   /** Hide the clear control where a page already owns its own clear flow. */
   allowClear?: boolean;
+  /** Compact readout for the single-screen render preference cards. */
+  compact?: boolean;
   onCleared?: () => void;
   /** Surfaces backend faults to a page-level alert in addition to the inline one. */
   onError?: (message: string) => void;
@@ -112,15 +115,15 @@ export function MapAssetCacheStorage({
   return (
     <section
       aria-label="Map cache storage"
-      {...mergeStyleProps(stylex.props(styles.root, xstyle), className)}
+      {...mergeStyleProps(stylex.props(styles.root, compact && styles.compact, xstyle), className)}
       data-testid="map-asset-cache-storage"
       data-cache-backend={status?.backend ?? "unknown"}
     >
       <div {...stylex.props(styles.head)}>
         <HardDrive {...stylex.props(styles.headIcon)} aria-hidden="true" />
         <div {...stylex.props(styles.headText)}>
-          <p {...stylex.props(styles.eyebrow)}>
-            {filesystem ? "Map cache on disk" : "Map cache in browser storage"}
+          <p {...stylex.props(styles.eyebrow, compact && styles.compactLabel)}>
+            {filesystem ? "Map cache on disk" : "Browser cache"}
           </p>
           <p
             {...stylex.props(styles.location)}
@@ -129,15 +132,15 @@ export function MapAssetCacheStorage({
           >
             {location}
           </p>
-          <dl {...stylex.props(styles.stats)}>
+          <dl {...stylex.props(styles.stats, compact && styles.compactStats)}>
             <div>
-              <dt {...stylex.props(styles.statLabel)}>{filesystem ? "Used " : "Site storage used "}</dt>
+              <dt {...stylex.props(styles.statLabel)}>{filesystem ? "Used " : "Site usage "}</dt>
               <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-used">
                 {status?.usedBytes == null ? "—" : formatCacheBytes(status.usedBytes)}
               </dd>
             </div>
             <div>
-              <dt {...stylex.props(styles.statLabel)}>Free </dt>
+              <dt {...stylex.props(styles.statLabel)}>{filesystem ? "Free disk " : "Browser quota available "}</dt>
               <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-free">
                 {status?.availableBytes == null ? "—" : formatCacheBytes(status.availableBytes)}
               </dd>
@@ -156,7 +159,7 @@ export function MapAssetCacheStorage({
       </div>
 
       {(filesystem || allowClear) && !confirmClear ? (
-        <div {...stylex.props(styles.actions)}>
+        <div {...stylex.props(styles.actions, compact && styles.compactActions)}>
           {filesystem ? (
             <>
               <Button
@@ -179,7 +182,7 @@ export function MapAssetCacheStorage({
                 title="Point the cache at another folder and leave the current files where they are."
               >
                 <FolderOpen aria-hidden="true" />
-                {busy === "choosing" ? "Choosing…" : "Use another folder…"}
+                {busy === "choosing" ? "Choosing…" : compact ? "Change folder…" : "Use another folder…"}
               </Button>
             </>
           ) : null}
@@ -237,7 +240,7 @@ export function MapAssetCacheStorage({
       ) : null}
 
       {error ? (
-        <p {...stylex.props(styles.error)} role="alert">
+        <p {...stylex.props(styles.error, compact && styles.compactMessage)} role="alert" title={error}>
           {error}
         </p>
       ) : null}

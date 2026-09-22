@@ -14,6 +14,8 @@ import {
   colors,
   layers,
   text,
+  space,
+  layout,
 } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /** The breakpoints this overlay responds to. */
@@ -97,7 +99,7 @@ export const styles = stylex.create({
     position: "fixed",
     inset: 0,
     zIndex: layers.appSwitcherTop,
-    overflowY: "auto",
+    overflow: "hidden",
     color: "#fff",
     outlineWidth: "2px",
     outlineStyle: "solid",
@@ -178,13 +180,15 @@ export const styles = stylex.create({
     position: "relative",
     marginInline: "auto",
     display: "grid",
-    alignContent: "center",
+    alignContent: "safe center",
     gap: "1.5rem",
     minHeight: "100%",
+    height: "100%",
+    overflow: "hidden",
     width: "100%",
-    maxWidth: "940px",
-    paddingInline: { default: "1.25rem", [SM]: "2rem" },
-    paddingBlock: "5rem",
+    maxWidth: layout.utilityFrame,
+    paddingInline: { default: layout.gutterNarrow, [SM]: layout.gutter },
+    paddingBlock: space.xxl,
   },
 
   /** The three product tabs: stacked on narrow viewports, a row from LG. */
@@ -202,6 +206,7 @@ export const styles = stylex.create({
    * things it does. No artwork, no badge, no index.
    */
   tab: {
+    "@media (max-width: 1023px)": { display: "grid", gridTemplateColumns: "4rem minmax(0, 1fr)", columnGap: space.lg },
     display: "flex",
     flexDirection: "column",
     gap: "0.5rem",
@@ -246,7 +251,7 @@ export const styles = stylex.create({
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
 
-  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem" },
+  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem", "@media (max-width: 1023px)": { gridColumn: 2 } },
   /**
    * The app's artwork: a square tile at the top of the tab, dimmed until the
    * tab is current or hovered, so the row reads as three pictures first and
@@ -258,6 +263,7 @@ export const styles = stylex.create({
     width: "100%",
     aspectRatio: "4 / 3",
     paddingBlock: "0.5rem",
+    "@media (max-width: 1023px)": { aspectRatio: "1", width: "4rem", gridRow: "1 / span 3", alignSelf: "center" },
   },
   /** The whole picture, never clipped: it is the square source scaled to fit the tile. */
   artImage: {
@@ -275,8 +281,8 @@ export const styles = stylex.create({
   artActive: { opacity: 1, filter: "none" },
   artDisabled: { opacity: 0.3, filter: "grayscale(1)" },
   /** Inline views (Render Settings) replace the tabs inside the same column. */
-  inlineView: { display: "grid", gap: "1rem" },
-  inlineHead: { display: "flex", alignItems: "center", gap: "0.75rem" },
+  inlineView: { display: "grid", gap: space.xl, minWidth: 0, minHeight: 0, overflow: "hidden" },
+  inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.lg },
   inlineBack: {
     display: "inline-flex",
     alignItems: "center",
@@ -312,18 +318,20 @@ export const styles = stylex.create({
   tabTitleActive: { color: colors.accent },
   tabTitleIdle: { color: "#fff" },
   tabDescription: {
+    "@media (max-width: 1023px)": { gridColumn: 2 },
     fontFamily: text.fontMeta,
     fontSize: "10px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
-    color: "rgb(255 255 255 / 0.3)",
+    color: colors.textSubtle,
   },
   /** The three capability phrases, one per line. */
   tabHighlights: {
     display: "grid",
     gap: "0.125rem",
     marginTop: "0.25rem",
+    "@media (max-width: 1023px)": { gridColumn: 2 },
   },
   tabHighlight: {
     fontSize: "0.75rem",
