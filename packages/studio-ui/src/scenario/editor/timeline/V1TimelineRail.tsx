@@ -438,6 +438,9 @@ export function V1TimelineRail({
   useEffect(() => {
     const onPlaybackShortcut = (event: KeyboardEvent) => {
       if (event.key === "Escape" && exitPlaybackRef.current) {
+        // The first-run walkthrough owns Escape until it is dismissed. This
+        // listener may predate its capture listener because the map loads first.
+        if (globalThis.document.getElementById("scenario-tutorial-title")) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         exitPlaybackRef.current();

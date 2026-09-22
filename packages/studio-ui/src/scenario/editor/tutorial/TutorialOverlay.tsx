@@ -85,6 +85,7 @@ export function TutorialOverlay({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopImmediatePropagation();
         finish();
         return;
       }
@@ -98,8 +99,10 @@ export function TutorialOverlay({
         setIndex((current) => Math.max(current - 1, 0));
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    // The canvas can consume bubbling keyboard events. Capture while mounted
+    // so skipping works from the canvas as well as from the walkthrough card.
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [finish, steps.length]);
 
   if (!step) return null;

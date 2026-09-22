@@ -6,6 +6,8 @@ import type { Interaction, ReasoningTraceSegment, ScenarioTemplateV2 } from "@si
 import { InteractionTrack } from "../../../../src/scenario/editor/timeline/InteractionTrack";
 import { TimelineRuler } from "../../../../src/scenario/editor/timeline/TimelineRuler";
 import { TrafficLightDetailsPanel } from "../../../../src/scenario/editor/inspector/TrafficLightDetailsPanel";
+import { TutorialOverlaySlot } from "../../../../src/scenario/editor/regions/slots/TutorialOverlaySlot";
+import { tutorialStorageKey } from "../../../../src/scenario/editor/tutorial/tutorial-steps";
 
 vi.mock("../../../../src/scenario/editor/timeline/TriggerControls", () => ({
   TriggerControls: ({ label }: { label: string }) => <div>{label}</div>,
@@ -843,6 +845,16 @@ describe("floating timeline presentation", () => {
     textInput.dispatchEvent(typedSpace);
     expect(typedSpace.defaultPrevented).toBe(false);
     expect(onPlayPause).toHaveBeenCalledTimes(2);
+
+    // The map/timeline mounts before its first-run walkthrough. Its existing
+    // capture shortcut must yield Escape, even while inspecting playback.
+    localStorage.removeItem(tutorialStorageKey("advanced"));
+    render(<TutorialOverlaySlot experience="advanced" ready />);
+    textInput.focus();
+    fireEvent.keyDown(textInput, { code: "Escape", key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onExitInspection).not.toHaveBeenCalled();
+    localStorage.removeItem(tutorialStorageKey("advanced"));
 
     fireEvent.keyDown(window, { code: "Escape", key: "Escape" });
     expect(onExitInspection).toHaveBeenCalledOnce();

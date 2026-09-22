@@ -73,6 +73,32 @@ describe("TutorialOverlay", () => {
     expect(localStorage.getItem(tutorialStorageKey("advanced"))).not.toBeNull();
   });
 
+  it("skips from a canvas that consumes keys, then restores editor Escape handling", () => {
+    const canvas = anchor("canvas");
+    canvas.tabIndex = 0;
+    const cancelEdit = vi.fn((event: KeyboardEvent) => event.stopPropagation());
+    canvas.addEventListener("keydown", cancelEdit);
+    const view = render(<TutorialOverlaySlot experience="advanced" ready scenarioKey="first" />);
+    canvas.focus();
+
+    fireEvent.keyDown(canvas, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(cancelEdit).not.toHaveBeenCalled();
+    expect(shouldRunTutorial(localStorage, "advanced")).toBe(false);
+
+    fireEvent.keyDown(canvas, { key: "Escape" });
+    expect(cancelEdit).toHaveBeenCalledOnce();
+    view.unmount();
+    render(<TutorialOverlaySlot experience="advanced" ready scenarioKey="second" />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Completion belongs to this browser's storage, not the scenario/account.
+    cleanup();
+    localStorage.clear();
+    render(<TutorialOverlaySlot experience="advanced" ready scenarioKey="second" />);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
   it("records completion when finished, so it never reappears", () => {
     const onClose = vi.fn();
     render(<TutorialOverlay mode="simple" onClose={onClose} />);
