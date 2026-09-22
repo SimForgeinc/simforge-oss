@@ -13,12 +13,13 @@ from dataclasses import replace
 from time import monotonic
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from .capabilities import native_sensor_capabilities
 from .runtime.backend import (
     CARLA_IMAGE_AMD64_MANIFEST_DIGEST,
     CARLA_IMAGE_INDEX_DIGEST,
+    KIA_CARNIVAL_BLUEPRINT_ID,
     PRONTO_CHASE_CAMERA_SENSOR_ID,
     CarlaBackend,
     cooked_map_name_for_xodr,
@@ -27,6 +28,8 @@ from .runtime.compiler import compile_xosc14
 from .runtime.contract import (
     ASSET_CATALOG_SCHEMA,
     EMPTY_AMBIENT_CONFIG_SHA256,
+    EXECUTION_MODE_PHYSICS_VALIDATION,
+    EXECUTION_MODE_TRACE_REPLAY,
     MAX_SENSOR_COUNT,
     OFFICIAL_XSD_SHA256,
     ContractError,
@@ -166,6 +169,8 @@ def _execute_local_lease(
     port: int,
     progress: Callable[[str, Mapping[str, object]], None] | None = None,
 ) -> dict[str, object]:
+    timeline_path = asset_paths.get("local:timeline")
+    asset_paths = {url: path for url, path in asset_paths.items() if url != "local:timeline"}
     for label, source in asset_paths.items():
         if not source.is_file():
             raise ValueError(f"local asset for {label!r} is not a file: {source}")
@@ -212,6 +217,7 @@ def _execute_local_lease(
         uploader=upload_local,
         authorize_upload=bind_local,
         progress=progress,
+        render_timeline=timeline_path.read_bytes() if timeline_path is not None else None,
     )
 
 
@@ -285,6 +291,18 @@ def _read_input_package(path: Path, intent: Mapping[str, Any]) -> tuple[str, str
             raise ContractError(f"input package input {input_id} failed size/digest verification")
         paths[input_id] = source
     return expected_intent_sha, control_sha256, paths
+
+
+def _is_render_timeline(path: Path) -> bool:
+    """A declared `other` asset holding a `simforge.render-timeline.v1` document."""
+    import gzip
+    body = path.read_bytes()
+    try:
+        text = gzip.decompress(body) if body[:2] == b"\x1f\x8b" else body
+        head = json.loads(text)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    return isinstance(head, Mapping) and head.get("version") == "simforge.render-timeline.v1"
 
 
 def _xosc_source_digest(xosc: bytes) -> str:
@@ -483,9 +501,18 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
     quality = "standard" if video is None else {
         "draft": "preview", "standard": "standard", "high": "high", "lossless": "cinematic",
     }[video["quality"]]
+    # CARLA renders the scenario by kinematic trace replay. CARLA-native
+    # physics is an explicit opt-in (the intent asks for the
+    # `actor.native_controls` capability) that yields a labelled physics
+    # validation run, never the scenario's render.
+    execution_mode = (
+        EXECUTION_MODE_PHYSICS_VALIDATION
+        if "actor.native_controls" in (*required, *preferred)
+        else EXECUTION_MODE_TRACE_REPLAY
+    )
     native_value = {
         "schema": "simforge.render-spec/v1", "fps": video_fps,
-        "sensors": sensor_values, "outputs": outputs, "executionMode": "native-physics",
+        "sensors": sensor_values, "outputs": outputs, "executionMode": execution_mode,
         "quality": quality, "environment": native_environment,
         "formats": ["png", "ply", "csv", "mp4-h264", "json", "jsonl"],
     }
@@ -633,8 +660,16 @@ def _intent_lease(
     samples_per_frame = raster_samples + point_samples
     sensor_samples = samples_per_frame * capture_count
     traffic_candidates: list[tuple[Path, Mapping[str, Any]]] = []
+    timeline_paths: list[Path] = []
     for asset in assets:
         if asset["kind"] != "other":
+            continue
+        # The authoritative render timeline (`render.timeline`, canonical
+        # JSON whose digest the intent binds) is preferred over the xosc.
+        if asset["assetId"] == "render.timeline" or _is_render_timeline(inputs[asset["assetId"]]):
+            if not _is_render_timeline(inputs[asset["assetId"]]):
+                raise ContractError("render.timeline input is not a simforge.render-timeline.v1 document")
+            timeline_paths.append(inputs[asset["assetId"]])
             continue
         candidate_path = inputs[asset["assetId"]]
         try:
@@ -801,9 +836,12 @@ def _intent_lease(
             control_sha256=execution_package_control_sha256,
         ),
     )
+    if len(timeline_paths) > 1:
+        raise ContractError("render intent contains multiple render timelines")
     return lease, {
         "local:manifest": manifest_path, "local:xosc": xosc_path,
         "local:xodr": xodr_path, "local:catalog": catalog_path, "local:traffic": traffic_path,
+        **({"local:timeline": timeline_paths[0]} if timeline_paths else {}),
     }
 
 
@@ -889,15 +927,15 @@ def _preflight_intent(args: argparse.Namespace) -> dict[str, object]:
         raise PreflightError("intent.schema", ContractError("render intent must be an object"))
     parsed_spec = check(
         "intent.capabilities",
-        lambda: RenderSpec.parse(intent.get("renderSpec")),
+        lambda: _render_spec_v3_to_native(intent.get("renderSpec"))[1],
     )
     assert isinstance(parsed_spec, RenderSpec)
     with tempfile.TemporaryDirectory(prefix="scenario-preflight-") as temporary:
         temporary_path = Path(temporary)
 
         def build_lease() -> tuple[Any, Mapping[str, Path]]:
-            intent_sha, inputs = _read_input_package(package_path, intent)
-            return _intent_lease(intent, intent_sha, inputs, temporary_path)
+            intent_sha, control_sha256, inputs = _read_input_package(package_path, intent)
+            return _intent_lease(intent, intent_sha, control_sha256, inputs, temporary_path)
 
         lease, asset_paths = check("intent.lease-eligibility", build_lease)
         backend: CarlaBackend | None = None
@@ -914,7 +952,7 @@ def _preflight_intent(args: argparse.Namespace) -> dict[str, object]:
 
             rpc = check("carla.rpc", connect)
             assert backend is not None
-            package = lease.job.execution_package
+            package = lease.execution_package
             xodr = asset_paths[package.xodr.url].read_bytes()
 
             def load_map() -> Mapping[str, object]:
@@ -1017,6 +1055,27 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
             "message": str(exc)[:4096] or exc.__class__.__name__,
         })
         raise
+    parity_value = result.get("parity") if isinstance(result.get("parity"), Mapping) else {}
+    if result.get("status") != "succeeded" or parity_value.get("accepted") is not True:
+        # Parity is blocking: a render whose CARLA poses do not match the
+        # scenario (or whose runtime closure failed) is not published.
+        evidence = result.get("parityEvidence") if isinstance(result.get("parityEvidence"), Mapping) else {}
+        trajectory = evidence.get("trajectory", {}) if isinstance(evidence, Mapping) else {}
+        semantics = evidence.get("semantics", {}) if isinstance(evidence, Mapping) else {}
+        summary = {
+            "mode": (evidence.get("execution") or {}).get("mode") if isinstance(evidence, Mapping) else None,
+            "trajectory": trajectory.get("verdict"),
+            "failedActorIds": trajectory.get("failedActorIds", [])[:8],
+            "metrics": {
+                key: value for key, value in dict(trajectory.get("metrics", {})).items()
+                if key.startswith(("max.", "acceptanceThreshold."))
+            },
+            "semantics": semantics.get("failedCheckIds", []),
+            "artifacts": (evidence.get("artifacts") or {}).get("missingKinds", []) if isinstance(evidence, Mapping) else [],
+        }
+        message = "CARLA render failed its blocking parity gate: " + json.dumps(summary, sort_keys=True)
+        emit("warning", {"code": "carla.parity_failed", "message": message[:4096]})
+        raise RuntimeError(message)
     manifest_entries = _artifact_manifest_entries(result["artifacts"])
     artifact_manifest = {
         "schema": "simforge.render-artifact-manifest/v1",
@@ -1057,6 +1116,8 @@ def main() -> None:
              "buried, displaced or non-moving actors (works on a -nullrhi server)",
     )
     smoke.add_argument("--map", default=None, help="cooked map to load (default: the loaded world)")
+    smoke.add_argument("--mode", default="trace-replay", choices=["trace-replay", "native-physics"],
+                       help="trace-replay (default) or the native-physics validation path")
     intent = commands.add_parser("run-intent", help="execute a local simforge.render-intent/v1")
     intent.add_argument("--intent", required=True)
     intent.add_argument("--package", required=True)
@@ -1121,7 +1182,7 @@ def main() -> None:
         result = _probe_tick_barrier(args.host, args.port, args.fixed_delta, args.ticks)
     elif args.command == "pose-smoke":
         from .pose_smoke import run_pose_smoke
-        result = run_pose_smoke(args.host, args.port, args.map)
+        result = run_pose_smoke(args.host, args.port, args.map, args.mode)
     else:
         result = _run_intent(args)
     print(json.dumps(result, sort_keys=True))

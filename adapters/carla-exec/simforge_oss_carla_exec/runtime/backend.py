@@ -16,7 +16,29 @@ from time import monotonic, sleep
 from typing import Any, Callable, Iterable, Mapping, Protocol
 
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
-from .contract import ASSET_CATALOG_SCHEMA, CAMERA_MODALITIES, ContractError, Environment, RenderSpec
+from .contract import (
+    ASSET_CATALOG_SCHEMA,
+    CAMERA_MODALITIES,
+    EXECUTION_MODE_PHYSICS_VALIDATION,
+    EXECUTION_MODE_TRACE_REPLAY,
+    EXECUTION_PURPOSE,
+    ContractError,
+    Environment,
+    RenderSpec,
+    normalize_execution_mode,
+)
+from .replay import (
+    DopplerBody,
+    GroundDiagnostic,
+    body_containing,
+    radar_point_world,
+    timeline_radial_velocity,
+    RenderPose,
+    carla_transform,
+    map_z_calibration,
+    observed_pose,
+    render_pose,
+)
 from .pose_gates import (
     GROUND_SEARCH_DOWN_M,
     GROUND_SEARCH_UP_M,
@@ -186,6 +208,17 @@ GROUND_CACHE_CELL_M = 0.25
 
 #: Vehicles are sampled against the ground this often (ticks) by the pose gate.
 VEHICLE_GROUND_CHECK_EVERY_TICKS = 10
+
+#: Replay: height above the timeline pose a body is spawned at when CARLA's
+#: spawn-time overlap test refuses the near-surface staging (bodies authored
+#: in contact at t=0). It is teleported down before the first tick.
+REPLAY_STAGING_ALTITUDE_M = 50.0
+#: Replay: moving walkers/vehicles are sampled by the cooked-mesh height
+#: diagnostic this often (ticks); static bodies once, at spawn.
+REPLAY_GROUND_SAMPLE_EVERY_TICKS = 50
+#: Replay: bound on sensor warm-up ticks before t=0 (actors are already posed
+#: and kinematic, so warm-up ticks move nothing).
+REPLAY_SENSOR_WARMUP_MAX_TICKS = 200
 
 
 def _spawn_footprint_half_extents(entry: object, kind: str) -> tuple[float, float]:
@@ -400,6 +433,79 @@ def _configured_cooked_map_names() -> dict[str, str]:
 def cooked_map_name_for_xodr(xodr_sha256: str) -> str | None:
     """Return the cooked runtime world name for a source XODR, if one exists."""
     return _configured_cooked_map_names().get(xodr_sha256)
+
+
+#: A cooked RoadRunner world re-serializes the OpenDRIVE it was built from, so
+#: ``to_opendrive()`` is never byte-identical to the source XODR. These are the
+#: runtime digests approved as the same road network as a source XODR (source
+#: sha256 -> runtime sha256s), recorded when each world was cooked and its
+#: signal/lane identity was verified. Anything else is a different map.
+#: ``SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`` (``{"<source>": ["<runtime>"]}``)
+#: extends it for engines that cook additional worlds.
+APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = {
+    "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": frozenset({
+        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
+    }),
+    "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": frozenset({
+        "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
+    }),
+    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": frozenset({
+        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
+    }),
+    # Belmont: measured 2026-09-22 on the carla-rfs-munich-belmont 0.10.0 cook
+    # (pose-smoke + d9d7-era worker image), whose world the registry above binds.
+    "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": frozenset({
+        "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
+    }),
+}
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str) and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def approved_cooked_xodr_digests(source_xodr_sha256: str) -> frozenset[str]:
+    approved = set(APPROVED_COOKED_XODR_DIGESTS.get(source_xodr_sha256, frozenset()))
+    raw = simforge_env("CARLA_APPROVED_COOKED_XODR_JSON", "").strip()
+    if raw:
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON must be valid JSON") from exc
+        if not isinstance(parsed, Mapping) or any(
+            not _is_sha256(source) or not isinstance(runtimes, list)
+            or any(not _is_sha256(runtime) for runtime in runtimes)
+            for source, runtimes in parsed.items()
+        ):
+            raise RuntimeError(
+                "SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON must map source XODR sha256 values "
+                "to arrays of runtime XODR sha256 values"
+            )
+        approved.update(parsed.get(source_xodr_sha256, ()))
+    return frozenset(approved)
+
+
+def map_binding_policy() -> str:
+    """``exact`` (default) fails a render whose runtime road network is not the
+    package XODR; ``allow-approximate`` renders it and labels every output
+    ``approximate map``."""
+    policy = (simforge_env("CARLA_MAP_BINDING", "exact") or "exact").strip().lower()
+    if policy not in {"exact", "allow-approximate"}:
+        raise RuntimeError("SIMFORGE_CARLA_MAP_BINDING must be exact or allow-approximate")
+    return policy
+
+
+#: Physics substepping applied (and recorded) on every world. Replayed actors
+#: never simulate, but physics-validation vehicles and any unowned simulating
+#: body step at 10 ms inside the 20 ms render tick.
+PHYSICS_SUBSTEPPING: Mapping[str, object] = {
+    "substepping": True,
+    "max_substep_delta_time": 0.01,
+    "max_substeps": 10,
+}
 
 
 VISUAL_SAMPLE_TARGET = 4096
@@ -667,7 +773,7 @@ class CarlaBackend:
         self.signal_snapshots: dict[int, _OwnedSignalSnapshot] = {}
         self.executed_signals: dict[str, str] = {}
         self.executed_signal_lamps: dict[str, Any] = {}
-        self.execution_mode = "native-physics"
+        self.execution_mode = EXECUTION_MODE_TRACE_REPLAY
         self.sensor_records: list[dict[str, Any]] = []
         self.sensor_lock = Lock()
         self.sensor_condition = Condition(self.sensor_lock)
@@ -721,9 +827,15 @@ class CarlaBackend:
         self.last_controls: dict[str, dict[str, Any]] = {}
 
     def configure_execution(self, mode: str) -> None:
-        if mode not in {"native-physics", "diagnostic-replay"}:
-            raise RuntimeError(f"unsupported execution mode {mode}")
-        self.execution_mode = mode
+        try:
+            self.execution_mode = normalize_execution_mode(mode, "execution mode")
+        except ContractError as exc:
+            raise RuntimeError(f"unsupported execution mode {mode}") from exc
+
+    @property
+    def replaying(self) -> bool:
+        """Trace replay: every actor kinematic, posed from the sampler."""
+        return getattr(self, "execution_mode", EXECUTION_MODE_TRACE_REPLAY) == EXECUTION_MODE_TRACE_REPLAY
 
     def set_rpc_timeout(self, timeout_s: float) -> None:
         if not isfinite(timeout_s) or timeout_s <= 0:
@@ -791,17 +903,33 @@ class CarlaBackend:
             sleep(0.01)
 
     def load_opendrive(self, map_name: str, xodr: bytes, fixed_timestep_s: float) -> None:
+        """Load the runtime world bound to the package XODR by digest.
+
+        The world is chosen by the XODR sha256 (the cooked-world registry),
+        never trusted by name: a package that names one world while its XODR
+        binds another is rejected, and after loading, the runtime's own
+        OpenDRIVE must be the package XODR byte-for-byte or an approved cooked
+        re-serialization of it. Anything else fails, unless the worker is
+        configured ``SIMFORGE_CARLA_MAP_BINDING=allow-approximate``, in which
+        case the render proceeds labelled ``approximate map``.
+        """
         requested_name = _normalized_map_name(map_name)
         if not requested_name or requested_name != map_name or any(
             token in requested_name for token in ("/", "\\", "..")
         ):
             raise RuntimeError("execution package must name one exact cooked CARLA map")
+        policy = map_binding_policy()
+        package_sha256 = hashlib.sha256(xodr).hexdigest()
+        cooked_name = cooked_map_name_for_xodr(package_sha256)
+        if cooked_name is not None and cooked_name != requested_name:
+            raise RuntimeError(
+                f"execution package names CARLA map {requested_name} but its XODR ({package_sha256}) "
+                f"binds the cooked world {cooked_name}"
+            )
         available_getter = getattr(self.client, "get_available_maps", None)
         available = list(available_getter() or ()) if callable(available_getter) else []
         matching = [value for value in available if _normalized_map_name(value) == requested_name]
         if len(matching) != 1:
-            package_xodr_sha256 = hashlib.sha256(xodr).hexdigest()
-            cooked_name = cooked_map_name_for_xodr(package_xodr_sha256)
             if cooked_name is not None:
                 # This XODR has a cooked runtime world. Rendering it as a
                 # generated bare-OpenDRIVE world silently loses the cooked
@@ -810,7 +938,7 @@ class CarlaBackend:
                 # generated-XODR fallback is enabled for uncooked maps.
                 raise RuntimeError(
                     f"CARLA runtime does not contain the cooked custom map {cooked_name} "
-                    f"required for this XODR ({package_xodr_sha256}); "
+                    f"required for this XODR ({package_sha256}); "
                     "refusing the generated-OpenDRIVE fallback for a cooked map"
                 )
             if simforge_env("CARLA_ALLOW_GENERATED_XODR") != "1":
@@ -829,10 +957,12 @@ class CarlaBackend:
                 "available": True,
                 "source": "generated-opendrive-world",
                 "identityMode": "generated-opendrive",
+                "binding": "exact",
+                "bindingPolicy": policy,
                 "requestedMapName": requested_name,
                 "loadedMapName": observed_name,
-                "packageXodrSha256": hashlib.sha256(xodr).hexdigest(),
-                "runtimeXodrSha256": hashlib.sha256(xodr).hexdigest(),
+                "packageXodrSha256": package_sha256,
+                "runtimeXodrSha256": package_sha256,
                 "xodrByteExact": True,
                 "signalIdentityMode": "direct-opendrive-id",
                 "signalIdMap": {},
@@ -851,17 +981,33 @@ class CarlaBackend:
             runtime_xodr = str(runtime_map.to_opendrive() or "")
             if not runtime_xodr:
                 raise RuntimeError("loaded cooked CARLA map exposes no OpenDRIVE identity")
-            package_sha256 = hashlib.sha256(xodr).hexdigest()
             runtime_sha256 = hashlib.sha256(runtime_xodr.encode("utf-8")).hexdigest()
+            if runtime_sha256 == package_sha256:
+                identity_mode = "xodr-byte-exact"
+            elif runtime_sha256 in approved_cooked_xodr_digests(package_sha256):
+                identity_mode = "approved-cooked-digest"
+            elif policy == "allow-approximate":
+                identity_mode = "approximate"
+            else:
+                raise RuntimeError(
+                    f"CARLA world {loaded_name} is not bound to the package XODR: runtime OpenDRIVE "
+                    f"{runtime_sha256} is neither the package XODR {package_sha256} nor an approved "
+                    "cooked re-serialization of it (approve the pair in "
+                    "SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON, or render labelled approximate with "
+                    "SIMFORGE_CARLA_MAP_BINDING=allow-approximate)"
+                )
             self.signal_id_map = dict(COOKED_SIGNAL_ID_MAPS.get(
                 (requested_name, package_sha256, runtime_sha256),
                 {},
             ))
+            exact = identity_mode != "approximate"
             self.map_evidence = {
                 "schema": "simforge.carla-map-evidence/v1",
                 "available": True,
                 "source": "cooked-custom-map",
-                "identityMode": "cooked-map-name",
+                "identityMode": identity_mode,
+                "binding": "exact" if exact else "approximate",
+                "bindingPolicy": policy,
                 "requestedMapName": requested_name,
                 "loadedMapName": loaded_name,
                 "packageXodrSha256": package_sha256,
@@ -871,13 +1017,18 @@ class CarlaBackend:
                     "approved-cooked-map-remap" if self.signal_id_map else "direct-opendrive-id"
                 ),
                 "signalIdMap": dict(sorted(self.signal_id_map.items())),
-                "exact": True,
+                "exact": exact,
             }
+        self.package_xodr_sha256 = package_sha256
         self.fixed_timestep_s = fixed_timestep_s
         settings = self.world.get_settings()
         settings.synchronous_mode = True
         settings.fixed_delta_seconds = fixed_timestep_s
         settings.no_rendering_mode = False
+        substepping: dict[str, object] = {}
+        for field, value in PHYSICS_SUBSTEPPING.items():
+            if hasattr(settings, field):
+                setattr(settings, field, value)
         streaming = {}
         for field in ("tile_stream_distance", "actor_active_distance"):
             if hasattr(settings, field):
@@ -898,6 +1049,17 @@ class CarlaBackend:
                 f"CARLA runtime did not accept synchronous {fixed_timestep_s:g}s stepping: "
                 f"synchronous_mode={applied_mode} fixed_delta_seconds={applied_delta}"
             )
+        for field in PHYSICS_SUBSTEPPING:
+            if hasattr(applied, field):
+                value = getattr(applied, field)
+                substepping[field] = value if isinstance(value, bool) else float(value)
+        self.physics_evidence = {
+            "schema": "simforge.carla-physics-settings/v1",
+            "fixedDeltaSeconds": float(applied_delta),
+            "synchronousMode": applied_mode,
+            "requested": dict(PHYSICS_SUBSTEPPING),
+            "applied": substepping,
+        }
         self.streaming_evidence = {
             "available": True,
             "settings": streaming,
@@ -1040,6 +1202,9 @@ class CarlaBackend:
         self.actor_lifecycle = getattr(self, "actor_lifecycle", {})
         self.collision_sensors = getattr(self, "collision_sensors", [])
         self.actor_asset_evidence = getattr(self, "actor_asset_evidence", {})
+        if self.replaying:
+            self._spawn_replay(actors, first_frame, catalog, check)
+            return
         self.static_actor_ids = {actor_id for actor_id, binding in actors.items() if binding.static}
         self.frozen_static_actor_ids = set()
         self.dropped_actor_ids: set[str] = set()
@@ -1237,6 +1402,361 @@ class CarlaBackend:
         }
         self.streaming_primary_actor_id = next(iter(self.actors), None)
         self._configure_collision_sensors(library, check)
+
+    # -- trace replay ---------------------------------------------------------
+    #
+    # Default execution: CARLA renders the canonical trace. Every replayed
+    # actor has physics off from spawn (before the first tick), there is no
+    # settle phase and no nudging, and one batched apply_batch_sync per tick
+    # poses every actor from the timeline sampler. The cooked-mesh raycast is
+    # only a diagnostic; the timeline z (plus the declared per-map calibration)
+    # is authoritative.
+
+    def _replay_estimated_bottom(self, klass: str, entry: Mapping[str, Any] | None) -> float:
+        if klass != WALKER:
+            return 0.0
+        dims = entry.get("dims") if isinstance(entry, Mapping) else None
+        height = dims.get("h") if isinstance(dims, Mapping) else None
+        return -(float(height) / 2.0 if isinstance(height, (int, float)) and height > 0 else 0.93)
+
+    def _replay_ground_delta(self, x: float, y: float, timeline_z: float) -> tuple[float | None, float, str]:
+        """Cooked-mesh surface under (x, y) minus the timeline z (diagnostic)."""
+        ground_z, source = self._ground_elevation(x, -y, timeline_z)
+        return (ground_z - timeline_z if source == "ground-raycast" else None), ground_z, source
+
+    def _spawn_replay(
+        self,
+        actors: Mapping[str, ActorBinding],
+        first_frame: PlanFrame,
+        catalog: Mapping[str, Any],
+        check: Callable[[], None],
+    ) -> None:
+        self.absent_actors = getattr(self, "absent_actors", set())
+        self.static_actor_ids = {actor_id for actor_id, binding in actors.items() if binding.static}
+        self.frozen_static_actor_ids = set(self.static_actor_ids)
+        self.dropped_actor_ids = set()
+        self.spawn_planar_targets = {}
+        self.kinematic_actor_ids = set()
+        self.actor_classes = {}
+        self.bottom_offsets = {}
+        self.kinematic_commands = {}
+        self.replay_poses: dict[str, RenderPose] = {}
+        self.replay_blueprints: dict[str, Any] = {}
+        self.replay_prop_respawns: dict[str, int] = {}
+        self.replay_extents: dict[str, tuple[float, float, float, float]] = {}
+        self.replay_batches = 0
+        self.replay_commands = 0
+        self.pose_gate = None
+        self.z_offset_m, self.z_offset_source = map_z_calibration(getattr(self, "package_xodr_sha256", ""))
+        self.ground_diagnostic = GroundDiagnostic()
+        placements: dict[str, dict[str, Any]] = {}
+        execution_drops: Mapping[str, str] = getattr(self, "execution_drops", {})
+        library = self.world.get_blueprint_library()
+        for actor_id in sorted(actors):
+            check()
+            binding = actors[actor_id]
+            state = first_frame.actors[actor_id]
+            authored = {"x": state.x, "y": state.y, "z": state.z}
+            if actor_id in execution_drops:
+                self.dropped_actor_ids.add(actor_id)
+                placements[actor_id] = {
+                    "outcome": "dropped", "cause": "execution-semantics",
+                    "reason": execution_drops[actor_id], "authored": authored,
+                }
+                continue
+            if state.lifecycle == LIFECYCLE_ABSENT:
+                # Deleted before the clip starts: never shown, never spawned.
+                self.absent_actors.add(actor_id)
+                self.actor_lifecycle[actor_id] = LIFECYCLE_ABSENT
+                placements[actor_id] = {"outcome": "absent-at-clip-start", "authored": authored}
+                continue
+            entry = catalog.get(binding.catalog_name, {}) if isinstance(catalog, Mapping) else {}
+            requested_blueprint_id = entry.get("blueprintId") if isinstance(entry, Mapping) else None
+            if not isinstance(requested_blueprint_id, str) or not requested_blueprint_id:
+                raise RuntimeError(f"asset catalog has no exact CARLA binding for {actor_id} ({binding.catalog_name})")
+            blueprint_id = RUNTIME_BLUEPRINT_ALIASES.get(requested_blueprint_id, requested_blueprint_id)
+            try:
+                blueprint = library.find(blueprint_id)
+            except RuntimeError as exc:
+                raise RuntimeError(
+                    f"CARLA runtime is missing required catalog blueprint for {actor_id} ({blueprint_id}, {binding.kind})"
+                ) from exc
+            klass = motion_class(blueprint_id)
+            entry_mapping = entry if isinstance(entry, Mapping) else None
+            estimate = self._replay_estimated_bottom(klass, entry_mapping)
+            pose = render_pose(state, bottom_offset_m=estimate, z_offset_m=self.z_offset_m, walker=klass == WALKER)
+            exact = carla_transform(self.carla, pose)
+            if klass == PROP:
+                # A prop is never moved after spawn (CARLA 0.10 ignores its
+                # teleports), so it spawns exactly at its timeline pose.
+                actor = self.world.try_spawn_actor(blueprint, exact)
+                outcome = "placed"
+            else:
+                # Spawn clear of the surface so CARLA's spawn-time overlap test
+                # passes, then hold kinematically and teleport to the exact
+                # timeline pose before the first tick. No physics step ever
+                # runs on the body, so nothing settles, bounces or is nudged.
+                entry_dims = entry_mapping.get("dims") if entry_mapping else None
+                height = entry_dims.get("h") if isinstance(entry_dims, Mapping) else None
+                lift = max(0.25, (float(height) / 2.0 if isinstance(height, (int, float)) else 0.0) + 0.15)
+                staging = self.carla.Transform(
+                    self.carla.Location(x=pose.x, y=-pose.y, z=pose.z + lift),
+                    exact.rotation,
+                )
+                actor = self.world.try_spawn_actor(blueprint, staging)
+                outcome = "placed"
+                if actor is None:
+                    # Authored bodies may touch at t=0 (a scenario can start in
+                    # contact). Spawn high above and teleport down instead of
+                    # nudging the actor off its trace.
+                    actor = self.world.try_spawn_actor(blueprint, self.carla.Transform(
+                        self.carla.Location(x=pose.x, y=-pose.y, z=pose.z + REPLAY_STAGING_ALTITUDE_M + 3.0 * len(placements)),
+                        exact.rotation,
+                    ))
+                    outcome = "staged"
+            check()
+            if actor is None:
+                self.dropped_actor_ids.add(actor_id)
+                placements[actor_id] = {
+                    "outcome": "dropped",
+                    "reason": "CARLA refused to spawn the body at or above its timeline pose",
+                    "authored": authored,
+                }
+                continue
+            observed_type_id = str(getattr(actor, "type_id", ""))
+            if observed_type_id != blueprint_id:
+                try:
+                    actor.destroy()
+                finally:
+                    raise RuntimeError(
+                        f"CARLA actor {actor_id} spawned as {observed_type_id!r}, "
+                        f"expected exact blueprint {blueprint_id!r}"
+                    )
+            try:
+                self._hold_kinematic(actor_id, actor)
+                bottom = self._bottom_offset(actor, klass, entry_mapping)
+                pose = render_pose(state, bottom_offset_m=bottom, z_offset_m=self.z_offset_m, walker=klass == WALKER)
+                if klass == PROP:
+                    if abs(bottom - estimate) > 1e-6:
+                        actor.destroy()
+                        actor = self.world.try_spawn_actor(blueprint, carla_transform(self.carla, pose))
+                        if actor is None:
+                            raise RuntimeError(f"CARLA refused to respawn prop {actor_id} at its timeline elevation")
+                        self._hold_kinematic(actor_id, actor)
+                else:
+                    actor.set_transform(carla_transform(self.carla, pose))
+            except BaseException:
+                if actor is not None:
+                    actor.destroy()
+                raise
+            delta, ground_z, ground_source = self._replay_ground_delta(state.x, state.y, state.z)
+            self.ground_diagnostic.observe(actor_id, klass, delta)
+            self.actor_asset_evidence[actor_id] = {
+                "catalogId": binding.catalog_name,
+                "requestedBlueprintId": requested_blueprint_id,
+                "observedBlueprintId": observed_type_id,
+                "verification": "runtime-type-id-readback",
+                **({"runtimeBlueprintAlias": blueprint_id} if blueprint_id != requested_blueprint_id else {}),
+            }
+            self.actor_classes[actor_id] = klass
+            self.bottom_offsets[actor_id] = bottom
+            self.kinematic_actor_ids.add(actor_id)
+            self.replay_poses[actor_id] = pose
+            box = getattr(actor, "bounding_box", None)
+            if box is not None:
+                self.replay_extents[actor_id] = (
+                    float(box.extent.x), float(box.extent.y), float(box.extent.z), float(box.location.z),
+                )
+            self.replay_blueprints[actor_id] = blueprint
+            self.kinematic_commands[actor_id] = (pose.x, pose.y, pose.z)
+            self.actors[actor_id] = actor
+            self.spawn_planar_targets[actor_id] = (state.x, state.y)
+            runtime_id = getattr(actor, "id", None)
+            if isinstance(runtime_id, int):
+                self.actor_id_by_runtime_id[runtime_id] = actor_id
+            self.actor_lifecycle[actor_id] = state.lifecycle
+            placements[actor_id] = {
+                "outcome": outcome,
+                "motion": "kinematic-replay",
+                "physics": "off-from-spawn",
+                "class": klass,
+                "authored": authored,
+                "commanded": {
+                    "x": pose.x, "y": pose.y, "z": pose.z,
+                    "headingDeg": pose.heading_deg, "pitchDeg": pose.pitch_deg, "rollDeg": pose.roll_deg,
+                },
+                "bottomOffsetM": bottom,
+                "zCalibrationM": self.z_offset_m,
+                "groundZ": ground_z,
+                "groundSource": ground_source,
+                "cookedMinusTimelineZM": delta,
+            }
+        if actors and not self.actors and not self.absent_actors:
+            raise RuntimeError("spawn placement dropped every scenario actor")
+        self.static_actor_ids -= self.dropped_actor_ids
+        self.spawn_placement = {
+            "schema": "simforge.spawn-placement/v1",
+            "mode": EXECUTION_MODE_TRACE_REPLAY,
+            "actors": placements,
+            "droppedActorIds": sorted(self.dropped_actor_ids),
+            "nudgedActorIds": [],
+            "stagedActorIds": sorted(
+                actor_id for actor_id, item in placements.items() if item.get("outcome") == "staged"
+            ),
+        }
+        self.streaming_primary_actor_id = next(iter(self.actors), None)
+        # No collision sensors: in replay nothing is simulated, so contacts are
+        # the trace's own events rather than a CARLA observation.
+
+    def _respawn_prop(self, actor_id: str, pose: RenderPose) -> None:
+        """Move a prop the only way CARLA 0.10 honours: respawn it."""
+        old = self.actors.pop(actor_id)
+        old_id = getattr(old, "id", None)
+        old.destroy()
+        actor = self.world.try_spawn_actor(self.replay_blueprints[actor_id], carla_transform(self.carla, pose))
+        if actor is None:
+            raise RuntimeError(f"CARLA refused to respawn moving prop {actor_id} at its timeline pose")
+        self._hold_kinematic(actor_id, actor)
+        self.actors[actor_id] = actor
+        if isinstance(old_id, int):
+            self.actor_id_by_runtime_id.pop(old_id, None)
+        runtime_id = getattr(actor, "id", None)
+        if isinstance(runtime_id, int):
+            self.actor_id_by_runtime_id[runtime_id] = actor_id
+        self.replay_prop_respawns[actor_id] = self.replay_prop_respawns.get(actor_id, 0) + 1
+
+    def _apply_replay(self, frame: PlanFrame, check: Callable[[], None]) -> None:
+        command = getattr(self.carla, "command", None)
+        commands: list[Any] = []
+        dropped_actor_ids = getattr(self, "dropped_actor_ids", set())
+        for actor_id, state in frame.actors.items():
+            check()
+            if actor_id in dropped_actor_ids:
+                continue
+            if state.lifecycle == LIFECYCLE_ABSENT:
+                self._destroy_absent_actor(actor_id)
+                continue
+            actor = self.actors.get(actor_id)
+            if actor is None:
+                raise RuntimeError(f"active actor {actor_id} is missing from CARLA")
+            self.actor_lifecycle[actor_id] = state.lifecycle
+            self._apply_appearance(actor_id, actor, state.appearance, frame.t)
+            klass = self.actor_classes[actor_id]
+            walker = klass == WALKER
+            pose = render_pose(
+                state, bottom_offset_m=self.bottom_offsets.get(actor_id, 0.0),
+                z_offset_m=self.z_offset_m, walker=walker,
+            )
+            previous = self.replay_poses.get(actor_id)
+            self.replay_poses[actor_id] = pose
+            self.kinematic_commands[actor_id] = (pose.x, pose.y, pose.z)
+            if klass == PROP:
+                if previous is not None and previous != pose:
+                    self._respawn_prop(actor_id, pose)
+                continue
+            if command is None:
+                raise RuntimeError("the CARLA runtime has no batch command API for trace replay")
+            runtime_id = actor.id
+            transform = carla_transform(self.carla, pose)
+            commands.append(command.ApplyTransform(runtime_id, transform))
+            yaw = radians(-pose.heading_deg)
+            forward_x, forward_y = cos(yaw), sin(yaw)
+            speed = 0.0 if (walker and state.downed) else state.speed_mps
+            # Physics-off bodies ignore the target velocity for motion; it is
+            # sent so velocity-driven presentation (walker gait blend, and
+            # wherever CARLA honours it, Doppler and motion blur) sees the
+            # timeline's speed rather than zero.
+            commands.append(command.ApplyTargetVelocity(runtime_id, self.carla.Vector3D(
+                x=forward_x * speed, y=forward_y * speed, z=0.0,
+            )))
+            if walker:
+                sign = -1.0 if speed < 0 else 1.0
+                commands.append(command.ApplyWalkerControl(runtime_id, self.carla.WalkerControl(
+                    direction=self.carla.Vector3D(x=forward_x * sign, y=forward_y * sign, z=0.0),
+                    speed=abs(speed),
+                    jump=False,
+                )))
+        if commands:
+            check()
+            responses = self.client.apply_batch_sync(commands, False)
+            self.replay_batches += 1
+            self.replay_commands += len(commands)
+            failures = [
+                str(getattr(response, "error", ""))
+                for response in (responses or ())
+                if getattr(response, "error", "")
+            ]
+            if failures:
+                raise RuntimeError(f"CARLA rejected {len(failures)} replay command(s): {failures[:3]}")
+
+    def _replay_readback(self) -> dict[str, Any]:
+        """Observed transforms for every live body, from one world snapshot."""
+        snapshot_getter = getattr(self.world, "get_snapshot", None)
+        snapshot = snapshot_getter() if callable(snapshot_getter) else None
+        observed: dict[str, Any] = {}
+        for actor_id, actor in self.actors.items():
+            item = snapshot.find(actor.id) if snapshot is not None else None
+            observed[actor_id] = item.get_transform() if item is not None else actor.get_transform()
+        return observed
+
+    def _replay_ground_sample(self, frame_index: int) -> None:
+        if frame_index % REPLAY_GROUND_SAMPLE_EVERY_TICKS:
+            return
+        targets = getattr(self, "current_frame_actors", None) or {}
+        for actor_id in sorted(self.actors):
+            klass = self.actor_classes.get(actor_id)
+            state = targets.get(actor_id)
+            if klass == PROP or state is None or (
+                frame_index and actor_id in getattr(self, "static_actor_ids", set())
+            ):
+                continue
+            delta, _ground_z, _source = self._replay_ground_delta(state.x, state.y, state.z)
+            self.ground_diagnostic.observe(actor_id, klass or VEHICLE, delta)
+
+    def _doppler_context(self) -> dict[str, Any]:
+        """The replayed bodies and their timeline velocities for this capture."""
+        targets = getattr(self, "current_frame_actors", None) or {}
+        bodies: list[DopplerBody] = []
+        velocities: dict[str, tuple[float, float, float]] = {}
+        for actor_id, pose in self.replay_poses.items():
+            state = targets.get(actor_id)
+            if state is None or actor_id not in self.actors:
+                continue
+            yaw = radians(-pose.heading_deg)
+            speed = 0.0 if (self.actor_classes.get(actor_id) == WALKER and state.downed) else state.speed_mps
+            velocity = (cos(yaw) * speed, sin(yaw) * speed, 0.0)
+            velocities[actor_id] = velocity
+            extent = self.replay_extents.get(actor_id)
+            if extent is None:
+                continue
+            bodies.append(DopplerBody(
+                actor_id, (pose.x, -pose.y, pose.z + extent[3]), yaw, extent[:3], velocity,
+            ))
+        return {"bodies": tuple(bodies), "velocities": velocities}
+
+    def replay_evidence(self) -> Mapping[str, Any]:
+        diagnostic = getattr(self, "ground_diagnostic", None)
+        return {
+            "schema": "simforge.carla-replay-evidence/v1",
+            "motion": "kinematic-trace-replay",
+            "physics": "off-from-spawn",
+            "settlePhase": False,
+            "commandTransport": "apply_batch_sync",
+            "batches": getattr(self, "replay_batches", 0),
+            "commands": getattr(self, "replay_commands", 0),
+            "propRespawns": dict(sorted(getattr(self, "replay_prop_respawns", {}).items())),
+            "zCalibration": {
+                "offsetM": getattr(self, "z_offset_m", 0.0),
+                "source": getattr(self, "z_offset_source", "none"),
+                "packageXodrSha256": getattr(self, "package_xodr_sha256", None),
+            },
+            "groundDiagnostic": (
+                diagnostic.report(
+                    applied_offset_m=getattr(self, "z_offset_m", 0.0),
+                    offset_source=getattr(self, "z_offset_source", "none"),
+                ) if diagnostic is not None else None
+            ),
+        }
 
     def spawn_placement_report(self, abort: Callable[[], None] | None = None) -> Mapping[str, Any] | None:
         check = abort or (lambda: None)
@@ -1550,9 +2070,11 @@ class CarlaBackend:
         Sensors are attached before this method runs so their asynchronous
         streams warm during pre-roll; warm-up frames are discarded before t=0.
         """
-        if self.execution_mode != "native-physics":
-            return None
         check = abort or (lambda: None)
+        if self.replaying:
+            return self._prepare_replay(check)
+        if self.execution_mode != EXECUTION_MODE_PHYSICS_VALIDATION:
+            return None
         check()
         assert self.world is not None
         for actor in self.actors.values():
@@ -1629,6 +2151,42 @@ class CarlaBackend:
                 actor_id: first_frame.actors[actor_id].speed_mps for actor_id in sorted(self.actors)
             },
             "phases": reports,
+        }
+
+    def _prepare_replay(self, check: Callable[[], None]) -> Mapping[str, Any]:
+        """No settle: bodies are already exactly at their t=0 pose, kinematic.
+
+        Only sensors need warming: tick until every sensor has delivered one
+        frame, then discard those frames, so the first captured frame is t=0.
+        """
+        check()
+        assert self.world is not None
+        ticks = 0
+        if getattr(self, "sensor_configs", {}):
+            deadline = monotonic() + self.sensor_timeout_s
+            while True:
+                with self.sensor_condition:
+                    if self.sensor_error:
+                        raise self.sensor_error
+                    missing = set(self.sensor_configs) - set(self.sensor_last_frame)
+                    if not missing:
+                        self.sensor_pending.clear()
+                        self.sensor_last_frame.clear()
+                        break
+                if ticks >= REPLAY_SENSOR_WARMUP_MAX_TICKS or monotonic() >= deadline:
+                    raise RuntimeError(
+                        "sensor warmup did not observe callbacks for: " + ", ".join(sorted(missing))
+                    )
+                check()
+                self.world.tick()
+                ticks += 1
+                with self.sensor_condition:
+                    self.sensor_condition.wait(0.05)
+        return {
+            "schema": "simforge.replay-prepare/v1",
+            "settleTicks": 0,
+            "sensorWarmupTicks": ticks,
+            "physics": "off-from-spawn",
         }
 
     def _settled_z(self, actor_id: str, actor: Any) -> float:
@@ -1941,14 +2499,40 @@ class CarlaBackend:
             self.sensor_condition.notify_all()
 
     @staticmethod
-    def _write_radar_csv(target: Path, measurement: Any) -> None:
+    def _write_radar_csv(target: Path, measurement: Any, doppler: Mapping[str, Any] | None = None) -> None:
+        """Radar detections; under trace replay also the timeline Doppler.
+
+        CARLA derives radar velocity from each body's physical velocity, which
+        a kinematic replayed body does not have. ``timeline_velocity_mps`` is
+        the same relative radial velocity computed from the timeline for the
+        replayed body the detection lies on (static world: zero velocity).
+        """
+        bodies = doppler.get("bodies", ()) if doppler else ()
+        matrix = None
+        if doppler is not None:
+            getter = getattr(getattr(measurement, "transform", None), "get_matrix", None)
+            matrix = getter() if callable(getter) else None
         with target.open("w", encoding="utf-8", newline="\n") as output:
-            output.write("depth_m,azimuth_rad,altitude_rad,velocity_mps\n")
+            output.write(
+                "depth_m,azimuth_rad,altitude_rad,velocity_mps"
+                + (",timeline_velocity_mps,timeline_actor_id" if matrix is not None else "")
+                + "\n"
+            )
+            origin = tuple(row[3] for row in matrix[:3]) if matrix is not None else None
             for detection in measurement:
-                output.write(
+                line = (
                     f"{float(detection.depth):.9g},{float(detection.azimuth):.9g},"
-                    f"{float(detection.altitude):.9g},{float(detection.velocity):.9g}\n"
+                    f"{float(detection.altitude):.9g},{float(detection.velocity):.9g}"
                 )
+                if matrix is not None:
+                    point = radar_point_world(matrix, float(detection.depth), float(detection.azimuth), float(detection.altitude))
+                    body = body_containing(point, (item for item in bodies if item.actor_id != doppler.get("hostActorId")))
+                    velocity = timeline_radial_velocity(
+                        origin, point, body.velocity if body is not None else (0.0, 0.0, 0.0),
+                        doppler.get("hostVelocity", (0.0, 0.0, 0.0)),
+                    )
+                    line += f",{velocity:.9g},{body.actor_id if body is not None else ''}"
+                output.write(line + "\n")
 
     def _sample_rgb_visual_quality(self, camera_id: str, image: Any) -> None:
         config = self.sensor_configs[camera_id]
@@ -2053,6 +2637,7 @@ class CarlaBackend:
         output_index: int,
         scheduled_time: float,
         carla_frame: int,
+        content_time: float | None = None,
     ) -> tuple[dict[str, Any], Path, int]:
         config = self.sensor_configs[sensor_key]
         converter = config["converter"]
@@ -2070,7 +2655,12 @@ class CarlaBackend:
             filename = f"{output_index:08d}.{config['extension']}"
             target = config["target"] / filename
             if config["modality"] == "radar":
-                self._write_radar_csv(target, data)
+                context = getattr(self, "replay_doppler_context", None)
+                self._write_radar_csv(target, data, None if context is None else {
+                    **context,
+                    "hostActorId": config.get("actorId"),
+                    "hostVelocity": context["velocities"].get(config.get("actorId"), (0.0, 0.0, 0.0)),
+                })
             else:
                 data.save_to_disk(str(target))
             size = target.stat().st_size
@@ -2083,6 +2673,7 @@ class CarlaBackend:
             "modality": config["modality"],
             "outputFrameIndex": output_index,
             "scheduledTimeS": scheduled_time,
+            "contentTimeS": scheduled_time if content_time is None else content_time,
             "carlaFrame": carla_frame,
             "actualCarlaTimeS": float(data.timestamp),
             "relativePath": relative,
@@ -2112,6 +2703,7 @@ class CarlaBackend:
             check()
         output_index = int(capture["outputFrameIndex"])
         scheduled_time = float(capture["scheduledTimeS"])
+        content_time = float(capture.get("contentTimeS", scheduled_time))
         if self.sensor_writer_pool is None:
             self.sensor_writer_pool = ThreadPoolExecutor(
                 max_workers=self.sensor_writer_workers,
@@ -2125,6 +2717,7 @@ class CarlaBackend:
                 output_index,
                 scheduled_time,
                 carla_frame,
+                content_time,
             )
             for sensor_key in sorted(images)
         ]
@@ -2181,9 +2774,14 @@ class CarlaBackend:
             for signal_id, indication in frame.signals.items():
                 check()
                 lamp = light_states[resolve_signal_lamp(indication, frame.t)]
-                self.signals[signal_id].set_state(lamp)
+                if self.executed_signal_lamps.get(signal_id) != lamp:
+                    self.signals[signal_id].set_state(lamp)
                 self.executed_signals[signal_id] = indication
                 self.executed_signal_lamps[signal_id] = lamp
+        if self.replaying:
+            self._apply_replay(frame, check)
+            check()
+            return
         dropped_actor_ids = getattr(self, "dropped_actor_ids", set())
         for actor_id, state in frame.actors.items():
             check()
@@ -2199,11 +2797,6 @@ class CarlaBackend:
                 raise RuntimeError(f"active actor {actor_id} is missing from CARLA")
             self.actor_lifecycle[actor_id] = state.lifecycle
             self._apply_appearance(actor_id, actor, state.appearance, frame.t)
-            target = self.carla.Transform(self.carla.Location(x=state.x, y=-state.y, z=state.z), self.carla.Rotation(yaw=-state.heading_deg))
-            if self.execution_mode == "diagnostic-replay":
-                actor.set_transform(target)
-                actor.set_target_velocity(target.transform_vector(self.carla.Vector3D(x=state.speed_mps, y=0, z=0)))
-                continue
             if actor_id in getattr(self, "kinematic_actor_ids", set()):
                 self._apply_kinematic(actor_id, actor, state)
                 continue
@@ -2314,7 +2907,9 @@ class CarlaBackend:
         """Fail loudly before t=0 on any displaced, airborne or buried actor."""
         check = abort or (lambda: None)
         gate = getattr(self, "pose_gate", None)
-        if gate is None:
+        if gate is None or self.replaying:
+            # Replay placement is proven by the blocking per-tick parity gate
+            # against the sampler, from the very first tick.
             return None
         placement = getattr(self, "spawn_placement", {}) or {}
         records = placement.get("actors", {}) if isinstance(placement, Mapping) else {}
@@ -2459,13 +3054,21 @@ class CarlaBackend:
                 wanted_bits |= bit
             else:
                 wanted_bits &= ~bit
-        current = int(actor.get_light_state())
-        wanted = (current & ~owned) | wanted_bits
-        if wanted != current:
-            actor.set_light_state(light_state_cls(wanted))
-        observed = int(actor.get_light_state())
-        if observed & owned != wanted & owned:
-            raise RuntimeError("CARLA vehicle light readback differs from the authored state")
+        # The authored lights are the only writer of these bits, so an
+        # unchanged (owned, wanted) pair needs no round trip: the state was
+        # written and read back when it last changed.
+        applied_bits = getattr(self, "applied_light_bits", None)
+        if applied_bits is None:
+            applied_bits = self.applied_light_bits = {}
+        if applied_bits.get(actor_id) != (owned, wanted_bits):
+            current = int(actor.get_light_state())
+            wanted = (current & ~owned) | wanted_bits
+            if wanted != current:
+                actor.set_light_state(light_state_cls(wanted))
+            observed = int(actor.get_light_state())
+            if observed & owned != wanted & owned:
+                raise RuntimeError("CARLA vehicle light readback differs from the authored state")
+            applied_bits[actor_id] = (owned, wanted_bits)
         verification = self.appearance_verification.setdefault(actor_id, {})
         for light_type in lights:
             verification[f"light.{light_type}"] = "runtime-readback"
@@ -2544,6 +3147,8 @@ class CarlaBackend:
             self.carla_to_plan_frame[carla_frame] = self.current_plan_frame
         check()
         if capture is not None:
+            if self.replaying and any(config.get("modality") == "radar" for config in self.sensor_configs.values()):
+                self.replay_doppler_context = self._doppler_context()
             self._capture_world_frame(carla_frame, capture, abort)
         else:
             with self.sensor_condition:
@@ -2556,6 +3161,8 @@ class CarlaBackend:
         actor_lifecycle = getattr(self, "actor_lifecycle", {})
         applied_appearance = getattr(self, "applied_appearance", {})
         result = {}
+        if self.replaying:
+            return self._replay_tick_result(absent_actors, actor_lifecycle, applied_appearance)
         for actor_id, actor in self.actors.items():
             check()
             transform, velocity = actor.get_transform(), actor.get_velocity()
@@ -2590,6 +3197,48 @@ class CarlaBackend:
                 "appearance": dict(applied_appearance.get(actor_id, {})),
             }
         self._observe_pose_gates(result)
+        return result
+
+    def _replay_tick_result(
+        self,
+        absent_actors: set[str],
+        actor_lifecycle: Mapping[str, str],
+        applied_appearance: Mapping[str, Mapping[str, str]],
+    ) -> Mapping[str, Mapping[str, Any]]:
+        """Replay readback: observed origin pose per live body (OSC frame).
+
+        Speed is the timeline's: a kinematic body has no physical velocity to
+        read back, and nothing in replay is allowed to invent one.
+        """
+        observed = self._replay_readback()
+        targets = getattr(self, "current_frame_actors", None) or {}
+        result: dict[str, Mapping[str, Any]] = {}
+        for actor_id, transform in observed.items():
+            pose = observed_pose(transform)
+            state = targets.get(actor_id)
+            result[actor_id] = {
+                "x": pose.x,
+                "y": pose.y,
+                "z": pose.z,
+                "contactZ": pose.z + self.bottom_offsets.get(actor_id, 0.0) - getattr(self, "z_offset_m", 0.0),
+                "headingDeg": pose.heading_deg,
+                "pitchDeg": pose.pitch_deg,
+                "rollDeg": pose.roll_deg,
+                "speedMps": state.speed_mps if state is not None else 0.0,
+                "speedSource": "timeline",
+                "present": True,
+                "lifecycle": actor_lifecycle.get(actor_id, "active"),
+                "appearance": dict(applied_appearance.get(actor_id, {})),
+            }
+        for actor_id in sorted(absent_actors):
+            result[actor_id] = {
+                "present": False,
+                "lifecycle": LIFECYCLE_ABSENT,
+                "appearance": dict(applied_appearance.get(actor_id, {})),
+            }
+        frame = getattr(self, "current_plan_frame", None)
+        if frame is not None:
+            self._replay_ground_sample(int(frame[0]))
         return result
 
     def collision_readback(self, frame_index: int, t: float, abort: Callable[[], None] | None = None) -> list[Mapping[str, Any]]:
@@ -2633,16 +3282,19 @@ class CarlaBackend:
             "schema": "simforge.carla-runtime-evidence/v1",
             "available": True,
             "executionMode": self.execution_mode,
-            "physicsAuthority": self.execution_mode == "native-physics",
-            "acceptanceEligible": self.execution_mode == "native-physics",
+            "purpose": EXECUTION_PURPOSE[self.execution_mode],
+            "physicsAuthority": self.execution_mode == EXECUTION_MODE_PHYSICS_VALIDATION,
+            "acceptanceEligible": True,
             "motionApplication": (
-                ("native-controls+kinematic-replay" if getattr(self, "kinematic_actor_ids", None) else "native-controls")
-                if self.execution_mode == "native-physics" else "diagnostic-teleport-replay"
+                "kinematic-trace-replay" if self.replaying else
+                "native-controls+kinematic-replay" if getattr(self, "kinematic_actor_ids", None) else "native-controls"
             ),
             "actorMotion": {
                 actor_id: ("kinematic-replay" if actor_id in getattr(self, "kinematic_actor_ids", set()) else "native-physics")
                 for actor_id in sorted(getattr(self, "actor_classes", {}))
             },
+            "replay": self.replay_evidence() if self.replaying else None,
+            "physicsSettings": dict(getattr(self, "physics_evidence", {}) or {}),
             "poseGates": getattr(self, "pose_gate", None).report() if getattr(self, "pose_gate", None) is not None else None,
             "carlaClientVersion": str(client_version),
             "carlaServerVersion": str(server_version),

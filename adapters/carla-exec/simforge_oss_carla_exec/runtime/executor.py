@@ -22,11 +22,16 @@ from .backend import RenderBackend, runtime_asset_bindings
 from .compiler import (
     LIFECYCLE_ABSENT,
     ExecutionPlan,
+    PlanFrame,
     compile_xosc14,
     substitute_actor_catalog_bindings,
 )
 from .contract import (
     CAMERA_MODALITIES,
+    EXECUTION_MODE_PHYSICS_VALIDATION,
+    EXECUTION_MODE_TRACE_REPLAY,
+    EXECUTION_PURPOSE,
+    REPLAY_PARITY_TOLERANCES,
     ContractError,
     Lease,
     MAX_ARTIFACT_BYTES,
@@ -43,6 +48,8 @@ from .contract import (
     reject_unsafe_xml_envelope,
 )
 from .parity import ParityAccumulator
+from .replay import RenderPose, ReplayParityGate, expected_replay_poses, timeline_observation
+from .timeline import BoundTimeline, PlanTimeline, load_bound_timeline
 from .sensor_video import encode_sensor_video
 from .materialized_traffic import merge_materialized_traffic, parse_materialized_traffic
 from .validation import validate_xosc14
@@ -126,17 +133,22 @@ def _attestation(
         "hostNode": platform.node(),
         "hostPlatform": platform.platform(),
         "executionMode": execution_mode,
-        "physicsAuthority": execution_mode == "native-physics",
-        "acceptanceEligible": execution_mode == "native-physics",
+        "purpose": EXECUTION_PURPOSE[execution_mode],
+        "scenarioRender": execution_mode == EXECUTION_MODE_TRACE_REPLAY,
+        "physicsAuthority": execution_mode == EXECUTION_MODE_PHYSICS_VALIDATION,
+        "acceptanceEligible": True,
         "workerIdentityComplete": worker_image != "unavailable" and worker_revision != "unavailable",
         "runtimeEvidence": dict(runtime_evidence),
         "xoscValidation": dict(validation),
     }
 
 
-def _trace_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, object]]], signal_readbacks: list[Mapping[str, str]], collision_readbacks: list[list[Mapping[str, object]]], control_sha256: str, source_input_digest: str, materialized_traffic_digest: str, destination: Path, max_bytes: int, abort: Callable[[], None]) -> Path:
+def _trace_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, object]]], signal_readbacks: list[Mapping[str, str]], collision_readbacks: list[list[Mapping[str, object]]], control_sha256: str, source_input_digest: str, materialized_traffic_digest: str, destination: Path, max_bytes: int, abort: Callable[[], None], readback_times: list[float] | None = None) -> Path:
     if len(readbacks) != len(plan.frames) or len(signal_readbacks) != len(plan.frames) or len(collision_readbacks) != len(plan.frames):
         raise RuntimeError("trace readbacks are not frame-closed")
+    times = readback_times if readback_times is not None else [frame.t for frame in plan.frames]
+    if len(times) != len(plan.frames):
+        raise RuntimeError("trace readback labels are not frame-closed")
     with destination.open("wb") as raw:
         bounded = _BoundedWriter(raw, max_bytes, "trace")
         with gzip.GzipFile(filename="", mode="wb", fileobj=bounded, compresslevel=6, mtime=0) as encoded:
@@ -149,11 +161,14 @@ def _trace_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str
             encoded.write(b',"fixedTimestepS":')
             encoded.write(json.dumps(plan.fixed_timestep_s, separators=(",", ":")).encode())
             encoded.write(b',"frames":[')
-            for index, (frame, readback, signals, collisions) in enumerate(zip(plan.frames, readbacks, signal_readbacks, collision_readbacks)):
+            for index, (frame, readback, signals, collisions, observed_t) in enumerate(zip(plan.frames, readbacks, signal_readbacks, collision_readbacks, times)):
                 abort()
                 if index:
                     encoded.write(b",")
-                encoded.write(json.dumps({"index": frame.index, "t": frame.t, "actors": readback, "signals": signals, "collisions": collisions}, sort_keys=True, separators=(",", ":")).encode())
+                # ``t`` is the clip time the readback actually shows: the
+                # sampled capture time in replay, and the post-tick time
+                # (one step after the applied frame) under physics validation.
+                encoded.write(json.dumps({"index": frame.index, "t": observed_t, "actors": readback, "signals": signals, "collisions": collisions}, sort_keys=True, separators=(",", ":")).encode())
             encoded.write(b'],"planSha256":')
             encoded.write(json.dumps(plan.sha256).encode())
             encoded.write(b',"schema":"simforge.render-trace/v1","signalStateSource":"backend-verified"}')
@@ -355,7 +370,25 @@ def _run_process(
         raise
 
 
-def _capture_schedule(plan: ExecutionPlan, fps: float, abort: Callable[[], None] | None = None) -> dict[int, tuple[int, float]]:
+def _capture_schedule(
+    plan: ExecutionPlan,
+    fps: float,
+    abort: Callable[[], None] | None = None,
+    execution_mode: str = EXECUTION_MODE_TRACE_REPLAY,
+) -> dict[int, tuple[int, float, float]]:
+    """Map each output frame to the 50 Hz tick it is rendered on.
+
+    Returns ``{tick: (outputFrameIndex, scheduledTimeS, contentTimeS)}``.
+    Output frame ``k`` is scheduled at exactly ``k / fps`` and rendered on
+    the nearest tick. Its content time is what the pixels actually show:
+
+    * fps dividing 50 (1, 2, 5, 10, 25, 50): the tick *is* ``k / fps``;
+    * other fps in trace replay (the product's 20/24/30): the sampler is
+      evaluated at exactly ``k / fps`` on that tick, so the frame still shows
+      its scheduled instant (sub-tick sampling, never nearest-tick snapping);
+    * physics validation cannot sample off-tick: the pixels show the world
+      one step after the applied frame, and are labelled with that time.
+    """
     check = abort or (lambda: None)
     check()
     if not plan.frames or plan.frames[0].t != 0:
@@ -365,31 +398,44 @@ def _capture_schedule(plan: ExecutionPlan, fps: float, abort: Callable[[], None]
     expected_count = round(exact_count)
     if abs(exact_count - expected_count) > 1e-6:
         raise RuntimeError("scenario duration multiplied by render fps must be an integer")
-    schedule: dict[int, tuple[int, float]] = {}
+    dt = plan.fixed_timestep_s
+    replay = execution_mode == EXECUTION_MODE_TRACE_REPLAY
+    schedule: dict[int, tuple[int, float, float]] = {}
     for output_index in range(expected_count):
         if output_index % 50 == 0:
             check()
         scheduled_time = output_index / fps
-        plan_index = round(scheduled_time / plan.fixed_timestep_s)
+        plan_index = round(scheduled_time / dt)
         if plan_index in schedule or plan_index >= len(plan.frames) - 1:
             raise RuntimeError("render fps cannot be represented by unique 50 Hz CARLA frames")
-        schedule[plan_index] = (output_index, scheduled_time)
+        tick_time = plan.frames[plan_index].t
+        content_time = scheduled_time if replay else round(tick_time + dt, 9)
+        schedule[plan_index] = (output_index, scheduled_time, content_time)
     check()
     return schedule
 
 
-def _annotations_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, float]]], capture_schedule: Mapping[int, tuple[int, float]], destination: Path, max_bytes: int, abort: Callable[[], None]) -> Path:
+def capture_policy(fps: float, execution_mode: str) -> str:
+    divides = abs(50.0 / fps - round(50.0 / fps)) < 1e-9
+    if divides:
+        return "tick-aligned" if execution_mode == EXECUTION_MODE_TRACE_REPLAY else "tick-aligned-post-step"
+    return "sub-tick-sampled" if execution_mode == EXECUTION_MODE_TRACE_REPLAY else "nearest-tick-post-step"
+
+
+def _annotations_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, float]]], capture_schedule: Mapping[int, tuple[int, float, float]], destination: Path, max_bytes: int, abort: Callable[[], None], sampled_frames: Mapping[int, PlanFrame] | None = None) -> Path:
     with destination.open("wb") as target:
         bounded = _BoundedWriter(target, max_bytes, "annotations")
-        for plan_index, (output_index, scheduled_time) in sorted(capture_schedule.items(), key=lambda item: item[1][0]):
+        for plan_index, (output_index, scheduled_time, content_time) in sorted(capture_schedule.items(), key=lambda item: item[1][0]):
             abort()
-            frame, actors = plan.frames[plan_index], readbacks[plan_index]
+            frame = (sampled_frames or {}).get(plan_index, plan.frames[plan_index])
+            actors = readbacks[plan_index]
             bounded.write(json.dumps({
             "schema": "simforge.annotation-frame/v1",
             "index": output_index,
             "scheduledTimeS": scheduled_time,
+            "contentTimeS": content_time,
             "simulationFrameIndex": frame.index,
-            "t": frame.t,
+            "t": content_time,
             "actors": actors,
             "signals": frame.signals,
             }, sort_keys=True, separators=(",", ":")).encode() + b"\n")
@@ -553,8 +599,10 @@ def _manifest_to_path(
     max_bytes: int,
     abort: Callable[[], None],
     carla_vehicle_fallbacks: tuple[Mapping[str, object], ...],
+    extras: Mapping[str, object] | None = None,
 ) -> Path:
     value = {
+        **dict(extras or {}),
         "schema": "simforge.render-manifest/v1",
         "jobId": lease.job_id,
         "attempt": lease.attempt,
@@ -586,6 +634,8 @@ def _manifest_to_path(
             "frameCount": len(sensor_records) // max(1, len(lease.render_spec.sensors)),
             "fps": lease.render_spec.fps,
             "durationS": plan.frames[-1].t,
+            "policy": capture_policy(lease.render_spec.fps, lease.render_spec.execution_mode),
+            "labelSemantics": "contentTimeS is the clip time the pixels show",
         },
         "capabilities": {
             "execution": lease.render_spec.execution_mode,
@@ -702,6 +752,163 @@ def _environment_evidence_is_accepted(environment: object, requested: object) ->
         and _is_baked_default_daylight(expected)
     )
 
+def _runtime_semantic_failures(
+    lease: Lease,
+    runtime_evidence: Mapping[str, object],
+    expected_capture_count: int,
+) -> list[str]:
+    """Runtime closure checks shared by every execution mode."""
+    failures: list[str] = []
+    environment = runtime_evidence.get("environment")
+    if not _environment_evidence_is_accepted(environment, lease.render_spec.environment):
+        failures.append("environment-readback")
+    sensor_evidence = runtime_evidence.get("sensors")
+    expected_sensor_ids = {sensor.artifact_name for sensor in lease.render_spec.sensors}
+    if not isinstance(sensor_evidence, Mapping) or set(sensor_evidence) != expected_sensor_ids:
+        failures.append("sensor-identity-closure")
+    else:
+        for sensor_id in sorted(expected_sensor_ids):
+            value = sensor_evidence[sensor_id]
+            if not isinstance(value, Mapping) or value.get("capturedFrames") != expected_capture_count:
+                failures.append(f"sensor-frame-closure:{sensor_id}")
+    if any(sensor.modality == "rgb" for sensor in lease.render_spec.sensors):
+        visual = runtime_evidence.get("visualQuality")
+        if not isinstance(visual, Mapping) or visual.get("verdict") != "pass":
+            failures.append("visual-quality")
+    return failures
+
+
+def _map_binding(runtime_evidence: Mapping[str, object], lease: Lease) -> tuple[str | None, list[str]]:
+    """(binding, failures) for the runtime world against the package XODR."""
+    map_evidence = runtime_evidence.get("map")
+    if (
+        not isinstance(map_evidence, Mapping)
+        or map_evidence.get("schema") != "simforge.carla-map-evidence/v1"
+        or map_evidence.get("available") is not True
+        or map_evidence.get("packageXodrSha256") != lease.execution_package.xodr.sha256
+        or map_evidence.get("binding") not in {"exact", "approximate"}
+        or map_evidence.get("identityMode") not in {
+            "xodr-byte-exact", "approved-cooked-digest", "generated-opendrive", "approximate",
+        }
+    ):
+        return None, ["map-binding"]
+    return str(map_evidence["binding"]), []
+
+
+def _replay_parity_evidence(
+    lease: Lease,
+    plan: ExecutionPlan,
+    replay_report: Mapping[str, Any],
+    runtime_evidence: Mapping[str, object],
+    artifacts: list[Mapping[str, object]],
+    expected_capture_count: int,
+    spawn_placement: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """Parity evidence for trace replay: CARLA vs the sampler, blocking."""
+    metadata = plan.semantic_metadata
+    semantic_failures: list[str] = []
+    if not metadata.get("complete"):
+        semantic_failures.append("semantic-metadata-incomplete")
+    if int(replay_report.get("lifecycleMismatches", 0)):
+        semantic_failures.append("actor-lifecycle")
+    if int(replay_report.get("signalMismatches", 0)):
+        semantic_failures.append("traffic-signal-state")
+    if runtime_evidence.get("available") is True:
+        if runtime_evidence.get("executionMode") != EXECUTION_MODE_TRACE_REPLAY or runtime_evidence.get("motionApplication") != "kinematic-trace-replay":
+            semantic_failures.append("replay-authority")
+        binding, map_failures = _map_binding(runtime_evidence, lease)
+        semantic_failures.extend(map_failures)
+        semantic_failures.extend(_runtime_semantic_failures(lease, runtime_evidence, expected_capture_count))
+    else:
+        binding = None
+    trajectory_passed = replay_report.get("verdict") == "pass"
+    produced_kinds = {str(item.get("kind")) for item in artifacts if isinstance(item.get("kind"), str)}
+    expected_kinds: set[str] = set(lease.render_spec.outputs)
+    if "video" in lease.render_spec.outputs:
+        primary_rgb = next((sensor for sensor in lease.render_spec.sensors if sensor.modality == "rgb"), None)
+        expected_kinds.update(
+            f"sensorVideo:{sensor.artifact_name}" for sensor in lease.render_spec.sensors if sensor is not primary_rgb
+        )
+    expected_kinds.update(
+        f"sensorData:{sensor.artifact_name}"
+        for sensor in lease.render_spec.sensors
+        if sensor.modality in {"lidar", "semantic-lidar", "radar"}
+    )
+    predicted_kinds = {kind for kind in ("manifest", "parity-report") if kind in lease.artifact_uploads}
+    verified_kinds = sorted(produced_kinds | predicted_kinds)
+    missing_kinds = sorted(expected_kinds - set(verified_kinds))
+    divergences: list[dict[str, object]] = []
+    if binding == "approximate":
+        divergences.append({"code": "map-binding:approximate", "classification": "approximate-map"})
+    staged = spawn_placement.get("stagedActorIds", ()) if isinstance(spawn_placement, Mapping) else ()
+    for actor_id in staged:
+        divergences.append({"code": f"spawn-placement:staged:{actor_id}", "classification": "informational"})
+    semantics_passed = not semantic_failures
+    artifacts_passed = not missing_kinds
+    overall = semantics_passed and trajectory_passed and artifacts_passed
+    metrics: dict[str, float] = {
+        "samples": float(replay_report.get("samples", 0)),
+        "max.positionM": float(replay_report.get("maxPositionErrorM", 0.0)),
+        "max.rotationDeg": float(replay_report.get("maxRotationErrorDeg", 0.0)),
+        "acceptanceThreshold.positionM": float(replay_report["tolerances"]["positionM"]),
+        "acceptanceThreshold.rotationDeg": float(replay_report["tolerances"]["rotationDeg"]),
+        "violations.pose": float(replay_report.get("violationCount", 0)),
+    }
+    for klass, stats in dict(replay_report.get("byClass", {})).items():
+        metrics[f"{klass}.max.positionM"] = float(stats["maxPositionErrorM"])
+        metrics[f"{klass}.max.rotationDeg"] = float(stats["maxRotationErrorDeg"])
+        metrics[f"{klass}.samples"] = float(stats["samples"])
+    return {
+        "schema": "uniscenario.parity-evidence/v1",
+        "identity": {
+            "revisionId": lease.execution_package.revision_id,
+            "executionPackageId": lease.execution_package.id,
+            "executionPackageControlSha256": lease.execution_package.control_sha256,
+            "sourceInputDigest": lease.execution_package.source_input_digest,
+            "planSha256": plan.sha256,
+        },
+        "execution": {
+            "mode": EXECUTION_MODE_TRACE_REPLAY,
+            "purpose": EXECUTION_PURPOSE[EXECUTION_MODE_TRACE_REPLAY],
+            "fixedTimestepS": plan.fixed_timestep_s,
+            "mapBinding": binding,
+        },
+        "semantics": {
+            "verdict": "pass" if semantics_passed else "fail",
+            "evaluatedInteractionCount": len(metadata.get("interactionIds", [])),
+            "unclassifiedDifferenceCount": len(semantic_failures),
+            "failedCheckIds": sorted(set(semantic_failures)),
+        },
+        "trajectory": {
+            "verdict": "pass" if trajectory_passed else "fail",
+            "acceptanceGate": "replay-sampler-parity",
+            "evaluatedActorCount": len(plan.actors),
+            "droppedActorIds": sorted(
+                str(item) for item in (spawn_placement.get("droppedActorIds", ()) if isinstance(spawn_placement, Mapping) else ())
+            ),
+            "nudgedActorIds": [],
+            "failedActorIds": list(replay_report.get("failedActorIds", [])),
+            "postContactFailedActorIds": [],
+            "postContactClassification": "not-applicable",
+            "metrics": metrics,
+        },
+        "collisions": {
+            # Nothing is simulated in replay: contacts are the trace's events.
+            "verdict": "pass",
+            "source": "timeline",
+            "evaluatedPairCount": 0,
+            "failedPairs": [],
+        },
+        "artifacts": {
+            "verdict": "pass" if artifacts_passed else "fail",
+            "verifiedKinds": verified_kinds,
+            "missingKinds": missing_kinds,
+        },
+        "divergences": divergences,
+        "verdict": "pass" if overall else "fail",
+    }
+
+
 def _parity_evidence(
     lease: Lease,
     plan: ExecutionPlan,
@@ -747,7 +954,7 @@ def _parity_evidence(
             or map_evidence.get("schema") != "simforge.carla-map-evidence/v1"
             or map_evidence.get("available") is not True
             or map_evidence.get("source") != "cooked-custom-map"
-            or map_evidence.get("identityMode") != "cooked-map-name"
+            or map_evidence.get("identityMode") not in {"xodr-byte-exact", "approved-cooked-digest"}
             or map_evidence.get("requestedMapName") != lease.execution_package.xodr.map_name
             or map_evidence.get("loadedMapName") != lease.execution_package.xodr.map_name
             or map_evidence.get("packageXodrSha256") != lease.execution_package.xodr.sha256
@@ -757,6 +964,7 @@ def _parity_evidence(
             or map_evidence.get("xodrByteExact") is not (
                 runtime_xodr_sha256 == lease.execution_package.xodr.sha256
             )
+            or map_evidence.get("binding") != "exact"
             or signal_identity_mode not in {
                 "direct-opendrive-id", "approved-cooked-map-remap",
             }
@@ -926,11 +1134,6 @@ def _parity_evidence(
                         "acceptanceViolationCount": int(violation_counts.get(key, 0)),
                     },
                 })
-    if lease.render_spec.execution_mode != "native-physics":
-        divergences.append({
-            "code": "diagnostic-replay-not-acceptance-eligible",
-            "classification": "unclassified",
-        })
     for actor_id in dropped_actor_ids:
         details = placement_actors.get(actor_id)
         details = dict(details) if isinstance(details, Mapping) else {}
@@ -972,6 +1175,7 @@ def _parity_evidence(
         },
         "execution": {
             "mode": lease.render_spec.execution_mode,
+            "purpose": EXECUTION_PURPOSE[lease.render_spec.execution_mode],
             "fixedTimestepS": plan.fixed_timestep_s,
         },
         "semantics": {
@@ -1223,6 +1427,51 @@ def _artifact(
     return {"kind": kind, "artifactUrl": bound["artifactUrl"], "sha256": digest, "sizeBytes": size, "mediaType": media_type, **({"metadata": dict(metadata)} if metadata else {})}
 
 
+def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object]) -> list[dict[str, str]]:
+    """What this render shows that is known not to be exact, stated plainly."""
+    items: list[dict[str, str]] = []
+    map_evidence = runtime_evidence.get("map")
+    if isinstance(map_evidence, Mapping) and map_evidence.get("binding") == "approximate":
+        items.append({"id": "map-binding", "detail": "the CARLA world is not bound to the package XODR digest (approximate map)"})
+    if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
+        items.append({"id": "physics-validation", "detail": "CARLA physics drove the vehicles; poses diverge from the scenario trace by design"})
+        return items
+    items.extend([
+        {"id": "suspension", "detail": "no suspension dynamics; body attitude is the timeline's road and acceleration pitch/roll"},
+        {"id": "wheel-spin", "detail": "wheels of kinematic vehicles do not spin or steer"},
+        {"id": "walker-gait", "detail": "walker gait is CARLA's speed-driven locomotion blend, not a replayed skeleton"},
+        {"id": "radar-doppler", "detail": "radar velocity comes from CARLA's velocity of a kinematic body; use the timeline speed for Doppler truth"},
+        {"id": "collisions", "detail": "contacts are the trace's events; CARLA reports no physical impulses"},
+    ])
+    return items
+
+
+def _replay_geometry(backend: RenderBackend, plan: ExecutionPlan) -> dict[str, Any]:
+    """The renderer-side mapping the replay gate needs from the backend.
+
+    A backend that does not expose it (unit fakes) replays every actor as a
+    base-origin body with no calibration.
+    """
+    classes = getattr(backend, "actor_classes", None)
+    return {
+        "classes": dict(classes) if isinstance(classes, Mapping) and classes else {actor_id: "vehicle" for actor_id in plan.actors},
+        "bottoms": dict(getattr(backend, "bottom_offsets", {}) or {}),
+        "zOffsetM": float(getattr(backend, "z_offset_m", 0.0) or 0.0),
+        "dropped": set(),
+    }
+
+
+def _observed_render_pose(value: Mapping[str, Any]) -> RenderPose | None:
+    try:
+        return RenderPose(
+            float(value["x"]), float(value["y"]), float(value["z"]),
+            float(value["headingDeg"]),
+            float(value.get("pitchDeg", 0.0)), float(value.get("rollDeg", 0.0)),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def execute_lease(
     lease: Lease,
     backend: RenderBackend,
@@ -1234,6 +1483,7 @@ def execute_lease(
     authorize_upload: Callable[[str, str, int, str, Mapping[str, Any]], Mapping[str, Any]] | None = None,
     deadline_monotonic: Deadline | None = None,
     runtime_asset_overrides: Mapping[str, Mapping[str, str]] | None = None,
+    render_timeline: bytes | None = None,
 ) -> dict[str, object]:
     emit = progress or (lambda _event, _payload: None)
     def deadline_value() -> float | None:
@@ -1367,11 +1617,37 @@ def execute_lease(
         "frames": len(plan.frames),
         "fixedTimestepS": plan.fixed_timestep_s,
     })
+    execution_mode = lease.render_spec.execution_mode
+    replay = execution_mode == EXECUTION_MODE_TRACE_REPLAY
     accumulator = ParityAccumulator(lease.parity_thresholds)
+    # Replay parity is blocking at the fixed float32/UE bound; a lease may only
+    # tighten it (its thresholds are native-physics ceilings otherwise).
+    replay_gate = ReplayParityGate({
+        "positionM": min(REPLAY_PARITY_TOLERANCES["positionM"], lease.parity_thresholds.get("positionM", float("inf"))),
+        "rotationDeg": REPLAY_PARITY_TOLERANCES["rotationDeg"],
+    })
+    # Poses come from the shared render-timeline sampler when the package
+    # ships a baked timeline, otherwise from the plan compiled from the xosc
+    # trajectory-replay export (same sampling rules).
+    sampler = PlanTimeline(plan)
+    if render_timeline is not None:
+        check_abort("load_render_timeline")
+        sampler = load_bound_timeline(render_timeline, plan, lambda: check_abort("execute"))
+        if sampler.tick_count() != len(plan.frames):
+            raise ContractError(
+                f"render timeline has {sampler.tick_count()} ticks but the execution plan has {len(plan.frames)}"
+            )
+        timeline_xodr = sampler.timeline.xodr_sha256
+        if timeline_xodr is not None and timeline_xodr != package.xodr.sha256:
+            raise ContractError("render timeline heights come from a different XODR than the execution package")
+    # With a baked timeline the shared comparator grades the run too.
+    comparator_records: list[str] | None = [] if isinstance(sampler, BoundTimeline) else None
     readbacks: list[Mapping[str, Mapping[str, object]]] = []
+    readback_times: list[float] = []
     signal_readbacks: list[Mapping[str, str]] = []
     collision_readbacks: list[list[Mapping[str, object]]] = []
-    capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture")) if lease.job_mode == "full_render" else {}
+    sampled_frames: dict[int, PlanFrame] = {}
+    capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture"), execution_mode) if lease.job_mode == "full_render" else {}
     expected_capture_count = len(capture_schedule)
     _enforce_render_budgets(lease, plan, expected_capture_count)
     if lease.job_mode == "full_render":
@@ -1381,15 +1657,17 @@ def execute_lease(
         for frame in plan.frames:
             if frame.index % 50 == 0:
                 check_abort("schedule_annotations", frame.index, len(plan.frames))
-            annotation_schedule[frame.index] = (frame.index, frame.t)
+            observed_t = frame.t if replay else round(frame.t + plan.fixed_timestep_s, 9)
+            annotation_schedule[frame.index] = (frame.index, frame.t, observed_t)
     with tempfile.TemporaryDirectory(prefix="scenario-render-") as directory:
         output_dir = Path(directory) / "frames"
         runtime_evidence: Mapping[str, object] = {
             "schema": "simforge.carla-runtime-evidence/v1",
             "available": False,
             "executionMode": lease.render_spec.execution_mode,
-            "physicsAuthority": lease.render_spec.execution_mode == "native-physics",
-            "acceptanceEligible": lease.render_spec.execution_mode == "native-physics",
+            "purpose": EXECUTION_PURPOSE[lease.render_spec.execution_mode],
+            "physicsAuthority": lease.render_spec.execution_mode == EXECUTION_MODE_PHYSICS_VALIDATION,
+            "acceptanceEligible": True,
         }
         try:
             check_abort("configure_execution")
@@ -1514,29 +1792,79 @@ def execute_lease(
                 abort=lambda: backend_fence("validate_placement"),
             )
             check_abort("validate_placement")
-            emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": len(plan.frames), "executionMode": lease.render_spec.execution_mode})
-            for frame in plan.frames:
-                check_abort("execute", frame.index, len(plan.frames))
-                backend_fence("execute", frame.index, len(plan.frames))
-                backend.apply(frame, abort=lambda: backend_fence("execute", frame.index, len(plan.frames)))
-                capture = capture_schedule.get(frame.index)
+            emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": len(plan.frames), "executionMode": execution_mode})
+            geometry = _replay_geometry(backend, plan) if replay else None
+            for index in range(sampler.tick_count()):
+                check_abort("execute", index, len(plan.frames))
+                backend_fence("execute", index, len(plan.frames))
+                capture = capture_schedule.get(index)
+                if replay:
+                    # The render timeline is sampled at the instant the pixels
+                    # of this tick show: the capture time when one falls here.
+                    frame = sampler.frame_at(index, capture[2] if capture is not None else plan.frames[index].t)
+                    if capture is not None:
+                        sampled_frames[index] = frame
+                else:
+                    frame = plan.frames[index]
+                backend.apply(frame, abort=lambda: backend_fence("execute", index, len(plan.frames)))
                 actual = backend.tick(None if capture is None else {
-                    "outputFrameIndex": capture[0], "scheduledTimeS": capture[1],
-                }, abort=lambda: backend_fence("execute", frame.index, len(plan.frames)))
-                signals = backend.signal_readback(abort=lambda: backend_fence("execute", frame.index, len(plan.frames)))
-                collisions = _optional_backend_call(
-                    backend,
-                    "collision_readback",
-                    frame.index,
-                    frame.t,
-                    abort=lambda: backend_fence("execute", frame.index, len(plan.frames)),
-                ) or []
-                accumulator.observe(frame, actual, actual_signals=signals, collision_events=collisions)
+                    "outputFrameIndex": capture[0], "scheduledTimeS": capture[1], "contentTimeS": capture[2],
+                }, abort=lambda: backend_fence("execute", index, len(plan.frames)))
+                signals = backend.signal_readback(abort=lambda: backend_fence("execute", index, len(plan.frames)))
+                if replay:
+                    # Contacts are the trace's events; CARLA observes none.
+                    collisions: list[Mapping[str, object]] = []
+                    replay_gate.observe(
+                        frame,
+                        expected_replay_poses(
+                            frame, geometry["classes"], geometry["bottoms"], geometry["zOffsetM"],
+                            skip=geometry["dropped"],
+                        ),
+                        {
+                            actor_id: _observed_render_pose(value)
+                            for actor_id, value in actual.items()
+                            if value.get("present", True)
+                        },
+                        expected_signals=frame.signals,
+                        observed_signals=signals,
+                    )
+                    if comparator_records is not None:
+                        comparator_records.append(json.dumps({
+                            "t": frame.t,
+                            "actors": [
+                                timeline_observation(
+                                    actor_id, pose,
+                                    walker=geometry["classes"].get(actor_id) == "walker",
+                                    downed=frame.actors[actor_id].downed,
+                                    bottom_offset_m=geometry["bottoms"].get(actor_id, 0.0),
+                                    z_offset_m=geometry["zOffsetM"],
+                                )
+                                for actor_id, value in sorted(actual.items())
+                                if value.get("present", True)
+                                and actor_id not in sampler.props
+                                and (pose := _observed_render_pose(value)) is not None
+                            ],
+                        }, separators=(",", ":")))
+                    readback_times.append(frame.t)
+                else:
+                    collisions = _optional_backend_call(
+                        backend,
+                        "collision_readback",
+                        frame.index,
+                        frame.t,
+                        abort=lambda: backend_fence("execute", index, len(plan.frames)),
+                    ) or []
+                    # A physics tick applied for frame i leaves the world at
+                    # t_{i+1}: that is the state read back and the one it is
+                    # compared with (the former one-tick label offset).
+                    if index + 1 < len(plan.frames):
+                        accumulator.observe(plan.frames[index + 1], actual, actual_signals=signals, collision_events=collisions)
+                    readback_times.append(round(frame.t + plan.fixed_timestep_s, 9))
                 readbacks.append(actual)
                 signal_readbacks.append(signals)
                 collision_readbacks.append(collisions)
-                if frame.index and frame.index % 250 == 0:
-                    emit("progress", {"completedFrames": frame.index + 1, "totalFrames": len(plan.frames)})
+                if index and index % 250 == 0:
+                    emit("progress", {"completedFrames": index + 1, "totalFrames": len(plan.frames)})
             if lease.job_mode == "full_render":
                 backend.finalize_capture(expected_capture_count, abort=lambda: backend_fence("finalize_capture", expected_capture_count, expected_capture_count))
             evidence = _optional_backend_call(
@@ -1591,7 +1919,7 @@ def execute_lease(
                 if isinstance(body, Path):
                     body.unlink(missing_ok=True)
         if "trace" in lease.render_spec.outputs or "trace" in lease.artifact_uploads:
-            trace_body = _trace_to_path(plan, readbacks, signal_readbacks, collision_readbacks, package.control_sha256, package.source_input_digest, package.materialized_traffic_digest, Path(directory) / "trace.json.gz", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_trace"))
+            trace_body = _trace_to_path(plan, readbacks, signal_readbacks, collision_readbacks, package.control_sha256, package.source_input_digest, package.materialized_traffic_digest, Path(directory) / "trace.json.gz", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_trace"), readback_times)
             add_artifact(make_artifact("trace", trace_body, "application/gzip", lease.artifact_uploads.get("trace"), {"format": "json", "contentEncoding": "gzip"}))
         if "video" in lease.render_spec.outputs:
             check_abort("collect_camera_videos", len(plan.frames), len(plan.frames))
@@ -1709,35 +2037,53 @@ def execute_lease(
                 },
             ))
         if "annotations" in lease.render_spec.outputs:
-            annotations_body = _annotations_to_path(plan, readbacks, annotation_schedule, Path(directory) / "annotations.ndjson", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_annotations"))
+            annotations_body = _annotations_to_path(plan, readbacks, annotation_schedule, Path(directory) / "annotations.ndjson", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_annotations"), sampled_frames)
             add_artifact(make_artifact("annotations", annotations_body, "application/x-ndjson", lease.artifact_uploads.get("annotations"), {"frameCount": len(annotation_schedule), "fps": lease.render_spec.fps, "durationS": plan.frames[-1].t}))
         parity = accumulator.report()
-        acceptance_eligible = lease.render_spec.execution_mode == "native-physics"
-        attestation = _attestation(validation, lease.render_spec.execution_mode, runtime_evidence)
+        replay_report = replay_gate.report() if replay else None
+        comparator_passed = True
+        if replay_report is not None and comparator_records is not None:
+            import simforge_oss_timeline
+            comparator = simforge_oss_timeline.compare_observed(
+                sampler.timeline, "\n".join(comparator_records), "carla",
+            )
+            comparator_passed = comparator.get("pass") is True
+            replay_report = {
+                **replay_report,
+                "comparator": {key: value for key, value in comparator.items() if key != "perActor"},
+                "verdict": "pass" if replay_report["verdict"] == "pass" and comparator_passed else "fail",
+            }
+        attestation = _attestation(validation, execution_mode, runtime_evidence)
         if stability:
             attestation["nativeStability"] = stability
         if spawn_placement:
             attestation["spawnPlacement"] = dict(spawn_placement)
-        parity_evidence = _parity_evidence(
-            lease,
-            plan,
-            parity,
-            runtime_evidence,
-            artifacts,
-            expected_capture_count,
-            spawn_placement,
-        )
-        accepted = acceptance_eligible and parity_evidence["verdict"] == "pass"
+        if replay:
+            parity_evidence = _replay_parity_evidence(
+                lease, plan, replay_report, runtime_evidence, artifacts,
+                expected_capture_count, spawn_placement,
+            )
+        else:
+            parity_evidence = _parity_evidence(
+                lease,
+                plan,
+                parity,
+                runtime_evidence,
+                artifacts,
+                expected_capture_count,
+                spawn_placement,
+            )
+        accepted = parity_evidence["verdict"] == "pass"
+        purpose = EXECUTION_PURPOSE[execution_mode]
         parity_value = {
-            **asdict(parity),
-            "rawStrictAccepted": parity.reference_accepted,
+            **({} if replay else asdict(parity)),
+            **({"rawStrictAccepted": parity.reference_accepted} if not replay else {}),
+            "executionMode": execution_mode,
+            "purpose": purpose,
+            "replay": replay_report,
             "accepted": accepted,
-            "acceptanceEligible": acceptance_eligible,
-            "verdict": (
-                "accepted-native-physics" if accepted else
-                "failed-native-physics" if acceptance_eligible else
-                "diagnostic-only"
-            ),
+            "acceptanceEligible": True,
+            "verdict": f"{'accepted' if accepted else 'failed'}-{purpose}",
         }
         if "parity-report" in lease.artifact_uploads:
             parity_body = json.dumps(
@@ -1766,10 +2112,22 @@ def execute_lease(
                 min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes),
                 lambda: check_abort("serialize_manifest"),
                 carla_vehicle_fallbacks,
+                {
+                    "execution": {
+                        "mode": execution_mode,
+                        "purpose": purpose,
+                        "scenarioRender": replay,
+                        "label": "Trace replay" if replay else "CARLA physics validation (not the scenario render)",
+                    },
+                    "timeline": dict(sampler.evidence()),
+                    "approximations": _approximations(execution_mode, runtime_evidence),
+                },
             )
             add_artifact(make_artifact("manifest", manifest_body, "application/json", lease.artifact_uploads.get("manifest")))
     return {
-        "status": "succeeded" if parity.accepted else "failed-parity",
+        # Status is the blocking pose gate; ``parity.accepted`` additionally
+        # folds in the semantic/runtime closure the control plane requires.
+        "status": "succeeded" if ((replay_gate.passed and comparator_passed) if replay else parity.accepted) else "failed-parity",
         "planSha256": plan.sha256,
         "sourceInputDigest": package.source_input_digest,
         "materializedTrafficDigest": package.materialized_traffic_digest,
