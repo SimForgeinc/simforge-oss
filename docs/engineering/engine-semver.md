@@ -154,8 +154,8 @@ The verdicts are a pure function of the simulation closure and
   closure. It is gzipped canonical JSON, `simforge.ambient-turn-verdicts/v1`:
   `{schema, engineSemVer, closureDigest, classes, verdicts:
   [[transitionFingerprint, knownMask, feasibleMask], ...]}`, with one row per
-  transition. Richmond: 4,368 verdicts, about 50 KB gzipped. San Ramon phase 1:
-  38,600 verdicts.
+  transition. Richmond: 546 transitions (4,368 verdicts), 20 KB gzipped. San Ramon phase 1:
+  4,825 transitions (38,600 verdicts).
 - **Key:** `(engineSemVer, closureDigest)`. A host loads the table only when
   both match its own engine and the closure it built
   (`loadShippedAmbientTurnVerdicts`). The engine itself also refuses another
