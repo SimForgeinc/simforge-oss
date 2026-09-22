@@ -54,6 +54,8 @@ export const JobInputTransferSchema = z.strictObject({
   download: z.strictObject({
     url: z.url(),
     headers: HeadersSchema,
+    expiresAt: z.iso.datetime({ offset: true }).optional(),
+    refresh: z.strictObject({ url: z.url(), headers: HeadersSchema }).optional(),
   }),
 });
 export const JobLeasedResponseSchema = z.strictObject({

@@ -18,6 +18,7 @@ import {
   claimResponseV2,
   registerRenderWorkerV2,
   reserveRenderArtifactV2,
+  refreshRenderInputV2,
   renderWorkerIdentity,
 } from "../render-worker-control-store";
 import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
@@ -314,6 +315,17 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.ok("lease" in lease && lease.lease.fenceToken.length >= 32);
   assert.ok("intent" in lease && "intentSha256" in lease);
   assert.equal(hashRenderIntent(lease.intent), lease.intentSha256, "the worker must accept the leased multi-camera intent digest");
+  const refreshRequest = {
+    jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken,
+    workerNodeId: WORKER_NODE_ID, inputId: "openscenario",
+  };
+  for (const inputId of ["openscenario", "map", "catalog", "execution-package"]) {
+    const refreshed = await refreshRenderInputV2({ ...refreshRequest, inputId });
+    assert.ok(refreshed && Date.parse(refreshed.expiresAt) > Date.now() + 800_000);
+  }
+  assert.equal(await refreshRenderInputV2({ ...refreshRequest, fenceToken: "wrong-fence" }), null);
+  assert.equal(await refreshRenderInputV2({ ...refreshRequest, workerNodeId: "another-worker" }), null);
+  assert.equal(await refreshRenderInputV2({ ...refreshRequest, inputId: "undeclared-object" }), null);
   const reservation = await reserveRenderArtifactV2({
     jobId: job.id,
     leaseId: lease.lease.leaseId,

@@ -37,6 +37,8 @@ export const StageProgressSchema = z.strictObject({
   completed: z.number().finite().nonnegative(),
   total: z.number().finite().positive(),
   unit: RenderProgressUnitSchema,
+  downloadedBytes: z.number().int().nonnegative().optional(),
+  totalBytes: z.number().int().nonnegative().optional(),
 }).check((ctx) => {
   if (ctx.value.completed > ctx.value.total) {
     ctx.issues.push({ code: 'custom', path: ['completed'], message: 'completed must not exceed total', input: ctx.value.completed });
