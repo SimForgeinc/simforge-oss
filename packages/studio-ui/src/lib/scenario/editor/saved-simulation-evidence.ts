@@ -1,4 +1,9 @@
-import { browserRevisionTraffic } from "@simforge-oss/playback/traffic";
+import {
+  ambientTrafficProviderFromExtensions,
+  browserRevisionTraffic,
+  previewAmbientTrafficProfile,
+} from "@simforge-oss/playback/traffic";
+import type { PlaybackBundle } from "@simforge-oss/playback";
 import {
   ambientProvenanceForRevisionTraffic,
   resolveScenarioMap,
@@ -8,6 +13,7 @@ import {
 } from "@simforge-oss/studio-host";
 import { playbackMapEntry } from "../maps";
 import { downloadSimulationPreview } from "../playback/simulationPreview";
+import { ScenarioWorkerClient } from "../playback/scenarioWorkerClient";
 import { uploadAndConsumeMaterializedTraffic } from "./materialized-traffic";
 
 /**
@@ -22,41 +28,56 @@ import { uploadAndConsumeMaterializedTraffic } from "./materialized-traffic";
  * render be created from the dataset list, where the editor session that
  * simulated the scenario has already been torn down.
  *
- * Refused, with the action the author can take, when the draft was never
- * simulated or was edited since: only a run of this exact version is evidence
- * for it.
+ * If the preview is missing or belongs to an older draft, the browser worker
+ * prepares the exact current document here. Rendering therefore does not
+ * require an author to perform a separate simulation ritual.
  */
 export async function savedSimulationRevisionEvidence(
   host: StudioHostServices,
   document: ScenarioDocumentDto,
   signal?: AbortSignal,
 ): Promise<ScenarioRevisionEvidenceDto> {
-  const descriptor = await host.projects.getSimulationPreview(document.id, signal);
-  if (!descriptor) {
-    throw new Error("This scenario has no saved simulation yet. Open it in the editor and let it simulate once, then create the render.");
-  }
-  if (descriptor.draftVersion !== document.draftVersion) {
-    throw new Error("The saved simulation is from an earlier version of this scenario. Open it in the editor to simulate the current version, then create the render.");
-  }
   const map = resolveScenarioMap(document, await host.artifacts.listMaps(signal));
-  const bundle = await downloadSimulationPreview(descriptor, null, signal);
-  const traffic = browserRevisionTraffic(document.content, map, bundle);
-  if (!traffic) {
-    throw new Error("This scenario runs ambient traffic through SUMO, which only the editor can freeze. Open it in the editor to create the render.");
+  const descriptor = await host.projects.getSimulationPreview(document.id, signal);
+  let bundle: PlaybackBundle;
+  let client: ScenarioWorkerClient | null = null;
+  try {
+    if (descriptor?.draftVersion === document.draftVersion) {
+      bundle = await downloadSimulationPreview(descriptor, null, signal);
+    } else {
+      client = new ScenarioWorkerClient();
+      bundle = await client.prepare(
+        document.content,
+        playbackMapEntry(map),
+        previewAmbientTrafficProfile(
+          ambientTrafficProviderFromExtensions(document.content.extensions),
+          document.content.extensions,
+          document.content.mapSignalPlans.length > 0,
+        ),
+        undefined,
+        { backgroundPreview: true },
+      );
+    }
+    const traffic = browserRevisionTraffic(document.content, map, bundle);
+    if (!traffic) {
+      throw new Error("This render is preparing SUMO traffic in the scenario worker; retry when preparation finishes.");
+    }
+    const { artifact, profile } = traffic;
+    const replaceActorIds = new Set(bundle.ambientTraffic?.actors.map((actor) => actor.id) ?? []);
+    const { reference } = await uploadAndConsumeMaterializedTraffic(
+      host,
+      document,
+      artifact,
+      artifact.artifact.sourceInputDigest,
+      bundle.trace,
+      replaceActorIds,
+      { signal },
+    );
+    return {
+      ambient: ambientProvenanceForRevisionTraffic(artifact, profile, playbackMapEntry(map)),
+      materializedTraffic: reference,
+    };
+  } finally {
+    client?.dispose();
   }
-  const { artifact, profile } = traffic;
-  const replaceActorIds = new Set(bundle.ambientTraffic?.actors.map((actor) => actor.id) ?? []);
-  const { reference } = await uploadAndConsumeMaterializedTraffic(
-    host,
-    document,
-    artifact,
-    artifact.artifact.sourceInputDigest,
-    bundle.trace,
-    replaceActorIds,
-    { signal },
-  );
-  return {
-    ambient: ambientProvenanceForRevisionTraffic(artifact, profile, playbackMapEntry(map)),
-    materializedTraffic: reference,
-  };
 }
