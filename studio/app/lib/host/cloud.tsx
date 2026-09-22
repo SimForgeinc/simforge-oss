@@ -115,8 +115,15 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
   const [accountDeleted, setAccountDeleted] = useState<StudioCloudAccountDeletion | null>(null);
   const poll = useRef<AbortController | null>(null);
   const mapScope = status?.state === "connected" ? `${status.user?.id}:${status.activeOrganizationId}` : status?.state;
+  // The first settled scope is the one the page already loaded its maps for;
+  // only a later change (sign-in, sign-out, workspace switch) needs a fresh
+  // list. Refreshing on the first one fetched the map list twice per load.
+  const loadedMapScope = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!mapScope || mapScope === "connecting") return;
+    const previous = loadedMapScope.current;
+    loadedMapScope.current = mapScope;
+    if (previous === undefined || previous === mapScope) return;
     const controller = new AbortController();
     void studioHost.artifacts.listMaps(controller.signal, { fresh: true }).catch((reason: unknown) => {
       if (!controller.signal.aborted) setError(cloudErrorMessage(reason, "The local map library could not be refreshed."));
