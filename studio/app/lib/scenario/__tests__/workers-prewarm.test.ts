@@ -333,6 +333,17 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   const refusal = new NativeSceneMemoryError(31 * 1024 ** 3, 24 * 1024 ** 3, "uastc-full");
   assert.equal(refusal.message, "uniscenario_render_resource_mapTextureMemory_exceeded");
   assert.match(refusal.detail, /needs about 31.0 GB and the largest available render GPU has 24.0 GB. Render at ML quality/);
+  // Submission refuses a native render the fleet measurably cannot hold, with advice.
+  await assert.rejects(
+    createRenderIntentJob(
+      { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
+      {
+        schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
+        engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-too-big",
+      } as Parameters<typeof createRenderIntentJob>[1],
+    ),
+    (error: unknown) => error instanceof NativeSceneMemoryError && /largest available render GPU has 24.0 GB/.test(error.detail),
+  );
   await execute(`UPDATE simforge.worker_nodes SET renderer_engine = 'carla' WHERE id = :id`, { id: WORKER_NODE_ID });
 
   const job = await createRenderIntentJob(
