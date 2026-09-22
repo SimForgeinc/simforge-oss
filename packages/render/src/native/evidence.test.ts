@@ -1,6 +1,7 @@
 import { CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
+import { FULL_MOUNT_ROTATION_APPROXIMATION } from '../capabilities.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 import {
   NativeRenderManifestSchema,
@@ -88,6 +89,7 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
       ...lineage,
       look: { profile: 'cinematic', lighting: {}, profileConfig: {}, autoMeter: true, provenance: {} },
       cameraProfiles: [],
+      warnings: [],
       videos: [
         { actorId: 'ego', sensorId: 'fast', relativePath: 'video/ego-fast.mp4', width: 320, height: 180, framesPerSecond: 24, frameCount: 48, sha256: HEX('2'), sizeBytes: 256 },
         { actorId: 'ego', sensorId: 'slow', relativePath: 'video/ego-slow.mp4', width: 320, height: 180, framesPerSecond: 12, frameCount: slowFrames, sha256: HEX('1'), sizeBytes: 128 },
@@ -119,8 +121,10 @@ describe('native run expectations', () => {
       cameraProfiles: [{
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
         requested: profile, effective: null,
+        approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
         differences: ['cameraProfile: not applied by cinematic capture'],
       }],
+      warnings: [FULL_MOUNT_ROTATION_APPROXIMATION.reason],
     });
 
     expect(parsed.cameraProfiles[0]).toMatchObject({
@@ -129,7 +133,9 @@ describe('native run expectations', () => {
         encoding: { transfer: 'srgb', bitDepth: 8 },
       },
       effective: null,
+      approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
     });
+    expect(parsed.warnings).toContain(FULL_MOUNT_ROTATION_APPROXIMATION.reason);
   });
 
   it('derives each source schedule, the union tick count and the pinned actor closure from the intent', () => {

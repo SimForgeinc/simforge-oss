@@ -24,7 +24,28 @@ export const EngineCapabilitySchema = z.enum([
   'map.static_semantics',
   'control.native',
   'divergence.classified',
+  'camera.projection.pinhole',
+  'camera.projection.brown_conrady',
+  'camera.projection.kannala_brandt',
+  'camera.shutter.global',
+  'camera.shutter.rolling',
+  'camera.output.raw',
+  'camera.output.linear_rgb',
+  'camera.output.processed_rgb',
+  'camera.noise.ptc',
 ]);
+
+export const EngineCapabilityApproximationSchema = z.strictObject({
+  capability: z.literal('full-mount-rotation'),
+  support: z.literal('approximated'),
+  reason: z.string().min(1),
+});
+
+export const FULL_MOUNT_ROTATION_APPROXIMATION = Object.freeze({
+  capability: 'full-mount-rotation' as const,
+  support: 'approximated' as const,
+  reason: 'roll dropped by SceneApp::set_pose (KNOWLEDGE-9f3d54a8)',
+});
 
 export const EngineCapabilityDeclarationSchema = z.strictObject({
   schema: z.literal(ENGINE_CAPABILITIES_V1_SCHEMA),
@@ -33,6 +54,7 @@ export const EngineCapabilityDeclarationSchema = z.strictObject({
   backend: z.enum(['browser', 'carla', 'native']),
   protocolVersion: z.literal(1),
   capabilities: z.array(EngineCapabilitySchema).min(1).max(32),
+  approximations: z.array(EngineCapabilityApproximationSchema).max(32).optional(),
   modalities: z.array(z.enum(['rgb', 'depth', 'semantic', 'instance', 'lidar', 'radar'])).min(1).max(6),
   limits: z.strictObject({
     maxSimultaneousSensors: z.number().int().positive().max(1024),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { FULL_MOUNT_ROTATION_APPROXIMATION } from '../capabilities.js';
 import { createRenderEngine, resolveBinary } from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
@@ -18,6 +19,7 @@ describe('native retained engine adapter', () => {
     expect(engine.capabilities.capabilities).not.toEqual(expect.arrayContaining([
       'sensor.depth', 'sensor.semantic', 'sensor.instance',
     ]));
+    expect(engine.capabilities.approximations).toContainEqual(FULL_MOUNT_ROTATION_APPROXIMATION);
   });
 
   it('resolves the retained service binary from explicit options', () => {

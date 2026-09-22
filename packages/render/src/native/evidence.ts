@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 
+import { EngineCapabilityApproximationSchema } from '../capabilities.js';
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID } from './actor-assets.js';
 import { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
@@ -48,8 +49,10 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     outputName: IdentifierSchema,
     requested: CameraProfileSchema,
     effective: CameraProfileSchema.nullable(),
+    approximations: z.array(EngineCapabilityApproximationSchema).default([]),
     differences: z.array(z.string()),
   })).default([]),
+  warnings: z.array(z.string()).default([]),
   videos: z.array(z.strictObject({
     actorId: IdentifierSchema,
     sensorId: IdentifierSchema,
