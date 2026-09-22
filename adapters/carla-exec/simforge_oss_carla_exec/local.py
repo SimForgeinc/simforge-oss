@@ -1051,6 +1051,12 @@ def main() -> None:
     )
     ticks.add_argument("--fixed-delta", type=float, default=0.02)
     ticks.add_argument("--ticks", type=int, default=120)
+    smoke = commands.add_parser(
+        "pose-smoke",
+        help="run a sensor-free scenario through the backend and fail on floating, "
+             "buried, displaced or non-moving actors (works on a -nullrhi server)",
+    )
+    smoke.add_argument("--map", default=None, help="cooked map to load (default: the loaded world)")
     intent = commands.add_parser("run-intent", help="execute a local simforge.render-intent/v1")
     intent.add_argument("--intent", required=True)
     intent.add_argument("--package", required=True)
@@ -1113,10 +1119,13 @@ def main() -> None:
             raise SystemExit(2) from exc
     elif args.command == "probe-ticks":
         result = _probe_tick_barrier(args.host, args.port, args.fixed_delta, args.ticks)
+    elif args.command == "pose-smoke":
+        from .pose_smoke import run_pose_smoke
+        result = run_pose_smoke(args.host, args.port, args.map)
     else:
         result = _run_intent(args)
     print(json.dumps(result, sort_keys=True))
-    if args.command == "probe-ticks" and result.get("verdict") != "pass":
+    if args.command in {"probe-ticks", "pose-smoke"} and result.get("verdict") != "pass":
         raise SystemExit(1)
 
 

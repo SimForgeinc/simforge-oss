@@ -54,6 +54,18 @@ jobs:
         run: |
           pnpm --filter @simforge-oss/map-pipeline build
           node --test scripts/__tests__/*.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SUMO derivative smoke
+        # Installs the digest-pinned SUMO 1.27.1 toolchain, then builds the
+        # committed OpenDRIVE fixtures twice through every structural gate
+        # (byte-identical output required) and the map-pipeline SUMO tests.
+        run: |
+          pnpm maps:sumo:toolchain --root "$RUNNER_TEMP/sumo-1.27.1"
+          export SIMFORGE_SUMO_TOOLCHAIN="$RUNNER_TEMP/sumo-1.27.1"
+          pnpm maps:sumo:smoke
+          pnpm --filter @simforge-oss/map-pipeline exec vitest run test/sumo-network.test.ts
       - run: pnpm test:integration
       - run: pnpm test:portable
       - run: pnpm release:manifest

@@ -156,6 +156,7 @@ export function ActorLibraryRail({
   trafficDetails = null,
   sumoAvailable = true,
   sumoStatus = null,
+  sumoUnavailableReason = null,
   parkedCars = null,
 }: {
   controller: EditorController | null;
@@ -173,6 +174,8 @@ export function ActorLibraryRail({
   trafficDetails?: ReactNode;
   sumoAvailable?: boolean;
   sumoStatus?: SumoTrafficStatus | null;
+  /** Why SUMO cannot run on this map; shown on the disabled SUMO source. */
+  sumoUnavailableReason?: string | null;
   /**
    * Parked-car generator state. Owned by the surface, which holds the viewer
    * that draws the cars, so the panel and the scene cannot disagree.
@@ -806,6 +809,7 @@ export function ActorLibraryRail({
                 document={editorDocument}
                 sumoAvailable={sumoAvailable}
                 sumoStatus={sumoStatus}
+                sumoUnavailableReason={sumoUnavailableReason}
               />
             ) : activeTool === "parked" && parkedCars ? (
               <ParkedCarsPanel

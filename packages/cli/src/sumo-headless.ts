@@ -100,7 +100,7 @@ export async function runHeadlessSumo(options: {
         path: file,
         detail: {
           hint: purpose === 'map SUMO sidecar'
-            ? `build the ${options.mapId} SUMO derivative, or run with --provider native`
+            ? `build it with "pnpm maps:sumo -- --map ${options.mapId}" (toolchain: "pnpm maps:sumo:toolchain"), or run with --provider native`
             : 'install/build dev-assets/sumo-runtime, or run with --provider native',
           devAssets: DEV_ASSETS,
         },

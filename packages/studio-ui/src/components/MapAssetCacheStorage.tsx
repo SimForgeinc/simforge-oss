@@ -17,6 +17,7 @@ import { Button } from "./ui/button";
 type Busy = "choosing" | "moving" | "clearing" | null;
 
 export function formatCacheBytes(bytes: number): string {
+  if (bytes <= 0) return "0 KB";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
@@ -162,6 +163,7 @@ export function MapAssetCacheStorage({
               Browser caching unavailable: {browserUnavailable}
             </p>
           ) : null}
+          {browserUnavailable ? null : (
           <dl {...stylex.props(styles.stats, compact && styles.compactStats)}>
             {status?.backend === "browser" && !browserUnavailable ? (
               <div>
@@ -193,6 +195,7 @@ export function MapAssetCacheStorage({
               </div>
             ) : null}
           </dl>
+          )}
         </div>
       </div>
 

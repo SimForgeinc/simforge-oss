@@ -29,6 +29,7 @@ export const ScenarioMapDescriptorSchema = object<ScenarioMapDescriptorDto>({
     lanePolygonsSha256: string(),
   }),
   sumoNetworkSha256: nullable(string()),
+  sumoStatus: optional(nullable(object({ state: string(), reason: nullable(string()) }))),
   topologyArtifactUrl: string(),
   derivedTopologyUrl: nullable(string()),
   locationsUrl: nullable(string()),

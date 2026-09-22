@@ -7,6 +7,12 @@ export const LOCAL_ARTIFACT_BUCKET = "local-artifacts";
 export const S3_BUCKET = LOCAL_ARTIFACT_BUCKET;
 export const S3_BUCKET_PUBLIC = LOCAL_ARTIFACT_BUCKET;
 export const S3_REGION = "local";
+/**
+ * Where the pinned SUMO browser runtime (`uniscenario/sumo-runtime/<version>/`)
+ * is stored. Locally the artifact store; a hosted overlay points it at the
+ * bucket its runtime promotion writes to.
+ */
+export const SUMO_RUNTIME_BUCKET = LOCAL_ARTIFACT_BUCKET;
 
 // ---------------------------------------------------------------------------
 // Dataset S3 path builders

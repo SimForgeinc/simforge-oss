@@ -143,7 +143,10 @@ class ParityAccumulator:
                 "positionM": math.sqrt(
                     (target.x + offset[0] - value["x"]) ** 2
                     + (target.y + offset[1] - value["y"]) ** 2
-                    + (target.z - value["z"]) ** 2
+                    # Authored z is the ground-contact elevation; compare it with
+                    # the body's bounding-box bottom when the backend reports it
+                    # (a walker's origin is ~0.93 m above its feet).
+                    + (target.z - value.get("contactZ", value["z"])) ** 2
                 ),
                 "headingDeg": abs((target.heading_deg - value["headingDeg"] + 180) % 360 - 180),
                 "speedMps": abs(target.speed_mps - value["speedMps"]),

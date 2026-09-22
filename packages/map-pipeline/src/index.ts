@@ -18,6 +18,7 @@ import type { Ktx2Options } from './ktx2.js';
 import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSourceDigest } from './source.js';
 import { withStageLock } from './stage-lock.js';
 import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } from '../scripts/sumo-network.mjs';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
 export { composeNativeTextureClosure } from './native-texture-closure.js';
 
@@ -31,6 +32,7 @@ export type { WebTierOptions, WebTierReport } from './web-tier.js';
 export { encodeKtx2, ktx2ToolFingerprint } from './ktx2.js';
 export type { Ktx2Options } from './ktx2.js';
 export { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+export { buildSumoDerivative, inspectSumoDerivative, resolveSumoToolchain, sumoBuildKey, SumoBuildError, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVATIVE_REVISION, SUMO_VERSION } from '../scripts/sumo-network.mjs';
 export { clampPbrFactors } from './material-ranges.js';
 export type { MaterialRangeReport } from './material-ranges.js';
 export { borrowTerrainLayerTextures, collectLibraryDonors, terrainDonorLibrary, terrainDonorPoolDigest, terrainLayerBase } from './terrain-layer-textures.js';
@@ -78,6 +80,14 @@ export interface RunMapPipelineOptions {
   donorLibrary?: readonly string[];
   /** Build only the master (no web tier). */
   derived?: boolean;
+  /**
+   * SUMO traffic derivative (`derived/sumo/*`) for maps with OpenDRIVE.
+   * Required by default: the pinned netconvert must be installed
+   * (`pnpm maps:sumo:toolchain`) and a failed validation gate fails the
+   * build. `false` (or SIMFORGE_MAP_SUMO=skip) builds the map without SUMO;
+   * `runtimeDir` (or SIMFORGE_SUMO_RUNTIME_DIR) adds the headless gate.
+   */
+  sumo?: false | { runtimeDir?: string };
 }
 
 export interface RegistryClosureArtifact {
@@ -240,7 +250,10 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
     return finishStage('scene', sceneDir, 'canonical', { inputDigest: sceneSource, toolFingerprint: sceneTool, cacheKey: sceneKey }, { master: true });
   });
   const semanticDigest = await semanticSourceDigest(source, options.name);
-  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}`);
+  const sumo = options.sumo ?? (process.env['SIMFORGE_MAP_SUMO'] === 'skip' ? false : {});
+  const sumoRuntimeDir = sumo === false ? undefined : sumo.runtimeDir ?? process.env['SIMFORGE_SUMO_RUNTIME_DIR'];
+  const sumoKey = sumo === false || !source.xodrPath ? 'none' : `${SUMO_DERIVATIVE_FINGERPRINT}:${sumoRuntimeDir ? 'simulated' : 'structural'}`;
+  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}`);
   const inputDigest = sha256(`${scene.closureDigest}\0${semanticDigest}`);
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'master', cacheKey);
@@ -255,7 +268,21 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
     await copyMembers(scene.outputDir, contentDir, Object.keys(scene.closure.members));
     await mkdir(path.join(contentDir, 'env'), { recursive: true });
     await linkOrCopy(source.skyPath, path.join(contentDir, 'env', 'sky.hdr'));
-    if (source.xodrPath) await writeRoadSidecars(contentDir, source.xodrPath, options.name, { sourceDir: source.sourceDir, masterPath: path.join(contentDir, 'master.gltf') });
+    if (source.xodrPath) {
+      await writeRoadSidecars(contentDir, source.xodrPath, options.name, { sourceDir: source.sourceDir, masterPath: path.join(contentDir, 'master.gltf') });
+      if (sumo !== false) {
+        // Throws SumoBuildError (with its report) when a gate fails, which
+        // fails the map build instead of publishing a map without traffic.
+        await buildSumoDerivative({
+          xodrPath: path.join(contentDir, 'map.xodr'),
+          topologyPath: path.join(contentDir, 'topology-index.json.gz'),
+          mapId: options.name,
+          outputDir: path.join(contentDir, ...SUMO_DERIVED_DIR.split('/')),
+          ...(sumoRuntimeDir ? { runtimeDir: sumoRuntimeDir } : {}),
+          simulate: Boolean(sumoRuntimeDir),
+        });
+      }
+    }
     await writeFile(path.join(contentDir, 'source-manifest.json'), `${canonicalJson({ schema: 'simforge.map-source-receipt.v1', name: options.name, sceneSourceDigest: sceneSource, semanticSourceDigest: semanticDigest, sceneClosureDigest: scene.closureDigest, donorDigest: donorKey, toolFingerprint })}\n`);
     const stage = await finishStage('master', outputDir, 'canonical', keys, { master: true, viewerOnly: !source.xodrPath });
     const report = JSON.parse(await readFile(path.join(contentDir, 'master-report.json'), 'utf8')) as MasterReport;

@@ -354,6 +354,8 @@ export type ScenarioMapDescriptorDto = {
   };
   /** Digest of the network bytes referenced by the optional SUMO manifest. */
   sumoNetworkSha256: string | null;
+  /** SUMO derivative state and, when unavailable, the reason to show. */
+  sumoStatus?: { state: string; reason: string | null } | null;
   topologyArtifactUrl: string;
   /** Presigned gzipped derived topology; null when the map version has no available artifact. */
   derivedTopologyUrl: string | null;

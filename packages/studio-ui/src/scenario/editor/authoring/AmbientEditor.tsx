@@ -34,11 +34,14 @@ export function AmbientEditor({
   sumoStatus = null,
   provenance = null,
   sumoAvailable,
+  sumoUnavailableReason = null,
 }: {
   document: EditorDocument;
   sumoStatus?: SumoTrafficStatus | null;
   provenance?: AmbientTrafficProvenance | null;
   sumoAvailable: boolean;
+  /** Why SUMO cannot run on this map (see `sumoUnavailableReason`). */
+  sumoUnavailableReason?: string | null;
 }) {
   const extensions = document.data.extensions;
   const provider = ambientTrafficProviderFromExtensions(extensions);
@@ -81,7 +84,7 @@ export function AmbientEditor({
         }
         sumoStatus={sumoStatus}
         sumoAvailable={sumoAvailable}
-        sumoUnavailableReason="SUMO is unavailable because this map has no immutable SUMO network."
+        sumoUnavailableReason={sumoUnavailableReason ?? "SUMO is unavailable because this map has no immutable SUMO network."}
       />
     </section>
   );

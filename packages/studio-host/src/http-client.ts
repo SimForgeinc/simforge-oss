@@ -94,6 +94,7 @@ function mapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {
     browserClosureSha256: map.browserClosureSha256,
     artifacts: map.artifacts,
     sumoNetworkSha256: map.sumoNetworkSha256,
+    sumoStatus: map.sumoStatus ?? null,
     manifestUrl: map.browserManifestUrl,
     topologyUrl: map.topologyArtifactUrl,
     derivedTopologyUrl: map.derivedTopologyUrl,

@@ -59,11 +59,14 @@ export function AddTrafficPanel({
   document,
   sumoAvailable = true,
   sumoStatus = null,
+  sumoUnavailableReason = null,
 }: {
   details?: ReactNode;
   document: EditorDocument | null;
   sumoAvailable?: boolean;
   sumoStatus?: SumoTrafficStatus | null;
+  /** Why SUMO cannot run on this map; shown on the disabled SUMO tile. */
+  sumoUnavailableReason?: string | null;
 }) {
   if (!document) {
     return (
@@ -100,7 +103,7 @@ export function AddTrafficPanel({
                 )}
                 testId={`traffic-source-${choice.value}`}
                 title={blocked
-                  ? "SUMO is unavailable because this map has no immutable SUMO network."
+                  ? sumoUnavailableReason ?? "SUMO is unavailable because this map has no immutable SUMO network."
                   : choice.detail}
               />
             );

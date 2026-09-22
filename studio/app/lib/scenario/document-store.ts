@@ -1453,7 +1453,29 @@ type MapDescriptorRow = {
   derived_topology_sha256: string; locations_sha256: string;
   signals_sha256: string; lane_polygons_sha256: string;
   sumo_network_sha256: string | null;
+  sumo_status: { state?: unknown; reason?: unknown } | string | null;
 };
+
+/**
+ * What the editor shows about SUMO for one map revision. A bound network is
+ * `ready`; otherwise the reconciler's recorded state and reason (a failed
+ * validation gate, a build in progress) or a plain "not built" explanation.
+ */
+function mapSumoStatus(
+  networkSha256: string | null,
+  recorded: MapDescriptorRow["sumo_status"],
+): { state: string; reason: string | null } {
+  if (networkSha256) return { state: "ready", reason: null };
+  let status = recorded;
+  if (typeof status === "string") {
+    try { status = JSON.parse(status) as { state?: unknown; reason?: unknown }; } catch { status = null; }
+  }
+  const state = typeof status?.state === "string" && status.state !== "ready" ? status.state : "missing";
+  const reason = typeof status?.reason === "string" && status.reason.length > 0
+    ? status.reason
+    : "No SUMO road network has been built for this map revision yet.";
+  return { state, reason };
+}
 
 /**
  * The cacheable half of {@link listScenarioMapDescriptors}: storage
@@ -1474,7 +1496,7 @@ async function readActiveEditorAssetReleaseCacheKey() {
          CONCAT_WS(':', mv.id, mv.source_map_asset_id, mv.created_at,
            mv.label, mv.locality, mv.topology_artifact_url, mv.xodr_artifact_id,
            mv.xodr_sha256, mv.coordinate_system_id, mv.coordinate_system_sha256,
-           mv.sumo_network_sha256, mv.browser_asset_set_id, bs.asset_set_state,
+           mv.sumo_network_sha256, mv.descriptor->>'sumo', mv.browser_asset_set_id, bs.asset_set_state,
            bs.closure_sha256), ',' ORDER BY mv.id
        ), ''))
         FROM simforge.map_versions mv
@@ -1503,6 +1525,7 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        signals_blob.sha256 AS signals_sha256,
        lanes_blob.sha256 AS lane_polygons_sha256,
        mv.sumo_network_sha256,
+       mv.descriptor->'sumo' AS sumo_status,
        ROW_NUMBER() OVER (
          PARTITION BY mv.source_map_asset_id
          ORDER BY mv.created_at DESC, mv.id DESC
@@ -1546,7 +1569,7 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        xodr_artifact_id, xodr_sha256, coordinate_system_id, coordinate_system_sha256,
        browser_closure_sha256, browser_xodr_sha256, topology_sha256,
        derived_topology_sha256, locations_sha256, signals_sha256,
-       lane_polygons_sha256, sumo_network_sha256
+       lane_polygons_sha256, sumo_network_sha256, sumo_status
      FROM ranked_map_versions
      WHERE source_publication_rank = 1
      ORDER BY label, id`,
@@ -1602,6 +1625,7 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
       lanePolygonsSha256: row.lane_polygons_sha256,
     },
     sumoNetworkSha256: row.sumo_network_sha256,
+    sumoStatus: mapSumoStatus(row.sumo_network_sha256, row.sumo_status),
     // Existing aliases remain on the same browser route. Unlike presigned
     // artifact URLs, these cannot expire while a page is open.
     // Named from `MAP_GRAPH_SIDECARS`, which is also what decides these five
