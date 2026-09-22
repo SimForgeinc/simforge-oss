@@ -359,16 +359,6 @@ export function renderPipelineStages(detail: ScenarioRenderJobDetailDto) {
   };
 }
 
-/** The newest event, by ordinal rather than array order. Drives the "last heard from" line. */
-export function latestRenderEvent<T extends { eventOrdinal: number }>(
-  events: readonly T[],
-): T | null {
-  return events.reduce<T | null>(
-    (newest, event) => (newest === null || event.eventOrdinal > newest.eventOrdinal ? event : newest),
-    null,
-  );
-}
-
 export function formatCostCents(cents: number): string {
   if (!Number.isFinite(cents)) return "—";
   return `$${(cents / 100).toFixed(2)}`;
