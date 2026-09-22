@@ -12,6 +12,7 @@ import {
 } from "../app/lib/auth/session";
 import { queryRows, shutdownDatabase, withTransaction } from "../app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
+import { SUMO_RUNTIME_BUCKET } from "../app/lib/s3/s3-config";
 import {
   findPublishedRegistryInstallation,
   publishRegistryInstallation,
@@ -270,7 +271,7 @@ async function seedSumoRuntime(assetsRoot: string): Promise<void> {
   }
   for (const [fileName, contentType] of runtimeFiles) {
     await registerLocalFile(
-      LOCAL_ARTIFACT_BUCKET,
+      SUMO_RUNTIME_BUCKET,
       `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/${fileName}`,
       resolve(runtimeRoot, fileName),
       contentType,
