@@ -6,6 +6,10 @@ import {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   AMBIENT_TRAFFIC_STORAGE_KEY,
   ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
+  ambientTrafficProfileForEditor,
+  AmbientTrafficProfileError,
+  offAmbientTrafficProfile,
   canReuseVerifiedEvidenceForAmbient,
   defaultAmbientTrafficProfile,
   loadAmbientTrafficProfile,
@@ -72,8 +76,20 @@ describe('ambient traffic preference', () => {
       pedestrianShare: 0.08,
     };
     expect(ambientTrafficProfileFromExtensions({ [AMBIENT_TRAFFIC_EXTENSION_KEY]: JSON.parse(JSON.stringify(custom)) })).toEqual(custom);
-    expect(ambientTrafficProfileFromExtensions({ [AMBIENT_TRAFFIC_EXTENSION_KEY]: { preset: 'broken' } })).toEqual(defaultAmbientTrafficProfile());
+    // A malformed profile is a validation error, never a silent City fallback.
+    expect(() => ambientTrafficProfileFromExtensions({ [AMBIENT_TRAFFIC_EXTENSION_KEY]: { preset: 'broken' } })).toThrow(AmbientTrafficProfileError);
+    // An absent one is the legacy City default only for pre-pinning documents...
     expect(ambientTrafficProfileFromExtensions(undefined)).toEqual(defaultAmbientTrafficProfile());
+    expect(ambientTrafficProfileForDocument({ extensions: {} })).toEqual(defaultAmbientTrafficProfile());
+    // ...and off for every document with a pinned simulation block.
+    expect(ambientTrafficProfileForDocument({ simulation: { seed: 's', dtS: 0.02 }, extensions: {} }).preset).toBe('off');
+    expect(ambientTrafficProfileFromExtensions(undefined, 'off')).toEqual(offAmbientTrafficProfile());
+  });
+
+  it('shows a malformed profile as off in the editor, without feeding it to a simulation', () => {
+    const broken = { simulation: { seed: 's', dtS: 0.02 }, extensions: { [AMBIENT_TRAFFIC_EXTENSION_KEY]: { preset: 'broken' } } };
+    expect(ambientTrafficProfileForEditor(broken)).toEqual(offAmbientTrafficProfile());
+    expect(() => ambientTrafficProfileForDocument(broken)).toThrow(AmbientTrafficProfileError);
   });
 
   it('preserves a scenario-owned explicit Off choice', () => {

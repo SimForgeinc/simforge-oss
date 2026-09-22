@@ -70,6 +70,67 @@ export const TemplateMetaSchema = ScenarioMetaSchema.extend({
   negativeControl: z.boolean().default(false),
 });
 
+/**
+ * The only simulation step SimForge executes: 20 ms (50 Hz). The document,
+ * the compiler, the core engine and every renderer use this one value;
+ * renderers sample the trace timeline and never assume their own step.
+ */
+export const SIMULATION_DT_S = 0.02;
+
+/**
+ * Explicit simulation identity, pinned in the document.
+ *
+ * `seed` replaces the implicit seed the compiler used to derive from the
+ * template id (`anchor.id`, else `meta.name`): with it pinned, renaming a
+ * scenario or saving it again never changes its simulation. The one-time pin
+ * of existing documents writes the template id they resolved to before, so
+ * their simulation is unchanged. `dtS` is fixed at {@link SIMULATION_DT_S}.
+ *
+ * Absent only on documents written before pinning (immutable old revisions):
+ * those keep the legacy seed derivation and the legacy ambient default
+ * (`docs/engineering/document-pinning.md`).
+ */
+export const SimulationBlockSchema = z.strictObject({
+  /** Up to 200 characters, so any legacy template id (a meta.name is at most 200) pins verbatim. */
+  seed: z.string().min(1).max(200),
+  dtS: z.literal(SIMULATION_DT_S),
+});
+export type SimulationBlock = z.infer<typeof SimulationBlockSchema>;
+
+/**
+ * The seed a document without a `simulation` block resolves to: its template
+ * id, exactly as the native compiler derives it (`ScenarioTemplate::template_id`).
+ * The one-time pin writes this value, so pinning never changes a simulation.
+ */
+export function legacyTemplateSeed(template: { readonly anchor?: { readonly id?: string | null } | null; readonly meta: { readonly name: string } }): string {
+  const anchorId = template.anchor?.id;
+  return typeof anchorId === 'string' ? anchorId : template.meta.name;
+}
+
+/** The pinned simulation block for a document: its own, or the one-time pin of its legacy seed. */
+export function pinnedSimulationBlock(template: {
+  readonly simulation?: SimulationBlock | undefined;
+  readonly anchor?: { readonly id?: string | null } | null;
+  readonly meta: { readonly name: string };
+}): SimulationBlock {
+  return template.simulation ?? { seed: legacyTemplateSeed(template), dtS: SIMULATION_DT_S };
+}
+
+/**
+ * The document with its `simulation` block pinned: unchanged when it already
+ * has one, otherwise the one-time pin of the seed it resolves to today. Every
+ * write boundary (Studio create/save/duplicate/transfer, `template new`)
+ * applies this, so a stored document always carries its seed and step.
+ */
+export function withPinnedSimulation<T extends {
+  readonly simulation?: SimulationBlock | undefined;
+  readonly anchor?: { readonly id?: string | null } | null;
+  readonly meta: { readonly name: string };
+}>(template: T): T & { readonly simulation: SimulationBlock } {
+  if (template.simulation) return template as T & { readonly simulation: SimulationBlock };
+  return { ...template, simulation: pinnedSimulationBlock(template) };
+}
+
 /** The v2 document, without the cross-field checks. Exported for tooling/JSON Schema. */
 export const ScenarioTemplateV2ObjectSchema = z.strictObject({
   scenarioVersion: z.literal(SCENARIO_TEMPLATE_VERSION),
@@ -81,6 +142,8 @@ export const ScenarioTemplateV2ObjectSchema = z.strictObject({
    * migrated v1 document does not lose which map it belonged to.
    */
   sourceMap: MapRefSchema.optional(),
+  /** Pinned seed and fixed step (see {@link SimulationBlockSchema}). Absent only on pre-pinning documents. */
+  simulation: SimulationBlockSchema.optional(),
   params: ParamsBlockSchema.prefault({}),
   environment: EnvironmentSchema.prefault({}),
   anchor: LogicalAnchorSchema,

@@ -1,4 +1,6 @@
-//! Per-cell parameter resolution: `sha256(templateId|paramsVersion|siteId|drawIndex)`
+//! Per-cell parameter resolution: `sha256(seedIdentity|paramsVersion|siteId|drawIndex)`,
+//! where `seedIdentity` is the pinned `simulation.seed` or, for documents
+//! written before pinning, the template id.
 //! seeds one xoshiro128** stream, forked once per declaration.
 
 use std::collections::BTreeMap;
@@ -122,7 +124,7 @@ pub fn resolve_params(
     let version = params_version(template);
     let param_seed = seed_override
         .map(str::to_owned)
-        .unwrap_or_else(|| cell_seed(template.template_id(), &version, site_id, draw_index));
+        .unwrap_or_else(|| cell_seed(template.seed_identity(), &version, site_id, draw_index));
     let rng = Rng::from_label(&param_seed);
 
     let mut values: BTreeMap<String, f64> = BTreeMap::new();
@@ -209,4 +211,68 @@ pub fn resolve_params(
         param_seed,
         rejected_constraints: rejected,
     })
+}
+
+#[cfg(test)]
+mod seed_pinning_tests {
+    use super::*;
+    use crate::template::parse_template;
+
+    fn ltap() -> serde_json::Value {
+        serde_json::from_str(include_str!(
+            "../../../../examples/ltap-opposing.template.json"
+        ))
+        .unwrap()
+    }
+
+    fn draw(value: &serde_json::Value) -> ParamDraw {
+        let template = parse_template(value).expect("fixture parses");
+        resolve_params(&template, "site-a", 0, None).expect("params resolve")
+    }
+
+    #[test]
+    fn unpinned_documents_keep_the_legacy_template_id_seed() {
+        let value = ltap();
+        let template = parse_template(&value).unwrap();
+        assert!(template.simulation.is_none());
+        let expected = cell_seed(
+            template.template_id(),
+            &params_version(&template),
+            "site-a",
+            0,
+        );
+        assert_eq!(draw(&value).param_seed, expected);
+    }
+
+    #[test]
+    fn pinning_the_legacy_seed_changes_nothing() {
+        let value = ltap();
+        let legacy = parse_template(&value).unwrap().template_id().to_owned();
+        let mut pinned = value.clone();
+        pinned["simulation"] = serde_json::json!({ "seed": legacy, "dtS": 0.02 });
+        assert_eq!(draw(&pinned).param_seed, draw(&value).param_seed);
+    }
+
+    #[test]
+    fn a_pinned_seed_survives_renames() {
+        let mut a = ltap();
+        a["simulation"] = serde_json::json!({ "seed": "pinned-seed", "dtS": 0.02 });
+        let mut b = a.clone();
+        b["meta"]["name"] = serde_json::json!("A completely different title");
+        if let Some(anchor) = b["anchor"].as_object_mut() {
+            anchor.remove("id");
+        }
+        assert_eq!(draw(&a).param_seed, draw(&b).param_seed);
+        let mut c = a.clone();
+        c["simulation"]["seed"] = serde_json::json!("other-seed");
+        assert_ne!(draw(&a).param_seed, draw(&c).param_seed);
+    }
+
+    #[test]
+    fn simulation_dt_other_than_20ms_is_rejected() {
+        let mut value = ltap();
+        value["simulation"] = serde_json::json!({ "seed": "s", "dtS": 0.05 });
+        let error = parse_template(&value).expect_err("dt 0.05 must be rejected");
+        assert!(format!("{error:?}").contains("simulation.dtS"), "{error:?}");
+    }
 }

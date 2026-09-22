@@ -21,7 +21,7 @@ function bundle() {
     mapId: "test-map",
     clipSeconds: 1,
     warmupSeconds: 0,
-    dt: 0.2,
+    dt: 0.02,
     seed: "preview-test",
     metricSubject: "ego",
     actors: [{
@@ -41,7 +41,7 @@ function bundle() {
       seed: "preview-test",
       mapId: "test-map",
       engineGraphDigest: "graph-digest",
-      dt: 0.2,
+      dt: 0.02,
       clipSeconds: 1,
       warmupSeconds: 0,
       frame: "xodr-local",

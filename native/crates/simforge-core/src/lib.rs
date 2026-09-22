@@ -52,7 +52,7 @@ pub use math::{Obb, SceneXZ, Vec2};
 pub use rng::{Rng, Seed};
 pub use types::{
     parse_scenario_input, parse_scenario_input_bytes, parse_scenario_input_value, SimScenarioInput,
-    SCHEMA_VERSION,
+    SCHEMA_VERSION, SIMULATION_DT_S,
 };
 
 /// Crate-wide result type.
