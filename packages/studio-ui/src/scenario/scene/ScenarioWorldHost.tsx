@@ -27,6 +27,7 @@ import {
   type SceneLoadProgress,
   type SceneLoadProgressTracker,
 } from "./map-load-progress";
+import { useDirectMapAssetUrlResolver } from "./direct-map-asset-urls";
 import { useSceneLoadingSurfaceProps } from "./scene-loading";
 import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import { MapLoadDebugPanel } from "./MapLoadDebugPanel";
@@ -128,66 +129,7 @@ export function ScenarioWorldHost({
     initialSceneLoadProgress(target?.label ?? "scene"),
   );
   const [retryNonce, setRetryNonce] = useState(0);
-  const directAssetUrlsRef = useRef(new Map<string, string>());
-  const pendingDirectUrlsRef = useRef(new Set<string>());
-  const directBatchPromiseRef = useRef<Promise<void> | null>(null);
-  const canonicalAssetKey = (url: string): string => {
-    const parsed = new URL(url, window.location.origin);
-    parsed.pathname = parsed.pathname.split('/').map((part) => {
-      try { return encodeURIComponent(decodeURIComponent(part)); } catch { return part; }
-    }).join('/');
-    return parsed.toString();
-  };
-  const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
-    const mapVersionId = retainedTarget?.mapVersionId;
-    const keys = urls.map((url) => [url, canonicalAssetKey(url)] as const);
-    if (!mapVersionId) return new Map<string, string>();
-    const unresolved = keys.filter(([url, key]) => /^\/api\/simforge\/maps\/[^/]+\/browser-assets\//.test(new URL(url, window.location.origin).pathname)
-      && !directAssetUrlsRef.current.has(key));
-    for (const [, key] of unresolved) pendingDirectUrlsRef.current.add(key);
-    while (unresolved.some(([, key]) => !directAssetUrlsRef.current.has(key))) {
-      if (signal.aborted) throw signal.reason;
-      if (!directBatchPromiseRef.current) {
-        directBatchPromiseRef.current = new Promise<void>((resolve, reject) => {
-          setTimeout(async () => {
-            const batchUrls = [...pendingDirectUrlsRef.current].splice(0, 256);
-            for (const key of batchUrls) pendingDirectUrlsRef.current.delete(key);
-            try {
-              const assets = batchUrls.flatMap((key) => {
-                const parsed = new URL(key);
-                const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
-                return match ? [{ mapVersionId, relativePath: match[1]!.split('/').map(decodeURIComponent).join('/') }] : [];
-              });
-              if (assets.length > 0) {
-                const response = await fetch("/api/simforge/maps/cache-download-urls", {
-                  method: "POST", credentials: "same-origin",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ assets }), signal,
-                });
-                if (!response.ok) throw new Error(`URL resolver failed: ${response.status}`);
-                const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
-                for (const asset of payload.assets ?? []) {
-                  const original = batchUrls.find((key) =>
-                    decodeURIComponent(new URL(key).pathname).endsWith(`/browser-assets/${asset.relativePath}`));
-                  if (original) directAssetUrlsRef.current.set(original, asset.url);
-                }
-              }
-            } catch (error) {
-              reject(error);
-            } finally {
-              directBatchPromiseRef.current = null;
-              resolve();
-            }
-          }, 25);
-        });
-      }
-      await directBatchPromiseRef.current;
-    }
-    return new Map(keys.flatMap(([url, key]) => {
-      const resolved = directAssetUrlsRef.current.get(key);
-      return resolved ? [[url, resolved] as const] : [];
-    }));
-  }, [retainedTarget?.mapVersionId]);
+  const resolveMapAssetUrls = useDirectMapAssetUrlResolver(retainedTarget?.mapVersionId ?? null);
   const [tierSelection, setTierSelection] = useState<TierSelection | null>(null);
   const [preference, setPreference] = useState<RenderingPreference>(
     () => readRenderingPreference() ?? "medium",
