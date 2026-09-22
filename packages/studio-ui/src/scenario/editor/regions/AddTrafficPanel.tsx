@@ -91,7 +91,7 @@ export function AddTrafficPanel({
             return (
               <PanelTile
                 active={provider === choice.value}
-                detail={choice.value === "sumo" && provider === "sumo" ? phase : choice.detail}
+                detail={choice.value === "sumo" && provider === "sumo" ? `preview ${phase}` : choice.detail}
                 disabled={blocked}
                 icon={<Icon aria-hidden="true" size={22} strokeWidth={1.6} />}
                 index={index}

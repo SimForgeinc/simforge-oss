@@ -349,3 +349,81 @@ fn quat_mul(a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
         aw * bw - ax * bx - ay * by - az * bz,
     ]
 }
+
+/// A `simforge.scene-state.v1` document sampled from the timeline at
+/// `times` (one frame per time, `t` = the time itself): scene-yup positions
+/// with the baked height as `y`, rotations from [`scene_yup`] (`yaw_only`
+/// drops pitch/roll), velocity = speed × heading, acceleration from the
+/// sampler, explicit spawn/update/despawn from presence. `dt` is the mean
+/// frame spacing. This is the scene-state projection of the render
+/// contract for consumers that read whole documents (scen-play, goldens).
+pub fn scene_state_document(
+    timeline: &RenderTimeline,
+    times: &[f64],
+    yaw_only: bool,
+) -> Result<super::super::scene_state::SceneState, SampleError> {
+    use super::super::scene_state::{
+        ActorDesc, ActorTick, ActorTickKind, SceneFrame, SceneState, SCENE_STATE_VERSION,
+    };
+    let mut previous = vec![false; timeline.actors.len()];
+    let mut frames = Vec::with_capacity(times.len());
+    for (tick, t) in times.iter().enumerate() {
+        let mut actors = Vec::new();
+        for (index, actor) in timeline.actors.iter().enumerate() {
+            let pose = sample_actor(timeline, actor, *t)?;
+            let was = previous[index];
+            previous[index] = pose.present;
+            let kind = match (pose.present, was) {
+                (false, false) => continue,
+                (true, false) => ActorTickKind::Spawn,
+                (true, true) => ActorTickKind::Update,
+                (false, true) => ActorTickKind::Despawn,
+            };
+            let (position, rotation) = scene_yup(&pose, yaw_only);
+            actors.push(ActorTick {
+                id: actor.id.clone(),
+                kind,
+                position,
+                rotation,
+                yaw_rad: pose.heading_rad,
+                velocity: [pose.velocity[0], 0.0, -pose.velocity[1]],
+                acceleration: [pose.acceleration[0], 0.0, -pose.acceleration[1]],
+            });
+        }
+        frames.push(SceneFrame {
+            tick: tick as u64,
+            t: *t,
+            actors,
+        });
+    }
+    let dt = if times.len() > 1 {
+        (times[times.len() - 1] - times[0]) / (times.len() - 1) as f64
+    } else {
+        timeline.dt_s
+    };
+    Ok(SceneState {
+        version: SCENE_STATE_VERSION.to_owned(),
+        map_id: timeline.map_id.clone(),
+        frame: "scene-yup".to_owned(),
+        dt,
+        tick_hz: 1.0 / dt,
+        tick_count: frames.len() as u64,
+        weather: timeline.environment.weather,
+        time_of_day: timeline.environment.time_of_day,
+        profile: timeline.environment.profile,
+        // Heights are baked: consumers must not substitute their own ground.
+        ground_y: None,
+        actors: timeline
+            .actors
+            .iter()
+            .map(|a| ActorDesc {
+                id: a.id.clone(),
+                catalog_id: a.catalog_id.clone(),
+                actor_class: a.actor_class,
+                dims: Some(a.dims),
+                color: a.color.clone(),
+            })
+            .collect(),
+        frames,
+    })
+}

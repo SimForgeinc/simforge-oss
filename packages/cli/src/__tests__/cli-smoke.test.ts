@@ -174,21 +174,23 @@ describe.skipIf(!haveArtifacts)('simforge — the pipeline', () => {
     expect(json<{ acceptance: { failures: Array<{ code: string }> } }>(mismatch).acceptance.failures.map((failure) => failure.code)).toContain('comparison_mismatch');
   }, 180_000);
 
-  it.runIf(haveSumo)('runs the packaged SUMO-Wasm provider headlessly and records ambient paths/performance', async () => {
+  it.runIf(haveSumo)('runs the worker SUMO step headlessly and records ambient paths/provenance', async () => {
     const out = path.join(tmp, 'sumo-debug-run');
     const run = await simforge('debug', SUMO_SCENARIO, '--provider', 'sumo', '--ambient-count', '8', '--duration', '1', '--sample', '0.1', '--out', out);
     expect(run.code).toBe(0);
-    const summary = json<{ ambientActorCount: number; performance: { sumo: { version: string; stepMilliseconds: { p95: number } } } }>(run);
+    const summary = json<{ ambientActorCount: number; performance: { sumo: { version: string; build: string; key: string; milliseconds: number } } }>(run);
     expect(summary.ambientActorCount).toBeGreaterThan(0);
     expect(summary.performance.sumo.version).toBe('1.27.1');
-    expect(summary.performance.sumo.stepMilliseconds.p95).toBeGreaterThanOrEqual(0);
+    expect(summary.performance.sumo.build).toBe('1.27.1-7717f237');
+    expect(summary.performance.sumo.key).toMatch(/^[0-9a-f]{64}$/);
+    expect(summary.performance.sumo.milliseconds).toBeGreaterThanOrEqual(0);
     const report = JSON.parse(await readFile(path.join(out, 'report.json'), 'utf8')) as {
       actors: Record<string, Array<{ x: number; z: number }>>;
-      ambientActors: Record<string, Array<{ t: number; x: number; z: number; speedMps: number; accelerationMps2: number; lanePositionM: number }>>;
-      performance: { sumo: { heapBytes: number } };
+      ambientActors: Record<string, Array<{ t: number; x: number; z: number; speedMps: number; accelerationMps2: number }>>;
+      performance: { sumo: { signalAgreement: { mismatches: number } } };
     };
     expect(Object.values(report.ambientActors)[0]?.[0]).toEqual(expect.objectContaining({ t: 0 }));
-    expect(report.performance.sumo.heapBytes).toBeGreaterThan(0);
+    expect(report.performance.sumo.signalAgreement.mismatches).toBe(0);
     const authoredPoints = Object.values(report.actors).flat();
     const ambientPoints = Object.values(report.ambientActors).flat();
     const nearest = Math.min(...ambientPoints.flatMap((ambient) => authoredPoints.map((actor) => Math.hypot(

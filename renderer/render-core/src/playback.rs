@@ -82,6 +82,12 @@ pub struct PlaybackArgs {
     /// Override terrain-following placement with a fixed road-surface elevation.
     #[arg(long)]
     pub ground_y: Option<f32>,
+    /// Place ground-contact actors at the scene-state's authored height
+    /// (`position[1]`) instead of re-sampling terrain. Render-timeline
+    /// scene states carry the height baked once from the map's XODR
+    /// elevation; this is how playback replays them exactly.
+    #[arg(long, default_value_t = false)]
+    pub authored_height: bool,
     /// `static` fixes the camera at the initial chase pose; `follow` tracks ego.
     #[arg(long, default_value = "follow")]
     pub camera: String,
@@ -329,6 +335,9 @@ struct Readiness {
 
 impl Readiness {
     fn ground_y(&self, pb: &Playback, position: [f64; 3]) -> f32 {
+        if pb.args.authored_height {
+            return position[1] as f32;
+        }
         pb.args.ground_y.unwrap_or_else(|| {
             self.terrain.sample(position[0] as f32, position[2] as f32)
         })

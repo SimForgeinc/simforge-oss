@@ -13,6 +13,11 @@ goldens/<gpuFingerprint>/<scene>.json
   `simforge-oss.render-determinism-manifest.v1`, extensions in
   `docs/native-golden-ci.md`). Gates read `passHashes` + `timings.avgFrameMs`.
 
+- `0c79cc9fe7b267f4` = NVIDIA GeForce RTX 3080, driver 595.91.07 (the dev
+  Bevy worker box, 100.81.232.25): render-timeline actor scenes
+  (`richmond-06-timeline`, `yale-05-timeline`), recorded with a debug-profile
+  `scen-play` from `ws-b/bevy-timeline` (binary sha in each file).
+
 ## Keying rules
 
 Goldens are valid ONLY for the exact tuple recorded inside each file:

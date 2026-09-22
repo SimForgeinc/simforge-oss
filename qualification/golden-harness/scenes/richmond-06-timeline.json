@@ -1,0 +1,49 @@
+{
+  "sceneId": "richmond-06-timeline",
+  "mapId": "richmond-field-station",
+  "profile": "sensor",
+  "description": "Blind-crest two-way corridor (edge case 06) instantiated on richmond-field-station: 4 moving actors replayed from the render timeline (scene-state.v1 at 24 fps, baked XODR heights, road + body attitude) through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler.",
+  "binary": "renderer/target/release/scen-play",
+  "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
+  "corpusFiles": [
+    "master.gltf"
+  ],
+  "sceneState": {
+    "gz": "qualification/golden-harness/fixtures/richmond-06.scene-state.json.gz"
+  },
+  "invocationTemplate": [
+    "--glbs",
+    "{glbs}",
+    "--scene-state",
+    "{sceneState}",
+    "--authored-height",
+    "--width",
+    "640",
+    "--height",
+    "360",
+    "--warmup",
+    "20",
+    "--out-dir",
+    "{out}"
+  ],
+  "expectedPasses": [
+    "frame60.rgb",
+    "frame60.id"
+  ],
+  "passPaths": {
+    "frame60.rgb": "frame-0060.rgb.png",
+    "frame60.id": "frame-0060.id.png"
+  },
+  "idPass": {
+    "keys": [
+      "frame60.id"
+    ],
+    "minInstances": 20,
+    "minCoverage": 0.2
+  },
+  "parity": {
+    "timeline": "qualification/golden-harness/fixtures/richmond-06.timeline.json.gz",
+    "observed": "observed-frames.jsonl",
+    "profile": "bevy"
+  }
+}

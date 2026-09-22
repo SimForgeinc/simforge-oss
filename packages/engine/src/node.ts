@@ -28,6 +28,15 @@ import {
 } from './runtime.js';
 
 export * from './index.js';
+export {
+  loadSumoRuntime,
+  stageSumoRuntime,
+  sumoTrafficNetworkFromMembers,
+  PINNED_SUMO_MODULE_SHA256,
+  PINNED_SUMO_RUNTIME_VERSION,
+  PINNED_SUMO_WASM_SHA256,
+  type SumoRuntimeFile,
+} from './ambient/sumo-node.js';
 
 let runtime: EngineRuntime | null = null;
 

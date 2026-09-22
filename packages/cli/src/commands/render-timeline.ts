@@ -26,7 +26,7 @@ import { boolFlag, optionalNumber, optionalString, parseArgs } from '../args.js'
 import { CliError, EXIT } from '../errors.js';
 import { emit } from '../output.js';
 
-export const RENDER_TIMELINE_COMMANDS = ['timeline', 'sample', 'parity'] as const;
+export const RENDER_TIMELINE_COMMANDS = ['timeline', 'sample', 'scene-state', 'parity'] as const;
 
 export const RENDER_TIMELINE_HELP = [
   {
@@ -44,6 +44,12 @@ export const RENDER_TIMELINE_HELP = [
     name: 'sample',
     summary: 'print pose(timeline, actorId, t) through the shared sampler',
     usage: ['simforge render sample <timeline.json[.gz]> --t <seconds> [--actor <id>]'],
+  },
+  {
+    name: 'scene-state',
+    summary: 'sample the timeline into a scene-state.v1 document at a fixed frame rate (scen-play, goldens)',
+    usage: ['simforge render scene-state <timeline.json[.gz]> --fps <n> [--start <s>] [--end <s>] [--yaw-only] --out <scene-state.json>'],
+    notes: ['frame k is sampled at start + k/fps; heights are the baked timeline z (play with scen-play --authored-height)'],
   },
   {
     name: 'parity',
@@ -128,6 +134,37 @@ async function sampleCommand(argv: readonly string[]): Promise<number> {
   return EXIT.ok;
 }
 
+async function sceneStateCommand(argv: readonly string[]): Promise<number> {
+  const args = parseArgs(argv, { booleans: ['pretty', 'yaw-only'], values: ['fps', 'start', 'end', 'out'] });
+  const file = args.positionals[0];
+  const fps = optionalNumber(args, 'fps');
+  const out = optionalString(args, 'out');
+  if (!file || args.positionals.length !== 1 || fps === undefined || !out) {
+    throw new CliError('missing_argument', 'simforge render scene-state requires one timeline file, --fps and --out');
+  }
+  if (!(fps > 0)) throw new CliError('bad_value', '--fps must be positive', { path: '--fps' });
+  const timeline = await openRenderTimeline(readBytes(file));
+  try {
+    const start = optionalNumber(args, 'start') ?? 0;
+    const end = optionalNumber(args, 'end') ?? timeline.clipEndS;
+    const micros: number[] = [];
+    for (let k = 0; ; k += 1) {
+      const us = Math.round(start * 1_000_000) + Math.round((k * 1_000_000) / fps);
+      if (us > Math.round(end * 1_000_000)) break;
+      micros.push(us);
+    }
+    const times = Float64Array.from(micros, (us) => us / 1_000_000);
+    writeFileSync(out, timeline.sceneStateJson(times, boolFlag(args, 'yaw-only')));
+    emit({ timelineSha256: timeline.sha256, frames: times.length, fps, start, end, out }, { pretty: boolFlag(args, 'pretty') });
+  } catch (error) {
+    if (error instanceof CliError) throw error;
+    throw new CliError('scene_state_rejected', error instanceof Error ? error.message : String(error), { exitCode: EXIT.validationFindings });
+  } finally {
+    timeline.free();
+  }
+  return EXIT.ok;
+}
+
 async function parityCommand(argv: readonly string[]): Promise<number> {
   const args = parseArgs(argv, { booleans: ['pretty'], values: ['profile', 'profile-json', 'out'] });
   const [timelineFile, observedFile] = args.positionals;
@@ -162,6 +199,7 @@ export function renderTimelineCommand(argv: readonly string[]): Promise<number> 
   switch (sub) {
     case 'timeline': return timelineCommand(rest);
     case 'sample': return sampleCommand(rest);
+    case 'scene-state': return sceneStateCommand(rest);
     case 'parity': return parityCommand(rest);
     default: throw new CliError('unknown_command', `unknown render timeline verb ${String(sub)}`);
   }

@@ -10,6 +10,7 @@ import {
   ambientTrafficProviderFromExtensions,
   sumoOwnsPhysicalSignalStates,
 } from "@simforge-oss/playback/traffic";
+import { traceCarriesSumoTraffic } from "@simforge-oss/engine";
 import type { PlaybackBundle } from "@simforge-oss/playback";
 import { applyRestingHeading, createRestingHeading } from "@simforge-oss/playback";
 import { useSumoTraffic } from "../../lib/scenario/ambient/useSumoTraffic";
@@ -78,7 +79,17 @@ export function SumoPreviewTraffic({
   const content = document.content;
   const profile = useMemo(() => ambientTrafficProfileForEditor(content), [content]);
   const provider = ambientTrafficProviderFromExtensions(extensions);
-  const hasAuthoredMapSignals = (document.content.mapSignalPlans?.length ?? 0) > 0;
+  // Display-only: once the loaded trace is the worker's authoritative trace
+  // with SUMO traffic baked in, that traffic is replayed and the live preview
+  // stands down so vehicles are never drawn twice.
+  const authoritativeTraffic = traceCarriesSumoTraffic(bundle.trace);
+  // The preview's SUMO obeys the same signal book the worker's does, so its
+  // vehicles stop at the heads the editor paints (authored plans included).
+  const signalBook = useMemo(() => ({
+    programs: bundle.instance.input.signalPrograms,
+    roadControls: bundle.instance.input.roadControls,
+    trace: bundle.trace,
+  }), [bundle]);
   const acceleratedSignalCycles = ambientSignalCycleSettingsFromExtensions(extensions).acceleratedSignalCycles;
   const allSignalsGreen = allSumoSignalsGreenFromExtensions(extensions);
   const metadata = useMemo(() => new Map(bundle.actors.map((actor) => [actor.id, actor])), [bundle]);
@@ -153,10 +164,10 @@ export function SumoPreviewTraffic({
     [playback.controller],
   );
   const status = useSumoTraffic({
-    // The browser bridge cannot inject an authored MapSignalPlan into SUMO's
-    // tlLogic yet. Letting both run would show one colour while SUMO vehicles
-    // obey another, so an authored controller plan takes exclusive ownership.
-    enabled: provider === "sumo" && map.sumoNetworkSha256 !== null && !hasAuthoredMapSignals,
+    // Live SUMO here is a display-only preview; the worker's authoritative
+    // traffic replaces it as soon as the loaded trace carries it.
+    enabled: provider === "sumo" && map.sumoNetworkSha256 !== null && !authoritativeTraffic,
+    signalBook,
     map,
     profile,
     renderer: actorRenderer,
@@ -195,11 +206,14 @@ export function SumoPreviewTraffic({
     if (status.phase === "fallback") resumeWhenSumoIsReady.current = false;
   }, [playback.controller, playbackState?.playing, status.phase]);
   const { setSumoStatus } = playback;
+  // The trace's signal book paints the heads and SUMO obeys it. Only the
+  // preview-only accelerated / all-green toggles hand the heads to SUMO, so
+  // what is drawn still matches what its vehicles do.
   const sumoOwnsSignalStates = sumoOwnsPhysicalSignalStates(
     provider,
     status.phase === "fallback",
-    hasAuthoredMapSignals,
-    false,
+    !(acceleratedSignalCycles || allSignalsGreen),
+    authoritativeTraffic,
   );
   useEffect(() => {
     if (!sumoOwnsSignalStates || !status.signalStates) return;
