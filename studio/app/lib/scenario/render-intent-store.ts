@@ -2,6 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
+import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
@@ -39,7 +40,7 @@ type ImmutableLineageRow = {
  */
 type NativeAsset = {
   assetId: string;
-  kind: "map" | "catalog";
+  kind: "map" | "catalog" | "other";
   sha256: string;
   sizeBytes: number;
 };
@@ -297,7 +298,7 @@ export async function createRenderIntentJob(
    * The revision's authoritative simulation (resolved by the caller): the job
    * records the trace and render timeline every renderer replays.
    */
-  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null } | null = null,
+  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null; timelineSizeBytes: number | null } | null = null,
 ): Promise<ScenarioRenderJobDto | null> {
   const renderSpec = input.renderSpec;
   const resources = deriveRenderIntentResources(renderSpec);
@@ -425,7 +426,12 @@ export async function createRenderIntentJob(
         sizeBytes: actorClosure.sizeBytes,
       });
     }
-    const intent = buildIntent(input, lineage, nativeAssets);
+    // The render timeline every renderer samples, bound into the intent as the
+    // `render.timeline` input (its bytes are the stored canonical JSON).
+    const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
+      ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
+      : [];
+    const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets]);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({
       schema: "uniscenario.render-control-lineage/v1",

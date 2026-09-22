@@ -331,6 +331,9 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     verifySimulation(simKey, verification, signal) {
       return call(documents.verifySimulation, { params: { simKey }, body: verification, signal });
     },
+    evaluateSimulation(simKey, filters, signal) {
+      return call(documents.evaluateSimulation, { params: { simKey }, body: filters ? { filters } : {}, signal });
+    },
     resolveRevisionSimulation(revisionId, opts = {}) {
       return call(documents.resolveRevisionSimulation, {
         params: { revisionId },

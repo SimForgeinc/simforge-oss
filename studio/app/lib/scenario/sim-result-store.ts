@@ -16,6 +16,8 @@ import {
   simulationCompletion,
   type AuthoritativeSimulation,
   type SimulationCompletionRecord,
+  type SimulationMapClosure,
+  type SimulationTimeline,
 } from "@simforge-oss/compiler/node";
 import type {
   ScenarioSimulationResultDto,
@@ -28,6 +30,8 @@ import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/li
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
+import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
+import { evaluateTrace, type EvaluateFilters, type TraceEvaluation } from "@simforge-oss/engine/node";
 import { simforgeEnv } from "@/lib/simforge-env";
 
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
@@ -60,6 +64,7 @@ export const SIMULATION_PIPELINE_REVISION = 1;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
+const TIMELINE_MEDIA_TYPE = "application/vnd.simforge.render-timeline+json";
 const INLINE_LEASE_SECONDS = 120;
 const POLL_INTERVAL_MS = 300;
 
@@ -146,6 +151,7 @@ type ResultRow = {
   traffic_artifact_id: string | null;
   ambient_provenance: unknown;
   timeline_sha256: string | null;
+  timeline_byte_length: number | string | null;
   producer: string;
   created_at: string;
 };
@@ -154,7 +160,8 @@ const RESULT_COLUMNS = `r.sim_key, r.trace_sha256, r.authored_trace_sha256, r.en
   r.trace_schema, r.resolved_input_digest, r.map_closure_digest, r.map_version_id, r.traffic_provider,
   r.storage_bucket, r.trace_storage_key, r.trace_byte_length, r.trace_gzip_sha256,
   r.resolution_storage_key, r.resolution_byte_length, r.resolution_sha256,
-  r.traffic_artifact_id, r.ambient_provenance, r.timeline_sha256, r.producer, r.created_at::text AS created_at`;
+  r.traffic_artifact_id, r.ambient_provenance, r.timeline_sha256, r.timeline_byte_length, r.producer,
+  r.created_at::text AS created_at`;
 
 async function resultDto(row: ResultRow): Promise<ScenarioSimulationResultDto> {
   return {
@@ -192,6 +199,7 @@ async function resultDto(row: ResultRow): Promise<ScenarioSimulationResultDto> {
       ),
     },
     timelineSha256: row.timeline_sha256,
+    timelineSizeBytes: row.timeline_byte_length === null ? null : Number(row.timeline_byte_length),
     producer: row.producer,
     createdAt: row.created_at,
   };
@@ -282,12 +290,37 @@ export type SimulationCompletion = Omit<SimulationCompletionRecord, "trafficProv
   trafficProvider: ScenarioSimulationTrafficProvider;
 };
 
-export function simulationObjectKeys(workspaceId: string, completion: Pick<SimulationCompletion, "traceSha256" | "resolution" | "traffic">) {
+export function simulationObjectKeys(workspaceId: string, completion: Pick<SimulationCompletion, "traceSha256" | "resolution" | "traffic" | "timeline">) {
   return {
     trace: `${workspaceId}/sim/sha256/${completion.traceSha256}.trace.json.gz`,
     resolution: `${workspaceId}/sim/resolution/sha256/${completion.resolution.sha256}.json.gz`,
     traffic: completion.traffic ? `${workspaceId}/materialized-traffic/sha256/${completion.traffic.sha256}.json` : null,
+    // Uncompressed canonical JSON: sha256(object) is exactly `timelineSha256`.
+    timeline: completion.timeline ? `${workspaceId}/timelines/sha256/${completion.timeline.timelineSha256}.json` : null,
   };
+}
+
+/**
+ * The render timeline step (WS-B): trace + the map's height source → the
+ * canonical timeline every renderer samples. Best effort: a render without it
+ * falls back to the XOSC, so a failure here never fails the simulation.
+ */
+export async function buildSimulationTimeline(
+  simulation: AuthoritativeSimulation,
+  closure: Pick<SimulationMapClosure, "xodr" | "topology">,
+): Promise<SimulationTimeline | null> {
+  try {
+    const { buildRenderTimeline } = await import("@simforge-oss/render/timeline");
+    return await buildRenderTimeline({
+      trace: simulation.trace,
+      xodr: closure.xodr,
+      topology: closure.topology,
+      catalogDigest: null,
+    });
+  } catch (error) {
+    console.warn(`[simulation] render timeline for ${simulation.simKey} unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
 }
 
 /**
@@ -405,6 +438,9 @@ export async function completeSimulationRequest(input: {
       [keys.trace, completion.trace],
       [keys.resolution, completion.resolution],
       ...(keys.traffic && completion.traffic ? [[keys.traffic, completion.traffic] as const] : []),
+      ...(keys.timeline && completion.timeline
+        ? [[keys.timeline, { sha256: completion.timeline.timelineSha256, sizeBytes: completion.timeline.sizeBytes }] as const]
+        : []),
     ] as const) {
       const head = await headS3Object(key, bucket);
       const checksum = head.checksumSha256 ? Buffer.from(head.checksumSha256, "base64").toString("hex") : null;
@@ -422,13 +458,14 @@ export async function completeSimulationRequest(input: {
          resolved_input_digest, map_closure_digest, traffic_step_key, traffic_provider, map_version_id,
          engine_build, producer, storage_bucket, trace_storage_key, trace_byte_length, trace_gzip_sha256,
          resolution_storage_key, resolution_byte_length, resolution_sha256, traffic_artifact_id,
-         ambient_provenance, metrics
+         ambient_provenance, metrics, timeline_key, timeline_sha256, timeline_storage_key, timeline_byte_length
        ) VALUES (
          :workspace_id, :sim_key, :trace_sha256, :authored_trace_sha256, :engine_sem_ver, :solver_ver, :trace_schema,
          :resolved_input_digest, :map_closure_digest, :traffic_step_key, :traffic_provider, :map_version_id,
          CAST(:engine_build AS jsonb), :producer, :bucket, :trace_key, :trace_size, :trace_gzip_sha256,
          :resolution_key, :resolution_size, :resolution_sha256, :traffic_artifact_id,
-         CAST(:ambient AS jsonb), CAST(:metrics AS jsonb)
+         CAST(:ambient AS jsonb), CAST(:metrics AS jsonb), :timeline_key, :timeline_sha256, :timeline_storage_key,
+         :timeline_byte_length
        ) ON CONFLICT (workspace_id, sim_key) DO NOTHING
        RETURNING sim_key`,
       {
@@ -456,6 +493,10 @@ export async function completeSimulationRequest(input: {
         traffic_artifact_id: trafficArtifactId,
         ambient: completion.traffic?.ambient ?? null,
         metrics: completion.metrics,
+        timeline_key: completion.timeline?.timelineKey ?? null,
+        timeline_sha256: completion.timeline?.timelineSha256 ?? null,
+        timeline_storage_key: keys.timeline,
+        timeline_byte_length: completion.timeline?.sizeBytes ?? null,
       },
     );
     let determinismViolation = false;
@@ -543,14 +584,20 @@ async function executeInline(
 ): Promise<void> {
   const producer = inlineProducer();
   try {
-    const simulation = inlineExecutorOverride
-      ? await inlineExecutorOverride(subject)
-      : simulateAuthoritative({
-          canonicalContent: subject.canonicalContent,
-          closure: await loadServerSimulationClosure(identity.map),
-          catalogEntries: identity.catalogEntries,
-        });
-    const { completion, bytes } = simulationCompletion(simulation);
+    let simulation: AuthoritativeSimulation;
+    let timeline: SimulationTimeline | null = null;
+    if (inlineExecutorOverride) {
+      simulation = await inlineExecutorOverride(subject);
+    } else {
+      const closure = await loadServerSimulationClosure(identity.map);
+      simulation = simulateAuthoritative({
+        canonicalContent: subject.canonicalContent,
+        closure,
+        catalogEntries: identity.catalogEntries,
+      });
+      timeline = await buildSimulationTimeline(simulation, closure);
+    }
+    const { completion, bytes } = simulationCompletion(simulation, timeline);
     const keys = simulationObjectKeys(subject.workspaceId, completion);
     const existing = await readSimulationRecord(subject.workspaceId, completion.simKey);
     const bucket = artifactBucket();
@@ -560,6 +607,7 @@ async function executeInline(
       await putS3Object(bucket, keys.resolution, bytes.resolution, RESOLUTION_MEDIA_TYPE);
     }
     if (keys.traffic && bytes.traffic) await putS3Object(bucket, keys.traffic, bytes.traffic, MATERIALIZED_TRAFFIC_MEDIA_TYPE);
+    if (!existing && keys.timeline && bytes.timeline) await putS3Object(bucket, keys.timeline, bytes.timeline, TIMELINE_MEDIA_TYPE);
     await completeSimulationRequest({
       workspaceId: subject.workspaceId,
       userId: subject.userId,
@@ -746,7 +794,7 @@ export async function reserveSimulationJobOutputs(input: {
   workspaceId: string;
   requestKey: string;
   fenceToken: string;
-  completion: Pick<SimulationCompletion, "simKey" | "traceSha256" | "trace" | "resolution" | "traffic">;
+  completion: Pick<SimulationCompletion, "simKey" | "traceSha256" | "trace" | "resolution" | "traffic" | "timeline">;
 }) {
   const request = await queryOne<{ fence_token_sha256: string | null; request_state: string }>(
     `SELECT fence_token_sha256, request_state FROM simforge.sim_requests
@@ -765,6 +813,12 @@ export async function reserveSimulationJobOutputs(input: {
     trace: await upload(keys.trace, SIMULATION_TRACE_MEDIA_TYPE, input.completion.trace, !existing),
     resolution: await upload(keys.resolution, RESOLUTION_MEDIA_TYPE, input.completion.resolution, !existing),
     traffic: await upload(keys.traffic, MATERIALIZED_TRAFFIC_MEDIA_TYPE, input.completion.traffic, true),
+    timeline: await upload(
+      keys.timeline,
+      TIMELINE_MEDIA_TYPE,
+      input.completion.timeline ? { sha256: input.completion.timeline.timelineSha256 } : null,
+      !existing,
+    ),
   };
 }
 
@@ -878,4 +932,22 @@ export async function recordSimulationVerification(input: {
     console.error(`[simulation] editor preview mismatch: sim_key ${input.simKey} local ${input.localTraceSha256} authoritative ${result.trace_sha256}`);
   }
   return { outcome, authoritativeTraceSha256: result.trace_sha256 };
+}
+
+/**
+ * Evaluation reads the authoritative trace by key: the same bytes every render
+ * replays, graded by the native evaluator. Nothing is simulated again.
+ */
+export async function evaluateSimulationResult(
+  workspaceId: string,
+  simKey: string,
+  filters: EvaluateFilters = {},
+): Promise<{ simKey: string; traceSha256: string; evaluation: TraceEvaluation } | null> {
+  const row = await readSimulationRecord(workspaceId, simKey);
+  if (!row) return null;
+  const bytes = await getS3ObjectBytes(row.storage_bucket, row.trace_storage_key);
+  if (bytes.byteLength !== Number(row.trace_byte_length) || sha256(bytes) !== row.trace_gzip_sha256) {
+    throw new SimulationFailedError("simulation_trace_corrupt", `stored trace for ${simKey} does not match its recorded digest`);
+  }
+  return { simKey, traceSha256: row.trace_sha256, evaluation: evaluateTrace(bytes, filters) };
 }

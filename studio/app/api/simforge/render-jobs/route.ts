@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       simKey: simulation.result.simKey,
       traceSha256: simulation.result.traceSha256,
       timelineSha256: simulation.result.timelineSha256,
+      timelineSizeBytes: simulation.result.timelineSizeBytes,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "uniscenario_workspace_limit_reached") {

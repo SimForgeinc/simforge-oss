@@ -86,6 +86,7 @@ function result(overrides: Partial<ScenarioSimulationResultDto> = {}): ScenarioS
     trace: { mediaType: "application/vnd.simforge.trace+json+gzip", sizeBytes: 1, gzipSha256: "g".repeat(64), downloadUrl: "/trace" },
     resolution: { sizeBytes: 1, sha256: "r".repeat(64), downloadUrl: "/resolution" },
     timelineSha256: null,
+    timelineSizeBytes: null,
     producer: "inline:test",
     createdAt: "now",
     ...overrides,
