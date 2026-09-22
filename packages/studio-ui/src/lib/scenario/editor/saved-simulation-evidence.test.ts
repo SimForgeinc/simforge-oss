@@ -55,7 +55,9 @@ function host(preview: ScenarioSimulationPreviewDto | null): StudioHostServices 
   return {
     projects: {
       getSimulationPreview: async () => preview,
-      saveSimulationPreview: vi.fn(async () => undefined),
+      saveSimulationPreview: vi.fn(async (target: Pick<ScenarioDocumentDto, "id" | "draftVersion">) => {
+        preview = { draftVersion: target.draftVersion } as ScenarioSimulationPreviewDto;
+      }),
       uploadMaterializedTraffic: async () => ({ artifactId: "artifact", sha256: "sha", sizeBytes: 1 }),
     },
     artifacts: {
@@ -90,15 +92,13 @@ describe("savedSimulationRevisionEvidence", () => {
   it.each([
     ["missing", null],
     ["stale", { draftVersion: 8 } as ScenarioSimulationPreviewDto],
-  ])("prepares the current document when the preview is %s", async (_label, preview) => {
-    await savedSimulationRevisionEvidence(host(preview), document);
-    expect(prepare).toHaveBeenCalledWith(
-      document.content,
-      expect.anything(),
-      expect.anything(),
-      undefined,
-      { backgroundPreview: true },
-    );
+  ])("persists reusable evidence when the preview is %s", async (_label, preview) => {
+    const services = host(preview);
+    await expect(savedSimulationRevisionEvidence(services, document)).resolves.toMatchObject({
+      materializedTraffic: { artifactId: "artifact" },
+    });
+    await savedSimulationRevisionEvidence(services, document);
+    expect(prepare).toHaveBeenCalledOnce();
     expect(dispose).toHaveBeenCalledOnce();
   });
 });
