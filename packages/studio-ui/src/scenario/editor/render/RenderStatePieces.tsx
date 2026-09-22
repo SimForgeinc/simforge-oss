@@ -21,9 +21,11 @@ import { styles } from "./RenderStatePieces.stylex";
 export function RenderStateChip({
   state,
   className,
+  label,
 }: {
   state: ScenarioRenderJobState;
   className?: string;
+  label?: string;
 }) {
   const visual = renderStateVisual(state);
   return (
@@ -34,7 +36,7 @@ export function RenderStateChip({
       {visual.live ? (
         <CloudActivityIndicator iconXstyle={styles.chipSpinner} />
       ) : null}
-      {visual.label}
+      {label ?? visual.label}
     </span>
   );
 }
