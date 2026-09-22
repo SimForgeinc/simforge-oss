@@ -202,6 +202,8 @@ export const RenderProgressRecordSchema = z.union([
     completed: z.number().finite().nonnegative(),
     total: z.number().finite().positive(),
     unit: z.enum(["frames", "bytes", "items", "seconds"]),
+    downloadedBytes: z.number().int().nonnegative().optional(),
+    totalBytes: z.number().int().nonnegative().optional(),
   }).refine((record) => record.completed <= record.total, {
     path: ["completed"],
     message: "completed must not exceed total",

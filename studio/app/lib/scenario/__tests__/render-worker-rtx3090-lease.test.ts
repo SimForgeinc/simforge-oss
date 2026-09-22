@@ -16,12 +16,13 @@ import { approveRenderWorker, renderWorkerApprovalError } from "../control-plane
 import { createRenderIntentJob } from "../render-intent-store";
 import {
   claimResponseV2,
+  appendRenderProgressV2,
   registerRenderWorkerV2,
   reserveRenderArtifactV2,
   refreshRenderInputV2,
   renderWorkerIdentity,
 } from "../render-worker-control-store";
-import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
+import { AppendRenderProgressV2Schema, ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
 import { canonicalJsonSha256 } from "../core";
 
 process.env[LOCAL_HOST_TOKEN_ENV] = "test-local-host-token";
@@ -326,6 +327,21 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.equal(await refreshRenderInputV2({ ...refreshRequest, fenceToken: "wrong-fence" }), null);
   assert.equal(await refreshRenderInputV2({ ...refreshRequest, workerNodeId: "another-worker" }), null);
   assert.equal(await refreshRenderInputV2({ ...refreshRequest, inputId: "undeclared-object" }), null);
+  const progress = AppendRenderProgressV2Schema.parse({
+    schema: "simforge.render-worker-control/v2", type: "lease.progress",
+    leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken,
+    records: [{
+      schema: "simforge.render-progress/v1", event: "stage.progress", stage: "downloading",
+      jobId: job.id, attempt: lease.attempt, sequence: 0, timestamp: new Date().toISOString(),
+      completed: 2, total: 4, unit: "items", downloadedBytes: 8192, totalBytes: 16384,
+    }],
+  });
+  await appendRenderProgressV2({ ...progress, jobId: job.id, workerNodeId: WORKER_NODE_ID });
+  assert.deepEqual(await queryOne(
+    `SELECT job_state, progress_detail->>'stage' AS stage,
+       (progress_detail->>'downloadedBytes')::int AS bytes
+       FROM simforge.render_jobs WHERE id = :id`, { id: job.id },
+  ), { job_state: "running", stage: "downloading", bytes: 8192 });
   const reservation = await reserveRenderArtifactV2({
     jobId: job.id,
     leaseId: lease.lease.leaseId,
