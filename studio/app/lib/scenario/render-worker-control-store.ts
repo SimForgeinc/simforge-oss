@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { queryRows, withTransaction } from "@/app/lib/db/data-api";
+import { queryRows, withTransaction, type SqlParams } from "@/app/lib/db/data-api";
 import { readLocalObject } from "@/app/lib/s3/s3-object";
 import {
   checksumBoundPutRequiredHeaders,
@@ -18,7 +18,7 @@ import {
   nativeRunExpectations,
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
-import { RENDER_INTENT_V1_SCHEMA, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
+import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   isScenarioParityEvidenceAccepted,
   SCENARIO_PARITY_EVIDENCE_VERSION,
@@ -212,7 +212,8 @@ export async function registerRenderWorkerV2(input: {
 type Candidate = {
   id: string;
   renderer_engine: "browser" | "carla" | "native";
-  render_intent: unknown;
+  /** Only the intent's render spec: screening never reads its asset closure. */
+  render_spec: unknown;
   intent_sha256: string;
   resource_request: unknown;
 };
@@ -240,14 +241,67 @@ function parseRenderIntent(value: unknown): ScenarioRenderIntent {
   );
 }
 
+type RowQuery = <T>(sql: string, params?: SqlParams) => Promise<T[]>;
+
+/**
+ * Characters per slice when reading a stored render intent. A native intent
+ * declares its whole map closure, so one row reaches megabytes for a large
+ * map, while Aurora's Data API caps a single response at 1 MB and its seam can
+ * page rows but never split one. 128k characters stays under that cap even if
+ * every character came back escaped as a six-byte `\uXXXX`.
+ */
+export const RENDER_INTENT_TEXT_SLICE_CHARS = 131_072;
+
+/** Postgres `length()` counts code points; a JS string counts UTF-16 units. */
+function codePointLength(text: string) {
+  let surrogatePairs = 0;
+  for (const _ of text.matchAll(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)) surrogatePairs += 1;
+  return text.length - surrogatePairs;
+}
+
+/**
+ * The stored canonical text of a job's render intent, read in bounded slices
+ * and reassembled. The column is written once at submission and never
+ * updated, so slices read by separate statements cannot tear; the lease path
+ * still verifies the reassembled document against `intent_sha256`.
+ * Resolves `null` when the job does not exist.
+ */
+export async function readRenderIntentText(
+  query: RowQuery,
+  jobId: string,
+  sliceChars = RENDER_INTENT_TEXT_SLICE_CHARS,
+): Promise<string | null> {
+  const [head] = await query<{ chars: number | string; part: string }>(
+    `SELECT length(render_intent::text) AS chars,
+            substr(render_intent::text, 1, CAST(:size AS integer)) AS part
+       FROM simforge.render_jobs WHERE id = :job_id`,
+    { job_id: jobId, size: sliceChars },
+  );
+  if (!head) return null;
+  const total = Number(head.chars);
+  const parts = [head.part];
+  for (let start = sliceChars + 1; start <= total; start += sliceChars) {
+    const [slice] = await query<{ part: string }>(
+      `SELECT substr(render_intent::text, CAST(:start AS integer), CAST(:size AS integer)) AS part
+         FROM simforge.render_jobs WHERE id = :job_id`,
+      { job_id: jobId, start, size: sliceChars },
+    );
+    if (!slice) throw new Error("render_intent_read_incomplete");
+    parts.push(slice.part);
+  }
+  const text = parts.join("");
+  if (codePointLength(text) !== total) throw new Error("render_intent_read_incomplete");
+  return text;
+}
+
 function workerCanRun(worker: WorkerRow, candidate: Candidate) {
   const capability = ScenarioRendererCapabilitySchema.safeParse(parseObject(worker.capabilities));
-  const intentValue = typeof candidate.render_intent === "string"
-    ? JSON.parse(candidate.render_intent) as Record<string, unknown>
-    : candidate.render_intent;
-  const intent = ScenarioRenderIntentSchema.safeParse(intentValue);
-  if (!capability.success || !intent.success || capability.data.backend !== candidate.renderer_engine) return false;
-  const sources = intent.data.renderSpec.sources;
+  const specValue = typeof candidate.render_spec === "string"
+    ? JSON.parse(candidate.render_spec) as unknown
+    : candidate.render_spec;
+  const renderSpec = RenderSpecV3Schema.safeParse(specValue);
+  if (!capability.success || !renderSpec.success || capability.data.backend !== candidate.renderer_engine) return false;
+  const sources = renderSpec.data.sources;
   const resources = typeof candidate.resource_request === "string"
     ? JSON.parse(candidate.resource_request) as { estimatedGpuBytes?: unknown }
     : candidate.resource_request as { estimatedGpuBytes?: unknown };
@@ -269,7 +323,7 @@ function workerCanRun(worker: WorkerRow, candidate: Candidate) {
       || attributes.fps > capability.data.limits.maxFramesPerSecond
     );
   })) return false;
-  const required = intent.data.renderSpec.capabilityIntent.required;
+  const required = renderSpec.data.capabilityIntent.required;
   return required.every((item) =>
     capability.data.capabilities.includes(item as typeof capability.data.capabilities[number])
   );
@@ -374,8 +428,11 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
     { registration_id: registrationId, worker_node_id: workerNodeId, environment: runtimeEnvironment() },
   );
   if (!pollingWorker) return null;
+  // The candidate page carries only what screening reads. Whole intents put up
+  // to 32 map closures in one response, which exceeds the Data API's 1 MB cap
+  // as soon as two large-map native jobs are queued.
   const candidates = await queryRows<Candidate>(
-    `SELECT id, renderer_engine, render_intent, intent_sha256, resource_request
+    `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request
        FROM simforge.render_jobs
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
@@ -409,12 +466,10 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
       if (busy) return null;
       const row = await tx.queryOne<{
         id: string; workspace_id: string; revision_id: string; execution_package_id: string;
-        execution_package_control_sha256: string; attempt_count: number;
-        render_intent: string | Record<string, unknown>; intent_sha256: string;
+        execution_package_control_sha256: string; attempt_count: number; intent_sha256: string;
       }>(
         `SELECT id, workspace_id, revision_id, execution_package_id,
-                execution_package_control_sha256, attempt_count,
-                render_intent::text AS render_intent, intent_sha256
+                execution_package_control_sha256, attempt_count, intent_sha256
            FROM simforge.render_jobs
           WHERE id = :job_id AND renderer_engine = :renderer_engine
             AND job_state = 'queued' AND cancel_requested_at IS NULL
@@ -423,7 +478,10 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         { job_id: candidate.id, renderer_engine: worker.renderer_engine, contract: RENDER_INTENT_V1_SCHEMA },
       );
       if (!row) return null;
-      const intent = ScenarioRenderIntentSchema.parse(parseObject(row.render_intent));
+      // The row is locked above, so its intent is read in slices under that lock.
+      const intentText = await readRenderIntentText((sql, params) => tx.queryRows(sql, params), row.id);
+      if (intentText === null) return null;
+      const intent = ScenarioRenderIntentSchema.parse(JSON.parse(intentText));
       if (hashRenderIntent(intent) !== row.intent_sha256) throw new Error("render_intent_digest_mismatch");
       const attempt = Number(row.attempt_count) + 1;
       const attemptId = scenarioId("usat");
@@ -610,6 +668,19 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         executionPackageControlSha256: row.execution_package_control_sha256,
         inputs,
       };
+    }).catch((error: unknown): null => {
+      // One job that cannot be leased (an incomplete map closure, a digest
+      // mismatch, an oversized read) must not fail every worker's poll: the
+      // candidates are oldest first, so rethrowing would pin the whole queue
+      // behind it. Its transaction rolled back, so the job stays queued and
+      // unleased, and the next candidate is offered instead.
+      console.error(JSON.stringify({
+        event: "render_lease_candidate_failed",
+        jobId: candidate.id,
+        workerNodeId,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+      return null;
     });
     if (claimed) return claimed;
   }
@@ -682,9 +753,9 @@ async function activeLease(
   workerNodeId: string,
   jobId: string,
 ) {
-  const rows = await queryRows<ActiveLease>(
+  const rows = await queryRows<Omit<ActiveLease, "render_intent">>(
     `SELECT l.id AS lease_id, j.id AS job_id, j.workspace_id, l.render_attempt_id AS attempt_id,
-            a.attempt_number, l.worker_node_id, j.intent_sha256, j.render_intent,
+            a.attempt_number, l.worker_node_id, j.intent_sha256,
             j.cancel_requested_at::text AS cancel_requested_at,
             j.renderer_engine, j.execution_package_id, j.execution_package_control_sha256,
             ep.source_input_digest, ep.xsd_sha256
@@ -699,7 +770,11 @@ async function activeLease(
       LIMIT 1`,
     { lease_id: leaseId, job_id: jobId, worker_node_id: workerNodeId, token_sha256: sha256(fenceToken) },
   );
-  return rows[0] ?? null;
+  const lease = rows[0];
+  if (!lease) return null;
+  const renderIntent = await readRenderIntentText(queryRows, lease.job_id);
+  if (renderIntent === null) return null;
+  return { ...lease, render_intent: renderIntent } satisfies ActiveLease;
 }
 
 /** Re-authorize each refresh against the live lease and immutable input digest; no URL/session state is stored. */
