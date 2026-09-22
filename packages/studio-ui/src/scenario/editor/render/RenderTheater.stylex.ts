@@ -213,6 +213,7 @@ export const styles = stylex.create({
   // render-glass flex min-h-0 flex-col border
   flexColBordered: {
     display: "flex",
+    flexShrink: 0,
     minHeight: "0px",
     flexDirection: "column",
     borderWidth: "1px",
