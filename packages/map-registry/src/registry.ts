@@ -3,6 +3,8 @@ import { copyFile, link, mkdir, mkdtemp, open, readFile, readdir, rename, rm, wr
 import { basename, dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
+import { gzip } from 'node:zlib';
+import { promisify } from 'node:util';
 import { isRegistryWriteConflict, type RegistryBackend } from './backend.js';
 import {
   assertClosure,
@@ -27,6 +29,7 @@ import {
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+const gzipBytes = promisify(gzip);
 
 function blobKey(digest: string): string {
   return `blobs/sha256/${digest.slice(0, 2)}/${digest}`;
@@ -143,6 +146,19 @@ async function uploadClosureMembers(
       throw new Error(`closure source does not match ${memberPath}`);
     }
     const key = blobKey(member.sha256);
+    // Transport siblings preserve the closure's decoded byte/hash identity.
+    // Never replace the original: native/range readers still consume it.
+    if (memberPath.endsWith('.json') && backend.url.startsWith('s3:') && !(await backend.exists(`${key}.gz`))) {
+      const bytes = typeof source === 'string' ? await readFile(source) : source;
+      try {
+        await backend.put(`${key}.gz`, await gzipBytes(bytes, { level: 9 }), {
+          ifAbsent: true, contentEncoding: 'gzip', contentType: 'application/json',
+          metadata: { 'decoded-sha256': member.sha256 },
+        });
+      } catch (error) {
+        if (!isRegistryWriteConflict(error)) throw error;
+      }
+    }
     if (uploaded.has(member.sha256)) return;
     uploaded.add(member.sha256);
     if (await backend.exists(key)) {

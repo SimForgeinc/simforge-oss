@@ -11,6 +11,24 @@ const emptyAsset = (): PreparedAsset => ({
 });
 
 describe('essential streaming assets', () => {
+  it('fills the requested download window without exceeding it while transfers are pending', () => {
+    const layer = new TileStreamLayer({
+      name: 'network-window', renderer: {} as WebGLRenderer, scene: new Scene(),
+      defs: Array.from({ length: 20 }, (_, index) => ({
+        id: `tile-${index}`, box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: `${index}.glb`, triangles: 1, fileSize: 1, geometricError: 0 }],
+      })),
+      build: () => new Promise<PreparedAsset>(() => undefined),
+      maxConcurrent: 6, memory: { admit: () => true, maxAssetBytes: () => 100 }, pinCoarsest: true,
+    });
+    try {
+      layer.update(new Vector3(), 1, 9999);
+      expect(layer.stats().loading).toBe(6);
+      layer.update(new Vector3(), 1, 9999);
+      expect(layer.stats().loading).toBe(6);
+    } finally { layer.dispose(); }
+  });
+
   it('does not refetch a decoded asset while it waits for upload and shader compilation', async () => {
     let resolveBuild!: (asset: PreparedAsset) => void;
     const build = vi.fn(() => new Promise<PreparedAsset>((resolve) => { resolveBuild = resolve; }));

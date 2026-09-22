@@ -50,6 +50,7 @@ export async function getPresignedGetUrl(
   responseContentDisposition?: string,
   /** `response-cache-control`: what the store says about the bytes it returns. */
   responseCacheControl?: string,
+  _preferGzip = false,
 ): Promise<string> {
   const url = objectUrl(bucket, key);
   if (responseContentDisposition) url.searchParams.set("response-content-disposition", responseContentDisposition);
@@ -64,12 +65,13 @@ export async function getMapArtifactDownloadUrl(
   bucket: string,
   sha256: string,
   byteLength: number,
+  preferGzip = false,
 ): Promise<string> {
   // A closure member is named by its digest: the bytes behind this key cannot
   // change, so the store is told to say so and the browser keeps them instead
   // of re-fetching thousands of tiles on every load.
   if (bucket !== MAP_CACHE_BUCKET) {
-    return getPresignedGetUrl(key, bucket, MEDIA_URL_TTL_SECONDS, undefined, IMMUTABLE_OBJECT_CACHE_CONTROL);
+    return getPresignedGetUrl(key, bucket, MEDIA_URL_TTL_SECONDS, undefined, IMMUTABLE_OBJECT_CACHE_CONTROL, preferGzip);
   }
   const map = await getRegisteredMap(mapVersionId);
   if (map) {

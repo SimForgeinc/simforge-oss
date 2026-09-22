@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     // Always return the signed object-store URL. Returning the first-party
     // cache route here reintroduces one 302 per asset before the browser
     // reaches the same private object.
-    const url = await getPresignedGetUrl(asset.key, asset.bucket, SIGNED_URL_TTL_SECONDS);
+    const url = await getPresignedGetUrl(asset.key, asset.bucket, SIGNED_URL_TTL_SECONDS, undefined, undefined, asset.relativePath.endsWith(".json"));
     return { mapVersionId: asset.mapVersionId, relativePath: asset.relativePath, url };
   }))).filter((asset): asset is { mapVersionId: string; relativePath: string; url: string } => asset !== null);
   return NextResponse.json(
