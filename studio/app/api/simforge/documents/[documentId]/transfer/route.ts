@@ -37,20 +37,25 @@ export async function POST(request: Request, route: Context) {
 
   const source = await getScenarioDocument(auth.context, documentId);
   if (!source) return NextResponse.json({ error: "document_not_found" }, { status: 404 });
-  const prepared = await prepareTransfer(auth.context, source, parsed.data);
-  if (!prepared) {
+  try {
+    const prepared = await prepareTransfer(auth.context, source, parsed.data);
+    if (prepared.kind === "refused") {
+      return NextResponse.json({ error: "transfer_refused", message: prepared.message }, { status: 422 });
+    }
+    const result = await createCrossMapScenarioDocument(auth.context, documentId, {
+      title: parsed.data.title,
+      targetMapVersionId: parsed.data.targetMapVersionId,
+      content: prepared.content,
+      receipt: prepared.receipt,
+    });
+    return result.kind === "created"
+      ? NextResponse.json(result.document, { status: 201 })
+      : NextResponse.json({ error: "document_not_found" }, { status: 404 });
+  } catch (error) {
+    console.error(`[transfer] ${documentId} -> ${parsed.data.targetMapVersionId}/${parsed.data.siteId} failed`, error);
     return NextResponse.json(
-      { error: "transfer_refused", message: "The selected map site cannot accept this scenario." },
-      { status: 422 },
+      { error: "transfer_failed", message: "The variation could not be created. Try again." },
+      { status: 500 },
     );
   }
-  const result = await createCrossMapScenarioDocument(auth.context, documentId, {
-    title: parsed.data.title,
-    targetMapVersionId: parsed.data.targetMapVersionId,
-    content: prepared.content,
-    receipt: prepared.receipt,
-  });
-  return result.kind === "created"
-    ? NextResponse.json(result.document, { status: 201 })
-    : NextResponse.json({ error: "document_not_found" }, { status: 404 });
 }
