@@ -246,6 +246,11 @@ export class RenderTimeline {
      */
     sceneFramesArray(times: Float64Array, yaw_only: boolean): Float64Array;
     /**
+     * A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+     * scene-state projection of the timeline for whole-document consumers.
+     */
+    sceneStateJson(times: Float64Array, yaw_only: boolean): string;
+    /**
      * `{signalId: indication}` held at `t`, as JSON.
      */
     signalsAtJson(t: number): string;
@@ -834,6 +839,7 @@ export interface InitOutput {
     readonly rendertimeline_posesArray: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_samplerVersion: (a: number) => [number, number];
     readonly rendertimeline_sceneFramesArray: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly rendertimeline_sceneStateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly rendertimeline_sha256: (a: number) => [number, number, number, number];
     readonly rendertimeline_signalsAtJson: (a: number, b: number) => [number, number, number, number];
     readonly rendertimeline_tickCount: (a: number) => number;

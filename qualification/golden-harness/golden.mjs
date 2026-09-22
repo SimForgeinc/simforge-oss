@@ -17,14 +17,30 @@
  *
  * Exit codes: 0 ok · 2 pass-hash drift · 3 frame-time budget exceeded ·
  * 4 nondeterministic on record (two runs differ) · 5 no golden for this GPU ·
- * 6 GPU busy (co-tenant load; infra, not drift) · 1 usage/environment error.
+ * 6 GPU busy (co-tenant load; infra, not drift) · 7 vacuous ID pass (it
+ * encodes too few instances: a golden of a blank pass proves nothing) ·
+ * 8 observed actor transforms fail parity with the render timeline ·
+ * 1 usage/environment error.
+ *
+ * Scene fields beyond the renderer arguments:
+ * - `idPass: {keys?, minInstances?, minCoverage?}` — every ID pass (keys
+ *   default to expectedPasses matching /^id\d|instance/) must encode at least
+ *   `minInstances` distinct non-background ids (default 2) covering at least
+ *   `minCoverage` of the frame (default 0.05), on record and on verify.
+ * - `sceneState: {gz}` — a committed scene-state.v1 document (gzipped) that
+ *   is expanded next to the run and substituted for `{sceneState}`.
+ * - `parity: {timeline, observed, profile}` — grade the renderer's observed
+ *   transforms against the render timeline's shared sampler
+ *   (`simforge render parity`; override with GOLDEN_PARITY_CMD).
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 import { collectNativeHardware } from './lib/fingerprint.mjs';
+import { idPassStats } from './lib/png.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const HARNESS = path.join(repoRoot, 'qualification/golden-harness');
@@ -166,9 +182,19 @@ function hashPasses(outPrefix, passes, hashScene) {
  */
 function buildInvocation(scene, glbs, outPrefix) {
   if (scene.invocationTemplate) {
-    // Generic argv template ({glbs} -> csv, {out} -> output prefix/dir).
+    // Generic argv template ({glbs} -> csv, {out} -> output prefix/dir,
+    // {sceneState} -> the expanded committed scene state, {corpus} -> root).
+    let sceneStatePath = '';
+    if (scene.sceneState?.gz) {
+      sceneStatePath = `${outPrefix}.scene-state.json`;
+      fs.mkdirSync(path.dirname(sceneStatePath), { recursive: true });
+      fs.writeFileSync(sceneStatePath, gunzipSync(fs.readFileSync(path.join(repoRoot, scene.sceneState.gz))));
+    }
+    const { corpusRoot } = resolvePaths(scene);
+    fs.mkdirSync(outPrefix, { recursive: true });
     return scene.invocationTemplate.map((t) =>
-      t === '{glbs}' ? glbs.join(',') : t.replaceAll('{out}', outPrefix));
+      t === '{glbs}' ? glbs.join(',') : t.replaceAll('{out}', outPrefix)
+        .replaceAll('{sceneState}', sceneStatePath).replaceAll('{corpus}', corpusRoot));
   }
   const a = scene.rendererArgs;
   const cameras = Array.from({ length: Math.max(1, a.cameras) }, (_, c) => ({
@@ -191,6 +217,43 @@ function buildInvocation(scene, glbs, outPrefix) {
   fs.mkdirSync(outPrefix, { recursive: true });
   fs.writeFileSync(jobPath, JSON.stringify(job, null, 2));
   return ['--job', jobPath];
+}
+
+/** Exit 7 unless every ID pass encodes real instances (see `idPass`). */
+function checkIdPasses(outPrefix, scene) {
+  const keys = scene.idPass?.keys ?? scene.expectedPasses.filter((k) => /^id\d|instance/.test(k));
+  const minInstances = scene.idPass?.minInstances ?? 2;
+  const minCoverage = scene.idPass?.minCoverage ?? 0.05;
+  const files = passFiles(outPrefix, scene);
+  const stats = {};
+  for (const key of keys) {
+    const file = files[key];
+    if (!file || !fs.existsSync(file)) throw new GateFailure(1, `ID pass ${key} missing: ${file}`);
+    const s = idPassStats(fs.readFileSync(file));
+    stats[key] = { distinctIds: s.distinctIds, coveredFraction: Number(s.coveredFraction.toFixed(4)) };
+    if (s.distinctIds < minInstances || s.coveredFraction < minCoverage) {
+      throw new GateFailure(7, `vacuous ID pass ${key}: ${s.distinctIds} ids covering ${(s.coveredFraction * 100).toFixed(2)}% (need >= ${minInstances} ids and >= ${(minCoverage * 100).toFixed(1)}%)`);
+    }
+  }
+  return stats;
+}
+
+/** Exit 8 unless the renderer's observed transforms match the timeline sampler. */
+function checkParity(outPrefix, scene) {
+  if (!scene.parity) return undefined;
+  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
+  const observed = path.join(outPrefix, scene.parity.observed ?? 'observed-frames.jsonl');
+  const r = spawnSync(cmd[0], [...cmd.slice(1), path.join(repoRoot, scene.parity.timeline), observed, '--profile', scene.parity.profile ?? 'bevy'], { encoding: 'utf8' });
+  let report;
+  try { report = JSON.parse(r.stdout); } catch { throw new GateFailure(1, `parity command failed (${r.status}): ${r.stderr?.slice(-800)}`); }
+  const summary = {
+    schema: report.schema, pass: report.pass, profile: report.profile.name, comparedPoses: report.comparedPoses,
+    maxPositionErrorM: report.maxPositionErrorM, maxHeadingErrorDeg: report.maxHeadingErrorDeg,
+    maxPitchErrorDeg: report.maxPitchErrorDeg, maxRollErrorDeg: report.maxRollErrorDeg,
+    presenceMismatches: report.presenceMismatches, timelineSha256: report.timelineSha256,
+  };
+  if (!report.pass) throw new GateFailure(8, `parity failed: ${JSON.stringify(summary)}`);
+  return summary;
 }
 
 function runRenderer(binPath, invocation, label) {
@@ -315,6 +378,8 @@ async function cmdRecord(args) {
     runs.push({
       timings,
       passHashes: hashPasses(prefix, scene.expectedPasses, scene),
+      idPasses: checkIdPasses(prefix, scene),
+      parity: checkParity(prefix, scene),
       invocation,
     });
   }
@@ -330,6 +395,9 @@ async function cmdRecord(args) {
   const golden = {
     ...manifestBase({ mode: 'golden-record', ...base, invocation: runs[0].invocation }),
     passHashes: runs[0].passHashes,
+    idPasses: runs[0].idPasses,
+    ...(runs[0].parity ? { parity: runs[0].parity } : {}),
+    ...(scene.sceneState?.gz ? { sceneStateSha256: sha256File(path.join(repoRoot, scene.sceneState.gz)) } : {}),
     corpusChecksums,
     ...(t ? {
       timings: {
@@ -411,6 +479,8 @@ async function verifyOne(args, sceneId) {
   const invocation = buildInvocation(scene, glbs, prefix);
   const timings = runRenderer(binPath, invocation, 'verify');
   const observed = hashPasses(prefix, [...scene.expectedPasses, ...(Object.keys(golden.passHashes).includes('legend') ? ['legend'] : [])], scene);
+  const idPasses = checkIdPasses(prefix, scene);
+  const parity = checkParity(prefix, scene);
 
   // Gate 1: pass-hash drift.
   const drifted = Object.entries(golden.passHashes)
@@ -427,6 +497,8 @@ async function verifyOne(args, sceneId) {
   const manifest = {
     ...manifestBase({ mode: 'golden-verify', scene, hardware, binPath, invocation, versions: cargoVersions() }),
     passHashes: observed,
+    idPasses,
+    ...(parity ? { parity } : {}),
     corpusChecksums: golden.corpusChecksums,
     timings: {
       ...(timings ? {

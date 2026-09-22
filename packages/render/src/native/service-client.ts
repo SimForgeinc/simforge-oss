@@ -58,6 +58,23 @@ export interface NativeBundleResponse extends NativeServiceResponse {
   readonly frames: readonly NativeFrameRecord[];
 }
 
+/** One actor as the service drew it (scene-yup world frame). */
+export interface NativeObservedActor {
+  readonly id: string;
+  /** Ground-contact origin of the drawn body. */
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number, number];
+  readonly bodyCentre: readonly [number, number, number];
+  readonly modelPosition?: readonly [number, number, number];
+  readonly modelRotation?: readonly [number, number, number, number];
+  readonly visible: boolean;
+}
+
+export interface NativeActorObservation {
+  readonly tick: number | null;
+  readonly actors: readonly NativeObservedActor[];
+}
+
 /** An RPC outlived its deadline; the connection it was on is gone. */
 export class NativeServiceTimeoutError extends Error {
   override readonly name = 'TimeoutError';
@@ -177,6 +194,21 @@ export class NativeServiceClient {
     }
     if (!value.ok) throw new Error(value.error ?? `native service ${value.op} failed`);
     return value;
+  }
+
+  /**
+   * What the service drew for every scene actor on the last applied tick
+   * (`observe_actors`). `null` from a service that predates the op, so a
+   * newer engine still drives an older binary (without the parity gate).
+   */
+  async observeActors(): Promise<NativeActorObservation | null> {
+    try {
+      const value = await this.rpc({ op: 'observe_actors' });
+      return { tick: (value.tick as number | null | undefined) ?? null, actors: (value.actors as NativeObservedActor[] | undefined) ?? [] };
+    } catch (error) {
+      if (error instanceof Error && /unknown variant|observe_actors/.test(error.message) && !(error instanceof NativeServiceTimeoutError)) return null;
+      throw error;
+    }
   }
 
   async readFrame(frame: NativeFrameRecord): Promise<Buffer> {
