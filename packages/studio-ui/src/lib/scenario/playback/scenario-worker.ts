@@ -221,7 +221,7 @@ scope.onmessage = (event: MessageEvent<ScenarioWorkerMessage>): void => {
   const request = event.data;
   // The generated catalog is bundled into the worker so headless compilation
   // does not depend on the browser having fetched /api/carla-objects first.
-  for (const entry of CARLA_OBJECT_CATALOG ?? []) registerExternalCatalogEntry(entry);
+  for (const entry of CARLA_OBJECT_CATALOG) registerExternalCatalogEntry(entry);
   for (const entry of request.externalCatalog ?? []) registerExternalCatalogEntry(entry);
   if (request.kind === 'cancel') {
     liveGeneration += 1;
