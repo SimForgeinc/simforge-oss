@@ -470,6 +470,11 @@ impl JsMapBundle {
     pub fn digest(&self) -> String {
         self.inner.digest().to_owned()
     }
+    /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+    #[napi(getter)]
+    pub fn closure_digest(&self) -> String {
+        self.inner.bundle().closure_digest().to_owned()
+    }
     #[napi(getter)]
     pub fn graph(&self) -> JsLaneGraph {
         JsLaneGraph {

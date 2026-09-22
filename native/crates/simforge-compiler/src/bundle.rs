@@ -34,6 +34,20 @@ pub const SEARCH_INDEX_FILE: &str = "search-index.json.gz";
 pub const XODR_FILE: &str = "map.xodr";
 pub const SIGNALS_FILE: &str = "signals.geojson.gz";
 pub const STATIC_COLLIDERS_MANIFEST: &str = "variants/manifest.json";
+/// Where published map bundles keep the collider derivative: the 3D closure
+/// (`3d/manifest.json`) and its variants (`3d/variants/manifest.json`), the
+/// same files the browser loads through `loadStaticMapColliders`.
+pub const STATIC_COLLIDERS_MANIFEST_3D: &str = "3d/variants/manifest.json";
+/// Map closure identity version (`MapBundle::closure_digest`).
+pub const MAP_CLOSURE_VERSION: &str = "simforge.map-closure/v1";
+/// Same rule as the artifact builder's `ROAD_BOUNDARY_MAX_THICKNESS_M` and the
+/// browser loader (`@simforge-oss/playback` staticMapColliders.ts): a kerb or
+/// guardrail OBB is only a strip. Artifacts published before the builder
+/// enforced it carry the map-wide merged `Roads_Curb` mesh as one slab the size
+/// of the map, which every vehicle spawns inside. Applied in `from_sources`, so
+/// every host that builds a bundle (browser WASM, Node addon, CLI, workers)
+/// simulates against the same colliders.
+pub const ROAD_BOUNDARY_MAX_THICKNESS_M: f64 = 2.0;
 pub const STATIC_COLLIDERS_SCHEMA: &str = "simforge.static-map-colliders/v1";
 
 /// Files a complete installed map must carry.
@@ -112,6 +126,33 @@ struct Inner {
     signal_catalog: MapSignalCatalog,
     static_colliders: Vec<StaticMapCollider>,
     static_collider_diagnostics: StaticColliderDiagnostics,
+    closure_digest: std::sync::OnceLock<String>,
+}
+
+/// Apply [`ROAD_BOUNDARY_MAX_THICKNESS_M`]: drop road-boundary OBBs thicker
+/// than a strip and move them to `ignored` in the diagnostics. Idempotent, so
+/// a host that already filtered (the browser loader) gets the same result.
+fn drop_map_wide_road_boundaries(
+    colliders: Vec<StaticMapCollider>,
+    mut diagnostics: StaticColliderDiagnostics,
+) -> (Vec<StaticMapCollider>, StaticColliderDiagnostics) {
+    let before = colliders.len();
+    let kept: Vec<StaticMapCollider> = colliders
+        .into_iter()
+        .filter(|c| {
+            c.class != StaticColliderClass::RoadBoundary
+                || c.obb.length_m.min(c.obb.width_m) <= ROAD_BOUNDARY_MAX_THICKNESS_M
+        })
+        .collect();
+    let dropped = before - kept.len();
+    if dropped > 0 {
+        diagnostics.accepted = diagnostics.accepted.saturating_sub(dropped);
+        diagnostics.ignored += dropped;
+        if let Some(n) = diagnostics.classes.get_mut("road-boundary") {
+            *n = n.saturating_sub(dropped);
+        }
+    }
+    (kept, diagnostics)
 }
 
 /// A loaded map: topology, lane graph, derived index, signal catalog and
@@ -179,7 +220,12 @@ pub fn load_static_colliders(dir: &Path) -> (Vec<StaticMapCollider>, StaticColli
 fn load_static_colliders_strict(
     dir: &Path,
 ) -> CompileResult<(Vec<StaticMapCollider>, StaticColliderDiagnostics)> {
-    let manifest_path = dir.join(STATIC_COLLIDERS_MANIFEST);
+    // Published bundles keep the derivative under `3d/`; older test layouts at the root.
+    let (manifest_path, closure_dir) = if dir.join(STATIC_COLLIDERS_MANIFEST_3D).is_file() {
+        (dir.join(STATIC_COLLIDERS_MANIFEST_3D), dir.join("3d"))
+    } else {
+        (dir.join(STATIC_COLLIDERS_MANIFEST), dir.to_path_buf())
+    };
     if !manifest_path.is_file() {
         return Err(CompileError::new(
             "static_colliders_missing",
@@ -199,7 +245,7 @@ fn load_static_colliders_strict(
             "Static collision derivative targets a stale map bundle",
         ));
     }
-    let source_manifest = dir.join("manifest.json");
+    let source_manifest = closure_dir.join("manifest.json");
     if source_manifest.is_file()
         && sha256_bytes(&read_bytes(&source_manifest, "static_colliders_missing")?) != source_sha
     {
@@ -231,7 +277,7 @@ fn load_static_colliders_strict(
             "Static collision derivative is not published for this map",
         ));
     }
-    let artifact_path = dir.join("variants").join(file.expect("checked"));
+    let artifact_path = closure_dir.join("variants").join(file.expect("checked"));
     let bytes = read_bytes(&artifact_path, "static_colliders_missing")?;
     if sha256_bytes(&bytes) != output_sha {
         return Err(CompileError::new(
@@ -472,8 +518,9 @@ impl MapBundle {
             },
         );
         let graph = Arc::new(LaneGraph::new(topology.clone()));
-        let (static_colliders, static_collider_diagnostics) =
-            static_colliders.unwrap_or_else(|| {
+        let (static_colliders, static_collider_diagnostics) = static_colliders
+            .map(|(colliders, diagnostics)| drop_map_wide_road_boundaries(colliders, diagnostics))
+            .unwrap_or_else(|| {
                 (
                     Vec::new(),
                     StaticColliderDiagnostics::unavailable(
@@ -491,7 +538,38 @@ impl MapBundle {
                 signal_catalog,
                 static_colliders,
                 static_collider_diagnostics,
+                closure_digest: std::sync::OnceLock::new(),
             }),
+        })
+    }
+
+    /// Identity of everything a simulation reads from this map: the lane graph
+    /// source (the topology index with map speed limits applied), the static
+    /// colliders after the road-boundary rule, and the signal catalog the map's
+    /// control plan is derived from.
+    ///
+    /// `sha256(canonicalJson({v, topology, colliders, signalCatalog}))` where
+    /// each member is itself the canonical content hash of that part. Computed
+    /// natively, so the WASM build in the browser and the N-API build on a
+    /// worker report the same value for the same closure, whichever files it
+    /// was assembled from (installed directory or published URLs). Computed
+    /// once per bundle, on first use.
+    pub fn closure_digest(&self) -> &str {
+        self.inner.closure_digest.get_or_init(|| {
+            let part = |value: serde_json::Result<Value>| {
+                value
+                    .ok()
+                    .and_then(|v| simforge_core::hash::content_hash(&v).ok())
+                    .unwrap_or_default()
+            };
+            let value = serde_json::json!({
+                "v": MAP_CLOSURE_VERSION,
+                "topology": part(serde_json::to_value(&self.inner.topology)),
+                "colliders": part(serde_json::to_value(&self.inner.static_colliders)),
+                "colliderStatus": serde_json::to_value(&self.inner.static_collider_diagnostics.status).unwrap_or(Value::Null),
+                "signalCatalog": part(serde_json::to_value(&self.inner.signal_catalog)),
+            });
+            simforge_core::hash::content_hash(&value).unwrap_or_default()
         })
     }
 
@@ -571,4 +649,73 @@ fn is_map_id(s: &str) -> bool {
                     .bytes()
                     .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
         })
+}
+
+#[cfg(test)]
+mod closure_tests {
+    use super::*;
+    use simforge_core::engine::SceneObb;
+    use simforge_core::math::SceneXZ;
+
+    fn collider(id: &str, class: StaticColliderClass, length_m: f64, width_m: f64) -> StaticMapCollider {
+        StaticMapCollider {
+            id: id.to_owned(),
+            class,
+            obb: SceneObb { center: SceneXZ { x: 0.0, z: 0.0 }, length_m, width_m, heading_rad: 0.0 },
+        }
+    }
+
+    fn ready(colliders: &[StaticMapCollider]) -> StaticColliderDiagnostics {
+        let mut classes = BTreeMap::new();
+        classes.insert("building".to_owned(), 1);
+        classes.insert("road-boundary".to_owned(), colliders.len() - 1);
+        StaticColliderDiagnostics {
+            digest: "d".into(),
+            status: StaticColliderStatus::Ready,
+            warning: None,
+            source_tiles: 1,
+            accepted: colliders.len(),
+            rejected_road_overlap: 0,
+            ignored: 0,
+            classes,
+        }
+    }
+
+    fn bundle(colliders: Vec<StaticMapCollider>) -> MapBundle {
+        let diagnostics = ready(&colliders);
+        MapBundle::from_sources(MapBundleSources {
+            map_id: "closure-test".into(),
+            topology: Some(crate::test_support::topology()),
+            static_colliders: Some((colliders, diagnostics)),
+            ..Default::default()
+        })
+        .expect("bundle")
+    }
+
+    #[test]
+    fn map_wide_road_boundaries_are_dropped_once_for_every_host() {
+        let all = vec![
+            collider("b", StaticColliderClass::Building, 40.0, 30.0),
+            collider("kerb", StaticColliderClass::RoadBoundary, 30.0, 0.4),
+            collider("slab", StaticColliderClass::RoadBoundary, 900.0, 700.0),
+        ];
+        let unfiltered = bundle(all.clone());
+        assert_eq!(unfiltered.static_colliders().len(), 2);
+        assert_eq!(unfiltered.static_collider_diagnostics().ignored, 1);
+        assert_eq!(unfiltered.static_collider_diagnostics().classes["road-boundary"], 1);
+        // A host that filtered already (the browser loader) builds the same closure.
+        let prefiltered = bundle(all.into_iter().filter(|c| c.id != "slab").collect());
+        assert_eq!(unfiltered.closure_digest(), prefiltered.closure_digest());
+    }
+
+    #[test]
+    fn closure_digest_covers_colliders_and_is_stable() {
+        let a = bundle(vec![collider("b", StaticColliderClass::Building, 40.0, 30.0), collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4)]);
+        let b = bundle(vec![collider("b", StaticColliderClass::Building, 40.0, 31.0), collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4)]);
+        assert_eq!(a.closure_digest().len(), 64);
+        assert_eq!(a.closure_digest(), a.clone().closure_digest());
+        assert_ne!(a.closure_digest(), b.closure_digest());
+        let none = MapBundle::from_topology("closure-test", crate::test_support::topology()).expect("bundle");
+        assert_ne!(a.closure_digest(), none.closure_digest());
+    }
 }
