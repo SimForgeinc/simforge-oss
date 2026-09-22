@@ -724,17 +724,21 @@ export class CityViewer {
     // A zero vegetation distance is the preset-level contract for Balanced. Do
     // not download every instance sidecar merely to hide the resulting layer
     // after the React settings effect runs.
-    const vegetationPromise = this.options.vegetationMaxDistance <= 0
+    const vegetationPromise = this.options.vegetationMaxDistance <= 0 || !this.options.vegetation
       ? Promise.resolve()
-      : this.options.vegetation
-        ? this.loadVegetationInstances(manifest)
-        : Promise.resolve();
-    await vegetationPromise;
+      : this.loadVegetationInstances(manifest);
 
     this.createRoadLayer(manifest);
     this.createCityLayer(manifest);
     if (this.disposed) return;
-    if (this.options.vegetation && this.options.vegetationMaxDistance > 0) this.createVegetationLayer(manifest);
+    if (this.options.vegetation && this.options.vegetationMaxDistance > 0) {
+      void vegetationPromise.then(() => {
+        if (!this.disposed && !this.vegLayer) {
+          this.createVegetationLayer(manifest);
+          this.lastStreamUpdate = 0;
+        }
+      });
+    }
 
     void visualResourcesPromise.catch((error: unknown) => {
       if (!this.disposed) this.recordStreamingError(error);
