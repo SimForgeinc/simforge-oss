@@ -808,6 +808,18 @@ pub fn materialize_ambient_traffic(
     Ok((JsScenarioInput { inner: scenario }, provenance))
 }
 
+/// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
+#[napi]
+pub fn ambient_turn_verdicts_json(graph: &JsLaneGraph) -> String {
+    rt::ambient_turn_verdicts_json(&graph.inner)
+}
+
+/// Load persisted ambient turn verdicts into this process; returns the count. Refuses another ENGINE_SEM_VER.
+#[napi]
+pub fn load_ambient_turn_verdicts(json: String) -> Result<u32> {
+    rt::load_ambient_turn_verdicts(&json).map(|n| n as u32).js()
+}
+
 /// The `t = 0` feasibility guards alone; returns the `SimIssue[]` JSON (no clip run).
 #[napi]
 pub fn check_feasibility(input: &JsScenarioInput, graph: &JsLaneGraph) -> Result<String> {
