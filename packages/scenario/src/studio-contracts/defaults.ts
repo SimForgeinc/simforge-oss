@@ -14,7 +14,8 @@ export const RECORDING_DEFAULTS = {
 /** Default simulation timing parameters. */
 export const SIMULATION_DEFAULTS = {
   durationSeconds: SCENARIO_TIMING.defaultDurationSeconds,
-  fixedDeltaSeconds: 0.05,
+  /** The only simulation step SimForge executes (20 ms); every other value is rejected. */
+  fixedDeltaSeconds: 0.02,
   physicsProfileId: "carla_default",
 } as const;
 

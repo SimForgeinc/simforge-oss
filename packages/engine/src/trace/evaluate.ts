@@ -10,6 +10,7 @@
  * | `never_fired` | any trigger never fired |
  * | `out_of_window` | the criticality peak falls inside the proportional edge guard |
  * | `collision` | opt-in; off by default because some archetypes want contact |
+ * | `implausible_motion` | always on: a body rotated at rest, turned faster than rolling allows, or was placed rather than driven |
  *
  * A scenario tagged `negative-control` keeps its `trivially_safe` finding but
  * is *accepted* — the taxonomy deliberately includes curb-standing pedestrians
@@ -59,7 +60,8 @@ export type RejectCode =
   | 'out_of_window'
   | 'collision'
   | 'occlusion_unproven'
-  | 'no_interaction';
+  | 'no_interaction'
+  | 'implausible_motion';
 
 export interface RejectFinding {
   readonly code: RejectCode;
@@ -83,7 +85,29 @@ export interface TraceEvaluation {
     readonly collisions: number;
     readonly neverFired: number;
     readonly occlusionUnproven: number;
+    /** Ticks of physically impossible motion no engine event accounts for. */
+    readonly implausibleMotion: number;
   };
+}
+
+/** Checks of the native motion-plausibility audit (`simforge-core::trace::plausibility`). */
+export type MotionFindingCode =
+  | 'rotation_at_rest'
+  | 'yaw_rate_exceeds_rolling_envelope'
+  | 'displacement_exceeds_speed'
+  | 'speed_step_exceeds_tyre_limit'
+  | 'lateral_acceleration_exceeds_tyre_limit'
+  | 'jerk_exceeds_limit';
+
+/** One implausible tick of one actor, as listed in an `implausible_motion` finding's `detail.findings`. */
+export interface MotionFinding {
+  readonly actorId: string;
+  readonly code: MotionFindingCode;
+  readonly t: number;
+  readonly measured: number;
+  readonly limit: number;
+  readonly ambient: boolean;
+  readonly explainedBy?: string;
 }
 
 export const DEFAULT_TRIVIAL_TTC_S = 3;

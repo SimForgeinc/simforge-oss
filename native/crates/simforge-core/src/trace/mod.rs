@@ -25,6 +25,7 @@ pub mod metrics;
 pub mod monitored_pairs;
 pub mod pairs;
 pub mod perception;
+pub mod plausibility;
 pub mod recorder;
 pub mod scene_state;
 pub mod timeline;

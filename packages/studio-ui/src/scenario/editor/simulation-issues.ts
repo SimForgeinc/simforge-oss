@@ -324,6 +324,8 @@ function solutionForEngineIssue(code: string | undefined, _path: string): string
     case "timed_route_turn_unreachable":
     case "target_timing_infeasible":
       return "Give the actor more time to reach the waypoint, reduce its speed, or widen the turn so the vehicle can physically follow the route.";
+    case "implausible_motion":
+      return "If the actor follows a drawn timed path, space its points so it never has to turn while stopped or outrun its own speed. Otherwise this is a simulation defect: copy the debug information and send it to support.";
     case "illegal_lane_change":
       return "Move the lane change to a connected neighboring lane where the road marking permits crossing.";
     case "curb_crossing":

@@ -1,0 +1,62 @@
+{
+  "cases": {
+    "rfs-ambient-city-1": {
+      "actors": 40,
+      "inputHash": "c68e546069ed4bf2a40d562982f94ecfe7d8c4ea8800d9b0838bd79e52c7938f",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 601,
+      "traceSha256": "851c68c26790773b8c0eb5cc98865580980ba760bca1aeb8fbb66daa935c7169"
+    },
+    "rfs-ambient-heavy-1": {
+      "actors": 48,
+      "inputHash": "b4e8ce28754e3a686d327c159bf407963488165e616be6d0f1c92cd47f403dce",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 601,
+      "traceSha256": "1a86db435cc20d7f52688cdaafb08ccf237fea102cd11c1ae4a64a42b7632c9c"
+    },
+    "rfs-ambient-heavy-2": {
+      "actors": 48,
+      "inputHash": "630688a7b5119929fe17bcf6644535af28617aa97b8abe54671bf60a32de3736",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 601,
+      "traceSha256": "5e1a771acc5b7ef2d57a1c4a31abf2f0c1c17a5e092764f0c75c6ed4b26879d5"
+    },
+    "rfs-collider-building": {
+      "actors": 1,
+      "inputHash": "9fa5bc5dad44552579d7c75b92fe8786a50dca972df0934716bfeecbeddd1659",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 501,
+      "traceSha256": "433e96e9be3b0a09369efceb8cf107c232dc61fbef3de258971bb227f26501ef"
+    },
+    "rfs-stop-and-go": {
+      "actors": 1,
+      "inputHash": "a9ec3a97916760c445012ac426d9d8825ea8f0d6c99d423add953f28d79af4ce",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 1001,
+      "traceSha256": "6b042fcab60de36b4c178218fb3dada0f020e4b5e3998d90eb4afaa1644b71d9"
+    },
+    "rfs-uturn-car": {
+      "actors": 1,
+      "inputHash": "cedec770a66f28cfbada20701e1e20520262839e0a8142f733ff4f9948ac3aa0",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 1501,
+      "traceSha256": "7c7817c65027943ba44eeaf20beb516d951d055b3464b8ce76d5761a31c18d87"
+    },
+    "rfs-uturn-truck": {
+      "actors": 1,
+      "inputHash": "60ebc57a34e4a9869299a79ddd3ef931e74cb49c14d600f50d92ea356063e208",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 1701,
+      "traceSha256": "d2666736d96010b4ca0ac2cc04702f98ef5d62f0773470df6d2caa8bf9c3278a"
+    },
+    "rfs-walkers-crossing": {
+      "actors": 4,
+      "inputHash": "5ab9075aee5b6182d731697c830ad0480e2372ebc0bee567e69e695fac76f590",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 801,
+      "traceSha256": "a38e025d36053a59f3c61949223c1e6be927cfa85f649bc9362e6ce8f9cbead0"
+    }
+  },
+  "engineSemVer": "0.8.0",
+  "schema": "simforge.golden-traces/v1"
+}

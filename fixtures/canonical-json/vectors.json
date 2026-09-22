@@ -1,0 +1,72 @@
+{
+  "rule": "simforge.canonical-json/v1",
+  "description": "Shared conformance vectors for SimForge canonical JSON. `input` is JSON text; parse it, canonicalize it, and the result must equal `canonical` byte for byte and hash to `sha256`. Run by packages/scenario (TypeScript) and simforge-core hash.rs (Rust).",
+  "vectors": [
+    {
+      "id": "scalars",
+      "input": "[null,true,false,0,-0,1,-1,\"\",0.5]",
+      "canonical": "[null,true,false,0,0,1,-1,\"\",0.5]",
+      "sha256": "1021671269f49ba7af85983191881f4442c05b36fb89df63999132f17daef838"
+    },
+    {
+      "id": "key-order-ascii",
+      "input": "{\"b\":1,\"a\":2,\"B\":3,\"_\":4,\"aa\":5,\"a0\":6}",
+      "canonical": "{\"B\":3,\"_\":4,\"a\":2,\"a0\":6,\"aa\":5,\"b\":1}",
+      "sha256": "f88a39af5d5ac89f92fe01f1ea4dbf009afae717eb9bbbf80e2a7aa299da7b3d"
+    },
+    {
+      "id": "integer-like-keys",
+      "input": "{\"10\":\"ten\",\"9\":\"nine\",\"2\":\"two\",\"a\":\"letter\",\"-1\":\"neg\",\"01\":\"lead\"}",
+      "canonical": "{\"-1\":\"neg\",\"01\":\"lead\",\"10\":\"ten\",\"2\":\"two\",\"9\":\"nine\",\"a\":\"letter\"}",
+      "sha256": "c7c00edeea46f6343b1dcb5554c82f5da4819c06e5b574defda455b96d4ffd1e"
+    },
+    {
+      "id": "utf16-key-order",
+      "input": "{\"\\uff5e\":1,\"\\ud83d\\ude00\":2,\"\\u00e9\":3,\"e\":4,\"\\u0000\":5}",
+      "canonical": "{\"\\u0000\":5,\"e\":4,\"é\":3,\"😀\":2,\"～\":1}",
+      "sha256": "225aa7bf6bccf87b4d2f9d25a8c4f9163c458e0a40586ece241c353392730a73"
+    },
+    {
+      "id": "nested",
+      "input": "{\"z\":{\"y\":[{\"b\":1,\"a\":[3,2,1]},{}],\"x\":{}},\"a\":[]}",
+      "canonical": "{\"a\":[],\"z\":{\"x\":{},\"y\":[{\"a\":[3,2,1],\"b\":1},{}]}}",
+      "sha256": "b46f50d6581dbcbcffce7eee859884a9a29cf67f8b965b9b439032edaf6b7277"
+    },
+    {
+      "id": "number-format",
+      "input": "[1e21,1e20,123456789012345680000,1e-6,1e-7,0.000001234,5e-324,1.7976931348623157e308,-2.5e-8,100,1.5e300,0.1,0.30000000000000004]",
+      "canonical": "[1e+21,100000000000000000000,123456789012345680000,0.000001,1e-7,0.000001234,5e-324,1.7976931348623157e+308,-2.5e-8,100,1.5e+300,0.1,0.30000000000000004]",
+      "sha256": "c8640bc601aa67128734ec2d27f597e3c2fc69a1222dd63d277af0600b1ad1a2"
+    },
+    {
+      "id": "float-noise-is-not-rounded",
+      "input": "{\"x\":0.30000000000000004,\"yaw\":3.141592653589793,\"s\":12.3456789012}",
+      "canonical": "{\"s\":12.3456789012,\"x\":0.30000000000000004,\"yaw\":3.141592653589793}",
+      "sha256": "6bf669048adf5444d9d4405ebd515ac39f7ca3c738b10a486d4e86d4842a4620"
+    },
+    {
+      "id": "negative-zero",
+      "input": "{\"a\":-0.0,\"b\":[-0,-0.0]}",
+      "canonical": "{\"a\":0,\"b\":[0,0]}",
+      "sha256": "ae86694fce44e84887aa02c49cbd13bc7415f39d6c89672cf1f96e692565d4cf"
+    },
+    {
+      "id": "integers",
+      "input": "[0,7,-7,9007199254740991,-9007199254740991,1.0,2.50]",
+      "canonical": "[0,7,-7,9007199254740991,-9007199254740991,1,2.5]",
+      "sha256": "ccac2eee0f67ee4a707362f9bc1570b31b93bc26c6b8b3bacf0e48d128c5437e"
+    },
+    {
+      "id": "string-escapes",
+      "input": "[\"quote\\\"\",\"back\\\\slash\",\"nl\\n\",\"tab\\t\",\"ctl\\u0001\",\"del\\u007f\",\"ls\\u2028\",\"slash/\",\"emoji\\ud83d\\ude00\",\"e\\u0301\"]",
+      "canonical": "[\"quote\\\"\",\"back\\\\slash\",\"nl\\n\",\"tab\\t\",\"ctl\\u0001\",\"del\",\"ls \",\"slash/\",\"emoji😀\",\"é\"]",
+      "sha256": "33ec336f45afb862c6b7d19222166cc6de8f2728560c14eec518ce3e9b9593a0"
+    },
+    {
+      "id": "empty",
+      "input": "{\"o\":{},\"a\":[],\"s\":\"\"}",
+      "canonical": "{\"a\":[],\"o\":{},\"s\":\"\"}",
+      "sha256": "c127f9b3c6f4233b3976f8e2d54486ab15f9a46cfa50fc14ae6d0787d1ac2917"
+    }
+  ]
+}

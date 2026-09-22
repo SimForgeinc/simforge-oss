@@ -128,21 +128,22 @@ describe("scenario session trace residency", () => {
     expect(worker.prepare).toHaveBeenCalledTimes(1);
   });
 
-  it("opens a superseded draft on its source's current geometry-compatible map", async () => {
+  it("never silently moves a pinned draft to a newer publication", async () => {
     const { services } = host({
       ...documentAt(1), mapVersionId: "retired-publication",
       mapSourceMapId: MAP.sourceMapId, mapXodrSha256: MAP.artifacts!.xodrSha256,
     });
-    worker.prepare.mockImplementation(async () => fakeBundle("forward-resolved"));
     const wrapper = ({ children }: { children: ReactNode }) => (
       <StudioHostProvider host={services}>{children}</StudioHostProvider>
     );
     const rendered = renderHook(() => useScenarioSession({
       documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
     }), { wrapper });
-    await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "forward-resolved" }));
-    expect(rendered.result.current.map?.mapVersionId).toBe(MAP.mapVersionId);
-    expect(rendered.result.current.failed).toBe(false);
+    // The pinned version is gone; a geometry-compatible build is only an explicit re-pin away.
+    await waitFor(() => expect(rendered.result.current.failed).toBe(true));
+    expect(rendered.result.current.message).toContain(MAP.mapVersionId);
+    expect(rendered.result.current.bundle).toBeNull();
+    expect(worker.prepare).not.toHaveBeenCalled();
   });
 
   it("refuses drift before producing a driveable preview", async () => {
