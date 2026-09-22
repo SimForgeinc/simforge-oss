@@ -16,8 +16,8 @@ import { styles } from "./ScenarioWorkspaceStatusProvider.stylex";
  * failure mode worth naming: a ported panel that publishes a status with no
  * provider mounted looks exactly like a panel that publishes nothing.
  *
- * Both renderers are `fixed` overlays rather than flow children, so appearing
- * and disappearing never reflows the canvas.
+ * The dock is fixed; boot work publishes to the shared screen loading host and
+ * boot errors cover this bounded provider. None of these states reflows the canvas.
  */
 export function ScenarioWorkspaceStatusProvider({
   children,
