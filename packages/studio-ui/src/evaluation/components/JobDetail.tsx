@@ -1,4 +1,6 @@
 "use client";
+import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
+import { PaneErrorState } from "../../components/state-frames";
 
 /**
  * One run's result, in both hosts.
@@ -15,7 +17,6 @@
  */
 import { AlertTriangle, Ban, Download, Loader2 } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
-import { cn } from "../../lib/utils";
 import { styles as s } from "./evaluation-components.stylex";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -316,14 +317,15 @@ function UploadedVideoResult({
   );
 }
 
+
 export function JobDetail({
   gateway,
   jobId,
-  className,
+  xstyle,
 }: {
   gateway: EvaluationGateway;
   jobId: string;
-  className?: string;
+  xstyle?: stylex.StyleXStyles;
 }) {
   const {
     job,
@@ -335,27 +337,22 @@ export function JobDetail({
     frameUrls,
     loading,
     problems,
+    retry,
   } = useJobResult(gateway, jobId);
 
   if (loading && !job) {
-    return (
-      <p className={cn(stylex.props(s.inlineGap2, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineGap2, s.textSm, s.textMuted).style}>
-        <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
-        Loading run…
-      </p>
-    );
+    return <CloudLoadingSurface scope="pane" title="Loading run…" />;
   }
 
   if (!job) {
-    return (
-      <RefusalNotice
-        className={className}
-        title="This run is not available"
-        reasons={[
-          "It does not exist, or it belongs to a workspace you are not a member of. Access is checked on every request.",
-        ]}
-      />
-    );
+    return <PaneErrorState
+      xstyle={xstyle}
+      title="Could not load this run"
+      description={problems.join(" ") || "The run is unavailable or access was denied."}
+      onRetry={retry}
+      exitHref="/dashboard/evaluation"
+      exitLabel="Back to evaluation"
+    />;
   }
 
   const presentation = jobStatusPresentation(job.status);
@@ -374,7 +371,7 @@ export function JobDetail({
   const uploadedVideo = videoProvenanceCandidate !== undefined || overlayVideoUrl !== null;
 
   return (
-    <div className={cn(stylex.props(s.section6).className, className)} data-testid="job-detail">
+    <div {...stylex.props(s.section6, xstyle)} data-testid="job-detail">
       <header {...stylex.props(s.space3)}>
         <div {...stylex.props(s.flexCenterGap3)}>
           <JobStatusBadge job={job} />

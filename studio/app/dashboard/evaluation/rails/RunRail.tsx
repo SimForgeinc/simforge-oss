@@ -24,7 +24,8 @@ import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import type { ModelRunRecord } from "@/app/lib/models/contracts";
-import { HOST_KIND } from "@/app/lib/host/kind";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
+import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
 import { StatusBadge } from "../shared";
 import { styles } from "./rails.stylex";
 
@@ -45,11 +46,13 @@ export function RunRail({
   onNewPrediction,
   organizationPicker,
   listError,
+  onRetry,
 }: {
   /** Null while the first page of cloud jobs is still loading, or if it failed. */
   jobs: ComputeJob[] | null;
   /** Why the cloud list is unavailable, when it is. */
   listError: string | null;
+  onRetry: () => void;
   localRuns: ModelRunRecord[];
   scenarioTitles: ReadonlyMap<string, string>;
   selectedRunId: string | null;
@@ -133,28 +136,10 @@ export function RunRail({
       }
       groups={groups}
       status={
-        // The cloud list failing is true of the section whether or not this
-        // machine has runs of its own. Saying it only in the empty state hid
-        // it behind the first local run: the list looked complete and was not.
-        //
-        // The reassurance about local runs belongs to a host that executes
-        // them; a cloud host has none to still be showing.
-        listError ? (
-          <p {...stylex.props(styles.status)}>
-            <span {...stylex.props(styles.statusTitle)}>Cloud runs are unavailable</span>
-            {listError}
-            {HOST_KIND === "local" ? " Runs started on this machine still appear here." : null}
-          </p>
-        ) : null
+        listError ? <PaneErrorState title="Could not load cloud runs" description={listError} onRetry={onRetry} /> : null
       }
-      empty={
-        <EmptyState
-          // A failed list is not a pending one: `jobs` stays null when the
-          // request rejected, and calling that "loading" is the spin this
-          // rail is not allowed to do. The failure itself is stated above.
-          title={jobs === null && listError === null ? "Loading runs…" : "No runs yet"}
-          description="Runs you submit here and from the web portal both appear in this list, for everyone in the workspace."
-        />
+      empty={listError ? null : jobs === null ? <ListSkeleton label="Loading runs" /> :
+        <EmptyState title="No runs yet" description="Runs submitted to this workspace appear here." />
       }
     />
   );

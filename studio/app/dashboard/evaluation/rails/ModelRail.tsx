@@ -1,4 +1,5 @@
 "use client";
+import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
 
 /** The model registry rail: one row per registered version, promotion state visible. */
 
@@ -50,12 +51,7 @@ export function ModelRail({
       count={loading ? null : versions.length}
       ariaLabel="Model versions"
       groups={groups}
-      empty={
-        <EmptyState
-          title={loading ? "Loading model versions…" : "No registered model versions"}
-          description="Versions appear here once a checkpoint is registered in the local model registry."
-        />
-      }
+      empty={loading ? <ListSkeleton label="Loading evaluation list" /> : <EmptyState title="No registered model versions" description="Versions appear here once a checkpoint is registered in the model registry." />}
     />
   );
 }

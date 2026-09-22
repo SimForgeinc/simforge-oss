@@ -1,4 +1,7 @@
 "use client";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
 import * as stylex from "@stylexjs/stylex";
 
 import { Pause, Play } from "lucide-react";
@@ -17,7 +20,7 @@ import type {
   EvalEvent,
   EvalViewTick,
 } from "@/app/lib/evaluation/contracts";
-import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "../shared";
+import { formatScore, StatusBadge, useJsonFetch } from "../shared";
 import { styles } from "../route-residuals.stylex";
 
 const EVENT_COLOR: Record<EvalEvent["severity"], string> = {
@@ -187,9 +190,9 @@ export function EpisodePlaybackClient({
     return () => window.clearInterval(interval);
   }, [playing, ticks.length]);
 
-  if (state.kind === "loading") return <PanelMessage>Loading episode…</PanelMessage>;
+  if (state.kind === "loading") return <CloudLoadingSurface scope="pane" title="Loading episode…" />;
   if (state.kind === "error") {
-    return <PanelMessage>Failed to load episode: {state.message}</PanelMessage>;
+    return <PaneErrorState title="Could not load episode" description={state.message} onRetry={state.retry} exitHref="/dashboard/evaluation" exitLabel="Back to evaluation" />;
   }
   const payload = state.data;
   const current = ticks[cursor];
@@ -215,7 +218,7 @@ export function EpisodePlaybackClient({
         ) : null}
       </div>
       {ticks.length === 0 ? (
-        <PanelMessage>No trace.jsonl for this episode — nothing to play back.</PanelMessage>
+        <EmptyState title="No trace.jsonl for this episode — nothing to play back." />
       ) : (
         <>
           <Card>
@@ -346,7 +349,7 @@ export function EpisodePlaybackClient({
                     ))}
                   </div>
                 ) : (
-                  <PanelMessage>Playback continues without imagery.</PanelMessage>
+                  <EmptyState title="Playback continues without imagery." />
                 )}
               </CardContent>
             </Card>

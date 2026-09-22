@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import * as stylex from "@stylexjs/stylex";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { styles } from "./shared.stylex";
 
@@ -27,8 +26,10 @@ export type FetchState<T> =
   | { kind: "error"; message: string }
   | { kind: "ready"; data: T };
 
-export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<T> {
+export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<T> & { retry: () => void } {
   const [state, setState] = useState<FetchState<T>>({ kind: "loading" });
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = useCallback(() => setRetryKey((key) => key + 1), []);
   useEffect(() => {
     if (!url) return;
     const controller = new AbortController();
@@ -47,10 +48,6 @@ export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<
         setState({ kind: "error", message: error instanceof Error ? error.message : String(error) });
       });
     return () => controller.abort();
-  }, [url, refreshKey]);
-  return state;
-}
-
-export function PanelMessage({ children }: { children: React.ReactNode }) {
-  return <div {...stylex.props(styles.message)}>{children}</div>;
+  }, [url, refreshKey, retryKey]);
+  return { ...state, retry };
 }

@@ -11,7 +11,7 @@
 
 import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
-import { ResizablePanel } from "../../scenario/ResizablePanel";
+import { WorkspacePanes } from "../../components/WorkspacePanes";
 import { EvaluationSectionStrip } from "./EvaluationSectionStrip";
 import type { EvaluationSection } from "./useEvaluationSelection";
 import { styles } from "./EvaluationShell.stylex";
@@ -26,35 +26,40 @@ export function EvaluationShell({
   rail,
   stage,
   overlay,
+  activePane,
+  onActivePaneChange,
 }: {
+  activePane?: "list" | "detail" | "inspector";
+  onActivePaneChange?: (pane: "list" | "detail" | "inspector") => void;
   section: EvaluationSection;
   onSectionChange: (section: EvaluationSection) => void;
   /** Sits under the section squares, off the scrolling column. */
   stripFooter?: ReactNode;
   rail: ReactNode;
   stage: ReactNode;
-  /** Floats over the stage: refusals and failed actions, with their retry. */
+  /** Failed actions remain beside the stage without covering its controls. */
   overlay?: ReactNode;
 }) {
   return (
     <section {...stylex.props(styles.root)} data-testid="evaluation-workspace" data-section={section}>
-      <ResizablePanel
+      <WorkspacePanes
+        activePane={activePane}
+        onActivePaneChange={onActivePaneChange}
         storageKey={EVALUATION_RAIL_WIDTH_KEY}
-        label="Resize the evaluation list"
-        className={stylex.props(styles.panel).className}
-      >
+        railLabel="Resize the evaluation list"
+        rail={
         <div {...stylex.props(styles.panelGrid)}>
           <EvaluationSectionStrip section={section} onSectionChange={onSectionChange} footer={stripFooter} />
           <div {...stylex.props(styles.railColumn)}>{rail}</div>
         </div>
-      </ResizablePanel>
-
-      <div {...stylex.props(styles.stageWrap)}>
+        }
+        stage={<div {...stylex.props(styles.stageWrap)}>
         <div {...stylex.props(styles.stage)} data-testid="evaluation-stage">
           {stage}
         </div>
         {overlay ? <div {...stylex.props(styles.overlay)}>{overlay}</div> : null}
-      </div>
+      </div>}
+      />
     </section>
   );
 }

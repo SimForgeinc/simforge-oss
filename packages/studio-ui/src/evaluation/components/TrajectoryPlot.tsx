@@ -10,7 +10,6 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { cn } from "../../lib/utils";
 import { styles as s } from "./evaluation-components.stylex";
 import type { OpenLoopItem } from "@simforge-oss/evaluation/client";
 
@@ -49,21 +48,20 @@ function extentOf(polylines: number[][][]): Extent {
 
 export function TrajectoryPlot({
   item,
-  className,
+  xstyle,
 }: {
   item: OpenLoopItem;
-  className?: string;
+  xstyle?: stylex.StyleXStyles;
 }) {
   const samples = item.points;
   const reference = item.reference.points.length > 0 ? item.reference.points : null;
   const polylines = reference ? [...samples, reference] : samples;
 
   if (polylines.length === 0) {
-    const empty = stylex.props(s.plotEmpty, s.border, s.mutedSurface, s.textSm, s.textMuted);
+    const empty = stylex.props(s.plotEmpty, s.border, s.mutedSurface, s.textSm, s.textMuted, xstyle);
     return (
       <div
-        className={cn(empty.className, className)}
-        style={empty.style}
+        {...empty}
       >
         This item produced no trajectory to plot.
       </div>
@@ -103,7 +101,7 @@ export function TrajectoryPlot({
   }
 
   return (
-    <figure className={cn(stylex.props(s.figure).className, className)}>
+    <figure {...stylex.props(s.figure, xstyle)}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"

@@ -22,7 +22,6 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { SelectMenuField } from "../../components/ui/select-menu";
-import { cn } from "../../lib/utils";
 import { MODEL_CATALOG } from "../model-catalog";
 import type { ModelFamilyId } from "../model-catalog";
 import { RefusalNotice } from "./RefusalNotice";
@@ -52,7 +51,7 @@ export type RenderEvaluationHandoffProps = {
   }[];
   cameraProfile: string;
   onSubmitted?: (jobId: string, provenance: RenderEvaluationProvenance) => void;
-  className?: string;
+  xstyle?: stylex.StyleXStyles;
 };
 
 const SLOT_NAMES = Object.entries(ALPAMAYO_CAMERA_SLOT)
@@ -64,7 +63,7 @@ export function RenderEvaluationHandoff({
   offeredFamilies,
   cameraProfile,
   onSubmitted,
-  className,
+  xstyle,
 }: RenderEvaluationHandoffProps) {
   const [familyId, setFamilyId] = useState<ModelFamilyId | null>(offeredFamilies[0]?.family ?? null);
   const [progress, setProgress] = useState<RenderHandoffProgress | null>(null);
@@ -110,7 +109,7 @@ export function RenderEvaluationHandoff({
   const busy = progress !== null && progress.stage !== "submitted";
 
   return (
-    <section className={cn("space-y-4", className)} data-testid="render-evaluation-handoff">
+    <section {...stylex.props(styles.root, xstyle)} data-testid="render-evaluation-handoff">
       <header {...stylex.props(styles.header)}>
         <h2 {...stylex.props(styles.evaluateThisRender)}>Evaluate this render</h2>
         <p {...stylex.props(styles.theRenderedCamerasBecomeTheC)}>
