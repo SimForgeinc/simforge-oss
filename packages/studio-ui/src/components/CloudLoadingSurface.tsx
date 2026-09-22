@@ -7,7 +7,15 @@ import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./CloudLoadingSurface.stylex";
 import { useCloudLoadingSource, type CloudLoadingKind, type CloudLoadingSource } from "./cloud-loading-context";
 
-export type CloudLoadingTelemetry = { transferred: string; total?: string | null; speed?: string | null; eta?: string | null; stalled?: boolean; stalledFor?: string | null };
+/** One labelled figure on the telemetry plate, e.g. `{ label: "Speed", value: "4.8 MB/s" }`. */
+export type CloudLoadingMetric = { label: string; value: string };
+/**
+ * The byte view of a load. `transferred` is what crossed the network this
+ * time; `metrics` are the figures that explain what the loader is doing with
+ * it (in flight, decoding, on the GPU, on screen), so "loaded" is never the
+ * only word on the plate.
+ */
+export type CloudLoadingTelemetry = { transferred: string; total?: string | null; speed?: string | null; eta?: string | null; stalled?: boolean; stalledFor?: string | null; metrics?: ReadonlyArray<CloudLoadingMetric> };
 
 /**
  * Studio's one loading design: the sky-cloud plate with a title, an optional
@@ -68,16 +76,23 @@ export function CloudLoadingSurface({ scope = "pane", kind = "route", priority, 
   const hosted = useCloudLoadingSource(published);
   const normalizedProgress = normalizeProgress(progress); const hasProgress = progress !== undefined;
   if (hosted && scope === "screen") return null;
-  return <div aria-busy={ariaBusy} aria-hidden={ariaHidden || undefined} aria-live={role === "alert" ? "assertive" : "polite"} {...mergeStyleProps(stylex.props(styles.root, scope === "screen" && styles.screen, scope === "pane" && styles.pane, scope === "embedded" && styles.embedded, diagnostics != null && styles.withDiagnostics, xstyle), className, style)} data-cloud-loading-scope={scope} data-load-kind={kind} data-load-phase={phase} data-transition-state={dataTransitionState} data-testid={testId} role={role}>
+  return <div aria-busy={ariaBusy} aria-hidden={ariaHidden || undefined} aria-live={role === "alert" ? "assertive" : "polite"} {...mergeStyleProps(stylex.props(styles.root, scope === "screen" && styles.screen, scope === "pane" && styles.pane, scope === "embedded" && styles.embedded, xstyle), className, style)} data-cloud-loading-scope={scope} data-load-kind={kind} data-load-phase={phase} data-transition-state={dataTransitionState} data-testid={testId} role={role}>
     <SkyCloudBackdrop animated={backdropAnimated} assetBase={backdropAssetBase} className={backdropClassName} />
-    <div {...mergeStyleProps(stylex.props(styles.wrap, diagnostics != null && styles.diagnosticsWrap), contentWrapClassName)}><div {...mergeStyleProps(stylex.props(scope === "pane" ? styles.paneContent : styles.fullContent), contentClassName)} data-testid={contentTestId}>
-      <div {...stylex.props(styles.row)}><div {...stylex.props(styles.icon)}>{icon ?? <LoaderCircle aria-hidden="true" {...stylex.props(styles.spin)} />}</div><div {...stylex.props(styles.body)}><h2 {...stylex.props(styles.title, scope === "pane" ? styles.titlePane : styles.titleFull)}>{title}</h2>{detail ? <p {...stylex.props(styles.detail)}>{detail}</p> : null}{telemetry ? <CloudLoadingTelemetryPanel telemetry={telemetry} testId={telemetryTestId} /> : null}</div></div>
+    <div {...mergeStyleProps(stylex.props(styles.wrap), contentWrapClassName)}><div {...mergeStyleProps(stylex.props(scope === "pane" ? styles.paneContent : styles.fullContent), contentClassName)} data-testid={contentTestId}>
+      <div {...stylex.props(styles.row)}><div {...stylex.props(styles.icon)}>{icon ?? <LoaderCircle aria-hidden="true" {...stylex.props(styles.spin)} />}</div><div {...stylex.props(styles.body)}><h2 {...stylex.props(styles.title, scope === "pane" ? styles.titlePane : styles.titleFull)}>{title}</h2>{detail ? <p {...stylex.props(styles.detail)}>{detail}</p> : null}{telemetry ? <CloudLoadingTelemetryPanel telemetry={telemetry} testId={telemetryTestId} /> : null}{diagnostics != null ? <div {...stylex.props(styles.diagnostics)}>{diagnostics}</div> : null}</div></div>
       {hasProgress ? <div {...stylex.props(styles.progressWrap)}><div aria-label={`${title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={normalizedProgress ?? undefined} {...stylex.props(styles.progressTrack)} role="progressbar">{normalizedProgress == null ? <div {...stylex.props(styles.shimmer)} /> : <div {...stylex.props(styles.progressFill)} style={{ width: `${normalizedProgress}%` }} />}</div><div {...stylex.props(styles.progressMeta)}><span>{progressValueLabel ?? (normalizedProgress == null ? "Working" : `${normalizedProgress}%`)}</span></div></div> : null}
       {children}
     </div></div>
-    {diagnostics}
   </div>;
 }
 export function CloudActivityIndicator({ label, className, xstyle, iconXstyle, testId }: { label?: string; className?: string; xstyle?: stylex.StyleXStyles; iconXstyle?: stylex.StyleXStyles; testId?: string }) { return <span {...mergeStyleProps(stylex.props(styles.activity, xstyle), className)} data-testid={testId} role={label ? "status" : undefined}><LoaderCircle aria-hidden="true" {...stylex.props(styles.activityIcon, iconXstyle)} />{label ? <span>{label}</span> : null}</span>; }
-function CloudLoadingTelemetryPanel({ telemetry, testId }: { telemetry: CloudLoadingTelemetry; testId: string }) { return <div {...stylex.props(styles.telemetry, telemetry.stalled && styles.telemetryStalled)} data-testid={testId}><div {...stylex.props(styles.telemRow)}><span>{telemetry.total ? `${telemetry.transferred} of ${telemetry.total}` : `${telemetry.transferred} loaded`}</span>{telemetry.speed ? <span>{telemetry.speed}</span> : null}</div>{telemetry.eta ? <p {...stylex.props(styles.telemText)}>{telemetry.eta} remaining</p> : null}{telemetry.stalled ? <p {...stylex.props(styles.telemWarn)}>No data received for {telemetry.stalledFor ?? "several seconds"}</p> : null}</div>; }
+function CloudLoadingTelemetryPanel({ telemetry, testId }: { telemetry: CloudLoadingTelemetry; testId: string }) {
+  const headline = telemetry.total ? `${telemetry.transferred} of ${telemetry.total} downloaded` : `${telemetry.transferred} downloaded`;
+  return <div {...stylex.props(styles.telemetry, telemetry.stalled && styles.telemetryStalled)} data-testid={testId}>
+    <div {...stylex.props(styles.telemRow)}><span>{headline}</span>{telemetry.speed ? <span>{telemetry.speed}</span> : null}</div>
+    {telemetry.metrics && telemetry.metrics.length > 0 ? <dl {...stylex.props(styles.telemGrid)}>{telemetry.metrics.map((metric) => <div key={metric.label} {...stylex.props(styles.telemMetric)}><dt {...stylex.props(styles.telemLabel)}>{metric.label}</dt><dd {...stylex.props(styles.telemValue)}>{metric.value}</dd></div>)}</dl> : null}
+    {telemetry.eta ? <p {...stylex.props(styles.telemText)}>{telemetry.eta} remaining</p> : null}
+    {telemetry.stalled ? <p {...stylex.props(styles.telemWarn)}>No data received for {telemetry.stalledFor ?? "several seconds"}</p> : null}
+  </div>;
+}
 function normalizeProgress(progress: number | null | undefined) { if (progress == null || !Number.isFinite(progress)) return null; return Math.max(0, Math.min(100, Math.round(progress))); }

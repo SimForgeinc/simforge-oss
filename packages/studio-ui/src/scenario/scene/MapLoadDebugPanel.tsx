@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { CityViewer, CityViewerStats } from "@simforge-oss/viewer";
 import * as stylex from "@stylexjs/stylex";
+import { ChevronDown } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { styles } from "./MapLoadDebugPanel.stylex";
 import { writeToClipboard } from "../list/CopyableErrorMessage";
@@ -76,7 +77,7 @@ function captureViewer(viewer: CityViewer, manifestUrl: string | null | undefine
   };
 }
 
-export function MapLoadDebugPanel({ source, docked = true }: { source: MapLoadDebugSource; docked?: boolean }) {
+export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
   const contentId = useId();
   const [expanded, setExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -123,12 +124,12 @@ export function MapLoadDebugPanel({ source, docked = true }: { source: MapLoadDe
     ...snapshot,
   };
   const json = JSON.stringify(payload, null, 2);
-  return <aside {...stylex.props(styles.panel, expanded && docked && styles.expanded)} aria-label="Map loading diagnostics" aria-live="off" data-testid="map-load-debug">
-    <button {...stylex.props(styles.toggle)} type="button" aria-expanded={expanded} aria-controls={contentId} onClick={() => {
+  return <aside {...stylex.props(styles.panel)} aria-label="Map loading diagnostics" aria-live="off" data-testid="map-load-debug">
+    <button {...stylex.props(styles.toggle, expanded && styles.toggleOpen)} type="button" aria-expanded={expanded} aria-controls={contentId} aria-haspopup="true" onClick={() => {
       const next = !expanded;
       setExpanded(next);
       try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { /* The panel still works without persistence. */ }
-    }}>{expanded ? "▾" : "▸"} ADVANCED / DEBUG</button>
+    }}>Advanced / debug<ChevronDown {...stylex.props(styles.chevron, expanded && styles.chevronOpen)} aria-hidden="true" /></button>
     {expanded ? <div id={contentId} {...stylex.props(styles.content)}>
       <div {...stylex.props(styles.toolbar)}><span>Live map diagnostics · sizes in bytes</span><Button size="sm" onClick={async () => {
         const copied = await writeToClipboard(json);
