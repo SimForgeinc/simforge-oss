@@ -2095,14 +2095,15 @@ export async function leaseRenderJob(input: { workerNodeId: string; leaseSeconds
     );
     await tx.execute(
       `INSERT INTO simforge.worker_leases (
-         id, render_job_id, render_attempt_id, worker_node_id,
+         id, workspace_id, render_job_id, render_attempt_id, worker_node_id,
          lease_token_sha256, expires_at
        ) VALUES (
-         :id, :job_id, :attempt_id, :worker_node_id,
+         :id, :workspace_id, :job_id, :attempt_id, :worker_node_id,
          :lease_token_sha256, CAST(:expires_at AS timestamptz)
        )`,
       {
         id: leaseId,
+        workspace_id: row.workspace_id,
         job_id: row.id,
         attempt_id: attemptId,
         worker_node_id: input.workerNodeId,

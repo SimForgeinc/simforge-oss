@@ -353,6 +353,26 @@ async function reapExpiredRenderIntentLeasesV2() {
 
 export async function claimRenderJobV2(registrationId: string, workerNodeId: string): Promise<Claimed | null> {
   await reapExpiredRenderIntentLeasesV2();
+  // An authenticated poll is liveness evidence even when the queue is empty
+  // or contains no work compatible with this worker.
+  const [pollingWorker] = await queryRows<{ id: string }>(
+    `UPDATE simforge.worker_nodes w
+        SET last_heartbeat_at = NOW(),
+            last_idle_heartbeat_at = CASE WHEN NOT EXISTS (
+              SELECT 1 FROM simforge.worker_leases lease
+               WHERE lease.worker_node_id = w.id AND lease.lease_state = 'active'
+                 AND lease.expires_at > NOW()
+            ) THEN NOW() ELSE w.last_idle_heartbeat_at END
+      WHERE w.registration_id = :registration_id AND w.id = :worker_node_id
+        AND w.environment = :environment AND w.registration_state = 'active'
+        AND w.approved_worker_version = w.worker_version
+        AND w.approved_image_digest = w.image_digest
+        AND w.approved_hardware_profile = w.hardware_profile
+        AND w.approved_at IS NOT NULL
+      RETURNING w.id`,
+    { registration_id: registrationId, worker_node_id: workerNodeId, environment: runtimeEnvironment() },
+  );
+  if (!pollingWorker) return null;
   const candidates = await queryRows<Candidate>(
     `SELECT id, renderer_engine, render_intent, intent_sha256, resource_request
        FROM simforge.render_jobs
@@ -383,11 +403,6 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
       const busy = await tx.queryOne<{ id: string }>(
         `SELECT id FROM simforge.worker_leases
           WHERE worker_node_id = :worker_id AND lease_state = 'active' LIMIT 1`,
-        { worker_id: worker.id },
-      );
-      await tx.execute(
-        `UPDATE simforge.worker_nodes SET last_heartbeat_at = NOW(), last_idle_heartbeat_at = NOW()
-          WHERE id = :worker_id`,
         { worker_id: worker.id },
       );
       if (busy) return null;
@@ -445,12 +460,13 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
       );
       await tx.execute(
         `INSERT INTO simforge.worker_leases (
-           id, render_job_id, render_attempt_id, worker_node_id, lease_token_sha256, expires_at
+           id, workspace_id, render_job_id, render_attempt_id, worker_node_id, lease_token_sha256, expires_at
          ) VALUES (
-           :lease_id, :job_id, :attempt_id, :worker_id, :token_sha256, CAST(:expires_at AS timestamptz)
+           :lease_id, :workspace_id, :job_id, :attempt_id, :worker_id, :token_sha256, CAST(:expires_at AS timestamptz)
          )`,
         {
           lease_id: leaseId,
+          workspace_id: row.workspace_id,
           job_id: row.id,
           attempt_id: attemptId,
           worker_id: worker.id,
