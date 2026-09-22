@@ -2,6 +2,10 @@ import { randomBytes } from "node:crypto";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
 import { readLocalObject } from "@/app/lib/s3/s3-object";
+import type {
+  CameraProfileEffectiveConfiguration,
+  RenderManifestWarning,
+} from "@simforge-oss/render";
 import {
   checksumBoundPutRequiredHeaders,
   getPresignedGetUrl,
@@ -1126,7 +1130,11 @@ async function verifyCompletion(lease: ActiveLease, intentSha256: string, reserv
 
 export async function completeRenderJobV2(input: {
   jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; intentSha256: string;
-  manifest: { artifacts: CompletionArtifact[] };
+  manifest: {
+    artifacts: CompletionArtifact[];
+    effectiveConfiguration?: CameraProfileEffectiveConfiguration;
+    warnings: RenderManifestWarning[];
+  };
 }) {
   const lease = await activeLease(input.leaseId, input.fenceToken, input.workerNodeId, input.jobId);
   if (!lease || lease.intent_sha256 !== input.intentSha256) return null;
@@ -1182,7 +1190,11 @@ export async function completeRenderJobV2(input: {
   const evidence = {
     parity_schema: completion.schema,
     parity_evidence: JSON.stringify(completion.evidence),
-    attestation: JSON.stringify(completion.attestation),
+    attestation: JSON.stringify({
+      ...completion.attestation,
+      ...(input.manifest.effectiveConfiguration ? { effectiveConfiguration: input.manifest.effectiveConfiguration } : {}),
+      warnings: input.manifest.warnings,
+    }),
   };
   await withTransaction(async (tx) => {
     const fenced = await tx.queryOne<{ id: string }>(

@@ -16,7 +16,7 @@ import {
   WeatherSchema,
   type Environment,
 } from './schema/v2/environment.js';
-import { CameraProfileSchema, SensorMountSchema, cameraProfileCapabilities } from './schema/v2/sensors.js';
+import { CameraProfileSchema, CameraProfileSourceSchema, SensorMountSchema, cameraProfileCapabilities } from './schema/v2/sensors.js';
 
 export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
 
@@ -151,7 +151,7 @@ export const RenderModalitySchema = z.enum([
 
 export const RenderSourceTransformSchema = SensorMountSchema;
 
-export const RenderCameraAttributesSchema = z.strictObject({
+const RenderCameraAttributesObjectSchema = z.strictObject({
   width: z.number().int().min(64).max(8192),
   height: z.number().int().min(64).max(8192),
   fps: z.number().finite().positive().max(240),
@@ -159,6 +159,7 @@ export const RenderCameraAttributesSchema = z.strictObject({
   nearM: z.number().finite().positive(),
   farM: z.number().finite().positive(),
   cameraProfile: CameraProfileSchema.prefault({}),
+  profileSource: CameraProfileSourceSchema.default('default'),
 }).check((ctx) => {
   if (ctx.value.farM <= ctx.value.nearM) {
     ctx.issues.push({
@@ -169,6 +170,15 @@ export const RenderCameraAttributesSchema = z.strictObject({
     });
   }
 });
+export const RenderCameraAttributesSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const record = value as Record<string, unknown>;
+    if (record.profileSource !== undefined) return value;
+    return { ...record, profileSource: Object.hasOwn(record, 'cameraProfile') ? 'authored' : 'default' };
+  },
+  RenderCameraAttributesObjectSchema,
+);
 
 export const RenderLidarAttributesSchema = z.strictObject({
   channels: z.number().int().min(1).max(256),
@@ -565,8 +575,9 @@ export const ResolvedCaptureManifestSchema = z.strictObject({
       input: available,
     });
   }
-  const expectedPreferredApplied = spec.capabilityIntent.preferred.filter((capability) => availableSet.has(capability));
-  const expectedPreferredUnavailable = spec.capabilityIntent.preferred.filter((capability) => !availableSet.has(capability));
+  const preferred = preferredCapabilities(spec);
+  const expectedPreferredApplied = preferred.filter((capability) => availableSet.has(capability));
+  const expectedPreferredUnavailable = preferred.filter((capability) => !availableSet.has(capability));
   if (!sameStringArray(ctx.value.capabilityResolution.preferredApplied, expectedPreferredApplied)) {
     ctx.issues.push({
       code: 'custom',
@@ -881,8 +892,9 @@ export function resolveCaptureManifest(
   if (missing.length > 0) {
     throw new Error(`renderer is missing required capture capabilities: ${missing.join(', ')}`);
   }
-  const preferredApplied = renderSpec.capabilityIntent.preferred.filter((capability) => available.has(capability));
-  const preferredUnavailable = renderSpec.capabilityIntent.preferred.filter((capability) => !available.has(capability));
+  const preferred = preferredCapabilities(renderSpec);
+  const preferredApplied = preferred.filter((capability) => available.has(capability));
+  const preferredUnavailable = preferred.filter((capability) => !available.has(capability));
   const scheduleFps = captureScheduleFps(renderSpec);
   const frameCount = fixedStepFrameCount(
     renderSpec.clip.startSeconds,
@@ -926,10 +938,20 @@ function requiredCapabilities(renderSpec: RenderSpecV3): string[] {
     ...renderSpec.capabilityIntent.required,
     ...renderSpec.sources.map((source) => `sensor.${source.modality}`),
     ...renderSpec.sources.flatMap((source) =>
-      source.modality !== 'lidar' && source.modality !== 'radar'
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'authored'
         ? cameraProfileCapabilities(source.attributes.cameraProfile)
         : []),
     ...renderSpec.artifacts.map(artifactCapability),
+  ])];
+}
+
+function preferredCapabilities(renderSpec: RenderSpecV3): string[] {
+  return [...new Set([
+    ...renderSpec.capabilityIntent.preferred,
+    ...renderSpec.sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'default'
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []),
   ])];
 }
 

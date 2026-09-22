@@ -164,6 +164,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
               nearM: sensor.camera.nearM,
               farM: sensor.camera.farM,
               cameraProfile: sensor.profile,
+              profileSource: sensor.profileSource,
             },
           };
         }
@@ -203,7 +204,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
   const required = [
     ...sources.map((source) => `sensor.${source.modality}`),
     ...sources.flatMap((source) =>
-      source.modality !== 'lidar' && source.modality !== 'radar'
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'authored'
         ? cameraProfileCapabilities(source.attributes.cameraProfile)
         : []),
     ...artifacts.map((artifact) => artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`),
@@ -214,6 +215,10 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
       ? ["map.static_semantics"]
       : []),
   ];
+  const preferred = sources.flatMap((source) =>
+    source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'default'
+      ? cameraProfileCapabilities(source.attributes.cameraProfile)
+      : []);
   return parseRenderSpecV3({
     schema: RENDER_SPEC_V3_SCHEMA,
     sources,
@@ -222,7 +227,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
     artifacts,
     capabilityIntent: {
       required: [...new Set(required)],
-      preferred: [],
+      preferred: [...new Set(preferred)],
       fidelity: input.fidelity,
     },
     authoredEnvironment: input.environment ?? input.content.environment,

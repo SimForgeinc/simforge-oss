@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RENDER_WORKER_CONTROL_V2_SCHEMA } from '@simforge-oss/render';
-import type { RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createRenderControlTransport, type RenderControlTransport } from './transport.js';
@@ -36,7 +36,11 @@ const INTENT: RenderIntentV1 = {
       outputName: 'ego-front',
       modality: 'rgb',
       transform: { position: { x: 1.6, y: 0, z: 1.7 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
-      attributes: { width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 1_000 },
+      attributes: {
+        width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 1_000,
+        cameraProfile: CameraProfileSchema.parse({}),
+        profileSource: 'default',
+      },
     }],
     clip: { startSeconds: 0, endSeconds: 2 },
     video: { width: 320, height: 180, fps: 24, container: 'mp4', codec: 'h264', quality: 'high' },
@@ -70,7 +74,13 @@ async function checkedInRoutePaths(): Promise<string[]> {
   return paths;
 }
 
-type Recorded = { method: string; path: string; workerNodeIdHeader: string | undefined; authorization: string | undefined };
+type Recorded = {
+  method: string;
+  path: string;
+  workerNodeIdHeader: string | undefined;
+  authorization: string | undefined;
+  body: unknown;
+};
 
 function respond(path: string): unknown {
   if (path.endsWith('/workers/register')) {
@@ -129,14 +139,17 @@ describe('render control transport against the checked-in Studio routes', () => 
     recorded = [];
     server = createServer((request, response) => {
       const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
-      recorded.push({
-        method: request.method ?? '',
-        path,
-        workerNodeIdHeader: request.headers['x-simforge-worker-node-id'] as string | undefined,
-        authorization: request.headers.authorization,
-      });
-      request.resume();
+      let body = '';
+      request.setEncoding('utf8');
+      request.on('data', (chunk: string) => { body += chunk; });
       request.on('end', () => {
+        recorded.push({
+          method: request.method ?? '',
+          path,
+          workerNodeIdHeader: request.headers['x-simforge-worker-node-id'] as string | undefined,
+          authorization: request.headers.authorization,
+          body: body.length > 0 ? JSON.parse(body) : null,
+        });
         response.writeHead(200, { 'content-type': 'application/json' });
         response.end(JSON.stringify(respond(path)));
       });
@@ -216,6 +229,19 @@ describe('render control transport against the checked-in Studio routes', () => 
           sizeBytes: 12,
           mediaType: 'application/json',
         }],
+        effectiveConfiguration: {
+          cameraProfiles: [{
+            actorId: 'ego',
+            sensorId: 'front',
+            outputName: 'ego-front',
+            profileSource: 'default',
+            status: 'camera-profile: not-declared-by-engine (approximated)',
+          }],
+        },
+        warnings: [{
+          code: 'camera_profile_not_declared_by_engine',
+          message: 'camera-profile: not-declared-by-engine (approximated): ego/front',
+        }],
       },
     }, signal);
     await transport.drain({
@@ -233,6 +259,12 @@ describe('render control transport against the checked-in Studio routes', () => 
       `/api/simforge/internal/render-jobs/${JOB_ID}/complete`,
       `/api/simforge/internal/workers/${WORKER_NODE_ID}/state`,
     ]);
+    expect(recorded.find((entry) => entry.path.endsWith('/complete'))?.body).toMatchObject({
+      manifest: {
+        effectiveConfiguration: { cameraProfiles: [{ profileSource: 'default' }] },
+        warnings: [{ code: 'camera_profile_not_declared_by_engine' }],
+      },
+    });
     // Every request must be POST and must carry both credentials: the token
     // alone answers worker_unauthorized without the node-id header.
     for (const entry of recorded) {

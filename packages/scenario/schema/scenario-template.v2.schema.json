@@ -2656,10 +2656,9 @@
       "type": "boolean"
     },
     "__schema52": {
-      "default": [],
       "type": "array",
       "items": {
-        "oneOf": [
+        "anyOf": [
           {
             "type": "object",
             "properties": {
@@ -2734,6 +2733,14 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "profileSource": {
+                "default": "default",
+                "type": "string",
+                "enum": [
+                  "default",
+                  "authored"
+                ]
               },
               "detection": {
                 "default": {},

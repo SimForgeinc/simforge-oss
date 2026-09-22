@@ -89,6 +89,7 @@ suite('native retained service GPU e2e', () => {
           attributes: {
             width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
             cameraProfile: CameraProfileSchema.parse({}),
+            profileSource: 'default',
           },
         }],
         clip: { startSeconds: clipStart, endSeconds: clipEnd },

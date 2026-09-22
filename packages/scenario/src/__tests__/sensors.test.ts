@@ -18,6 +18,7 @@ import {
   defaultLidar,
   defaultRadar,
   matchSensorMountPreset,
+  SensorRigCameraTemplateSchema,
 } from '../schema/v2/sensor-rigs.js';
 import { ltapTemplateInput } from './v2-fixtures.js';
 
@@ -47,6 +48,7 @@ describe('actor-attached sensors', () => {
       outputStage: 'linear',
       encoding: { transfer: 'srgb', bitDepth: 8 },
     });
+    expect(firstEnabledDashCamera(second.roles[0]!.actor)?.profileSource).toBe('default');
 
     const spec = buildCanonicalRenderSpec({
       content: second,
@@ -64,13 +66,29 @@ describe('actor-attached sensors', () => {
         outputStage: 'linear',
         encoding: { transfer: 'srgb', bitDepth: 8 },
       },
+      profileSource: 'default',
     });
+    expect(spec.capabilityIntent.required).not.toContain('camera.output.linear_rgb');
+    expect(spec.capabilityIntent.preferred).toContain('camera.output.linear_rgb');
 
     const withoutProfile = JSON.parse(JSON.stringify(spec));
     delete withoutProfile.sources[0].attributes.cameraProfile;
+    delete withoutProfile.sources[0].attributes.profileSource;
     expect(parseRenderSpecV3(withoutProfile).sources[0]?.attributes).toMatchObject({
       cameraProfile: { profileId: 'generic-rgb@1' },
+      profileSource: 'default',
     });
+    const explicitProfile = JSON.parse(JSON.stringify(spec));
+    delete explicitProfile.sources[0].attributes.profileSource;
+    expect(parseRenderSpecV3(explicitProfile).sources[0]?.attributes).toMatchObject({
+      cameraProfile: { profileId: 'generic-rgb@1' },
+      profileSource: 'authored',
+    });
+
+    const sensorWithoutSource = JSON.parse(JSON.stringify(camera));
+    sensorWithoutSource.profile = CameraProfileSchema.parse({});
+    delete sensorWithoutSource.profileSource;
+    expect(ActorSensorSchema.parse(sensorWithoutSource)).toMatchObject({ profileSource: 'authored' });
 
     const depthSpec = buildCanonicalRenderSpec({
       content: second,
@@ -81,12 +99,47 @@ describe('actor-attached sensors', () => {
       staticSemantics: false,
       fidelity: 'dataset',
     });
-    expect(depthSpec.capabilityIntent.required).toContain('camera.output.linear_rgb');
+    expect(depthSpec.capabilityIntent.preferred).toContain('camera.output.linear_rgb');
+
+    const authoredCamera = {
+      ...firstEnabledDashCamera(second.roles[0]!.actor)!,
+      profileSource: 'authored' as const,
+    };
+    const authoredTemplate = parseTemplate({
+      ...second,
+      roles: second.roles.map((role, index) => index === 0
+        ? { ...role, actor: { ...role.actor, sensors: [authoredCamera] } }
+        : role),
+    });
+    const authoredSpec = buildCanonicalRenderSpec({
+      content: authoredTemplate,
+      selections: [{ actorId: authoredTemplate.roles[0]!.id, sensorId: authoredCamera.id, modalities: ['rgb'] }],
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    expect(authoredSpec.sources[0]?.attributes).toMatchObject({ profileSource: 'authored' });
+    expect(authoredSpec.capabilityIntent.required).toContain('camera.output.linear_rgb');
+    expect(authoredSpec.capabilityIntent.preferred).not.toContain('camera.output.linear_rgb');
   });
 
   it('requires rolling-shutter profiles to declare their readout span', () => {
     expect(() => CameraProfileSchema.parse({ acquisition: { shutter: 'rolling' } }))
       .toThrow(/readoutSpanS/);
+  });
+
+  it('classifies an explicit custom-rig profile as authored', () => {
+    expect(SensorRigCameraTemplateSchema.parse({
+      id: 'rig-camera',
+      type: 'dash_camera',
+      mount: {
+        position: { x: 1, y: 1, z: 0 },
+        rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
+      },
+      profile: CameraProfileSchema.parse({}),
+    })).toMatchObject({ profileSource: 'authored' });
   });
 
   it('builds active sensors against the authored dimensions of a non-reference vehicle', () => {

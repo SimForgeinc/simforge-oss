@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-import { RenderSha256Schema } from '@simforge-oss/scenario';
+import { CameraProfileSourceSchema, RenderSha256Schema } from '@simforge-oss/scenario';
 
 export const ARTIFACT_MANIFEST_V1_SCHEMA = 'simforge.render-artifact-manifest/v1' as const;
+export const CAMERA_PROFILE_NOT_DECLARED_STATUS = 'camera-profile: not-declared-by-engine (approximated)' as const;
 
 export const ArtifactRoleSchema = z.enum([
   'video',
@@ -54,6 +55,21 @@ export const ArtifactManifestEntrySchema = z.strictObject({
   frameCount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
 });
 
+export const CameraProfileEffectiveConfigurationSchema = z.strictObject({
+  cameraProfiles: z.array(z.strictObject({
+    actorId: z.string().min(1).max(128),
+    sensorId: z.string().min(1).max(128),
+    outputName: z.string().min(1).max(128),
+    profileSource: CameraProfileSourceSchema,
+    status: z.literal(CAMERA_PROFILE_NOT_DECLARED_STATUS),
+  })).max(64),
+});
+
+export const RenderManifestWarningSchema = z.strictObject({
+  code: z.string().min(1).max(128),
+  message: z.string().min(1).max(4096),
+});
+
 export const RenderArtifactManifestSchema = z.strictObject({
   schema: z.literal(ARTIFACT_MANIFEST_V1_SCHEMA),
   intentSha256: RenderSha256Schema,
@@ -65,10 +81,8 @@ export const RenderArtifactManifestSchema = z.strictObject({
   startedAt: z.iso.datetime({ offset: true }),
   completedAt: z.iso.datetime({ offset: true }),
   artifacts: z.array(ArtifactManifestEntrySchema).max(4096),
-  warnings: z.array(z.strictObject({
-    code: z.string().min(1).max(128),
-    message: z.string().min(1).max(4096),
-  })).max(1024),
+  effectiveConfiguration: CameraProfileEffectiveConfigurationSchema.optional(),
+  warnings: z.array(RenderManifestWarningSchema).max(1024),
 }).check((ctx) => {
   const identities = new Set<string>();
   ctx.value.artifacts.forEach((artifact, index) => {
@@ -84,6 +98,8 @@ export type ArtifactRole = z.infer<typeof ArtifactRoleSchema>;
 export type ArtifactModality = z.infer<typeof ArtifactModalitySchema>;
 export type ArtifactIdentity = z.infer<typeof ArtifactIdentitySchema>;
 export type ArtifactManifestEntry = z.infer<typeof ArtifactManifestEntrySchema>;
+export type CameraProfileEffectiveConfiguration = z.infer<typeof CameraProfileEffectiveConfigurationSchema>;
+export type RenderManifestWarning = z.infer<typeof RenderManifestWarningSchema>;
 export type RenderArtifactManifest = z.infer<typeof RenderArtifactManifestSchema>;
 
 export function artifactIdentityKey(identity: ArtifactIdentity): string {

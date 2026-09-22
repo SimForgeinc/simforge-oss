@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { RenderIntentV1Schema } from '@simforge-oss/scenario';
 
 import { RenderArtifactManifestSchema, type RenderArtifactManifest } from './artifacts.js';
-import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration } from './capabilities.js';
+import { ENGINE_CAPABILITIES_V1_SCHEMA, assertEngineSupportsIntent, type EngineCapabilityDeclaration } from './capabilities.js';
 import { loadRenderEngine, type RenderEngineAdapter, type RenderExecutionContext } from './engine.js';
 import { parseProgressJsonl } from './progress.js';
 
@@ -69,11 +69,13 @@ class CarlaProcessEngine implements RenderEngineAdapter {
 
   async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
     await mkdir(context.workspace, { recursive: true });
+    const intent = RenderIntentV1Schema.parse(context.intent);
+    const support = assertEngineSupportsIntent(this.capabilities, intent);
     const intentPath = join(context.workspace, 'render-intent.json');
     const packagePath = join(context.workspace, 'input-package.json');
     const progressPath = join(context.workspace, 'carla-progress.jsonl');
     const manifestPath = join(context.workspace, 'render-artifact-manifest.json');
-    await writeFile(intentPath, `${JSON.stringify(RenderIntentV1Schema.parse(context.intent))}\n`, { mode: 0o644 });
+    await writeFile(intentPath, `${JSON.stringify(intent)}\n`, { mode: 0o644 });
     await writeFile(packagePath, `${JSON.stringify({
       intentSha256: context.intentSha256,
       executionPackageControlSha256: context.executionPackageControlSha256,
@@ -140,7 +142,12 @@ class CarlaProcessEngine implements RenderEngineAdapter {
     if (result.code !== 0) {
       throw new Error(`CARLA renderer exited code=${String(result.code)} signal=${String(result.signal)} stdout=${stdout} stderr=${stderr}`);
     }
-    return RenderArtifactManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
+    const manifest = RenderArtifactManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
+    return RenderArtifactManifestSchema.parse({
+      ...manifest,
+      ...support,
+      warnings: [...manifest.warnings, ...support.warnings],
+    });
   }
 }
 

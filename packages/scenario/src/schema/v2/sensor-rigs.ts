@@ -6,12 +6,14 @@ import { EntityIdSchema } from '../v1.js';
 
 import {
   ActorSensorSchema,
+  DashCameraSensorObjectSchema,
   DashCameraSensorSchema,
   LidarSensorSchema,
   RadarSensorSchema,
   SensorMountSchema,
   SensorRigMountSchema,
   newSensorId,
+  withCameraProfileSource,
   type ActorSensor,
   type DashCameraSensor,
   type LidarSensor,
@@ -23,9 +25,13 @@ import {
 } from './sensors.js';
 import { DEFAULT_ACTOR_DIMS, type ActorSpec } from './roles.js';
 
-export const SensorRigCameraTemplateSchema = DashCameraSensorSchema
+const SensorRigCameraTemplateObjectSchema = DashCameraSensorObjectSchema
   .omit({ mount: true })
   .extend({ mount: SensorRigMountSchema });
+export const SensorRigCameraTemplateSchema = z.preprocess(
+  (value) => withCameraProfileSource(value, 'profile'),
+  SensorRigCameraTemplateObjectSchema,
+);
 export const SensorRigLidarTemplateSchema = LidarSensorSchema
   .omit({ mount: true })
   .extend({ mount: SensorRigMountSchema });
@@ -33,7 +39,7 @@ export const SensorRigRadarTemplateSchema = RadarSensorSchema
   .omit({ mount: true })
   .extend({ mount: SensorRigMountSchema });
 
-export const SensorRigSensorTemplateSchema = z.discriminatedUnion('type', [
+export const SensorRigSensorTemplateSchema = z.union([
   SensorRigCameraTemplateSchema,
   SensorRigLidarTemplateSchema,
   SensorRigRadarTemplateSchema,

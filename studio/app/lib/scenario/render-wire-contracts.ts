@@ -254,6 +254,19 @@ const CompletionManifestSchema = z.strictObject({
     sizeBytes: z.number().int().nonnegative(),
     mediaType: z.string().trim().min(1).max(200),
   })).min(1).max(4096),
+  effectiveConfiguration: z.strictObject({
+    cameraProfiles: z.array(z.strictObject({
+      actorId: PublicIdSchema,
+      sensorId: PublicIdSchema,
+      outputName: PublicIdSchema,
+      profileSource: z.enum(["default", "authored"]),
+      status: z.literal("camera-profile: not-declared-by-engine (approximated)"),
+    })).max(64),
+  }).optional(),
+  warnings: z.array(z.strictObject({
+    code: z.string().min(1).max(128),
+    message: z.string().min(1).max(4096),
+  })).max(1024).default([]),
 });
 
 export const CompleteRenderJobV2Schema = z.strictObject({

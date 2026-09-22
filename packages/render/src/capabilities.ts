@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { cameraProfileCapabilities, type RenderIntentV1 } from '@simforge-oss/scenario';
 
+import { CAMERA_PROFILE_NOT_DECLARED_STATUS, type RenderArtifactManifest } from './artifacts.js';
+
 export const ENGINE_CAPABILITIES_V1_SCHEMA = 'simforge.render-engine-capabilities/v1' as const;
 
 export const EngineCapabilitySchema = z.enum([
@@ -85,10 +87,12 @@ export class UnsupportedRenderIntentError extends Error {
   }
 }
 
+export type EngineSupportResolution = Pick<RenderArtifactManifest, 'effectiveConfiguration' | 'warnings'>;
+
 export function assertEngineSupportsIntent(
   declaration: EngineCapabilityDeclaration,
   intent: RenderIntentV1,
-): void {
+): EngineSupportResolution {
   const reasons: string[] = [];
   const spec = intent.renderSpec;
   if (spec.sources.length > declaration.limits.maxSimultaneousSensors) {
@@ -113,6 +117,7 @@ export function assertEngineSupportsIntent(
   }
   for (const source of spec.sources) {
     if (source.modality === 'lidar' || source.modality === 'radar') continue;
+    if (source.attributes.profileSource !== 'authored') continue;
     for (const required of cameraProfileCapabilities(source.attributes.cameraProfile)) {
       if (!required.startsWith('camera.projection.') && !capabilities.has(required)) {
         reasons.push(`missing capability ${required}`);
@@ -124,4 +129,23 @@ export function assertEngineSupportsIntent(
     if (!capabilities.has(capability)) reasons.push(`missing capability ${capability}`);
   }
   if (reasons.length > 0) throw new UnsupportedRenderIntentError([...new Set(reasons)]);
+  const cameraProfiles = declaration.capabilities.some((capability) => capability.startsWith('camera.'))
+    ? []
+    : spec.sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'default'
+        ? [{
+            actorId: source.actorId,
+            sensorId: source.sensorId,
+            outputName: source.outputName,
+            profileSource: source.attributes.profileSource,
+            status: CAMERA_PROFILE_NOT_DECLARED_STATUS,
+          }]
+        : []);
+  return {
+    ...(cameraProfiles.length > 0 ? { effectiveConfiguration: { cameraProfiles } } : {}),
+    warnings: cameraProfiles.map((profile) => ({
+      code: 'camera_profile_not_declared_by_engine',
+      message: `${profile.status}: ${profile.actorId}/${profile.sensorId}`,
+    })),
+  };
 }

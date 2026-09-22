@@ -26,6 +26,7 @@ function camera(sensorId: string, fps: number): RenderSourceV3 {
     attributes: {
       width: 320, height: 180, fps, horizontalFovDeg: 90, nearM: 0.1, farM: 1_000,
       cameraProfile: CameraProfileSchema.parse({}),
+      profileSource: 'default',
     },
   };
 }

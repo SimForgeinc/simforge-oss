@@ -249,7 +249,11 @@ async function executeClaim(
       leaseId: job.lease.leaseId,
       fenceToken: job.lease.fenceToken,
       intentSha256: job.intentSha256,
-      manifest: { artifacts: completed },
+      manifest: {
+        artifacts: completed,
+        ...(manifest.effectiveConfiguration ? { effectiveConfiguration: manifest.effectiveConfiguration } : {}),
+        warnings: manifest.warnings,
+      },
     }, state.controller.signal));
   } catch (error) {
     state.heartbeatController.abort(new Error('render failed; stop heartbeats before fenced failure'));

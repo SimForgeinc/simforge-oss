@@ -16,6 +16,7 @@ const source: RenderSourceV3 = {
   attributes: {
     width: 1280, height: 720, fps: 24, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
     cameraProfile: CameraProfileSchema.parse({}),
+    profileSource: 'default',
   },
 };
 const host: RenderSensorSourceHost = {

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { gunzip } from 'node:zlib';
 import { promisify } from 'node:util';
 import { chromium, type Page } from 'playwright-core';
-import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration, type RenderArtifactManifest, type RenderEngineAdapter, type RenderExecutionContext } from '../index.js';
+import { ENGINE_CAPABILITIES_V1_SCHEMA, assertEngineSupportsIntent, type EngineCapabilityDeclaration, type RenderArtifactManifest, type RenderEngineAdapter, type RenderExecutionContext } from '../index.js';
 import { RENDER_INTENT_V1_SCHEMA, fixedStepFrameCount, parseRenderIntent } from '@simforge-oss/scenario';
 import { parsePlaybackPair, type PlaybackBundle } from '@simforge-oss/playback';
 import { BROWSER_RENDER_ENGINE_ID, type BrowserCaptureResult } from './capture.js';
@@ -128,11 +128,13 @@ export function createRenderEngine(options: BrowserRenderEngineOptions = {}): Re
     capabilities,
     async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
       const startedAt = new Date().toISOString();
+      const portableIntent = parseRenderIntent(context.intent);
+      const support = assertEngineSupportsIntent(capabilities, portableIntent);
       const harnessUrl = options.harnessUrl
         ?? process.env.SIMFORGE_BROWSER_HARNESS_URL
         ?? await resolveBrowserHarnessUrl();
       await fs.mkdir(context.workspace, { recursive: true });
-      const intent = resolveBrowserRenderIntent(context.intent);
+      const intent = resolveBrowserRenderIntent(portableIntent);
       const scenarioInput = context.inputs.get('scenario.xosc');
       if (!scenarioInput) throw new Error('Browser render requires mandatory input scenario.xosc.');
       for (const asset of intent.assets) {
@@ -239,10 +241,14 @@ export function createRenderEngine(options: BrowserRenderEngineOptions = {}): Re
             startedAt,
             completedAt: new Date().toISOString(),
             artifacts,
-            warnings: result.omittedArtifacts.map((omitted) => ({
-              code: omitted.role === 'sensor-video' ? 'sensor_video_omitted' : 'sensor_archive_omitted',
-              message: `${omitted.role} omitted (${omitted.reason}): ${omitted.actorId}/${omitted.sensorId}/${omitted.modality}`,
-            })),
+            ...support,
+            warnings: [
+              ...result.omittedArtifacts.map((omitted) => ({
+                code: omitted.role === 'sensor-video' ? 'sensor_video_omitted' : 'sensor_archive_omitted',
+                message: `${omitted.role} omitted (${omitted.reason}): ${omitted.actorId}/${omitted.sensorId}/${omitted.modality}`,
+              })),
+              ...support.warnings,
+            ],
           } as RenderArtifactManifest;
         } finally {
           context.signal.removeEventListener('abort', abort);

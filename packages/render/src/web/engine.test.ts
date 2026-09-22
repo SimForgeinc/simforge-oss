@@ -1,7 +1,9 @@
 import { chromium } from 'playwright-core';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { EngineCapabilityDeclarationSchema } from '../index.js';
+import { EngineCapabilityDeclarationSchema, type RenderExecutionContext } from '../index.js';
+import { assertEngineSupportsIntent } from '../capabilities.js';
+import { cameraIntent } from '../camera-test-fixture.js';
 import { bootBrowserHarness, browserChromiumArgs, createRenderEngine, decodePlaybackArchive, installArtifactBridgeInitScript, normalizeSavedPlaybackTrace, resolveBrowserHarnessUrl, resolveBrowserRenderIntent } from './engine.js';
 
 describe('browser render engine registration', () => {
@@ -16,6 +18,19 @@ describe('browser render engine registration', () => {
       protocolVersion: 1,
       modalities: ['rgb', 'depth', 'semantic', 'instance', 'lidar', 'radar'],
       requiresGpu: false,
+    });
+  });
+
+  it('keeps schema-default camera profiles runnable', () => {
+    const engine = createRenderEngine({ engineVersion: 'test-build' });
+    expect(() => assertEngineSupportsIntent(engine.capabilities, cameraIntent())).not.toThrow();
+  });
+
+  it('rejects an authored profile before resolving the browser harness', async () => {
+    const engine = createRenderEngine({ harnessUrl: 'file:///definitely-missing-harness.html' });
+    await expect(engine.execute({ intent: cameraIntent('authored') } as RenderExecutionContext)).rejects.toMatchObject({
+      code: 'unsupported_render_intent',
+      reasons: expect.arrayContaining(['missing capability camera.output.linear_rgb']),
     });
   });
 });

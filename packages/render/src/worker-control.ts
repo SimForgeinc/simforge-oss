@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 import { RenderIntentV1Schema, RenderSha256Schema } from '@simforge-oss/scenario';
 
-import { ArtifactIdentitySchema } from './artifacts.js';
+import {
+  ArtifactIdentitySchema,
+  CameraProfileEffectiveConfigurationSchema,
+  RenderManifestWarningSchema,
+} from './artifacts.js';
 import { EngineCapabilityDeclarationSchema } from './capabilities.js';
 import { RenderProgressRecordSchema } from './progress.js';
 
@@ -130,6 +134,8 @@ export const JobCompleteRequestSchema = z.strictObject({
   intentSha256: RenderSha256Schema,
   manifest: z.strictObject({
     artifacts: z.array(CompletedArtifactSchema).min(1).max(4096),
+    effectiveConfiguration: CameraProfileEffectiveConfigurationSchema.optional(),
+    warnings: z.array(RenderManifestWarningSchema).max(1024).default([]),
   }),
 });
 export const JobFailureSchema = z.strictObject({

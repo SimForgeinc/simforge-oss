@@ -63,6 +63,7 @@ export const DashCameraIntrinsicsSchema = z.strictObject({
 });
 
 export const CAMERA_PROFILE_V1_SCHEMA = 'simforge.camera-profile/v1' as const;
+export const CameraProfileSourceSchema = z.enum(['default', 'authored']);
 
 export const CameraProfileSchema = z.strictObject({
   schemaVersion: z.literal(CAMERA_PROFILE_V1_SCHEMA).default(CAMERA_PROFILE_V1_SCHEMA),
@@ -95,6 +96,13 @@ export const CameraProfileSchema = z.strictObject({
 });
 
 export const GENERIC_CAMERA_PROFILE = Object.freeze(CameraProfileSchema.parse({}));
+
+export function withCameraProfileSource(value: unknown, profileKey: string): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  if (record.profileSource !== undefined) return value;
+  return { ...record, profileSource: Object.hasOwn(record, profileKey) ? 'authored' : 'default' };
+}
 
 export function cameraProfileCapabilities(profile: CameraProfile): string[] {
   return [
@@ -151,7 +159,7 @@ export const DetectionModelSchema = z.strictObject({
 });
 
 /** A passive imager: fog, rain, darkness and a bright source in frame all hurt it. */
-export const DashCameraSensorSchema = z.strictObject({
+export const DashCameraSensorObjectSchema = z.strictObject({
   id: EntityIdSchema,
   type: z.literal('dash_camera'),
   label: z.string().min(1).max(200).optional(),
@@ -159,8 +167,13 @@ export const DashCameraSensorSchema = z.strictObject({
   mount: SensorMountSchema,
   camera: DashCameraIntrinsicsSchema.prefault({}),
   profile: CameraProfileSchema.prefault({}),
+  profileSource: CameraProfileSourceSchema.default('default'),
   detection: DetectionModelSchema.prefault({}),
 });
+export const DashCameraSensorSchema = z.preprocess(
+  (value) => withCameraProfileSource(value, 'profile'),
+  DashCameraSensorObjectSchema,
+);
 
 /** Angular/range envelope for the active modalities. */
 export const ActiveSensorFieldSchema = z.strictObject({
@@ -206,7 +219,7 @@ export const RadarSensorSchema = z.strictObject({
   }),
 });
 
-export const ActorSensorSchema = z.discriminatedUnion('type', [
+export const ActorSensorSchema = z.union([
   DashCameraSensorSchema,
   LidarSensorSchema,
   RadarSensorSchema,
@@ -219,6 +232,7 @@ export type VehicleAnchorMount = z.infer<typeof VehicleAnchorMountSchema>;
 export type SensorRigMount = z.infer<typeof SensorRigMountSchema>;
 export type DashCameraIntrinsics = z.infer<typeof DashCameraIntrinsicsSchema>;
 export type CameraProfile = z.infer<typeof CameraProfileSchema>;
+export type CameraProfileSource = z.infer<typeof CameraProfileSourceSchema>;
 export type DashCameraSensor = z.infer<typeof DashCameraSensorSchema>;
 export type LidarSensor = z.infer<typeof LidarSensorSchema>;
 export type RadarSensor = z.infer<typeof RadarSensorSchema>;

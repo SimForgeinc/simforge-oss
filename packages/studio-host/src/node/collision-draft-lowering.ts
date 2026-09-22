@@ -974,6 +974,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
         nearM: sensor.camera.nearM,
         farM: sensor.camera.farM,
         cameraProfile: sensor.profile,
+        profileSource: sensor.profileSource,
       },
     };
   });
@@ -1002,13 +1003,19 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
     ...new Set([
       ...sources.map((source) => `sensor.${source.modality}`),
       ...sources.flatMap((source) =>
-        source.modality !== "lidar" && source.modality !== "radar"
+        source.modality !== "lidar" && source.modality !== "radar" && source.attributes.profileSource === "authored"
           ? cameraProfileCapabilities(source.attributes.cameraProfile)
           : []),
       ...artifacts.map((artifact) => (artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`)),
       "environment.authored",
       "timing.fixed_step",
     ]),
+  ];
+  const preferred = [
+    ...new Set(sources.flatMap((source) =>
+      source.modality !== "lidar" && source.modality !== "radar" && source.attributes.profileSource === "default"
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : [])),
   ];
   return parseRenderSpecV3({
     schema: RENDER_SPEC_V3_SCHEMA,
@@ -1018,7 +1025,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
     artifacts,
     capabilityIntent: {
       required,
-      preferred: [],
+      preferred,
       fidelity: captures.some((capture) => !capture.presentation) ? "dataset" : "review",
     },
     authoredEnvironment: template.environment,

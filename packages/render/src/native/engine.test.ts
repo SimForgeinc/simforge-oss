@@ -31,7 +31,7 @@ const intent: RenderIntentV1 = {
     sources: [{
       actorId: 'ego', sensorId: 'camera', outputName: 'camera-rgb', modality: 'rgb',
       transform: { position: { x: 0, y: 1, z: 0 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
-      attributes: { width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 100, cameraProfile: profile },
+      attributes: { width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 100, cameraProfile: profile, profileSource: 'default' },
     }],
     clip: { startSeconds: 0, endSeconds: 1 },
     artifacts: ['manifest'],
@@ -57,7 +57,7 @@ function withProfile(cameraProfile: typeof profile): RenderIntentV1 {
   if (source.modality !== 'rgb') throw new Error('test source must be RGB');
   return {
     ...intent,
-    renderSpec: { ...intent.renderSpec, sources: [{ ...source, attributes: { ...source.attributes, cameraProfile } }] },
+    renderSpec: { ...intent.renderSpec, sources: [{ ...source, attributes: { ...source.attributes, cameraProfile, profileSource: 'authored' } }] },
   };
 }
 
@@ -77,6 +77,7 @@ describe('native retained engine adapter', () => {
       'sensor.depth', 'sensor.semantic', 'sensor.instance',
     ]));
     expect(engine.capabilities.approximations).toContainEqual(FULL_MOUNT_ROTATION_APPROXIMATION);
+    expect(assertEngineSupportsIntent(engine.capabilities, intent)).toEqual({ warnings: [] });
   });
 
   it('resolves the retained service binary from explicit options', () => {
