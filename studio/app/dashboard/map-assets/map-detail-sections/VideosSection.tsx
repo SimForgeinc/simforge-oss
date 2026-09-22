@@ -4,7 +4,7 @@ import { styles } from "./VideosSection.stylex";
 
 import { ChevronRight, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
-import { focus, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { focus, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** A fly-by `mp4` artifact, optionally paired with its low-res preview clip. */
 type FlybyArtifact = {
@@ -42,7 +42,7 @@ export function VideosSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        {...stylex.props([motionRecipe.colors, styles.videosToggleButton])}
+        {...stylex.props([motionRecipe.colors, [typography.caps, styles.videosToggleButton]])}
         aria-expanded={open}
       >
         <ChevronRight

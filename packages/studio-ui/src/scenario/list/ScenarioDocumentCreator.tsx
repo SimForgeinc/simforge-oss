@@ -24,7 +24,7 @@ import {
   DEFAULT_SCENARIO_TAG_COLOR,
   DEFAULT_SCENARIO_TAG_COLORS,
 } from "./scenarioListCache";
-import { focus, textLayout } from "../../stylex/recipes.stylex";
+import { focus, hairline, textLayout, typography } from "../../stylex/recipes.stylex";
 
 type SharedRowHandlers = Pick<
   React.ComponentProps<typeof ScenarioDocumentRow>,
@@ -369,7 +369,7 @@ function MapDocumentGroup({
             <div {...stylex.props([textLayout.truncate, styles.divTruncateSmSemibold])}>
               {group.displayLabel}
             </div>
-            <div {...stylex.props(styles.divMetaMicroUppercase)}>
+            <div {...stylex.props([typography.eyebrow, styles.divMetaMicroUppercase])}>
               {group.documents.length} {group.documents.length === 1 ? "scenario" : "scenarios"}
             </div>
           </div>
@@ -453,16 +453,15 @@ function ScenarioTagTools({
       <div {...stylex.props(styles.div7)}>
         <section {...stylex.props(styles.sectionRelative)}>
           <div {...stylex.props(styles.divFlex2)}>
-            <div {...stylex.props(styles.divFlexMetaMicro)}>
+            <div {...stylex.props([typography.eyebrow, styles.divFlexMetaMicro])}>
               <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
               {tagEditorMode ? "Add Tags" : "Filter"}
             </div>
             {tagEditorMode ? (
               <Button
                 type="button"
-                size="icon"
-                variant="outline"
-                xstyle={list.tagAdd}
+                size="iconXs"
+                variant="accentOutline"
                 aria-label="Add scenario tag"
                 aria-expanded={createOpen}
                 onClick={() => setCreateOpen((open) => !open)}
@@ -482,7 +481,7 @@ function ScenarioTagTools({
               }}
             >
               <div {...stylex.props(styles.divFlex3)}>
-                <Input
+                <Input size="sm" variant="plate"
                   autoFocus
                   type="text"
                   aria-label="New tag name"
@@ -494,7 +493,7 @@ function ScenarioTagTools({
                 <Button
                   type="submit"
                   size="sm"
-                  variant="outline"
+                  variant="accentOutline"
                   xstyle={list.tagSubmit}
                 >
                   Add
@@ -510,7 +509,7 @@ function ScenarioTagTools({
         </section>
 
         <section {...stylex.props(styles.section)}>
-          <div {...stylex.props(styles.divMetaMicroUppercase2)}>
+          <div {...stylex.props([typography.eyebrow, styles.divMetaMicroUppercase2])}>
             {tagEditorMode ? "Drag tags" : "Sort by tags"}
           </div>
           <p {...stylex.props(styles.pMeta)}>
@@ -618,7 +617,7 @@ function ScenarioTagTools({
                           <MoreHorizontal {...stylex.props(styles.morehorizontalIcon)} aria-hidden="true" />
                         </button>
                         {openTagMenuId === tag.id ? (
-                          <div {...stylex.props(styles.divAbsolute)}>
+                          <div {...stylex.props([hairline.all, styles.divAbsolute])}>
                             <ScenarioTagColorPicker
                               selectedColor={color}
                               onSelectColor={(nextColor) => onSetTagColor(tag.id, nextColor)}
@@ -657,7 +656,7 @@ function ScenarioTagTools({
             )}
           </div>
           {selectedTagFilter ? (
-            <div {...stylex.props(styles.showing)}>
+            <div {...stylex.props([typography.eyebrow, styles.showing])}>
               Showing {visibleDocumentCount} of {documentCount}
             </div>
           ) : null}

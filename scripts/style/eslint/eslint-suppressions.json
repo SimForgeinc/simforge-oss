@@ -101,20 +101,10 @@
   },
   "studio/app/components/map-assets-map/map-canvas.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "studio/app/components/setup-preparation.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
+      "count": 2
     }
   },
   "studio/app/dashboard/assets/AssetGalleryPageClient.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/assets/asset-dialogs.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }

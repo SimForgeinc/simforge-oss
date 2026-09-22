@@ -12,6 +12,7 @@ import type {
   AiProviderSettingsStatus,
   UpdateAiProviderSettings,
 } from "@/app/lib/ai-providers/contracts";
+import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * AI provider keys, as a Settings pane rather than a page of its own: 3D
@@ -95,8 +96,8 @@ export function AiProviderSettings() {
   const meshy = status?.assetGeneration.meshy ?? null;
 
   return (
-    <section {...stylex.props(plate.root)} data-testid="settings-ai-providers">
-      <p {...stylex.props(plate.eyebrow)}>Authoring</p>
+    <section {...stylex.props([hairline.all, plate.root])} data-testid="settings-ai-providers">
+      <p {...stylex.props([typography.eyebrow, plate.eyebrow])}>Authoring</p>
       <h2 {...stylex.props(plate.title)}>AI providers</h2>
       <p {...stylex.props(plate.copy)}>
         3D asset generation calls an external AI service. Bring your own key; nothing is set by default.
@@ -123,7 +124,7 @@ export function AiProviderSettings() {
           <form {...stylex.props(form.root)} onSubmit={(event) => void submit(event)}>
             <div {...stylex.props(form.field)}>
               <label htmlFor={inputId} {...stylex.props(form.label)}>Meshy API key</label>
-              <Input
+              <Input variant="plate"
                 id={inputId}
                 xstyle={form.input}
                 type="password"
@@ -136,12 +137,12 @@ export function AiProviderSettings() {
               />
             </div>
             <div {...stylex.props(form.row)}>
-              <Button xstyle={plate.button} variant="outline" type="submit" disabled={busy || draft.trim().length < 8}>
+              <Button xstyle={[focus.ring, plate.button]} variant="outline" type="submit" disabled={busy || draft.trim().length < 8}>
                 <KeyRound {...stylex.props(plate.icon)} aria-hidden="true" />
                 Save
               </Button>
               {meshy.configured && meshy.source !== "environment" ? (
-                <Button xstyle={plate.button} variant="outline" type="button" disabled={busy} onClick={() => void patch({ meshyApiKey: null })}>
+                <Button xstyle={[focus.ring, plate.button]} variant="outline" type="button" disabled={busy} onClick={() => void patch({ meshyApiKey: null })}>
                   <Trash2 {...stylex.props(plate.icon)} aria-hidden="true" />
                   Remove
                 </Button>

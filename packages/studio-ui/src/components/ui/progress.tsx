@@ -76,7 +76,7 @@ const sizes = stylex.create({
 
 const tones = stylex.create({
   neutral: { color: colors.mutedForeground },
-  muted: { color: colors.textSubtle },
+  muted: { color: colors.inkMuted },
   accent: { color: colors.accent },
   positive: { color: colors.signalGreen },
   warning: { color: colors.signalYellow },

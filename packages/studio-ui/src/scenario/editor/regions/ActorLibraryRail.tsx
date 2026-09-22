@@ -63,6 +63,7 @@ import { usePanelEdgeResize } from "../usePanelEdgeResize";
 import * as stylex from "@stylexjs/stylex";
 import { styles as sx } from "./ActorLibraryRail.stylex";
 import { styles as catalogStyles } from "./catalog-surfaces.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 /** Everything the parked-cars tool needs, supplied by the editor surface. */
 export interface ParkedCarsRailState {
@@ -642,7 +643,7 @@ export function ActorLibraryRail({
           {/* The rail is welded to the panel's left edge, so the right edge is the free one. */}
           <div
             {...catalogSeparatorProps}
-            {...stylex.props(sx.panelResize)}
+            {...stylex.props([focus.ring, sx.panelResize])}
             data-testid="catalog-resize-handle"
             style={styles.panelResizeHandle}
           />

@@ -14,7 +14,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { textLayout } from "../../stylex/recipes.stylex";
+import { focus, textLayout } from "../../stylex/recipes.stylex";
 
 export type SelectMenuOption = { value: string; label?: string; disabled?: boolean };
 export type SelectMenuProps = {
@@ -54,7 +54,7 @@ export function SelectMenu({
         <button
           type="button" id={id} aria-label={labelledBy ? undefined : label}
           aria-labelledby={labelledBy} disabled={disabled}
-          {...mergeStyleProps(stylex.props(styles.trigger, motionStyles.editorMotion, xstyle), className)}
+          {...mergeStyleProps(stylex.props([focus.ring, styles.trigger], motionStyles.editorMotion, xstyle), className)}
         >
           <span {...stylex.props([textLayout.truncate, styles.value])}>{display ?? selected?.label ?? selected?.value ?? placeholder}</span>
           <ChevronDown aria-hidden="true" {...stylex.props(styles.icon)} />

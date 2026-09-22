@@ -40,10 +40,6 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // flex items-baseline justify-between gap-3 border-b render-hairline py-1.5 last:border-b-0
@@ -58,14 +54,10 @@ export const styles = stylex.create({
     },
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // min-w-0 truncate text-xs font-semibold text-foreground
@@ -97,7 +89,7 @@ export const styles = stylex.create({
     paddingRight: space.s6,
     paddingTop: space.s3,
     paddingBottom: space.s3,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/15 to-transparent
   abs: {
@@ -128,7 +120,7 @@ export const styles = stylex.create({
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-4
   size4: {
@@ -137,13 +129,7 @@ export const styles = stylex.create({
   },
   // font-mono text-micro font-bold uppercase tracking-meta text-primary/90
   capsMonoMicro: {
-    fontFamily: text.fontMono,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "hsl(var(--primary) / 0.9)",
+    color: colors.accent,
   },
   // text-base font-extrabold leading-tight tracking-tight text-foreground
   inkBaseExtrabold: {
@@ -166,7 +152,7 @@ export const styles = stylex.create({
   xsMutedBordered: {
     marginTop: space.s5,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -179,8 +165,8 @@ export const styles = stylex.create({
   xsMutedBordered2: {
     marginTop: space.s5,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.3)",
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -200,7 +186,7 @@ export const styles = stylex.create({
     lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-3 grid gap-1.5 text-xs sm:grid-cols-2
   gridXsGap15: {
@@ -226,7 +212,7 @@ export const styles = stylex.create({
     paddingTop: space.s2,
     paddingBottom: space.s2,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // font-semibold text-foreground
   inkSemibold: {
@@ -295,10 +281,6 @@ export const styles = stylex.create({
   // block truncate text-micro uppercase tracking-meta text-muted-foreground
   blockCapsMicro: {
     display: "block",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // mt-2 flex flex-wrap gap-1 pl-6
@@ -320,7 +302,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-4
   mt4: {
@@ -378,7 +360,7 @@ export const styles = stylex.create({
     paddingBottom: space.s1_5,
     color: colors.text,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // render-glass border px-2 py-1.5 capitalize text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   capsInkBordered: {
@@ -390,7 +372,7 @@ export const styles = stylex.create({
     textTransform: "capitalize",
     color: colors.text,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // capitalize
   caps: {
@@ -403,8 +385,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.3)",
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -415,7 +397,7 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: "0",
-    color: "hsl(var(--primary) / 0.8)",
+    color: colors.accent,
   },
   // text-xs text-foreground
   xsInk: {
@@ -426,11 +408,6 @@ export const styles = stylex.create({
   // ml-2 text-micro font-normal uppercase tracking-meta text-muted-foreground
   capsMicroMuted2: {
     marginLeft: space.s2,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightNormal,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // render-glass border px-3 py-1.5
@@ -441,14 +418,14 @@ export const styles = stylex.create({
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-3 border border-amber-500/45 bg-amber-500/10 px-3 py-2.5
   bordered2: {
     marginTop: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(245 158 11 / 0.45)",
-    backgroundColor: "rgb(245 158 11 / 0.1)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2_5,
@@ -466,14 +443,6 @@ export const styles = stylex.create({
     width: "1rem",
     height: "1rem",
     flexShrink: "0",
-  },
-  // text-micro font-bold uppercase tracking-meta
-  capsMicroBold: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
   /*
    * `space-y-*` is a `> * + *` rule with no StyleX form — StyleX styles only
@@ -537,7 +506,7 @@ export const styles = stylex.create({
   xsMutedBordered5: {
     marginTop: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -552,7 +521,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     padding: space.s3,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-2 text-xs font-medium
   flexCenterXs: {
@@ -601,14 +570,9 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // motionStyles.editorMotion + inline-flex h-9 shrink-0 items-center justify-center gap-2 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90
   inlineFlexCenterMid2: {
@@ -620,22 +584,17 @@ export const styles = stylex.create({
     gap: space.s2,
     backgroundColor: {
       default: colors.primary,
-      ":hover": "hsl(var(--primary) / 0.9)",
+      ":hover": colors.accent,
     },
     paddingLeft: space.s5,
     paddingRight: space.s5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
   },
   // motionStyles.editorMotion + border px-3 py-2 border-primary bg-primary/10
   bordered3: {
     borderWidth: stroke.hairline,
     borderColor: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.1)",
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -649,7 +608,7 @@ export const styles = stylex.create({
     paddingTop: space.s2,
     paddingBottom: space.s2,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // border px-1.5 py-0.5 text-micro uppercase tracking-meta border-primary bg-primary text-primary-foreground
   capsMicroBordered: {
@@ -660,10 +619,6 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
   },
   // border px-1.5 py-0.5 text-micro uppercase tracking-meta render-glass text-muted-foreground
@@ -673,13 +628,9 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // motionStyles.editorMotion + border px-2.5 py-1 text-micro uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-primary bg-primary text-primary-foreground
   capsMicroBordered2: {
@@ -690,10 +641,6 @@ export const styles = stylex.create({
     paddingRight: space.s2_5,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
   },
   // motionStyles.editorMotion + border px-2.5 py-1 text-micro uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass text-muted-foreground hover:text-foreground
@@ -703,15 +650,11 @@ export const styles = stylex.create({
     paddingRight: space.s2_5,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
 });

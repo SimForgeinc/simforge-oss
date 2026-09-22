@@ -64,12 +64,12 @@ export const card = stylex.create({
     overflow: "hidden",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: colors.border, ":hover": "hsl(var(--border) / 0.8)" },
+    borderColor: { default: colors.hairline, ":hover": colors.hairline },
     backgroundColor: colors.card,
     textAlign: "left",
     transform: { default: "none", ":hover": "translateY(-0.125rem)" },
     transitionProperty: "transform, border-color, box-shadow",
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
     transitionTimingFunction: motion.easeStandard,
     /**
      * Hover and focus can be true at once, and Tailwind would render both
@@ -116,7 +116,7 @@ export const card = stylex.create({
     objectFit: "contain",
     transform: `var(${CARD_ZOOM})`,
     transitionProperty: "transform",
-    transitionDuration: "300ms",
+    transitionDuration: motion.durSlow,
     transitionTimingFunction: motion.easeStandard,
   },
   // absolute left-2 top-2
@@ -135,11 +135,11 @@ export const card = stylex.create({
     gap: space.s1,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.25)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: "hsl(var(--background) / 0.8)",
     paddingInline: space.s1_5,
     paddingBlock: 0,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: "inherit",
     color: colors.primary,
   },
@@ -178,7 +178,7 @@ export const card = stylex.create({
     color: colors.primary,
     opacity: `var(${CARD_REVEAL})`,
     transitionProperty: "opacity",
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
     transitionTimingFunction: motion.easeStandard,
   },
 
@@ -213,17 +213,10 @@ export const card = stylex.create({
    */
   title: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSnug,
     fontWeight: text.weightSemibold,
     color: `var(${CARD_TITLE_INK})`,
-    transitionProperty:
-      "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
   },
   /**
    * shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px]
@@ -234,12 +227,9 @@ export const card = stylex.create({
    */
   classChip: {
     flexShrink: 0,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     textTransform: "capitalize",
     color: colors.mutedForeground,
   },
@@ -282,31 +272,16 @@ export const grid = stylex.create({
     padding: 0,
     listStyle: "none",
   },
-  /** `sr-only`: read but not seen, for the one live status the grid announces. */
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
-  },
 
   // overflow-hidden rounded-lg border border-border bg-card
   skeletonCard: {
     overflow: "hidden",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.card,
   },
   // The full thumbnail uses a quieter fill than the text placeholders.
   skeletonThumb: {
     aspectRatio: "1 / 1",
-    backgroundColor: "hsl(var(--muted) / 0.4)",
+    backgroundColor: colors.fillSubtle,
   },
 
   skeletonBody: {

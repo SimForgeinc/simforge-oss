@@ -45,7 +45,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderConfigPanel.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
 import { randomUuid } from "@simforge-oss/engine/uuid";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 type RenderBackend = ScenarioRendererEngine | "esmini";
 
 const ESMINI_VALIDATOR_VERSION = "3.6.0";
@@ -242,7 +242,7 @@ function StepHeading({ title, hint, aside }: { title: string; hint?: string; asi
         {hint ? <p {...stylex.props(styles.microMuted)}>{hint}</p> : null}
       </div>
       {aside ? (
-        <span {...stylex.props(styles.tightCapsMicro)}>{aside}</span>
+        <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>{aside}</span>
       ) : null}
     </div>
   );
@@ -251,7 +251,7 @@ function StepHeading({ title, hint, aside }: { title: string; hint?: string; asi
 function ReviewRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div {...stylex.props(styles.flexBetweenBaseline)}>
-      <dt {...stylex.props(styles.capsMicroMuted)}>{label}</dt>
+      <dt {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>{label}</dt>
       <dd {...stylex.props([textLayout.truncate, styles.xsInkSemibold])}>{value}</dd>
     </div>
   );
@@ -688,7 +688,7 @@ export function RenderConfigPanel({
             <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
           <div {...stylex.props(styles.narrowable)}>
-            <p {...stylex.props(styles.capsMonoMicro)}>New render</p>
+            <p {...stylex.props([typography.eyebrow, styles.capsMonoMicro])}>New render</p>
             <h2 {...stylex.props(styles.inkBaseExtrabold)}>
               {engineOption.label}
             </h2>
@@ -783,7 +783,7 @@ export function RenderConfigPanel({
             onBack={() => setStepIndex(0)}
             primary={
               <button
-                className={stylex.props(stage != null ? [focus.ring, styles.inlineFlexCenterMid] : [focus.ring, styles.inlineFlexCenterMid2], motionStyles.editorMotion).className}
+                className={stylex.props(stage != null ? [focus.ring, [typography.eyebrow, styles.inlineFlexCenterMid]] : [focus.ring, [typography.eyebrow, styles.inlineFlexCenterMid2]], motionStyles.editorMotion).className}
                 data-testid="esmini-run-button"
                 disabled={stage != null}
                 onClick={() => void submitEsminiRun()}
@@ -841,7 +841,7 @@ export function RenderConfigPanel({
                           <span {...stylex.props([textLayout.truncate, styles.blockXsInk])}>
                             {sensorLabel(option.sensor)}
                           </span>
-                          <span {...stylex.props([textLayout.truncate, styles.blockCapsMicro])}>
+                          <span {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.blockCapsMicro]])}>
                             {sensorDetail(option)}
                           </span>
                         </span>
@@ -852,7 +852,7 @@ export function RenderConfigPanel({
                           return (
                             <button
                               aria-pressed={enabled}
-                              {...stylex.props(enabled ? styles.capsMicroBordered : styles.capsMicroMuted3)}
+                              {...stylex.props(enabled ? [typography.eyebrow, styles.capsMicroBordered] : [typography.eyebrow, styles.capsMicroMuted3])}
                               disabled={stage != null || !selectedSensorKeys.includes(key)}
                               key={modality}
                               onClick={() => toggleSensorModality(key, modality)}
@@ -880,7 +880,7 @@ export function RenderConfigPanel({
                   return (
                     <button
                       aria-pressed={enabled}
-                      className={stylex.props(enabled ? [focus.ring, styles.capsMicroBordered2] : [focus.ring, styles.capsMicroMuted4], motionStyles.editorMotion).className}
+                      className={stylex.props(enabled ? [focus.ring, [typography.eyebrow, styles.capsMicroBordered2]] : [focus.ring, [typography.eyebrow, styles.capsMicroMuted4]], motionStyles.editorMotion).className}
                       key={kind.id}
                       onClick={() => toggleKind(kind.id)}
                       title={kind.hint}
@@ -941,14 +941,14 @@ export function RenderConfigPanel({
                 <section>
                   <StepHeading title="Texture profile" hint="Pinned into the job and its evidence. Capacity failures never lower texture quality." />
                   <label {...stylex.props(styles.flexColGap1)}>
-                    <span {...stylex.props(styles.capsMicroMuted)}>Native texture profile</span>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>Native texture profile</span>
                     <select {...stylex.props([focus.ring, styles.inkBordered])} disabled={stage != null} value={renderProfile} onChange={(event) => setRenderProfile(event.target.value as "render" | "ml")}>
                       <option value="render">Render — full authored UASTC textures</option>
                       <option value="ml">ML Training — bounded 512 px BC7 textures</option>
                     </select>
                   </label>
                   <label {...stylex.props(styles.flexColGap1)}>
-                    <span {...stylex.props(styles.capsMicroMuted)}>Native capacity override (GiB)</span>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>Native capacity override (GiB)</span>
                     <input {...stylex.props([focus.ring, styles.inkBordered])} type="number" min="0.1" step="0.1" placeholder="Auto" disabled={stage != null} value={nativeBudgetGiB} onChange={(event) => setNativeBudgetGiB(event.target.value)} />
                   </label>
                   <p {...stylex.props(styles.xsMutedBordered2)}>Auto budgets the calculated texture, geometry and frame demand against an assumed 16 GiB device. This is not measured GPU memory or a hard allocation limit. Declare a different ceiling only for provisioned hardware.</p>
@@ -958,7 +958,7 @@ export function RenderConfigPanel({
                 <StepHeading hint="Applies to every image sensor in the request." title="Format" />
                 <div {...stylex.props(styles.gridXsGap2)}>
                   <label {...stylex.props(styles.flexColGap1)}>
-                    <span {...stylex.props(styles.capsMicroMuted)}>Resolution</span>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>Resolution</span>
                     <select
                       {...stylex.props([focus.ring, styles.inkBordered])}
                       disabled={stage != null}
@@ -973,7 +973,7 @@ export function RenderConfigPanel({
                     </select>
                   </label>
                   <label {...stylex.props(styles.flexColGap1)}>
-                    <span {...stylex.props(styles.capsMicroMuted)}>FPS</span>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>FPS</span>
                     <select
                       {...stylex.props([focus.ring, styles.inkBordered])}
                       disabled={stage != null}
@@ -988,7 +988,7 @@ export function RenderConfigPanel({
                     </select>
                   </label>
                   <label {...stylex.props(styles.flexColGap1)}>
-                    <span {...stylex.props(styles.capsMicroMuted)}>Quality</span>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>Quality</span>
                     <select
                       {...stylex.props([focus.ring, styles.capsInkBordered])}
                       disabled={stage != null}
@@ -1007,7 +1007,7 @@ export function RenderConfigPanel({
                   <Clock aria-hidden="true" className={stylex.props(styles.tight).className} />
                   <p {...stylex.props(styles.xsInk)}>
                     {durationSeconds}s
-                    <span {...stylex.props(styles.capsMicroMuted2)}>
+                    <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted2])}>
                       durable submission — closing this tab does not stop the worker
                     </span>
                   </p>
@@ -1065,7 +1065,7 @@ export function RenderConfigPanel({
                 <div {...stylex.props(styles.flexCenterGap2)}>
                   <TriangleAlert aria-hidden="true" className={stylex.props(styles.tight2).className} />
                   <h3
-                    {...stylex.props(styles.capsMicroBold)}
+                    {...stylex.props(typography.eyebrow)}
                     id="render-warnings-heading"
                   >
                     Warnings
@@ -1164,7 +1164,7 @@ export function RenderConfigPanel({
             onBack={() => setStepIndex(3)}
             primary={
               <button
-                className={stylex.props(submitDisabled ? [focus.ring, styles.inlineFlexCenterMid] : [focus.ring, styles.inlineFlexCenterMid2], motionStyles.editorMotion).className}
+                className={stylex.props(submitDisabled ? [focus.ring, [typography.eyebrow, styles.inlineFlexCenterMid]] : [focus.ring, [typography.eyebrow, styles.inlineFlexCenterMid2]], motionStyles.editorMotion).className}
                 data-testid="render-run-button"
                 disabled={submitDisabled}
                 onClick={() => void submitGpuRender()}

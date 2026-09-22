@@ -10,6 +10,7 @@ import {
 import type { ScenarioRenderJobState } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderStatePieces.stylex";
+import { typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The two visual atoms every render surface repeats: a state chip and a progress bar.
@@ -30,7 +31,7 @@ export function RenderStateChip({
   const visual = renderStateVisual(state);
   return (
     <span
-      className={cn(stylex.props(styles.inlineFlexCenterCaps, renderStateChipStyle(visual.tone)).className, className)}
+      className={cn(stylex.props([typography.eyebrow, styles.inlineFlexCenterCaps], renderStateChipStyle(visual.tone)).className, className)}
       data-render-state={state}
     >
       {visual.live ? (

@@ -31,7 +31,7 @@ export const styles = stylex.create({
     alignItems: "center",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.95)",
     backdropFilter: motion.blurSm,
   },

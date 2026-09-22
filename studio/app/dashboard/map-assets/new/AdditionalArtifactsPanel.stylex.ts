@@ -5,7 +5,7 @@ export const styles = stylex.create({
   artifactsPanel: {
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingTop: space.s5,
   },
   artifactsHeading: {
@@ -46,7 +46,7 @@ export const styles = stylex.create({
   artifactTypeBadge: {
     flexShrink: 0,
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: "inherit",
   },
 });

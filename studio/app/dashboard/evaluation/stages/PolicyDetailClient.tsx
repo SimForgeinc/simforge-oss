@@ -36,7 +36,7 @@ function ProvenanceCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle xstyle={styles.cardTitle} >Provenance</CardTitle>
+          <CardTitle >Provenance</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState title="No provenance.json recorded for this policy." />
@@ -73,7 +73,7 @@ function ProvenanceCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle xstyle={styles.cardTitle} >Provenance</CardTitle>
+        <CardTitle >Provenance</CardTitle>
         <CardDescription>From the first completed episode of this policy</CardDescription>
       </CardHeader>
       <CardContent>
@@ -137,7 +137,7 @@ export function PolicyDetailClient({
           <Card key={label}>
             <CardHeader xstyle={styles.cardHeaderTight} >
               <CardDescription>{label}</CardDescription>
-              <CardTitle xstyle={styles.cardTitleLarge} >{value}</CardTitle>
+              <CardTitle >{value}</CardTitle>
             </CardHeader>
           </Card>
         ))}
@@ -147,7 +147,7 @@ export function PolicyDetailClient({
 
       <Card>
         <CardHeader>
-          <CardTitle xstyle={styles.cardTitle} >Episodes</CardTitle>
+          <CardTitle >Episodes</CardTitle>
           <CardDescription>Per-scenario scores and infractions</CardDescription>
         </CardHeader>
         <CardContent>

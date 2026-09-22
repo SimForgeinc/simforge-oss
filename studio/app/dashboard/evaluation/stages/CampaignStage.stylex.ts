@@ -52,7 +52,7 @@ export const styles = stylex.create({
   },
   scoreRowSelected: {
     borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.accentWash,
   },
   policy: {
     display: "flex",

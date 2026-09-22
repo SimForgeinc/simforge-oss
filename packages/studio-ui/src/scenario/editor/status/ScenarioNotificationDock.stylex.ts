@@ -19,17 +19,10 @@ export const styles = stylex.create({
     pointerEvents: "auto",
     height: "auto",
     justifyContent: "center",
-    borderColor: "hsl(var(--border) / 0.7)",
-    backgroundColor: "hsl(var(--background) / 0.95)",
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: {
-      default: colors.mutedForeground,
-      ":hover": colors.text,
-    },
-    boxShadow: shadows.elevationLg,
     backdropFilter: motion.blurGlass,
   },
 });

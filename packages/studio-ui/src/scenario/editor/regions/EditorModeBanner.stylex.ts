@@ -21,28 +21,9 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
   },
-  // text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground
-  textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground: {
-    color: {
-      default: colors.primaryForeground,
-      ":hover": colors.primaryForeground,
-    },
-    backgroundColor: {
-      default: null,
-      ":hover": "hsl(var(--primary-foreground) / 0.1)",
-    },
-  },
   // ml-auto text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground
   pushRight: {
     marginLeft: "auto",
-    color: {
-      default: colors.primaryForeground,
-      ":hover": colors.primaryForeground,
-    },
-    backgroundColor: {
-      default: null,
-      ":hover": "hsl(var(--primary-foreground) / 0.1)",
-    },
   },
 
   // flex min-h-11 shrink-0 items-center px-5 py-2 text-sm font-semibold
@@ -89,7 +70,7 @@ export const styles = stylex.create({
   routeToolActive: {
     backgroundColor: {
       default: "rgb(0 0 0 / 1)",
-      ":hover": "rgb(0 0 0 / 0.85)",
+      ":hover": colors.scrimHeavy,
     },
     color: colors.ink,
   },

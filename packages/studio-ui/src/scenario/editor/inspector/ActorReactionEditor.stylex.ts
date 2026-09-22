@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { space, stroke } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /*
@@ -16,6 +16,6 @@ export const styles = stylex.create({
     minHeight: "0px",
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
   },
 });

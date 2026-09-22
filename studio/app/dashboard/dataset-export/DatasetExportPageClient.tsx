@@ -10,7 +10,7 @@ import { RouteErrorState, PaneErrorState } from "@simforge-oss/studio-ui/compone
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import { DatasetExportPanel } from "./DatasetExportPanel";
 import { styles } from "./DatasetExportPageClient.stylex";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type DatasetSummary = {
   id: string;
@@ -64,7 +64,7 @@ export function DatasetExportPageClient() {
   }, [loadDatasets]);
 
   useRouteHeader({ title: "Dataset Export", context: "Dataset operations", actions:
-    <button type="button" onClick={() => void loadDatasets()} disabled={loading} aria-busy={loading} {...stylex.props(styles.workspaceButton)}>
+    <button type="button" onClick={() => void loadDatasets()} disabled={loading} aria-busy={loading} {...stylex.props([hairline.all, styles.workspaceButton])}>
       <LoaderCircle {...stylex.props(styles.iconSmall, loading && motionRecipe.spin)} /> Refresh datasets
     </button>
   });
@@ -85,17 +85,17 @@ export function DatasetExportPageClient() {
               <PaneErrorState title="Could not refresh datasets" description={error} onRetry={() => void loadDatasets()} />
             ) : null}
             {datasets.length === 0 ? (
-              <div {...stylex.props(styles.datasetEmpty)}>No datasets.</div>
+              <div {...stylex.props([hairline.all, styles.datasetEmpty])}>No datasets.</div>
             ) : (
               <div {...stylex.props(styles.datasetList)}>
                 {datasets.map((dataset) => {
                   const active = dataset.id === selectedDatasetId;
                   return (
-                    <button key={dataset.id} type="button" onClick={() => { setSelectedDatasetId(dataset.id); setActivePane("detail"); }} {...stylex.props(styles.datasetButton, active && styles.datasetActive)}>
+                    <button key={dataset.id} type="button" onClick={() => { setSelectedDatasetId(dataset.id); setActivePane("detail"); }} {...stylex.props([hairline.all, styles.datasetButton], active && styles.datasetActive)}>
                       <Database {...stylex.props(styles.datasetIcon, active && styles.datasetIconActive)} />
                       <span {...stylex.props(styles.datasetText)}>
                         <span {...stylex.props([textLayout.truncate, styles.datasetName])}>{dataset.name}</span>
-                        {dataset.description ? <span {...stylex.props(styles.datasetDescription)}>{dataset.description}</span> : <span {...stylex.props(styles.datasetId)}>{dataset.id}</span>}
+                        {dataset.description ? <span {...stylex.props(styles.datasetDescription)}>{dataset.description}</span> : <span {...stylex.props([typography.eyebrow, styles.datasetId])}>{dataset.id}</span>}
                       </span>
                     </button>
                   );
@@ -107,7 +107,7 @@ export function DatasetExportPageClient() {
         stage={<main {...stylex.props(styles.main)}>
           {selectedDatasetId && selectedDataset ? (
             <div {...stylex.props(styles.selectedWrap)}>
-              <section {...stylex.props(styles.selected)}>
+              <section {...stylex.props([hairline.all, styles.selected])}>
                 <div {...stylex.props(styles.selectedLabel)}>Selected dataset</div>
                 <h2 {...stylex.props(styles.selectedName)}>{selectedDataset.name}</h2>
                 {selectedDataset.description ? <p {...stylex.props(styles.selectedDescription)}>{selectedDataset.description}</p> : null}
@@ -119,7 +119,7 @@ export function DatasetExportPageClient() {
               icon={<Database {...stylex.props(styles.iconEmpty)} />}
               title="Select a dataset"
               description="Choose a dataset from the list to review its export options."
-              xstyle={styles.emptyState}
+              xstyle={[hairline.all, styles.emptyState]}
             />
           )}
         </main>}

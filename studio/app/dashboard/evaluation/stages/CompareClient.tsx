@@ -112,7 +112,7 @@ function ColumnCard({
         <CardDescription>
           {index === 0 ? "Baseline" : `Column ${String(index + 1)}`}
         </CardDescription>
-        <CardTitle xstyle={residual.cardTitle}>
+        <CardTitle>
           {identity?.familyLabel ?? identity?.family ?? policy.policyId}
         </CardTitle>
         <CardDescription>
@@ -333,7 +333,7 @@ export function CompareClient({
 
       <Card>
         <CardHeader>
-          <CardTitle xstyle={residual.cardTitle}>Metrics</CardTitle>
+          <CardTitle>Metrics</CardTitle>
           <CardDescription>
             A metric is ranked only over rows where every column matched the baseline and defined
             it. Where a run saw different cameras or ran on a different runtime, its numbers are
@@ -352,7 +352,7 @@ export function CompareClient({
 
       <Card>
         <CardHeader>
-        <CardTitle xstyle={residual.cardTitle}>Per-scenario</CardTitle>
+        <CardTitle>Per-scenario</CardTitle>
           <CardDescription>
             Divergence is the first trace step where a column&apos;s ego drifts more than{" "}
             {String(comparison.divergenceThresholdM)} m from the baseline&apos;s.

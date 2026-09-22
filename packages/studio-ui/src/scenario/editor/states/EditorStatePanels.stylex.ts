@@ -15,7 +15,7 @@ export const styles = stylex.create({
   borderedPad8CenterText: {
     maxWidth: "28rem",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
     padding: space.s8,
     textAlign: "center",
@@ -69,11 +69,6 @@ export const styles = stylex.create({
   },
   // text-xs font-semibold uppercase tracking-meta-wider text-primary
   capsXsAccent: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.primary,
   },
   // mt-2 text-2xl font-semibold
@@ -104,24 +99,12 @@ export const styles = stylex.create({
   borderedPad5LeftText: {
     borderWidth: stroke.hairline,
     borderColor: {
-      default: colors.border,
-      ":hover": "hsl(var(--primary) / 0.6)",
+      default: colors.hairline,
+      ":hover": colors.accentLine,
     },
     backgroundColor: colors.card,
     padding: space.s5,
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring))",
-    },
   },
   // block font-semibold
   blockSemibold: {

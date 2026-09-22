@@ -11,7 +11,7 @@ import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
 import { control, list } from "../scenario-controls.stylex";
 import type { ScenarioMapOption } from "./document-map-groups";
-import { textLayout } from "../../stylex/recipes.stylex";
+import { hairline, textLayout } from "../../stylex/recipes.stylex";
 
 function searchableText(map: ScenarioMapOption) {
   return [map.label, map.locality, map.mapVersionId].filter(Boolean).join(" ").toLowerCase();
@@ -92,7 +92,7 @@ export function ScenarioMapPickerDialog({
         role="dialog"
         aria-modal="true"
         aria-label="Select map"
-        {...stylex.props(styles.selectMap)}
+        {...stylex.props([hairline.all, styles.selectMap])}
       >
         <div {...stylex.props(styles.divFlex)}>
           <div {...stylex.props(styles.div)}>
@@ -109,7 +109,7 @@ export function ScenarioMapPickerDialog({
                 {...stylex.props(styles.searchAbsoluteIcon)}
                 aria-hidden="true"
               />
-              <Input
+              <Input size="md" variant="plate"
                 autoFocus
                 aria-label="Search maps"
                 value={query}

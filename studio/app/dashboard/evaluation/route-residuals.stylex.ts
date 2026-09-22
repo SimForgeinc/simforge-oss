@@ -14,20 +14,20 @@ export const styles = stylex.create({
   dlRun: { display: "grid", columnGap: space.s8, rowGap: space.s2, fontSize: text.sizeSm, lineHeight: text.lineSm, "@media (min-width: 640px)": { gridTemplateColumns: "repeat(4,minmax(0,1fr))" } },
   dlMetrics: { display: "grid", columnGap: space.s8, rowGap: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, "@media (min-width: 640px)": { gridTemplateColumns: "repeat(3,minmax(0,1fr))" } },
   cardStack3: { display: "flex", flexDirection: "column", gap: space.s3 }, cardStack3Top: { display: "flex", flexDirection: "column", gap: space.s3, paddingTop: space.s5 },
-  cardHeaderTight: { paddingBottom: space.s2 }, cardTitle: { fontSize: text.sizeBase, lineHeight: text.lineBase }, cardTitleSmall: { fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightSemibold, color: colors.text }, cardTitleLarge: { fontFamily: text.fontMono, fontSize: text.size2xl, lineHeight: text.lineXl },
+  cardHeaderTight: { paddingBottom: space.s2 }, cardTitleSmall: { fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightSemibold, color: colors.text },
   mono: { fontFamily: text.fontMono }, monoSmall: { fontFamily: text.fontMono, fontSize: text.sizeXs, lineHeight: text.lineXs },
   /** `font-mono text-[10px]` replaced the Badge's entire `text-xs` utility, including its leading. */
-  monoTiny: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" },
+  monoTiny: { fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: "inherit" },
   muted: { color: colors.mutedForeground },
   /** `text-[10px] text-muted-foreground` — the reasoning note. */
-  tinyMuted: { fontSize: "10px", color: colors.mutedForeground },
+  tinyMuted: { fontSize: text.sizeMicro, color: colors.mutedForeground },
   // SVG paint: `fill-muted-foreground` on the two chart captions. `color` would
   // leave the glyphs on the UA default fill.
-  svgCaptionTiny: { fontSize: "10px", fill: colors.mutedForeground },
+  svgCaptionTiny: { fontSize: text.sizeMicro, fill: colors.mutedForeground },
   /** `text-[10px] uppercase text-muted-foreground` — the ego-state <dt>s. */
-  tinyLabel: { fontSize: "10px", textTransform: "uppercase", color: colors.mutedForeground },
+  tinyLabel: { fontSize: text.sizeMicro, textTransform: "uppercase", color: colors.mutedForeground },
   /** `text-[10px]` alone — it rides a `Badge` variant, which owns the colour. */
-  tinyBadge: { fontSize: "10px", lineHeight: "inherit" },
+  tinyBadge: { fontSize: text.sizeMicro, lineHeight: "inherit" },
   /** `text-xs text-muted-foreground` — the named scale, which carries its own leading. */
   xsMuted: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground },
   /** `text-xs leading-5 text-muted-foreground` — same scale, looser leading for the run notes. */
@@ -43,16 +43,16 @@ export const styles = stylex.create({
   spinnerSm: { width: ".875rem", height: ".875rem", animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite", color: colors.mutedForeground },
   spinnerPlain: { width: "1rem", height: "1rem", animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
   flexWrap: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s3 }, controls: { display: "flex", alignItems: "center", gap: space.s3 }, range: { width: "100%", accentColor: "hsl(var(--primary))" }, time: { width: "11rem", flexShrink: 0, textAlign: "right", fontFamily: text.fontMono, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground },
-  chart: { width: "100%", cursor: "crosshair", userSelect: "none", borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / .3)" }, chartStatic: { width: "100%", borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / .3)" },
+  chart: { width: "100%", cursor: "crosshair", userSelect: "none", backgroundColor: colors.fillFaint }, chartStatic: { width: "100%", backgroundColor: colors.fillFaint },
   section: { display: "flex", flexDirection: "column", rowGap: space.s2 }, resultBox: { display: "flex", alignItems: "flex-start", gap: space.s2, paddingInline: space.s3, paddingBlock: space.s2, fontSize: text.sizeSm, lineHeight: text.lineSm, borderWidth: stroke.hairline, borderStyle: "solid" },
   /** `border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300` — dark value folded. */
-  promoted: { borderColor: "rgba(16,185,129,.4)", backgroundColor: "rgba(16,185,129,.1)", color: "rgb(110,231,183)" }, refused: { borderColor: "hsl(var(--destructive) / .4)", backgroundColor: "hsl(var(--destructive) / .1)", color: colors.danger },
+  promoted: { borderColor: colors.positive, backgroundColor: colors.positiveWash, color: colors.positive }, refused: { borderColor: colors.critical, backgroundColor: colors.criticalWash, color: colors.danger },
   /**
    * `bg-emerald-500/15 text-emerald-600 dark:text-emerald-400` — dark value
    * folded. It rides the default `Badge` variant, which repaints the
    * background on :hover; the utility pinned the rest state only, so the
    * variant's hover value is restated here rather than dropped.
    */
-  promotedBadge: { backgroundColor: { default: "rgba(16,185,129,.15)", ":hover": "hsl(var(--primary) / 0.8)" }, color: colors.positive },
-  list: { display: "flex", flexDirection: "column", rowGap: space.s1_5 }, event: { display: "flex", alignItems: "center", gap: space.s3, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "transparent", paddingInline: space.s2, paddingBlock: space.s1, fontSize: text.sizeSm, lineHeight: text.lineSm }, reached: { backgroundColor: "hsl(var(--muted) / .5)" }, unreached: { opacity: .5 }, dot: { width: ".5rem", height: ".5rem", flexShrink: 0, }, eventPosition: { fontFamily: text.fontMono, fontSize: "10px", color: colors.mutedForeground }, infractionBadge: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" }, frames: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: space.s2 }, image: { width: "100%", borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border }, centerCaption: { marginTop: space.s1, textAlign: "center" }, whitespace: { whiteSpace: "pre-wrap", fontSize: text.sizeSm, lineHeight: text.lineBase, color: colors.text }, actionData: { backgroundColor: "hsl(var(--muted) / .4)", padding: space.s2, fontFamily: text.fontMono, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground }, outputList: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, fontSize: text.sizeXs, lineHeight: text.lineXs }, outputItem: { paddingInline: space.s3, paddingBlock: space.s2, fontFamily: text.fontMono, color: colors.mutedForeground, borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.border },
+  promotedBadge: { backgroundColor: { default: colors.positiveWash, ":hover": "hsl(var(--primary) / 0.8)" }, color: colors.positive },
+  list: { display: "flex", flexDirection: "column", rowGap: space.s1_5 }, event: { display: "flex", alignItems: "center", gap: space.s3, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "transparent", paddingInline: space.s2, paddingBlock: space.s1, fontSize: text.sizeSm, lineHeight: text.lineSm }, reached: { backgroundColor: colors.fillSubtle }, unreached: { opacity: .5 }, dot: { width: ".5rem", height: ".5rem", flexShrink: 0, }, eventPosition: { fontFamily: text.fontMono, fontSize: text.sizeMicro, color: colors.mutedForeground }, infractionBadge: { fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: "inherit" }, frames: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: space.s2 }, image: { width: "100%", }, centerCaption: { marginTop: space.s1, textAlign: "center" }, whitespace: { whiteSpace: "pre-wrap", fontSize: text.sizeSm, lineHeight: text.lineBase, color: colors.text }, actionData: { backgroundColor: colors.fillSubtle, padding: space.s2, fontFamily: text.fontMono, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground }, outputList: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.hairline, fontSize: text.sizeXs, lineHeight: text.lineXs }, outputItem: { paddingInline: space.s3, paddingBlock: space.s2, fontFamily: text.fontMono, color: colors.mutedForeground, borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.hairline },
 });

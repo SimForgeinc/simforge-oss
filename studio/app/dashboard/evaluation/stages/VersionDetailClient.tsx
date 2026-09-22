@@ -95,7 +95,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
       <Card>
         <CardHeader xstyle={styles.cardHeaderTight}>
           <CardDescription>{record.family}</CardDescription>
-          <CardTitle xstyle={styles.cardTitle} >{record.name}</CardTitle>
+          <CardTitle >{record.name}</CardTitle>
           <CardDescription>
             <StatusBadge status={record.status} /> Model version {record.id}
           </CardDescription>
@@ -144,7 +144,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle xstyle={styles.cardTitle} >Eval runs</CardTitle>
+          <CardTitle >Eval runs</CardTitle>
           <CardDescription>
             The promotion gate requires a succeeded openloop or policy_episode run of this
             version — the database trigger is the arbiter, refusals surface here.

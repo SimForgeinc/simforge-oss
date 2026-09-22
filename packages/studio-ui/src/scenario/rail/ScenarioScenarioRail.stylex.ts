@@ -2,7 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  row: { borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.border, ":last-child": { borderBottomWidth: 0 } },
+  row: { borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.hairline, ":last-child": { borderBottomWidth: 0 } },
   documentButton: { display: "flex", width: "100%", flexDirection: "column", gap: space.s0_5, borderLeftWidth: stroke.thick, borderLeftStyle: "solid", backgroundColor: "transparent", paddingInline: space.s2, paddingBlock: space.s2_5, textAlign: "left", outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` }, outlineOffset: 2 },
   activeDocument: { borderLeftColor: colors.accent, color: colors.text },
   idleDocument: { borderLeftColor: { default: "transparent", ":hover": colors.accent }, color: { default: colors.mutedForeground, ":hover": colors.text } },
@@ -15,14 +15,14 @@ export const styles = stylex.create({
     flexDirection: "column",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: "transparent",
   },
   // space-y-2 border-b border-white/15 p-3
   scenarioScenarioHeader: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     padding: space.s3,
     display: "flex",
     flexDirection: "column",
@@ -38,12 +38,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro font-bold uppercase tracking-meta-wider text-foreground
   scenarios: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.text,
   },
   // font-meta text-micro tabular-nums text-white/70
@@ -68,12 +62,7 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
-    color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
+    color: { default: colors.inkSecondary, ":hover": colors.primary },
   },
   // size-3 shrink-0
   chevronleftIcon: {
@@ -85,12 +74,7 @@ export const styles = stylex.create({
   openTheFullScenarioListLink: {
     minWidth: 0,
     flex: "1 1 0%",
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
-    color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
+    color: { default: colors.inkSecondary, ":hover": colors.primary },
   },
   // mr-1 inline size-3
   layoutlistIcon: {
@@ -146,7 +130,7 @@ export const styles = stylex.create({
     height: "100%",
     backgroundColor: colors.primary,
     transitionProperty: { default: "width", [layout.reducedMotion]: "none" },
-    transitionDuration: "100ms",
+    transitionDuration: motion.durInstant,
     transitionTimingFunction: motion.easeLinear,
   },
   // scenario-glass-scrollbar min-h-0 flex-1 overflow-y-auto px-3
@@ -170,7 +154,7 @@ export const styles = stylex.create({
     paddingBlock: space.s2,
     fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
-    color: "rgb(255 255 255 / 0.75)",
+    color: colors.inkSecondary,
   },
   // line-clamp-2 text-meta font-medium leading-tight
   spanMetaMedium: {
@@ -184,20 +168,10 @@ export const styles = stylex.create({
   },
   // truncate font-meta text-micro uppercase tracking-meta-tight text-white/70
   spanTruncateMetaMicro: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
     color: colors.inkSecondary,
   },
   // font-meta text-micro uppercase tracking-meta-tight text-green-400
   rendered: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-    color: "rgb(74 222 128 / 1)",
+    color: colors.positive,
   },
 });

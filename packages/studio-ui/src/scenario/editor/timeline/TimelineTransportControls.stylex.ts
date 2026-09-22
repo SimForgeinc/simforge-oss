@@ -21,20 +21,7 @@ export const styles = stylex.create({
   },
   // size-6 rounded-none border-0 bg-transparent p-0 text-white shadow-none hover:bg-transparent enabled:hover:text-[#E8E044] disabled:text-white/25
   whitePad0: {
-    width: "1.5rem",
-    height: "1.5rem",
-    borderWidth: "0px",
-    backgroundColor: {
-      default: "transparent",
-      ":hover": "transparent",
-    },
     padding: 0,
-    color: {
-      default: colors.ink,
-      ":enabled:hover": colors.accent,
-      ":disabled": colors.inkGhost,
-    },
-    boxShadow: "none",
   },
   // flex items-center gap-1 text-white
   flexCenterWhite: {

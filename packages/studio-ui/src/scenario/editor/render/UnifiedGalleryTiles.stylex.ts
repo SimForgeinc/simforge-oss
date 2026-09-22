@@ -7,21 +7,13 @@ export const styles = stylex.create({
     position: "absolute",
     inset: 0,
     zIndex: layers.raised,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
   },
   // absolute inset-0 render-glass
   absInset0: {
     position: "absolute",
     inset: 0,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-full object-cover
   fullCover: {
@@ -40,7 +32,7 @@ export const styles = stylex.create({
   size6TextMutedForeground50: {
     width: "1.5rem",
     height: "1.5rem",
-    color: "hsl(var(--muted-foreground) / 0.5)",
+    color: colors.inkFaint,
   },
   // pointer-events-none absolute left-2 top-2 z-20 flex flex-wrap items-center gap-1
   absFlexCenter: {
@@ -60,10 +52,6 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.secondaryForeground,
     backgroundColor: colors.fillStronger,
   },
@@ -110,10 +98,6 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // line-clamp-2 text-micro text-destructive
@@ -133,7 +117,7 @@ export const styles = stylex.create({
     display: "grid",
     placeItems: "center",
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1.5 render-scrim px-2.5 pb-2 pt-6
   absFlexCol2: {
@@ -167,17 +151,13 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.text,
     backdropFilter: motion.blurMd,
     backgroundColor: {
       default: colors.fillSubtle,
       ":hover": colors.fillStronger,
     },
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-3
   size3: {
@@ -190,27 +170,23 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 
   // Tile state chips, tone for tone with the managed tile's chips in
   // `RenderStatePieces.stylex.ts` — one gallery, one vocabulary of state.
   // bg-primary/20 text-primary
   chipRunning: {
-    backgroundColor: "hsl(var(--primary) / 0.2)",
+    backgroundColor: colors.accentWash,
     color: colors.primary,
   },
   // bg-primary/15 text-primary
   chipSucceeded: {
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    backgroundColor: colors.accentWash,
     color: colors.primary,
   },
   // bg-destructive/20 text-destructive
   chipFailed: {
-    backgroundColor: "hsl(var(--destructive) / 0.2)",
+    backgroundColor: colors.criticalWash,
     color: colors.danger,
   },
   // text-muted-foreground — the plate beside it is the `render-chip` global.
@@ -231,7 +207,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
     backgroundColor: colors.fillSubtle,
   },
   // motionStyles.editorMotion + group relative flex aspect-video w-full flex-col render-glass render-surface-motion overflow-hidden border text-left focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background
@@ -245,7 +221,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     textAlign: "left",
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
     boxShadow: {
       default: null,
       ":focus-within": "0 0 0 1px hsl(var(--background)), 0 0 0 3px hsl(var(--ring))",
@@ -253,14 +229,14 @@ export const styles = stylex.create({
   },
   // border-destructive/60
   borderDestructive60: {
-    borderColor: "hsl(var(--destructive) / 0.6)",
+    borderColor: colors.critical,
   },
   // hover:border-primary/60 — nested pseudo-class form, not `{ default: null,
   // ":hover": … }`: a `null` default would unset the base tile's resting
   // border colour when the two rules are composed.
   hoverBorderPrimary60: {
     ":hover": {
-      borderColor: "hsl(var(--primary) / 0.6)",
+      borderColor: colors.accentLine,
     },
   },
 });

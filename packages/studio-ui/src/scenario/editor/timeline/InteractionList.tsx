@@ -16,7 +16,7 @@ import { triggerLabel } from "./trigger-defaults";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionList.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The semantic timeline: one row per authored interaction, expandable into its
@@ -76,7 +76,7 @@ export function InteractionList({
 
   return (
     <div {...stylex.props(styles.fillWhiteScrollY)} data-testid="semantic-timeline">
-      <h2 {...stylex.props(styles.flexCenterCaps)}>
+      <h2 {...stylex.props([typography.eyebrow, styles.flexCenterCaps])}>
         <Radio aria-hidden="true" className={stylex.props(styles.mr2Size3).className} />
         Semantic timeline
         <span {...stylex.props(styles.pushRightNormalCase)}>
@@ -114,7 +114,7 @@ export function InteractionList({
                 <button
                   type="button"
                   aria-label={`Delete action ${name}`}
-                  className={stylex.props([focus.ringAccent, styles.editorMotionMr2TextWhite30], motionStyles.editorMotion).className}
+                  className={stylex.props([focus.ring, styles.editorMotionMr2TextWhite30], motionStyles.editorMotion).className}
                   onClick={() => document.removeInteraction(interaction.id)}
                 >
                   <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />

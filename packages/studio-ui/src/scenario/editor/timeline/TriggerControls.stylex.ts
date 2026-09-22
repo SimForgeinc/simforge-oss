@@ -44,8 +44,8 @@ export const styles = stylex.create({
   // border border-border bg-muted/20 p-2
   borderedPad2: {
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.2)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillFaint,
     padding: space.s2,
   },
   // px-1 text-muted-foreground
@@ -57,7 +57,7 @@ export const styles = stylex.create({
   // border border-border/70 p-2
   borderedPad22: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   // col-span-2 grid grid-cols-2 gap-2 border border-border/70 p-2
@@ -67,7 +67,7 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   // block min-w-0 text-muted-foreground
@@ -79,7 +79,6 @@ export const styles = stylex.create({
   // mt-1 h-8
   mt1H8: {
     marginTop: space.s1,
-    height: "2rem",
   },
   // (was each stack's space-y-2)
   stackedMd: {

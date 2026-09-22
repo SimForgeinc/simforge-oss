@@ -1,25 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // h-8 gap-2 rounded-none border border-border bg-card/90 px-3 shadow-sm backdrop-blur
   borderedGlassyGap2: {
-    height: "2rem",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    boxShadow: shadows.elevationSm,
     backdropFilter: motion.blurMd,
   },
   // font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground
   capsMonoMuted: {
-    fontFamily: text.fontMono,
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaNarrow,
     color: colors.mutedForeground,
   },
   // flex w-[min(440px,calc(100vw-1rem))] flex-col gap-0 overflow-hidden border-border bg-background p-0 sm:max-w-[440px]
@@ -29,7 +20,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: 0,
     overflow: "hidden",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.bg,
     padding: 0,
     maxWidth: {
@@ -40,7 +31,7 @@ export const styles = stylex.create({
   // border-b border-border px-5 py-5 pr-12
   ruleB: {
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s12,
     paddingTop: space.s5,
@@ -66,7 +57,7 @@ export const styles = stylex.create({
     placeItems: "center",
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s6,
     textAlign: "center",
   },
@@ -97,7 +88,7 @@ export const styles = stylex.create({
   xsMutedBordered: {
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s5,
     textAlign: "center",
     fontSize: text.sizeXs,
@@ -156,15 +147,15 @@ export const styles = stylex.create({
   // border p-3 border-destructive/50 bg-destructive/10
   borderedPad3: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.5)",
-    backgroundColor: "hsl(var(--destructive) / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     padding: space.s3,
   },
   // border p-3 border-amber-400/40 bg-amber-500/10
   borderedPad32: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(251 191 36 / 0.4)",
-    backgroundColor: "rgb(245 158 11 / 0.1)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     padding: space.s3,
   },
   /*

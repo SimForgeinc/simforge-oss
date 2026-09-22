@@ -20,7 +20,7 @@ import type { ExecutionTarget } from "../presentation";
 import { RefusalNotice } from "./RefusalNotice";
 import type { UploadedArtifact, UploadProgress } from "../upload";
 import { uploadEvaluationInput } from "../upload";
-import { textLayout } from "../../stylex/recipes.stylex";
+import { hairline, textLayout } from "../../stylex/recipes.stylex";
 
 export type PreparedInput = {
   /** Empty for a local run: nothing is uploaded, so no artifact exists. */
@@ -213,7 +213,7 @@ export function InputPicker({
             File order is preserved through upload and submission. You will map each file to its
             real camera position after the upload.
           </p>
-          <ul {...stylex.props(s.borderBox)} data-testid="evaluation-file-list">
+          <ul {...stylex.props(hairline.all)} data-testid="evaluation-file-list">
             {files.map((file, index) => (
               <li key={`${file.name}-${index}`} {...stylex.props(s.flexGap3, s.dividedRow, s.px3py2, s.textSm)}>
                 <FileVideo aria-hidden="true" {...stylex.props(s.icon, s.textMuted)} />

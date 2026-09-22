@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // editor-pulse h-full w-1/3 bg-primary
@@ -22,11 +22,6 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
   // render-chip h-1 overflow-hidden
   clip: {
@@ -37,17 +32,17 @@ export const styles = stylex.create({
 
   // bg-primary/20 text-primary
   chipRunning: {
-    backgroundColor: "hsl(var(--primary) / 0.2)",
+    backgroundColor: colors.accentWash,
     color: colors.primary,
   },
   // bg-primary/15 text-primary
   chipSucceeded: {
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    backgroundColor: colors.accentWash,
     color: colors.primary,
   },
   // bg-destructive/20 text-destructive
   chipFailed: {
-    backgroundColor: "hsl(var(--destructive) / 0.2)",
+    backgroundColor: colors.criticalWash,
     color: colors.danger,
   },
   // bg-muted text-muted-foreground

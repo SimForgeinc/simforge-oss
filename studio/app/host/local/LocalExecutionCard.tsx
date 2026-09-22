@@ -9,6 +9,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { card, local, readyPill, action } from "@/app/components/host-status-cards.stylex";
 import { studioHost } from "@/app/lib/host";
+import { typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * One fact. The value WRAPS rather than truncating: these are the strings an
@@ -20,7 +21,7 @@ import { studioHost } from "@/app/lib/host";
 function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div {...stylex.props(local.row)}>
-      <dt {...stylex.props(card.factLabel, local.rowLabel)}>
+      <dt {...stylex.props([typography.tag, card.factLabel], local.rowLabel)}>
         {label}
       </dt>
       <dd {...stylex.props(local.rowValue, mono && card.mono)} title={value}>
@@ -32,7 +33,7 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
 
 function ReadyPill({ ready, label }: { ready: boolean; label: string }) {
   return (
-    <span {...stylex.props(readyPill.base, ready ? readyPill.ready : readyPill.notReady)}>
+    <span {...stylex.props([typography.tag, readyPill.base], ready ? readyPill.ready : readyPill.notReady)}>
       <span
         aria-hidden="true"
         {...stylex.props(readyPill.dot, ready ? readyPill.dotReady : readyPill.dotNotReady)}
@@ -91,7 +92,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
           <Cpu aria-hidden="true" />
         </div>
         <div {...stylex.props(card.body)}>
-          <p {...stylex.props(card.eyebrow)}>This computer</p>
+          <p {...stylex.props([typography.tag, card.eyebrow])}>This computer</p>
           <h2 id="local-execution-title" {...stylex.props(card.title)}>
             {capabilities?.host.label ?? "SimForge Studio"}
             {capabilities?.host.version ? (
@@ -116,7 +117,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
                 <Row label="Data folder" value={capabilities.persistence.dataRoot} mono />
               ) : null}
               <div {...stylex.props(local.row)}>
-                <dt {...stylex.props(card.factLabel, local.rowLabel)}>
+                <dt {...stylex.props([typography.tag, card.factLabel], local.rowLabel)}>
                   Local render
                 </dt>
                 <dd {...stylex.props(local.rowValueWrap)}>
@@ -189,7 +190,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
       </div>
 
       <div {...stylex.props(card.actions)}>
-        <Button
+        <Button size="lg"
           xstyle={action.outline}
           disabled={refreshing}
           onClick={() => void load(true)}
@@ -199,7 +200,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
           <RefreshCw {...stylex.props(action.icon, refreshing && action.spin)} aria-hidden="true" />
           Re-check
         </Button>
-        <Button asChild xstyle={action.outline} variant="outline">
+        <Button size="lg" asChild xstyle={action.outline} variant="outline">
           <Link href="/dashboard/apps?view=render-settings">
             <MonitorCog {...stylex.props(action.icon)} aria-hidden="true" />
             Rendering profile &amp; map preparation

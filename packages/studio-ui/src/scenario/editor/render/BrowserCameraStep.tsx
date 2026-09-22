@@ -8,7 +8,7 @@ import { defaultModalities, RENDER_MODALITY_ORDER, renderModalityLabel, sensorKe
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./BrowserCameraStep.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { a11y, focus, textLayout } from "../../../stylex/recipes.stylex";
+import { a11y, focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The browser lane's sensor step: one row per sensor, one column per pass.
@@ -93,7 +93,7 @@ export function BrowserCameraStep({
               Every enabled sensor is captured. The one you pick here is also the video&apos;s point of view.
             </p>
           </div>
-          <span {...stylex.props(styles.tightCapsMicro)}>
+          <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
             {sensors.length} {sensors.length === 1 ? "sensor" : "sensors"} · {selectedCount}{" "}
             {selectedCount === 1 ? "pass" : "passes"}
           </span>
@@ -112,7 +112,7 @@ export function BrowserCameraStep({
             <table {...stylex.props(styles.wideLeftText)}>
               <thead>
                 <tr {...stylex.props(styles.ruleB)}>
-                  <th {...stylex.props(styles.capsMicroMuted)} scope="col">
+                  <th {...stylex.props([typography.eyebrow, styles.capsMicroMuted])} scope="col">
                     Sensor
                   </th>
                   {columns.map((modality) => {
@@ -123,7 +123,7 @@ export function BrowserCameraStep({
                           aria-label={`${all ? "Clear" : "Capture"} ${renderModalityLabel(modality)} on every sensor`}
                           aria-pressed={all}
                           className={stylex.props(
-                            [focus.ring, styles.capsMicroBold],
+                            [focus.ring, [typography.eyebrow, styles.capsMicroBold]],
                             motionStyles.editorMotion,
                             all ? styles.columnAll : some ? styles.columnSome : styles.columnNone,
                           ).className}
@@ -147,7 +147,7 @@ export function BrowserCameraStep({
                   {groups.length > 1 ? (
                     <tr>
                       <th
-                        {...stylex.props(styles.capsMicroMuted2)}
+                        {...stylex.props([typography.eyebrow, styles.capsMicroMuted2])}
                         colSpan={columns.length + 1}
                         scope="colgroup"
                       >
@@ -191,11 +191,11 @@ export function BrowserCameraStep({
                             <span {...stylex.props([textLayout.truncate, styles.fillXsInk])}>
                               {option.sensor.label ?? option.sensor.id}
                             </span>
-                            <span {...stylex.props(styles.tightCapsMicro)}>
+                            <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
                               {humanize(option.sensor.type)}
                             </span>
                             {isPov ? (
-                              <span {...stylex.props(styles.tightCapsMicro2)}>
+                              <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro2])}>
                                 Video
                               </span>
                             ) : null}

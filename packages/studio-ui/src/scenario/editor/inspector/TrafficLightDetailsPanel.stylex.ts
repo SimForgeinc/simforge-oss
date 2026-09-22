@@ -18,10 +18,7 @@ export const styles = stylex.create({
   },
   // text-[9px] uppercase tracking-[0.16em] text-white/40
   caps: {
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // max-w-52 truncate text-xs font-medium text-white
   xsWhiteMedium: {
@@ -33,22 +30,22 @@ export const styles = stylex.create({
   },
   // text-[10px] leading-relaxed text-white/45
   relaxed: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineRelaxed,
     color: colors.inkMuted,
   },
   // rounded-lg border border-amber-300/35 bg-amber-300/10 px-2.5 py-2 text-[10px] leading-relaxed text-amber-100
   borderedRelaxed: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(252 211 77 / 0.35)",
+    borderColor: colors.warning,
     backgroundColor: colors.warningWash,
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
     paddingTop: space.s2,
     paddingBottom: space.s2,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineRelaxed,
-    color: "rgb(254 243 199 / 1)",
+    color: colors.warning,
   },
   // motionStyles.editorMotion + grid size-6 shrink-0 place-items-center rounded-md text-white/40 hover:bg-red-500/15 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300
   gridCenteredTight: {
@@ -58,24 +55,12 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     color: {
-      default: "rgb(255 255 255 / 0.4)",
+      default: colors.inkMuted,
       ":hover": colors.critical,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(252 165 165 / 1)",
     },
     backgroundColor: {
       default: null,
-      ":hover": "rgb(239 68 68 / 0.15)",
+      ":hover": colors.criticalWash,
     },
   },
   // size-3.5
@@ -92,8 +77,8 @@ export const styles = stylex.create({
     gap: space.s2,
     borderWidth: stroke.hairline,
     borderColor: {
-      default: "rgb(255 255 255 / 0.15)",
-      ":hover": "rgb(255 255 255 / 0.3)",
+      default: colors.hairlineStrong,
+      ":hover": colors.hairlineStrong,
     },
     paddingLeft: space.s3,
     paddingRight: space.s3,
@@ -102,7 +87,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: {
-      default: "rgb(255 255 255 / 0.6)",
+      default: colors.inkSecondary,
       ":hover": colors.ink,
     },
     backgroundColor: {

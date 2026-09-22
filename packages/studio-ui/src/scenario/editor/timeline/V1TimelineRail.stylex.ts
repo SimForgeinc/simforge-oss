@@ -99,14 +99,6 @@ export const styles = stylex.create({
     },
     touchAction: "none",
     backgroundColor: "transparent",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
     "::before": {
       content: "''",
       position: "absolute",
@@ -158,7 +150,7 @@ export const styles = stylex.create({
   // border-dashed border-white/20
   signalBandBaseline: {
     borderStyle: "dashed",
-    borderColor: "rgb(255 255 255 / 0.2)",
+    borderColor: colors.hairlineStrong,
   },
   // cursor-pointer
   signalBandSelectable: {
@@ -187,8 +179,8 @@ export const styles = stylex.create({
   },
   // bg-black/20 text-white/75
   identityColumnIdle: {
-    backgroundColor: "rgb(0 0 0 / 0.2)",
-    color: "rgb(255 255 255 / 0.75)",
+    backgroundColor: colors.scrimLight,
+    color: colors.inkSecondary,
   },
   // absolute inset-y-1 overflow-hidden rounded-md border px-2 text-left text-[8px]
   reasoningClip: {
@@ -200,18 +192,18 @@ export const styles = stylex.create({
     paddingLeft: space.s2,
     paddingRight: space.s2,
     textAlign: "left",
-    fontSize: "8px",
+    fontSize: text.sizeNano,
   },
   // border-white bg-[#E8E044] text-black ring-1 ring-white
   reasoningClipSelected: {
-    borderColor: "rgb(255 255 255 / 1)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: colors.accent,
     color: "rgb(0 0 0 / 1)",
     boxShadow: "0 0 0 1px rgb(255 255 255 / 1)",
   },
   // border-[#E8E044]/70 bg-[#E8E044]/25 text-[#E8E044]
   reasoningClipIdle: {
-    borderColor: "rgb(232 224 68 / 0.7)",
+    borderColor: colors.accentLine,
     backgroundColor: "rgb(232 224 68 / 0.25)",
     color: colors.accent,
   },
@@ -265,24 +257,24 @@ export const styles = stylex.create({
   clipConflict: {
     "--v1-clip-shadow": "0 0 8px rgba(252,165,165,0.2)",
     borderColor: colors.critical,
-    backgroundColor: "rgb(248 113 113 / 0.25)",
+    backgroundColor: colors.criticalWash,
     color: "rgb(254 242 242 / 1)",
   },
   // border-amber-300/80 bg-amber-300/20 text-amber-50
   clipPossible: {
-    borderColor: "rgb(252 211 77 / 0.8)",
-    backgroundColor: "rgb(252 211 77 / 0.2)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     color: "rgb(255 251 235 / 1)",
   },
   // border-dashed border-[#E8E044]/60 bg-[#E8E044]/15
   clipArmed: {
     borderStyle: "dashed",
     borderColor: colors.accentLine,
-    backgroundColor: "rgb(232 224 68 / 0.15)",
+    backgroundColor: colors.accentWash,
   },
   // border-[#E8E044]/80 bg-[#E8E044]/65 text-black
   clipAuthored: {
-    borderColor: "rgb(232 224 68 / 0.8)",
+    borderColor: colors.accentLine,
     backgroundColor: "rgb(232 224 68 / 0.65)",
     color: "rgb(0 0 0 / 1)",
   },
@@ -340,7 +332,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     backgroundImage: `linear-gradient(to right, rgb(232 224 68 / 0.07), rgb(255 255 255 / 0.025), transparent)`,
   },
   // flex min-w-0 items-center justify-center overflow-hidden border-r border-white/10
@@ -352,7 +344,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
   },
   // flex w-max flex-col items-center justify-center gap-0.5 px-2
   divFlex2: {
@@ -368,10 +360,6 @@ export const styles = stylex.create({
   timeline: {
     whiteSpace: "nowrap",
     textAlign: "center",
-    fontSize: "8px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
     color: colors.accent,
   },
   // relative min-w-0 self-stretch cursor-pointer
@@ -386,7 +374,7 @@ export const styles = stylex.create({
     marginBottom: "0",
     height: "100%",
     borderBottomWidth: 0,
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    backgroundColor: colors.scrimLight,
   },
   // pointer-events-none absolute inset-y-0 z-20 w-px bg-[#E8E044] shadow-[0_0_10px_rgba(232,224,68,0.65)]
   timelinePlayhead: {
@@ -440,7 +428,7 @@ export const styles = stylex.create({
     placeItems: "center",
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     paddingInline: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
@@ -454,8 +442,8 @@ export const styles = stylex.create({
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.scrimLight,
   },
   // flex min-w-0 items-stretch overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.06]
   divFlex3: {
@@ -465,8 +453,8 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(232 224 68 / 0.06)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.accentWash,
   },
   // flex w-max items-stretch self-stretch
   divFlex4: {
@@ -485,12 +473,9 @@ export const styles = stylex.create({
     gap: space.s1_5,
     paddingInline: space.s2,
     textAlign: "left",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     color: colors.accent,
     backgroundColor: { default: null, ":hover": colors.accentWash },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `inset 0 0 0 1px ${colors.accent}` },
   },
   // size-3 shrink-0
   trafficconeIcon: {
@@ -508,8 +493,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     paddingInline: space.s2,
-    fontSize: "9px",
-    color: "rgb(232 224 68 / 0.8)",
+    fontSize: text.sizeTag,
+    color: colors.accent,
   },
   // size-3 shrink-0
   trafficconeIcon2: {
@@ -532,12 +517,9 @@ export const styles = stylex.create({
     placeItems: "center",
     borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     color: { default: colors.inkFaint, ":hover": colors.critical },
-    backgroundColor: { default: null, ":hover": "rgb(239 68 68 / 0.15)" },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `inset 0 0 0 1px rgb(252 165 165 / 1)` },
+    backgroundColor: { default: null, ":hover": colors.criticalWash },
   },
   // size-3
   trash2Icon: {
@@ -550,14 +532,14 @@ export const styles = stylex.create({
     marginBlock: space.s2,
     cursor: "pointer",
     overflow: "hidden",
-    backgroundColor: "rgb(255 255 255 / 0.025)",
+    backgroundColor: colors.fillFaint,
   },
   // grid border-b border-white/10
   timelineWorldLane: {
     display: "grid",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
   },
   // relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.04] text-[#E8E044]/80
   timelineWorldIdentity: {
@@ -569,9 +551,9 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(232 224 68 / 0.04)",
-    color: "rgb(232 224 68 / 0.8)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.accentWash,
+    color: colors.accent,
   },
   // flex w-max items-start gap-1.5 px-2 py-2
   divFlex6: {
@@ -592,7 +574,7 @@ export const styles = stylex.create({
   // whitespace-nowrap text-[9px] font-medium
   scene: {
     whiteSpace: "nowrap",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightMedium,
   },
   // grid border-b border-white/10
@@ -600,7 +582,7 @@ export const styles = stylex.create({
     display: "grid",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
   },
   // flex w-max items-start gap-1.5 px-2 py-2
   divFlex7: {
@@ -619,14 +601,11 @@ export const styles = stylex.create({
     textAlign: "left",
     cursor: { default: null, ":enabled": "pointer" },
     color: { default: null, ":enabled:hover": colors.ink },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 1px ${colors.accent}` },
   },
   // whitespace-nowrap text-[9px] font-medium
   spanMedium: {
     whiteSpace: "nowrap",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightMedium,
   },
   // inline-flex size-4 shrink-0 items-center justify-center bg-transparent p-0 text-white/35 transition-colors hover:bg-transparent hover:text-red-300 focus-visible:bg-transparent focus-visible:text-red-300 focus-visible:outline-none
@@ -640,8 +619,6 @@ export const styles = stylex.create({
     backgroundColor: { default: "transparent", ":hover": "transparent", ":focus-visible": "transparent" },
     padding: "0",
     color: { default: colors.inkFaint, ":hover": colors.critical, ":focus-visible": colors.critical },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
   },
   // size-3.5
   trash2Icon2: {
@@ -654,9 +631,6 @@ export const styles = stylex.create({
     cursor: "pointer",
     alignItems: "center",
     paddingInline: space.s2,
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
     color: colors.inkGhost,
   },
   // relative cursor-pointer bg-black/15
@@ -671,8 +645,8 @@ export const styles = stylex.create({
     inset: "0",
     display: "grid",
     placeItems: "center",
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.2)",
+    fontSize: text.sizeNano,
+    color: colors.inkGhost,
   },
   // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-[#E8E044]/[0.025]
   timelineReasoningTraceLane: {
@@ -681,8 +655,8 @@ export const styles = stylex.create({
     gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(232 224 68 / 0.025)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.accentWash,
   },
   // flex min-w-0 items-center overflow-hidden border-r border-white/10 text-[#E8E044]/80
   divFlex8: {
@@ -692,8 +666,8 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    color: "rgb(232 224 68 / 0.8)",
+    borderColor: colors.hairline,
+    color: colors.accent,
   },
   // flex w-max items-center gap-1.5 px-2
   divFlex9: {
@@ -712,10 +686,6 @@ export const styles = stylex.create({
   // whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.08em]
   reasoning: {
     whiteSpace: "nowrap",
-    fontSize: "8px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
   },
   // relative cursor-pointer bg-black/15
   divRelative2: {
@@ -729,8 +699,8 @@ export const styles = stylex.create({
     inset: "0",
     display: "grid",
     placeItems: "center",
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.2)",
+    fontSize: text.sizeNano,
+    color: colors.inkGhost,
   },
   // block truncate
   spanTruncate: {
@@ -752,14 +722,14 @@ export const styles = stylex.create({
   },
   // text-[10px] font-semibold text-white
   reasoningTrace: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
     color: colors.ink,
   },
   // text-[8px] text-white/40
   observationAndAction: {
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.4)",
+    fontSize: text.sizeNano,
+    color: colors.inkMuted,
   },
   // grid grid-cols-2 gap-2
   divGrid: {
@@ -770,9 +740,6 @@ export const styles = stylex.create({
   // min-w-0 text-[8px] uppercase tracking-[0.1em] text-white/45
   labelUppercase: {
     minWidth: 0,
-    fontSize: "8px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaNarrow,
     color: colors.inkMuted,
   },
   // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
@@ -783,10 +750,10 @@ export const styles = stylex.create({
     minWidth: 0,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    borderColor: { default: colors.hairline, ":focus": colors.accentLine },
     backgroundColor: colors.fillSubtle,
     paddingInline: space.s2,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     textTransform: "none",
     color: colors.ink,
     outline: "2px solid transparent",
@@ -795,9 +762,6 @@ export const styles = stylex.create({
   // block text-[8px] uppercase tracking-[0.1em] text-white/45
   observation: {
     display: "block",
-    fontSize: "8px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaNarrow,
     color: colors.inkMuted,
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
@@ -808,10 +772,10 @@ export const styles = stylex.create({
     resize: "vertical",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    borderColor: { default: colors.hairline, ":focus": colors.accentLine },
     backgroundColor: colors.fillSubtle,
     padding: space.s2,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     textTransform: "none",
     lineHeight: text.lineRelaxed,
     color: colors.ink,
@@ -821,9 +785,6 @@ export const styles = stylex.create({
   // block text-[8px] uppercase tracking-[0.1em] text-white/45
   action: {
     display: "block",
-    fontSize: "8px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaNarrow,
     color: colors.inkMuted,
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
@@ -834,10 +795,10 @@ export const styles = stylex.create({
     resize: "vertical",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": colors.accentLine },
+    borderColor: { default: colors.hairline, ":focus": colors.accentLine },
     backgroundColor: colors.fillSubtle,
     padding: space.s2,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     textTransform: "none",
     lineHeight: text.lineRelaxed,
     color: colors.ink,
@@ -851,7 +812,7 @@ export const styles = stylex.create({
     gap: space.s1_5,
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s3,
   },
   // h-8 rounded-md bg-[#E8E044] px-3 text-[10px] font-semibold text-black disabled:opacity-40
@@ -859,7 +820,7 @@ export const styles = stylex.create({
     height: space.s8,
     backgroundColor: colors.accent,
     paddingInline: space.s3,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
     color: "rgb(0 0 0 / 1)",
     opacity: { default: null, ":disabled": 0.4 },
@@ -873,9 +834,9 @@ export const styles = stylex.create({
     gap: space.s1_5,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgb(252 165 165 / 0.2)",
-    fontSize: "9px",
-    color: "rgb(254 202 202 / 1)",
+    borderColor: colors.critical,
+    fontSize: text.sizeTag,
+    color: colors.critical,
     backgroundColor: { default: null, ":hover": colors.criticalWash },
   },
   // size-3
@@ -926,7 +887,7 @@ export const styles = stylex.create({
     gap: space.s1,
     overflow: "hidden",
     paddingInline: space.s2,
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     fontWeight: text.weightMedium,
     pointerEvents: { default: null, ":disabled": "none" },
   },
@@ -942,10 +903,6 @@ export const styles = stylex.create({
     borderColor: "color-mix(in srgb, currentColor 20%, transparent)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
     paddingInline: space.s0_5,
-    fontSize: "6px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
   },
   // size-1.5
   clock3Icon: {
@@ -975,9 +932,6 @@ export const styles = stylex.create({
     position: "fixed",
     zIndex: layers.editorTop,
     overflowY: "auto",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))",
     padding: space.s3,
     color: colors.ink,
@@ -992,7 +946,7 @@ export const styles = stylex.create({
     gap: space.s3,
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingBottom: space.s2_5,
   },
   // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
@@ -1021,10 +975,6 @@ export const styles = stylex.create({
   },
   // text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E8E044]
   addAt: {
-    fontSize: "10px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.accent,
   },
   // mt-0.5 truncate text-xs text-white/60
@@ -1032,7 +982,7 @@ export const styles = stylex.create({
     marginTop: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(255 255 255 / 0.6)",
+    color: colors.inkSecondary,
   },
   // grid size-7 place-items-center rounded-lg text-lg leading-none text-white/45 hover:bg-white/10 hover:text-white
   closeActionMenuButton: {
@@ -1069,21 +1019,14 @@ export const styles = stylex.create({
   },
   // rounded-xl border border-white/10 bg-white/[0.035] p-2
   timelineContextGroup: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(255 255 255 / 0.035)",
+    backgroundColor: colors.fillSubtle,
     padding: space.s2,
   },
   // mb-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40
   h3SemiboldUppercase: {
     marginBottom: space.s1_5,
     paddingInline: space.s1,
-    fontSize: "9px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.15em",
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // grid grid-cols-2 gap-1
   divGrid4: {
@@ -1096,12 +1039,12 @@ export const styles = stylex.create({
     minHeight: space.s8,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "transparent", ":hover": "rgb(232 224 68 / 0.35)" },
-    backgroundColor: { default: "rgb(0 0 0 / 0.2)", ":hover": colors.accentWash },
+    borderColor: { default: "transparent", ":hover": colors.accentLineSubtle },
+    backgroundColor: { default: colors.scrimLight, ":hover": colors.accentWash },
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
     textAlign: "left",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineTight,
     color: { default: colors.inkSecondary, ":hover": colors.accent },
   },

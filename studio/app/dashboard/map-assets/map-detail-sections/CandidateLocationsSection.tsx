@@ -5,7 +5,7 @@ import { styles } from "./CandidateLocationsSection.stylex";
 import { ChevronRight, Loader2 } from "lucide-react";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
 import { CandidateLocationCard } from "./CandidateLocationCard";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the CandidateLocationsSection component. */
 type CandidateLocationsSectionProps = {
@@ -32,7 +32,7 @@ export function CandidateLocationsSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props([motionRecipe.colors, styles.candidateLocationsToggle])}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.candidateLocationsToggle]])}
           aria-expanded={open}
         >
           <ChevronRight

@@ -10,7 +10,7 @@ export const styles = stylex.create({
     zIndex: layers.editorOverlay,
     display: "grid",
     placeItems: "center",
-    backgroundColor: "rgb(0 0 0 / 0.65)",
+    backgroundColor: colors.scrimHeavy,
     padding: space.s6,
     backdropFilter: motion.blurSm,
   },
@@ -19,7 +19,7 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "36rem",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(17 19 23 / 1)",
     padding: space.s6,
     boxShadow: shadows.elevation2xl,
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     marginTop: space.s2,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   // mt-5 grid gap-3 sm:grid-cols-2
   gridGap3: {
@@ -51,10 +51,10 @@ export const styles = stylex.create({
   // rounded-xl border border-[#E8E044]/50 bg-[#E8E044]/8 p-4 text-left hover:bg-[#E8E044]/12
   borderedPad4LeftText: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.5)",
+    borderColor: colors.accentLine,
     backgroundColor: {
-      default: "rgb(232 224 68 / 0.08)",
-      ":hover": "rgb(232 224 68 / 0.12)",
+      default: colors.accentWash,
+      ":hover": colors.accentWash,
     },
     padding: space.s4,
     textAlign: "left",
@@ -79,14 +79,14 @@ export const styles = stylex.create({
     display: "block",
     fontSize: text.sizeXs,
     lineHeight: text.lineSm,
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   // rounded-xl border border-white/15 bg-white/[0.03] p-4 text-left hover:bg-white/[0.06]
   borderedPad4LeftText2: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.03)",
+      default: colors.fillFaint,
       ":hover": colors.fill,
     },
     padding: space.s4,

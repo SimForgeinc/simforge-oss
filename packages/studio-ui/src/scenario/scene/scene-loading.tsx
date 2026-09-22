@@ -36,7 +36,7 @@ export function useSceneLoadingSurfaceProps(
       icon: failed ? <RotateCcw {...stylex.props(styles.rotateccwIcon)} aria-hidden="true" /> : undefined,
       diagnostics,
       children: failed && onRetry ? (
-        <Button
+        <Button size="lg" variant="accent"
           xstyle={scene.retry}
           onClick={onRetry}
         >

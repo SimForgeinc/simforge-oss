@@ -27,7 +27,7 @@ export const styles = stylex.create({
   // border border-white/10 p-2
   borderedPad2: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   // mt-2 text-micro text-red-300
@@ -49,7 +49,7 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   // col-span-2 text-left text-micro text-red-300
@@ -66,7 +66,7 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   // col-span-3 text-micro text-white/35
@@ -94,12 +94,6 @@ export const styles = stylex.create({
   // mt-1 h-8 border-white/15 bg-white/5 text-xs text-white
   xsWhite: {
     marginTop: space.s1,
-    height: "2rem",
-    borderColor: "rgb(255 255 255 / 0.15)",
-    backgroundColor: "rgb(255 255 255 / 0.05)",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
   },
   // block text-micro text-white/35
   blockMicro2: {
@@ -111,22 +105,16 @@ export const styles = stylex.create({
   // mt-1 h-8 border-white/10 bg-white/[0.02] text-xs text-white/50
   xs2: {
     marginTop: space.s1,
-    height: "2rem",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: colors.fillFaint,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.textSubtle,
   },
   // text-micro text-white/40
   micro5: {
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // text-white/65
   textWhite65: {
-    color: "rgb(255 255 255 / 0.65)",
+    color: colors.inkSecondary,
   },
   /*
    * `space-y-2` was a `> * + *` rule, which StyleX cannot express from the

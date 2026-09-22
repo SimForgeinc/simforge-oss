@@ -6,7 +6,7 @@ export const styles = stylex.create({
   xsRuleT: {
     marginTop: space.s5,
     borderTopWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingTop: space.s4,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
@@ -39,8 +39,8 @@ export const styles = stylex.create({
   inkBorderedPad2: {
     marginTop: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(52 211 153 / 0.4)",
-    backgroundColor: "rgb(16 185 129 / 0.15)",
+    borderColor: colors.positive,
+    backgroundColor: colors.positiveWash,
     padding: space.s2,
     color: colors.text,
   },
@@ -53,14 +53,14 @@ export const styles = stylex.create({
   },
   // border-destructive/50 bg-destructive/15 text-foreground
   firstIssueError: {
-    borderColor: "hsl(var(--destructive) / 0.5)",
-    backgroundColor: "hsl(var(--destructive) / 0.15)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     color: colors.text,
   },
   // border-amber-400/40 bg-amber-500/15 text-foreground
   firstIssueWarning: {
-    borderColor: "rgb(251 191 36 / 0.4)",
-    backgroundColor: "rgb(245 158 11 / 0.15)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     color: colors.text,
   },
 });

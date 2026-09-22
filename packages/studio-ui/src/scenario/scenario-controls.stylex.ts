@@ -21,7 +21,7 @@
  * inert; carrying them over would be inventing a value, not preserving one.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "../stylex/tokens.stylex";
+import { colors, space, text } from "../stylex/tokens.stylex";
 /** Tailwind's `font-[Share_Tech_Mono,IBM_Plex_Mono,monospace]`. */
 const CHIP_FONT = "Share Tech Mono, IBM Plex Mono, monospace";
 
@@ -55,29 +55,8 @@ export const menu = stylex.create({
   width220: { minWidth: "220px" },
   /** `text-destructive focus:text-destructive` */
   destructiveItem: { color: { default: colors.danger, ":focus": colors.danger } },
-  /** `font-meta text-micro uppercase tracking-meta` */
-  metaItem: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-  },
-  /** `font-meta text-micro uppercase tracking-meta-tight` */
-  metaItemTight: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-  },
   /** `font-meta text-micro uppercase tracking-meta-wide text-muted-foreground` */
   metaLabel: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.mutedForeground,
   },
   /** `text-primary` on the selected row, over the menu's own focus ink. */
@@ -101,48 +80,24 @@ export const list = stylex.create({
    * tracking-meta-wide hover:bg-transparent hover:text-primary`
    */
   loadMore: {
-    height: "2.25rem",
     width: "100%",
-    backgroundColor: { default: "transparent", ":hover": "transparent" },
     fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
-    color: { default: null, ":hover": colors.primary },
-  },
-  /**
-   * `size-6 border-primary/40 text-primary` — the outline variant keeps its
-   * own `hover:text-accent-foreground`, which the caller never displaced.
-   */
-  tagAdd: {
-    width: "1.5rem",
-    height: "1.5rem",
-    borderColor: "hsl(var(--primary) / 0.4)",
-    color: { default: colors.primary, ":hover": colors.hoverWashText },
   },
   /** `h-7 min-w-0 flex-1 px-2 text-meta` */
   tagNameInput: {
-    height: "1.75rem",
     minWidth: 0,
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: "0%",
     paddingInline: space.s2,
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
   },
   /** `h-7 border-primary/60 px-2 text-micro uppercase tracking-meta text-primary` */
   tagSubmit: {
-    height: "1.75rem",
-    borderColor: "hsl(var(--primary) / 0.6)",
     paddingInline: space.s2,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: { default: colors.primary, ":hover": colors.hoverWashText },
   },
   /** `h-8 w-full justify-start px-3 text-xs` */
   allScenarios: {
@@ -154,22 +109,17 @@ export const list = stylex.create({
     lineHeight: text.lineXs,
   },
   /** `h-9 pl-9` — the map search field, cleared of the leading icon. */
-  mapSearchInput: { height: "2.25rem", paddingLeft: "2.25rem" },
+  mapSearchInput: { paddingLeft: "2.25rem" },
   /**
    * `h-4 rounded-full border-red-400/40 bg-red-400/10 px-1.5 py-0 font-meta
    * text-[8px] uppercase tracking-meta-narrow text-red-300`
    */
   rejectedBadge: {
     height: "1rem",
-    borderColor: "rgb(248 113 113 / 0.4)",
-    backgroundColor: "rgb(248 113 113 / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     paddingInline: space.s1_5,
     paddingBlock: 0,
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    lineHeight: "inherit",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaNarrow,
     color: colors.critical,
   },
   /** `w-full gap-2` on the `.xosc` file chooser. */
@@ -179,7 +129,7 @@ export const list = stylex.create({
 /** The row-level icon buttons in `ScenarioDocumentRow`. */
 export const row = stylex.create({
   /** `text-foreground/65 hover:text-foreground` */
-  quiet: { color: { default: "hsl(var(--foreground) / 0.65)", ":hover": colors.text } },
+  quiet: { color: { default: colors.inkSecondary, ":hover": colors.text } },
   /** `text-primary`, beside the row base's own `hover:text-foreground`. */
   activeInk: { color: { default: colors.primary, ":hover": colors.text } },
   /** `text-primary` where the ghost variant still supplies the hover ink. */
@@ -203,14 +153,14 @@ export const renderInk = stylex.create({
   active: { color: { default: colors.critical, ":hover": colors.text } },
   activeFlat: { color: colors.critical },
   /** `text-yellow-400 hover:text-yellow-300` */
-  running: { color: { default: "rgb(250 204 21)", ":hover": "rgb(253 224 71)" } },
-  runningFlat: { color: "rgb(250 204 21)" },
+  running: { color: { default: colors.warning, ":hover": colors.warning } },
+  runningFlat: { color: colors.warning },
   /** `text-green-400 hover:text-green-300` */
-  complete: { color: { default: "rgb(74 222 128)", ":hover": "rgb(134 239 172)" } },
-  completeFlat: { color: "rgb(74 222 128)" },
+  complete: { color: { default: colors.positive, ":hover": colors.positive } },
+  completeFlat: { color: colors.positive },
   /** `text-red-400 hover:text-red-300` */
-  none: { color: { default: "rgb(248 113 113)", ":hover": colors.critical } },
-  noneFlat: { color: "rgb(248 113 113)" },
+  none: { color: { default: colors.critical, ":hover": colors.critical } },
+  noneFlat: { color: colors.critical },
 });
 
 /**
@@ -218,33 +168,6 @@ export const renderInk = stylex.create({
  * dataset detail view's tag editor. Both are the same control.
  */
 export const chip = stylex.create({
-  /**
-   * `h-8 gap-2 rounded-none border-border/80 px-3
-   * font-[Share_Tech_Mono,IBM_Plex_Mono,monospace] text-[10px] font-bold
-   * uppercase tracking-[0.16em]`
-   */
-  base: {
-    height: "2rem",
-    gap: space.s2,
-    borderColor: "hsl(var(--border) / 0.8)",
-    paddingInline: space.s3,
-    fontFamily: CHIP_FONT,
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    lineHeight: "inherit",
-    letterSpacing: text.trackingMetaWide,
-  },
-  /** `bg-foreground text-background hover:bg-foreground/90` */
-  on: {
-    backgroundColor: { default: colors.text, ":hover": "hsl(var(--foreground) / 0.9)" },
-    color: colors.bg,
-  },
-  /** `bg-background/70 text-foreground/75 hover:bg-muted hover:text-foreground` */
-  off: {
-    backgroundColor: { default: "hsl(var(--background) / 0.7)", ":hover": colors.muted },
-    color: { default: "hsl(var(--foreground) / 0.75)", ":hover": colors.text },
-  },
 });
 
 /** `scenario/scene` — the retry action and the cache-everything button. */
@@ -252,10 +175,7 @@ export const scene = stylex.create({
   /** `mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]` */
   retry: {
     marginTop: space.s6,
-    height: "2.5rem",
-    backgroundColor: { default: colors.accent, ":hover": "#f1ea55" },
     paddingInline: space.s5,
-    color: "black",
   },
 });
 
@@ -275,12 +195,6 @@ export const rail = stylex.create({
     gap: space.s1_5,
     backgroundColor: { default: "transparent", ":hover": "transparent" },
     paddingInline: space.s2,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: { default: null, ":hover": colors.primary },
   },
   /** `text-primary` while autoplay runs, over `autoplay`'s own hover ink. */
@@ -292,32 +206,22 @@ export const rail = stylex.create({
    * footer action.
    */
   footerAction: {
-    height: "2.25rem",
     width: "100%",
     justifyContent: "center",
     gap: space.s1_5,
-    borderWidth: 0,
-    borderTopWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: { default: colors.accent, ":hover": "#f1e949" },
     paddingInline: 0,
     fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: { default: "black", ":hover": "black" },
   },
 });
 
 /** `scenario/review` — the review queue's badges and saving indicator. */
 export const review = stylex.create({
   /** `text-[10px]` */
-  tagBadge: { fontSize: "10px", lineHeight: "inherit" },
+  tagBadge: { fontSize: text.sizeMicro, lineHeight: "inherit" },
   /** `font-mono text-[10px]` */
-  idBadge: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" },
+  idBadge: { fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: "inherit" },
   /** `ml-1 text-xs text-muted-foreground` */
   saving: {
     marginLeft: space.s1,

@@ -17,7 +17,7 @@ import { EDITOR_SENSOR_RIGS } from "./sensor-rig-presets";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorSensorsSection.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Sensors, as much of them as a 192px rail can honestly show.
@@ -50,7 +50,7 @@ export function ActorSensorsSection({
     <section aria-labelledby="scenario-sensors-heading" {...stylex.props(styles.stackSm)}>
       <div {...stylex.props(styles.flexBetweenBaseline)}>
         <span
-          {...stylex.props(styles.caps)}
+          {...stylex.props([typography.tag, styles.caps])}
           id="scenario-sensors-heading"
         >
           Sensors
@@ -93,7 +93,7 @@ export function ActorSensorsSection({
 
       <div {...stylex.props(styles.flexGap15)}>
         <button
-          className={stylex.props([focus.ringAccent, styles.flexCenterMid], motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.flexCenterMid], motionStyles.editorMotion).className}
           data-testid="open-sensor-setup"
           onClick={() => setSetupOpen(true)}
           type="button"
@@ -104,7 +104,7 @@ export function ActorSensorsSection({
         {counts.total === 0 ? (
           <button
             aria-label="Add dash camera"
-            className={stylex.props([focus.ringAccent, styles.flexCenterMid2], motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.flexCenterMid2], motionStyles.editorMotion).className}
             onClick={() => document.addActorSensor(role.id, defaultDashCamera(role.actor))}
             type="button"
           >

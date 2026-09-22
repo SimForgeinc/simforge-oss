@@ -20,7 +20,7 @@ export const styles = stylex.create({
     paddingRight: space.s5,
     paddingTop: space.s3_5,
     paddingBottom: space.s3_5,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-3
   flexCenterGap3: {
@@ -41,7 +41,7 @@ export const styles = stylex.create({
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-4
   size4: {
@@ -91,10 +91,10 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     backgroundColor: {
-      default: "hsl(var(--destructive) / 0.1)",
-      ":hover": "hsl(var(--destructive) / 0.2)",
+      default: colors.criticalWash,
+      ":hover": colors.criticalWash,
     },
     paddingLeft: space.s3,
     paddingRight: space.s3,
@@ -128,7 +128,7 @@ export const styles = stylex.create({
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
     opacity: {
       default: null,
       ":disabled": "0.5",
@@ -179,7 +179,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // aspect-video w-full render-video-mat object-contain
   wideVideoContain: {
@@ -209,10 +209,6 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // render-glass flex min-h-72 flex-1 flex-col items-center justify-center gap-3 border p-8 text-center text-sm text-muted-foreground
@@ -231,13 +227,13 @@ export const styles = stylex.create({
     lineHeight: text.lineSm,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-6 text-muted-foreground/50
   size6TextMutedForeground50: {
     width: "1.5rem",
     height: "1.5rem",
-    color: "hsl(var(--muted-foreground) / 0.5)",
+    color: colors.inkFaint,
   },
   // flex shrink-0 flex-wrap gap-2
   flexWrapTight: {
@@ -260,10 +256,6 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // flex min-h-0 flex-col render-hairline xl:border-l
@@ -271,7 +263,7 @@ export const styles = stylex.create({
     display: "flex",
     minHeight: "0px",
     flexDirection: "column",
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
     borderLeftWidth: {
       default: null,
       [layout.bpXl]: stroke.hairline,
@@ -288,7 +280,7 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-h-0 flex-1 overflow-y-auto
   fillScrollYShrinkable: {
@@ -313,7 +305,7 @@ export const styles = stylex.create({
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineRelaxed,
-    color: "hsl(var(--foreground) / 0.75)",
+    color: colors.inkSecondary,
   },
   // flex h-full items-center justify-center text-muted-foreground
   flexCenterMid: {
@@ -352,10 +344,6 @@ export const styles = stylex.create({
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // motionStyles.editorMotion + relative w-40 shrink-0 overflow-hidden border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-primary
@@ -378,8 +366,8 @@ export const styles = stylex.create({
     textAlign: "left",
     backgroundColor: colors.fillSubtle,
     borderColor: {
-      default: "rgb(255 255 255 / 10%)",
-      ":hover": "hsl(var(--primary) / 0.5)",
+      default: colors.hairline,
+      ":hover": colors.accentLine,
     },
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass-raised border text-foreground
@@ -393,7 +381,7 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
-    backgroundColor: colors.glassRaised,
+    backgroundColor: colors.fill,
     borderColor: colors.hairlineStrong,
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground

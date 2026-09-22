@@ -14,6 +14,7 @@ import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActionPalette.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -114,13 +115,13 @@ export function ActionPalette({
   return (
     <div {...stylex.props(styles.tightWhiteRuleR)}>
       <label
-        {...stylex.props(styles.blockCapsMicro)}
+        {...stylex.props([typography.eyebrow, styles.blockCapsMicro])}
         htmlFor={timeId}
       >
         Add action at time
       </label>
       <div {...stylex.props(styles.flexGap2)}>
-        <Input
+        <Input size="md" variant="plate"
           id={timeId}
           type="number"
           step={0.5}
@@ -139,9 +140,9 @@ export function ActionPalette({
         Choose a time from 0 to {clipSeconds} seconds.
       </p>
       {targetSpeedAction ? (
-        <label {...stylex.props(styles.blockCapsMicro2)}>
+        <label {...stylex.props([typography.eyebrow, styles.blockCapsMicro2])}>
           Target speed (kph)
-          <Input
+          <Input size="md" variant="plate"
             xstyle={styles.xsWhite2}
             data-testid="action-palette-target-speed"
             step={1}
@@ -223,7 +224,7 @@ function PaletteButton({
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className={stylex.props(styles.metaBordered, motionStyles.editorMotion).className}
+      className={stylex.props([focus.ring, styles.metaBordered], motionStyles.editorMotion).className}
     >
       {children}
     </button>

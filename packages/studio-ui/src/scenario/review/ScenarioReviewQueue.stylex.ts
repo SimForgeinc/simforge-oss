@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, layout, space, stroke, text } from "../../stylex/tokens.stylex";
 export const styles = stylex.create({
-  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
+  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
   activeCard: { borderColor: colors.accent },
   failedCard: { borderColor: colors.danger },
   divFlex: {
@@ -16,7 +16,7 @@ export const styles = stylex.create({
   div: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.25)",
     paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
     paddingBlock: space.s3,
@@ -38,8 +38,8 @@ export const styles = stylex.create({
   alert: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "hsl(var(--destructive) / 0.4)",
-    backgroundColor: "hsl(var(--destructive) / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
     paddingBlock: space.s3,
     fontSize: text.sizeSm,
@@ -86,7 +86,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "hsl(var(--muted-foreground) / 0.9)",
+    color: colors.inkMuted,
   },
   divFlex2: {
     display: "flex",

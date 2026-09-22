@@ -16,6 +16,7 @@ import { Readout } from "../regions/Readout";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorAppearanceSection.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 /**
  * Eight paints that stay legible against asphalt at authoring distance and read
@@ -161,8 +162,8 @@ export function ActorAppearanceSection({
                   })
                 }
                 className={stylex.props(
-                  styles.swatch,
-                  active ? styles.swatchActive : styles.swatchIdle,
+                  [focus.ring, styles.swatch],
+                  active ? styles.swatchActive : [focus.ring, styles.swatchIdle],
                   motionStyles.editorMotion,
                 ).className}
                 // The swatch *is* the colour, so this is data, not decoration —

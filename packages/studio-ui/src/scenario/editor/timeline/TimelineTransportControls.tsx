@@ -67,10 +67,10 @@ function TransportButton({
       xstyle={styles.whitePad0}
       disabled={disabled}
       onClick={onClick}
-      size="icon"
+      size="iconXs"
       title={label}
       type="button"
-      variant="ghost"
+      variant="outline"
     >
       {children}
     </Button>

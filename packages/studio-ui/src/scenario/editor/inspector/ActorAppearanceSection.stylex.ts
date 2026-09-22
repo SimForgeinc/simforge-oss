@@ -56,7 +56,7 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     gap: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s2,
@@ -115,29 +115,17 @@ export const styles = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     borderWidth: stroke.hairline,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
   },
   // border-primary ring-1 ring-primary
   swatchActive: {
     borderColor: colors.primary,
     boxShadow: {
       default: "0 0 0 1px hsl(var(--primary))",
-      ":focus-visible": shadows.ringOffset,
+      ":focus-visible": shadows.ring,
     },
   },
   // border-border
   swatchIdle: {
-    borderColor: colors.border,
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
-    },
+    borderColor: colors.hairline,
   },
 });

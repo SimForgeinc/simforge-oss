@@ -115,7 +115,7 @@ export function EditorDetailsPanel({
         {headerFooter}
         <button
           aria-label={closeLabel}
-          {...stylex.props([focus.ringAccent, styles.absGridCentered])}
+          {...stylex.props([focus.ring, styles.absGridCentered])}
           data-testid={closeTestId}
           onClick={onClose}
           type="button"

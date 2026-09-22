@@ -52,6 +52,7 @@ import { formatBytes, installFraction, installLabel, runtimeKey } from "../prese
 import type { ModelStoreView } from "../model-store-client";
 import { ModelStoreError, modelStore, toRuntimeSnapshot } from "../model-store-client";
 import { RefusalNotice } from "./RefusalNotice";
+import { hairline, typography } from "../../stylex/recipes.stylex";
 
 const STATE_POLL_MS = 1000;
 
@@ -382,11 +383,11 @@ export function ModelStorePanel({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
         />
       ) : null}
 
-      <div {...stylex.props(s.flexEndGap3, s.borderP4, styles.chrome)}>
+      <div {...stylex.props(s.flexEndGap3, [hairline.all, s.borderP4], styles.chrome)}>
         <div {...stylex.props(s.minW64, s.flex1, s.stack15)}>
           <label
             htmlFor="hf-token"
-            {...stylex.props(s.labelToken)}
+            {...stylex.props([typography.caps, s.labelToken])}
           >
             <KeyRound aria-hidden="true" {...stylex.props(s.icon14)} />
             Hugging Face token

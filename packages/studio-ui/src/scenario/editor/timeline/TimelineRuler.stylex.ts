@@ -16,7 +16,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderColor: colors.critical,
     backgroundColor: "rgb(69 10 10 / 1)",
-    color: "rgb(254 202 202 / 1)",
+    color: colors.critical,
     boxShadow: "0 0 8px rgba(248, 113, 113, 0.7)",
   },
   // size-2.5
@@ -33,8 +33,8 @@ export const styles = stylex.create({
     MozUserSelect: "none",
     userSelect: "none",
     borderBottomWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.scrimLight,
   },
 
   // absolute inset-y-0 w-px

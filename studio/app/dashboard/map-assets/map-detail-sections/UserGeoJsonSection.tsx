@@ -13,7 +13,7 @@ import {
   parseUserGeoJson,
   type UserGeoJsonLayer,
 } from "@/app/lib/maps/frontend/user-geojson-layers";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the UserGeoJsonSection component. */
 export type UserGeoJsonSectionProps = {
@@ -48,7 +48,7 @@ function SliderRow({
 }) {
   return (
     <div {...stylex.props(styles.sliderRow)}>
-      <span {...stylex.props(styles.sliderLabel)}>
+      <span {...stylex.props([typography.eyebrow, styles.sliderLabel])}>
         {label}
       </span>
       <input
@@ -124,13 +124,13 @@ export function UserGeoJsonSection({
   return (
     <section data-testid="user-geojson-section">
       <div {...stylex.props(styles.uploadHeader)}>
-        <span {...stylex.props(styles.uploadTitle)}>
+        <span {...stylex.props([typography.caps, styles.uploadTitle])}>
           Uploaded GeoJSON
         </span>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          {...stylex.props([motionRecipe.colors, styles.uploadButton])}
+          {...stylex.props([motionRecipe.colors, [hairline.all, styles.uploadButton]])}
           data-testid="upload-geojson-button"
         >
           <Upload {...stylex.props(styles.uploadIcon)} />
@@ -168,7 +168,7 @@ export function UserGeoJsonSection({
             return (
               <li
                 key={layer.id}
-                {...stylex.props(styles.layerItem)}
+                {...stylex.props([hairline.all, styles.layerItem])}
               >
                 <div {...stylex.props(styles.layerControls)}>
                   <button

@@ -7,7 +7,7 @@ export const styles = stylex.create({
     position: "relative",
     height: "0.625rem",
     overflow: "hidden",
-    backgroundColor: "rgb(0 0 0 / 0.3)",
+    backgroundColor: colors.scrimLight,
   },
   // absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/10
   abs: {
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     borderLeftWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.accent,
-    backgroundColor: "rgb(232 224 68 / 0.2)",
+    backgroundColor: colors.accentWash,
   },
   // bg-[#E8E044]/75
   barExact: {

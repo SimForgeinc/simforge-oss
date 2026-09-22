@@ -8,9 +8,6 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
-const AMBER_400_30 = "rgba(251, 191, 36, 0.3)";
-const AMBER_400_10 = "rgba(251, 191, 36, 0.1)";
-const AMBER_300_90 = "rgba(252, 211, 77, 0.9)";
 /** `animate-spin`: one revolution per second on the pending-request loader. */
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
@@ -40,16 +37,13 @@ export const form = stylex.create({
   },
   label: {
     fontFamily: text.fontMeta,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   input: {
-    backgroundColor: colors.fillSubtle,
-    borderColor: colors.hairlineStrong,
-    color: colors.text,
   },
   // A six-digit code: monospaced, spaced, and only as wide as it needs to be.
   code: {
@@ -72,18 +66,10 @@ export const form = stylex.create({
     gap: space.s2,
   },
   submit: {
-    height: "2.5rem",
     gap: space.s2,
-    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
-    color: colors.accentText,
-    opacity: { default: null, ":disabled": 0.6 },
   },
   secondary: {
-    height: "2.5rem",
     gap: space.s2,
-    borderColor: colors.hairlineStrong,
-    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
-    color: colors.text,
   },
   // An inline text action ("Create account", "Forgot password?").
   link: {
@@ -102,7 +88,7 @@ export const form = stylex.create({
     alignItems: "center",
     gap: space.s2,
     fontFamily: text.fontMeta,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -126,7 +112,7 @@ export const form = stylex.create({
   success: {
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
-    color: AMBER_300_90,
+    color: colors.warning,
   },
   note: {
     fontSize: text.sizeXs,
@@ -154,8 +140,8 @@ export const banner = stylex.create({
     marginTop: space.s3,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: AMBER_400_30,
-    backgroundColor: AMBER_400_10,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     padding: space.s4,
   },
   title: {

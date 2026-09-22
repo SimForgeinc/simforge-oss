@@ -47,7 +47,7 @@ export function ScenarioBootGate() {
       title={blocking.message}
     >
       {blocking.action ? (
-        <Button
+        <Button size="lg"
           xstyle={styles.round}
           onClick={blocking.action.run}
         >

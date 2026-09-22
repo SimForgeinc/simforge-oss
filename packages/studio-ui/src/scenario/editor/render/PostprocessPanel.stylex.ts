@@ -9,7 +9,7 @@ export const styles = stylex.create({
     gap: space.s3,
     borderTopWidth: stroke.hairline,
     paddingTop: space.s4,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-2
   flexCenterGap2: {
@@ -19,11 +19,6 @@ export const styles = stylex.create({
   },
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // ml-auto flex items-center gap-1
@@ -52,10 +47,6 @@ export const styles = stylex.create({
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted2: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   /*
@@ -67,12 +58,12 @@ export const styles = stylex.create({
   borderedDivided: {
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // (was the list's render-divide divide-y)
   rowDivided: {
     borderTopWidth: stroke.hairline,
-    borderTopColor: "rgb(255 255 255 / 10%)",
+    borderTopColor: colors.hairline,
   },
   // flex flex-col gap-1 px-2.5 py-2
   flexColGap12: {
@@ -107,7 +98,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     padding: space.s2_5,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-h-16 text-xs
   xs: {
@@ -115,22 +106,8 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
   },
-  // h-8 text-xs
-  xs2: {
-    height: "2rem",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-  },
   // self-start
   selfStart: {
     alignSelf: "flex-start",
-  },
-
-  // text-micro uppercase tracking-meta
-  fieldMetaLabel: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 });

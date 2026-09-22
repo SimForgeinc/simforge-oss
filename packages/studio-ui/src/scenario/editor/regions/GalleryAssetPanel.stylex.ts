@@ -4,7 +4,7 @@ import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 export const styles = stylex.create({
   // text-[9px] leading-relaxed text-white/45
   relaxed: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: text.lineRelaxed,
     color: colors.inkMuted,
   },
@@ -14,13 +14,13 @@ export const styles = stylex.create({
     width: "100%",
     borderWidth: stroke.hairline,
     borderColor: {
-      default: "rgb(255 255 255 / 0.15)",
-      ":focus": "rgb(255 255 255 / 0.3)",
+      default: colors.hairlineStrong,
+      ":focus": colors.hairlineStrong,
     },
     backgroundColor: colors.scrimLight,
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.ink,
     outline: "2px solid transparent",
     outlineOffset: "2px",
@@ -46,7 +46,7 @@ export const styles = stylex.create({
   wideSquareContain: {
     aspectRatio: "1 / 1",
     width: "100%",
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    backgroundColor: colors.scrimLight,
     objectFit: "contain",
   },
   // min-w-0 px-2 py-1.5
@@ -60,15 +60,15 @@ export const styles = stylex.create({
   // block truncate text-[10px] font-semibold text-white/85
   blockSemiboldTruncate: {
     display: "block",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
-    color: "rgb(255 255 255 / 0.85)",
+    color: colors.ink,
   },
   // block truncate text-[8px] text-white/40
   blockTruncate: {
     display: "block",
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.4)",
+    fontSize: text.sizeNano,
+    color: colors.inkMuted,
   },
   // mt-1.5
   mt15: {
@@ -88,12 +88,12 @@ export const styles = stylex.create({
     paddingTop: "4rem",
     paddingBottom: "4rem",
     textAlign: "center",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.inkMuted,
   },
   // text-[9px] leading-relaxed text-red-300
   relaxed2: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: text.lineRelaxed,
     color: colors.critical,
   },
@@ -101,12 +101,12 @@ export const styles = stylex.create({
   borderedWide: {
     width: "100%",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(255 255 255 / 0.05)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
     paddingTop: space.s2,
     paddingBottom: space.s2,
-    fontSize: "10px",
-    color: "rgb(255 255 255 / 0.65)",
+    fontSize: text.sizeMicro,
+    color: colors.inkSecondary,
     opacity: {
       default: null,
       ":disabled": "0.5",
@@ -117,8 +117,8 @@ export const styles = stylex.create({
     paddingTop: space.s2,
     paddingBottom: space.s2,
     textAlign: "center",
-    fontSize: "9px",
-    color: "rgb(255 255 255 / 0.4)",
+    fontSize: text.sizeTag,
+    color: colors.inkMuted,
   },
   /*
    * The panel's old `space-y-3`. `space-y` is a `> * + *` rule with no StyleX
@@ -142,7 +142,7 @@ export const styles = stylex.create({
     paddingRight: space.s2_5,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
   },
   // border-[#d56d27] bg-[#5a3521] text-[#ffd2b2]
   ownershipChipActive: {
@@ -154,7 +154,7 @@ export const styles = stylex.create({
   ownershipChipIdle: {
     borderColor: colors.fillStrong,
     backgroundColor: colors.fillSubtle,
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   // relative overflow-hidden rounded-md border bg-white/[0.04]
   // (the `group` marker went with the migration: nothing in this panel reads an
@@ -194,7 +194,7 @@ export const styles = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     placeItems: "center",
-    backgroundColor: "rgb(0 0 0 / 0.55)",
+    backgroundColor: colors.scrim,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
   },
@@ -204,6 +204,6 @@ export const styles = stylex.create({
   },
   // text-white/55
   favoriteToggleOff: {
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
 });

@@ -32,7 +32,7 @@ import { useProximityArrows } from "./useProximityArrows";
 import { useMapAssetOperations } from "./useMapAssetOperations";
 import { MapDetailRightPanel } from "./MapDetailRightPanel";
 import { DigitalTwinViewerPanel } from "./DigitalTwinViewerPanel";
-import { focus, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { focus, hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type DetailTab = "overview" | "layers" | "analytics" | "insights";
 
@@ -636,13 +636,13 @@ export function MapDetailPageClient({
             <button
               type="button"
               onClick={requestResetView}
-              {...stylex.props([motionRecipe.colors, styles.resetViewButton])}
+              {...stylex.props([motionRecipe.colors, [hairline.all, styles.resetViewButton]])}
               aria-label="Reset view"
               title="Reset view"
             >
               <Home {...stylex.props(styles.resetViewIcon)} />
             </button>
-            <div {...stylex.props(styles.viewModeToggle)}>
+            <div {...stylex.props([hairline.all, styles.viewModeToggle])}>
               {(["2d", "3d"] as const).map((mode) => (
                 <button
                   key={mode}

@@ -12,7 +12,7 @@ resizeDotColor: "hsl(var(--border))"
 export const styles = stylex.create({
   mediaPanel: {
     animationName: slideInFromBottom2,
-    animationDuration: "200ms",
+    animationDuration: motion.durBase,
     animationTimingFunction: motion.easeDecelerate,
     position: "absolute",
     bottom: "0.75rem",
@@ -21,9 +21,6 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevationXl,
   },
@@ -38,7 +35,7 @@ export const styles = stylex.create({
     cursor: "nwse-resize",
     alignItems: "center",
     justifyContent: "center",
-    [hovered.resizeDotColor]: colors.border,
+    [hovered.resizeDotColor]: colors.hairline,
     ":hover": {
       [hovered.resizeDotColor]: "hsl(var(--muted-foreground) / 0.6)",
     },
@@ -56,7 +53,7 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s2,
   },
@@ -66,8 +63,6 @@ export const styles = stylex.create({
     fontWeight: text.weightMedium,
   },
   closeButton: {
-    height: "1.5rem",
-    width: "1.5rem",
     flexShrink: 0,
   },
   closeIcon: {

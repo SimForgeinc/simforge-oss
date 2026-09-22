@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   viewerLoadingContainer: {
@@ -16,10 +16,7 @@ export const styles = stylex.create({
     width: "4rem",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.5)",
+    backgroundColor: colors.fillSubtle,
   },
   loadingPlaceholderIcon: {
     width: "2rem",

@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { colors, layers, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -41,7 +41,7 @@ export const styles = stylex.create({
     color: colors.ink,
     cursor: "pointer",
     whiteSpace: "nowrap",
-    backdropFilter: "blur(6px)",
+    backdropFilter: motion.blurMd,
   },
   labelSelected: {
     borderColor: colors.accent,
@@ -53,12 +53,7 @@ export const styles = stylex.create({
     lineHeight: text.lineTight,
   },
   labelCount: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    letterSpacing: text.trackingMetaTight,
-    textTransform: "uppercase",
-    color: colors.textSubtle,
-    lineHeight: text.lineTight,
+    color: colors.inkMuted,
   },
   actions: {
     display: "flex",
@@ -102,21 +97,14 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     backgroundColor: colors.scrim,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.hairline,
-    backdropFilter: "blur(6px)",
+    backdropFilter: motion.blurMd,
   },
   legendTitle: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    letterSpacing: text.trackingMetaTight,
-    textTransform: "uppercase",
     color: colors.inkFaint,
   },
   legendRow: {
     fontSize: text.sizeXs,
-    color: colors.textSubtle,
+    color: colors.inkMuted,
     lineHeight: text.lineNormal,
   },
   status: {
@@ -128,11 +116,8 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     backgroundColor: colors.scrim,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.hairline,
     fontSize: text.sizeXs,
-    color: colors.textSubtle,
-    backdropFilter: "blur(6px)",
+    color: colors.inkMuted,
+    backdropFilter: motion.blurMd,
   },
 });

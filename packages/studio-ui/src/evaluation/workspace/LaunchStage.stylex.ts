@@ -47,11 +47,6 @@ export const styles = stylex.create({
   },
   recentLabel: {
     margin: 0,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
-    letterSpacing: text.trackingMeta,
-    textTransform: "uppercase",
     color: colors.mutedForeground,
   },
   filmstrip: {
@@ -76,7 +71,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
-    backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.fill },
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     transitionProperty: "background-color, border-color",

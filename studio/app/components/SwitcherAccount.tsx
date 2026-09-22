@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { focus, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Who you are on a host that has accounts, as one segment of the switcher's
@@ -54,14 +54,14 @@ export function AccountChip({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          {...stylex.props(chip.root, [motionRecipe.colors, chip.trigger])}
+          {...stylex.props(chip.root, [motionRecipe.colors, [focus.ringInset, chip.trigger]])}
           aria-label={`Account: ${name}. Open account menu`}
           data-testid="account-chip"
           disabled={signingOut}
           type="button"
         >
           <span {...stylex.props(chip.body)}>
-            <span {...stylex.props(chip.eyebrow)}>Account</span>
+            <span {...stylex.props([typography.tag, chip.eyebrow])}>Account</span>
             <span {...stylex.props(textLayout.truncate, chip.summary)} title={name}>
               {signingOut ? "Signing out…" : name}
             </span>

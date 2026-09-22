@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-auto fixed inset-0 z-50 flex items-center justify-center px-4
@@ -17,7 +17,7 @@ export const styles = stylex.create({
   closeNewDatasetDialogButton: {
     position: "absolute",
     inset: "0",
-    backgroundColor: "rgb(0 0 0 / 0.7)",
+    backgroundColor: colors.scrimHeavy,
     backdropFilter: motion.blurSm,
   },
   // relative z-10 w-full max-w-sm border border-border bg-background p-5 shadow-2xl
@@ -26,9 +26,6 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     width: "100%",
     maxWidth: "24rem",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     padding: space.s5,
     boxShadow: shadows.elevation2xl,

@@ -69,7 +69,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   expandCollapseIcon: {
@@ -81,11 +81,7 @@ export const styles = stylex.create({
     marginBottom: space.s1,
   },
   lodSummaryTitle: {
-    fontSize: "10px",
-    fontWeight: text.weightMedium,
-    color: "hsl(var(--muted-foreground) / 0.7)",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
+    color: colors.inkFaint,
     marginBottom: space.s1_5,
   },
   lodSummaryRows: {
@@ -111,19 +107,19 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   strengthStrong: {
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
-    color: "#4ade80",
-    borderColor: "rgba(34, 197, 94, 0.2)",
+    backgroundColor: colors.positiveWash,
+    color: colors.positive,
+    borderColor: colors.positive,
   },
   strengthModerate: {
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
-    color: "#fbbf24",
-    borderColor: "rgba(245, 158, 11, 0.2)",
+    backgroundColor: colors.warningWash,
+    color: colors.warning,
+    borderColor: colors.warning,
   },
   strengthLimited: {
     backgroundColor: colors.muted,
     color: colors.mutedForeground,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
   },
   readinessSignalHeader: {
     display: "flex",
@@ -136,7 +132,7 @@ export const styles = stylex.create({
     alignItems: "center",
     paddingInline: space.s1_5,
     paddingBlock: "1px",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightMedium,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
@@ -147,7 +143,7 @@ export const styles = stylex.create({
     fontWeight: text.weightMedium,
   },
   readinessSignalDescription: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
     lineHeight: text.lineRelaxed,
     marginLeft: space.s0_5,

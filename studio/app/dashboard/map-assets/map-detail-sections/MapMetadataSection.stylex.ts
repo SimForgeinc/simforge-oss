@@ -12,11 +12,6 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -29,12 +24,12 @@ export const styles = stylex.create({
   },
   copyMetadataButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
+    color: { default: colors.inkFaint, ":hover": colors.mutedForeground },
   },
   copiedCheckIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.75rem",
@@ -52,20 +47,16 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   populateMetadataEmphasis: {
-    color: "hsl(var(--foreground) / 0.8)",
+    color: colors.inkSecondary,
   },
   metadataSubsectionHeading: {
     marginBottom: space.s1,
-    fontSize: "11px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   locationValue: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "hsl(var(--foreground) / 0.9)",
+    color: colors.ink,
   },
   metadataDefinitionList: {
     display: "grid",
@@ -77,31 +68,31 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   metadataLabel: {
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
   },
   metadataValue: {
     fontFamily: text.fontMono,
-    color: "hsl(var(--foreground) / 0.9)",
+    color: colors.ink,
   },
   metadataSecondaryValue: {
     wordBreak: "break-all",
     fontFamily: text.fontMono,
-    color: "hsl(var(--foreground) / 0.9)",
+    color: colors.ink,
   },
   projLabel: {
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
     flexShrink: 0,
   },
   projStringValue: {
     wordBreak: "break-all",
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineSnug,
-    color: "hsl(var(--foreground) / 0.85)",
+    color: colors.ink,
   },
   metadataTimestamp: {
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontSize: text.sizeMicro,
+    color: colors.inkFaint,
   },
   populateMetadataContainer: {
     paddingTop: space.s1,

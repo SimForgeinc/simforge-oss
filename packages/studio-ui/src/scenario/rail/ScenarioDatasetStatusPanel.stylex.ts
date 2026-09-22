@@ -8,11 +8,6 @@ export const styles = stylex.create({
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: space.s2,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
   },
   // text-muted-foreground
   span: {
@@ -37,11 +32,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   datasetStatus: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWidest,
     color: colors.mutedForeground,
   },
   // truncate text-sm font-semibold text-foreground
@@ -59,11 +49,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   contributors: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWidest,
     color: colors.mutedForeground,
   },
   // mt-1 text-xs text-muted-foreground
@@ -97,11 +82,6 @@ export const styles = stylex.create({
   // shrink-0 font-meta text-micro uppercase tracking-meta text-muted-foreground
   spanMetaMicroUppercase: {
     flexShrink: 0,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
 });

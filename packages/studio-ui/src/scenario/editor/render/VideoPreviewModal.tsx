@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./VideoPreviewModal.stylex";
-import { textLayout } from "../../../stylex/recipes.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Full-pane playback for one artifact — manifest #148.
@@ -57,7 +57,7 @@ export function VideoPreviewModal({
         <header {...stylex.props(styles.flexCenterRuleB)}>
           <div {...stylex.props(styles.fillNarrowable)}>
             {eyebrow ? (
-              <p {...stylex.props([textLayout.truncate, styles.capsMicroMuted])}>
+              <p {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.capsMicroMuted]])}>
                 {eyebrow}
               </p>
             ) : null}
@@ -69,7 +69,7 @@ export function VideoPreviewModal({
         </header>
         <div {...stylex.props(styles.relFillShrinkable)}>
           {!url ? (
-            <p {...stylex.props(styles.gridCenteredCaps)}>
+            <p {...stylex.props([typography.eyebrow, styles.gridCenteredCaps])}>
               This file has no playable URL.
             </p>
           ) : isVideo ? (

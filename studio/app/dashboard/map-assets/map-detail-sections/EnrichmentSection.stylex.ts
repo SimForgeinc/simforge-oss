@@ -12,11 +12,6 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -35,9 +30,9 @@ export const styles = stylex.create({
     justifyContent: "center",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.3)" },
+    borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
   },
@@ -89,7 +84,7 @@ export const styles = stylex.create({
     color: colors.danger,
   },
   provenanceLabel: {
-    color: "hsl(var(--foreground) / 0.8)",
+    color: colors.inkSecondary,
   },
   loadedError: {
     marginTop: space.s1_5,
@@ -98,7 +93,7 @@ export const styles = stylex.create({
     color: colors.danger,
   },
   attributionText: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineSnug,
     color: colors.mutedForeground,
   },

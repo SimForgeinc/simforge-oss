@@ -19,7 +19,7 @@ import {
 import { formatSeconds, indicationSwatch } from "./indication-style";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ReferenceLightEditor.stylex";
-import { a11y, textLayout } from "../../../stylex/recipes.stylex";
+import { a11y, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The whole authoring surface for one traffic light: three sortable phase rows.
@@ -104,7 +104,7 @@ export function ReferenceLightEditor({
         role="table"
       >
         <div
-          {...stylex.props(styles.gridCenterCaps)}
+          {...stylex.props([typography.eyebrow, styles.gridCenterCaps])}
           role="row"
         >
           <span aria-label="Order" role="columnheader" />
@@ -214,7 +214,7 @@ function TimingRow({
         </label>
       </div>
       <div {...stylex.props(styles.rel)} role="cell">
-        <Input
+        <Input size="xs" variant="plate"
           id={id}
           key={`${id}-${value}`}
           type="number"

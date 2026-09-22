@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   artifactsToggle: {
@@ -7,11 +7,6 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -38,9 +33,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
   },
@@ -62,8 +54,8 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    fontSize: text.sizeMicro,
+    color: colors.inkFaint,
   },
   artifactActions: {
     display: "flex",

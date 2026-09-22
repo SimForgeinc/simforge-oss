@@ -9,6 +9,7 @@ import { AppStage } from "@/app/components/AppStage";
 import { plate } from "@/app/components/AppStage.stylex";
 import { AiProviderSettings } from "./AiProviderSettings";
 import { LocalExecutionCard } from "./LocalExecutionCard";
+import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Settings, in the app switcher's chrome: the same backdrop and hairline
@@ -26,21 +27,21 @@ export function SettingsSurface() {
       testId="settings-panel"
     >
       <div {...stylex.props(plate.scroller)}>
-        <nav {...stylex.props(plate.tabs)} aria-label="Settings sections">
-          {[["computer", "This computer"], ["ai", "AI providers"], ["storage", "Storage"], ["account", "Account"]].map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => setSection(id!)} {...stylex.props(plate.tab, section === id ? plate.tabActive : plate.tabIdle)}>{label}</button>)}
+        <nav {...stylex.props([hairline.all, plate.tabs])} aria-label="Settings sections">
+          {[["computer", "This computer"], ["ai", "AI providers"], ["storage", "Storage"], ["account", "Account"]].map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => setSection(id!)} {...stylex.props([focus.ringInset, plate.tab], section === id ? plate.tabActive : plate.tabIdle)}>{label}</button>)}
         </nav>
         <div>
       {section === "computer" ? <LocalExecutionCard /> : null}
       {section === "ai" ? <AiProviderSettings /> : null}
-      {section === "storage" ? <section {...stylex.props(plate.root)}>
-        <p {...stylex.props(plate.eyebrow)}>Storage</p>
+      {section === "storage" ? <section {...stylex.props([hairline.all, plate.root])}>
+        <p {...stylex.props([typography.eyebrow, plate.eyebrow])}>Storage</p>
         <h2 {...stylex.props(plate.title)}>Map cache on this computer</h2>
         <p {...stylex.props(plate.copy)}>
           Downloaded map files live with the rendering profile: pick the folder, move the cache, or clear it
           from Render Settings. Clearing never deletes your projects, jobs or finished renders.
         </p>
         <div {...stylex.props(plate.row)}>
-          <Button asChild xstyle={plate.button} variant="outline">
+          <Button asChild xstyle={[focus.ring, plate.button]} variant="outline">
             <Link href="/dashboard/apps?view=render-settings">
               <MonitorCog {...stylex.props(plate.icon)} aria-hidden="true" />
               Rendering profile &amp; map cache
@@ -48,15 +49,15 @@ export function SettingsSurface() {
           </Button>
         </div>
       </section> : null}
-      {section === "account" ? <section {...stylex.props(plate.root)}>
-        <p {...stylex.props(plate.eyebrow)}>Account</p>
+      {section === "account" ? <section {...stylex.props([hairline.all, plate.root])}>
+        <p {...stylex.props([typography.eyebrow, plate.eyebrow])}>Account</p>
         <h2 {...stylex.props(plate.title)}>SimCloud</h2>
         <p {...stylex.props(plate.copy)}>
           Signing in adds your account&apos;s maps, cloud models and cloud storage. Everything on this computer
           works without an account.
         </p>
         <div {...stylex.props(plate.row)}>
-          <Button asChild xstyle={[plate.button, plate.buttonAccent]}>
+          <Button asChild xstyle={[[focus.ring, plate.button], plate.buttonAccent]}>
             <Link href="/dashboard/simcloud">
               <Cloud {...stylex.props(plate.icon)} aria-hidden="true" />
               Open SimCloud

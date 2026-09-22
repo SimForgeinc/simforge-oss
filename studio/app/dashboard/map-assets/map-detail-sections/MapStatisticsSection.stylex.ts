@@ -12,11 +12,6 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -29,12 +24,12 @@ export const styles = stylex.create({
   },
   copyStatsButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
+    color: { default: colors.inkFaint, ":hover": colors.mutedForeground },
   },
   copiedCheckIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyStatsIcon: {
     width: "0.75rem",

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, shadows, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   panel: {
@@ -14,10 +14,7 @@ export const styles = stylex.create({
   },
   qualityOptions: {
     display: "flex",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.3)",
+    backgroundColor: colors.fillFaint,
     padding: space.s0_5,
   },
   stackY1_5: { marginTop: { default: space.s1_5, ":first-child": 0 } },
@@ -40,7 +37,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   qualityDescription: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
@@ -48,9 +45,6 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "hsl(var(--border) / 0.7)",
     padding: space.s2_5,
   },
   clearCacheButton: {
@@ -59,9 +53,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s1_5,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
     fontSize: text.sizeXs,
@@ -93,6 +84,6 @@ export const styles = stylex.create({
   layerCheckIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#22c55e",
+    color: colors.positive,
   },
 });

@@ -23,6 +23,7 @@ import {
   type GallerySort,
 } from "./gallery-filters";
 import { dialog } from "./asset-dialogs.stylex";
+import { focus, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 
 export function AssetGalleryToolbar({
@@ -54,8 +55,8 @@ export function AssetGalleryToolbar({
   return (
     <Toolbar xstyle={dialog.toolbar}>
       <div {...stylex.props(dialog.searchWrap)}>
-        {searching ? <Loader2 aria-hidden="true" {...stylex.props(dialog.searchIcon, dialog.searchSpinner, dialog.progressPulse)} /> : <Search aria-hidden="true" {...stylex.props(dialog.searchIcon)} />}
-        <Input
+        {searching ? <Loader2 aria-hidden="true" {...stylex.props(dialog.searchIcon, dialog.searchSpinner, motionRecipe.spin)} /> : <Search aria-hidden="true" {...stylex.props(dialog.searchIcon)} />}
+        <Input size="md" variant="plate"
           type="search"
           aria-label="Search assets by title"
           placeholder="Search assets by title…"
@@ -65,7 +66,7 @@ export function AssetGalleryToolbar({
           xstyle={dialog.searchInput}
         />
         {query ? (
-          <button type="button" aria-label="Clear search" onClick={() => onQueryChange("")} {...stylex.props(dialog.clearButton)}>
+          <button type="button" aria-label="Clear search" onClick={() => onQueryChange("")} {...stylex.props([focus.ring, dialog.clearButton])}>
             <X aria-hidden="true" {...stylex.props(dialog.iconSm)} />
           </button>
         ) : null}
@@ -96,7 +97,7 @@ export function AssetGalleryToolbar({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               xstyle={dialog.toolbarSort}
               title={
                 hasMore

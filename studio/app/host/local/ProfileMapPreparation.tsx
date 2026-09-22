@@ -10,6 +10,7 @@ import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { setup } from "@/app/components/setup-preparation.stylex";
 import { MapPreparationProgress } from "@/app/components/map-preparation/MapPreparationProgress";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const CatalogSchema = z.object({
   maps: z.array(z.object({
@@ -86,7 +87,7 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
         <div {...stylex.props(setup.header)}>
           <div {...stylex.props(setup.headerIcon)}>{complete ? <Check aria-hidden="true" /> : <Database aria-hidden="true" />}</div>
           <div>
-            <p {...stylex.props(setup.eyebrow)}>{PROFILE_LABELS[profile]} profile</p>
+            <p {...stylex.props([typography.eyebrow, setup.eyebrow])}>{PROFILE_LABELS[profile]} profile</p>
             <h2 {...stylex.props(setup.title)}>{complete ? "Maps are ready" : "Prepare maps"}</h2>
             <p {...stylex.props(setup.description)}>{planning ? "Checking available maps…" : downloading ? "Preparing the selected maps for local viewing and Bevy rendering." : complete ? "Selected maps are installed for offline viewing and local native rendering. Account maps still require an active SimCloud connection." : "Download complete maps to this computer. Verified files already in the shared map cache are reused."}</p>
           </div>
@@ -94,7 +95,7 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
         {maps.length > 0 && !busy && !complete ? (
           <fieldset {...stylex.props(setup.selection)}>
             <div {...stylex.props(setup.selectionHead)}>
-              <legend {...stylex.props(setup.selectionLegend)}>Maps to prepare · {selected.length} / {maps.length}</legend>
+              <legend {...stylex.props([typography.tag, setup.selectionLegend])}>Maps to prepare · {selected.length} / {maps.length}</legend>
               <div {...stylex.props(setup.selectionActions)}>
                 <button type="button" {...stylex.props(setup.actionButton, setup.actionPrimary)} onClick={() => setSelection(new Set(maps.filter((map) => !map.locked).map((map) => map.mapVersionId)))}>Select all</button>
                 <button type="button" {...stylex.props(setup.actionButton)} onClick={() => setSelection(new Set())}>Clear</button>
@@ -104,27 +105,27 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
               {maps.map((map) => (
                 <label key={map.mapVersionId} {...stylex.props(setup.mapOption)}>
                   <input type="checkbox" {...stylex.props(setup.checkbox)} disabled={map.locked} checked={selection.has(map.mapVersionId)} onChange={(event) => { const next = new Set(selection); if (event.currentTarget.checked) next.add(map.mapVersionId); else next.delete(map.mapVersionId); setSelection(next); }} />
-                  <span {...stylex.props(setup.truncate)}>{map.label}{map.locked ? " · needs account" : ""}</span>
+                  <span {...stylex.props(textLayout.truncate)}>{map.label}{map.locked ? " · needs account" : ""}</span>
                 </label>
               ))}
             </div>
           </fieldset>
         ) : null}
         {!busy && cloudState !== null && cloudState !== "connected" ? (
-          <div {...stylex.props(setup.notice)} data-testid="profile-map-preparation-account-notice" data-cloud-state={cloudState}>
+          <div {...stylex.props([hairline.all, setup.notice])} data-testid="profile-map-preparation-account-notice" data-cloud-state={cloudState}>
             <Cloud {...stylex.props(setup.noticeIcon)} aria-hidden="true" />
             <p {...stylex.props(setup.noticeText)}>Richmond Field Station is available without an account. Sign in to SimCloud for other published maps.</p>
-            <Button xstyle={setup.compactButton} variant="outline" disabled={cloudState === "connecting"} onClick={cloud.openAccountPanel}><LogIn {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />{cloudState === "connecting" ? "Finishing in your browser…" : "Sign in to SimCloud"}</Button>
+            <Button xstyle={setup.compactButton} variant="accentOutline" disabled={cloudState === "connecting"} onClick={cloud.openAccountPanel}><LogIn {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />{cloudState === "connecting" ? "Finishing in your browser…" : "Sign in to SimCloud"}</Button>
           </div>
         ) : null}
         {cloud.error ? <p {...stylex.props(setup.error)} role="alert">{cloud.error}</p> : null}
         {preparation.phase !== "idle" ? <div {...stylex.props(setup.preparation)}><MapPreparationProgress phase={preparation.phase} maps={preparation.maps} onRetry={preparation.install} onSkip={preparation.skip} /></div> : null}
         {error ? <p role="alert" {...stylex.props(setup.errorBox)}>{error}</p> : null}
         <div {...stylex.props(setup.footer)}>
-          {complete ? <Button xstyle={setup.primaryButton} onClick={onContinue}>Open map gallery</Button>
-            : busy ? <Button xstyle={setup.primaryButton} disabled><LoaderCircle {...stylex.props(setup.loader)} />{planning ? "Checking maps" : "Preparing maps"}</Button>
-              : <Button xstyle={setup.primaryButton} disabled={selected.length === 0} onClick={preparation.start}><Download {...stylex.props(setup.iconWithMargin)} />Prepare selected maps</Button>}
-          {!complete ? <Button xstyle={setup.secondaryButton} variant="outline" onClick={onSkip}>Skip to map gallery</Button> : null}
+          {complete ? <Button size="xl" variant="accent" xstyle={setup.primaryButton} onClick={onContinue}>Open map gallery</Button>
+            : busy ? <Button size="xl" variant="accent" xstyle={setup.primaryButton} disabled><LoaderCircle {...stylex.props(motionRecipe.spin)} />{planning ? "Checking maps" : "Preparing maps"}</Button>
+              : <Button size="xl" variant="accent" xstyle={setup.primaryButton} disabled={selected.length === 0} onClick={preparation.start}><Download {...stylex.props(setup.iconWithMargin)} />Prepare selected maps</Button>}
+          {!complete ? <Button size="xl" variant="outline" onClick={onSkip}>Skip to map gallery</Button> : null}
         </div>
       </div>
     </div>

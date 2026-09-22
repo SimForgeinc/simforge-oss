@@ -17,11 +17,6 @@ export const styles = stylex.create({
   },
   // font-meta text-xs uppercase tracking-wide text-muted-foreground
   localPlatform: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-3 font-display text-4xl font-semibold

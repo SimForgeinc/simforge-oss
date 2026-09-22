@@ -96,7 +96,7 @@ export function SignalTimelineLane({
                 ? `Collapse junction ${row.junctionId} stages`
                 : `Show junction ${row.junctionId} per stage`
             }
-            className={stylex.props([focus.ringOffset, styles.tightMuted], motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.tightMuted], motionStyles.editorMotion).className}
             data-testid={`signal-lane-expand-${row.junctionId}`}
             type="button"
             onClick={onToggleExpanded}

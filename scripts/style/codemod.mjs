@@ -34,7 +34,7 @@ const repoRoot = join(here, "..", "..");
 const argv = process.argv.slice(2);
 const flag = (name) => argv.includes(`--${name}`) || (argv.includes("--all") && !VISUAL.has(name));
 /** Transforms that change what renders; never part of --all. */
-const VISUAL = new Set(["collapse", "roles"]);
+const VISUAL = new Set(["collapse", "roles", "empty"]);
 const opt = (name) => {
   const i = argv.indexOf(`--${name}`);
   return i === -1 ? undefined : argv[i + 1];
@@ -375,9 +375,10 @@ const RECIPES = [
   { ref: "a11y.srOnly", module: "recipes", whole: true, sets: [[["position", "", "absolute"], ["width", "", "1px"], ["height", "", "1px"], ["padding", "", "0"], ["margin", "", "-1px"], ["overflow", "", "hidden"], ["clip", "", "rect(0,0,0,0)"], ["whiteSpace", "", "nowrap"], ["borderWidth", "", "0"]]] },
   { ref: "textLayout.truncate", module: "recipes", sets: [[["overflow", "", "hidden"], ["textOverflow", "", "ellipsis"], ["whiteSpace", "", "nowrap"]]] },
   { ref: "focus.ring", module: "recipes", sets: ring("0 0 0 2px hsl(var(--ring))") },
-  { ref: "focus.ringAccent", module: "recipes", sets: ring("0 0 0 2px rgba(232,224,68,1)") },
+  // The accent ring is the ring: shadows.ring is 2px of the accent.
+  { ref: "focus.ring", module: "recipes", sets: ring("0 0 0 2px rgba(232,224,68,1)") },
   { ref: "focus.ringInset", module: "recipes", sets: ring("inset 0 0 0 2px hsl(var(--ring))") },
-  { ref: "focus.ringOffset", module: "recipes", sets: ring("0 0 0 1px hsl(var(--card)),0 0 0 3px hsl(var(--ring))") },
+  { ref: "focus.ring", module: "recipes", sets: ring("0 0 0 1px hsl(var(--card)),0 0 0 3px hsl(var(--ring))") },
   { ref: "motionRecipe.colors", module: "recipes", sets: [[["transitionProperty", "", TRANSITION_COLORS], ["transitionDuration", "", "150ms"], ["transitionTimingFunction", "", "cubic-bezier(0.4,0,0.2,1)"]]] },
   { ref: "motionRecipe.transform", module: "recipes", sets: [[["transitionProperty", "", "transform"], ["transitionDuration", "", "150ms"], ["transitionTimingFunction", "", "cubic-bezier(0.4,0,0.2,1)"]]] },
   {
@@ -636,6 +637,24 @@ if (flag("recipes") || flag("roles")) {
 }
 
 // ---------------------------------------------------------------------------
+// 1b. Empty keys (left behind when another codemod moved every declaration
+// out): references become `null`, which stylex.props and xstyle ignore.
+const emptyKeys = new Set();
+if (flag("empty")) {
+  for (const m of models) {
+    if (isExcluded(m.file)) continue;
+    for (const c of m.creates) {
+      if (!c.binding) continue;
+      const r = refs.get(`${m.file}#${c.binding}`);
+      if (!r || r.computed || r.escapes || r.reexported || PUBLIC_MODULES.has(m.file)) continue;
+      for (const ns of c.namespaces) {
+        if (ns.object && ns.object.properties.length === 0 && !r.refs.some((x) => x.key === ns.key && isExcluded(x.file))) emptyKeys.add(`${m.file}#${c.binding}#${ns.key}`);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2. Dead keys and modules.
 const deadKeys = new Set();
 if (flag("dead")) {
@@ -666,7 +685,7 @@ for (const m of models) {
     for (const ns of c.namespaces) {
       const id = `${m.file}#${c.binding}#${ns.key}`;
       const kr = keyRecipes.get(id);
-      if (deadKeys.has(id) && !allDead) {
+      if ((deadKeys.has(id) || emptyKeys.has(id)) && !allDead) {
         p.edits.push([...memberRange(m, ns.member), ""]);
         stats.deadKeys++;
         continue;
@@ -877,6 +896,22 @@ for (const [id, kr] of keyRecipes) {
     const text = kr.emptied ? (locals.length === 1 ? locals[0] : `[${locals.join(", ")}]`) : `[${[...locals, ref.node.getText(rm.sf)].join(", ")}]`;
     planFor(ref.file).edits.push([ref.node.getStart(rm.sf), ref.node.getEnd(), text]);
     stats.recipeRefs++;
+  }
+}
+
+for (const id of emptyKeys) {
+  const [file, binding, key] = id.split("#");
+  for (const ref of refs.get(`${file}#${binding}`).refs) {
+    if (ref.key !== key) continue;
+    const rm = byFile.get(ref.file);
+    const parent = ref.node.parent;
+    // `xstyle={styles.x}` loses the attribute; anything else reads null.
+    if (ts.isJsxExpression(parent) && ts.isJsxAttribute(parent.parent)) {
+      const attr = parent.parent;
+      planFor(ref.file).edits.push([attr.getFullStart(), attr.getEnd(), ""]);
+    } else {
+      planFor(ref.file).edits.push([ref.node.getStart(rm.sf), ref.node.getEnd(), "null"]);
+    }
   }
 }
 

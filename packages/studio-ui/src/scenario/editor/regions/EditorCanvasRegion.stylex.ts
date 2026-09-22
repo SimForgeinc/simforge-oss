@@ -16,8 +16,8 @@ export const styles = stylex.create({
     zIndex: layers.float,
     maxWidth: "24rem",
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.5)",
-    backgroundColor: "hsl(var(--destructive) / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     zIndex: layers.float,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(255 255 255 / 0.65)",
+    color: colors.inkSecondary,
   },
   // pointer-events-auto
   live: {

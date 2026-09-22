@@ -7,7 +7,7 @@ import { cn } from "../../../lib/utils";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderWizardChrome.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The chrome every step of the new-render flow shares.
@@ -45,7 +45,7 @@ export function RenderWizardStepRail({
             <button
               aria-current={state === "active" ? "step" : undefined}
               className={stylex.props(
-                [focus.ring, styles.inlineFlexCenterCaps2],
+                [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps2]],
                 motionStyles.editorMotion,
                 state === "active"
                   ? styles.stepActive
@@ -136,7 +136,7 @@ export function RenderWizardFooter({
       <div {...stylex.props(styles.flexCenterTight)}>
         {onBack ? (
           <button
-            className={stylex.props([focus.ring, styles.inlineFlexCenterCaps], motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps]], motionStyles.editorMotion).className}
             data-testid="render-wizard-back"
             onClick={onBack}
             type="button"
@@ -147,7 +147,7 @@ export function RenderWizardFooter({
         ) : null}
         {primary ?? (onNext ? (
           <button
-            className={stylex.props(nextDisabled ? [focus.ring, styles.inlineFlexCenterCaps3] : [focus.ring, styles.inlineFlexCenterCaps4], motionStyles.editorMotion).className}
+            className={stylex.props(nextDisabled ? [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps3]] : [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps4]], motionStyles.editorMotion).className}
             data-testid="render-wizard-next"
             disabled={nextDisabled}
             onClick={onNext}

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   tagsHeader: {
@@ -12,11 +12,6 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -29,12 +24,12 @@ export const styles = stylex.create({
   },
   copyButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
+    color: { default: colors.inkFaint, ":hover": colors.mutedForeground },
   },
   checkIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.75rem",
@@ -47,10 +42,7 @@ export const styles = stylex.create({
     marginTop: space.s2,
   },
   tagItem: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.3)",
+    backgroundColor: colors.fillFaint,
     paddingInline: space.s2_5,
     paddingBlock: space.s2,
   },
@@ -62,7 +54,7 @@ export const styles = stylex.create({
   },
   tagDefinition: {
     marginTop: space.s0_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: text.lineSnug,
     color: colors.mutedForeground,
   },

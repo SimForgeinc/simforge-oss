@@ -224,7 +224,7 @@ export const styles = stylex.create({
   // font-mono text-[10px]
   badgeMono: {
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
   },
   // rounded border bg-transparent px-2 py-1 text-sm
   selectSm3: {
@@ -273,7 +273,7 @@ export const styles = stylex.create({
     width: "100%",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(251 191 36 / 1)",
+    color: colors.warning,
   },
   // self-start
   button: {
@@ -336,6 +336,6 @@ export const styles = stylex.create({
   },
   // text-amber-600 dark:text-amber-400
   refused: {
-    color: "rgb(251 191 36 / 1)",
+    color: colors.warning,
   },
 });

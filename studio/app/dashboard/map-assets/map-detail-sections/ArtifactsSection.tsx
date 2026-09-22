@@ -4,7 +4,7 @@ import { styles } from "./ArtifactsSection.stylex";
 
 import { ChevronRight, Download, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -43,7 +43,7 @@ export function ArtifactsSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        {...stylex.props([motionRecipe.colors, styles.artifactsToggle])}
+        {...stylex.props([motionRecipe.colors, [typography.caps, styles.artifactsToggle]])}
         aria-expanded={open}
       >
         <ChevronRight
@@ -60,7 +60,7 @@ export function ArtifactsSection({
               return (
                 <li
                   key={`${artifact.uri}-${index}`}
-                  {...stylex.props(styles.artifactItem)}
+                  {...stylex.props([hairline.all, styles.artifactItem])}
                 >
                   <div {...stylex.props(styles.artifactInfo)}>
                     <span {...stylex.props([textLayout.truncate, styles.artifactTitle])}>

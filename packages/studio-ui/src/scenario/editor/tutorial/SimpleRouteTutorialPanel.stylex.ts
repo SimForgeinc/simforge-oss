@@ -10,7 +10,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgb(0 0 0 / 0.55)",
+    backgroundColor: colors.scrim,
     paddingLeft: space.s4,
     paddingRight: space.s4,
     backdropFilter: motion.blurSm,
@@ -20,7 +20,7 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "28rem",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(17 17 17 / 0.95)",
     padding: space.s5,
     color: colors.ink,
@@ -55,11 +55,6 @@ export const styles = stylex.create({
   },
   // font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]
   capsMonoBold: {
-    fontFamily: text.fontMono,
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.accent,
   },
   // mt-1 text-lg font-semibold
@@ -78,7 +73,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: {
-      default: "rgb(255 255 255 / 0.55)",
+      default: colors.inkMuted,
       ":hover": colors.ink,
     },
   },
@@ -104,7 +99,7 @@ export const styles = stylex.create({
     display: "flex",
     gap: space.s3,
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s3,
   },
   // mt-0.5 size-4 shrink-0 text-[#E8E044]
@@ -119,7 +114,7 @@ export const styles = stylex.create({
   sm: {
     fontSize: text.sizeSm,
     lineHeight: text.lineBase,
-    color: "rgb(255 255 255 / 0.75)",
+    color: colors.inkSecondary,
   },
   // font-semibold text-white
   whiteSemibold: {
@@ -134,16 +129,12 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     gap: space.s3,
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s4,
   },
   // font-mono text-[9px] uppercase tracking-[0.12em] text-white/40
   capsMono: {
-    fontFamily: text.fontMono,
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // h-10 shrink-0 bg-[#E8E044] px-5 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-[#f4ed55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
   tightCapsXs: {
@@ -155,23 +146,6 @@ export const styles = stylex.create({
     },
     paddingLeft: space.s5,
     paddingRight: space.s5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
     color: "rgb(0 0 0 / 1)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(255 255 255 / 1)",
-    },
   },
 });

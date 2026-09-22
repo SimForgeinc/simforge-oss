@@ -40,7 +40,7 @@ import { ScenarioTagsPanel } from "./ScenarioTagsPanel";
 import { AdditionalArtifactsPanel } from "./AdditionalArtifactsPanel";
 import { buildDebugPayload } from "./AddMapDebugPayload";
 import { sha256Blob } from "@simforge-oss/engine/hash";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const CRS_OPTIONS = [{ value: "EPSG:4326", label: "EPSG:4326 — WGS84 (lat, long)" }];
 
@@ -724,7 +724,7 @@ export default function AddMapPageClient() {
               <p {...stylex.props(styles.parseErrorMessage)}>{form.geojsonParseError}</p>
             )}
             {form.computed && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Center</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -780,7 +780,7 @@ export default function AddMapPageClient() {
               onChange={handleXodrChange}
             />
             {parsedMeta.xodr && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Road network</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -826,7 +826,7 @@ export default function AddMapPageClient() {
               onChange={handleRrdataChange}
             />
             {parsedMeta.rrdata_xml && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Signalization</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -980,7 +980,7 @@ export default function AddMapPageClient() {
           Debug: full map payload (asset + metadata + stats)
         </button>
         {debugOpen && (
-          <pre {...stylex.props(styles.debugPayload)}>
+          <pre {...stylex.props([hairline.all, styles.debugPayload])}>
             {JSON.stringify(buildDebugPayload({ form, parsedMeta, autoTagSet, uploads }), null, 2)}
           </pre>
         )}

@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { control } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "./CopyableErrorMessage";
-import { a11y } from "../../stylex/recipes.stylex";
+import { a11y, hairline } from "../../stylex/recipes.stylex";
 
 export function NewDatasetDialog({
   open,
@@ -51,7 +51,7 @@ export function NewDatasetDialog({
         }}
       />
       <div
-        {...stylex.props(styles.dialog)}
+        {...stylex.props([hairline.all, styles.dialog])}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

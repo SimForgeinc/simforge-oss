@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   layersTabContainer: {
@@ -10,8 +10,8 @@ export const styles = stylex.create({
   featureInspectorPanel: {
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.2)",
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     padding: space.s3,
   },
 });

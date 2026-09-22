@@ -8,7 +8,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import type { ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
 import { maps as styles } from "./asset-surfaces.stylex";
-import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Published map versions, for the Maps section of the asset library.
@@ -68,7 +68,7 @@ export function MapList({
           <p {...stylex.props(styles.emptyHint)}>
             Upload an OpenDRIVE file and one GLB per layer — a file named <code>road.glb</code> is required — and the server builds the rest.
           </p>
-          <Button type="button" onClick={onUpload} xstyle={styles.upload}>Upload a map</Button>
+          <Button variant="accent" type="button" onClick={onUpload} xstyle={styles.upload}>Upload a map</Button>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export function MapList({
   return (
     <div {...stylex.props(styles.grid)}>
       {maps.map((map) => (
-        <article key={map.mapVersionId} {...stylex.props(styles.card)}>
+        <article key={map.mapVersionId} {...stylex.props([hairline.all, styles.card])}>
           <div {...stylex.props(styles.well)}>
             {map.thumbnailUrl ? (
               <Image src={map.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 25vw, 20vw" unoptimized {...stylex.props(styles.thumbnail)} />

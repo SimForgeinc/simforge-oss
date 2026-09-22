@@ -9,14 +9,14 @@ export const styles = stylex.create({
     gap: space.s1,
     paddingLeft: space.s2,
     paddingTop: space.s0_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   pathLabel: {
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
-    color: "hsl(var(--muted-foreground) / 0.8)",
+    color: colors.inkMuted,
   },
   pathStepWrapper: {
     display: "flex",
@@ -26,12 +26,12 @@ export const styles = stylex.create({
   pathEllipsisIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   pathEllipsisSeparator: {
     width: "0.625rem",
     height: "0.625rem",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   stepChip: {
     display: "flex",
@@ -43,12 +43,12 @@ export const styles = stylex.create({
     paddingBlock: space.s0_5,
   },
   stepChipOn: {
-    borderColor: "hsl(var(--primary) / 0.6)",
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    borderColor: colors.accentLine,
+    backgroundColor: colors.accentWash,
   },
   stepChipOff: {
-    borderColor: "hsl(var(--border) / 0.4)",
-    backgroundColor: "hsl(var(--muted) / 0.4)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
   },
   pathStepIcon: {
     width: "0.625rem",
@@ -58,17 +58,17 @@ export const styles = stylex.create({
   pathStepObjectId: {
     maxWidth: "200px",
     fontFamily: text.fontMono,
-    color: "hsl(var(--muted-foreground) / 0.9)",
+    color: colors.inkMuted,
   },
   pathStepDistance: {
     fontFamily: text.fontMono,
-    color: "hsl(var(--muted-foreground) / 0.8)",
+    color: colors.inkMuted,
   },
   pathStepSeparator: {
     width: "0.625rem",
     height: "0.625rem",
     flexShrink: 0,
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   highlightToggleXs: {
     width: "1rem",
@@ -158,10 +158,10 @@ export const styles = stylex.create({
     gap: space.s2,
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--secondary) / 0.2)",
     padding: space.s2,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
   },
   debugSectionLabel: {
     color: colors.mutedForeground,
@@ -179,7 +179,7 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: 0,
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: "inherit",
   },
   filterChipsRow: {
@@ -217,9 +217,9 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.4)",
-    backgroundColor: "hsl(var(--primary) / 0.1)",
-    fontSize: "11px",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
+    fontSize: text.sizeMeta,
     fontWeight: text.weightNormal,
   },
   relationOperator: {
@@ -231,14 +231,14 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: 0,
     color: colors.text,
-    backgroundColor: "hsl(var(--primary) / 0.1)",
+    backgroundColor: colors.accentWash,
   },
   structuredFilterBadge: {
     borderColor: "transparent",
     backgroundColor: "hsl(var(--secondary) / 0.5)",
     paddingInline: space.s1_5,
     paddingBlock: 0,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: "inherit",
     fontWeight: text.weightNormal,
     color: colors.text,
@@ -248,7 +248,7 @@ export const styles = stylex.create({
     backgroundColor: "transparent",
     paddingInline: space.s1_5,
     paddingBlock: 0,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: "inherit",
     fontWeight: text.weightNormal,
     color: colors.mutedForeground,
@@ -261,7 +261,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingTop: space.s2,
   },
   loadingStatus: {
@@ -269,11 +269,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   loadingIcon: {
@@ -285,11 +280,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   resultList: {
@@ -315,11 +305,11 @@ export const styles = stylex.create({
     transitionDuration: motion.durStandard,
   },
   resultCardSelected: {
-    borderColor: "hsl(var(--primary) / 0.5)",
-    backgroundColor: "hsl(var(--primary) / 0.1)",
+    borderColor: colors.accentLine,
+    backgroundColor: colors.accentWash,
   },
   resultCardIdle: {
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: { default: "hsl(var(--secondary) / 0.2)", ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   resultCardHeader: {
@@ -352,7 +342,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: space.s2,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
   },
   metadataItem: {
     minWidth: 0,
@@ -379,7 +369,7 @@ export const styles = stylex.create({
     backgroundColor: "hsl(var(--secondary) / 0.5)",
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "inherit",
     color: colors.text,
   },
@@ -396,7 +386,7 @@ export const styles = stylex.create({
   },
   refChip: { display: "flex", alignItems: "center", gap: space.s1_5, padding: space.s1, borderWidth: stroke.hairline, borderStyle: "solid", fontSize: text.sizeXs },
   refChipOn: { backgroundColor: colors.secondary, borderColor: colors.primary },
-  refChipOff: { backgroundColor: colors.muted, borderColor: colors.border },
+  refChipOff: { backgroundColor: colors.muted, borderColor: colors.hairline },
   relationLabelRow: {
     display: "flex",
     alignItems: "center",
@@ -427,8 +417,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1,
     paddingLeft: space.s2,
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.8)",
+    fontSize: text.sizeMicro,
+    color: colors.inkMuted,
   },
   debugValue: {
     fontFamily: text.fontMono,
@@ -438,7 +428,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s0_5,
     marginTop: space.s1_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   resultDebugIdentity: {
@@ -454,10 +444,6 @@ export const styles = stylex.create({
     justifyContent: "flex-end",
     gap: space.s1,
   },
-  resultActionButton: {
-    width: "1.75rem",
-    height: "1.75rem",
-  },
   resultActionIcon: {
     width: "0.875rem",
     height: "0.875rem",
@@ -465,7 +451,7 @@ export const styles = stylex.create({
   emptyResultsState: {
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingInline: space.s3,
     paddingBlock: space.s6,
     textAlign: "center",
@@ -499,7 +485,7 @@ export const styles = stylex.create({
     gap: space.s1_5,
   },
   alternativeQueriesHeading: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   alternativeQueriesList: {
@@ -511,8 +497,8 @@ export const styles = stylex.create({
   alternativeQueryButton: {
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },
-    backgroundColor: { default: "hsl(var(--secondary) / 0.3)", ":hover": "hsl(var(--primary) / 0.1)" },
+    borderColor: { default: colors.hairline, ":hover": colors.accentLineSubtle },
+    backgroundColor: { default: "hsl(var(--secondary) / 0.3)", ":hover": colors.accentWash },
     paddingInline: space.s2_5,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,

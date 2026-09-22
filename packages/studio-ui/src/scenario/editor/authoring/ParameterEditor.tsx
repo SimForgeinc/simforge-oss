@@ -14,6 +14,7 @@ import {
   numberOr,
   uniqueId,
 } from "./fields";
+import { hairline } from "../../../stylex/recipes.stylex";
 
 const PARAM_TYPES = ["continuous", "discrete", "categorical", "derived"] as const;
 
@@ -46,7 +47,7 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
         <MiniAdd label="Add parameter" onClick={add} />
       </div>
       {declarations.map((param) => (
-        <div key={param.id} {...stylex.props(styles.itemBorder)}>
+        <div key={param.id} {...stylex.props([hairline.all, styles.itemBorder])}>
           <div {...stylex.props(styles.row)}>
             <span {...stylex.props(styles.mono)}>{param.id}</span>
             <DeleteButton

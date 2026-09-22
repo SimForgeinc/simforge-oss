@@ -109,12 +109,12 @@ of look, built only from tokens, composed first in `stylex.props`.
 
 | Recipe | Keys | Use for |
 | --- | --- | --- |
-| `focus` | `ring`, `ringInset`, `ringAccent`, `ringAccentInset`, `ringOffset`, `outline`, `within` | every focusable element that is not a primitive; exactly one |
-| `motionRecipe` | `colors`, `opacity`, `transform`, `spin`, `pulse`, `fadeIn` | every transition or animation; all stop under reduced motion |
+| `focus` | `ring`, `ringInset`, `outline`, `within` | every focusable element that is not a primitive; exactly one. The ring is 2px of accent everywhere |
+| `motionRecipe` | `colors`, `opacity`, `transform`, `spin`, `pulse`, `fadeIn`, `sweep` | every transition or animation; all stop under reduced motion |
 | `hairline` | `all`, `top`, `bottom`, `start`, `end`; modifiers `subtle`, `strong`, `hover` | every border and divider |
 | `surface` | `plate`, `raised`, `card`, `glass`, `chip`, `scrim` | what a region is made of |
 | `interactive` | `base`, `hoverFill`, `hoverInk`, `selected` | clickable rows, tiles and items that are not a `Button` |
-| `typography` | `eyebrow`, `meta`, `label`, `body`, `bodySm`, `title`, `heading`, `numeric` | every piece of text: pick the role |
+| `typography` | `eyebrow`, `tag`, `caps`, `meta`, `label`, `body`, `bodySm`, `title`, `heading`, `numeric` | every piece of text: pick the role. Uppercase text is always one of `eyebrow` (10px meta face), `tag` (9px, dense rows) or `caps` (12px body face, controls) |
 | `control` | `xs`, `sm`, `md`, `lg`, `iconXs` … `iconLg` | the height/padding/size of a custom control, so it lines up with the primitives |
 | `a11y` | `srOnly` | text for assistive technology only |
 | `textLayout` | `truncate`, `clamp2` | text that must not overflow |
@@ -130,12 +130,13 @@ caller can place one but not reskin it.
 
 | Primitive | Import | Props for the look |
 | --- | --- | --- |
-| `Button` | `components/ui/button` | `variant`: `accent` (the one primary action), `plate`, `accentOutline`, `quiet`, and the shadcn set; `size`: `xs`, `sm`, `md`, `lg`, `xl`, `icon*` |
+| `Button` | `components/ui/button` | `variant`: `default`/`accent` (solid accent: the one primary action), `outline`/`plate` (hairline plate), `secondary` (filled), `ghost`, `quiet`, `accentOutline` (belongs to the current item), `destructive`, `link`; `size`: `xs` 1.5rem, `sm` 1.75rem, `md`/default 2rem, `lg` 2.5rem, `xl` 3rem, `iconXs`/`iconSm`/`iconMd`/`icon` |
 | `IconButton` | `components/ui/icon-button` | `label` (required), `variant`: `ghost`, `plate`, `accent`; `size`; `active` |
-| `Input` | `components/ui/input` | `size`: `xs`, `sm`, `md`, `lg`; `variant`: `default`, `plate` |
+| `Input`, `Textarea` | `components/ui/input` | `size`: `xs`, `sm`, `md` (default, 2rem), `lg`; one look (a faint plate whose hairline turns accent on focus) |
 | `Chip`, `ChipButton` | `components/ui/chip` | `tone`, `size`, `leading`; `selected` on the button |
 | `Dialog` + parts | `components/ui/dialog` | `DialogContent size`: `sm`, `md`, `lg`, `xl`; `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, `DialogFooter`, `DialogClose` |
-| `Spinner` | `components/ui/spinner` | `size`, `tone`, `label` |
+| `Spinner` | `components/ui/spinner` | `size`, `tone` (`accent`, `ink`, `muted`, `onAccent`), `label` |
+| `Progress` | `components/ui/progress` | `value`, `indeterminate`, `tone`, `size` |
 | `Dot` | `components/ui/dot` | `tone`, `size`, `pulse`, `label` |
 | `MetaLabel` | `components/stylex` | `tone`, `as` |
 | `PageShell` | `components/ui/page-shell` | `title`, `eyebrow`, `description`, `actions`, `fill` |
@@ -173,6 +174,10 @@ reference surface.
   action, a focus ring), at most about 5% of any surface.
 - **Type:** the body face for content, the meta face uppercase and tracked out
   for labels, counters and status.
+- **Controls:** one height scale (1.5, 1.75, 2, 2.5, 3rem) shared by buttons,
+  fields, icon buttons and chips; 2rem is the default, so a row of mixed
+  controls lines up without anyone setting a height.
+- **Focus:** one ring, 2px of accent, on every focusable element.
 
 ## Checks
 

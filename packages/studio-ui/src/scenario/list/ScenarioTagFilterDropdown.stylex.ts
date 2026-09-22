@@ -1,12 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, space, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  // size-3.5
-  filterFilter: {
-    width: "0.875rem",
-    height: "0.875rem",
-  },
   // min-w-0 flex-1 truncate
   spanTruncate: {
     minWidth: 0,
@@ -22,9 +17,6 @@ export const styles = stylex.create({
   spanIcon: {
     width: space.s2,
     height: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
   },
   // min-w-0 flex-1 truncate
   spanTruncate2: {

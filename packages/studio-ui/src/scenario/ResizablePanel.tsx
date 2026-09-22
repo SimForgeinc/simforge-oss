@@ -4,7 +4,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ResizablePanel.stylex";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mergeStyleProps } from "../components/stylex/surface";
-import { motionRecipe } from "../stylex/recipes.stylex";
+import { focus, motionRecipe } from "../stylex/recipes.stylex";
 
 /**
  * A resizable left panel with a persisted width.
@@ -170,7 +170,7 @@ export function ResizablePanel({
         onPointerDown={startDrag}
         onKeyDown={onKeyDown}
         // Sits just outside the border so it does not overlap the list's own scrollbar.
-        {...stylex.props([motionRecipe.colors, styles.scenarioPanelResizeHandle])}
+        {...stylex.props([motionRecipe.colors, [focus.ring, styles.scenarioPanelResizeHandle]])}
         data-testid="scenario-panel-resize-handle"
       /> : null}
     </div>

@@ -32,13 +32,11 @@ import { colors, layout, motion as m, shadows, space, stroke, text } from "./tok
  * outline beside it is not decoration: forced-colors mode drops box-shadows
  * and repaints outlines, so the outline is the ring high-contrast users see.
  *
- *  - `ring`: the default, outside the element.
+ *  - `ring`: the default, outside the element: 2px of brand accent.
  *  - `ringInset`: inside the element, for controls flush against a neighbour
  *    or inside a scroller that would clip an outside ring.
- *  - `ringAccent` / `ringAccentInset`: the brand-accent ring the app chrome
- *    uses (the switcher, the top bar).
- *  - `ringOffset`: a ring separated from the element by a gap of card colour,
- *    for controls whose own edge is already the accent.
+ *    (There is one ring colour: the accent. `ringAccent`, `ringAccentInset`
+ *    and `ringOffset` are gone; compose `ring` or `ringInset`.)
  *  - `outline`: a solid outline instead of a shadow, for elements that
  *    already use `box-shadow` for something else.
  *  - `within`: the ring on a container while any descendant has focus.
@@ -57,27 +55,6 @@ export const focus = stylex.create({
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": shadows.ringInset },
-  },
-  ringAccent: {
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ringAccent },
-  },
-  ringAccentInset: {
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "-2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ringAccentInset },
-  },
-  ringOffset: {
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ringOffset },
   },
   outline: {
     outlineWidth: { default: null, ":focus-visible": stroke.thick },
@@ -232,6 +209,8 @@ export const interactive = stylex.create({
  *
  *  - `eyebrow`: the instrument label above a section or value: meta face,
  *    uppercase, tracked out, muted.
+ *  - `tag`: the eyebrow one step smaller, for status tags on dense rows.
+ *  - `caps`: uppercase control text in the body face.
  *  - `meta`: a secondary fact beside a value (a count, a time, a size).
  *  - `label`: a control's or field's label.
  *  - `body`: running copy.
@@ -244,11 +223,29 @@ export const typography = stylex.create({
   eyebrow: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
-    fontWeight: text.weightNormal,
+    fontWeight: text.weightBold,
     lineHeight: text.lineMicro,
     letterSpacing: text.trackingMetaWide,
     textTransform: "uppercase",
     color: colors.inkMuted,
+  },
+  /** A status tag on a dense row: the eyebrow one step smaller. */
+  tag: {
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeTag,
+    fontWeight: text.weightBold,
+    lineHeight: text.lineMicro,
+    letterSpacing: text.trackingMeta,
+    textTransform: "uppercase",
+  },
+  /** Uppercase control text in the body face (a segmented control, a tab). */
+  caps: {
+    fontFamily: text.fontBody,
+    fontSize: text.sizeXs,
+    fontWeight: text.weightSemibold,
+    lineHeight: text.lineXs,
+    letterSpacing: text.trackingWide,
+    textTransform: "uppercase",
   },
   meta: {
     fontFamily: text.fontBody,

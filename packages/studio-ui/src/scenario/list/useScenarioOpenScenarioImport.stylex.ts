@@ -16,7 +16,7 @@ export const styles = stylex.create({
   closeOpenSCENARIODialogButton: {
     position: "absolute",
     inset: "0",
-    backgroundColor: "rgb(0 0 0 / 0.7)",
+    backgroundColor: colors.scrimHeavy,
     backdropFilter: motion.blurSm,
   },
   // relative z-10 max-h-[88vh] w-full max-w-2xl space-y-4 overflow-y-auto border border-border bg-background p-6 shadow-2xl
@@ -27,9 +27,6 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "42rem",
     overflowY: "auto",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     padding: space.s6,
     boxShadow: shadows.elevation2xl,
@@ -64,8 +61,8 @@ export const styles = stylex.create({
   alert: {
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--destructive) / 0.6)",
-    backgroundColor: "hsl(var(--destructive) / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     padding: space.s3,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
@@ -81,9 +78,6 @@ export const styles = stylex.create({
   divGridSm: {
     display: "grid",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.surfaceDeep,
     padding: space.s3,
     fontSize: text.sizeSm,
@@ -126,13 +120,13 @@ export const styles = stylex.create({
   checkcircle2Icon: {
     width: space.s4,
     height: space.s4,
-    color: "rgb(16 185 129 / 1)",
+    color: colors.positive,
   },
   // size-4 text-amber-500
   alerttriangleIcon: {
     width: space.s4,
     height: space.s4,
-    color: "rgb(245 158 11 / 1)",
+    color: colors.warning,
   },
   // block text-sm
   labelSm: {
@@ -160,13 +154,13 @@ export const styles = stylex.create({
   multipleMapsMatchedNoMapWasS: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(217 119 6 / 1)",
+    color: colors.warning,
   },
   // text-xs text-amber-600
   noKnownMapMatchedSelectTheIn: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(217 119 6 / 1)",
+    color: colors.warning,
   },
   // text-xs text-destructive
   theFileContainsContradictory: {
@@ -176,9 +170,6 @@ export const styles = stylex.create({
   },
   // border border-border p-3
   xoscConversionSummary: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     padding: space.s3,
   },
   // text-sm font-semibold
@@ -227,9 +218,6 @@ export const styles = stylex.create({
   },
   // border border-border p-2 text-xs
   liXs: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     padding: space.s2,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,

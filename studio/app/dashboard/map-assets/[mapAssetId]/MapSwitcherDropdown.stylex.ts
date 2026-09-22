@@ -8,10 +8,7 @@ export const styles = stylex.create({
     width: { default: "11rem", [layout.bpSm]: "280px" },
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: { default: "hsl(var(--muted) / 0.3)", ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fillSubtle },
     paddingInline: space.s3,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
@@ -35,7 +32,7 @@ export const styles = stylex.create({
   searchSection: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s2,
   },
   searchFieldWrapper: {
@@ -52,10 +49,7 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   searchInput: {
-    height: "2rem",
     paddingLeft: space.s8,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
   mapList: {
     maxHeight: "16rem",
@@ -80,12 +74,12 @@ export const styles = stylex.create({
     textAlign: "left",
   },
   switcherItemCurrent: {
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    backgroundColor: colors.accentWash,
     color: colors.primary,
   },
   switcherItemOther: {
     color: colors.text,
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   selectedMapIcon: {
     width: "0.875rem",
@@ -110,7 +104,7 @@ export const styles = stylex.create({
     fontWeight: text.weightMedium,
   },
   mapLocation: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
 });

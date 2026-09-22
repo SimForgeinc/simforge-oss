@@ -27,11 +27,6 @@ export const styles = stylex.create({
   },
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   /*
@@ -43,12 +38,12 @@ export const styles = stylex.create({
   borderedDivided: {
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // (was the list's render-divide divide-y)
   rowDivided: {
     borderTopWidth: stroke.hairline,
-    borderTopColor: "rgb(255 255 255 / 10%)",
+    borderTopColor: colors.hairline,
   },
   // flex items-center gap-3 px-2.5 py-2
   flexCenterGap3: {
@@ -82,10 +77,6 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta text-destructive
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.danger,
   },
   // flex shrink-0 items-center gap-1
@@ -118,9 +109,5 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta
   availabilityNote: {
     flexShrink: 0,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 });

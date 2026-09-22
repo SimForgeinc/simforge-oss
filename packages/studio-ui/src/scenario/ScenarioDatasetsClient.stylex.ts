@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, motion, shadows, space, stroke } from "../stylex/tokens.stylex";
+import { colors, layers, layout, motion, shadows, space } from "../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   errorCover: { position: "absolute", inset: 0, zIndex: layers.sticky },
@@ -7,7 +7,7 @@ export const styles = stylex.create({
   listSession: { position: "relative", zIndex: layers.raised, display: "flex", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
   hiddenSession: { visibility: "hidden", pointerEvents: "none" },
   coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: { default: "420ms", [layout.reducedMotion]: "0ms" } },
-  coverageBlurred: { transform: "scale(1.02)", filter: "blur(14px)" },
+  coverageBlurred: { transform: "scale(1.02)", filter: motion.blurGlass },
   editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: layers.float, visibility: "visible", opacity: 1 },
   // relative h-full min-h-0 overflow-hidden bg-background text-foreground
   scenarioDatasetIndex: {
@@ -55,9 +55,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.95)",
     padding: space.s2,
     boxShadow: shadows.elevationXl,

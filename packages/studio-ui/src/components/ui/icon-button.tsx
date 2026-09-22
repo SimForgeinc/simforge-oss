@@ -3,7 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { control, focus, interactive } from "../../stylex/recipes.stylex";
 import { colors, stroke } from "../../stylex/tokens.stylex";
-import { type ControlPlacementStyle } from "../stylex/surface";
+import { mergeStyleProps, type ControlPlacementStyle } from "../stylex/surface";
 
 export type IconButtonSize = "xs" | "sm" | "md" | "lg";
 export type IconButtonVariant = "ghost" | "plate" | "accent";
@@ -45,13 +45,21 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       )}
       {...props}
     >
-      <span aria-hidden="true" {...stylex.props(styles.icon, iconSizes[size])}>{children}</span>
+      <span aria-hidden="true" {...mergeStyleProps(stylex.props(styles.icon, iconSizes[size]), ICON_FILL)}>{children}</span>
     </button>
   ),
 );
 IconButton.displayName = "IconButton";
 
 const ICON_SIZE = { xs: "iconXs", sm: "iconSm", md: "iconMd", lg: "iconLg" } as const;
+
+/**
+ * The icon is whatever SVG the caller passes, with its own width/height
+ * attributes; StyleX only styles the element it is applied to, so the SVG is
+ * sized to its box through this descendant selector (the same residual
+ * bridge `Button` uses for its icons).
+ */
+const ICON_FILL = "[&>svg]:size-full [&>svg]:shrink-0";
 
 const styles = stylex.create({
   root: {

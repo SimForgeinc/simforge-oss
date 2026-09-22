@@ -8,7 +8,7 @@ import { MAP_ASSET_DESCRIPTOR_TAG_IDS, getMapAssetDescriptorTag } from "@simforg
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { displayTag } from "@/app/lib/maps/frontend/add-map-utils";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { focus, hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface ScenarioTagsPanelProps {
   tags: string[];
@@ -126,7 +126,7 @@ export function ScenarioTagsPanel({
           + Add tag
         </Button>
         {tagDropdownOpen && (
-          <div {...stylex.props(styles.tagDropdownPanel)}>
+          <div {...stylex.props([hairline.all, styles.tagDropdownPanel])}>
             <div {...stylex.props(styles.searchInputWrapper)}>
               <Input
                 value={tagSearch}
@@ -189,7 +189,7 @@ export function ScenarioTagsPanel({
               placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
               spellCheck={false}
               rows={3}
-              {...stylex.props(styles.csvTextarea, styles.stackY1_5)}
+              {...stylex.props([focus.ring, styles.csvTextarea], styles.stackY1_5)}
             />
             {csvErrors.length > 0 && (
               <p {...stylex.props(styles.csvErrorMessage, styles.stackY1_5)}>

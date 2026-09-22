@@ -15,7 +15,7 @@ export const styles = stylex.create({
     overflowY: "auto",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s2,
   },
 });

@@ -16,13 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
-import { space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { focus, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type WorkspaceSummary = { id: string; name: string; slug: string; type: string };
 
 const styles = stylex.create({
-  meta: { marginLeft: "auto", paddingLeft: space.s3, fontSize: "10px", opacity: 0.5, textTransform: "capitalize" },
+  meta: { marginLeft: "auto", paddingLeft: space.s3, fontSize: text.sizeMicro, opacity: 0.5, textTransform: "capitalize" },
 });
 
 /**
@@ -74,7 +74,7 @@ export function WorkspaceChip({ identity, onNavigate }: { identity: StudioHostId
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          {...stylex.props(chip.root, [motionRecipe.colors, chip.trigger])}
+          {...stylex.props(chip.root, [motionRecipe.colors, [focus.ringInset, chip.trigger]])}
           aria-label={`Workspace: ${summary}. Switch workspace`}
           data-testid="workspace-chip"
           disabled={switching !== null}
@@ -82,7 +82,7 @@ export function WorkspaceChip({ identity, onNavigate }: { identity: StudioHostId
         >
           <span aria-hidden="true" {...stylex.props(lamp.base, error ? lamp.attention : lamp.connected)} />
           <span {...stylex.props(chip.body)}>
-            <span {...stylex.props(chip.eyebrow)}>Workspace</span>
+            <span {...stylex.props([typography.tag, chip.eyebrow])}>Workspace</span>
             <span {...stylex.props(textLayout.truncate, chip.summary)} title={current ? `${current.name} · ${current.slug}` : undefined}>
               {summary}
             </span>

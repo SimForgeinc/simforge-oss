@@ -7,6 +7,7 @@ import type { ScenarioMapEntry } from "@simforge-oss/editor";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorStatePanels.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The full-page panels that are genuine *content*, not boot states.
@@ -67,7 +68,7 @@ export function MapChooser({
     <div {...stylex.props(styles.gridCenteredPad8)}>
       <div {...stylex.props(styles.wide)}>
         <div {...stylex.props(styles.centerText)}>
-          <p {...stylex.props(styles.capsXsAccent)}>
+          <p {...stylex.props([typography.caps, styles.capsXsAccent])}>
             Map-bound scenario
           </p>
           <h1 {...stylex.props(styles.xxlSemibold)}>Choose a map</h1>
@@ -82,7 +83,7 @@ export function MapChooser({
               key={map.versionId}
               type="button"
               onClick={() => onChoose(map.versionId)}
-              className={stylex.props(styles.borderedPad5LeftText, motionStyles.editorMotion).className}
+              className={stylex.props([focus.ring, styles.borderedPad5LeftText], motionStyles.editorMotion).className}
             >
               <span {...stylex.props(styles.blockSemibold)}>{map.label}</span>
               <span {...stylex.props(styles.blockXsMuted)}>

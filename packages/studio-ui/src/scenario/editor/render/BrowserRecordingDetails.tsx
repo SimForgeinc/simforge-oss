@@ -14,7 +14,7 @@ import type { BrowserRecordingDetailDto } from "../../../lib/scenario/recording-
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./BrowserRecordingDetails.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -127,7 +127,7 @@ export function BrowserRecordingDetails({
               {cameraVideos.length > 0 ? (
                 <section {...stylex.props(styles.mt3)} aria-labelledby="camera-views-heading">
                   <div {...stylex.props(styles.flexBetweenBaseline)}>
-                    <h4 {...stylex.props(styles.capsXsSemibold)} id="camera-views-heading">
+                    <h4 {...stylex.props(typography.caps)} id="camera-views-heading">
                       Camera views
                     </h4>
                     <span {...stylex.props(styles.monoMicroMuted2)}>
@@ -158,7 +158,7 @@ export function BrowserRecordingDetails({
           {activeSensorVideos.length > 0 ? (
             <section {...stylex.props(styles.mt4)} aria-labelledby="active-sensor-videos-heading">
               <div {...stylex.props(styles.flexBetweenBaseline)}>
-                <h4 {...stylex.props(styles.capsXsSemibold)} id="active-sensor-videos-heading">
+                <h4 {...stylex.props(typography.caps)} id="active-sensor-videos-heading">
                   LiDAR and radar views
                 </h4>
                 <span {...stylex.props(styles.monoMicroMuted2)}>
@@ -199,7 +199,7 @@ export function BrowserRecordingDetails({
             </div>
           ) : null}
           <section {...stylex.props(styles.mt4)} aria-labelledby="browser-recording-files-heading">
-            <h4 {...stylex.props(styles.capsXsSemibold)} id="browser-recording-files-heading">Files</h4>
+            <h4 {...stylex.props(typography.caps)} id="browser-recording-files-heading">Files</h4>
             {detail.artifacts.length === 0 ? (
               <p {...stylex.props(styles.xsMuted)}>Files appear after encoding and checksum verification.</p>
             ) : (
@@ -230,7 +230,7 @@ export function BrowserRecordingDetails({
 }
 
 function RecordingStatus({ status }: { status: BrowserRecordingDetailDto["status"] }) {
-  return <span {...stylex.props(styles.capsMicroMuted)}>{status}</span>;
+  return <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>{status}</span>;
 }
 
 function DetailValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {

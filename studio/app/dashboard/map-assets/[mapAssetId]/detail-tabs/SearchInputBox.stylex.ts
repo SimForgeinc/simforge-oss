@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchContainer: {
@@ -17,13 +17,8 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   searchInput: {
-    height: "2.5rem",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.3)",
     paddingLeft: "2.25rem",
     paddingRight: "2.25rem",
-    fontSize: text.sizeSm,
-    lineHeight: text.lineSm,
   },
   clearButton: {
     position: "absolute",
@@ -44,9 +39,6 @@ export const styles = stylex.create({
     top: "100%",
     zIndex: layers.float,
     marginTop: space.s1,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.popover,
     padding: space.s1,
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",

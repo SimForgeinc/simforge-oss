@@ -15,7 +15,7 @@ export const styles = stylex.create({
   closeMapPickerButton: {
     position: "absolute",
     inset: "0",
-    backgroundColor: "rgb(0 0 0 / 0.55)",
+    backgroundColor: colors.scrim,
     backdropFilter: motion.blurGlass,
   },
   // relative flex h-[80vh] w-[80vw] flex-col overflow-hidden border border-border bg-background shadow-2xl
@@ -26,9 +26,6 @@ export const styles = stylex.create({
     width: "80vw",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevation2xl,
   },
@@ -41,7 +38,7 @@ export const styles = stylex.create({
     gap: space.s4,
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.bg,
     paddingInline: space.s6,
     paddingBlock: space.s4,
@@ -127,7 +124,7 @@ export const styles = stylex.create({
     aspectRatio: "4 / 3",
     width: "100%",
     overflow: "hidden",
-    backgroundColor: "hsl(var(--muted) / 0.3)",
+    backgroundColor: colors.fillFaint,
   },
   // h-full w-full bg-gradient-to-br from-muted via-muted/60 to-muted/30
   div3: {

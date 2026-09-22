@@ -5,6 +5,7 @@ import { Skeleton } from "@simforge-oss/studio-ui/components/ui/skeleton";
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { AssetCard } from "./AssetCard";
 import { grid } from "./asset-grid.stylex";
+import { a11y, hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 
 /**
@@ -42,12 +43,12 @@ export function AssetGalleryGrid({
 export function AssetGalleryGridSkeleton({ count = 10 }: { count?: number }) {
   return (
     <>
-      <p role="status" {...stylex.props(grid.srOnly)}>
+      <p role="status" {...stylex.props(a11y.srOnly)}>
         Loading assets…
       </p>
       <div aria-hidden="true" {...stylex.props(grid.grid)}>
         {Array.from({ length: count }, (_, index) => (
-          <div key={index} {...stylex.props(grid.skeletonCard)}>
+          <div key={index} {...stylex.props([hairline.all, grid.skeletonCard])}>
             <Skeleton xstyle={grid.skeletonThumb} />
             <div {...stylex.props(grid.skeletonBody)}>
               <div {...stylex.props(grid.skeletonRow)}>

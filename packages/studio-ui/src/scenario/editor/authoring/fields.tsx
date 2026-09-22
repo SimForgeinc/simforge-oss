@@ -46,7 +46,7 @@ export function MiniAdd({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      {...stylex.props([focus.ringOffset, styles.iconButton], motionStyles.editorMotion)}
+      {...stylex.props([focus.ring, styles.iconButton], motionStyles.editorMotion)}
     >
       <Plus aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
@@ -67,7 +67,7 @@ export function DeleteButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      {...stylex.props([focus.ringOffset, styles.iconButtonMuted], motionStyles.editorMotion)}
+      {...stylex.props([focus.ring, styles.iconButtonMuted], motionStyles.editorMotion)}
     >
       <Trash2 aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>

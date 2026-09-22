@@ -4,7 +4,7 @@ import { styles } from "./ScenarioTagsSection.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import { getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the ScenarioTagsSection component. */
 type ScenarioTagsSectionProps = {
@@ -29,7 +29,7 @@ export function ScenarioTagsSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props([motionRecipe.colors, styles.toggleButton])}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.toggleButton]])}
           aria-expanded={open}
         >
           <ChevronRight
@@ -52,7 +52,7 @@ export function ScenarioTagsSection({
           {tags.map((tagId) => {
             const descriptor = getMapAssetDescriptorTag(tagId);
             return (
-              <li key={tagId} {...stylex.props(styles.tagItem)}>
+              <li key={tagId} {...stylex.props([hairline.all, styles.tagItem])}>
                 <p {...stylex.props(styles.tagLabel)}>{tagId.replace(/_/g, " ")}</p>
                 {descriptor?.shortDefinition && (
                   <p {...stylex.props(styles.tagDefinition)}>

@@ -16,6 +16,7 @@ import {
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { CarlaCompatibility } from "@simforge-oss/studio-ui/lib/scenario/carla-compatibility";
 import { carla } from "./carla-table.stylex";
+import { hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export interface CarlaCompatibilityRow {
   catalogId: string;
@@ -55,7 +56,7 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
       <div {...stylex.props(carla.tools)}>
         <div {...stylex.props(carla.searchWrap)}>
           <Search {...stylex.props(carla.searchIcon)} />
-          <Input
+          <Input variant="plate"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search objects, classes, or blueprints"
@@ -72,7 +73,7 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
         />
       </div>
 
-      <div {...stylex.props(carla.tableWrap)}>
+      <div {...stylex.props([hairline.all, carla.tableWrap])}>
         <Table xstyle={carla.table}>
           <TableHeader xstyle={carla.header}>
             <TableRow xstyle={carla.headerRow}>

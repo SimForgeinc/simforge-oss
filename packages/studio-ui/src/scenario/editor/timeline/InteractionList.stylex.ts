@@ -16,11 +16,6 @@ export const styles = stylex.create({
     marginBottom: space.s2,
     display: "flex",
     alignItems: "center",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.inkMuted,
   },
   // mr-2 size-3
@@ -49,7 +44,7 @@ export const styles = stylex.create({
   // w-24 truncate text-white/40
   truncate: {
     width: "6rem",
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // truncate font-medium
   mediumTruncate: {
@@ -65,8 +60,8 @@ export const styles = stylex.create({
   editorMotionMr2TextWhite30: {
     marginRight: space.s2,
     color: {
-      default: "rgb(255 255 255 / 0.3)",
-      ":hover": "rgb(248 113 113 / 1)",
+      default: colors.inkFaint,
+      ":hover": colors.critical,
     },
   },
   // size-3
@@ -78,7 +73,7 @@ export const styles = stylex.create({
   ruleT: {
     gridColumn: "span 2 / span 2",
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s3,
   },
   // grid h-16 place-items-center border border-dashed border-white/15 text-xs text-white/35
@@ -88,7 +83,7 @@ export const styles = stylex.create({
     placeItems: "center",
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.inkFaint,
@@ -123,7 +118,7 @@ export const styles = stylex.create({
   rowCollapsed: {
     borderColor: colors.fillStrong,
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.035)",
+      default: colors.fillSubtle,
       ":hover": colors.fill,
     },
   },

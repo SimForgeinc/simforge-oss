@@ -15,7 +15,7 @@ import {
 } from "./render-view-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderArtifactList.stylex";
-import { textLayout } from "../../../stylex/recipes.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Artifact rows with previews and downloads — manifest #148.
@@ -54,7 +54,7 @@ export function RenderArtifactList({
     <div {...stylex.props(styles.flexColGap4)}>
       {groupArtifacts(artifacts).map((group) => (
         <section {...stylex.props(styles.flexColGap1)} key={group.key}>
-          <h4 {...stylex.props(styles.capsMicroMuted)}>
+          <h4 {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>
             {group.title} · {group.items.length}
           </h4>
           <ul {...stylex.props(styles.borderedDivided)}>
@@ -155,7 +155,7 @@ function ArtifactRow({
         </p>
       </div>
       {resolveFailed ? (
-        <span {...stylex.props(styles.tightCapsMicro)}>
+        <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
           No longer in storage
         </span>
       ) : openable && (availability.kind === "ready" || resolve) ? (
@@ -192,7 +192,7 @@ function ArtifactRow({
       ) : (
         <span
           {...stylex.props(
-            styles.availabilityNote,
+            [typography.eyebrow, styles.availabilityNote],
             availability.kind === "quarantined" ? styles.danger : styles.muted,
           )}
           data-artifact-state={artifact.artifactState}

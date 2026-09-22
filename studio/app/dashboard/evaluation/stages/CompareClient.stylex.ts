@@ -39,7 +39,7 @@ export const styles = stylex.create({
   cameraHistoryWasResampled: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(251 191 36 / 1)",
+    color: colors.warning,
   },
   // flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground
   buttonFlexXs: {
@@ -58,7 +58,7 @@ export const styles = stylex.create({
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     paddingTop: space.s2,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
   },
   // flex items-baseline justify-between gap-2
   divFlex: {
@@ -107,9 +107,9 @@ export const styles = stylex.create({
   },
   // bg-amber-500/15 text-[10px] text-amber-700 border-transparent dark:text-amber-400
   readingsOnlyBadge: {
-    backgroundColor: "rgb(245 158 11 / 0.15)",
-    fontSize: "10px",
-    color: "rgb(251 191 36 / 1)",
+    backgroundColor: colors.warningWash,
+    fontSize: text.sizeMicro,
+    color: colors.warning,
     borderColor: "transparent",
   },
   // grid gap-2 sm:grid-cols-3
@@ -136,12 +136,12 @@ export const styles = stylex.create({
   // ml-1 text-[10px] text-muted-foreground
   span: {
     marginLeft: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   // text-[11px] text-muted-foreground
   excluded: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   // text-muted-foreground
@@ -165,7 +165,7 @@ export const styles = stylex.create({
   // font-mono text-[10px] text-muted-foreground
   spanMono: {
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   // text-xs text-muted-foreground

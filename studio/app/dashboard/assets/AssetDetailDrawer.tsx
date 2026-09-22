@@ -17,6 +17,7 @@ import {
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { dialog, drawer } from "./asset-dialogs.stylex";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Loaded on demand, and the one place in this page where that is warranted: the
@@ -26,7 +27,7 @@ import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 const AssetModelPreview = dynamic(() => import("./AssetModelPreview"), {
   ssr: false,
   loading: () => (
-    <div {...stylex.props(dialog.drawerPreviewLoading)}>
+    <div {...stylex.props([hairline.all, dialog.drawerPreviewLoading])}>
       Loading preview…
     </div>
   ),
@@ -166,20 +167,20 @@ export function AssetDetailDrawer({
 
             <AssetModelPreview catalogId={asset.catalogId} />
             <div {...stylex.props(drawer.stats)}>
-              <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Class</p><p {...stylex.props(drawer.valueCapitalize)}>{asset.actorClass.replaceAll("_", " ")}</p>
+              <div {...stylex.props([hairline.all, drawer.tile])}>
+                <p {...stylex.props([typography.eyebrow, drawer.eyebrow])}>Class</p><p {...stylex.props(drawer.valueCapitalize)}>{asset.actorClass.replaceAll("_", " ")}</p>
               </div>
-              <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Triangles</p><p {...stylex.props(drawer.value)}>{asset.triangleCount.toLocaleString()}</p>
+              <div {...stylex.props([hairline.all, drawer.tile])}>
+                <p {...stylex.props([typography.eyebrow, drawer.eyebrow])}>Triangles</p><p {...stylex.props(drawer.value)}>{asset.triangleCount.toLocaleString()}</p>
               </div>
-              <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Dimensions</p><p {...stylex.props(drawer.value)}>{asset.dims.l.toFixed(2)} × {asset.dims.w.toFixed(2)} × {asset.dims.h.toFixed(2)} m</p>
+              <div {...stylex.props([hairline.all, drawer.tile])}>
+                <p {...stylex.props([typography.eyebrow, drawer.eyebrow])}>Dimensions</p><p {...stylex.props(drawer.value)}>{asset.dims.l.toFixed(2)} × {asset.dims.w.toFixed(2)} × {asset.dims.h.toFixed(2)} m</p>
               </div>
-              <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Source</p><p {...stylex.props(drawer.valueUppercase)}>{asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB</p>
+              <div {...stylex.props([hairline.all, drawer.tile])}>
+                <p {...stylex.props([typography.eyebrow, drawer.eyebrow])}>Source</p><p {...stylex.props(drawer.valueUppercase)}>{asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB</p>
               </div>
-              <div {...stylex.props(drawer.tile, dialog.span2)}>
-                <p {...stylex.props(drawer.eyebrow)}>CARLA</p>
+              <div {...stylex.props([hairline.all, drawer.tile], dialog.span2)}>
+                <p {...stylex.props([typography.eyebrow, drawer.eyebrow])}>CARLA</p>
                 <div {...stylex.props(drawer.section)}>
                   <CarlaCompatibilityPill compatibility={GALLERY_UPLOAD_CARLA_COMPATIBILITY} size="sm" />
                   <p {...stylex.props(dialog.drawerNote)}>Runs in browser preview and browser-recorded renders, but not CARLA renders because it has no runtime blueprint.</p>
@@ -193,17 +194,17 @@ export function AssetDetailDrawer({
 
             {asset.tags.length > 0 ? (
               <div {...stylex.props(dialog.tagList)}>
-                {asset.tags.map((tag) => <span key={tag} {...stylex.props(dialog.tag)}>{tag}</span>)}
+                {asset.tags.map((tag) => <span key={tag} {...stylex.props([hairline.all, dialog.tag])}>{tag}</span>)}
               </div>
             ) : null}
 
             <section aria-labelledby="asset-clips-heading" {...stylex.props(drawer.section)}>
-              <h3 id="asset-clips-heading" {...stylex.props(dialog.sectionHeading)}>Animation clips</h3>
+              <h3 id="asset-clips-heading" {...stylex.props([typography.caps, dialog.sectionHeading])}>Animation clips</h3>
               {asset.clips.length > 0 ? (
-                <ul {...stylex.props(dialog.clipList)}>
+                <ul {...stylex.props([hairline.all, dialog.clipList])}>
                   {asset.clips.map((clip) => (
                     <li key={clip} {...stylex.props(dialog.listRow)}>
-                      <span {...stylex.props(dialog.truncate)}>{clip}</span>
+                      <span {...stylex.props(textLayout.truncate)}>{clip}</span>
                       <span {...stylex.props(dialog.drawerClipTag)}>{clip === asset.idleClip ? "Idle" : clip === asset.locomotionClip ? "Locomotion" : ""}</span>
                     </li>
                   ))}
@@ -221,7 +222,7 @@ export function AssetDetailDrawer({
                     void renameAsset();
                   }}
                 >
-                  <Input
+                  <Input size="md" variant="plate"
                     aria-label="Asset title"
                     autoFocus
                     maxLength={120}
@@ -229,15 +230,14 @@ export function AssetDetailDrawer({
                     onChange={(event) => setRenameDraft(event.target.value)}
                     xstyle={dialog.inputCompact}
                   />
-                  <Button type="submit" size="sm" xstyle={dialog.buttonCompact} disabled={renaming || renameDraft.trim() === ""}>
-                    {renaming ? <Loader2 aria-hidden="true" {...stylex.props(dialog.progressPulse)} /> : null}
+                  <Button type="submit" size="md" disabled={renaming || renameDraft.trim() === ""}>
+                    {renaming ? <Loader2 aria-hidden="true" {...stylex.props(motionRecipe.spin)} /> : null}
                     {renaming ? "Saving…" : "Save title"}
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
+                    size="md"
                     variant="outline"
-                    xstyle={dialog.buttonCompact}
                     disabled={renaming}
                     onClick={() => setRenameDraft(null)}
                   >
@@ -256,7 +256,7 @@ export function AssetDetailDrawer({
 
                   {usage.phase === "loading" ? (
                     <p {...stylex.props(dialog.usageLoading)}>
-                      <Loader2 aria-hidden="true" {...stylex.props(dialog.usageIcon, dialog.progressPulse)} />
+                      <Loader2 aria-hidden="true" {...stylex.props(dialog.usageIcon, motionRecipe.spin)} />
                       Checking which scenarios use it…
                     </p>
                   ) : usage.phase === "known" && usage.scenarioCount > 0 ? (
@@ -275,7 +275,7 @@ export function AssetDetailDrawer({
 
                   <div {...stylex.props(dialog.deleteActions)}>
                     <Button type="button" size="sm" variant="destructive" disabled={deleting} onClick={() => void deleteAsset()}>
-                      {deleting ? <Loader2 aria-hidden="true" {...stylex.props(dialog.progressPulse)} /> : <Trash2 aria-hidden="true" />}
+                      {deleting ? <Loader2 aria-hidden="true" {...stylex.props(motionRecipe.spin)} /> : <Trash2 aria-hidden="true" />}
                       {deleting ? "Removing…" : "Remove asset"}
                     </Button>
                     <Button

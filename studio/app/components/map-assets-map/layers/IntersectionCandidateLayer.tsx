@@ -17,6 +17,7 @@ import {
   useSignalJunctionStore,
 } from "@/app/lib/scenario-editor/signals/signal-junction-store";
 import { styles } from "../map-canvas.stylex";
+import { hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Armed-mode intersection candidates (plan 2026-07-26, section 5).
@@ -231,7 +232,7 @@ function CandidateHoverCard({ candidate }: { candidate: IntersectionCandidate })
     <div
       data-testid={`intersection-candidate-card-${candidate.junctionId}`}
       role="tooltip"
-      {...stylex.props(styles.candidateCard)}
+      {...stylex.props([hairline.all, hairline.strong, styles.candidateCard])}
     >
       <p {...stylex.props(styles.candidateName)}>{candidate.identity}</p>
       <p {...stylex.props(styles.candidateMeta, styles.candidateMetaSpaced)}>

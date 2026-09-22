@@ -18,7 +18,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--foreground) / 0.08)" },
+    backgroundColor: { default: null, ":hover": colors.fill },
   },
   sharedActionIcon: {
     width: "0.875rem",
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     height: "1.25rem",
     width: "1px",
     flexShrink: 0,
-    backgroundColor: colors.border,
+    backgroundColor: colors.hairline,
   },
   createScenarioButton: {
     gap: space.s1_5,
@@ -45,8 +45,8 @@ export const styles = stylex.create({
     width: "2.5rem",
     height: "2.5rem",
     flexShrink: 0,
-    color: { default: "hsl(var(--foreground) / 0.7)", ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--foreground) / 0.08)" },
+    color: { default: colors.inkSecondary, ":hover": colors.text },
+    backgroundColor: { default: null, ":hover": colors.fill },
   },
   actionsMenuContent: {
     width: "12rem",
