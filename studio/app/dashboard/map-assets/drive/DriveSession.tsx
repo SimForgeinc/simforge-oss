@@ -138,7 +138,9 @@ export function DriveSession({
     const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
     return new Map(urls.flatMap((url) => {
       const parsed = new URL(url, window.location.origin);
-      const asset = payload.assets?.find((candidate) => parsed.pathname.endsWith(`/browser-assets/${candidate.relativePath.split("/").map(encodeURIComponent).join("/")}`));
+      const decodedPath = decodeURIComponent(parsed.pathname);
+      const asset = payload.assets?.find((candidate) =>
+        decodedPath.endsWith(`/browser-assets/${candidate.relativePath}`));
       return asset ? [[url, asset.url] as const] : [];
     }));
   }, [map.versionId]);

@@ -167,8 +167,8 @@ export function ScenarioWorldHost({
                 if (!response.ok) throw new Error(`URL resolver failed: ${response.status}`);
                 const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
                 for (const asset of payload.assets ?? []) {
-                  const expectedPath = `/browser-assets/${asset.relativePath.split('/').map(encodeURIComponent).join('/')}`;
-                  const original = batchUrls.find((key) => new URL(key).pathname.endsWith(expectedPath));
+                  const original = batchUrls.find((key) =>
+                    decodeURIComponent(new URL(key).pathname).endsWith(`/browser-assets/${asset.relativePath}`));
                   if (original) directAssetUrlsRef.current.set(original, asset.url);
                 }
               }
