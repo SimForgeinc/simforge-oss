@@ -12,6 +12,7 @@ import {
 import {
   DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
   SCENARIO_SCHEMA_VERSION,
+  type ScenarioDocumentDto,
   type ScenarioDocumentSummaryDto,
 } from "../../lib/scenario/contracts";
 import {
@@ -52,15 +53,14 @@ export type ScenarioDocumentActionsResult = {
     nextTitle: string,
   ) => Promise<void>;
   duplicateDocument: (document: ScenarioDocumentSummaryDto) => Promise<void>;
-  transferDocument: (
-    document: ScenarioDocumentSummaryDto,
-    input: {
-      targetMapVersionId: string;
-      siteId: string;
-      title?: string;
-      signalPlanDecision?: "remove" | "accept-proposal";
-    },
-  ) => Promise<boolean>;
+  /**
+   * Put a variation the transfer overlay just created into the list. The
+   * overlay makes the request itself, so each card can report its own outcome.
+   */
+  recordTransferredDocument: (
+    source: ScenarioDocumentSummaryDto,
+    created: ScenarioDocumentDto,
+  ) => void;
   /** Create the variation to drive; resolves to the drive target, or null when it was refused. */
   startDriverInTheLoop: (
     document: ScenarioDocumentSummaryDto,
@@ -247,36 +247,17 @@ export function useScenarioDocumentActions({
     [reportError, spliceDocument, trackPending, studioHost],
   );
 
-  const transferDocument = useCallback(
-    async (
-      document: ScenarioDocumentSummaryDto,
-      input: {
-        targetMapVersionId: string;
-        siteId: string;
-        title?: string;
-        signalPlanDecision?: "remove" | "accept-proposal";
-      },
-    ) => {
-      setBusyDocumentId(document.id);
-      try {
-        const created = await studioHost.projects.transferDocument(document.id, input);
-        const summary = {
-          ...documentSummaryFromDocument(created),
-          derivationKind: "cross_map_variation" as const,
-          derivedFromDocumentId: document.id,
-        };
-        trackPending(created.datasetId, summary);
-        spliceDocument(summary);
-        rememberScenarioSelection(created.datasetId, created.id);
-        return true;
-      } catch (transferError) {
-        reportError(transferError, "Failed to transfer scenario.");
-        return false;
-      } finally {
-        setBusyDocumentId(null);
-      }
+  const recordTransferredDocument = useCallback(
+    (source: ScenarioDocumentSummaryDto, created: ScenarioDocumentDto) => {
+      const summary = {
+        ...documentSummaryFromDocument(created),
+        derivationKind: "cross_map_variation" as const,
+        derivedFromDocumentId: source.id,
+      };
+      trackPending(created.datasetId, summary);
+      spliceDocument(summary);
     },
-    [reportError, spliceDocument, trackPending, studioHost],
+    [spliceDocument, trackPending],
   );
 
   /**
@@ -479,7 +460,7 @@ export function useScenarioDocumentActions({
     createDocumentOnMap,
     commitRename,
     duplicateDocument,
-    transferDocument,
+    recordTransferredDocument,
     startDriverInTheLoop,
     deleteDocument,
     downloadDocument,
