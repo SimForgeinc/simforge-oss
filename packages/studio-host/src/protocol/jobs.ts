@@ -75,6 +75,11 @@ export const ScenarioRenderJobSchema = object<ScenarioRenderJobDto>({
   workerAttestation: nullable(record(passthrough<unknown>())),
   failureCode: nullable(string()),
   failureDetail: passthrough<unknown>(),
+  simulation: optional(nullable(object({
+    simKey: string(),
+    traceSha256: string(),
+    timelineSha256: nullable(string()),
+  }))),
   createdAt: string(),
   updatedAt: string(),
 });

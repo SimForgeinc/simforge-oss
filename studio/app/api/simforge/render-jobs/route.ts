@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { SubmitScenarioRenderIntentSchema } from "@/app/lib/scenario/render-wire-contracts";
 import { listRenderJobs } from "@/app/lib/scenario/control-plane-store";
 import { createRenderIntentJob } from "@/app/lib/scenario/render-intent-store";
+import { resolveRevisionSimulation } from "@/app/lib/scenario/sim-result-store";
+import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
 import {
   readJson,
   requireScenarioContext,
@@ -35,9 +37,33 @@ export async function POST(request: Request) {
     "read",
   );
   if (access.response) return access.response;
+  // Every render replays the revision's authoritative simulation. A revision
+  // committed before this pipeline (or under another engine) is simulated now,
+  // once; ten renders of one revision share that one result.
+  let simulation;
+  try {
+    simulation = await resolveRevisionSimulation(auth.context, parsed.data.revisionId, { waitMs: 20_000 });
+  } catch (error) {
+    if (!(error instanceof SimulationClosureUnavailableError)) throw error;
+    return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
+  }
+  if (!simulation) return NextResponse.json({ error: "revision_not_found" }, { status: 404 });
+  if (simulation.state === "failed") {
+    return NextResponse.json({ error: simulation.failureCode, message: simulation.message }, { status: 422 });
+  }
+  if (simulation.state !== "succeeded") {
+    return NextResponse.json(
+      { error: "simulation_pending", retryable: true, simulation },
+      { status: 409, headers: { "Retry-After": "2" } },
+    );
+  }
   let created;
   try {
-    created = await createRenderIntentJob(auth.context, parsed.data);
+    created = await createRenderIntentJob(auth.context, parsed.data, {
+      simKey: simulation.result.simKey,
+      traceSha256: simulation.result.traceSha256,
+      timelineSha256: simulation.result.timelineSha256,
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "uniscenario_workspace_limit_reached") {
       return NextResponse.json(

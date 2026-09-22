@@ -40,6 +40,12 @@ const MIN_FREE_BYTES_TO_CACHE = 64 * 1024 * 1024;
 export type ContentAddressedDescriptor = {
   readonly sha256: string;
   readonly sizeBytes: number;
+  /**
+   * Name the entry by a semantic digest instead of the byte digest (an
+   * authoritative trace is filed under its `traceSha256`). The entry is still
+   * verified against `sha256` on every read, so the name cannot go stale.
+   */
+  readonly cacheKey?: string;
 };
 
 export type ArtifactCacheOutcome = "hit" | "miss" | "uncacheable";
@@ -60,9 +66,9 @@ function cacheStorage(): CacheStorage | null {
   }
 }
 
-function contentRequest(sha256: string): Request {
+function contentRequest(descriptor: ContentAddressedDescriptor): Request {
   const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
-  return new Request(`${origin}${CONTENT_PREFIX}${sha256}`);
+  return new Request(`${origin}${CONTENT_PREFIX}${descriptor.cacheKey ?? descriptor.sha256}`);
 }
 
 /**
@@ -77,15 +83,15 @@ async function readVerified(
 ): Promise<Uint8Array<ArrayBuffer> | null> {
   try {
     const cache = await storage.open(CACHE_NAME);
-    const hit = await cache.match(contentRequest(descriptor.sha256));
+    const hit = await cache.match(contentRequest(descriptor));
     if (!hit) return null;
     const bytes = new Uint8Array(await hit.arrayBuffer());
     if (bytes.byteLength !== descriptor.sizeBytes) {
-      await cache.delete(contentRequest(descriptor.sha256));
+      await cache.delete(contentRequest(descriptor));
       return null;
     }
     if (await sha256BytesAsync(bytes) !== descriptor.sha256) {
-      await cache.delete(contentRequest(descriptor.sha256));
+      await cache.delete(contentRequest(descriptor));
       return null;
     }
     return bytes;
@@ -105,7 +111,7 @@ async function persist(
     if (free !== null && free < MIN_FREE_BYTES_TO_CACHE) return;
     const cache = await storage.open(CACHE_NAME);
     const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    await cache.put(contentRequest(descriptor.sha256), new Response(body));
+    await cache.put(contentRequest(descriptor), new Response(body));
   } catch {
     // Quota, private-mode restrictions, a racing eviction: all mean "not cached".
   }

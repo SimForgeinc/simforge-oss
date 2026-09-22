@@ -295,8 +295,14 @@ export function simulateAuthoritative(request: {
   );
   const result = engine().runSimulation(resolved.executedInput, { graph: request.closure.bundle.graph });
   const authoredTrace = result.trace;
-  const authoredTraceSha256 = engine().traceDigest(authoredTrace);
   const resolvedInputDigest = executionSourceInputDigest(resolved.resolvedInput);
+  // The stored resolution record must be exactly the input this trace was
+  // simulated from: the export binds the trace to it, and replayers rebuild
+  // the playback instance from it.
+  if (authoredTrace.header.inputHash !== resolvedInputDigest) {
+    throw new Error(`simulation_input_identity_mismatch: trace ${authoredTrace.header.inputHash}, resolved ${resolvedInputDigest}`);
+  }
+  const authoredTraceSha256 = engine().traceDigest(authoredTrace);
   const step = provider === 'sumo' && request.trafficStep
     ? request.trafficStep({ authoredTrace, resolvedInput: resolved.resolvedInput, sourceInputDigest: resolvedInputDigest, closure: request.closure })
     : null;
@@ -434,4 +440,87 @@ function materializedSignalState(state: string): 'green' | 'yellow' | 'red' | 'o
 /** Canonical JSON bytes, re-exported for hosts that persist simulation metadata. */
 export function canonicalJsonBytes(value: unknown): Uint8Array {
   return new TextEncoder().encode(canonicalJson(value));
+}
+
+export const SIMULATION_RESOLUTION_CONTRACT = 'simforge.sim-resolution/v1';
+export const SIMULATION_RESOLUTION_MEDIA_TYPE = 'application/vnd.simforge.sim-resolution+json+gzip';
+
+/**
+ * The resolution record stored beside a trace: the exact input it was
+ * simulated from, with the materialization manifest and ambient provenance.
+ * Exports and replayers consume it instead of resolving the document again,
+ * so nothing downstream re-materializes traffic. Canonical JSON, gzip level 9.
+ */
+export function encodeSimulationResolution(simulation: AuthoritativeSimulation): Uint8Array {
+  return new Uint8Array(gzipSync(Buffer.from(canonicalJsonBytes({
+    contract: SIMULATION_RESOLUTION_CONTRACT,
+    simKey: simulation.simKey,
+    resolvedInputDigest: simulation.resolvedInputDigest,
+    resolvedInput: simulation.resolved.resolvedInput,
+    ambientActorIds: simulation.resolved.concrete.ambientTraffic.actors.map((actor) => actor.id).sort(),
+    ambientTraffic: simulation.resolved.concrete.ambientTraffic,
+    siteId: simulation.resolved.concrete.siteId,
+    materialization: simulation.resolved.concrete.materialization,
+    axisUntilClamps: simulation.resolved.axisUntilClamps,
+    trafficProvider: simulation.provider,
+  })), { level: 9 }));
+}
+
+/** What an executor reports when it completes a simulation request (the host verifies and records it). */
+export interface SimulationCompletionRecord {
+  readonly simKey: string;
+  readonly traceSha256: string;
+  readonly authoredTraceSha256: string;
+  readonly engineSemVer: string;
+  readonly solverVer: string;
+  readonly traceSchema: string;
+  readonly resolvedInputDigest: string;
+  readonly mapClosureDigest: string;
+  readonly trafficStepKey: string | null;
+  readonly trafficProvider: AmbientTrafficProviderId;
+  readonly engineBuild: Record<string, unknown>;
+  readonly trace: { readonly sha256: string; readonly sizeBytes: number };
+  readonly resolution: { readonly sha256: string; readonly sizeBytes: number };
+  readonly traffic: {
+    readonly sha256: string;
+    readonly sizeBytes: number;
+    readonly sourceInputDigest: string;
+    readonly ambient: Record<string, unknown>;
+  } | null;
+  readonly metrics: Record<string, number>;
+}
+
+/** The completion record of a simulation this process executed, plus the bytes to store. */
+export function simulationCompletion(simulation: AuthoritativeSimulation): {
+  readonly completion: SimulationCompletionRecord;
+  readonly bytes: { readonly trace: Uint8Array; readonly resolution: Uint8Array; readonly traffic: Uint8Array | null };
+} {
+  const resolution = encodeSimulationResolution(simulation);
+  return {
+    completion: {
+      simKey: simulation.simKey,
+      traceSha256: simulation.traceSha256,
+      authoredTraceSha256: simulation.authoredTraceSha256,
+      engineSemVer: simulation.engineSemVer,
+      solverVer: simulation.solverVer,
+      traceSchema: simulation.traceSchema,
+      resolvedInputDigest: simulation.resolvedInputDigest,
+      mapClosureDigest: simulation.mapClosureDigest,
+      trafficStepKey: simulation.trafficStepKey,
+      trafficProvider: simulation.provider,
+      engineBuild: { ...simulation.engineBuild },
+      trace: { sha256: simulation.traceGzipSha256, sizeBytes: simulation.traceGzip.byteLength },
+      resolution: { sha256: sha256Hex(resolution), sizeBytes: resolution.byteLength },
+      traffic: simulation.traffic
+        ? {
+            sha256: simulation.traffic.envelope.sha256,
+            sizeBytes: simulation.traffic.envelope.sizeBytes,
+            sourceInputDigest: simulation.resolvedInputDigest,
+            ambient: { ...simulation.traffic.ambient },
+          }
+        : null,
+      metrics: { simulateMs: Math.round(simulation.simulateMs), traceGzipBytes: simulation.traceGzip.byteLength },
+    },
+    bytes: { trace: simulation.traceGzip, resolution, traffic: simulation.traffic?.envelope.bytes ?? null },
+  };
 }

@@ -21,7 +21,7 @@ import { ViewportSettingsPanel } from "./slots/ViewportSettingsPanel";
 import type { EditorExperience } from "../simple-timed-routes";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorHeader.stylex";
-import { SaveStatus } from "../SaveStatus";
+import { SimulationStatus } from "../SimulationStatus";
 import type { ScenarioSharedPlayback } from "../../scene/useScenarioSession";
 
 const EXPECTED_MAP_BOUND_ISSUES = new Set([
@@ -113,11 +113,9 @@ export function EditorHeader({
             </Button>
           ) : null}
           {documentSaveStatus}
-          <SaveStatus
-            label="Simulation"
-            status={playback?.savedSimulationStatus}
-            error={playback?.savedSimulationError}
-            onRetry={playback?.retrySimulationSave}
+          <SimulationStatus
+            verification={playback?.simulationVerification}
+            onRetry={playback?.retrySimulationVerification}
           />
         </div>
       </TopBarActionsPortal>

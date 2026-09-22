@@ -1,9 +1,8 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { ambientProvenanceForRevisionTraffic, resolveScenarioMap, type ScenarioRevisionEvidenceDto } from "@simforge-oss/studio-host";
+import { resolveScenarioMap } from "@simforge-oss/studio-host";
 import {
-  materializeBrowserRevisionTraffic,
   previewAmbientTrafficProfile,
   previewExecutionTrafficProvider,
 } from "@simforge-oss/playback/traffic";
@@ -19,33 +18,33 @@ import {
 } from "@simforge-oss/playback/traffic";
 import { ambientTrafficProfileFromExtensions } from "@simforge-oss/playback/traffic";
 import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
-import { contentHash, type MaterializedTrafficArtifactEnvelope } from "@simforge-oss/engine";
+import { contentHash } from "@simforge-oss/engine";
 import {
   CollisionActorOverrides,
   type PlaybackBundle,
   type PlaybackController,
 } from "@simforge-oss/playback";
-import { downloadSimulationPreview, encodeSimulationPreview } from "../../lib/scenario/playback/simulationPreview";
+import {
+  authoritativePlaybackBundle,
+  comparableTraceSha256,
+  type SimulationVerificationState,
+} from "../../lib/scenario/playback/authoritativeSimulation";
 import { ScenarioWorkerClient } from "../../lib/scenario/playback/scenarioWorkerClient";
 import { usePlayback } from "../../lib/scenario/playback/usePlayback";
 import { playbackMapEntry } from "../../lib/scenario/maps";
 import type { MapOverlayHandle } from "../../lib/scenario/mapOverlays";
 import { useMapSignalOverlays } from "../../lib/scenario/useMapSignalOverlays";
 import { loadSumoAssets } from "../../lib/scenario/ambient/sumoAssets";
-import { uploadAndConsumeMaterializedTraffic } from "../../lib/scenario/editor/materialized-traffic";
 import { normalizeAuthoringGraph } from "@simforge-oss/editor";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "./previewPolicy";
 
-/** A failed preview save is retried this many times (2 s, 4 s, 6 s) before the error stays on screen. */
-const PREVIEW_SAVE_RETRIES = 3;
-const PREVIEW_SAVE_RETRY_MS = 2_000;
+/** Per request the host waits this long on a simulation someone else holds. */
+const VERIFY_WAIT_MS = 15_000;
+/** Queued simulations are awaited for about three minutes before the preview stays "Local preview". */
+const VERIFY_ATTEMPTS = 12;
 
-export type ScenarioRevisionEvidence = ScenarioRevisionEvidenceDto;
-
-export type ScenarioEvidenceRequest = {
-  readonly key: string;
-};
+export type { SimulationVerificationState } from "../../lib/scenario/playback/authoritativeSimulation";
 
 export type ScenarioSharedPlayback = {
   readonly bundle: PlaybackBundle | null;
@@ -57,15 +56,14 @@ export type ScenarioSharedPlayback = {
   /** Preparation failure text retained even when no playback controller exists. */
   readonly preparationMessage?: string | null;
   /**
-   * Why persisting this trace as the document's saved simulation failed,
-   * if it did. The in-memory trace still plays, but a render needs the saved
-   * copy, so the failure is published instead of leaving the document's
-   * simulation preview a permanent 404 with nothing to explain it.
+   * The preview's standing against the host's authoritative simulation of the
+   * saved draft: "Local preview" until the authoritative trace for the same
+   * content arrives, "Verified" when the digests are equal. A mismatch shows
+   * the authoritative trace instead and is reported as a determinism bug.
+   * Nothing is uploaded: the host computes the authoritative result itself.
    */
-  readonly savedSimulationError?: string | null;
-  /** Honest state of the current draft's browser simulation artifact. */
-  readonly savedSimulationStatus?: "saving" | "saved" | null;
-  readonly retrySimulationSave?: () => void;
+  readonly simulationVerification?: SimulationVerificationState;
+  readonly retrySimulationVerification?: () => void;
   readonly inspecting: boolean;
   readonly setInspecting: (inspecting: boolean) => void;
   /** Status published by the one workspace-owned SUMO runtime. */
@@ -103,11 +101,6 @@ export interface ScenarioSession {
     readonly actorRenderer: ActorRenderer | null;
     readonly loadedMapVersionId: string | null;
   };
-  /** Present only while an explicit action is materializing SUMO output. */
-  readonly evidenceRequest: ScenarioEvidenceRequest | null;
-  prepareRevisionEvidence(documentId: string): Promise<ScenarioRevisionEvidence>;
-  completeRevisionEvidence(requestKey: string, artifact: MaterializedTrafficArtifactEnvelope): void;
-  failRevisionEvidence(requestKey: string, reason: unknown): void;
   updateDocument(document: ScenarioDocumentDto): void;
 }
 
@@ -172,34 +165,21 @@ export function useScenarioSession({
   const [inspecting, setInspectingState] = useState(false);
   const [recordingCamera, setRecordingCamera] = useState<ScenarioRecordingCamera | null>(null);
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
-  const [savedSimulationStatus, setSavedSimulationStatus] = useState<"saving" | "saved" | null>(null);
-  const previewRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const publishPreviewRef = useRef<((nextBundle: PlaybackBundle) => void) | null>(null);
-  const wasPlayingRef = useRef(false);
-  const [evidenceRequest, setEvidenceRequest] = useState<ScenarioEvidenceRequest | null>(null);
-  const [savedSimulationError, setSavedSimulationError] = useState<string | null>(null);
+  const [simulationVerification, setSimulationVerification] = useState<SimulationVerificationState>({ status: "local" });
+  const verifyPreviewRef = useRef<((nextBundle: PlaybackBundle, force?: boolean) => void) | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
-  /** The one in-flight or completed upload of the current trace, by content identity and saved version. */
-  const previewSaveRef = useRef<{ key: string; abort: AbortController } | null>(null);
+  /** The one in-flight or completed verification of the current trace, by content identity and saved version. */
+  const verificationRef = useRef<{ key: string; abort: AbortController } | null>(null);
   const fetchGenerationRef = useRef(0);
   const prepareFenceRef = useRef(new ScenarioSessionResultFence());
   const preparedKeyRef = useRef<string | null>(null);
   /** Simulation identity the worker is compiling right now, so a save landing mid-compile keeps that run. */
   const compilingKeyRef = useRef<string | null>(null);
-  const evidenceCacheRef = useRef<{ key: string; evidence: ScenarioRevisionEvidence } | null>(null);
   const bundleContentIdentityRef = useRef(new WeakMap<PlaybackBundle, string>());
   const persistedDocumentIdentityRef = useRef<{
     id: string;
     draftVersion: number;
     contentIdentity: string;
-  } | null>(null);
-  const evidencePendingRef = useRef<{
-    key: string;
-    promise: Promise<ScenarioRevisionEvidence>;
-    resolve: (evidence: ScenarioRevisionEvidence) => void;
-    reject: (reason: Error) => void;
-    uploading: boolean;
-    abort: AbortController;
   } | null>(null);
 
   useEffect(() => {
@@ -223,7 +203,7 @@ export function useScenarioSession({
       setMap(null);
       setBundle(null);
       setMessage(null);
-      setSavedSimulationError(null);
+      setSimulationVerification({ status: "local" });
       return;
     }
     if (document?.id === documentId) return;
@@ -236,7 +216,7 @@ export function useScenarioSession({
     persistedDocumentIdentityRef.current = null;
     setBundle(null);
     setMessage("Preparing scenario preview…");
-    setSavedSimulationError(null);
+    setSimulationVerification({ status: "local" });
     void studioHost.projects.getDocument(documentId, abort.signal).then((nextDocument) => {
       if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
       const canonical = withCanonicalEditorTimeline(nextDocument);
@@ -293,61 +273,90 @@ export function useScenarioSession({
       workerRef.current = client;
       return client;
     };
-    const previewRuntime = async () => ({
-      engine: await worker().engineIdentity(),
-      mapClosureSha256: nextMap.browserClosureSha256,
-    });
-    // Persist a trace only as the preview of content the server holds at that
-    // exact version, once per (content, version). A trace of unsaved edits is
-    // never uploaded under the last saved version; the autosave that lands
-    // later re-enters this effect (and the play transition below) and publishes
-    // the same in-memory trace.
-    const publishPreview = (nextBundle: PlaybackBundle, attempt = 0) => {
+    // Verify the local preview against the host's authoritative simulation of
+    // the saved draft, once per (content, version). Unsaved edits stay "Local
+    // preview": the autosave that lands later re-enters this effect and
+    // verifies the same in-memory trace. Nothing is uploaded.
+    const verifyPreview = (nextBundle: PlaybackBundle, force = false) => {
       const persisted = persistedDocumentIdentityRef.current;
-      if (persisted?.id !== document.id || persisted.contentIdentity !== sourceContentIdentity) return;
-      const key = `${sourceContentIdentity}:${persisted.draftVersion}`;
-      if (previewSaveRef.current?.key === key) return;
-      if (previewRetryTimeoutRef.current !== null) {
-        clearTimeout(previewRetryTimeoutRef.current);
-        previewRetryTimeoutRef.current = null;
+      if (persisted?.id !== document.id || persisted.contentIdentity !== sourceContentIdentity) {
+        setSimulationVerification({ status: "local", detail: "Unsaved edits" });
+        return;
       }
-      previewSaveRef.current?.abort.abort();
+      const key = `${sourceContentIdentity}:${persisted.draftVersion}`;
+      if (!force && verificationRef.current?.key === key) return;
+      verificationRef.current?.abort.abort();
       const abort = new AbortController();
-      previewSaveRef.current = { key, abort };
-      setSavedSimulationStatus("saving");
-      setSavedSimulationError(null);
+      verificationRef.current = { key, abort };
+      const current = () => verificationRef.current?.key === key && !abort.signal.aborted;
       const target = { id: persisted.id, draftVersion: persisted.draftVersion };
-      void previewRuntime()
-        .then((runtime) => encodeSimulationPreview(nextBundle, target.draftVersion, runtime))
-        .then(({ bytes, sha256 }) => studioHost.projects.saveSimulationPreview(target, bytes, sha256, abort.signal))
-        .then(() => {
-          if (previewSaveRef.current?.key !== key) return;
-          setSavedSimulationStatus("saved");
-          setSavedSimulationError(null);
-        })
-        .catch((reason: unknown) => {
-          if (previewSaveRef.current?.key !== key) return;
-          previewSaveRef.current = null;
-          if ((reason as { name?: string } | null)?.name === "AbortError") return;
-          setSavedSimulationStatus(null);
-          setSavedSimulationError(reason instanceof Error ? reason.message : String(reason));
-          // A transient presign/upload failure must not leave the render tab
-          // claiming that this draft was never played: retry the same exact
-          // bundle a bounded number of times, then leave the error on screen.
-          if (attempt >= PREVIEW_SAVE_RETRIES) return;
-          previewRetryTimeoutRef.current = setTimeout(() => {
-            previewRetryTimeoutRef.current = null;
-            publishPreview(nextBundle, attempt + 1);
-          }, PREVIEW_SAVE_RETRY_MS * (attempt + 1));
-        });
+      setSimulationVerification({ status: "verifying" });
+      void (async () => {
+        for (let attempt = 0; attempt < VERIFY_ATTEMPTS && current(); attempt += 1) {
+          const status = await studioHost.projects.resolveSimulation(target, { waitMs: VERIFY_WAIT_MS, signal: abort.signal });
+          if (!current()) return;
+          if (status.state === "failed") {
+            setSimulationVerification({ status: "unavailable", message: status.message ?? status.failureCode });
+            return;
+          }
+          if (status.state !== "succeeded") {
+            setSimulationVerification({ status: "verifying", queued: true });
+            continue;
+          }
+          const result = status.result;
+          const localTraceSha256 = nextBundle.traceSha256 ?? null;
+          const verified = localTraceSha256 !== null && comparableTraceSha256(result).includes(localTraceSha256);
+          const runtime = await worker().engineIdentity().catch(() => null);
+          if (localTraceSha256) {
+            void studioHost.projects.verifySimulation(result.simKey, {
+              documentId: document.id,
+              localTraceSha256,
+              localRuntime: {
+                ...(runtime ? { engineVersion: runtime.engineVersion, abiVersion: runtime.abiVersion } : {}),
+                ...(typeof navigator === "undefined" ? {} : { userAgent: navigator.userAgent.slice(0, 400) }),
+              },
+            }).catch(() => undefined);
+          }
+          if (verified) {
+            setSimulationVerification({
+              status: "verified",
+              simKey: result.simKey,
+              traceSha256: result.traceSha256,
+              engineSemVer: result.engineSemVer,
+            });
+            return;
+          }
+          // A different trace under the same content is a determinism bug: show
+          // the authority's trace (it is what every render and evaluation
+          // replays) and keep the mismatch on screen.
+          const mismatch = {
+            status: "mismatch" as const,
+            simKey: result.simKey,
+            localTraceSha256,
+            authoritativeTraceSha256: result.traceSha256,
+          };
+          setSimulationVerification({ ...mismatch, showingAuthoritative: false });
+          console.error(`[simulation] local preview ${localTraceSha256 ?? "(no digest)"} differs from authoritative ${result.traceSha256} (${result.simKey})`);
+          const authoritative = await authoritativePlaybackBundle(result, nextBundle, abort.signal);
+          if (!current()) return;
+          bundleContentIdentityRef.current.set(authoritative, sourceContentIdentity);
+          setBundle(authoritative);
+          setSimulationVerification({ ...mismatch, showingAuthoritative: true });
+          return;
+        }
+        if (current()) setSimulationVerification({ status: "local", detail: "Authoritative simulation is still queued" });
+      })().catch((reason: unknown) => {
+        if (!current() || (reason as { name?: string } | null)?.name === "AbortError") return;
+        setSimulationVerification({ status: "unavailable", message: reason instanceof Error ? reason.message : String(reason) });
+      });
     };
-    publishPreviewRef.current = publishPreview;
+    verifyPreviewRef.current = verifyPreview;
     // The exact trace for this content is already on screen: a mode change,
     // a title edit or an autosave echo must not drop it, re-parse it or rebuild
     // the playback controller and its per-actor presentation tables.
     if (bundle && bundleContentIdentityRef.current.get(bundle) === sourceContentIdentity) {
       setMessage(null);
-      publishPreview(bundle);
+      verifyPreview(bundle);
       return;
     }
     // The worker is already computing this exact content (typically the autosave
@@ -378,7 +387,7 @@ export function useScenarioSession({
         bundleContentIdentityRef.current.set(nextBundle, sourceContentIdentity);
         setBundle(nextBundle);
         setMessage(null);
-        publishPreview(nextBundle);
+        verifyPreview(nextBundle);
       }).catch((reason) => {
         if (compilingKeyRef.current === simulationKey) compilingKeyRef.current = null;
         if (!prepareFenceRef.current.accepts(generation, simulationKey)
@@ -388,49 +397,14 @@ export function useScenarioSession({
           : "Preview unavailable for this scenario.");
       });
     };
-    setBundle(null);
-    setMessage("Preparing scenario preview…");
-    // A saved simulation stands in for compilation only when the server holds
-    // exactly this content at this version and the copy was produced by this
-    // engine build on this map closure; anything else recompiles.
-    const persisted = persistedDocumentIdentityRef.current;
-    if (persisted?.id !== document.id
-        || persisted.draftVersion !== document.draftVersion
-        || persisted.contentIdentity !== sourceContentIdentity) {
-      compileScenarioPreview();
-      return;
-    }
-    const abort = new AbortController();
-    void Promise.all([
-      studioHost.projects.getSimulationPreview(document.id, abort.signal),
-      previewRuntime(),
-    ]).then(async ([descriptor, runtime]) => {
-      if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
-      if (!descriptor || descriptor.draftVersion !== document.draftVersion) {
-        compileScenarioPreview();
-        return;
-      }
-      const saved = await downloadSimulationPreview(descriptor, runtime, abort.signal);
-      if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
-      bundleContentIdentityRef.current.set(saved, sourceContentIdentity);
-      previewSaveRef.current = { key: `${sourceContentIdentity}:${document.draftVersion}`, abort: new AbortController() };
-      setSavedSimulationStatus("saved");
-      setSavedSimulationError(null);
-      setBundle(saved);
-      setMessage(null);
-    }).catch((reason) => {
-      if (!prepareFenceRef.current.accepts(generation, simulationKey)
-          || (reason as { name?: string } | null)?.name === "AbortError") return;
-      setSavedSimulationError(reason instanceof Error ? reason.message : String(reason));
-      compileScenarioPreview();
-    });
-    return () => abort.abort();
+    // The editor always runs its own local simulation: it is instant (the same
+    // Rust core, in WASM) and it prepares the live world Play resumes from.
+    // The authoritative result is fetched by key and compared, never uploaded.
+    compileScenarioPreview();
   }, [bundle, document, documentId, maps, studioHost]);
 
   useEffect(() => () => {
-    clearTimeout(previewRetryTimeoutRef.current ?? undefined);
-    previewRetryTimeoutRef.current = null;
-    previewSaveRef.current?.abort.abort();
+    verificationRef.current?.abort.abort();
     workerRef.current?.dispose();
   }, []);
 
@@ -513,13 +487,6 @@ export function useScenarioSession({
   });
   const presentationActive = inspecting || recordingCamera !== null;
   useEffect(() => {
-    const playing = runtimePlayback.state?.playing === true;
-    if (playing && !wasPlayingRef.current && bundle) {
-      publishPreviewRef.current?.(bundle);
-    }
-    wasPlayingRef.current = playing;
-  }, [bundle, runtimePlayback.state?.playing]);
-  useEffect(() => {
     const controller = runtimePlayback.controller;
     if (!controller) return;
     applyScenarioPresentationVisibility(
@@ -553,135 +520,15 @@ export function useScenarioSession({
     // change drops it so the previous revision's trace is never shown beside
     // new authoring state; a title edit or the autosave echo keeps it.
     if (document && contentIdentity !== contentHash(document.content)) {
-      setSavedSimulationStatus(null);
-      setSavedSimulationError(null);
+      verificationRef.current?.abort.abort();
+      verificationRef.current = null;
+      setSimulationVerification({ status: "local" });
     }
     setBundle((current) => (
       current && bundleContentIdentityRef.current.get(current) === contentIdentity ? current : null
     ));
     setDocument(canonical);
   }, [document, documentId]);
-
-  const evidenceIdentity = useMemo(() => document && map && bundle
-    ? contentHash({
-        documentId: document.id,
-        draftVersion: document.draftVersion,
-        mapVersionId: map.mapVersionId,
-        sourceMapId: map.sourceMapId,
-        inputHash: bundle.instance.manifest.inputHash,
-      })
-    : null, [bundle, document, map]);
-
-  const failRevisionEvidence = useCallback((requestKey: string, reason: unknown) => {
-    const pending = evidencePendingRef.current;
-    if (!pending || pending.key !== requestKey) return;
-    pending.abort.abort();
-    evidencePendingRef.current = null;
-    setEvidenceRequest(null);
-    setInspectingState(false);
-    runtimePlayback.controller?.pause();
-    pending.reject(reason instanceof Error ? reason : new Error(String(reason)));
-  }, [runtimePlayback.controller]);
-
-  const completeRevisionEvidence = useCallback((requestKey: string, artifact: MaterializedTrafficArtifactEnvelope) => {
-    const pending = evidencePendingRef.current;
-    if (!pending || pending.key !== requestKey || pending.uploading
-        || requestKey !== evidenceIdentity || !document || !map || !bundle) return;
-    if (!mapSupportsScenarioPreview(map)) {
-      failRevisionEvidence(requestKey, new Error("The active map is missing its immutable browser runtime closure."));
-      return;
-    }
-    pending.uploading = true;
-    const runtimeMap = playbackMapEntry(map);
-    const profile = ambientTrafficProfileFromExtensions(document.content.extensions);
-    const replaceActorIds = new Set(bundle.ambientTraffic?.actors.map((actor) => actor.id) ?? []);
-    void uploadAndConsumeMaterializedTraffic(
-      studioHost,
-      document,
-      artifact,
-      artifact.artifact.sourceInputDigest,
-      bundle.trace,
-      replaceActorIds,
-      { signal: pending.abort.signal },
-    ).then(({ reference }) => {
-      if (evidencePendingRef.current !== pending || requestKey !== evidenceIdentity) return;
-      const evidence = {
-        ambient: ambientProvenanceForRevisionTraffic(artifact, profile, runtimeMap),
-        materializedTraffic: reference,
-      } satisfies ScenarioRevisionEvidence;
-      evidenceCacheRef.current = { key: requestKey, evidence };
-      evidencePendingRef.current = null;
-      setEvidenceRequest(null);
-      setInspectingState(false);
-      runtimePlayback.controller?.pause();
-      pending.resolve(evidence);
-    }).catch((reason: unknown) => failRevisionEvidence(requestKey, reason));
-  }, [bundle, document, evidenceIdentity, failRevisionEvidence, map, runtimePlayback.controller, studioHost]);
-
-  const prepareRevisionEvidence = useCallback((requestedDocumentId: string) => {
-    if (!document || !map || !mapSupportsScenarioPreview(map) || !bundle
-        || !evidenceIdentity || document.id !== requestedDocumentId) {
-      return Promise.reject(new Error("Open this saved scenario in the canonical browser session before preparing revision evidence."));
-    }
-    const cached = evidenceCacheRef.current;
-    if (cached?.key === evidenceIdentity) return Promise.resolve(cached.evidence);
-    const existing = evidencePendingRef.current;
-    if (existing?.key === evidenceIdentity) return existing.promise;
-    if (existing) failRevisionEvidence(existing.key, new Error("Revision evidence preparation was superseded."));
-
-    let resolve!: (evidence: ScenarioRevisionEvidence) => void;
-    let reject!: (reason: Error) => void;
-    const promise = new Promise<ScenarioRevisionEvidence>((accept, decline) => {
-      resolve = accept;
-      reject = decline;
-    });
-    const pending = {
-      key: evidenceIdentity,
-      promise,
-      resolve,
-      reject,
-      uploading: false,
-      abort: new AbortController(),
-    };
-    evidencePendingRef.current = pending;
-    const requestedProvider = ambientTrafficProviderFromExtensions(document.content.extensions);
-    const executionProvider = previewExecutionTrafficProvider(
-      requestedProvider,
-      document.content.mapSignalPlans.length > 0,
-    );
-    if (executionProvider === "sumo") {
-      setEvidenceRequest({ key: evidenceIdentity });
-    } else {
-      try {
-        const artifact = materializeBrowserRevisionTraffic(
-          executionProvider,
-          ambientTrafficProfileFromExtensions(document.content.extensions),
-          playbackMapEntry(map),
-          bundle,
-        );
-        completeRevisionEvidence(evidenceIdentity, artifact);
-      } catch (reason) {
-        failRevisionEvidence(evidenceIdentity, reason);
-      }
-    }
-    return promise;
-  }, [bundle, completeRevisionEvidence, document, evidenceIdentity, failRevisionEvidence, map]);
-
-  useEffect(() => {
-    const pending = evidencePendingRef.current;
-    if (pending && pending.key !== evidenceIdentity) {
-      failRevisionEvidence(pending.key, new Error("Revision evidence preparation was superseded by another scenario state."));
-    }
-    if (evidenceCacheRef.current?.key !== evidenceIdentity) evidenceCacheRef.current = null;
-  }, [evidenceIdentity, failRevisionEvidence]);
-
-  useEffect(() => () => {
-    const pending = evidencePendingRef.current;
-    if (!pending) return;
-    pending.abort.abort();
-    pending.reject(new Error("Revision evidence preparation was canceled."));
-    evidencePendingRef.current = null;
-  }, []);
 
   return {
     maps,
@@ -700,10 +547,9 @@ export function useScenarioSession({
       error: runtimePlayback.error,
       preparationMessage: message,
       inspecting,
-      savedSimulationError,
-      savedSimulationStatus,
-      retrySimulationSave: () => {
-        if (bundle) publishPreviewRef.current?.(bundle);
+      simulationVerification,
+      retrySimulationVerification: () => {
+        if (bundle) verifyPreviewRef.current?.(bundle, true);
       },
       setInspecting,
       sumoStatus,
@@ -714,10 +560,6 @@ export function useScenarioSession({
       setRecordingCamera,
     },
     capture: { viewer, actorRenderer, loadedMapVersionId },
-    evidenceRequest,
-    prepareRevisionEvidence,
-    completeRevisionEvidence,
-    failRevisionEvidence,
     updateDocument,
   };
 }

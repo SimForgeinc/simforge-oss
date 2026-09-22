@@ -9,6 +9,7 @@ import {
   listScenarioRevisions,
 } from "@/app/lib/scenario/document-store";
 import { ScenarioMapResolutionError, STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
+import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
 import {
   readJson,
   requireScenarioContext,
@@ -49,19 +50,23 @@ export async function POST(request: Request, route: Context) {
   try {
     result = await createScenarioRevision(auth.context, documentId, parsed.data);
   } catch (error) {
-    if (!(error instanceof ScenarioMapResolutionError)) throw error;
+    if (!(error instanceof ScenarioMapResolutionError) && !(error instanceof SimulationClosureUnavailableError)) throw error;
     return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
   }
   if (result.kind === "not_found") {
     return NextResponse.json({ error: "document_not_found" }, { status: 404 });
   }
-  if (result.kind === "traffic_binding_invalid") {
+  if (result.kind === "simulation_pending") {
+    // Another executor (a CPU runner) holds this draft's simulation: retry the same commit.
     return NextResponse.json(
-      {
-        error: "materialized_traffic_binding_invalid",
-        message: "The materialized traffic evidence does not bind to this document's current compatible map publication.",
-      },
-      { status: 409 },
+      { error: "simulation_pending", retryable: true, simulation: result.status },
+      { status: 409, headers: { "Retry-After": "2" } },
+    );
+  }
+  if (result.kind === "simulation_failed") {
+    return NextResponse.json(
+      { error: result.code, message: result.message, simulation: result.status },
+      { status: 422 },
     );
   }
   if (result.kind === "conflict") {
