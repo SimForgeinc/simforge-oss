@@ -194,7 +194,13 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     this.worker.onmessage = (event: MessageEvent<LiveWorldWorkerResponse>) => this.onMessage(event.data);
     this.worker.onerror = (event) => {
       clearTimeout(this.readyTimeout);
-      this.setStatus('error', event.message || 'authored world worker failed');
+      const location = event.filename
+        ? ` (${event.filename}${event.lineno ? `:${event.lineno}${event.colno ? `:${event.colno}` : ''}` : ''})`
+        : '';
+      this.setStatus(
+        'error',
+        `${event.message || 'Drive worker could not be loaded — reload the page'}${location}`,
+      );
     };
     this.readyTimeout = setTimeout(() => {
       this.worker.terminate();
