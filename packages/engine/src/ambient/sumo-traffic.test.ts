@@ -226,7 +226,9 @@ describe('worker SUMO traffic step', () => {
     const result = await runSumoTraffic(runtimeWith([]), input());
     const [actor] = result.artifact.artifact.actors;
     expect(actor!.id).toBe(sumoTrafficActorIdFor(sumoVehicleId('unit', 0)));
-    expect(actor!.id).toMatch(/^sumo:[0-9a-f]{8}$/);
+    expect(actor!.id).toMatch(/^sumo-[0-9a-f]{8}$/);
+    // URL-safe: render intents accept it as a sensor host id.
+    expect(actor!.id).toMatch(/^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$/);
     for (const state of actor!.states) {
       expect(Math.round(state.x * 1e4) / 1e4).toBe(state.x);
       expect(state.z).toBe(41.75);
@@ -274,7 +276,7 @@ describe('worker SUMO traffic step', () => {
     expect(result.diagnostics.teleports).toBe(1);
     const ids = result.artifact.artifact.actors.map((actor) => actor.id);
     expect(ids).toHaveLength(2);
-    expect(ids[1]).toBe(`${ids[0]}~1`);
+    expect(ids[1]).toBe(`${ids[0]}-t1`);
     const [before, after] = result.artifact.artifact.actors;
     const handover = before!.states.findIndex((state) => !state.present);
     expect(after!.states[handover]!.present).toBe(true);

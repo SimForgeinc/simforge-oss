@@ -102,7 +102,8 @@ const sumoInTimeline = timelineDoc.actors.filter((actor) => actor.origin === 'su
 //    actor cannot carry the camera), mounted high to see across junctions.
 const scene = traceToSceneFrame(worker.trace);
 const dt = worker.trace.header.dt;
-const sumoIds = Object.keys(scene.ticks.actors).filter((id) => id.startsWith('sumo:'));
+const isSumo = (id: string) => worker.trace.header.actorMetadata?.[id]?.tags.includes('sumo') ?? false;
+const sumoIds = Object.keys(scene.ticks.actors).filter(isSumo);
 const hosts = Object.keys(scene.ticks.actors).filter((id) =>
   /^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$/.test(id) && !worker.trace.header.actorMetadata?.[id]?.static
   && ['car', 'vehicle', 'truck', 'van', 'bus'].includes(worker.trace.header.actorMetadata?.[id]?.kind ?? ''));
@@ -256,7 +257,7 @@ for (const [index, frame] of sent.frames.entries()) {
     if (body && body.catalogId !== 'vehicle.sedan') wrongBody.push(actor.id);
   }
 }
-const sumoPerActor = Object.fromEntries(Object.entries(parity.perActor).filter(([id]) => id.startsWith('sumo:')));
+const sumoPerActor = Object.fromEntries(Object.entries(parity.perActor).filter(([id]) => isSumo(id)));
 const stills: string[] = [];
 if (video) {
   for (const fraction of [0.1, 0.5, 0.9]) {
@@ -281,7 +282,7 @@ const report = {
   render: {
     host: best.host, clip: [start, end], frames: sent.frames.length,
     video: video?.relativePath ?? null, renderError, attitude,
-    sumoActorsDrawnPerFrame: sent.frames.map((frame) => frame.actors.filter((actor) => actor.id.startsWith('sumo:') && actor.kind !== 'despawn').length),
+    sumoActorsDrawnPerFrame: sent.frames.map((frame) => frame.actors.filter((actor) => isSumo(actor.id) && actor.kind !== 'despawn').length),
   },
   checks: {
     missingSumoActorsInFrames: missingSumo.length,
