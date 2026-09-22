@@ -36,7 +36,7 @@
  */
 
 import { canonicalJson, sha256, sha256Bytes } from '../core/hash.js';
-import type { RoadControl, SignalProgram } from '../schema/input.js';
+import type { ControlIndication, RoadControl, SignalProgram } from '../schema/input.js';
 import type { SimTrace } from '../trace/trace.js';
 import { traceToSceneFrame } from '../trace/trace.js';
 import {
@@ -299,12 +299,7 @@ function runSumoTrafficWithModule(
       if (phase !== signalProgramIndicationAt(program, trace.ticks.t[index]!, warmupSeconds)) signalOverrideTicks += 1;
     });
   }
-  const indicationAt = (program: SignalProgram, step: number) => {
-    const tick = step - preRollSteps;
-    const track = recorded[program.id];
-    if (tick >= 0 && track && tick < track.phase.length) return track.phase[tick]!;
-    return signalProgramIndicationAt(program, (step - preRollSteps) * dt, warmupSeconds);
-  };
+  const indicationAt = sumoSignalBookIndication(trace, preRollSteps);
   const synthesis = synthesizeSumoSignalPrograms(networkXml, input.signalPrograms, {
     stepSeconds: dt,
     stepCount: totalSteps + 1,
@@ -439,6 +434,28 @@ function proxiesAt(
       } satisfies SumoExternalProxy;
     })
     .sort((left, right) => compare(left.id, right.id));
+}
+
+/**
+ * What the SimForge signal book shows during SUMO step `step`, for a SUMO run
+ * whose time 0 is scene time `-preRollSteps · dt`: the trace's recorded phase
+ * (authored overrides included) for clip steps, the program formula before.
+ * Shared by the worker and the editor's display-only SUMO preview.
+ */
+export function sumoSignalBookIndication(
+  trace: {
+    readonly header: { readonly dt: number; readonly warmupSeconds: number };
+    readonly ticks: { readonly signals?: Readonly<Record<string, { readonly phase: readonly ControlIndication[] }>> };
+  },
+  preRollSteps: number,
+): (program: SignalProgram, step: number) => ControlIndication {
+  const recorded = trace.ticks.signals ?? {};
+  return (program, step) => {
+    const tick = step - preRollSteps;
+    const track = recorded[program.id];
+    if (tick >= 0 && track && tick < track.phase.length) return track.phase[tick]!;
+    return signalProgramIndicationAt(program, tick * trace.header.dt, trace.header.warmupSeconds);
+  };
 }
 
 /** Remove proxies that disappeared, then upsert changed ones, all in id order. */

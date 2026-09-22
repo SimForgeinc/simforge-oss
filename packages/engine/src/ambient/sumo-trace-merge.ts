@@ -22,9 +22,9 @@ export function sumoTraceActorMetadata(): TraceActorMetadata & { readonly origin
     kind: SUMO_TRAFFIC_VEHICLE.kind,
     dims: { ...SUMO_TRAFFIC_VEHICLE.dims },
     static: false,
-    // Tags survive every runtime that re-serializes the header; `origin` is
-    // the typed field consumers read.
-    tags: [`catalog:${SUMO_TRAFFIC_VEHICLE.catalogId}`, 'ambient', `origin:${SUMO_TRAFFIC_ORIGIN}`],
+    // Tags survive every runtime that re-serializes the header, and the render
+    // timeline derives `origin` from them (`sumo` wins over `ambient`).
+    tags: ['ambient', `catalog:${SUMO_TRAFFIC_VEHICLE.catalogId}`, SUMO_TRAFFIC_ORIGIN],
     origin: SUMO_TRAFFIC_ORIGIN,
   };
 }
@@ -107,4 +107,15 @@ function sortKeys<T>(record: Record<string, T>): Record<string, T> {
 
 function compare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * Whether a trace already carries baked worker SUMO traffic. The editor's
+ * live SUMO preview stands down for such a trace: the authoritative traffic
+ * is replayed from it, never simulated again.
+ */
+export function traceCarriesSumoTraffic(trace: {
+  readonly header: { readonly actorMetadata?: Readonly<Record<string, { readonly tags: readonly string[] }>> };
+}): boolean {
+  return Object.values(trace.header.actorMetadata ?? {}).some((meta) => meta.tags.includes(SUMO_TRAFFIC_ORIGIN));
 }
