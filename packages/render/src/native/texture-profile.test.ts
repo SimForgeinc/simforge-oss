@@ -111,3 +111,33 @@ it('does not re-hash a staged member that is already a link to the verified blob
   await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
   expect(spy).not.toHaveBeenCalled();
 });
+
+it('measures per-tier scene memory from KTX2 headers, matching what staging admits', async () => {
+  const value = await fixture();
+  const { measureNativeTextureDemand } = await import('./texture-profile.js');
+  const members = value.closure.members;
+  const master = JSON.parse(await fs.readFile(members.get('master.gltf')!.path, 'utf8'));
+  const source = {
+    sha256: (uri: string) => members.get(uri)?.sha256,
+    readText: (uri: string) => fs.readFile(members.get(uri)!.path, 'utf8'),
+    path: (uri: string) => members.get(uri)!.path,
+  };
+  const full = await measureNativeTextureDemand(master, 'uastc-full', source);
+  const ml = await measureNativeTextureDemand(master, 'bc7-512', source);
+  expect(full.textureBytes).toBe(1024 ** 2);
+  expect(ml.textureBytes).toBe(512 ** 2);
+  const staged = await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(full.sceneBytes).toBe(staged.estimatedBytes);
+});
+
+it('refuses fast, with advice, when the device cannot hold the scene', async () => {
+  const { NativeGpuMemoryError, nativeStartupTimeoutMs } = await import('./texture-profile.js');
+  const error = new NativeGpuMemoryError(7 * 1024 ** 3, { totalBytes: 10 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }, 'uastc-full');
+  expect(error.message).toMatch(/needs about 7.0 GB and this worker has 3.0 GB free of 10.0 GB/);
+  expect(error.message).toMatch(/ML quality/);
+  expect(error.retryable).toBe(true);
+  expect(new NativeGpuMemoryError(12 * 1024 ** 3, { totalBytes: 10 * 1024 ** 3, freeBytes: 9 * 1024 ** 3 }, 'uastc-full').retryable).toBe(false);
+  expect(nativeStartupTimeoutMs({ textureBytes: 0, geometryBytes: 0 })).toBe(300_000);
+  expect(nativeStartupTimeoutMs({ textureBytes: 5.48e9, geometryBytes: 143e6 })).toBeGreaterThan(600_000);
+  expect(nativeStartupTimeoutMs({ textureBytes: 1e12, geometryBytes: 1e12 })).toBe(1_800_000);
+});

@@ -15,6 +15,37 @@ export class NativeTextureCapacityError extends Error {
   }
 }
 
+/**
+ * The device cannot hold the scene at this texture tier. Raised before the
+ * service starts (seconds into the job) instead of a startup timeout minutes
+ * later; not retryable when the whole device is too small.
+ */
+export class NativeGpuMemoryError extends Error {
+  readonly code = 'native_gpu_memory_insufficient';
+  readonly retryable: boolean;
+  constructor(readonly demandBytes: number, readonly device: { readonly totalBytes: number; readonly freeBytes: number }, readonly renderTextures: NativeRenderTextures) {
+    const gb = (bytes: number) => (bytes / 1024 ** 3).toFixed(1);
+    const advice = renderTextures === 'uastc-full'
+      ? 'Render at ML quality (512 px textures, about a fifth of the texture memory) or below 720p, or on a worker with more GPU memory.'
+      : 'Render on a worker with more GPU memory.';
+    super(`native_gpu_memory_insufficient: not enough GPU memory for this map at ${renderTextures} quality: the scene needs about ${gb(demandBytes)} GB and this worker has ${gb(device.freeBytes)} GB free of ${gb(device.totalBytes)} GB. ${advice}`);
+    this.name = 'NativeGpuMemoryError';
+    this.retryable = demandBytes <= device.totalBytes;
+  }
+}
+
+/**
+ * Startup budget for the retained service: texture transcode/upload scales
+ * with texture volume (~15 s/GB measured on an RTX 3080 box) and the sensor
+ * raycast scene with map geometry; a large map at full quality otherwise hit
+ * a flat 300 s timeout after its textures were already resident.
+ */
+export function nativeStartupTimeoutMs(profile: { readonly textureBytes: number; readonly geometryBytes: number }): number {
+  const seconds = 300 + 30 * (profile.textureBytes / 1024 ** 3) + 2 * (profile.geometryBytes / 1024 ** 2);
+  return Math.round(Math.min(1800, seconds) * 1000);
+}
+
+export type NativeMapMaster = Master;
 type Master = {
   buffers?: Array<{ uri?: string; byteLength: number }>;
   images?: Array<{ uri?: string; mimeType?: string }>;
@@ -100,6 +131,49 @@ export async function planNativeTextureMembers(
   return { members, images, variantDigest, variant: variant !== undefined };
 }
 
+const KTX2_MAGIC = Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]);
+
+async function readKtx2Header(file: string): Promise<Buffer> {
+  const handle = await fs.open(file, 'r');
+  try {
+    const header = Buffer.alloc(80);
+    await handle.read(header, 0, 80, 0);
+    return header;
+  } finally { await handle.close(); }
+}
+
+/** Device bytes of one KTX2 texture once resident (BC7/ASTC-class blocks, or RGBA8), all mips. */
+export function ktx2VramBytes(header: Buffer, uri: string, variant: boolean): number {
+  if (!header.subarray(0, 12).equals(KTX2_MAGIC)) throw new Error(`native_texture_ktx2_required: ${uri}`);
+  const format = header.readUInt32LE(12);
+  if (variant && ![145, 146, 37, 43].includes(format)) throw new Error(`native_ml_texture_format_invalid: ${format}`);
+  let width = header.readUInt32LE(20), height = header.readUInt32LE(24);
+  if (variant && Math.max(width, height) > 512) throw new Error(`native_ml_texture_dimensions_invalid: ${width}x${height}`);
+  const levels = header.readUInt32LE(40);
+  if (!width || !height || !levels || levels > 32) throw new Error('native_texture_header_invalid');
+  let bytes = 0;
+  for (let level = 0; level < levels; level++) {
+    bytes += format === 37 || format === 43 ? width * height * 4 : Math.ceil(width / 4) * Math.ceil(height / 4) * 16;
+    width = Math.max(1, width >> 1); height = Math.max(1, height >> 1);
+  }
+  return bytes;
+}
+
+/** Scene memory a map needs at one tier, without frame attachments (job-specific). */
+export const NATIVE_SCENE_RESERVE_BYTES = 512 * 1024 ** 2;
+export async function measureNativeTextureDemand(
+  master: Master,
+  renderTextures: NativeRenderTextures,
+  source: NativeTextureMemberSource & { readonly path: (uri: string) => string },
+): Promise<{ textureBytes: number; geometryBytes: number; sceneBytes: number }> {
+  const document = JSON.parse(JSON.stringify(master)) as Master;
+  const plan = await planNativeTextureMembers(document, renderTextures, source);
+  let textureBytes = 0;
+  for (const uri of new Set(plan.images.values())) textureBytes += ktx2VramBytes(await readKtx2Header(source.path(uri)), uri, plan.variant);
+  const geometryBytes = (document.buffers ?? []).reduce((sum, buffer) => sum + buffer.byteLength, 0);
+  return { textureBytes, geometryBytes, sceneBytes: textureBytes + geometryBytes * 2 + NATIVE_SCENE_RESERVE_BYTES };
+}
+
 export async function stageNativeTextureProfile(input: {
   closure: NativeMapClosure<RenderInputFile>;
   renderTextures: NativeRenderTextures;
@@ -131,29 +205,14 @@ export async function stageNativeTextureProfile(input: {
     const member = selected.get(uri)!;
     if (seenImages.has(uri)) continue;
     seenImages.add(uri);
-    const file = await fs.open(member.path, 'r');
-    try {
-      const header = Buffer.alloc(80);
-      await file.read(header, 0, 80, 0);
-      if (!header.subarray(0, 12).equals(Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]))) throw new Error(`native_texture_ktx2_required: ${uri}`);
-      const format = header.readUInt32LE(12);
-      if (plan.variant && ![145, 146, 37, 43].includes(format)) throw new Error(`native_ml_texture_format_invalid: ${format}`);
-      let width = header.readUInt32LE(20), height = header.readUInt32LE(24);
-      if (plan.variant && Math.max(width, height) > 512) throw new Error(`native_ml_texture_dimensions_invalid: ${width}x${height}`);
-      const levels = header.readUInt32LE(40);
-      if (!width || !height || !levels || levels > 32) throw new Error('native_texture_header_invalid');
-      for (let level = 0; level < levels; level++) {
-        textureBytes += format === 37 || format === 43 ? width * height * 4 : Math.ceil(width / 4) * Math.ceil(height / 4) * 16;
-        width = Math.max(1, width >> 1); height = Math.max(1, height >> 1);
-      }
-    } finally { await file.close(); }
+    textureBytes += ktx2VramBytes(await readKtx2Header(member.path), uri, plan.variant);
   }
   let geometryBytes = 0;
   for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
   // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
   // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
   // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
-  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + 512 * 1024 ** 2;
+  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
   if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
   const budgetBytes = input.budgetBytes ?? estimatedBytes;
   const identity = createHash('sha256').update(JSON.stringify([masterInput.sha256, input.renderTextures, variantDigest, [...selected].map(([uri, member]) => [uri, member.sha256])])).digest('hex');

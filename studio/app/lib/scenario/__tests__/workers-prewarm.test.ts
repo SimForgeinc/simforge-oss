@@ -18,7 +18,10 @@ import { claimResponseV2, registerRenderWorkerV2, signRenderInputsV2 } from "../
 import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
 import { canonicalJsonSha256 } from "../core";
 import {
+  activeNativeGpuCapacities,
   approvedRenderWorker,
+  knownNativeSceneDemand,
+  NativeSceneMemoryError,
   listPrewarmMembers,
   listPrewarmSets,
   recordWorkerCacheStatus,
@@ -312,6 +315,25 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     `SELECT metadata->'cacheStatus'->'maps' AS maps, metadata->'labels'->>'inputUrls' AS input_urls FROM simforge.worker_nodes WHERE id = :id`,
     { id: WORKER_NODE_ID },
   ), { maps: { ready: 1, total: 2 }, input_urls: "batch-v1" });
+
+  // Scene-memory demand measured by warm workers drives native admission.
+  assert.ok(await recordWorkerCacheStatus(WORKER_NODE_ID, registration.registrationId, {
+    ...status,
+    gpu: { totalBytes: 24 * 1024 ** 3, freeBytes: 20 * 1024 ** 3 },
+    demand: [
+      { mapVersionId: "usmapv_prewarm", renderTextures: "uastc-full", sceneBytes: 30 * 1024 ** 3, textureBytes: 29 * 1024 ** 3 },
+      { mapVersionId: "usmapv_prewarm", renderTextures: "bc7-512", sceneBytes: 2 * 1024 ** 3, textureBytes: 1024 ** 3 },
+    ],
+  }));
+  assert.equal(await knownNativeSceneDemand("usmapv_prewarm", "uastc-full"), null, "a CARLA worker's report is not native evidence");
+  await execute(`UPDATE simforge.worker_nodes SET renderer_engine = 'native' WHERE id = :id`, { id: WORKER_NODE_ID });
+  assert.equal(await knownNativeSceneDemand("usmapv_prewarm", "uastc-full"), 30 * 1024 ** 3);
+  assert.equal(await knownNativeSceneDemand("usmapv_other", "uastc-full"), null);
+  assert.deepEqual(await activeNativeGpuCapacities(), [24576 * 1024 * 1024]);
+  const refusal = new NativeSceneMemoryError(31 * 1024 ** 3, 24 * 1024 ** 3, "uastc-full");
+  assert.equal(refusal.message, "uniscenario_render_resource_mapTextureMemory_exceeded");
+  assert.match(refusal.detail, /needs about 31.0 GB and the largest available render GPU has 24.0 GB. Render at ML quality/);
+  await execute(`UPDATE simforge.worker_nodes SET renderer_engine = 'carla' WHERE id = :id`, { id: WORKER_NODE_ID });
 
   const job = await createRenderIntentJob(
     { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },

@@ -145,3 +145,51 @@ export async function recordWorkerCacheStatus(workerNodeId: string, registration
   );
   return rows.length > 0 ? { schema: CONTROL_SCHEMA, type: "worker.cache-status" as const } : null;
 }
+
+type Queryable = { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> };
+
+/**
+ * Scene memory (textures + geometry + reserve) a native map needs at a
+ * texture tier, as measured by warm workers from its KTX2 headers; null when
+ * no worker has measured it yet (admission then cannot judge and admits).
+ */
+export async function knownNativeSceneDemand(mapVersionId: string, renderTextures: string, db: Queryable = { queryRows }) {
+  const rows = await db.queryRows<{ scene_bytes: string | number | null }>(
+    `SELECT MAX((d->>'sceneBytes')::bigint) AS scene_bytes
+       FROM simforge.worker_nodes w,
+            jsonb_array_elements(COALESCE(w.metadata->'cacheStatus'->'demand', '[]'::jsonb)) d
+      WHERE w.environment = :environment AND w.renderer_engine = 'native'
+        AND d->>'mapVersionId' = :map_version_id AND d->>'renderTextures' = :render_textures`,
+    { environment: runtimeEnvironment(), map_version_id: mapVersionId, render_textures: renderTextures },
+  );
+  const value = rows[0]?.scene_bytes;
+  return value === null || value === undefined ? null : Number(value);
+}
+
+/** GPU memory (bytes) of every approved, active native worker of this environment. */
+export async function activeNativeGpuCapacities(db: Queryable = { queryRows }) {
+  const rows = await db.queryRows<{ gpu_memory_mib: string | number | null }>(
+    `SELECT (metadata->>'gpuMemoryMiB')::integer AS gpu_memory_mib
+       FROM simforge.worker_nodes
+      WHERE environment = :environment AND renderer_engine = 'native'
+        AND registration_state = 'active' AND approved_at IS NOT NULL
+        AND approved_worker_version = worker_version AND approved_image_digest = image_digest
+        AND last_heartbeat_at > NOW() - INTERVAL '1 day'`,
+    { environment: runtimeEnvironment() },
+  );
+  return rows.map((row) => Number(row.gpu_memory_mib) * 1024 * 1024).filter((bytes) => Number.isFinite(bytes) && bytes > 0);
+}
+
+/** Per-worker headroom kept free of scene + attachments (driver, desktop, co-tenant idle services). */
+export const NATIVE_GPU_HEADROOM_BYTES = 1024 ** 3;
+
+export class NativeSceneMemoryError extends Error {
+  readonly detail: string;
+  constructor(readonly neededBytes: number, readonly largestBytes: number, renderTextures: string) {
+    super("uniscenario_render_resource_mapTextureMemory_exceeded");
+    const gb = (bytes: number) => (bytes / 1024 ** 3).toFixed(1);
+    this.detail = `Not enough GPU memory for this map at ${renderTextures === "bc7-512" ? "ML" : "full"} texture quality: it needs about ${gb(neededBytes)} GB and the largest available render GPU has ${gb(largestBytes)} GB. `
+      + (renderTextures === "uastc-full" ? "Render at ML quality or below 720p, or " : "")
+      + "wait for a worker with more GPU memory.";
+  }
+}

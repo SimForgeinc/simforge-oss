@@ -27,6 +27,7 @@ import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
 import { acquireGpuJobLock, type GpuJobLock } from './gpu-lock.js';
+import { probeGpuMemory, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
 import { Prewarmer } from './prewarm.js';
@@ -58,6 +59,12 @@ export function boundedFailureMessage(raw: string, limit = 1800): string {
 
 function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
   const message = boundedFailureMessage(error instanceof Error ? error.message : String(error));
+  // Engine errors that carry their own machine code and retry verdict (e.g.
+  // native_gpu_memory_insufficient) report them as-is.
+  const coded = error as { code?: unknown; retryable?: unknown };
+  if (error instanceof Error && typeof coded.code === 'string' && /^native_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
+    return { code: `render.${coded.code}`, message, retryable: coded.retryable };
+  }
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
   if (error instanceof UnsupportedRenderIntentError) return { code: error.code, message, retryable: false };
   if (/integrity mismatch|intent hash mismatch|invalid/i.test(message)) return { code: 'render.invalid_input', message, retryable: false };
@@ -293,7 +300,13 @@ async function executeClaim(
     await stageStarted('preparing');
     const containerIdentity = configuredContainerIdentity(config);
     if (containerIdentity) await chownWorkspace(workspace, containerIdentity);
-    if (engine.capabilities.requiresGpu) gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId);
+    let gpuMemory: GpuMemory | null = null;
+    if (engine.capabilities.requiresGpu) {
+      gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId);
+      // Measured while holding the lock: co-tenant renders are excluded, their idle residency is not.
+      gpuMemory = await probeGpuMemory();
+      if (gpuMemory) console.error(JSON.stringify({ event: 'gpu.memory', jobId: job.jobId, ...gpuMemory }));
+    }
     const manifest = RenderArtifactManifestSchema.parse(await engine.execute({
       jobId: job.jobId,
       attempt: job.attempt,
@@ -305,6 +318,7 @@ async function executeClaim(
       workspace,
       signal: state.controller.signal,
       reportProgress: forward,
+      ...(gpuMemory ? { gpuMemory } : {}),
     }));
     if (manifest.intentSha256 !== job.intentSha256) throw new Error('engine manifest intentSha256 does not match claimed intent');
 
@@ -520,7 +534,15 @@ export async function runRenderWorker(
     }, () => registration.registrationId)
     : undefined;
   const prewarmStop = new AbortController();
+  let lastGpuProbe = 0;
   const statusTimer = setInterval(() => {
+    if (engine.capabilities.requiresGpu && Date.now() - lastGpuProbe > 30_000) {
+      lastGpuProbe = Date.now();
+      void probeGpuMemory().then((gpu) => {
+        prewarmer?.setGpu(gpu);
+        if (gpu) health.setStatus?.('gpu', gpu);
+      });
+    }
     health.setStatus?.('cache', prewarmer?.status() ?? { state: 'disabled' });
     health.setStatus?.('transfers', store.stats());
   }, 2000);

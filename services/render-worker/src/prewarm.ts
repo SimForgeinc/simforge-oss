@@ -15,7 +15,9 @@ import {
   PINNED_ACTOR_ASSETS_SIZE_BYTES,
   actorAssetBlobUrl,
   actorAssetsClosureUrl,
+  measureNativeTextureDemand,
   nativeActorAssetsCacheDir,
+  type NativeMapMaster,
 } from '@simforge-oss/render/native';
 
 import { listCachedBlobs, type BlobSource, type BlobStore } from './blob-store.js';
@@ -103,6 +105,12 @@ export class Prewarmer {
 
   status(): WorkerCacheStatus {
     return this.statusValue;
+  }
+
+  /** The render GPU's current memory, reported with the cache status. */
+  setGpu(gpu: { totalBytes: number; freeBytes: number } | null): void {
+    if (!gpu) return;
+    this.statusValue = { ...this.statusValue, gpu };
   }
 
   /** Records that a job rendered this map version, so it is kept and warmed first. */
@@ -213,6 +221,7 @@ export class Prewarmer {
     });
     let cachedBlobs = initial.cachedBlobs;
     let cachedBytes = initial.cachedBytes;
+    const demand: NonNullable<WorkerCacheStatus['demand']> = [];
     const onFetched = (blob: WantedBlob) => {
       cachedBlobs += 1;
       cachedBytes += blob.sizeBytes;
@@ -225,7 +234,12 @@ export class Prewarmer {
       const blobs = plan.members.map((member) => ({ sha256: member.sha256, sizeBytes: member.sizeBytes, setId: plan.set.setId }));
       await this.fetchAll(blobs, signal, onFetched);
       readySets += 1;
-      this.update({ maps: { ready: readySets, total: planned.length } }, false);
+      const measured = await this.demand(plan).catch((error: unknown) => {
+        this.log({ event: 'prewarm.demand_failed', mapVersionId: plan.set.mapVersionId, error: errorMessage(error) });
+        return [];
+      });
+      demand.push(...measured);
+      this.update({ maps: { ready: readySets, total: planned.length }, demand: [...demand] }, false);
     }
     const final = await countStatus();
     this.update({
@@ -235,6 +249,35 @@ export class Prewarmer {
       bytes: { cached: final.cachedBytes, wanted: wantedBytes, budget, ...(await this.diskFree()) },
     });
     this.log({ event: 'prewarm.cycle', sets: planned.length, admitted: admitted.length, wantedBlobs: wanted.size, wantedBytes, cachedBytes: final.cachedBytes, elapsedMs: Date.now() - startedAt });
+  }
+
+  /** Per-tier scene memory of a fully cached set, measured once per closure digest. */
+  private async demand(plan: PlannedSet): Promise<NonNullable<WorkerCacheStatus['demand']>> {
+    const file = path.join(this.store.root, 'prewarm', 'demand', `${plan.set.closureSha256}.json`);
+    type Tier = { renderTextures: 'uastc-full' | 'bc7-512'; sceneBytes: number; textureBytes: number };
+    let tiers: Tier[];
+    try {
+      tiers = JSON.parse(await readFile(file, 'utf8')) as Tier[];
+    } catch {
+      const byPath = new Map(plan.members.map((member) => [member.relativePath, member]));
+      const masterMember = byPath.get('master.gltf');
+      if (!masterMember) return [];
+      const master = JSON.parse(await readFile(this.store.path(masterMember.sha256), 'utf8')) as NativeMapMaster;
+      const source = {
+        sha256: (uri: string) => byPath.get(uri)?.sha256,
+        readText: (uri: string) => readFile(this.store.path(byPath.get(uri)!.sha256), 'utf8'),
+        path: (uri: string) => this.store.path(byPath.get(uri)!.sha256),
+      };
+      tiers = [];
+      for (const renderTextures of ['uastc-full', 'bc7-512'] as const) {
+        // A closure without 512 px variants simply has no bc7-512 tier.
+        const measured = await measureNativeTextureDemand(master, renderTextures, source).catch(() => null);
+        if (measured) tiers.push({ renderTextures, sceneBytes: measured.sceneBytes, textureBytes: measured.textureBytes });
+      }
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, JSON.stringify(tiers));
+    }
+    return tiers.map((tier) => ({ mapVersionId: plan.set.mapVersionId, ...tier }));
   }
 
   private async present(blob: WantedBlob): Promise<boolean> {
