@@ -17,6 +17,7 @@ import { createRenderIntentJob } from "../render-intent-store";
 import {
   claimResponseV2,
   registerRenderWorkerV2,
+  reserveRenderArtifactV2,
   renderWorkerIdentity,
 } from "../render-worker-control-store";
 import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
@@ -313,6 +314,24 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.ok("lease" in lease && lease.lease.fenceToken.length >= 32);
   assert.ok("intent" in lease && "intentSha256" in lease);
   assert.equal(hashRenderIntent(lease.intent), lease.intentSha256, "the worker must accept the leased multi-camera intent digest");
+  const reservation = await reserveRenderArtifactV2({
+    jobId: job.id,
+    leaseId: lease.lease.leaseId,
+    fenceToken: lease.lease.fenceToken,
+    workerNodeId: WORKER_NODE_ID,
+    identity: { role: "video", actorId: "ego", sensorId: FRONT_SENSOR.id, modality: "rgb" },
+    sha256: DIGEST("9"),
+    sizeBytes: 4096,
+    mediaType: "video/mp4",
+  });
+  assert.ok(reservation, "the active worker can reserve its camera artifact");
+  const reservedAttempt = await queryOne<{ matches: boolean }>(
+    `SELECT u.render_attempt_id = l.render_attempt_id AS matches
+       FROM simforge.artifact_uploads u JOIN simforge.worker_leases l ON l.id = :lease_id
+      WHERE u.id = :artifact_id`,
+    { lease_id: lease.lease.leaseId, artifact_id: reservation.artifactId },
+  );
+  assert.equal(reservedAttempt?.matches, true, "the upload is fenced to the leased attempt");
 
   // The lease is real in the ledger: the trigger that refuses ineligible
   // hardware profiles let it through.
