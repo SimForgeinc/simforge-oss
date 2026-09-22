@@ -175,6 +175,40 @@ fn build_sensor_scene(triangles: Vec<SensorTriangle>) -> RaycastScene {
     scene
 }
 
+/// The static map's raycast scenes: every map triangle (lidar/radar) and
+/// the road surface (episode footprint checks). Built on first use, never at
+/// startup: an RGB-only render must not pay for them, and on a large map on a
+/// slow CPU the build alone outlasted the worker's readiness budget.
+pub(crate) struct MapSensorScenes {
+    pub(crate) static_scene: RaycastScene,
+    pub(crate) road: RaycastScene,
+}
+
+/// Build both map scenes in parallel from one triangle snapshot.
+pub(crate) fn build_map_sensor_scenes(
+    triangles: Vec<SensorTriangle>,
+    legend: &HashMap<u32, String>,
+) -> MapSensorScenes {
+    let road_triangles: Vec<SensorTriangle> = triangles
+        .iter()
+        .filter(|tri| {
+            legend.get(&tri.instance_id).is_some_and(|name| {
+                sensors::taxonomy::SemanticClass::from_mesh_name(name)
+                    == sensors::taxonomy::SemanticClass::Road
+            })
+        })
+        .copied()
+        .collect();
+    std::thread::scope(|scope| {
+        let road = scope.spawn(|| build_sensor_scene(road_triangles));
+        let static_scene = build_sensor_scene(triangles);
+        MapSensorScenes {
+            static_scene,
+            road: road.join().expect("road sensor scene build panicked"),
+        }
+    })
+}
+
 struct CombinedSensorScene<'a> {
     static_scene: &'a RaycastScene,
     actor_scene: &'a RaycastScene,
@@ -224,9 +258,9 @@ pub struct ServiceState {
     /// Retained CPU sensor rigs in registration order.
     lidars: Vec<ServiceLidar>,
     radars: Vec<ServiceRadar>,
-    /// Static map BVH, built once after prewarm and reused for every tick.
-    static_sensor_scene: RaycastScene,
-    road_sensor_scene: RaycastScene,
+    /// Static map BVHs, built on first lidar/radar render or episode and
+    /// reused for every later tick (see [`MapSensorScenes`]).
+    sensor_scenes: Option<MapSensorScenes>,
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
@@ -242,8 +276,58 @@ pub struct ServiceState {
 }
 
 impl ServiceState {
+    /// Build the map's sensor scenes if nothing has needed them yet. Logs
+    /// progress: on a large map this runs for minutes inside one request.
+    fn ensure_sensor_scenes(&mut self) {
+        if self.sensor_scenes.is_some() {
+            return;
+        }
+        let started = std::time::Instant::now();
+        let triangles = self.app.sensor_triangles(false);
+        eprintln!(
+            "sensor-scenes: building static + road BVHs over {} map triangles (first lidar/radar/episode request)",
+            triangles.len()
+        );
+        let snapshot_s = started.elapsed().as_secs_f64();
+        // A heartbeat while the BVHs build, so a watcher of the service log
+        // sees progress instead of a silent minute on a large map.
+        let done = std::sync::atomic::AtomicBool::new(false);
+        let legend = &self.legend;
+        let scenes = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let mut last = std::time::Instant::now();
+                while !done.load(std::sync::atomic::Ordering::Relaxed) {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    if last.elapsed() >= std::time::Duration::from_secs(10) {
+                        last = std::time::Instant::now();
+                        eprintln!(
+                            "sensor-scenes: still building ({:.0} s)",
+                            started.elapsed().as_secs_f64()
+                        );
+                    }
+                }
+            });
+            let scenes = build_map_sensor_scenes(triangles, legend);
+            done.store(true, std::sync::atomic::Ordering::Relaxed);
+            scenes
+        });
+        self.sensor_scenes = Some(scenes);
+        eprintln!(
+            "sensor-scenes: built in {:.1} s (triangle snapshot {:.1} s)",
+            started.elapsed().as_secs_f64(),
+            snapshot_s
+        );
+    }
+
+    /// Whether the map sensor scenes exist (tests, diagnostics).
+    pub fn sensor_scenes_built(&self) -> bool {
+        self.sensor_scenes.is_some()
+    }
+}
+
+impl ServiceState {
     pub fn new(
-        mut app: SceneApp,
+        app: SceneApp,
         spec: &SceneSpec,
         shm_path: String,
         shm: ShmRing,
@@ -265,10 +349,6 @@ impl ServiceState {
             .into_iter()
             .map(|LegendEntry { id, name }| (id, name))
             .collect();
-        let triangles = app.sensor_triangles(false);
-        let road_sensor_scene=build_sensor_scene(triangles.iter().filter(|tri| legend.get(&tri.instance_id)
-            .is_some_and(|name| sensors::taxonomy::SemanticClass::from_mesh_name(name)==sensors::taxonomy::SemanticClass::Road)).copied().collect());
-        let static_sensor_scene = build_sensor_scene(triangles);
         Ok(Self {
             app,
             profile: spec.profile,
@@ -286,8 +366,7 @@ impl ServiceState {
             rig: Vec::new(),
             lidars: Vec::new(),
             radars: Vec::new(),
-            static_sensor_scene,
-            road_sensor_scene,
+            sensor_scenes: None,
             vehicle_models,
             pedestrian_models,
             actor_model_refs: spec
@@ -488,7 +567,8 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             let history_indices=match episode.warm_start() {
                 Ok(indices)=>indices,Err(error)=>return WireResponse::error(i,error),
             };
-            episode.evaluate(&|pose| on_road(&state.road_sensor_scene,pose));
+            state.ensure_sensor_scenes();
+            episode.evaluate(&|pose| on_road(&state.sensor_scenes.as_ref().expect("sensor scenes built").road,pose));
             for frame in &state.scene {
                 for actor in &frame.actors { state.app.remove_actor(&actor.id); }
             }
@@ -525,10 +605,13 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             response
         }
         RequestBody::StepEpisode { action } => {
+            if state.episode.is_some() {
+                state.ensure_sensor_scenes();
+            }
             let Some(episode) = state.episode.as_mut() else {
                 return WireResponse::error(i, "reset_episode is required before step_episode");
             };
-            match episode.advance(action, |pose| on_road(&state.road_sensor_scene,pose)) {
+            match episode.advance(action, |pose| on_road(&state.sensor_scenes.as_ref().expect("sensor scenes built").road,pose)) {
                 Ok(frame) => replace_episode_frame(state,frame),
                 Err(error) => return WireResponse::error(i, error),
             }
@@ -1613,9 +1696,10 @@ fn render_bundle_op(
         }
     }
     if !lidar_rig.is_empty() || !radar_rig.is_empty() {
+        state.ensure_sensor_scenes();
         let actor_scene = build_sensor_scene(state.app.sensor_triangles(true));
         let combined_scene = CombinedSensorScene {
-            static_scene: &state.static_sensor_scene,
+            static_scene: &state.sensor_scenes.as_ref().expect("sensor scenes built").static_scene,
             actor_scene: &actor_scene,
         };
         let mut instance_velocities = HashMap::new();
@@ -1826,9 +1910,43 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        actor_base_y, actor_color, capture_keys, instance_coverage, parse_bundle_passes,
-        row_stride, CombinedSensorScene,
+        actor_base_y, actor_color, build_map_sensor_scenes, build_sensor_scene, capture_keys,
+        instance_coverage, on_road, parse_bundle_passes, row_stride, CombinedSensorScene,
     };
+    use render_core::engine::SensorTriangle;
+    use std::collections::HashMap;
+
+    fn quad(x0: f32, z0: f32, size: f32, y: f32, instance_id: u32) -> [SensorTriangle; 2] {
+        let (a, b, c, d) = ([x0, y, z0], [x0 + size, y, z0], [x0 + size, y, z0 + size], [x0, y, z0 + size]);
+        [
+            SensorTriangle { a, b, c, instance_id },
+            SensorTriangle { a, b: c, c: d, instance_id },
+        ]
+    }
+
+    #[test]
+    fn map_sensor_scenes_split_road_from_everything_and_match_a_serial_build() {
+        // A road slab at y=0 (id 1), a building roof at y=5 (id 2) beside it.
+        let mut triangles = Vec::new();
+        triangles.extend(quad(0.0, 0.0, 10.0, 0.0, 1));
+        triangles.extend(quad(20.0, 0.0, 10.0, 5.0, 2));
+        let legend: HashMap<u32, String> =
+            [(1, "Road_Asphalt_01".to_string()), (2, "Building_Block_7".to_string())].into();
+        let scenes = build_map_sensor_scenes(triangles.clone(), &legend);
+        let down = |scene: &RaycastScene, x: f32| {
+            scene.cast(Vec3::new(x, 100.0, 5.0), Vec3::NEG_Y, 1000.0).map(|hit| hit.instance_id)
+        };
+        assert_eq!(down(&scenes.road, 5.0), Some(1));
+        assert_eq!(down(&scenes.road, 25.0), None, "buildings are not road");
+        assert_eq!(down(&scenes.static_scene, 25.0), Some(2));
+        let serial = build_sensor_scene(triangles);
+        for x in [1.0, 5.0, 9.5, 15.0, 21.0, 29.0] {
+            assert_eq!(down(&scenes.static_scene, x), down(&serial, x));
+        }
+        let footprint = |x: f64| crate::traffic::Footprint { x, z: 5.0, yaw: 0.0, length: 2.0, width: 1.0 };
+        assert!(on_road(&scenes.road, footprint(5.0)));
+        assert!(!on_road(&scenes.road, footprint(25.0)));
+    }
     use crate::proto::ServiceCamera;
     use crate::scene::{ActorState, ActorTransform};
     use bevy::math::{Quat, Vec3};
