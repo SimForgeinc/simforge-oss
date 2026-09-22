@@ -208,7 +208,9 @@ export const styles = stylex.create({
     boxShadow: { default: ACCENT_RULE, ":focus-visible": `${ACCENT_RULE}, ${shadows.ringAccent}` },
   },
   /** Not part of the batch being created: still visible, plainly out of play. */
-  cardInert: { cursor: "default", opacity: 0.35 },
+  cardInert: { cursor: "default" },
+  /** An inert card's contents recede; its plate stays opaque so the smoke does not show through. */
+  inertContent: { opacity: 0.35 },
   cardLocked: { cursor: "default" },
 
   stage: {
