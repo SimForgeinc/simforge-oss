@@ -9,10 +9,12 @@ vi.mock("../playback/scenarioWorkerClient", () => ({
   ScenarioWorkerClient: class {
     prepare = prepare;
     dispose = dispose;
+    engineIdentity = async () => ({ engineVersion: "test", abiVersion: 2 });
   },
 }));
 vi.mock("../playback/simulationPreview", () => ({
   downloadSimulationPreview: vi.fn(async () => bundle),
+  encodeSimulationPreview: vi.fn(async () => ({ bytes: new Uint8Array([1]), sha256: "preview-sha" })),
 }));
 vi.mock("../maps", () => ({ playbackMapEntry: vi.fn((map) => map) }));
 vi.mock("./materialized-traffic", () => ({
@@ -53,6 +55,7 @@ function host(preview: ScenarioSimulationPreviewDto | null): StudioHostServices 
   return {
     projects: {
       getSimulationPreview: async () => preview,
+      saveSimulationPreview: vi.fn(async () => undefined),
       uploadMaterializedTraffic: async () => ({ artifactId: "artifact", sha256: "sha", sizeBytes: 1 }),
     },
     artifacts: {
@@ -66,6 +69,16 @@ describe("savedSimulationRevisionEvidence", () => {
     prepare.mockResolvedValue(bundle);
     prepare.mockClear();
     dispose.mockClear();
+  });
+
+  it("surfaces a failed background publish and releases its worker so Retry can recover", async () => {
+    const services = host(null);
+    vi.mocked(services.projects.saveSimulationPreview).mockRejectedValueOnce(new Error("Publish unavailable"));
+    await expect(savedSimulationRevisionEvidence(services, document)).rejects.toThrow("Publish unavailable");
+    expect(dispose).toHaveBeenCalledOnce();
+    await expect(savedSimulationRevisionEvidence(services, document)).resolves.toMatchObject({
+      materializedTraffic: { artifactId: "artifact" },
+    });
   });
 
   it("reuses a valid preview for the same draft without starting a worker", async () => {
