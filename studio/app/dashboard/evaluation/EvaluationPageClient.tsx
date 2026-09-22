@@ -37,6 +37,7 @@ import type { ModelRunRecord, ModelVersionRecord } from "@/app/lib/models/contra
 import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
 import { LocalRunUnavailable, startLocalRun } from "@/app/lib/host/local-runs";
 import { HOST_KIND } from "@/app/lib/host/kind";
+import { EVALUATION_HOST_LINKS } from "@/app/lib/host/evaluation-links";
 import { CampaignRail } from "./rails/CampaignRail";
 import { ModelRail } from "./rails/ModelRail";
 import { RunRail } from "./rails/RunRail";
@@ -375,6 +376,7 @@ export function EvaluationPageClient() {
       onActivePaneChange={setActivePane}
       section={selection.section}
       onSectionChange={selectSection}
+      stripLinks={EVALUATION_HOST_LINKS}
       rail={rail}
       stage={stage}
       overlay={

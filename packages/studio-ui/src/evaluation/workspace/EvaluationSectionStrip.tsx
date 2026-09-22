@@ -5,9 +5,14 @@
  * affordance the scenarios page uses for datasets. It replaced a tab bar,
  * which cost a row of page height and read as a filter over one page rather
  * than as three places to be.
+ *
+ * A host may add places of its own below the three (`links`): pages that
+ * belong to evaluation but are not a section of this workspace, such as a
+ * hosted archive of finished comparisons. They navigate rather than switch.
  */
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import * as stylex from "@stylexjs/stylex";
 import { datasetHue, datasetMonogram } from "../../lib/monogram";
 import {
@@ -25,16 +30,21 @@ const SECTIONS: readonly { id: EvaluationSection; label: string; hint: string }[
   { id: "models", label: "Models", hint: "The local model registry and its promotion gates" },
 ];
 
+/** A host-contributed place in the strip: a square that navigates to `href`. */
+export type EvaluationStripLink = { readonly id: string; readonly href: string; readonly label: string; readonly hint: string };
+
 export function EvaluationSectionStrip({
   section,
   onSectionChange,
   footer,
+  links = [],
 }: {
   section: EvaluationSection;
   onSectionChange: (section: EvaluationSection) => void;
   footer?: ReactNode;
+  links?: readonly EvaluationStripLink[];
 }) {
-  const [hovered, setHovered] = useState<EvaluationSection | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -74,6 +84,36 @@ export function EvaluationSectionStrip({
                     >
                       <span aria-hidden="true">{datasetMonogram(entry.label)}</span>
                     </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={12}>
+                    <div {...stylex.props(styles.tooltipTitle)}>{entry.label}</div>
+                    <div {...stylex.props(styles.tooltipMeta)}>{entry.hint}</div>
+                  </TooltipContent>
+                </Tooltip>
+              </li>
+            );
+          })}
+          {links.map((entry) => {
+            const hue = datasetHue(entry.id);
+            return (
+              <li
+                key={entry.id}
+                {...stylex.props(styles.item)}
+                onMouseEnter={() => setHovered(entry.id)}
+                onMouseLeave={() => setHovered((current) => (current === entry.id ? null : current))}
+              >
+                <span {...stylex.props(styles.pill, hovered === entry.id ? styles.pillHover : null)} aria-hidden="true" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={entry.href}
+                      aria-label={entry.label}
+                      style={{ backgroundColor: `hsl(${hue} 40% 30%)` }}
+                      {...stylex.props(styles.icon)}
+                      data-testid={`evaluation-link-${entry.id}`}
+                    >
+                      <span aria-hidden="true">{datasetMonogram(entry.label)}</span>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={12}>
                     <div {...stylex.props(styles.tooltipTitle)}>{entry.label}</div>

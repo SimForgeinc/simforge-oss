@@ -12,7 +12,7 @@
 import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { WorkspacePanes } from "../../components/WorkspacePanes";
-import { EvaluationSectionStrip } from "./EvaluationSectionStrip";
+import { EvaluationSectionStrip, type EvaluationStripLink } from "./EvaluationSectionStrip";
 import type { EvaluationSection } from "./useEvaluationSelection";
 import { styles } from "./EvaluationShell.stylex";
 
@@ -23,6 +23,7 @@ export function EvaluationShell({
   section,
   onSectionChange,
   stripFooter,
+  stripLinks,
   rail,
   stage,
   overlay,
@@ -35,6 +36,8 @@ export function EvaluationShell({
   onSectionChange: (section: EvaluationSection) => void;
   /** Sits under the section squares, off the scrolling column. */
   stripFooter?: ReactNode;
+  /** Host places below the section squares; see `EvaluationSectionStrip`. */
+  stripLinks?: readonly EvaluationStripLink[];
   rail: ReactNode;
   stage: ReactNode;
   /** Failed actions remain beside the stage without covering its controls. */
@@ -49,7 +52,7 @@ export function EvaluationShell({
         railLabel="Resize the evaluation list"
         rail={
         <div {...stylex.props(styles.panelGrid)}>
-          <EvaluationSectionStrip section={section} onSectionChange={onSectionChange} footer={stripFooter} />
+          <EvaluationSectionStrip section={section} onSectionChange={onSectionChange} footer={stripFooter} links={stripLinks} />
           <div {...stylex.props(styles.railColumn)}>{rail}</div>
         </div>
         }
