@@ -26,11 +26,7 @@ import {
 } from "@/app/lib/scenario/document-store";
 import { loadCollisionDraftMap } from "@/app/lib/scenario/collision-draft-map.server";
 import type { ScenarioDocumentDto, ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
-import {
-  boundRigidPairLateralFractions,
-  chainLanePath,
-  rankCandidates,
-} from "@/app/lib/scenario/transfer-rules";
+import { chainLanePath, rankCandidates } from "@/app/lib/scenario/transfer-rules";
 import {
   buildTransferPreview,
   isRoadActorKind,
@@ -168,7 +164,7 @@ async function liftSource(
     if (!result.template || !result.sourceSiteId) return lifted;
     let template: ScenarioTemplateV2;
     try {
-      template = parseTemplate(boundRigidPairLateralFractions(result.template));
+      template = parseTemplate(result.template);
     } catch (error) {
       return { ...lifted, issues: [...issues, ...validationIssues(error)] };
     }

@@ -1,27 +1,8 @@
 /**
  * The rules cross-map transfer applies between the native compiler and the
- * response: repairing the lift's output so it parses, ordering candidates, and
- * drawing a lane-path route as one line. Pure, so they are tested directly.
+ * response: ordering candidates and drawing a lane-path route as one line.
+ * Pure, so they are tested directly.
  */
-
-import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
-
-/**
- * The native lift carries a formation wider than the anchor frame as a rigid
- * pair (`relative_to` + `rigidOffsetM`) and writes the raw lateral fraction into
- * `tFrac`, which the scenario schema bounds to ±1. With `rigidOffsetM` present
- * the materializer never reads `tFrac` (the offset owns placement), so bounding
- * it here is lossless — and without it the template does not parse at all.
- */
-export function boundRigidPairLateralFractions(template: ScenarioTemplateV2): ScenarioTemplateV2 {
-  return {
-    ...template,
-    roles: template.roles.map((role) =>
-      role.kind === "relative_to" && role.rigidOffsetM && Math.abs(role.tFrac) > 1
-        ? { ...role, tFrac: Math.sign(role.tFrac) }
-        : role),
-  };
-}
 
 /** Route drawn in a preview: enough to show where the subject goes, not the whole lane chain. */
 const ROUTE_PREVIEW_M = 160;

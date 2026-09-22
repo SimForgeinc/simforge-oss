@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
 import {
   buildTransferPreview,
@@ -10,7 +9,7 @@ import {
   previewFrame,
   type PreviewActor,
 } from "../transfer-preview";
-import { boundRigidPairLateralFractions, chainLanePath, rankCandidates } from "../transfer-rules";
+import { chainLanePath, rankCandidates } from "../transfer-rules";
 
 /**
  * The geometry a transfer candidate is shown with, and the rules the server
@@ -142,21 +141,5 @@ describe("rankCandidates", () => {
       3,
     );
     expect(ranked.map((candidate) => `${candidate.rank}:${candidate.id}`)).toEqual(["1:b", "2:c", "3:a"]);
-  });
-});
-
-describe("boundRigidPairLateralFractions", () => {
-  it("bounds tFrac only where a rigid offset owns the placement", () => {
-    const template = {
-      roles: [
-        { id: "rigid", kind: "relative_to", tFrac: 41.2, rigidOffsetM: { alongM: 3, acrossM: 180 } },
-        { id: "lane", kind: "relative_to", tFrac: 0.4 },
-        { id: "ego", kind: "on_reference", pose: { tFrac: 0 } },
-      ],
-    } as unknown as ScenarioTemplateV2;
-    const bounded = boundRigidPairLateralFractions(template).roles as unknown as Array<{ id: string; tFrac?: number }>;
-    expect(bounded.find((role) => role.id === "rigid")!.tFrac).toBe(1);
-    expect(bounded.find((role) => role.id === "lane")!.tFrac).toBe(0.4);
-    expect(bounded.find((role) => role.id === "ego")).toBe(template.roles[2]);
   });
 });
