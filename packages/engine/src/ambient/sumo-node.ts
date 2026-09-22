@@ -10,16 +10,81 @@
  */
 
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { validateSumoRuntimeManifest, type SumoRuntimeManifest } from './sumo.js';
+import {
+  validateSumoNetworkManifest,
+  validateSumoRuntimeManifest,
+  type SumoNetworkManifest,
+  type SumoRuntimeManifest,
+} from './sumo.js';
+import type { SumoTrafficNetwork } from './sumo-traffic.js';
 import type { SumoRuntime, SumoWasmModule } from './sumo-runtime.js';
 
 /** sha256 of the only SUMO runtime build workers accept (SUMO 1.27.1, commit 7717f237). */
 export const PINNED_SUMO_WASM_SHA256 = 'e93c001444732ee95c4e0030e824d7d1883b84c4994ac6fbe8b04b336ced3e93';
 export const PINNED_SUMO_RUNTIME_VERSION = '1.27.1-7717f237';
+/** sha256 of the Emscripten loader (`sumo.mjs`) shipped with that build. */
+export const PINNED_SUMO_MODULE_SHA256 = 'eafc5a8ad2390ac12fd81e7b29c4126d3cd9a6e571c7f1483c5d9c7d23dc6886';
+
+export type SumoRuntimeFile = 'sumo.mjs' | 'sumo.wasm' | 'runtime-manifest.json';
+
+/**
+ * Stage the pinned runtime into `directory` from any byte source (the
+ * artifact store key `uniscenario/sumo-runtime/1.27.1-7717f237/<file>`, a
+ * mounted volume, …) and load it. Files already staged with the pinned
+ * digests are reused; anything else is re-read and replaced atomically.
+ */
+export async function stageSumoRuntime(options: {
+  readonly directory: string;
+  readonly read: (file: SumoRuntimeFile) => Promise<Uint8Array>;
+}): Promise<SumoRuntime> {
+  await mkdir(options.directory, { recursive: true });
+  const pinned: Record<SumoRuntimeFile, string | null> = {
+    'sumo.mjs': PINNED_SUMO_MODULE_SHA256,
+    'sumo.wasm': PINNED_SUMO_WASM_SHA256,
+    'runtime-manifest.json': null,
+  };
+  for (const file of Object.keys(pinned) as SumoRuntimeFile[]) {
+    const target = path.join(options.directory, file);
+    const expected = pinned[file];
+    const existing = await readFile(target).catch(() => null);
+    if (existing && expected !== null && sha256Of(existing) === expected) continue;
+    const bytes = await options.read(file);
+    if (expected !== null && sha256Of(bytes) !== expected) {
+      throw new Error(`SUMO runtime ${file} ${sha256Of(bytes)} is not the pinned build ${expected}`);
+    }
+    const temporary = `${target}.${process.pid}.tmp`;
+    await writeFile(temporary, bytes);
+    await rename(temporary, target);
+  }
+  return loadSumoRuntime(options.directory);
+}
+
+/**
+ * The map version's SUMO derivative members as the traffic step takes them,
+ * verified against the digest the map version row records.
+ */
+export function sumoTrafficNetworkFromMembers(options: {
+  readonly manifest: Uint8Array | string;
+  readonly network: Uint8Array;
+  /** `map_versions.sumo_network_sha256`. */
+  readonly expectedSha256: string;
+}): SumoTrafficNetwork {
+  const manifest = JSON.parse(typeof options.manifest === 'string' ? options.manifest : new TextDecoder().decode(options.manifest)) as SumoNetworkManifest;
+  validateSumoNetworkManifest(manifest, manifest.mapId);
+  const actual = sha256Of(options.network);
+  if (manifest.sha256 !== options.expectedSha256 || actual !== options.expectedSha256) {
+    throw new Error(`SUMO network ${actual} (sidecar ${manifest.sha256}) is not the map version's ${options.expectedSha256}`);
+  }
+  return { bytes: options.network, manifest };
+}
+
+function sha256Of(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
 
 /**
  * Load the packaged Emscripten factory. A native dynamic import is used when
