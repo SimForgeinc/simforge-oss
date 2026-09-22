@@ -1,12 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /** Fills the switcher's content column; the confirmation overlays cover it. */
-  root: { position: "relative", minHeight: 0, color: "#fff" },
-  footer: { display: "grid", gap: "1rem" },
-  footerRow: { display: "flex", flexDirection: "column", alignItems: "center", gap: ".5rem" },
-  current: { textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,.35)" },
+  root: { position: "relative", minWidth: 0, minHeight: 0, overflow: "hidden", color: colors.textOnPlate },
+  footer: { display: "grid", gap: space.md, minWidth: 0 },
+  footerRow: { display: "flex", flexDirection: "column", alignItems: "stretch", gap: space.xs },
+  current: { fontSize: text.sizeXs, color: colors.textSubtle },
   overlay: {
     position: "absolute",
     inset: 0,
@@ -34,7 +34,7 @@ export const styles = stylex.create({
     height: "2.5rem",
     borderColor: "rgba(255,255,255,.15)",
     backgroundColor: "transparent",
-    paddingInline: "1.25rem",
+    paddingInline: space.md,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgba(255,255,255,.65)",

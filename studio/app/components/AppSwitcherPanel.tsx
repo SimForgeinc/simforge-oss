@@ -45,6 +45,9 @@ export function AppSwitcherPanel({
               <ArrowLeft {...stylex.props(styles.inlineBackIcon)} aria-hidden="true" />
               All apps
             </button>
+            <button {...stylex.props(styles.inlineBack)} type="button" onClick={() => setView(null)}>
+              Done
+            </button>
           </div>
           <RenderSettingsSurface onDone={() => setView(null)} />
         </section>

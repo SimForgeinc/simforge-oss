@@ -21,7 +21,7 @@ const CatalogSchema = z.object({
 });
 type PreparationMap = z.infer<typeof CatalogSchema>["maps"][number];
 const PROFILE_LABELS: Record<RenderingPreference, string> = {
-  low: "Low", medium: "Medium",
+  "low-no-foliage": "Low · no foliage", low: "Low", medium: "Medium",
 };
 
 /** Prepare complete local closures, not a Cloud browser bundle that is not registered here yet. */
@@ -87,7 +87,7 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
           <div {...stylex.props(setup.headerIcon)}>{complete ? <Check aria-hidden="true" /> : <Database aria-hidden="true" />}</div>
           <div>
             <p {...stylex.props(setup.eyebrow)}>{PROFILE_LABELS[profile]} profile</p>
-            <h1 {...stylex.props(setup.title)}>{complete ? "Maps are ready" : "Prepare maps"}</h1>
+            <h2 {...stylex.props(setup.title)}>{complete ? "Maps are ready" : "Prepare maps"}</h2>
             <p {...stylex.props(setup.description)}>{planning ? "Checking available maps…" : downloading ? "Preparing the selected maps for local viewing and Bevy rendering." : complete ? "Selected maps are installed for offline viewing and local native rendering. Account maps still require an active SimCloud connection." : "Download complete maps to this computer. Verified files already in the shared map cache are reused."}</p>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import {
   readRenderingPreference,
+  renderingPreferenceQuality,
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapSelectionScreen, type OnboardingMapOption } from "@simforge-oss/studio-ui/onboarding";
@@ -72,7 +73,7 @@ export function OnboardingMapsSurface() {
   const signingIn = revealSignIn && !signedIn;
   const started = preparation.phase !== "idle";
 
-  useEffect(() => setQuality(readRenderingPreference() ?? DEFAULT_SCENARIO_AUTHORING_QUALITY_ID), []);
+  useEffect(() => setQuality(renderingPreferenceQuality(readRenderingPreference())), []);
 
   useEffect(() => {
     // A download in flight owns the list it started with.
@@ -168,7 +169,8 @@ export function OnboardingMapsSurface() {
       onDownload={() => {
         // The viewer reads the level from browser storage; save it before the
         // first map lands so a mid-download navigation already renders right.
-        saveRenderingPreference(quality);
+        const preference = readRenderingPreference();
+        saveRenderingPreference(renderingPreferenceQuality(preference) === quality ? preference : quality);
         preparation.start();
       }}
       onQualityChange={setQuality}

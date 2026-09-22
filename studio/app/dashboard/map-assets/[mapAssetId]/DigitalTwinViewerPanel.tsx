@@ -16,9 +16,8 @@ import type {
   ViewerPath,
   ViewerPoint3,
 } from "@simforge-oss/viewer";
-import { useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
-import { useRegisterRenderingBenchmarkTarget } from "@simforge-oss/studio-ui/components/rendering-benchmark-target";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
 
@@ -66,8 +65,6 @@ export function DigitalTwinViewerPanel({
   proximityArrows,
 }: Props) {
   const manifestUrl = `/api/map-assets/${asset.map_asset_id}/3d-asset/manifest.json`;
-  const graphicsTarget = useMemo(() => ({ manifestUrl, label: asset.name }), [manifestUrl, asset.name]);
-  useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const hasArtifact = asset.artifacts?.some(
     (artifact) => (artifact.artifact_type as string) === "3d_manifest",
   );
@@ -77,7 +74,7 @@ export function DigitalTwinViewerPanel({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
-  const quality = useRenderingPreference() ?? "medium";
+  const quality = useRenderingPreference() ?? "low";
   const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
     ? "native"
     : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"
@@ -250,7 +247,7 @@ export function DigitalTwinViewerPanel({
         tabIndex={0}
         {...stylex.props(styles.viewerCanvas)}
       />
-      {viewer ? <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={quality} viewer={viewer} /> : null}
+      {viewer ? <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={renderingPreferenceQuality(quality)} viewer={viewer} /> : null}
     </div>
   );
 }

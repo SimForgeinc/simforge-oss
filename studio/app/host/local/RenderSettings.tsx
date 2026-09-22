@@ -1,16 +1,14 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { studioHost } from "@/app/lib/host";
 import { DatabaseZap } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProfileMapPreparation } from "./ProfileMapPreparation";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { readRenderingPreference, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { useRenderingPreference, renderingPreferenceQuality, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
-import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
+import { RenderSelectionPanel } from "@simforge-oss/studio-ui/render-selection/RenderSelectionPanel";
 import { styles } from "@/app/components/render-settings.stylex";
 
 /**
@@ -26,60 +24,33 @@ type Preparation = {
 };
 
 const PROFILE_LABELS: Record<RenderingPreference, string> = {
+  "low-no-foliage": "Low · no foliage",
   low: "Low",
   medium: "Medium",
 };
 
-const RenderSelectionPanel = dynamic(
-  () =>
-    import("@simforge-oss/studio-ui/render-selection/RenderSelectionPanel").then(
-      (module) => module.RenderSelectionPanel,
-    ),
-  { ssr: false },
-);
-
 export function RenderSettings({ onDone }: { onDone: () => void }) {
-  const [currentProfile, setCurrentProfile] =
-    useState<RenderingPreference | null>(null);
+  const currentProfile = useRenderingPreference();
   const [preparation, setPreparation] = useState<Preparation | null>(null);
   const [pendingProfile, setPendingProfile] =
     useState<RenderingPreference | null>(null);
   const [confirmRedownload, setConfirmRedownload] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [benchmarkTarget, setBenchmarkTarget] =
-    useState<ScenarioMapOption | null>(null);
-  const [benchmarkCatalogReady, setBenchmarkCatalogReady] = useState(false);
-
-  useEffect(() => setCurrentProfile(readRenderingPreference()), []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void studioHost.artifacts.listMaps(controller.signal)
-      .then((maps) => {
-        if (controller.signal.aborted) return;
-        setBenchmarkTarget(
-          maps.find((map) => Boolean(map.browserManifestUrl)) ?? null,
-        );
-        setBenchmarkCatalogReady(true);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setBenchmarkCatalogReady(true);
-      });
-    return () => controller.abort();
-  }, []);
-
   const beginPreparation = (
     profile: RenderingPreference,
     redownload = false,
   ) => {
     saveRenderingPreference(profile);
-    setCurrentProfile(profile);
     setPendingProfile(null);
     setConfirmRedownload(false);
     setPreparation({ profile, redownload });
   };
 
   const choose = (profile: RenderingPreference) => {
+    if (currentProfile && renderingPreferenceQuality(currentProfile) === renderingPreferenceQuality(profile)) {
+      saveRenderingPreference(profile);
+      return;
+    }
     if (currentProfile && currentProfile !== profile) {
       setPendingProfile(profile);
       return;
@@ -110,26 +81,24 @@ export function RenderSettings({ onDone }: { onDone: () => void }) {
         />
       ) : (
         <RenderSelectionPanel
-          manifestUrl={benchmarkTarget?.browserManifestUrl ?? null}
-          mapLabel={benchmarkTarget?.label ?? "Current map"}
-          catalogReady={benchmarkCatalogReady}
           currentQuality={currentProfile ?? "low"}
           onChoose={choose}
           titleId="render-settings-title"
           descriptionId="render-settings-description"
           footer={
             <div {...stylex.props(styles.footer)}>
-              <MapAssetCacheStorage refreshKey={currentProfile} />
+              <MapAssetCacheStorage compact allowClear={false} refreshKey={currentProfile} />
               {currentProfile ? (
                 <div {...stylex.props(styles.footerRow)}>
                   <Button
                     xstyle={styles.cacheButton}
                     onClick={() => setConfirmRedownload(true)}
                     type="button"
+                    title="Delete the shared map cache, then download this profile again."
                     variant="outline"
                   >
                     <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
-                    Delete cache and re-download {PROFILE_LABELS[currentProfile]}
+                    Re-download maps
                   </Button>
                   <p {...stylex.props(styles.current)}>
                     Current setting: {PROFILE_LABELS[currentProfile]}
