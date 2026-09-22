@@ -19,6 +19,7 @@ import {
 } from "./interactive-tutorial-programs";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractiveTutorialOverlay.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -219,7 +220,7 @@ export function InteractiveTutorialOverlay({
           </div>
           <button
             aria-label="Exit interactive tutorial"
-            {...stylex.props(styles.gridCenteredTight)}
+            {...stylex.props([focus.ringAccent, styles.gridCenteredTight])}
             onClick={onClose}
             type="button"
           >

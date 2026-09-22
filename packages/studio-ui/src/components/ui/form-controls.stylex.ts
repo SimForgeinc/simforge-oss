@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "../../stylex/tokens.stylex";
+import { colors, space, text } from "../../stylex/tokens.stylex";
 
 const RING_OFFSET = "var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)";
 const RING = "var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)";
@@ -33,7 +33,25 @@ const common = {
 
 export const input = stylex.create({
   base: { ...common, height: "2.5rem" },
-  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeSm, lineHeight: "1.25rem", fontWeight: 500, color: colors.text } },
+  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightMedium, color: colors.text } },
 });
 
 export const textarea = stylex.create({ base: { ...common, minHeight: "5rem" } });
+
+/** Heights on the shared control scale; `lg` is the default `Input`. */
+export const inputSizes = stylex.create({
+  xs: { height: "1.5rem", paddingInline: space.s2, fontSize: text.sizeXs },
+  sm: { height: "1.75rem", paddingInline: space.s2, fontSize: text.sizeXs },
+  md: { height: "2rem", paddingInline: space.s3, fontSize: text.sizeXs },
+  lg: { height: "2.5rem" },
+});
+
+/** `plate`: the dark-glass field the product surfaces use. */
+export const inputVariants = stylex.create({
+  default: {},
+  plate: {
+    backgroundColor: colors.fillSubtle,
+    borderColor: { default: colors.hairline, ":focus-visible": colors.accentLine },
+    color: colors.ink,
+  },
+});

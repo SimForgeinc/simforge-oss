@@ -21,6 +21,7 @@ import type { ScenarioDocumentSummaryDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { control, rail } from "../scenario-controls.stylex";
 import { documentMapLabel, documentName } from "../list/document-list-utils";
+import { focus, motionRecipe, textLayout } from "../../stylex/recipes.stylex";
 
 /**
  * The in-editor scenario rail: every sibling document in the active dataset, selectable in place.
@@ -109,16 +110,16 @@ export function ScenarioScenarioRail({
             <button
               type="button"
               onClick={onBack}
-              {...stylex.props(styles.backToAllDatasetsButton)}
+              {...stylex.props([textLayout.truncate, focus.ring, motionRecipe.colors, styles.backToAllDatasetsButton])}
               title="Back to all datasets"
             >
               <ChevronLeft {...stylex.props(styles.chevronleftIcon)} aria-hidden="true" />
-              <span {...stylex.props(styles.spanTruncate)}>{datasetName ?? "Dataset"}</span>
+              <span {...stylex.props(textLayout.truncate)}>{datasetName ?? "Dataset"}</span>
             </button>
           ) : (
             <Link
               href={`/dashboard/scenario/${encodeURIComponent(datasetId)}`}
-              {...stylex.props(styles.openTheFullScenarioListLink)}
+              {...stylex.props([textLayout.truncate, focus.ring, motionRecipe.colors, styles.openTheFullScenarioListLink])}
               title="Open the full scenario list"
             >
               <LayoutList {...stylex.props(styles.layoutlistIcon)} aria-hidden="true" />
@@ -241,7 +242,7 @@ export function ScenarioScenarioRail({
                     <span {...stylex.props(styles.spanMetaMedium)}>
                       {documentName(document)}
                     </span>
-                    <span {...stylex.props(styles.spanTruncateMetaMicro)}>
+                    <span {...stylex.props([textLayout.truncate, styles.spanTruncateMetaMicro])}>
                       {documentMapLabel(document)} · {document.roleCount}{" "}
                       {document.roleCount === 1 ? "role" : "roles"}
                     </span>

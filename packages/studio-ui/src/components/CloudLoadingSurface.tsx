@@ -6,6 +6,7 @@ import { SkyCloudBackdrop } from "./SkyCloudBackdrop";
 import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./CloudLoadingSurface.stylex";
 import { useCloudLoadingSource, type CloudLoadingKind, type CloudLoadingSource } from "./cloud-loading-context";
+import { textLayout } from "../stylex/recipes.stylex";
 
 /** One labelled figure on the telemetry plate, e.g. `{ label: "Speed", value: "4.8 MB/s" }`. */
 export type CloudLoadingMetric = { label: string; value: string };
@@ -90,7 +91,7 @@ function CloudLoadingTelemetryPanel({ telemetry, testId }: { telemetry: CloudLoa
   const headline = telemetry.total ? `${telemetry.transferred} of ${telemetry.total} downloaded` : `${telemetry.transferred} downloaded`;
   return <div {...stylex.props(styles.telemetry, telemetry.stalled && styles.telemetryStalled)} data-testid={testId}>
     <div {...stylex.props(styles.telemRow)}><span>{headline}</span>{telemetry.speed ? <span>{telemetry.speed}</span> : null}</div>
-    {telemetry.metrics && telemetry.metrics.length > 0 ? <dl {...stylex.props(styles.telemGrid)}>{telemetry.metrics.map((metric) => <div key={metric.label} {...stylex.props(styles.telemMetric)}><dt {...stylex.props(styles.telemLabel)}>{metric.label}</dt><dd {...stylex.props(styles.telemValue)}>{metric.value}</dd></div>)}</dl> : null}
+    {telemetry.metrics && telemetry.metrics.length > 0 ? <dl {...stylex.props(styles.telemGrid)}>{telemetry.metrics.map((metric) => <div key={metric.label} {...stylex.props(styles.telemMetric)}><dt {...stylex.props(styles.telemLabel)}>{metric.label}</dt><dd {...stylex.props([textLayout.truncate, styles.telemValue])}>{metric.value}</dd></div>)}</dl> : null}
     {telemetry.eta ? <p {...stylex.props(styles.telemText)}>{telemetry.eta} remaining</p> : null}
     {telemetry.stalled ? <p {...stylex.props(styles.telemWarn)}>No data received for {telemetry.stalledFor ?? "several seconds"}</p> : null}
   </div>;

@@ -25,7 +25,7 @@ import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
 import { ScenarioMapPickerDialog } from "../list/ScenarioMapPickerDialog";
-import { ScenarioTransferDialog } from "../list/ScenarioTransferDialog";
+import { ScenarioTransferOverlay } from "../list/transfer/ScenarioTransferOverlay";
 import { ScenarioTagFilterDropdown } from "../list/ScenarioTagFilterDropdown";
 import {
   documentCreatorKey,
@@ -47,6 +47,7 @@ import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
 import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
 import { isDatasetEditable } from "../rail/DatasetStrip";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 /** Readiness refresh cadence while a render is in flight, matching v1. */
 const READINESS_POLL_MS = 5_000;
@@ -383,7 +384,7 @@ export function ScenarioDatasetDetailClient({
                 {...stylex.props(styles.titleButton)}
                 aria-label={`${dataset.name} dataset menu`}
               >
-                <h2 {...stylex.props(styles.title)}>{dataset.name}</h2>
+                <h2 {...stylex.props([textLayout.truncate, styles.title])}>{dataset.name}</h2>
                 <ChevronDown {...stylex.props(styles.titleChevron)} aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
@@ -667,18 +668,17 @@ export function ScenarioDatasetDetailClient({
         onSelectMap={(map) => void actions.createDocumentOnMap(map)}
       />
       {openScenarioImport.dialog}
-      <ScenarioTransferDialog
-        open={Boolean(transferDocument)}
+      <ScenarioTransferOverlay
         document={transferDocument}
-        busy={Boolean(
-          transferDocument &&
-          actions.busyDocumentId === transferDocument.id,
-        )}
         onClose={() => setTransferDocument(null)}
-        onTransfer={async (input) => {
-          if (!transferDocument) return false;
-          return actions.transferDocument(transferDocument, input);
-        }}
+        onCreated={actions.recordTransferredDocument}
+        onOpenDocument={(created) =>
+          onEditDocument({
+            ...documentSummaryFromDocument(created),
+            derivationKind: "cross_map_variation",
+            derivedFromDocumentId: transferDocument?.id ?? null,
+          })
+        }
       />
       <MetadataDetailsDialog
         open={Boolean(actions.detailsDraft)}

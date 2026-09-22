@@ -26,6 +26,7 @@ import type {
 } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./PostprocessPanel.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * Cosmos augment (#139, #144) and VLM annotate (#140, #145), reshaped onto v2's control plane.
@@ -188,7 +189,7 @@ function ChildList({ items, title }: { items: ScenarioGalleryItemDto[]; title: s
           <li {...stylex.props(styles.flexColGap12, index > 0 && styles.rowDivided)} key={child.id}>
             <div {...stylex.props(styles.flexCenterGap2)}>
               <RenderStateChip state={child.jobState} />
-              <span {...stylex.props(styles.fillXsInk)}>
+              <span {...stylex.props([textLayout.truncate, styles.fillXsInk])}>
                 {child.modelFamily ?? "—"}
               </span>
               <span {...stylex.props(styles.tightMicroMuted)}>

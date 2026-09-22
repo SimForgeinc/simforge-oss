@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const slideInFromBottom2 = stylex.keyframes({
   from: { transform: "translate3d(0, 0.5rem, 0)" },
@@ -13,7 +13,7 @@ export const styles = stylex.create({
   mediaPanel: {
     animationName: slideInFromBottom2,
     animationDuration: "200ms",
-    animationTimingFunction: "cubic-bezier(0, 0, 0.2, 1)",
+    animationTimingFunction: motion.easeDecelerate,
     position: "absolute",
     bottom: "0.75rem",
     right: "0.75rem",
@@ -21,11 +21,11 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+    boxShadow: shadows.elevationXl,
   },
   resizeHandle: {
     position: "absolute",
@@ -47,9 +47,6 @@ export const styles = stylex.create({
     width: "0.375rem",
     height: "0.375rem",
     backgroundColor: hovered.resizeDotColor,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
   },
   header: {
     display: "flex",
@@ -57,19 +54,16 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
-    paddingLeft: "1.25rem",
-    paddingRight: space.md,
+    paddingLeft: space.s5,
+    paddingRight: space.s2,
   },
   title: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
   },
   closeButton: {
     height: "1.5rem",

@@ -4,6 +4,7 @@ import { styles } from "./VideosSection.stylex";
 
 import { ChevronRight, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
+import { focus, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** A fly-by `mp4` artifact, optionally paired with its low-res preview clip. */
 type FlybyArtifact = {
@@ -41,11 +42,11 @@ export function VideosSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        {...stylex.props(styles.videosToggleButton)}
+        {...stylex.props([motionRecipe.colors, styles.videosToggleButton])}
         aria-expanded={open}
       >
         <ChevronRight
-          {...stylex.props(styles.chevron, open && styles.rotate90)}
+          {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
         />
         Videos
       </button>
@@ -68,7 +69,7 @@ export function VideosSection({
                   <button
                     type="button"
                     onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                    {...stylex.props(styles.previewVideoButton)}
+                    {...stylex.props([focus.ring, motionRecipe.colors, styles.previewVideoButton])}
                   >
                     <div {...stylex.props(styles.previewVideoFrame)}>
                       <video
@@ -82,13 +83,13 @@ export function VideosSection({
                         aria-label={label}
                         {...stylex.props(styles.previewVideo)}
                       />
-                      <div {...stylex.props(styles.previewPlayOverlay)}>
-                        <span {...stylex.props(styles.previewPlayButton)}>
+                      <div {...stylex.props([motionRecipe.colors, styles.previewPlayOverlay])}>
+                        <span {...stylex.props([motionRecipe.transform, styles.previewPlayButton])}>
                           <Play {...stylex.props(styles.previewPlayIcon)} />
                         </span>
                       </div>
                     </div>
-                    <span {...stylex.props(styles.previewVideoLabel)}>
+                    <span {...stylex.props([textLayout.truncate, styles.previewVideoLabel])}>
                       {label}
                     </span>
                   </button>
@@ -102,14 +103,14 @@ export function VideosSection({
                 <button
                   type="button"
                   onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                  {...stylex.props(styles.compactVideoButton)}
+                  {...stylex.props([focus.ring, motionRecipe.colors, styles.compactVideoButton])}
                 >
                   <div {...stylex.props(styles.compactPlayContainer)}>
-                    <span {...stylex.props(styles.compactPlayButton)}>
+                    <span {...stylex.props([motionRecipe.transform, styles.compactPlayButton])}>
                       <Play {...stylex.props(styles.compactPlayIcon)} />
                     </span>
                   </div>
-                  <span {...stylex.props(styles.compactVideoLabel)}>
+                  <span {...stylex.props([textLayout.truncate, styles.compactVideoLabel])}>
                     {label}
                   </span>
                 </button>

@@ -1,12 +1,7 @@
 {
-  "packages/studio-ui/src/components/CloudLoadingHost.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
   "packages/studio-ui/src/components/CloudLoadingSurface.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 5
+      "count": 4
     }
   },
   "packages/studio-ui/src/components/ListSkeleton.stylex.ts": {
@@ -19,107 +14,17 @@
       "count": 1
     }
   },
-  "packages/studio-ui/src/components/VideoGroupPlayer.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/components/VideoPreviewTile.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/components/stylex/Progress.tsx": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/components/stylex/StatusIndicator.tsx": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/components/ui/card.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/components/ui/controls.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/components/ui/dropdown-menu.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 6
-    }
-  },
-  "packages/studio-ui/src/components/ui/layout.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/components/ui/select-menu.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
   "packages/studio-ui/src/components/ui/sheet.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 15
-    }
-  },
-  "packages/studio-ui/src/components/ui/skeleton.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/components/ui/switch.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/components/ui/tabs.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/components/ui/tooltip.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 9
-    }
-  },
-  "packages/studio-ui/src/drive/PauseMenu.tsx": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/drive/chrome.tsx": {
-    "studio/banned-syntax": {
-      "count": 5
-    }
-  },
-  "packages/studio-ui/src/drive/hud/DriveHud.tsx": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/drive/hud/Minimap.tsx": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/evaluation/components/RenderEvaluationHandoff.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/evaluation/components/evaluation-components.stylex.ts": {
     "studio/banned-syntax": {
       "count": 10
     }
   },
-  "packages/studio-ui/src/evaluation/workspace/LaunchStage.stylex.ts": {
+  "packages/studio-ui/src/components/ui/tooltip.stylex.ts": {
+    "studio/banned-syntax": {
+      "count": 8
+    }
+  },
+  "packages/studio-ui/src/evaluation/components/evaluation-components.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }
@@ -129,59 +34,14 @@
       "count": 12
     }
   },
-  "packages/studio-ui/src/scenario/editor/EditorExperienceChooser.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/ScenarioEditorSurface.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/UnanchoredActorBadges.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
   "packages/studio-ui/src/scenario/editor/inspector/ActorDetailsPanel.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 9
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/inspector/ActorSensorsSection.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/inspector/AnchoredEditorPopover.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 6
+      "count": 4
     }
   },
   "packages/studio-ui/src/scenario/editor/inspector/EditorDetailsPanel.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/inspector/InteractionActionPopover.stylex.ts": {
-    "studio/banned-syntax": {
       "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/inspector/SensorSetupModal.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 5
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/inspector/TrafficLightDetailsPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/readiness/ScenarioReadinessButton.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 5
     }
   },
   "packages/studio-ui/src/scenario/editor/regions/ActorLibraryRail.stylex.ts": {
@@ -189,57 +49,7 @@
       "count": 4
     }
   },
-  "packages/studio-ui/src/scenario/editor/regions/CopyDebugInformationButton.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/EditorHeader.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/EditorModeBanner.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/GalleryAssetPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 6
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/SimulationIssuesButton.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
   "packages/studio-ui/src/scenario/editor/regions/catalog-surfaces.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/slots/HifiPreviewSlot.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/regions/slots/ViewportSettingsPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/render/BrowserRecordingDetails.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/render/RenderConfigPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 9
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/render/RenderProgressView.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }
@@ -249,129 +59,19 @@
       "count": 1
     }
   },
-  "packages/studio-ui/src/scenario/editor/render/RenderTheater.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
   "packages/studio-ui/src/scenario/editor/render/RenderWorkspace.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/render/recording-panel-fields.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/shell/ScenarioEditorChrome.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/signals/ReferenceLightEditor.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/states/EditorStatePanels.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/status/ScenarioBootGate.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/status/ScenarioNotificationCard.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline-dock.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/ActionPalette.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/ActorCameras.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/CanonicalInteractionComposer.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/InteractionSemanticsControls.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/InteractionTrack.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/TimelineCarlaCompatibilityMarker.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/TimelineGlassSurface.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/TimelineRuler.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/timeline/TimelineTransportControls.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }
   },
   "packages/studio-ui/src/scenario/editor/timeline/V1TimelineRail.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 26
-    }
-  },
-  "packages/studio-ui/src/scenario/editor/tutorial/EditorTutorialGuide.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 27
+      "count": 2
     }
   },
   "packages/studio-ui/src/scenario/editor/tutorial/InteractiveTutorialOverlay.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/list/ScenarioMapPickerDialog.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "packages/studio-ui/src/scenario/list/useScenarioOpenScenarioImport.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "packages/studio-ui/src/scenario/review/ScenarioReviewQueue.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 6
-    }
-  },
-  "packages/studio-ui/src/scenario/scene/MapLoadDebugPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
+      "count": 1
     }
   },
   "studio/app/components/AppStage.stylex.ts": {
@@ -384,16 +84,6 @@
       "count": 4
     }
   },
-  "studio/app/components/CopyButton.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/components/JsonTreeView.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
   "studio/app/components/ScenarioStatusBadge.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
@@ -401,7 +91,7 @@
   },
   "studio/app/components/host-status-cards.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 10
+      "count": 2
     }
   },
   "studio/app/components/map-assets-map/MapAssetsMapView.tsx": {
@@ -411,32 +101,22 @@
   },
   "studio/app/components/map-assets-map/map-canvas.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 17
-    }
-  },
-  "studio/app/components/map-preparation/map-preparation.stylex.ts": {
-    "studio/banned-syntax": {
       "count": 3
     }
   },
   "studio/app/components/setup-preparation.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 10
+      "count": 1
     }
   },
   "studio/app/dashboard/assets/AssetGalleryPageClient.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "studio/app/dashboard/assets/AssetGallerySegmented.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
+      "count": 1
     }
   },
   "studio/app/dashboard/assets/asset-dialogs.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 30
+      "count": 1
     }
   },
   "studio/app/dashboard/assets/asset-grid.stylex.ts": {
@@ -444,49 +124,14 @@
       "count": 1
     }
   },
-  "studio/app/dashboard/assets/asset-surfaces.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 10
-    }
-  },
-  "studio/app/dashboard/dataset-export/DatasetExportPageClient.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/dataset-export/DatasetExportPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/evaluation/rails/rails.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
   "studio/app/dashboard/evaluation/route-residuals.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 16
-    }
-  },
-  "studio/app/dashboard/evaluation/shared.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/evaluation/stages/CampaignStage.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "studio/app/dashboard/evaluation/stages/CompareClient.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }
   },
   "studio/app/dashboard/evaluation/stages/ComparisonLauncher.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 4
+      "count": 1
     }
   },
   "studio/app/dashboard/map-assets/MapAssetEditPanel.stylex.ts": {
@@ -499,102 +144,17 @@
       "count": 1
     }
   },
-  "studio/app/dashboard/map-assets/[mapAssetId]/DigitalTwinViewerPanel.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 2
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/MapDetailHeader.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 5
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/MapDetailPageClient.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/MapSwitcherDropdown.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/detail-tabs/AnalyticsTab.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/detail-tabs/InsightsTab.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/detail-tabs/OverviewTab.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/[mapAssetId]/detail-tabs/SearchResultsTab.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
   "studio/app/dashboard/map-assets/catalog/Map2DOverlay.stylex.ts": {
     "studio/banned-syntax": {
-      "count": 10
+      "count": 4
     }
   },
   "studio/app/dashboard/map-assets/map-assets.legacy.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 17
-    }
-  },
-  "studio/app/dashboard/map-assets/map-detail-sections/CandidateLocationsSection.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/map-detail-sections/EnrichmentSection.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/map-detail-sections/MapLayersSection.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/map-detail-sections/MapMetadataSection.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/map-detail-sections/ThumbnailGenerator.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/new/AddMapPageClient.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 3
-    }
-  },
-  "studio/app/dashboard/map-assets/new/AddMapPreviewMapDynamic.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
-  "studio/app/dashboard/map-assets/new/UploadStatusBadge.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }
   },
   "studio/app/host/local/cloud/cloud-account.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 4
-    }
-  },
-  "studio/app/host/local/simcloud/SimCloudStorage.stylex.ts": {
     "studio/banned-syntax": {
       "count": 1
     }

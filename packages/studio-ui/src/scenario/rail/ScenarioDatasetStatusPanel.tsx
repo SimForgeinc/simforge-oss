@@ -8,6 +8,7 @@ import type {
   ScenarioDocumentSummaryDto,
 } from "../../lib/scenario/contracts";
 import { cn } from "../../lib/utils";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 type ReadinessSummary = ScenarioDatasetReadinessDto["summary"];
 
@@ -101,7 +102,7 @@ export function ScenarioDatasetStatusPanel({
         <p {...stylex.props(styles.datasetStatus)}>
           Dataset status
         </p>
-        <p {...stylex.props(styles.pTruncateSmSemibold)}>{datasetName ?? "Dataset"}</p>
+        <p {...stylex.props([textLayout.truncate, styles.pTruncateSmSemibold])}>{datasetName ?? "Dataset"}</p>
       </div>
       <div {...stylex.props(styles.div2)}>
         <CoverageBar label="Rendered" covered={readiness?.rendered ?? 0} total={total} />
@@ -121,7 +122,7 @@ export function ScenarioDatasetStatusPanel({
                 key={contributor.name}
                 {...stylex.props(styles.liFlexXs)}
               >
-                <span {...stylex.props(styles.spanTruncate)}>{contributor.name}</span>
+                <span {...stylex.props([textLayout.truncate, styles.spanTruncate])}>{contributor.name}</span>
                 <span {...stylex.props(styles.spanMetaMicroUppercase)}>
                   {contributor.authored} authored
                   {contributor.edited > 0 ? ` · ${contributor.edited} edited` : ""}

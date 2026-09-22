@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { getMapSearchSuggestions } from "@/app/lib/maps/search/map-search";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchInputBoxProps {
   draftQuery: string;
@@ -112,7 +113,7 @@ export function SearchInputBox({
             onDraftQueryChange("");
             onSubmitSearch("");
           }}
-          {...stylex.props(styles.clearButton)}
+          {...stylex.props([motionRecipe.colors, styles.clearButton])}
           aria-label="Clear search"
         >
           <X {...stylex.props(styles.clearIcon)} />
@@ -131,7 +132,7 @@ export function SearchInputBox({
               type="button"
               role="option"
               aria-selected={index === highlightedSuggestionIndex}
-              {...stylex.props(styles.suggestion, index === highlightedSuggestionIndex && styles.suggestionHighlighted)}
+              {...stylex.props([motionRecipe.colors, styles.suggestion], index === highlightedSuggestionIndex && styles.suggestionHighlighted)}
               onMouseDown={(event) => {
                 event.preventDefault();
               }}
