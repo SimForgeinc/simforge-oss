@@ -91,6 +91,7 @@ export interface LayerStats {
   /** Wanted tiles that hit their terminal failure count and will not retry. */
   failedTiles: number;
   largestAdmissionUnderestimate: { assetId: string; estimatedBytes: number; decodedBytes: number } | null;
+  lastAdmissionRefusal: { assetId: string; lodIndex: number; estimatedBytes: number; priority: number; pendingBytes: number } | null;
 }
 
 export interface MemoryGovernor {
@@ -185,6 +186,7 @@ export class TileStreamLayer {
   private decodedAssets = 0;
   private uploadedTextures = 0;
   private compiledAssets = 0;
+  private lastAdmissionRefusal: LayerStats['lastAdmissionRefusal'] = null;
   private largestAdmissionUnderestimate: LayerStats['largestAdmissionUnderestimate'] = null;
   private estimateRatio = 1;
 
@@ -289,6 +291,7 @@ export class TileStreamLayer {
       missingInViewTiles: this.requiredMissing,
       budgetBlockedTiles,
       failedTiles,
+      lastAdmissionRefusal: this.lastAdmissionRefusal,
     };
   }
 
@@ -433,6 +436,13 @@ export class TileStreamLayer {
       || (this.opts.essentialCoarsest === true && index === 0);
     const priority = (entry.required ? -Infinity : entry.distance) + (this.opts.priorityBias ?? 0);
     if (!essential && !this.opts.memory.admit(estimate, priority)) {
+      this.lastAdmissionRefusal = {
+        assetId: entry.def.id,
+        lodIndex: index,
+        estimatedBytes: estimate,
+        priority,
+        pendingBytes: this.opts.memory.pendingBytes?.() ?? this.pending,
+      };
       if (markBudgetBlocked) entry.budgetBlocked = true;
       if (entry.required && this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
         entry.failures = MAX_FAILURES;

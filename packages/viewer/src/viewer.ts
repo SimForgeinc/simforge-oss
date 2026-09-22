@@ -1831,6 +1831,13 @@ export class CityViewer {
         shadowAtlas: this.atlas?.diagnostics ?? null,
         admissionUnderestimates: { city: city?.largestAdmissionUnderestimate ?? null,
           roads: road?.largestAdmissionUnderestimate ?? null, vegetation: veg?.largestAdmissionUnderestimate ?? null },
+        admissionRefusals: { city: city?.lastAdmissionRefusal ?? null,
+          roads: road?.lastAdmissionRefusal ?? null, vegetation: veg?.lastAdmissionRefusal ?? null },
+        residencyBytes: {
+          city: { resident: city?.bytes ?? 0, pending: city?.pendingBytes ?? 0 },
+          roads: { resident: road?.bytes ?? 0, pending: road?.pendingBytes ?? 0 },
+          vegetation: { resident: veg?.bytes ?? 0, pending: veg?.pendingBytes ?? 0 },
+        },
         residencyDeadline: this.residencyDeadline,
         actorModels: externalModelDiagnostics(),
       },

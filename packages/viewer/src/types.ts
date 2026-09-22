@@ -249,6 +249,8 @@ export interface CityViewerStats {
       residentBytes: number; downgradeReason: string | null;
     } | null;
     admissionUnderestimates: Record<string, LayerStats['largestAdmissionUnderestimate']>;
+    admissionRefusals: Record<string, LayerStats['lastAdmissionRefusal']>;
+    residencyBytes: Record<string, { resident: number; pending: number }>;
     residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
     actorModels: Readonly<Record<string, { state: 'idle' | 'loading' | 'ready' | 'failed'; url: string; downgradeReason: string }>>;
   };
