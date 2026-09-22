@@ -347,7 +347,16 @@ export async function publishUploadedMapVersion(
         ? { registryReleaseDigest: input.registryReleaseDigest }
         : {}),
       ...(footprint ? { footprint: { polygon: footprint.polygon, center: footprint.center } } : {}),
-      sumoRequired: false,
+      // SUMO is fail-closed once bound: a published network must stay served.
+      sumoRequired: plan.sumoNetworkSha256 !== null,
+      sumo: plan.sumoNetworkSha256 !== null
+        ? {
+          state: "ready",
+          networkSha256: plan.sumoNetworkSha256,
+          manifestSha256: digest("derived/sumo/sumo-network-manifest.json"),
+          reportSha256: digest("derived/sumo/sumo-build-report.json"),
+        }
+        : { state: "missing", reason: "This map revision was published without a SUMO road network." },
       artifactDigests: {
         xodrSha256: digest("map.xodr"),
         topologySha256: digest("topology-index.json.gz"),
