@@ -238,6 +238,7 @@ export const TransferScenarioDocumentSchema = z.object({
 
 export const TransferScenarioDocumentOptionsSchema = z.object({
   targetMapVersionIds: z.array(z.string().trim().min(1)).max(100).optional(),
+  candidates: z.boolean().optional(),
 });
 
 /**
