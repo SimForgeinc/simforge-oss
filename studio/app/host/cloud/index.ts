@@ -1,6 +1,7 @@
 import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType } from "@/app/host/contract";
 import { RenderSettings } from "./RenderSettings";
 import { MapLibrarySurface as MapLibrary } from "./MapLibrarySurface";
+import type { ReactNode } from "react";
 
 /**
  * A cloud host's surfaces: the ones whose subject still exists here.
@@ -25,6 +26,7 @@ export const SettingsSurface: HostSurface = null;
 export const MapLibrarySurface: HostSurface = MapLibrary;
 export const ModelsSurface: HostSurface = null;
 export const SimCloudSurface: HostSurface = null;
+export const OnboardingGateSurface: HostSurface<{ children: ReactNode }> = null;
 export const OnboardingWelcomeSurface: HostSurface = null;
 export const OnboardingMapsSurface: HostSurface = null;
 export const OnboardingNativeRenderSurface: HostSurface = null;

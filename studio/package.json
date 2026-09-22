@@ -46,7 +46,7 @@
     "test:native-map": "tsx --test worker/__tests__/native-map-materialization.test.ts",
     "test:hifi-preview": "tsx --test app/lib/hifi-preview/__tests__/camera-roundtrip.test.ts worker/__tests__/native-ready-map.test.ts worker/__tests__/payload-framing.test.ts",
     "test:fresh-schema": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts",
-    "test:onboarding": "tsx --test app/lib/host/__tests__/onboarding-gate.test.ts app/components/map-preparation/__tests__/useMapPreparation.test.ts",
+    "test:onboarding": "tsx --test app/host/local/__tests__/onboarding-gate.test.ts app/components/map-preparation/__tests__/useMapPreparation.test.ts",
     "test:connections": "node --test desktop/__tests__/connections.test.mjs && tsx --test app/lib/host/__tests__/pairing.test.ts",
     "test:worker-presence": "tsx --test app/lib/scenario/__tests__/cpu-worker-presence.test.ts",
     "test:host-modules": "tsx --test app/host/__tests__/host-modules.test.ts",
