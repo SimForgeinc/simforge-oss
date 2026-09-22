@@ -1,8 +1,60 @@
 import { describe, expect, it } from 'vitest';
 
-import { FULL_MOUNT_ROTATION_APPROXIMATION } from '../capabilities.js';
+import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
+
+import {
+  FULL_MOUNT_ROTATION_APPROXIMATION,
+  UnsupportedRenderIntentError,
+  assertEngineSupportsIntent,
+} from '../capabilities.js';
 import { createRenderEngine, resolveBinary } from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
+
+const profile = CameraProfileSchema.parse({});
+const intent: RenderIntentV1 = {
+  schema: 'simforge.render-intent/v1',
+  intentId: 'camera-capabilities',
+  executionPackage: { id: 'camera-capabilities', sourceInputDigest: 'a'.repeat(64) },
+  scenarioRevision: {
+    revisionId: 'camera-capabilities', scenarioSha256: 'b'.repeat(64),
+    openScenario: { sha256: 'c'.repeat(64), sizeBytes: 1 },
+    map: { mapId: 'map', revisionId: 'map', sha256: 'd'.repeat(64) },
+  },
+  sensorHosts: [],
+  renderSpec: {
+    schema: 'simforge.render-spec/v3',
+    sources: [{
+      actorId: 'ego', sensorId: 'camera', outputName: 'camera-rgb', modality: 'rgb',
+      transform: { position: { x: 0, y: 1, z: 0 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
+      attributes: { width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 100, cameraProfile: profile },
+    }],
+    clip: { startSeconds: 0, endSeconds: 1 },
+    artifacts: ['manifest'],
+    capabilityIntent: { required: ['sensor.rgb', 'artifact.manifest'], preferred: [], fidelity: 'dataset' },
+    authoredEnvironment: { weather: 'clear', timeOfDay: 'noon', surfacePatches: [] },
+  },
+  assets: [],
+  seed: 1,
+};
+
+function rejectionReasons(candidate: RenderIntentV1): readonly string[] {
+  try {
+    assertEngineSupportsIntent(createRenderEngine({ binary: '/bin/true' }).capabilities, candidate);
+  } catch (error) {
+    if (error instanceof UnsupportedRenderIntentError) return error.reasons;
+    throw error;
+  }
+  throw new Error('expected render intent rejection');
+}
+
+function withProfile(cameraProfile: typeof profile): RenderIntentV1 {
+  const source = intent.renderSpec.sources[0]!;
+  if (source.modality !== 'rgb') throw new Error('test source must be RGB');
+  return {
+    ...intent,
+    renderSpec: { ...intent.renderSpec, sources: [{ ...source, attributes: { ...source.attributes, cameraProfile } }] },
+  };
+}
 
 describe('native retained engine adapter', () => {
   it('declares cameras, cast lidar/radar, and the artifact contract - not camera derivatives', () => {
@@ -24,6 +76,70 @@ describe('native retained engine adapter', () => {
 
   it('resolves the retained service binary from explicit options', () => {
     expect(resolveBinary({ binary: '/opt/native-render-service' })).toBe('/opt/native-render-service');
+  });
+
+  it('rejects rolling shutter with a stable capability reason', () => {
+    const rolling = CameraProfileSchema.parse({ acquisition: { shutter: 'rolling', readoutSpanS: 0.01 } });
+    expect(rejectionReasons(withProfile(rolling))).toContain('missing capability camera.shutter.rolling');
+  });
+
+  it('rejects PTC noise with a stable capability reason', () => {
+    const ptc = CameraProfileSchema.parse({ detector: { noise: 'ptc' } });
+    expect(rejectionReasons(withProfile(ptc))).toContain('missing capability camera.noise.ptc');
+  });
+
+  it('rejects raw output requested as a required capability', () => {
+    const raw: RenderIntentV1 = {
+      ...intent,
+      renderSpec: {
+        ...intent.renderSpec,
+        capabilityIntent: {
+          ...intent.renderSpec.capabilityIntent,
+          required: [...intent.renderSpec.capabilityIntent.required, 'camera.output.raw'],
+        },
+      },
+    };
+    expect(rejectionReasons(raw)).toContain('missing capability camera.output.raw');
+  });
+
+  it('reports every unsupported camera feature in a combination', () => {
+    const combined = withProfile(CameraProfileSchema.parse({
+      detector: { noise: 'ptc' },
+      acquisition: { shutter: 'rolling', readoutSpanS: 0.01 },
+    }));
+    const unsupported: RenderIntentV1 = {
+      ...combined,
+      renderSpec: {
+        ...combined.renderSpec,
+        capabilityIntent: {
+          ...combined.renderSpec.capabilityIntent,
+          required: [...combined.renderSpec.capabilityIntent.required, 'camera.output.raw'],
+        },
+      },
+    };
+    expect(rejectionReasons(unsupported)).toEqual(expect.arrayContaining([
+      'missing capability camera.output.raw',
+      'missing capability camera.shutter.rolling',
+      'missing capability camera.noise.ptc',
+    ]));
+  });
+
+  it('defers unsupported projection-family rejection to checkpoint 2', () => {
+    const candidate = withProfile(CameraProfileSchema.parse({ projection: { model: 'brown-conrady' } }));
+    const brown: RenderIntentV1 = {
+      ...candidate,
+      renderSpec: {
+        ...candidate.renderSpec,
+        capabilityIntent: {
+          ...candidate.renderSpec.capabilityIntent,
+          required: [...candidate.renderSpec.capabilityIntent.required, 'camera.projection.brown_conrady'],
+        },
+      },
+    };
+    expect(() => assertEngineSupportsIntent(
+      createRenderEngine({ binary: '/bin/true' }).capabilities,
+      brown,
+    )).not.toThrow();
   });
 
   it('removes wgpu row padding before rawvideo encoding', () => {

@@ -19,6 +19,7 @@ import {
   type RenderInputFile,
 } from '../index.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { assertEngineSupportsIntent } from '../capabilities.js';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
@@ -201,6 +202,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const wallStarted = performance.now();
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
+      assertEngineSupportsIntent(capabilities, intent);
       const sources = intent.renderSpec.sources;
       const unsupported = sources.find((source) => source.modality !== 'rgb' && source.modality !== 'lidar' && source.modality !== 'radar');
       if (unsupported) throw new Error(`native retained engine does not render ${unsupported.modality} sources`);

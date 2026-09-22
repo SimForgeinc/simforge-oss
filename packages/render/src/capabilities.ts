@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { RenderIntentV1 } from '@simforge-oss/scenario';
+import { cameraProfileCapabilities, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 export const ENGINE_CAPABILITIES_V1_SCHEMA = 'simforge.render-engine-capabilities/v1' as const;
 
@@ -108,7 +108,16 @@ export function assertEngineSupportsIntent(
   }
   const capabilities = new Set<string>(declaration.capabilities);
   for (const required of spec.capabilityIntent.required) {
+    if (required.startsWith('camera.projection.')) continue;
     if (!capabilities.has(required)) reasons.push(`missing capability ${required}`);
+  }
+  for (const source of spec.sources) {
+    if (source.modality === 'lidar' || source.modality === 'radar') continue;
+    for (const required of cameraProfileCapabilities(source.attributes.cameraProfile)) {
+      if (!required.startsWith('camera.projection.') && !capabilities.has(required)) {
+        reasons.push(`missing capability ${required}`);
+      }
+    }
   }
   for (const artifact of spec.artifacts) {
     const capability = artifact === 'sensorArchive' ? 'artifact.sensor_archive' : `artifact.${artifact}`;
