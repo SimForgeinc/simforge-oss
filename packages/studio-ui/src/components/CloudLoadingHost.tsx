@@ -311,7 +311,6 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
               styles.overlay,
               visible ? styles.overlayVisible : styles.overlayHidden,
             ]}
-            style={{ transitionDuration: "900ms" }}
             contentWrapClassName={
               visible
                 ? enteringScene

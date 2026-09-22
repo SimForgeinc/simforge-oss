@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors } from "../stylex/tokens.stylex";
+import { colors, layers, radii } from "../stylex/tokens.stylex";
 
 /** The property list Tailwind's `transition-colors` compiles to. */
 const TRANSITION_COLORS =
@@ -7,23 +7,17 @@ const TRANSITION_COLORS =
 
 export const styles = stylex.create({
   alertIcon: { width: "1.25rem", height: "1.25rem" },
-  reload: { marginTop: "1.5rem", height: "2.5rem", borderRadius: "9999px", backgroundColor: colors.accent, paddingInline: "1.25rem", color: "black", ":hover": { backgroundColor: colors.accentHover } },
-  /**
-   * `!z-[250] transition-colors ease-out motion-reduce:transition-none`
-   *
-   * The overlay sits one step above `CloudLoadingSurface`'s own `screen`
-   * scope (240). It travels as `xstyle` so StyleX resolves the two `z-index`
-   * rules by argument order; as a class name the `!important` was load-
-   * bearing, and here it is not needed at all. `transition-duration` is
-   * Tailwind's default — the caller's inline style raises it to 900ms.
-   */
+  reload: { marginTop: "1.5rem", height: "2.5rem", borderRadius: radii.none, backgroundColor: colors.accent, paddingInline: "1.25rem", color: colors.accentText, ":hover": { backgroundColor: colors.accentHover } },
+  /** The dashboard host covers content, never its escape/navigation chrome. */
   overlay: {
-    zIndex: 250,
+    top: "3.5rem",
+    minHeight: 0,
+    zIndex: layers.loadingTop,
     transitionProperty: {
       default: TRANSITION_COLORS,
       "@media (prefers-reduced-motion: reduce)": "none",
     },
-    transitionDuration: "150ms",
+    transitionDuration: "900ms",
     transitionTimingFunction: "cubic-bezier(0, 0, 0.2, 1)",
   },
   /** `pointer-events-auto bg-black/70 backdrop-blur-2xl` */
