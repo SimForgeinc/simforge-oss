@@ -113,6 +113,7 @@ import {
 } from "../inspector/TrafficLightDetailsPanel";
 import { EditorDetailsPanel } from "../inspector/EditorDetailsPanel";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
+import { focus, motionRecipe, textLayout } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -825,7 +826,7 @@ export function V1TimelineRail({
             role="separator"
             tabIndex={0}
           >
-            <span {...stylex.props(styles.span)} />
+            <span {...stylex.props([motionRecipe.colors, styles.span])} />
           </div>
           <div
             aria-label="Resize name column"
@@ -864,7 +865,7 @@ export function V1TimelineRail({
             style={{ left: `var(${IDENTITY_WIDTH_VAR})` }}
             tabIndex={0}
           >
-            <span {...stylex.props(styles.absInert)} />
+            <span {...stylex.props([motionRecipe.colors, styles.absInert])} />
           </div>
           <header
             {...stylex.props(styles.timelineTopbar)}
@@ -907,7 +908,7 @@ export function V1TimelineRail({
               aria-valuemin={windowRange.startMs / 1000}
               aria-valuenow={displayedTime}
               aria-valuetext={`${displayedTime.toFixed(1)} seconds`}
-              {...mergeStyleProps(stylex.props(styles.timelinePlayheadDragHandleButton, styles.absLivePad0))}
+              {...mergeStyleProps(stylex.props([focus.ringAccent, styles.timelinePlayheadDragHandleButton], [focus.ringAccent, styles.absLivePad0]))}
               data-testid="timeline-playhead-drag-handle"
               data-timeline-seek-ignore="true"
               onKeyDown={(event) => {
@@ -923,7 +924,7 @@ export function V1TimelineRail({
               role="slider"
               type="button"
             >
-              <span {...stylex.props(styles.absRound)} />
+              <span {...stylex.props([motionRecipe.transform, styles.absRound])} />
             </button>
           </div>
 
@@ -1299,7 +1300,7 @@ function ActorRailLane({
           {!readOnly ? (
             <button
               aria-label={`Delete actor ${actorLabel}`}
-              {...stylex.props(styles.timelineDeleteButton)}
+              {...stylex.props([motionRecipe.colors, styles.timelineDeleteButton])}
               data-testid={`timeline-delete-${role.id}`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -1416,7 +1417,7 @@ function ReasoningTraceLane({
               title={label}
               type="button"
             >
-              <span {...stylex.props(styles.spanTruncate)}>{label}</span>
+              <span {...stylex.props([textLayout.truncate, styles.spanTruncate])}>{label}</span>
             </button>
           );
         })}
@@ -1673,7 +1674,7 @@ function InteractionBand({
             {(!editable || timingLocked) && !simpleTimedRoute ? (
               <Lock aria-hidden="true" {...stylex.props(styles.lockIcon)} />
             ) : null}
-            <span {...stylex.props(styles.spanTruncate2)}>{label}</span>
+            <span {...stylex.props(textLayout.truncate)}>{label}</span>
             {conflictMessage ? (
               <AlertTriangle
                 aria-label={conflictMessage}
@@ -1769,7 +1770,7 @@ function ContextActionMenu({
           <p {...stylex.props(styles.addAt)}>
             Add at {state.timeS.toFixed(1)}s
           </p>
-          <p {...stylex.props(styles.pTruncateXs)}>{actorLabel}</p>
+          <p {...stylex.props([textLayout.truncate, styles.pTruncateXs])}>{actorLabel}</p>
         </div>
         <button
           aria-label="Close action menu"
@@ -1876,7 +1877,7 @@ function ActionMenuButton({
 }) {
   return (
     <button
-      {...stylex.props(styles.menuitemButton)}
+      {...stylex.props([focus.ringAccent, styles.menuitemButton])}
       data-testid={testId}
       data-timeline-action={timelineAction}
       onClick={onClick}

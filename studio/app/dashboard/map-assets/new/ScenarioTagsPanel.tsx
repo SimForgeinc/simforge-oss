@@ -8,6 +8,7 @@ import { MAP_ASSET_DESCRIPTOR_TAG_IDS, getMapAssetDescriptorTag } from "@simforg
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { displayTag } from "@/app/lib/maps/frontend/add-map-utils";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface ScenarioTagsPanelProps {
   tags: string[];
@@ -102,7 +103,7 @@ export function ScenarioTagsPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveTag(tagId)}
-                  {...stylex.props(styles.tagRemove, isAuto ? styles.tagRemoveAuto : styles.tagRemoveManual)}
+                  {...stylex.props([motionRecipe.colors, styles.tagRemove], isAuto ? styles.tagRemoveAuto : styles.tagRemoveManual)}
                   aria-label={`Remove ${tagId}`}
                 >
                   <X {...stylex.props(styles.removeIcon)} />
@@ -170,10 +171,10 @@ export function ScenarioTagsPanel({
         <button
           type="button"
           onClick={() => setCsvOpen((o) => !o)}
-          {...stylex.props(styles.csvToggle)}
+          {...stylex.props([motionRecipe.colors, styles.csvToggle])}
         >
           <ChevronDown
-            {...stylex.props(styles.chevron, !csvOpen && styles.rotateMinus90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], !csvOpen && styles.rotateMinus90)}
           />
           Bulk-add via CSV paste
         </button>

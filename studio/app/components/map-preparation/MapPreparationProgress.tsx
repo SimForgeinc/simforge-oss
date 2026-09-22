@@ -7,6 +7,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { setup } from "../setup-preparation.stylex";
 import { PROGRESS_VAR, preparation } from "./map-preparation.stylex";
 import type { MapPreparationPhase, MapPreparationRow } from "./useMapPreparation";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * One row per map being prepared, with the two actions a failed row offers.
@@ -71,7 +72,7 @@ export function MapPreparationProgress({
                     <SkipForward {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : null}
                 </span>
-                <span {...stylex.props(preparation.rowLabel)}>{map.label}</span>
+                <span {...stylex.props([textLayout.truncate, preparation.rowLabel])}>{map.label}</span>
                 <span {...stylex.props(preparation.rowBytes)}>
                   {map.state === "installing" || map.state === "ready"
                     ? `${formatBytes(map.completedBytes)}${map.bytes > 0 ? ` / ${formatBytes(map.bytes)}` : ""}`

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   column: {
@@ -15,20 +15,20 @@ export const styles = stylex.create({
   header: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    borderBottomWidth: "1px",
+    gap: space.s1_5,
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.lineStrong,
-    paddingInline: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.md,
+    borderColor: colors.hairlineStrong,
+    paddingInline: space.s3,
+    paddingTop: space.s3,
+    paddingBottom: space.s2,
   },
   titleRow: {
     display: "flex",
     minWidth: 0,
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   /** The dataset name is itself the menu trigger, as a Slack channel name is. */
   titleButton: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     minWidth: 0,
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     padding: 0,
     borderWidth: 0,
     backgroundColor: "transparent",
@@ -50,9 +50,6 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   title: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontDisplay,
     fontSize: text.sizeBase,
     lineHeight: text.lineTight,
@@ -69,7 +66,7 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: 0,
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   headerAdd: {
     width: "1.75rem",
@@ -81,7 +78,7 @@ export const styles = stylex.create({
   description: {
     margin: 0,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.65)",
     display: "-webkit-box",
     WebkitBoxOrient: "vertical",
@@ -90,13 +87,13 @@ export const styles = stylex.create({
   },
   descriptionEmpty: {
     fontStyle: "italic",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   toolbar: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    marginTop: space.xs,
+    gap: space.s1_5,
+    marginTop: space.s1,
   },
   searchField: {
     position: "relative",
@@ -106,7 +103,7 @@ export const styles = stylex.create({
   searchIcon: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.md,
+    left: space.s2,
     top: "50%",
     width: "0.75rem",
     height: "0.75rem",
@@ -116,12 +113,12 @@ export const styles = stylex.create({
   searchInput: {
     height: "2rem",
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: "hsl(var(--border) / 0.8)", ":focus-visible": "hsl(var(--primary) / 0.7)" },
     backgroundColor: "hsl(var(--background) / 0.5)",
     paddingLeft: "1.625rem",
-    paddingRight: space.md,
+    paddingRight: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -138,19 +135,19 @@ export const styles = stylex.create({
   },
   /** Errors and notices, between the header and the list. */
   messages: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   messageRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   messageText: {
     minWidth: 0,
@@ -170,8 +167,8 @@ export const styles = stylex.create({
     overflow: "hidden",
   },
   emptyState: {
-    paddingInline: space.lg,
-    paddingBlock: space.xxl,
+    paddingInline: space.s3,
+    paddingBlock: space.s6,
     borderStyle: "none",
     backgroundColor: "transparent",
   },
@@ -184,24 +181,24 @@ export const styles = stylex.create({
     width: "100%",
     flexShrink: 0,
     justifyContent: "flex-start",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: 0,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: colors.lineStrong,
-    backgroundColor: { default: "transparent", ":hover": colors.glass },
-    paddingInline: space.lg,
+    borderColor: colors.hairlineStrong,
+    backgroundColor: { default: "transparent", ":hover": colors.fillSubtle },
+    paddingInline: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
-    color: { default: "rgb(255 255 255 / 0.7)", ":hover": colors.text },
+    color: { default: colors.inkSecondary, ":hover": colors.text },
   },
   footerAddIcon: {
     display: "grid",
     placeItems: "center",
     width: "1.25rem",
     height: "1.25rem",
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   importScenarioJSONFileInput: {
     display: "none",

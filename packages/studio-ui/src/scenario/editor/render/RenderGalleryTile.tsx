@@ -17,6 +17,7 @@ import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderGalleryTile.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * One render in the gallery — manifest #137, reshaped onto v2's control plane.
@@ -176,7 +177,7 @@ export function RenderGalleryTile({
       <button
         type="button"
         aria-label={`Hide this ${label.toLowerCase()} from the gallery`}
-        className={stylex.props(styles.absInlineFlexCenter, motionStyles.editorMotion).className}
+        className={stylex.props([focus.ring, styles.absInlineFlexCenter], motionStyles.editorMotion).className}
         disabled={hideBusy}
         onClick={onHide}
       >
@@ -187,7 +188,7 @@ export function RenderGalleryTile({
         <button
           type="button"
           aria-label={`Restore the scenario this ${label.toLowerCase()} was rendered from`}
-          className={stylex.props(styles.absInlineFlexCenter2, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.absInlineFlexCenter2], motionStyles.editorMotion).className}
           data-testid="scenario-render-restore"
           disabled={restoreBusy}
           onClick={onRestore}
@@ -204,7 +205,7 @@ export function RenderGalleryTile({
           state={item.jobState}
         />
         <div {...stylex.props(styles.flexBetweenBaseline)}>
-          <span {...stylex.props(styles.metaInkTruncate)}>
+          <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>
             {formatTimestamp(item.createdAt)}
           </span>
           <span {...stylex.props(styles.tightCapsMicro)}>

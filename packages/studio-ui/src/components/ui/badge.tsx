@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { badge as badgeBase, badgeVariants as badgeVariantStyles } from "./controls.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 type BadgeStyle = stylex.StyleXStyles;
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
@@ -15,7 +16,7 @@ export interface BadgeProps
 
 function Badge({ className, variant, xstyle, ...props }: BadgeProps) {
   const styleProps = stylex.props(
-    badgeBase.base,
+    [motionRecipe.colors, badgeBase.base],
     variant == null ? (variant === null ? null : badgeVariantStyles.default) : badgeVariantStyles[variant],
     xstyle,
   );

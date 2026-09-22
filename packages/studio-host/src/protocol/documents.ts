@@ -32,10 +32,40 @@ import {
   passthrough,
   record,
   string,
+  tuple,
   union,
 } from "./schema";
 
 // ── DTO decoders ─────────────────────────────────────────────────────────────
+
+const ScenarioTransferPreviewSchema = object<ScenarioTransferPreviewDto>({
+  viewBox: tuple([number(), number(), number(), number()] as const),
+  lanes: array(object({
+    kind: oneOf(["drive", "walk", "park"] as const),
+    width: number(),
+    d: string(),
+  })),
+  route: nullable(string()),
+  actors: array(object({
+    id: string(),
+    kind: oneOf(["subject", "vehicle", "vru", "object"] as const),
+    x: number(),
+    y: number(),
+    rotateDeg: number(),
+    length: number(),
+    width: number(),
+  })),
+});
+
+const ScenarioTransferCandidateSchema = object<ScenarioTransferCandidateDto>({
+  siteId: string(),
+  rank: number(),
+  score: number(),
+  verdict: oneOf(["exact", "degraded"] as const),
+  summary: string(),
+  offRoadActors: number(),
+  preview: nullable(ScenarioTransferPreviewSchema),
+});
 
 export const ScenarioDocumentSchema = object<ScenarioDocumentDto>({
   id: string(),
@@ -256,19 +286,79 @@ export type TransferDocumentRequest = {
   title?: string;
   signalPlanDecision?: "remove" | "accept-proposal";
 };
-export type TransferOptionsRequest = { targetMapVersionIds?: string[] };
+export type TransferOptionsRequest = {
+  /** Match only these target maps. Omitted: every published map except the source's. */
+  targetMapVersionIds?: string[];
+  /**
+   * `false` lifts the source and lists the target maps without matching any of
+   * them, so a client can show the maps at once and fill each one as its own
+   * request returns. Omitted or `true`: every listed map carries candidates.
+   */
+  candidates?: boolean;
+};
 export type PortableLiftIssueDto = {
   code: string;
   severity: "error" | "warning" | "info";
   path?: string;
   message: string;
 };
+/**
+ * A 2D schematic of one candidate placement: the target map's lanes around the
+ * site and the scenario's actors where the compiler materializes them there.
+ *
+ * Units are metres in the scene frame (`x` east, `y` = scene `z`, south), so it
+ * draws straight into an SVG whose y axis points down. Paths are SVG path data
+ * relative to the same frame as `viewBox`.
+ */
+export type ScenarioTransferPreviewDto = {
+  viewBox: [number, number, number, number];
+  /** Lane ribbons, one path per lane class and width, stroked at `width` metres. */
+  lanes: Array<{ kind: "drive" | "walk" | "park"; width: number; d: string }>;
+  /** The subject's route from its start, when the scenario gives it one. */
+  route: string | null;
+  actors: Array<{
+    id: string;
+    kind: "subject" | "vehicle" | "vru" | "object";
+    x: number;
+    y: number;
+    /** Heading in degrees, clockwise on screen, 0 = east: an SVG `rotate()` angle. */
+    rotateDeg: number;
+    length: number;
+    width: number;
+  }>;
+};
+/** One vetted place a scenario can be transferred to on one map. */
+export type ScenarioTransferCandidateDto = {
+  siteId: string;
+  /** 1-based rank of this site among the map's candidates, best first. */
+  rank: number;
+  /** Matcher score, 0..1. */
+  score: number;
+  /** `exact`: nothing was relaxed; `degraded`: presentation was relaxed, never intent. */
+  verdict: "exact" | "degraded";
+  /** Plain-language account of what was relaxed, empty when nothing was. */
+  summary: string;
+  /** Road actors the compiler placed off every lane at this site. */
+  offRoadActors: number;
+  preview: ScenarioTransferPreviewDto | null;
+};
 export type ScenarioTransferMapOptionDto = {
   mapVersionId: string;
   sourceMapId: string;
   label: string;
   locality: string | null;
+  /** The candidates' site ids, best first. Empty until the map is matched. */
   siteIds: string[];
+  /** Present once the map has been matched; absent from a `candidates: false` listing. */
+  candidates?: ScenarioTransferCandidateDto[];
+  /** Why this map could not be matched; the other maps are unaffected. */
+  error?: string | null;
+  /**
+   * Whose failure `error` is. `scenario`: the scenario itself cannot be placed
+   * anywhere (it does not compile), so every other map will say the same and
+   * a client can stop asking; `map`: this map only.
+   */
+  errorScope?: "scenario" | "map" | null;
 };
 export type ScenarioTransferOptionsDto = {
   sourceMapVersionId: string | null;
@@ -380,6 +470,9 @@ export const documentsProtocol = {
         label: string(),
         locality: nullable(string()),
         siteIds: array(string()),
+        candidates: optional(array(ScenarioTransferCandidateSchema)),
+        error: optional(nullable(string())),
+        errorScope: optional(nullable(oneOf(["scenario", "map"] as const))),
       })),
     }),
   }),

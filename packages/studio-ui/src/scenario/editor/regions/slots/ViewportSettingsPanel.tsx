@@ -31,6 +31,7 @@ import {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ViewportSettingsPanel.stylex";
 import { useRenderingPreference } from "../../../../components/rendering-preference";
+import { a11y, focus, motionRecipe } from "../../../../stylex/recipes.stylex";
 
 /**
  * Editor, viewport, and camera settings for either the editor top bar or the idle canvas.
@@ -174,7 +175,7 @@ export function ViewportSettingsPanel({
               {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => (
                 <button
                   aria-pressed={quality === choice.id}
-                  {...stylex.props(quality === choice.id ? styles.capsMetaInk : styles.capsMetaMuted)}
+                  {...stylex.props(quality === choice.id ? [focus.ring, motionRecipe.colors, styles.capsMetaInk] : [focus.ring, motionRecipe.colors, styles.capsMetaMuted])}
                   key={choice.id}
                   onClick={() => onQualityChange(choice.id)}
                   type="button"
@@ -196,7 +197,7 @@ export function ViewportSettingsPanel({
                 type="button"
                 aria-pressed={settings.cameraMode === mode}
                 onClick={() => update({ ...settings, cameraMode: mode })}
-                {...stylex.props(settings.cameraMode === mode ? styles.capsMetaMicro3 : styles.capsMetaMicro4)}
+                {...stylex.props(settings.cameraMode === mode ? [focus.ring, motionRecipe.colors, styles.capsMetaMicro3] : [focus.ring, motionRecipe.colors, styles.capsMetaMicro4])}
               >
                 {mode}
               </button>
@@ -324,8 +325,8 @@ export function ViewportSettingsPanel({
         data-testid="viewport-settings-drawer"
         side="right"
       >
-        <SheetTitle xstyle={styles.srOnly}>Editor settings</SheetTitle>
-        <SheetDescription xstyle={styles.srOnly}>
+        <SheetTitle xstyle={a11y.srOnly}>Editor settings</SheetTitle>
+        <SheetDescription xstyle={a11y.srOnly}>
           Configure the editor mode, rendering quality, camera controls, and visible map layers.
         </SheetDescription>
         {panel}
@@ -372,12 +373,12 @@ function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      {...stylex.props(styles.flexCenterBetween2)}
+      {...stylex.props([focus.ring, motionRecipe.colors, styles.flexCenterBetween2])}
     >
       <span>{label}</span>
       <span
         aria-hidden="true"
-        {...stylex.props(checked ? styles.relTightBordered : styles.relTightBordered2)}
+        {...stylex.props(checked ? [motionRecipe.colors, styles.relTightBordered] : [motionRecipe.colors, styles.relTightBordered2])}
       >
         <span
           {...stylex.props(checked ? styles.abs2 : styles.abs3)}
@@ -418,7 +419,7 @@ function Slider({
         // whether that is fast or slow.
         aria-valuetext={`${value} percent`}
         onChange={(event) => onChange(Number(event.currentTarget.value))}
-        {...stylex.props(styles.widePointer)}
+        {...stylex.props([focus.ring, styles.widePointer])}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import type { MapAsset } from "@simforge-oss/studio-shared";
 import { MapDetailPageClient } from "@/app/dashboard/map-assets/[mapAssetId]/MapDetailPageClient";
 import type { MapTemplateScenarioRow } from "@/app/lib/db/scenario-query-store";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
+import { a11y } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export function Map2DOverlay({
   asset,
@@ -62,10 +63,10 @@ export function Map2DOverlay({
           {...stylex.props(styles.dialogContent)}
           data-testid="map-gallery-2d-overlay"
         >
-          <DialogPrimitive.Title {...stylex.props(styles.dialogText)}>
+          <DialogPrimitive.Title {...stylex.props(a11y.srOnly)}>
             {asset.name} 2D map
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description {...stylex.props(styles.dialogText)}>
+          <DialogPrimitive.Description {...stylex.props(a11y.srOnly)}>
             Explore road geometry, map layers, search results, and attributes for this map.
           </DialogPrimitive.Description>
           <MapDetailPageClient

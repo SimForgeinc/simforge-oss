@@ -22,6 +22,7 @@ import {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SignalTimelineLane.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * One junction's row on the timeline. Manifest #114.
@@ -95,7 +96,7 @@ export function SignalTimelineLane({
                 ? `Collapse junction ${row.junctionId} stages`
                 : `Show junction ${row.junctionId} per stage`
             }
-            className={stylex.props(styles.tightMuted, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ringOffset, styles.tightMuted], motionStyles.editorMotion).className}
             data-testid={`signal-lane-expand-${row.junctionId}`}
             type="button"
             onClick={onToggleExpanded}
@@ -107,7 +108,7 @@ export function SignalTimelineLane({
             )}
           </button>
         ) : null}
-        <span {...stylex.props(styles.fillMicroInk)}>
+        <span {...stylex.props([textLayout.truncate, styles.fillMicroInk])}>
           Junction {row.junctionId}
           {!row.planned ? (
             <span {...stylex.props(styles.muted)}>· map timing</span>
@@ -131,7 +132,7 @@ export function SignalTimelineLane({
               {...stylex.props(styles.narrowable2)}
               data-testid={`signal-lane-stage-${stageRow.controllerId}`}
             >
-              <span {...stylex.props(styles.blockMicroMuted)}>
+              <span {...stylex.props([textLayout.truncate, styles.blockMicroMuted])}>
                 Stage {stageRow.controllerId} · {stageRow.headIds.length} head
                 {stageRow.headIds.length === 1 ? "" : "s"}
               </span>
@@ -181,7 +182,7 @@ function BandTrack({
             aria-label={description}
             className={cn(
               stylex.props(
-                styles.absFlexCenter,
+                [focus.ringInset, styles.absFlexCenter],
                 selectable ? styles.pointer : styles.cursorDefault,
                 authored ? null : styles.dashed,
                 authored ? swatch.fill : swatch.ghost,
@@ -243,7 +244,7 @@ function BoundaryHandle({
   return (
     <button
       aria-label={`${label} — move the ${formatSeconds(boundaryS)} second boundary`}
-      className={stylex.props(styles.abs, motionStyles.editorMotion).className}
+      className={stylex.props([focus.ringInset, styles.abs], motionStyles.editorMotion).className}
       data-testid={`signal-boundary-${boundaryS}`}
       style={{ left: `${boundaryS * pxPerSecond}px` }}
       type="button"

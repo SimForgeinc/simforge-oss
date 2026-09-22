@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderParityEvidence.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 
@@ -277,7 +278,7 @@ export function RenderParityEvidencePanel({
 }
 
 function EvidenceValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.evidenceValueMono : styles.evidenceValue)} title={value}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? [textLayout.truncate, styles.evidenceValueMono] : [textLayout.truncate, styles.evidenceValue])} title={value}>{value}</dd></div>;
 }
 
 function parseDivergences(value: unknown): RenderParityDivergence[] {

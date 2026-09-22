@@ -12,6 +12,7 @@ import type { BrowserRecordingSummaryDto } from "../../../lib/scenario/recording
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./UnifiedGalleryTiles.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * The non-managed cards of the unified render gallery. They share the managed tile's card anatomy —
@@ -178,7 +179,7 @@ export function RecordingGalleryTile({
           </div>
         ) : null}
         <div {...stylex.props(styles.flexBetweenBaseline)}>
-          <span {...stylex.props(styles.metaInkTruncate)}>{formatTimestamp(recording.createdAt)}</span>
+          <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>{formatTimestamp(recording.createdAt)}</span>
           {recording.status === "running" ? (
             <span {...stylex.props(styles.tightCapsMicro)}>
               {progressPercent}%
@@ -245,7 +246,7 @@ export function EsminiGalleryTile({ run }: { run: ScenarioValidationRunDto }) {
 
       <div {...stylex.props(styles.absFlexCol2)}>
         <div {...stylex.props(styles.flexBetweenBaseline)}>
-          <span {...stylex.props(styles.metaInkTruncate)}>{formatTimestamp(run.created_at)}</span>
+          <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>{formatTimestamp(run.created_at)}</span>
           {detail ? (
             <span {...stylex.props(styles.tightCapsMicro)}>{detail}</span>
           ) : null}
@@ -254,7 +255,7 @@ export function EsminiGalleryTile({ run }: { run: ScenarioValidationRunDto }) {
           <div {...stylex.props(styles.flexCenterGap15)}>
             {run.trace_artifact_id ? (
               <button
-                className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ring, styles.inlineFlexCenterCaps], motionStyles.editorMotion).className}
                 onClick={() => void studioHost.artifacts.downloadArtifact(run.trace_artifact_id!)}
                 type="button"
               >
@@ -264,7 +265,7 @@ export function EsminiGalleryTile({ run }: { run: ScenarioValidationRunDto }) {
             ) : null}
             {run.report_artifact_id ? (
               <button
-                className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ring, styles.inlineFlexCenterCaps], motionStyles.editorMotion).className}
                 onClick={() => void studioHost.artifacts.downloadArtifact(run.report_artifact_id!)}
                 type="button"
               >

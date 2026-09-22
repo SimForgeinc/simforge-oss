@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { space } from "../../../stylex/tokens.stylex";
+import { space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /*
@@ -8,14 +8,14 @@ export const styles = stylex.create({
    * follows a sibling.
    */
   mt4: {
-    marginTop: space.xl,
+    marginTop: space.s4,
   },
   // flex min-h-0 overflow-hidden border border-white/10
   flexBorderedClip: {
     display: "flex",
     minHeight: "0px",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
   },
 });

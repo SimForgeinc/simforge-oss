@@ -1,18 +1,18 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // grid grid-cols-2 gap-2
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8 text-xs
   xs: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // col-span-2
   colSpan2: {
@@ -21,107 +21,107 @@ export const styles = stylex.create({
   // text-micro text-white/45
   micro: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: "rgb(255 255 255 / 0.45)",
+    lineHeight: text.lineMicro,
+    color: colors.inkMuted,
   },
   // border border-white/10 p-2
   borderedPad2: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // mt-2 text-micro text-red-300
   micro2: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: "rgb(252 165 165 / 1)",
+    lineHeight: text.lineMicro,
+    color: colors.critical,
   },
   // text-micro text-[#E8E044]
   micro3: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.accent,
   },
   // grid grid-cols-2 gap-2 border border-white/10 p-2
   gridBorderedCols2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
-    borderWidth: "1px",
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // col-span-2 text-left text-micro text-red-300
   microLeftText: {
     gridColumn: "span 2 / span 2",
     textAlign: "left",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: "rgb(252 165 165 / 1)",
+    lineHeight: text.lineMicro,
+    color: colors.critical,
   },
   // grid grid-cols-3 gap-2 border border-white/10 p-2
   gridBorderedCols3: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.md,
-    borderWidth: "1px",
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
-    padding: space.md,
+    padding: space.s2,
   },
   // col-span-3 text-micro text-white/35
   micro4: {
     gridColumn: "span 3 / span 3",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: colors.textFaint,
+    lineHeight: text.lineMicro,
+    color: colors.inkFaint,
   },
   // col-span-3 text-left text-micro text-red-300
   microLeftText2: {
     gridColumn: "span 3 / span 3",
     textAlign: "left",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: "rgb(252 165 165 / 1)",
+    lineHeight: text.lineMicro,
+    color: colors.critical,
   },
   // block text-micro text-white/45
   blockMicro: {
     display: "block",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: "rgb(255 255 255 / 0.45)",
+    lineHeight: text.lineMicro,
+    color: colors.inkMuted,
   },
   // mt-1 h-8 border-white/15 bg-white/5 text-xs text-white
   xsWhite: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 1)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   // block text-micro text-white/35
   blockMicro2: {
     display: "block",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    color: colors.textFaint,
+    lineHeight: text.lineMicro,
+    color: colors.inkFaint,
   },
   // mt-1 h-8 border-white/10 bg-white/[0.02] text-xs text-white/50
   xs2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: "rgb(255 255 255 / 0.02)",
+    backgroundColor: colors.fillFaint,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.textSubtle,
   },
   // text-micro text-white/40
   micro5: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: "rgb(255 255 255 / 0.4)",
   },
   // text-white/65
@@ -145,12 +145,12 @@ export const styles = stylex.create({
   stackMd: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   stackedMd: {
     marginTop: {
-      default: space.md,
-      ":first-child": space.none,
+      default: space.s2,
+      ":first-child": 0,
     },
   },
 });

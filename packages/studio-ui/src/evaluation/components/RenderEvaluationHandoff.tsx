@@ -37,6 +37,7 @@ import type {
   RenderHandoffProgress,
   RenderHandoffSource,
 } from "../render-handoff";
+import { motionRecipe, textLayout } from "../../stylex/recipes.stylex";
 
 export type RenderEvaluationHandoffProps = {
   source: RenderHandoffSource;
@@ -130,7 +131,7 @@ export function RenderEvaluationHandoff({
         </div>
         <div {...stylex.props(styles.div2)}>
           <dt {...stylex.props(styles.renderJob)}>Render job</dt>
-          <dd {...stylex.props(styles.ddTruncateMono)}>{source.renderJobId}</dd>
+          <dd {...stylex.props([textLayout.truncate, styles.ddTruncateMono])}>{source.renderJobId}</dd>
         </div>
       </dl>
 
@@ -184,7 +185,7 @@ export function RenderEvaluationHandoff({
           onClick={() => void submit()}
           data-testid="render-evaluation-submit"
         >
-          {busy ? <Loader2 aria-hidden="true" {...stylex.props(styles.loader2Icon)} /> : null}
+          {busy ? <Loader2 aria-hidden="true" {...stylex.props([motionRecipe.spin, styles.loader2Icon])} /> : null}
           Evaluate this render
           <ArrowRight aria-hidden="true" {...stylex.props(styles.arrowrightIcon)} />
         </Button>
@@ -236,7 +237,7 @@ export function RenderEvaluationHandoff({
             ].map(([label, value]) => (
               <li key={label} {...stylex.props(styles.liFlex)}>
                 <span {...stylex.props(styles.spanUppercase)}>{label}</span>
-                <span {...stylex.props(styles.spanTruncateMono)}>{value}</span>
+                <span {...stylex.props([textLayout.truncate, styles.spanTruncateMono])}>{value}</span>
               </li>
             ))}
           </ol>

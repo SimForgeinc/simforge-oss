@@ -59,6 +59,14 @@ function parseRange(header: string | null, size: number): { start: number; end: 
   return { start, end: Math.min(end, size - 1) };
 }
 
+/** Whether the request's `If-None-Match` names `etag` (weak comparison, `*` included). */
+function matchesEtag(request: Request, etag: string): boolean {
+  return request.headers.get("if-none-match")?.split(",").some((candidate) => {
+    const value = candidate.trim().replace(/^W\//, "");
+    return value === "*" || value === etag;
+  }) ?? false;
+}
+
 /**
  * Serve a member whose digest the client pins, through this app.
  *
@@ -75,19 +83,40 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * Length is checked against the registry before a byte is sent, so a
  * truncated or replaced object fails here rather than halfway through a
  * parse.
+ *
+ * A revalidation whose `If-None-Match` names the member's digest answers 304
+ * without touching the store: access was just rechecked by the caller, and
+ * the ETag is the registry's content digest, so the client's copy is exactly
+ * these bytes. `map.xodr` alone is ~8.5 MB, and every editor and drive
+ * session reads all five sidecars from a worker, where only the browser's
+ * HTTP cache can reuse them.
  */
-async function attestedObject(
+export async function attestedObject(
+  request: Request,
   member: Pick<RegistryMember, "sha256" | "byteLength" | "mediaType">,
   storedAt: { bucket: string; key: string },
   headOnly: boolean,
 ): Promise<Response> {
+  const etag = `"${member.sha256}"`;
+  if (matchesEtag(request, etag)) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        etag,
+        "x-content-sha256": member.sha256,
+        "cache-control": REVALIDATE,
+        "x-content-type-options": "nosniff",
+        "content-security-policy": "sandbox",
+      },
+    });
+  }
   const size = await readLocalObjectSize(storedAt.bucket, storedAt.key);
   if (size === null) throw new MapAccessError("NotFound", "map_member_missing");
   if (size !== member.byteLength) throw new MapAccessError("MapCacheError", "map_member_integrity");
   const headers = new Headers({
     "content-type": member.mediaType,
     "content-length": String(size),
-    etag: `"${member.sha256}"`,
+    etag,
     "x-content-sha256": member.sha256,
     "cache-control": REVALIDATE,
     "x-content-type-options": "nosniff",
@@ -120,7 +149,7 @@ export async function streamCachedObject(
 ): Promise<Response> {
   let cached = await resolveCachedMapAsset(member.sha256);
   if (!cached && storedAt && storedAt.bucket !== MAP_CACHE_BUCKET) {
-    if (storedAt.attestDigest) return attestedObject(member, storedAt, headOnly);
+    if (storedAt.attestDigest) return attestedObject(request, member, storedAt, headOnly);
     const url = await getMapArtifactDownloadUrl(
       storedAt.mapVersionId,
       storedAt.key,
@@ -154,11 +183,7 @@ export async function streamCachedObject(
     "content-security-policy": "sandbox",
   });
   const etag = headers.get("etag")!;
-  const matches = request.headers.get("if-none-match")?.split(",").some((candidate) => {
-    const value = candidate.trim().replace(/^W\//, "");
-    return value === "*" || value === etag;
-  });
-  if (matches) return new Response(null, { status: 304, headers });
+  if (matchesEtag(request, etag)) return new Response(null, { status: 304, headers });
   const ifRange = request.headers.get("if-range");
   const range = parseRange(ifRange && ifRange !== etag ? null : request.headers.get("range"), cached.sizeBytes);
   if (range === "invalid") {

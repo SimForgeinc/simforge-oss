@@ -7,6 +7,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./dropdown-menu.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
@@ -73,7 +74,7 @@ const DropdownMenuItem = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & { inset?: boolean; xstyle?: DropdownStyle }
 >(({ className, inset, xstyle, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item ref={ref} {...compose([styles.item, inset ? styles.inset : null], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} {...props} />
+  <DropdownMenuPrimitive.Item ref={ref} {...compose([[motionRecipe.colors, styles.item], inset ? styles.inset : null], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} {...props} />
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
@@ -81,7 +82,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem> & { xstyle?: DropdownStyle }
 >(({ className, children, checked, xstyle, ...props }, ref) => (
-  <DropdownMenuPrimitive.CheckboxItem ref={ref} {...compose([styles.checkboxItem], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} checked={checked} {...props}>
+  <DropdownMenuPrimitive.CheckboxItem ref={ref} {...compose([[motionRecipe.colors, styles.checkboxItem]], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} checked={checked} {...props}>
     <span {...stylex.props(styles.indicator)}>
       <DropdownMenuPrimitive.ItemIndicator><Check {...stylex.props(styles.icon)} /></DropdownMenuPrimitive.ItemIndicator>
     </span>
@@ -94,7 +95,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.RadioItem>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.RadioItem> & { xstyle?: DropdownStyle }
 >(({ className, children, xstyle, ...props }, ref) => (
-  <DropdownMenuPrimitive.RadioItem ref={ref} {...compose([styles.radioItem], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} {...props}>
+  <DropdownMenuPrimitive.RadioItem ref={ref} {...compose([[motionRecipe.colors, styles.radioItem]], className ? `${DISABLED_CLASS} ${className}` : DISABLED_CLASS, xstyle)} {...props}>
     <span {...stylex.props(styles.indicator)}>
       <DropdownMenuPrimitive.ItemIndicator><Circle {...stylex.props(styles.radioDot)} /></DropdownMenuPrimitive.ItemIndicator>
     </span>

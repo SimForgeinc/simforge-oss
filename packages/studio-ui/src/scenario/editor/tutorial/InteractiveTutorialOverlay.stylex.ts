@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /** `animate-pulse`. */
 const pulse = stylex.keyframes({
@@ -12,19 +12,19 @@ export const styles = stylex.create({
   fixedInertInset0: {
     pointerEvents: "none",
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: "130",
   },
   // absolute inset-0 bg-black/20
   absInset0: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     backgroundColor: "rgb(0 0 0 / 0.2)",
   },
   // absolute border-2 border-[#E8E044] shadow-[0_0_0_4px_rgba(232,224,68,0.16),0_0_24px_rgba(232,224,68,0.3)]
   abs: {
     position: "absolute",
-    borderWidth: "2px",
+    borderWidth: stroke.thick,
     borderColor: colors.accent,
     boxShadow: "0 0 0 4px rgba(232, 224, 68, 0.16), 0 0 24px rgba(232, 224, 68, 0.3)",
   },
@@ -33,13 +33,13 @@ export const styles = stylex.create({
     pointerEvents: "auto",
     position: "absolute",
     width: "min(360px, calc(100vw - 24px))",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.55)",
     backgroundColor: "rgb(17 18 15 / 0.95)",
-    padding: space.xl,
-    color: "rgb(255 255 255 / 1)",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
-    backdropFilter: "blur(24px)",
+    padding: space.s4,
+    color: colors.ink,
+    boxShadow: shadows.elevation2xl,
+    backdropFilter: motion.blurPane,
     outline: {
       default: null,
       ":focus": "2px solid transparent",
@@ -53,7 +53,7 @@ export const styles = stylex.create({
   flexStartGap3: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -71,9 +71,9 @@ export const styles = stylex.create({
   },
   // mt-1.5 text-base font-semibold
   semiboldBase: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     fontWeight: text.weightSemibold,
   },
   // grid size-7 shrink-0 place-items-center text-white/55 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
@@ -85,23 +85,11 @@ export const styles = stylex.create({
     placeItems: "center",
     color: {
       default: "rgb(255 255 255 / 0.55)",
-      ":hover": "rgb(255 255 255 / 1)",
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":hover": colors.ink,
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-4
@@ -111,24 +99,24 @@ export const styles = stylex.create({
   },
   // mt-2 text-xs leading-5 text-white/60
   xs: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: "rgb(255 255 255 / 0.6)",
   },
   // mt-4 flex items-center gap-2 border border-[#E8E044]/30 bg-[#E8E044]/[0.08] px-3 py-2.5
   flexCenterBordered: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
-    borderWidth: "1px",
-    borderColor: "rgb(232 224 68 / 0.3)",
+    gap: space.s2,
+    borderWidth: stroke.hairline,
+    borderColor: colors.accentLineSubtle,
     backgroundColor: "rgb(232 224 68 / 0.08)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
   },
   // size-4 shrink-0 text-[#E8E044]
   tight: {
@@ -144,32 +132,31 @@ export const styles = stylex.create({
     flexShrink: "0",
     animationName: {
       default: pulse,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
-    borderRadius: "0",
     backgroundColor: colors.accent,
   },
   // text-xs font-medium text-[#E8E044]
   xsMedium: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.accent,
   },
   // mt-4 h-8 w-full
   wide: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     height: "2rem",
     width: "100%",
   },
   // mt-3 text-[10px] leading-4 text-white/40
   mt3TextLeading4: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: "10px",
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.4)",
   },
 });

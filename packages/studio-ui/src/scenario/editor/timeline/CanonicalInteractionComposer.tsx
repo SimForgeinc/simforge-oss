@@ -24,6 +24,7 @@ import { competingMotionRefusal } from "../competing-motion";
 import { uniqueTimelineInteractionId } from "./v1-timeline-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./CanonicalInteractionComposer.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 type TriggerKind = Trigger["kind"];
@@ -313,7 +314,7 @@ export function CanonicalInteractionComposer({
         </label>
       ) : null}
       <button
-        {...stylex.props(styles.semiboldBordered)}
+        {...stylex.props([focus.ringAccent, styles.semiboldBordered])}
         data-testid={`${testIdPrefix}-add`}
         aria-describedby={unavailableReason ? availabilityId : undefined}
         disabled={Boolean(unavailableReason)}

@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./table.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 type TableStyle = stylex.StyleXStyles;
 type TableProps = React.HTMLAttributes<HTMLTableElement> & { xstyle?: TableStyle };
@@ -83,7 +84,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, RowProps>(
     <tr
       ref={ref}
       {...props}
-      {...mergeStyleProps(stylex.props(styles.row, xstyle), className, style)}
+      {...mergeStyleProps(stylex.props([motionRecipe.colors, styles.row], xstyle), className, style)}
     />
   ),
 );
