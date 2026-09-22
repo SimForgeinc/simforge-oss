@@ -280,7 +280,7 @@ function buildIntent(
     sensorHosts,
     renderSpec: input.renderSpec,
     ...(input.engine === "native" ? {
-      renderTextures: input.renderProfile === "ml" ? "bc7-512" : "uastc-full",
+      renderTextures: nativeRenderTextureTier(input.renderProfile, input.renderSpec.sources),
       nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? 16 * 1024 ** 3,
       ...(input.nativeVramBudgetBytes === undefined ? {} : { nativeVramBudgetBytes: input.nativeVramBudgetBytes }),
     } : {}),
@@ -301,6 +301,29 @@ function buildIntent(
     ],
     seed: renderSeed(content, lineage.scenario_sha256),
   });
+}
+
+/**
+ * The native texture tier a render intent pins. `ml` renders always use the
+ * 512 px BC7 variants. Otherwise the policy (`SIMFORGE_NATIVE_TEXTURE_TIER_POLICY`)
+ * decides: `profile` (default, the historical behaviour) always renders full
+ * UASTC; `resolution` uses the 512 px variants when every camera is below
+ * `SIMFORGE_NATIVE_FULL_TEXTURE_MIN_HEIGHT` (default 720) rows, where full-size
+ * textures cannot resolve anyway and cost ~5x the download and VRAM.
+ * A quality tradeoff: the user decides before `resolution` becomes default.
+ */
+export function nativeRenderTextureTier(
+  renderProfile: string | undefined,
+  sources: readonly { modality: string; attributes: unknown }[],
+  env: NodeJS.ProcessEnv = process.env,
+): "uastc-full" | "bc7-512" {
+  if (renderProfile === "ml") return "bc7-512";
+  if (env.SIMFORGE_NATIVE_TEXTURE_TIER_POLICY?.trim() !== "resolution") return "uastc-full";
+  const minHeight = Number(env.SIMFORGE_NATIVE_FULL_TEXTURE_MIN_HEIGHT ?? 720);
+  const heights = sources
+    .filter((source) => source.modality === "rgb")
+    .map((source) => Number((source.attributes as { height?: number }).height ?? Infinity));
+  return heights.length > 0 && heights.every((height) => height < minHeight) ? "bc7-512" : "uastc-full";
 }
 
 export async function createRenderIntentJob(
