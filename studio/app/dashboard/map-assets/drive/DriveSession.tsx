@@ -762,10 +762,13 @@ export function DriveSession({
       ref={frameRef}
       role="application"
     >
+      {/* A free drive keeps the world exactly as it was: the map's default sky
+          stays and nothing re-lights it. Only a take, driven inside a scenario,
+          follows that scenario's authored weather and time of day. */}
       <EditorSceneEnvironmentBridge
-        active={mapLoaded}
+        active={mapLoaded && isTake}
         actorRenderer={bridge?.actors ?? null}
-        document={document}
+        document={isTake ? document : null}
         ownsViewer={false}
         quality={quality}
         viewer={viewer}

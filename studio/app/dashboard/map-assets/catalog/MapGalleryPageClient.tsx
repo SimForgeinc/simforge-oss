@@ -144,7 +144,7 @@ function MapGalleryWorld({
         target={target}
       />
       <EditorSceneEnvironmentBridge
-        active={mapLoaded && !driving}
+        active={mapLoaded}
         actorRenderer={actorRenderer}
         document={null}
         ownsViewer={false}
