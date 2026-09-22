@@ -518,7 +518,7 @@ function identityKey(identity: RenderArtifactIdentity): string {
  * sensor when the spec asked for sensor archives. This is the engine's
  * evidence contract (`nativeEvidenceFailure`), not a per-spec selection.
  */
-function expectedNativeClosure(intentValue: unknown): Set<string> {
+export function expectedNativeClosure(intentValue: unknown): Set<string> {
   const intent = parseRenderIntent(intentValue);
   const expected = new Set<string>();
   for (const role of ["manifest", "trace", "diagnostics"] as const) {

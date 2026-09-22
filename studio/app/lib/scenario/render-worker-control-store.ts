@@ -29,6 +29,7 @@ import {
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
+import { expectedNativeClosure } from "./jobs/local-native-render-store";
 import {
   ScenarioRenderIntentSchema,
   ScenarioRendererCapabilitySchema,
@@ -881,6 +882,11 @@ function identityKey(identity: RenderArtifactIdentity) {
 
 function expectedClosure(intentValue: unknown) {
   const intent = parseRenderIntent(intentValue);
+  if (intent.engine === "native") {
+    const expected = expectedNativeClosure(intent);
+    expected.delete(identityKey({ role: "diagnostics", actorId: null, sensorId: null, modality: null }));
+    return expected;
+  }
   const expected = new Set<string>();
   for (const role of ["manifest", "trace", "annotations"] as const) {
     if (intent.renderSpec.artifacts.includes(role)) {
