@@ -17,7 +17,7 @@ trace = simulate(resolvedInput, mapClosure, engineSemantics)
 | `mapClosureDigest` | `H(simforge.map-closure/v1, browserClosureSha256, colliderDigest)`: the published browser closure the editor loads plus the verified static-collider artifact built into the graph. |
 | `traceSha256` | The engine's native `traceDigest()` of the trace, never the gzip bytes. |
 | `simKey` | `H(simforge.sim-key/v1, resolvedInputDigest, mapClosureDigest, engineSemVer, solverVer, traceSchema[, trafficStepKey])`. Build digests are provenance (`engine_build`), never key material, so a rebuild with unchanged semantics hits the cache. `trafficStepKey` is present only when an external traffic step (server-side SUMO) merged actors into the trace. |
-| request key | `H(simforge.sim-request/v1, contentSha256, mapVersionId, browserClosureSha256, catalogSha256, engineSemVer, engineBuild, pipeline)`: a memo of what a document resolves to, not an identity. A miss only costs one re-resolution that dedupes into the same `simKey`. |
+| request key | `H(simforge.sim-request/v1, simContentSha256, mapVersionId, browserClosureSha256, catalogSha256, engineSemVer, engineBuild, pipeline, sumo)`, where `sumo` is `{sumoNetworkSha256, wasmSha256}` for SUMO documents and `null` otherwise: a memo of what a document resolves to, not an identity. A miss only costs one re-resolution that dedupes into the same `simKey`. |
 | `timelineSha256` | WS-B: `sha256(canonicalJson(timeline))`; the timeline is derived from the trace and the map's height source. |
 
 The editor's scenario worker and `simulateAuthoritative` (`@simforge-oss/compiler/node`)
@@ -79,6 +79,21 @@ checksum-bound PUTs → `complete`. The host verifies every object and records t
 result. A completion with a stale fence is refused. Scenario errors fail the
 request; infrastructure errors requeue it. `SIMFORGE_SIMULATION_INLINE=0` routes
 every request to runners.
+
+**SUMO traffic.** A SUMO document's traffic is part of its simulation. Every
+executor (the API inline, the local worker lane and the SC runner) builds the
+step the same way, with `hostTrafficStep` (`@simforge-oss/compiler/node`):
+the map version's `derived/sumo/` members, verified against
+`map_versions.sumo_network_sha256`, and the pinned SUMO runtime, staged once
+per process from the runtime bucket (`uniscenario/sumo-runtime/<version>/`)
+or from the claim's presigned URLs. The authored actors run with ambient off,
+SUMO runs one-way against that trace, and its vehicles are merged into the
+stored trace (see `sumo-worker-traffic.md`). A runner claim for a SUMO
+document carries the network members and the runtime; other claims do not. A
+SUMO document on a map version without a SUMO network fails with
+`sumo_network_unavailable`. The editor verifies its preview against
+`authoredTraceSha256` and then replays the stored trace, so its in-browser
+SUMO preview stands down.
 
 **Evaluation.** `POST /simulations/:simKey/evaluation` grades the stored trace
 with the native evaluator.

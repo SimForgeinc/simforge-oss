@@ -1,12 +1,20 @@
 import "server-only";
 
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import {
   loadSimulationMapClosure,
+  stagedSumoRuntime,
+  SUMO_RUNTIME_OBJECT_PREFIX,
   type SimulationMapClosure,
 } from "@simforge-oss/compiler/node";
+import { PINNED_SUMO_RUNTIME_VERSION, type SumoRuntime } from "@simforge-oss/engine/node";
 
 import { serveLocalMapAsset } from "@/app/lib/cloud/asset-response";
 import { queryOne } from "@/app/lib/db/data-api";
+import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
+import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 
 /**
  * The map closure an authoritative simulation runs against, built by the
@@ -36,12 +44,14 @@ export type SimulationMapIdentity = {
   mapVersionId: string;
   mapAssetId: string;
   browserClosureSha256: string;
+  /** `map_versions.sumo_network_sha256`: the SUMO network a SUMO document's traffic runs on. */
+  sumoNetworkSha256: string | null;
 };
 
 /** The immutable identity a closure is built from; readable without loading the closure. */
 export async function readSimulationMapIdentity(mapVersionId: string): Promise<SimulationMapIdentity> {
-  const row = await queryOne<{ id: string; source_map_asset_id: string | null; closure_sha256: string | null }>(
-    `SELECT mv.id, mv.source_map_asset_id, bs.closure_sha256
+  const row = await queryOne<{ id: string; source_map_asset_id: string | null; closure_sha256: string | null; sumo_network_sha256: string | null }>(
+    `SELECT mv.id, mv.source_map_asset_id, bs.closure_sha256, mv.sumo_network_sha256
        FROM simforge.map_versions mv
        LEFT JOIN simforge.browser_asset_sets bs
          ON bs.id = mv.browser_asset_set_id AND bs.map_version_id = mv.id
@@ -59,7 +69,12 @@ export async function readSimulationMapIdentity(mapVersionId: string): Promise<S
       `map version ${mapVersionId} has no available browser asset closure to simulate against`,
     );
   }
-  return { mapVersionId: row.id, mapAssetId: row.source_map_asset_id, browserClosureSha256: row.closure_sha256 };
+  return {
+    mapVersionId: row.id,
+    mapAssetId: row.source_map_asset_id,
+    browserClosureSha256: row.closure_sha256,
+    sumoNetworkSha256: row.sumo_network_sha256,
+  };
 }
 
 /** Resolve browser-asset member URLs through the route implementation (and a store redirect). */
@@ -110,6 +125,27 @@ export async function loadServerSimulationClosure(identity: SimulationMapIdentit
     if (closures.get(identity.mapVersionId) === loading) closures.delete(identity.mapVersionId);
     throw error;
   }
+}
+
+/** One browser asset member of a map version, through the same verified route the editor loads it from. */
+export async function readServerMapMember(mapVersionId: string, relativePath: string): Promise<Uint8Array> {
+  loadAttempt += 1;
+  const fetcher = mapMemberFetcher(`http://simforge-simulation-closure-${loadAttempt}.internal`);
+  const response = await fetcher(`/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${relativePath}`);
+  if (!response.ok) throw new Error(`map_member_unavailable: ${relativePath} (${response.status})`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * The pinned SUMO runtime the editor loads (`/api/simforge/sumo-runtime`),
+ * staged from the runtime bucket into this process's temp directory once and
+ * verified against the pin on load.
+ */
+export function serverSumoRuntime(): Promise<SumoRuntime> {
+  return stagedSumoRuntime(
+    path.join(tmpdir(), "simforge-sumo-runtime", PINNED_SUMO_RUNTIME_VERSION),
+    (file) => getS3ObjectBytes(SUMO_RUNTIME_BUCKET, `${SUMO_RUNTIME_OBJECT_PREFIX}${file}`),
+  );
 }
 
 /** Test seam: drop every cached closure. */
