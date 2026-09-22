@@ -11,7 +11,7 @@ import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSO
 
 import { migrate } from "../../../../scripts/migrate";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { execute, queryOne, queryRows, shutdownDatabase } from "../../db/data-api";
 import { approveRenderWorker, renderWorkerApprovalError } from "../control-plane-store";
 import { createRenderIntentJob } from "../render-intent-store";
 import {
@@ -21,6 +21,7 @@ import {
   reserveRenderArtifactV2,
   refreshRenderInputV2,
   renderWorkerIdentity,
+  readRenderIntentText,
 } from "../render-worker-control-store";
 import { AppendRenderProgressV2Schema, ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
 import { canonicalJsonSha256 } from "../core";
@@ -310,12 +311,35 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   );
   assert.ok(job, "the render intent must enqueue against the seeded lineage");
 
+  // A candidate that cannot be leased must not fail the poll (the queue is
+  // oldest first, so a throw would pin every worker behind it): it is skipped
+  // and stays queued, unleased.
+  const digest = await queryOne<{ intent_sha256: string }>(
+    `SELECT intent_sha256 FROM simforge.render_jobs WHERE id = :id`, { id: job.id },
+  );
+  await execute(`UPDATE simforge.render_jobs SET intent_sha256 = :bad WHERE id = :id`, { id: job.id, bad: DIGEST("0") });
+  assert.equal((await claimResponseV2(registration.registrationId, WORKER_NODE_ID)).type, "job.none");
+  const skipped = await queryOne<{ job_state: string; attempt_count: number }>(
+    `SELECT job_state, attempt_count FROM simforge.render_jobs WHERE id = :id`, { id: job.id },
+  );
+  assert.deepEqual({ ...skipped, attempt_count: Number(skipped?.attempt_count) }, { job_state: "queued", attempt_count: 0 });
+  await execute(`UPDATE simforge.render_jobs SET intent_sha256 = :good WHERE id = :id`, { id: job.id, good: digest!.intent_sha256 });
+
   const lease = await claimResponseV2(registration.registrationId, WORKER_NODE_ID);
   assert.equal(lease.type, "job.leased");
   assert.equal("jobId" in lease ? lease.jobId : null, job.id);
   assert.ok("lease" in lease && lease.lease.fenceToken.length >= 32);
   assert.ok("intent" in lease && "intentSha256" in lease);
   assert.equal(hashRenderIntent(lease.intent), lease.intentSha256, "the worker must accept the leased multi-camera intent digest");
+  // Large-map intents exceed one Data API response, so the lease reads them in
+  // slices; a slice far smaller than the intent must reassemble it exactly.
+  const stored = await queryOne<{ text: string }>(
+    `SELECT render_intent::text AS text FROM simforge.render_jobs WHERE id = :id`, { id: job.id },
+  );
+  const sliced = await readRenderIntentText(queryRows, job.id, 97);
+  assert.ok(stored && stored.text.length > 97 * 3, "the fixture intent must span several slices");
+  assert.equal(sliced, stored.text);
+  assert.equal(await readRenderIntentText(queryRows, "usrj_missing"), null);
   const refreshRequest = {
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken,
     workerNodeId: WORKER_NODE_ID, inputId: "openscenario",
