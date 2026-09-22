@@ -97,7 +97,7 @@
     "vitest": "^3.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --sourcemap --clean --out-dir dist && rm -rf dist/scripts && cp -r scripts dist/scripts",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --clean --out-dir dist && rm -rf dist/scripts && cp -r scripts dist/scripts && cp scripts/sumo-opendrive.typ.xml dist/",
     "prepack": "pnpm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
