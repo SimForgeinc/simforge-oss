@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapSwitcherDropdown.stylex";
 
 import { useRef, useState, useMemo, useEffect } from "react";
 import { ChevronDown, Search, Check } from "lucide-react";
@@ -56,24 +56,24 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className={stylex.props(styles.s_749).className}
+          {...stylex.props(styles.dropdownTrigger)}
         >
-          <span className={stylex.props(styles.s_750).className}>{currentAsset.name}</span>
-          <ChevronDown className={stylex.props(styles.s_751).className} />
+          <span {...stylex.props(styles.currentMapName)}>{currentAsset.name}</span>
+          <ChevronDown {...stylex.props(styles.dropdownChevron)} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" xstyle={styles.s_752} sideOffset={4}>
+      <DropdownMenuContent align="start" xstyle={styles.dropdownContent} sideOffset={4}>
         {/* Search input */}
-        <div className={stylex.props(styles.s_753).className}>
-          <div className={stylex.props(styles.s_987).className}>
-            <Search className={stylex.props(styles.s_755).className} />
+        <div {...stylex.props(styles.searchSection)}>
+          <div {...stylex.props(styles.searchFieldWrapper)}>
+            <Search {...stylex.props(styles.searchIcon)} />
             <Input
               ref={inputRef}
               type="search"
               placeholder="Search maps..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              xstyle={styles.s_756}
+              xstyle={styles.searchInput}
               onKeyDown={(e) => {
                 // Prevent dropdown from closing on key presses
                 e.stopPropagation();
@@ -90,9 +90,9 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
         </div>
 
         {/* Map list */}
-        <div className={stylex.props(styles.s_757).className}>
+        <div {...stylex.props(styles.mapList)}>
           {filtered.length === 0 ? (
-            <p className={stylex.props(styles.s_758).className}>No maps found</p>
+            <p {...stylex.props(styles.noResultsMessage)}>No maps found</p>
           ) : (
             filtered.map((asset) => {
               const isCurrent = asset.map_asset_id === currentAsset.map_asset_id;
@@ -114,19 +114,19 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     if (!isCurrent) switchToMap(asset.map_asset_id);
                     setOpen(false);
                   }}
-                  className={stylex.props(styles.switcherItem, isCurrent ? styles.switcherItemCurrent : styles.switcherItemOther).className}
+                  {...stylex.props(styles.switcherItem, isCurrent ? styles.switcherItemCurrent : styles.switcherItemOther)}
                 >
                   {isCurrent ? (
-                    <Check className={stylex.props(styles.s_759).className} />
+                    <Check {...stylex.props(styles.selectedMapIcon)} />
                   ) : (
-                    <div className={stylex.props(styles.s_760).className} />
+                    <div {...stylex.props(styles.unselectedMapIndicator)} />
                   )}
-                  <div className={stylex.props(styles.s_761).className}>
-                    <p className={stylex.props(styles.switcherLabel, isCurrent && styles.switcherLabelCurrent).className}>
+                  <div {...stylex.props(styles.mapItemText)}>
+                    <p {...stylex.props(styles.switcherLabel, isCurrent && styles.switcherLabelCurrent)}>
                       {asset.name}
                     </p>
                     {place && (
-                      <p className={stylex.props(styles.s_762).className}>{place}</p>
+                      <p {...stylex.props(styles.mapLocation)}>{place}</p>
                     )}
                   </div>
                 </button>

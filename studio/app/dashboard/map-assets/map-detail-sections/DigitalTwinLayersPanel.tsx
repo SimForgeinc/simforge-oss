@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./DigitalTwinLayersPanel.stylex";
 
 import { useCallback, useState } from "react";
 import { Building2, Check, Sun, Trash2, TreePine } from "lucide-react";
@@ -36,34 +36,32 @@ export function DigitalTwinLayersPanel() {
   };
 
   return (
-    <div className={stylex.props(styles.s_426).className}>
+    <div {...stylex.props(styles.panel)}>
       {/* `space-y-1.5` lives on the children here: the label is an inline
           `<span>`, so a flex column would blockify it and change its line box. */}
       <div>
-        <span className={stylex.props(styles.s_636).className}>Render quality</span>
-        <div className={stylex.props(styles.s_429, styles.stackY1_5).className}>
+        <span {...stylex.props(styles.qualityLabel)}>Render quality</span>
+        <div {...stylex.props(styles.qualityOptions, styles.stackY1_5)}>
           {QUALITY_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => chooseQuality(value)}
-              className={
-                stylex.props(
+              {...stylex.props(
                   styles.qualitySegment,
                   quality === value ? styles.qualitySegmentActive : styles.qualitySegmentInactive,
-                ).className
-              }
+                )}
             >
               {label}
             </button>
           ))}
         </div>
-        <p className={stylex.props(styles.s_430, styles.stackY1_5).className}>
+        <p {...stylex.props(styles.qualityDescription, styles.stackY1_5)}>
           Changes apply to the shared scenario-editor and digital-twin viewer on reload.
         </p>
       </div>
 
-      <div className={stylex.props(styles.s_431).className}>
+      <div {...stylex.props(styles.layerStatusList)}>
         <LayerStatus icon={Building2} label="Streamed city geometry and road surface" />
         <LayerStatus icon={TreePine} label="Distance-admitted vegetation" />
         <LayerStatus icon={Sun} label="Sky, sun shadows, and street luminaires" />
@@ -73,9 +71,9 @@ export function DigitalTwinLayersPanel() {
         type="button"
         onClick={handleClearCache}
         disabled={cacheState === "clearing"}
-        className={stylex.props(styles.s_432).className}
+        {...stylex.props(styles.clearCacheButton)}
       >
-        <Trash2 className={stylex.props(styles.s_927).className} />
+        <Trash2 {...stylex.props(styles.clearCacheIcon)} />
         {cacheState === "clearing"
           ? "Clearing cache…"
           : cacheState === "cleared"
@@ -94,10 +92,10 @@ function LayerStatus({
   label: string;
 }) {
   return (
-    <div className={stylex.props(styles.s_434).className}>
-      <Icon className={stylex.props(styles.s_435).className} />
-      <span className={stylex.props(styles.s_436).className}>{label}</span>
-      <Check className={stylex.props(styles.s_496).className} />
+    <div {...stylex.props(styles.layerStatusRow)}>
+      <Icon {...stylex.props(styles.layerIcon)} />
+      <span {...stylex.props(styles.layerLabel)}>{label}</span>
+      <Check {...stylex.props(styles.layerCheckIcon)} />
     </div>
   );
 }

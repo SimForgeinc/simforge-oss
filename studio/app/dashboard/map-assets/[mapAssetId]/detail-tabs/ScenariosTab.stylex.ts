@@ -1,0 +1,96 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  scenariosContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.lg,
+  },
+  newScenarioSection: {
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.border,
+    padding: space.lg,
+  },
+  newScenarioRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: space.lg,
+  },
+  scenarioContentStack: {
+    minWidth: 0,
+  },
+  newScenarioTitle: {
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 500,
+    color: colors.text,
+  },
+  newScenarioDescription: {
+    marginTop: space.xs,
+    fontSize: "11px",
+    lineHeight: "1rem",
+    color: colors.mutedForeground,
+  },
+  scenarioActionButton: {
+    flexShrink: 0,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.border,
+    paddingInline: "0.625rem",
+    paddingBlock: space.xs,
+    fontSize: "11px",
+    fontWeight: 500,
+    color: colors.text,
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: "150ms",
+    backgroundColor: { default: null, ":hover": colors.muted },
+    cursor: { default: null, ":disabled": "not-allowed" },
+    opacity: { default: null, ":disabled": 0.6 },
+  },
+  templateScenariosTitle: {
+    fontSize: "10px",
+    fontWeight: 500,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: colors.mutedForeground,
+  },
+  emptyTemplatesMessage: {
+    marginTop: space.md,
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: colors.mutedForeground,
+  },
+  templateScenariosList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.sm,
+    marginTop: space.md,
+  },
+  templateScenarioItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.lg,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.border,
+    padding: space.md,
+  },
+  templateScenarioName: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 500,
+    color: colors.text,
+  },
+  templateActorCount: {
+    fontSize: "11px",
+    color: colors.mutedForeground,
+  },
+});

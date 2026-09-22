@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapStatsDisplay.stylex";
 
 import { useState, useCallback, useMemo } from "react";
 import type {
@@ -38,25 +38,25 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className={stylex.props(styles.s_634).className}
+        {...stylex.props(styles.sectionToggle)}
         aria-expanded={open}
       >
         <ChevronRight
-          className={stylex.props(styles.chevronMutedShrink, open && styles.rotate90).className}
+          {...stylex.props(styles.chevronMutedShrink, open && styles.rotate90)}
         />
-        <Icon className={stylex.props(styles.s_635).className} />
-        <span className={stylex.props(styles.s_636).className}>{label}</span>
+        <Icon {...stylex.props(styles.sectionIcon)} />
+        <span {...stylex.props(styles.sectionLabel)}>{label}</span>
       </button>
-      {open && <div className={stylex.props(styles.s_637).className}>{children}</div>}
+      {open && <div {...stylex.props(styles.sectionContent)}>{children}</div>}
     </div>
   );
 }
 
 function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className={stylex.props(styles.s_648).className}>
-      <span className={stylex.props(styles.s_973).className}>{label}</span>
-      <span className={stylex.props(styles.s_650).className}>{value}</span>
+    <div {...stylex.props(styles.statRow)}>
+      <span {...stylex.props(styles.statLabel)}>{label}</span>
+      <span {...stylex.props(styles.statValue)}>{value}</span>
     </div>
   );
 }
@@ -150,15 +150,15 @@ export function MapStatsDisplay({
   }
 
   return (
-    <div className={stylex.props(styles.s_641).className}>
+    <div {...stylex.props(styles.statsContainer)}>
       {/* Expand / Collapse all */}
-      <div className={stylex.props(styles.s_642).className}>
+      <div {...stylex.props(styles.expandControls)}>
         <button
           type="button"
           onClick={toggleAll}
-          className={stylex.props(styles.s_643).className}
+          {...stylex.props(styles.expandAllButton)}
         >
-          <ChevronsUpDown className={stylex.props(styles.s_927).className} />
+          <ChevronsUpDown {...stylex.props(styles.expandCollapseIcon)} />
           {allExpanded ? "Collapse all" : "Expand all"}
         </button>
       </div>
@@ -172,11 +172,11 @@ export function MapStatsDisplay({
             <StatRow
               label="Speed limits (mph)"
               value={
-                <span className={stylex.props(styles.s_416).className}>
+                <span {...stylex.props(styles.speedLimitList)}>
                   {rn.speed_limits_mph.map((s) => (
                     <span
                       key={s}
-                      className={stylex.props(styles.s_417).className}
+                      {...stylex.props(styles.speedLimitValue)}
                     >
                       {s}
                     </span>
@@ -209,7 +209,7 @@ export function MapStatsDisplay({
                 overtureCrosswalkSurvivors && overtureCrosswalkSurvivors > 0 ? (
                   <>
                     {fmt(fi.crosswalks.total + overtureCrosswalkSurvivors)}
-                    <span className={stylex.props(styles.s_418).className}>
+                    <span {...stylex.props(styles.crosswalkSourceDetail)}>
                       ({fmt(fi.crosswalks.total)} in-house + {fmt(overtureCrosswalkSurvivors)} Overture)
                     </span>
                   </>
@@ -269,8 +269,8 @@ export function MapStatsDisplay({
             <div>
               <StatRow label="Signalized Junctions" value={fmt(fi.junctions.signalized)} />
               {rn?.signal_breakdown?.traffic_lights != null && rn.signal_breakdown.traffic_lights > 0 && (
-                <div className={stylex.props(styles.s_421).className}>
-                  <span className={stylex.props(styles.s_698).className}>({fmt(rn.signal_breakdown.traffic_lights)} traffic lights)</span>
+                <div {...stylex.props(styles.signalDetailRow)}>
+                  <span {...stylex.props(styles.signalDetailText)}>({fmt(rn.signal_breakdown.traffic_lights)} traffic lights)</span>
                 </div>
               )}
             </div>
@@ -281,8 +281,8 @@ export function MapStatsDisplay({
             <div>
               <StatRow label="Stop Junctions" value={fmt(fi.junctions.stop_sign_controlled)} />
               {rn?.signal_breakdown?.stop_signs != null && rn.signal_breakdown.stop_signs > 0 && (
-                <div className={stylex.props(styles.s_421).className}>
-                  <span className={stylex.props(styles.s_698).className}>({fmt(rn.signal_breakdown.stop_signs)} stop signs)</span>
+                <div {...stylex.props(styles.signalDetailRow)}>
+                  <span {...stylex.props(styles.signalDetailText)}>({fmt(rn.signal_breakdown.stop_signs)} stop signs)</span>
                 </div>
               )}
             </div>
@@ -322,11 +322,11 @@ export function MapStatsDisplay({
             label="Phase timing"
             value={
               sig.has_signal_phase_timing ? (
-                <span className={stylex.props(styles.s_423).className}>
+                <span {...stylex.props(styles.phaseTimingAvailable)}>
                   Available
                 </span>
               ) : (
-                <span className={stylex.props(styles.s_424).className}>
+                <span {...stylex.props(styles.phaseTimingUnavailable)}>
                   Not available
                 </span>
               )
@@ -392,7 +392,7 @@ export function MapStatsDisplay({
               <StatRow key={label} label={label} value={fmt(count)} />
             ))}
             {attribution && (
-              <p className={stylex.props(styles.s_425).className}>
+              <p {...stylex.props(styles.providerAttribution)}>
                 {attribution}
               </p>
             )}

@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./ScenariosSection.stylex";
 
 import { ChevronRight, SquarePen } from "lucide-react";
 import Link from "next/link";
@@ -39,15 +39,15 @@ export function ScenariosSection({
 
   return (
     <section>
-      <div className={stylex.props(styles.s_961).className}>
+      <div {...stylex.props(styles.sectionHeader)}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className={stylex.props(styles.s_962).className}
+          {...stylex.props(styles.scenarioToggle)}
           aria-expanded={open}
         >
           <ChevronRight
-            className={stylex.props(styles.chevron, open && styles.rotate90).className}
+            {...stylex.props(styles.chevron, open && styles.rotate90)}
           />
           Scenarios ({scenarios.length})
         </button>
@@ -57,13 +57,13 @@ export function ScenariosSection({
               <TooltipTrigger asChild>
                 <Link
                   href={primaryEditorHref}
-                  className={stylex.props(styles.s_388).className}
+                  {...stylex.props(styles.editorLink)}
                   aria-label="Open latest scenario in editor"
                 >
-                  <SquarePen className={stylex.props(styles.s_927).className} />
+                  <SquarePen {...stylex.props(styles.editorIcon)} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="left" xstyle={styles.s_948}>
+              <TooltipContent side="left" xstyle={styles.editorTooltip}>
                 Open latest scenario in editor
               </TooltipContent>
             </Tooltip>
@@ -72,26 +72,26 @@ export function ScenariosSection({
       </div>
       {open &&
         (scenarios.length === 0 ? (
-          <p className={stylex.props(styles.s_818).className}>No scenarios yet.</p>
+          <p {...stylex.props(styles.emptyState)}>No scenarios yet.</p>
         ) : (
-          <ul className={stylex.props(styles.s_819).className}>
+          <ul {...stylex.props(styles.scenarioList)}>
             {scenarios.map((scenario) => (
               <li
                 key={scenario.id}
-                className={stylex.props(styles.s_393).className}
+                {...stylex.props(styles.scenarioItem)}
               >
-                <div className={stylex.props(styles.s_919).className}>
+                <div {...stylex.props(styles.scenarioDetails)}>
                   <Link
                     href={buildDashboardScenarioEditorHref({
                       scenarioId: scenario.id,
                       mapName,
                     })}
-                    className={stylex.props(styles.s_395).className}
+                    {...stylex.props(styles.scenarioLink)}
                   >
                     {scenario.displayName}
                   </Link>
                   <span
-                    className={stylex.props(styles.s_973).className}
+                    {...stylex.props(styles.scenarioTimestamp)}
                     title={new Date(scenario.createdAt).toLocaleString(undefined, {
                       dateStyle: "medium",
                       timeStyle: "short",

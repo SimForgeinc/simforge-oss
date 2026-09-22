@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./AdditionalArtifactsPanel.stylex";
 import { Paperclip } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
@@ -21,9 +21,9 @@ export function AdditionalArtifactsPanel({
   onFilesChange,
 }: AdditionalArtifactsPanelProps) {
   return (
-    <div className={stylex.props(styles.s_258).className}>
-      <h2 className={stylex.props(styles.s_259).className}>Additional artifacts</h2>
-      <p className={stylex.props(styles.s_260).className}>
+    <div {...stylex.props(styles.artifactsPanel)}>
+      <h2 {...stylex.props(styles.artifactsHeading)}>Additional artifacts</h2>
+      <p {...stylex.props(styles.artifactsDescription)}>
         Optional. Extra media or formats (e.g. .fbx, .mp4, images) beyond the three required files above.
       </p>
       <Button
@@ -32,7 +32,7 @@ export function AdditionalArtifactsPanel({
         size="sm"
         onClick={() => inputRef.current?.click()}
       >
-        <Paperclip className={stylex.props(styles.s_596).className} />
+        <Paperclip {...stylex.props(styles.attachmentIcon)} />
         {files.length > 0 ? "Add more files" : "Choose files"}
       </Button>
       <input
@@ -40,15 +40,15 @@ export function AdditionalArtifactsPanel({
         type="file"
         multiple
         ref={inputRef}
-        className={stylex.props(styles.s_373).className}
+        {...stylex.props(styles.fileInput)}
         onChange={onFilesChange}
       />
       {files.length > 0 && (
-        <ul className={stylex.props(styles.s_263).className}>
+        <ul {...stylex.props(styles.artifactsList)}>
           {files.map((f, i) => (
-            <li key={f.name} className={stylex.props(styles.s_264).className}>
-              <span className={stylex.props(styles.s_941).className}>{f.name}</span>
-              <Badge variant="outline" xstyle={styles.s_266}>
+            <li key={f.name} {...stylex.props(styles.artifactItem)}>
+              <span {...stylex.props(styles.artifactFilename)}>{f.name}</span>
+              <Badge variant="outline" xstyle={styles.artifactTypeBadge}>
                 {artifactTypeFromExtension(f.name) ?? "?"}
               </Badge>
               <UploadStatusBadge upload={uploads[`artifact-${i}`]} />

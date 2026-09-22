@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./InsightsTab.stylex";
 
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef } from "react";
 import { ChevronRight, Loader2, X } from "lucide-react";
@@ -100,13 +100,13 @@ export function InsightsTab({
   }, [sortedCandidates, activeFilter]);
 
   return (
-    <div className={stylex.props(styles.s_993).className}>
+    <div {...stylex.props(styles.insightsContainer)}>
       {familyGroups.length > 0 && (
         <section>
-          <h3 className={stylex.props(styles.s_959).className}>
+          <h3 {...stylex.props(styles.scenarioFamiliesHeading)}>
             Scenario Families
           </h3>
-          <div className={stylex.props(styles.s_960).className}>
+          <div {...stylex.props(styles.scenarioFamilyList)}>
             {familyGroups.map((group) => (
               <ScenarioFamilyCard
                 key={group.family.id}
@@ -128,24 +128,24 @@ export function InsightsTab({
 
       {(candidateLocations.length > 0 || candidateLocationsLoading) && (
         <section>
-          <div className={stylex.props(styles.s_961).className}>
+          <div {...stylex.props(styles.candidateLocationsHeader)}>
             <button
               type="button"
               onClick={() => setExplorerOpen((o) => !o)}
-              className={stylex.props(styles.s_962).className}
+              {...stylex.props(styles.candidateLocationsToggle)}
               aria-expanded={explorerOpen}
             >
               <ChevronRight
-                className={stylex.props(styles.chevron, explorerOpen && styles.rotate90).className}
+                {...stylex.props(styles.chevron, explorerOpen && styles.rotate90)}
               />
               Candidate Locations
               {candidateLocationsLoading ? (
-                <span className={stylex.props(styles.s_979).className}>
-                  <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
+                <span {...stylex.props(styles.loadingIndicator)}>
+                  <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
                   <span>Loading…</span>
                 </span>
               ) : candidateLocations.length > 0 ? (
-                <span className={stylex.props(styles.s_965).className}>
+                <span {...stylex.props(styles.candidateCountBadge)}>
                   {activeFilter ? `${filteredCandidates.length}/${candidateLocations.length}` : candidateLocations.length}
                 </span>
               ) : null}
@@ -154,19 +154,19 @@ export function InsightsTab({
               <button
                 type="button"
                 onClick={() => setActiveFilter(null)}
-                className={stylex.props(styles.s_966).className}
+                {...stylex.props(styles.activeFilterButton)}
               >
                 {activeFilter.type === "family"
                   ? familyGroups.find((g) => g.family.id === activeFilter.id)?.family.name ?? activeFilter.id
                   : humanizeTag(activeFilter.id)}
-                <X className={stylex.props(styles.s_967).className} />
+                <X {...stylex.props(styles.clearFilterIcon)} />
               </button>
             )}
           </div>
 
           {explorerOpen && (
-            <div className={stylex.props(styles.s_968).className}>
-              <div className={stylex.props(styles.s_969).className}>
+            <div {...stylex.props(styles.candidateExplorerContent)}>
+              <div {...stylex.props(styles.familyFilterChips)}>
                 {familyGroups.map((group) => {
                   const isActive = activeFilter?.type === "family" && activeFilter.id === group.family.id;
                   return (
@@ -176,13 +176,13 @@ export function InsightsTab({
                       onClick={() =>
                         setActiveFilter(isActive ? null : { type: "family", id: group.family.id })
                       }
-                      className={stylex.props(styles.insightChip, isActive ? styles.insightChipActive : styles.insightChipIdle).className}
+                      {...stylex.props(styles.insightChip, isActive ? styles.insightChipActive : styles.insightChipIdle)}
                     >
                       {group.family.name}
                       {!candidateLocationsLoading && (
                         <>
                           {" "}
-                          <span className={stylex.props(styles.s_970).className}>({group.candidates.length})</span>
+                          <span {...stylex.props(styles.familyCandidateCount)}>({group.candidates.length})</span>
                         </>
                       )}
                     </button>
@@ -191,15 +191,15 @@ export function InsightsTab({
               </div>
 
               {candidateLocationsLoading ? (
-                <p className={stylex.props(styles.s_971).className}>
-                  <Loader2 className={stylex.props(styles.s_972).className} /> Loading…
+                <p {...stylex.props(styles.candidateLoadingMessage)}>
+                  <Loader2 {...stylex.props(styles.candidateLoadingSpinner)} /> Loading…
                 </p>
               ) : filteredCandidates.length === 0 ? (
-                <p className={stylex.props(styles.s_973).className}>
+                <p {...stylex.props(styles.candidateEmptyMessage)}>
                   {activeFilter ? "No candidates match this filter." : "No candidate locations computed yet."}
                 </p>
               ) : (
-                <ul className={stylex.props(styles.s_986).className}>
+                <ul {...stylex.props(styles.candidateLocationList)}>
                   {filteredCandidates.map((candidate) => (
                     <li key={candidate.id}>
                       <CandidateLocationCard
@@ -245,50 +245,50 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
       : null;
 
     return (
-      <div ref={ref} className={stylex.props(styles.s_975).className}>
+      <div ref={ref} {...stylex.props(styles.scenarioFamilyCard)}>
         <button
           type="button"
           onClick={onToggle}
-          className={stylex.props(styles.s_976).className}
+          {...stylex.props(styles.scenarioFamilyToggle)}
         >
           <ChevronRight
-            className={stylex.props(styles.chevronMutedShrink, expanded && styles.rotate90).className}
+            {...stylex.props(styles.chevronMutedShrink, expanded && styles.rotate90)}
           />
-          <Icon className={stylex.props(styles.s_977).className} />
-          <span className={stylex.props(styles.s_978).className}>{group.family.name}</span>
+          <Icon {...stylex.props(styles.scenarioFamilyIcon)} />
+          <span {...stylex.props(styles.scenarioFamilyName)}>{group.family.name}</span>
           {loading ? (
-            <span className={stylex.props(styles.s_979).className}>
-              <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
+            <span {...stylex.props(styles.loadingIndicator)}>
+              <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
               <span>Loading…</span>
             </span>
           ) : (
-            <span className={stylex.props(styles.s_981).className}>
+            <span {...stylex.props(styles.scenarioFamilyLocationCount)}>
               {group.candidates.length} location{group.candidates.length !== 1 ? "s" : ""}
             </span>
           )}
         </button>
 
         {expanded && (
-          <div className={stylex.props(styles.s_982).className}>
+          <div {...stylex.props(styles.expandedFamilyContent)}>
             {tagTooltip ? (
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className={stylex.props(styles.s_983, styles.stackY2_5).className}>
+                    <button type="button" {...stylex.props(styles.familyDescriptionTrigger, styles.stackY2_5)}>
                       {group.family.description}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" xstyle={styles.s_984}>
+                  <TooltipContent side="bottom" xstyle={styles.familyTagsTooltip}>
                     {tagTooltip}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <p className={stylex.props(styles.s_985, styles.stackY2_5).className}>{group.family.description}</p>
+              <p {...stylex.props(styles.familyDescription, styles.stackY2_5)}>{group.family.description}</p>
             )}
 
             {group.candidates.length > 0 && (
-              <ul className={stylex.props(styles.s_986, styles.stackY2_5).className}>
+              <ul {...stylex.props(styles.candidateLocationList, styles.stackY2_5)}>
                 {group.candidates.map((candidate: CandidateLocation) => (
                   <li key={candidate.id}>
                     <CandidateLocationCard

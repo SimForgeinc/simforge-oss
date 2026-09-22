@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles, bridge } from "../map-assets.stylex";
+import { styles } from "./VideosSection.stylex";
 
 import { ChevronRight, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
@@ -41,16 +41,16 @@ export function VideosSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        className={stylex.props(styles.s_566).className}
+        {...stylex.props(styles.videosToggleButton)}
         aria-expanded={open}
       >
         <ChevronRight
-          className={stylex.props(styles.chevron, open && styles.rotate90).className}
+          {...stylex.props(styles.chevron, open && styles.rotate90)}
         />
         Videos
       </button>
       {open && (
-        <ul className={stylex.props(styles.s_968).className}>
+        <ul {...stylex.props(styles.videosList)}>
           {mp4Artifacts.map((artifact) => {
             const proxyUrl = s3UriToMapAssetProxyUrl(artifact.uri, assetId);
             if (!proxyUrl) return null;
@@ -68,9 +68,9 @@ export function VideosSection({
                   <button
                     type="button"
                     onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                    className={stylex.props(styles.s_545).className + " " + bridge.s_545}
+                    {...stylex.props(styles.previewVideoButton)}
                   >
-                    <div className={stylex.props(styles.s_546).className}>
+                    <div {...stylex.props(styles.previewVideoFrame)}>
                       <video
                         // `#t=0.1` nudges the element to decode and paint an
                         // actual frame; the poster covers the gap until then.
@@ -80,15 +80,15 @@ export function VideosSection({
                         playsInline
                         preload="metadata"
                         aria-label={label}
-                        className={stylex.props(styles.s_547).className}
+                        {...stylex.props(styles.previewVideo)}
                       />
-                      <div className={stylex.props(styles.s_548).className}>
-                        <span className={stylex.props(styles.s_549).className + " " + bridge.s_549}>
-                          <Play className={stylex.props(styles.s_550).className} />
+                      <div {...stylex.props(styles.previewPlayOverlay)}>
+                        <span {...stylex.props(styles.previewPlayButton)}>
+                          <Play {...stylex.props(styles.previewPlayIcon)} />
                         </span>
                       </div>
                     </div>
-                    <span className={stylex.props(styles.s_551).className}>
+                    <span {...stylex.props(styles.previewVideoLabel)}>
                       {label}
                     </span>
                   </button>
@@ -102,14 +102,14 @@ export function VideosSection({
                 <button
                   type="button"
                   onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                  className={stylex.props(styles.s_552).className + " " + bridge.s_552}
+                  {...stylex.props(styles.compactVideoButton)}
                 >
-                  <div className={stylex.props(styles.s_553).className}>
-                    <span className={stylex.props(styles.s_554).className + " " + bridge.s_554}>
-                      <Play className={stylex.props(styles.s_555).className} />
+                  <div {...stylex.props(styles.compactPlayContainer)}>
+                    <span {...stylex.props(styles.compactPlayButton)}>
+                      <Play {...stylex.props(styles.compactPlayIcon)} />
                     </span>
                   </div>
-                  <span className={stylex.props(styles.s_556).className}>
+                  <span {...stylex.props(styles.compactVideoLabel)}>
                     {label}
                   </span>
                 </button>

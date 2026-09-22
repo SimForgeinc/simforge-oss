@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../../map-assets.stylex";
+import { styles } from "./AnalyticsTab.stylex";
 
 import { Loader2 } from "lucide-react";
 import type {
@@ -38,17 +38,17 @@ export function AnalyticsTab({
   if (viewMode === "3d") {
     if (threeDStatsLoading) {
       return (
-        <div className={stylex.props(styles.s_995).className} role="status" aria-live="polite">
-          <Loader2 className={stylex.props(styles.s_996).className} aria-hidden="true" />
-          <span className={stylex.props(styles.s_997).className}>Loading 3D statistics</span>
+        <div {...stylex.props(styles.loadingState)} role="status" aria-live="polite">
+          <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
+          <span {...stylex.props(styles.loadingMessage)}>Loading 3D statistics</span>
         </div>
       );
     }
 
     if (!threeDStats) {
       return (
-        <div className={stylex.props(styles.s_1003).className}>
-          <div className={stylex.props(styles.s_1004).className}>
+        <div {...stylex.props(styles.emptyState)}>
+          <div {...stylex.props(styles.emptyStateIconWrapper)}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -59,14 +59,14 @@ export function AnalyticsTab({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={stylex.props(styles.s_1005).className}
+              {...stylex.props(styles.emptyStateIcon)}
             >
               <path d="M3 3v18h18" />
               <path d="m19 9-5 5-4-4-3 3" />
             </svg>
           </div>
-          <p className={stylex.props(styles.s_1006).className}>No 3D statistics available</p>
-          <p className={stylex.props(styles.s_1007).className}>
+          <p {...stylex.props(styles.emptyStateTitle)}>No 3D statistics available</p>
+          <p {...stylex.props(styles.emptyStateDescription)}>
             Upload 3D digital twin assets to see scene analytics.
           </p>
         </div>
@@ -85,8 +85,8 @@ export function AnalyticsTab({
 
   if (!mapStats) {
     return (
-      <div className={stylex.props(styles.s_1003).className}>
-        <div className={stylex.props(styles.s_1004).className}>
+      <div {...stylex.props(styles.emptyState)}>
+        <div {...stylex.props(styles.emptyStateIconWrapper)}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
@@ -97,14 +97,14 @@ export function AnalyticsTab({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={stylex.props(styles.s_1005).className}
+            {...stylex.props(styles.emptyStateIcon)}
           >
             <path d="M3 3v18h18" />
             <path d="m19 9-5 5-4-4-3 3" />
           </svg>
         </div>
-        <p className={stylex.props(styles.s_1006).className}>No statistics available</p>
-        <p className={stylex.props(styles.s_1007).className}>
+        <p {...stylex.props(styles.emptyStateTitle)}>No statistics available</p>
+        <p {...stylex.props(styles.emptyStateDescription)}>
           Run &quot;Re-extract Metadata&quot; from the actions menu to compute map statistics.
         </p>
       </div>

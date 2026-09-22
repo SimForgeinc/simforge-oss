@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapStatisticsSection.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
@@ -27,15 +27,15 @@ export function MapStatisticsSection({
 }: MapStatisticsSectionProps) {
   return (
     <section>
-      <div className={stylex.props(styles.s_961).className}>
+      <div {...stylex.props(styles.statisticsHeader)}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className={stylex.props(styles.s_962).className}
+          {...stylex.props(styles.statisticsToggle)}
           aria-expanded={open}
         >
           <ChevronRight
-            className={stylex.props(styles.chevron, open && styles.rotate90).className}
+            {...stylex.props(styles.chevron, open && styles.rotate90)}
           />
           Map Statistics
         </button>
@@ -47,23 +47,23 @@ export function MapStatisticsSection({
             }
             aria-label="Copy map statistics as JSON"
             title="Copy map statistics as JSON"
-            className={stylex.props(styles.s_713).className}
+            {...stylex.props(styles.copyStatsButton)}
           >
             {copiedKey === "mapStats" ? (
-              <Check className={stylex.props(styles.s_714).className} />
+              <Check {...stylex.props(styles.copiedCheckIcon)} />
             ) : (
-              <Copy className={stylex.props(styles.s_927).className} />
+              <Copy {...stylex.props(styles.copyStatsIcon)} />
             )}
           </button>
         )}
       </div>
       {open &&
         (mapStats != null ? (
-          <div className={stylex.props(styles.s_716).className}>
+          <div {...stylex.props(styles.statisticsContent)}>
             <MapStatsDisplay stats={mapStats} candidateLocations={candidateLocations} />
           </div>
         ) : (
-          <p className={stylex.props(styles.s_717).className}>
+          <p {...stylex.props(styles.noStatisticsMessage)}>
             No statistics yet. They appear here after map metadata has been computed (requires geojson, xodr, and
             rrdata_xml on the asset).
           </p>

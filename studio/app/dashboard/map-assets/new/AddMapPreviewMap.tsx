@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./AddMapPreviewMap.stylex";
 import { useEffect, useRef, useCallback, useState } from "react";
 import Map, { Source, Layer, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection } from "geojson";

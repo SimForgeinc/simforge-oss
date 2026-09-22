@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "../map-assets.legacy.stylex";
 
 import Link from "next/link";
 import dynamic from "next/dynamic";

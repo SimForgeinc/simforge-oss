@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapDetailRightPanel.stylex";
 
 import { BarChart3, LayoutDashboard, Layers, Lightbulb, PanelRightClose, PanelRightOpen } from "lucide-react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
@@ -78,10 +78,10 @@ export function MapDetailRightPanel({
     return (
       <button
         onClick={() => setPanelOpen(true)}
-        className={stylex.props(styles.s_733).className}
+        {...stylex.props(styles.openPanelButton)}
       >
-        <div className={stylex.props(styles.s_734).className}>
-          <PanelRightOpen className={stylex.props(styles.s_735).className} />
+        <div {...stylex.props(styles.openPanelButtonContent)}>
+          <PanelRightOpen {...stylex.props(styles.openPanelIcon)} />
           Map Attributes
         </div>
       </button>
@@ -89,18 +89,18 @@ export function MapDetailRightPanel({
   }
 
   return (
-    <div className={stylex.props(styles.s_736).className}>
+    <div {...stylex.props(styles.panelContainer)}>
       {/* Collapse rail */}
       {!editMode && (
         <button
           onClick={() => setPanelOpen(false)}
-          className={stylex.props(styles.s_737).className}
+          {...stylex.props(styles.collapsePanelButton)}
           aria-label="Collapse panel"
         >
-          <PanelRightClose className={stylex.props(styles.s_738).className} />
+          <PanelRightClose {...stylex.props(styles.collapsePanelIcon)} />
         </button>
       )}
-      <div className={stylex.props(styles.s_739).className}>
+      <div {...stylex.props(styles.panelContent)}>
         {editMode ? (
           <MapAssetEditPanel
             asset={currentAsset}
@@ -119,9 +119,9 @@ export function MapDetailRightPanel({
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className={stylex.props(styles.s_740).className}
+            {...stylex.props(styles.tabsContainer)}
           >
-            <TabsList xstyle={styles.s_741}>
+            <TabsList xstyle={styles.tabList}>
               {([
                 { value: "overview", label: "Overview", Icon: LayoutDashboard, disabled: false },
                 { value: "layers", label: "Layers", Icon: Layers, disabled: false },
@@ -132,17 +132,17 @@ export function MapDetailRightPanel({
                   key={value}
                   value={value}
                   disabled={disabled}
-                  xstyle={styles.s_742}
+                  xstyle={styles.tabTrigger}
                 >
-                  <Icon className={stylex.props(styles.s_760).className} />
-                  <span className={stylex.props(styles.s_941).className}>{label}</span>
+                  <Icon {...stylex.props(styles.tabIcon)} />
+                  <span {...stylex.props(styles.tabLabel)}>{label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
 
             <TabsContent
               value="overview"
-              xstyle={styles.s_748}
+              xstyle={styles.tabContent}
             >
               <OverviewTab
                 asset={currentAsset}
@@ -168,7 +168,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="layers"
-              xstyle={styles.s_748}
+              xstyle={styles.tabContent}
             >
               <LayersTab
                 asset={currentAsset}
@@ -231,7 +231,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="analytics"
-              xstyle={styles.s_748}
+              xstyle={styles.tabContent}
             >
               <AnalyticsTab
                 asset={currentAsset}
@@ -243,7 +243,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="insights"
-              xstyle={styles.s_748}
+              xstyle={styles.tabContent}
             >
               <InsightsTab
                 asset={currentAsset}

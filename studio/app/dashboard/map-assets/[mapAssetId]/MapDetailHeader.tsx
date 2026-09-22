@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapDetailHeader.stylex";
 
 import Link from "next/link";
 import {
@@ -13,10 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
-import {
-  TopBarActionsPortal,
-  TopBarTrailingPortal,
-} from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { useRouteHeader } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   DropdownMenu,
@@ -40,14 +37,12 @@ interface MapDetailHeaderProps {
   allAssets: MapAsset[];
   onEdit: () => void;
   onPopulateMetadata: () => void;
-  onEnrich: () => void;
   onRefreshSearchIndex: () => void;
   onGenerateThumbnail: () => void;
   onSwitchMap: (mapAssetId: string) => void;
   onCreateBlankScenario: () => void;
   canCreateBlankScenario?: boolean;
   populateBusy?: boolean;
-  enrichBusy?: boolean;
   refreshSearchIndexBusy?: boolean;
   thumbnailBusy?: boolean;
   createBlankBusy?: boolean;
@@ -58,14 +53,12 @@ export function MapDetailHeader({
   allAssets,
   onEdit,
   onPopulateMetadata,
-  onEnrich,
   onRefreshSearchIndex,
   onGenerateThumbnail,
   onSwitchMap,
   onCreateBlankScenario,
   canCreateBlankScenario = true,
   populateBusy = false,
-  enrichBusy = false,
   refreshSearchIndexBusy = false,
   thumbnailBusy = false,
   createBlankBusy = false,
@@ -76,30 +69,28 @@ export function MapDetailHeader({
     }).catch(() => {});
   }
 
-  return (
-    <>
-      <TopBarActionsPortal>
-        <div className={stylex.props(styles.s_718).className}>
+  useRouteHeader({
+    title: asset.name,
+    actions: (
+      <>
+        <div {...stylex.props(styles.headerNavigationGroup)}>
           <Link
             href="/dashboard/map-assets"
-            className={stylex.props(styles.s_719).className}
+            {...stylex.props(styles.backToMapsLink)}
           >
-            <ArrowLeft className={stylex.props(styles.s_991).className} />
-            <span className={stylex.props(styles.s_721).className}>Back to Maps</span>
-            <span className={stylex.props(styles.s_722).className}>Back</span>
+            <ArrowLeft {...stylex.props(styles.sharedActionIcon)} />
+            <span {...stylex.props(styles.backToMapsLabel)}>Back to Maps</span>
+            <span {...stylex.props(styles.backLabel)}>Back</span>
           </Link>
 
-          <div className={stylex.props(styles.s_723).className} />
+          <div {...stylex.props(styles.headerNavigationDivider)} />
 
           <MapSwitcherDropdown currentAsset={asset} allAssets={allAssets} onSwitchMap={onSwitchMap} />
         </div>
-      </TopBarActionsPortal>
-
-      <TopBarTrailingPortal>
         <Button
           variant="secondary"
           size="sm"
-          xstyle={styles.s_724}
+          xstyle={styles.createScenarioButton}
           onClick={onCreateBlankScenario}
           disabled={createBlankBusy || !canCreateBlankScenario}
           title={
@@ -108,7 +99,7 @@ export function MapDetailHeader({
               : "This map is not available in CARLA yet."
           }
         >
-          <Plus className={stylex.props(styles.s_991).className} />
+          <Plus {...stylex.props(styles.sharedActionIcon)} />
           {createBlankBusy ? "Creating..." : "Create Blank Scenario"}
         </Button>
         <DropdownMenu>
@@ -116,16 +107,16 @@ export function MapDetailHeader({
             <Button
               variant="ghost"
               size="icon"
-              xstyle={styles.s_726}
+              xstyle={styles.actionsMenuTrigger}
             >
               <MoreHorizontal size={22} strokeWidth={1.75} />
-              <span className={stylex.props(styles.s_997).className}>Actions</span>
+              <span {...stylex.props(styles.actionsMenuLabel)}>Actions</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" xstyle={styles.s_728}>
+          <DropdownMenuContent align="end" xstyle={styles.actionsMenuContent}>
             <TooltipProvider delayDuration={200}>
               <DropdownMenuItem onClick={onEdit}>
-                <Pencil className={stylex.props(styles.s_732).className} />
+                <Pencil {...stylex.props(styles.menuItemIcon)} />
                 Edit Map
               </DropdownMenuItem>
               <Tooltip>
@@ -135,21 +126,15 @@ export function MapDetailHeader({
                     disabled={populateBusy}
                   >
                     <RefreshCw
-                      className={stylex.props(styles.headerActionIcon, populateBusy && styles.spinning).className}
+                      {...stylex.props(styles.headerActionIcon, populateBusy && styles.spinning)}
                     />
                     Re-extract Metadata
                   </DropdownMenuItem>
                 </TooltipTrigger>
-                <TooltipContent side="left" xstyle={styles.s_731}>
-                  Recalculate metadata and refresh the local search index.
+                <TooltipContent side="left" xstyle={styles.actionTooltip}>
+                  Recalculate metadata and refresh the search index.
                 </TooltipContent>
               </Tooltip>
-              <DropdownMenuItem onClick={onEnrich} disabled>
-                <RefreshCw
-                  className={stylex.props(styles.headerActionIcon, enrichBusy && styles.spinning).className}
-                />
-                Enrichment unavailable locally
-              </DropdownMenuItem>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuItem
@@ -157,12 +142,12 @@ export function MapDetailHeader({
                     disabled={refreshSearchIndexBusy}
                   >
                     <RefreshCw
-                      className={stylex.props(styles.headerActionIcon, refreshSearchIndexBusy && styles.spinning).className}
+                      {...stylex.props(styles.headerActionIcon, refreshSearchIndexBusy && styles.spinning)}
                     />
                     Refresh Search Index
                   </DropdownMenuItem>
                 </TooltipTrigger>
-                <TooltipContent side="left" xstyle={styles.s_731}>
+                <TooltipContent side="left" xstyle={styles.actionTooltip}>
                   Refreshes the search index just from the current metadata — no repopulation or re-enrichment.
                 </TooltipContent>
               </Tooltip>
@@ -171,18 +156,19 @@ export function MapDetailHeader({
                 disabled={thumbnailBusy}
               >
                 <Camera
-                  className={stylex.props(styles.headerActionIcon, thumbnailBusy && styles.pulsing).className}
+                  {...stylex.props(styles.headerActionIcon, thumbnailBusy && styles.pulsing)}
                 />
                 Generate Thumbnail
               </DropdownMenuItem>
               <DropdownMenuItem onClick={copyMapId}>
-                <Copy className={stylex.props(styles.s_732).className} />
+                <Copy {...stylex.props(styles.menuItemIcon)} />
                 Copy Map ID
               </DropdownMenuItem>
             </TooltipProvider>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TopBarTrailingPortal>
-    </>
-  );
+      </>
+    ),
+  });
+  return null;
 }

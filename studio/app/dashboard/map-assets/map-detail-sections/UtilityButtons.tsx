@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./UtilityButtons.stylex";
 
 import { Check, Copy } from "lucide-react";
 
@@ -22,29 +22,29 @@ export function UtilityButtons({
   onCopy,
 }: UtilityButtonsProps) {
   return (
-    <section className={stylex.props(styles.s_523).className}>
+    <section {...stylex.props(styles.utilityButtonsContainer)}>
       <button
         type="button"
         onClick={() => onCopy(assetId, "mapId")}
-        className={stylex.props(styles.s_530).className}
+        {...stylex.props(styles.utilityCopyButton)}
       >
-        {copiedKey === "mapId" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
+        {copiedKey === "mapId" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         Map ID
       </button>
       <button
         type="button"
         onClick={() => onCopy(bboxText, "bbox")}
-        className={stylex.props(styles.s_530).className}
+        {...stylex.props(styles.utilityCopyButton)}
       >
-        {copiedKey === "bbox" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
+        {copiedKey === "bbox" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         bbox
       </button>
       <button
         type="button"
         onClick={() => onCopy(centerText, "center")}
-        className={stylex.props(styles.s_530).className}
+        {...stylex.props(styles.utilityCopyButton)}
       >
-        {copiedKey === "center" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
+        {copiedKey === "center" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         center
       </button>
     </section>

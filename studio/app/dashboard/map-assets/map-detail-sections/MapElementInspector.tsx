@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./MapElementInspector.stylex";
 
 import { useEffect, useState } from "react";
 import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
@@ -51,17 +51,17 @@ export function MapElementInspector({
 
   if (selectedFeatures.length === 0) {
     return (
-      <div className={stylex.props(styles.s_480).className}>
-        <MapPin className={stylex.props(styles.s_481).className} />
-        <p className={stylex.props(styles.s_948).className}>Click a feature on the map to inspect it.</p>
+      <div {...stylex.props(styles.emptyState)}>
+        <MapPin {...stylex.props(styles.emptyStateIcon)} />
+        <p {...stylex.props(styles.emptyStateMessage)}>Click a feature on the map to inspect it.</p>
       </div>
     );
   }
 
   return (
-    <div className={stylex.props(styles.s_960).className} data-testid="map-element-inspector">
-      <div className={stylex.props(styles.s_484).className}>
-        <p className={stylex.props(styles.s_485).className}>
+    <div {...stylex.props(styles.inspectorContainer)} data-testid="map-element-inspector">
+      <div {...stylex.props(styles.selectionHeader)}>
+        <p {...stylex.props(styles.selectionTitle)}>
           Selected Features ({selectedFeatures.length})
         </p>
         {onClearSelection && (
@@ -69,20 +69,20 @@ export function MapElementInspector({
             type="button"
             onClick={onClearSelection}
             title="Clear selection"
-            className={stylex.props(styles.s_486).className}
+            {...stylex.props(styles.clearSelectionButton)}
           >
-            <X className={stylex.props(styles.s_991).className} />
+            <X {...stylex.props(styles.clearSelectionIcon)} />
           </button>
         )}
       </div>
-      <div className={stylex.props(styles.s_879).className}>
+      <div {...stylex.props(styles.featureList)}>
         {selectedFeatures.map((f) => {
           const isSelected = f.id === selectedFeatureId;
           const isExpanded = f.id === expandedFeatureId;
           return (
             <div
               key={f.id}
-              className={stylex.props(styles.elementCard, isSelected ? styles.elementCardSelected : styles.elementCardIdle).className}
+              {...stylex.props(styles.elementCard, isSelected ? styles.elementCardSelected : styles.elementCardIdle)}
             >
               <button
                 type="button"
@@ -94,20 +94,20 @@ export function MapElementInspector({
                     onSelectFeatureId?.(f.id);
                   }
                 }}
-                className={stylex.props(styles.s_489).className}
+                {...stylex.props(styles.featureToggleButton)}
               >
                 <ChevronRight
-                  className={stylex.props(styles.chevronLg, isExpanded && styles.rotate90).className}
+                  {...stylex.props(styles.chevronLg, isExpanded && styles.rotate90)}
                 />
-                <span className={stylex.props(styles.s_490).className} data-testid="selected-feature-summary">
+                <span {...stylex.props(styles.featureSummary)} data-testid="selected-feature-summary">
                   {f.summary}
                 </span>
               </button>
               {isExpanded && (
-                <div className={stylex.props(styles.s_491).className}>
-                  <div className={stylex.props(styles.s_492).className}>
-                    <p className={stylex.props(styles.s_955).className}>
-                      Geometry: <span className={stylex.props(styles.s_517).className}>{f.geometryType}</span>
+                <div {...stylex.props(styles.expandedDetails)}>
+                  <div {...stylex.props(styles.featureActionRow)}>
+                    <p {...stylex.props(styles.geometryLabel)}>
+                      Geometry: <span {...stylex.props(styles.detailValue)}>{f.geometryType}</span>
                     </p>
                     <button
                       type="button"
@@ -123,12 +123,12 @@ export function MapElementInspector({
                         }).catch(() => {});
                       }}
                       title="Copy feature as GeoJSON"
-                      className={stylex.props(styles.s_495).className}
+                      {...stylex.props(styles.copyGeoJsonButton)}
                     >
                       {copiedFeatureId === f.id ? (
-                        <Check className={stylex.props(styles.s_496).className} />
+                        <Check {...stylex.props(styles.copiedIcon)} />
                       ) : (
-                        <Copy className={stylex.props(styles.s_927).className} />
+                        <Copy {...stylex.props(styles.copyIcon)} />
                       )}
                       Copy GeoJSON
                     </button>
@@ -141,36 +141,36 @@ export function MapElementInspector({
                     const street = streetFactsByFeatureId?.get(f.id);
                     if (!street) return null;
                     return (
-                      <div className={stylex.props(styles.s_498).className} data-testid="street-facts">
-                        <h3 className={stylex.props(styles.s_499).className}>
+                      <div {...stylex.props(styles.streetFactsSection)} data-testid="street-facts">
+                        <h3 {...stylex.props(styles.streetFactsHeading)}>
                           Street facts
                         </h3>
-                        <div className={stylex.props(styles.s_518).className}>
-                          <span className={stylex.props(styles.s_931).className}>Street</span>
-                          <span className={stylex.props(styles.s_517).className}>{street.streetName}</span>
+                        <div {...stylex.props(styles.detailRow)}>
+                          <span {...stylex.props(styles.detailLabel)}>Street</span>
+                          <span {...stylex.props(styles.detailValue)}>{street.streetName}</span>
                         </div>
                         {street.roadClass && (
-                          <div className={stylex.props(styles.s_518).className}>
-                            <span className={stylex.props(styles.s_931).className}>Road class</span>
-                            <span className={stylex.props(styles.s_517).className}>{street.roadClass}</span>
+                          <div {...stylex.props(styles.detailRow)}>
+                            <span {...stylex.props(styles.detailLabel)}>Road class</span>
+                            <span {...stylex.props(styles.detailValue)}>{street.roadClass}</span>
                           </div>
                         )}
                         {street.overtureSpeedLimitMph != null && (
-                          <div className={stylex.props(styles.s_518).className}>
-                            <span className={stylex.props(styles.s_931).className}>Posted limit</span>
-                            <span className={stylex.props(styles.s_517).className}>
+                          <div {...stylex.props(styles.detailRow)}>
+                            <span {...stylex.props(styles.detailLabel)}>Posted limit</span>
+                            <span {...stylex.props(styles.detailValue)}>
                               {street.overtureSpeedLimitMph} mph
-                              <span className={stylex.props(styles.s_509).className}>(Overture)</span>
+                              <span {...stylex.props(styles.overtureSource)}>(Overture)</span>
                             </span>
                           </div>
                         )}
                         {street.laneCount != null && (
-                          <div className={stylex.props(styles.s_518).className}>
-                            <span className={stylex.props(styles.s_931).className}>Lanes</span>
-                            <span className={stylex.props(styles.s_517).className}>{street.laneCount}</span>
+                          <div {...stylex.props(styles.detailRow)}>
+                            <span {...stylex.props(styles.detailLabel)}>Lanes</span>
+                            <span {...stylex.props(styles.detailValue)}>{street.laneCount}</span>
                           </div>
                         )}
-                        <div className={stylex.props(styles.s_521).className} />
+                        <div {...stylex.props(styles.sectionDivider)} />
                       </div>
                     );
                   })()}
@@ -187,25 +187,25 @@ export function MapElementInspector({
                     return (
                       <>
                         {(id != null || type != null) && (
-                          <div className={stylex.props(styles.s_514).className}>
+                          <div {...stylex.props(styles.identifierSection)}>
                             {type != null && (
-                              <div className={stylex.props(styles.s_518).className}>
-                                <span className={stylex.props(styles.s_931).className}>Type</span>
-                                <span className={stylex.props(styles.s_517).className}>{String(type)}</span>
+                              <div {...stylex.props(styles.detailRow)}>
+                                <span {...stylex.props(styles.detailLabel)}>Type</span>
+                                <span {...stylex.props(styles.detailValue)}>{String(type)}</span>
                               </div>
                             )}
                             {id != null && (
-                              <div className={stylex.props(styles.s_518).className}>
-                                <span className={stylex.props(styles.s_931).className}>Id</span>
-                                <span className={stylex.props(styles.s_520).className}>
+                              <div {...stylex.props(styles.detailRow)}>
+                                <span {...stylex.props(styles.detailLabel)}>Id</span>
+                                <span {...stylex.props(styles.identifierValue)}>
                                   {String(id).replace(/^\{|\}$/g, "")}
                                 </span>
                               </div>
                             )}
-                            <div className={stylex.props(styles.s_521).className} />
+                            <div {...stylex.props(styles.sectionDivider)} />
                           </div>
                         )}
-                        <h3 className={stylex.props(styles.s_522).className}>
+                        <h3 {...stylex.props(styles.propertiesHeading)}>
                           Properties
                         </h3>
                         <JsonTreeView

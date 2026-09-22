@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles } from "./DigitalTwinViewerPanel.stylex";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -27,9 +27,9 @@ const CityViewDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className={stylex.props(styles.s_766).className}>
-        <div className={stylex.props(styles.s_769).className}>
-          <Box className={stylex.props(styles.s_765).className} />
+      <div {...stylex.props(styles.viewerLoadingContainer)}>
+        <div {...stylex.props(styles.emptyStateIconWrapper)}>
+          <Box {...stylex.props(styles.loadingPlaceholderIcon)} />
         </div>
       </div>
     ),
@@ -196,21 +196,21 @@ export function DigitalTwinViewerPanel({
 
   if (has3D === null) {
     return (
-      <div className={stylex.props(styles.s_766).className}>
-        <Loader2 className={stylex.props(styles.s_767).className} />
+      <div {...stylex.props(styles.viewerLoadingContainer)}>
+        <Loader2 {...stylex.props(styles.loadingSpinner)} />
       </div>
     );
   }
 
   if (!has3D) {
     return (
-      <div className={stylex.props(styles.s_768).className}>
-        <div className={stylex.props(styles.s_769).className}>
-          <Box className={stylex.props(styles.s_770).className} />
+      <div {...stylex.props(styles.noAssetStateContainer)}>
+        <div {...stylex.props(styles.emptyStateIconWrapper)}>
+          <Box {...stylex.props(styles.noAssetIcon)} />
         </div>
-        <div className={stylex.props(styles.s_771).className}>
-          <p className={stylex.props(styles.s_880).className}>Digital Twin Viewer</p>
-          <p className={stylex.props(styles.s_773).className}>
+        <div {...stylex.props(styles.noAssetTextContent)}>
+          <p {...stylex.props(styles.noAssetTitle)}>Digital Twin Viewer</p>
+          <p {...stylex.props(styles.noAssetDescription)}>
             No 3D digital twin assets found for this map. Switch to Map mode to explore in 2D.
           </p>
         </div>
@@ -220,15 +220,15 @@ export function DigitalTwinViewerPanel({
 
   if (viewerError) {
     return (
-      <div className={stylex.props(styles.s_774).className}>
-        <AlertTriangle className={stylex.props(styles.s_775).className} />
-        <p className={stylex.props(styles.s_776).className}>{viewerError}</p>
+      <div {...stylex.props(styles.viewerErrorContainer)}>
+        <AlertTriangle {...stylex.props(styles.viewerErrorIcon)} />
+        <p {...stylex.props(styles.viewerErrorMessage)}>{viewerError}</p>
       </div>
     );
   }
 
   return (
-    <div className={stylex.props(styles.s_801).className}>
+    <div {...stylex.props(styles.viewerHostContainer)}>
       <CityViewDynamic
         key={quality}
         manifestUrl={manifestUrl}
@@ -248,7 +248,7 @@ export function DigitalTwinViewerPanel({
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}
         role="application"
         tabIndex={0}
-        className={stylex.props(styles.s_778).className}
+        {...stylex.props(styles.viewerCanvas)}
       />
       {viewer ? <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={quality} viewer={viewer} /> : null}
     </div>
