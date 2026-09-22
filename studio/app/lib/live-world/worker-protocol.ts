@@ -5,6 +5,12 @@ import type { AuthoredDriveMode, ManualDriveRecording } from './authored-world-s
 import type { ControlInput, DriveControlSource, DriverCommand, PlannerAction, SpawnActorRequest } from './types';
 
 export type LiveWorldWorkerRequest =
+  /**
+   * Start the WASM engine and build the map's lane graph and colliders now,
+   * while the page is still compiling the scenario. `init-authored` then only
+   * waits for what is left. Optional: `init-authored` loads the map itself.
+   */
+  | { type: 'preload-map'; mapSources: MapGraphSources }
   | {
       type: 'init-authored';
       input: SimScenarioInput;

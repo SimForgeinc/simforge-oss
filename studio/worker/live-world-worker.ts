@@ -13,7 +13,7 @@ import {
   type TruthSubscription,
   type WorldSession,
 } from '@simforge-oss/training-env/browser';
-import { loadMapGraph, type StaticColliderDiagnostics } from '@simforge-oss/playback';
+import { loadMapGraph, type MapGraphSources, type StaticColliderDiagnostics } from '@simforge-oss/playback';
 
 import type {
   LiveWorldWorkerRequest,
@@ -76,7 +76,7 @@ const AUTHORED_CATCH_UP_INTERVALS = 1.5;
 const AUTHORED_LAG_WARNING_INTERVAL_MS = 5_000;
 
 
-type WorldCommand = Exclude<LiveWorldWorkerRequest, { type: 'init-authored' } | { type: 'close' }>;
+type WorldCommand = Exclude<LiveWorldWorkerRequest, { type: 'init-authored' } | { type: 'preload-map' } | { type: 'close' }>;
 
 /**
  * Commands that arrive while the world is still being built are held and
@@ -100,8 +100,32 @@ const gate = new WorkerReadyGate<WorldCommand>((message) => {
   }
 });
 
+/**
+ * The engine and the map's lane graph, started by `preload-map` while the page
+ * compiles the scenario, or by `init-authored` when nothing preloaded them.
+ * Neither depends on the scenario, so there is one load per worker.
+ */
+let mapLoad: Promise<{ sessions: SessionRuntime; graph: LaneGraph; collisions: StaticColliderDiagnostics }> | null = null;
+
+function loadMap(sources: MapGraphSources): NonNullable<typeof mapLoad> {
+  mapLoad ??= (async () => {
+    const runtime = await loadSessions();
+    // The drive is a simulation of the same world the editor previews, so its
+    // lane graph is built by the same shared builder and carries the same
+    // verified static colliders: a car must hit a building here too.
+    const mapGraph = await loadMapGraph({ module: runtime.engine.module, sources });
+    return { sessions: runtime, graph: mapGraph.graph, collisions: mapGraph.collision.diagnostics };
+  })();
+  return mapLoad;
+}
+
 scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
   const message = event.data;
+  if (message.type === 'preload-map') {
+    // A failure here is reported by `init-authored`, which awaits the same load.
+    loadMap(message.mapSources).catch(() => {});
+    return;
+  }
   if (message.type === 'init-authored') {
     void initializeAuthored(message).then(
       () => {
@@ -312,16 +336,11 @@ async function initializeAuthored(
     throw new Error(`tickHz must be positive, got ${String(message.tickHz)}`);
   }
   authoredInput = parseSimScenarioInput(message.input);
-  sessions = await loadSessions();
-  // The drive is a simulation of the same world the editor previews, so its
-  // lane graph is built by the same shared builder and carries the same
-  // verified static colliders: a car must hit a building here too.
-  const mapGraph = await loadMapGraph({
-    module: sessions.engine.module,
-    sources: message.mapSources,
-  });
-  authoredGraph = mapGraph.graph;
-  postCollisionDiagnostics(mapGraph.collision.diagnostics);
+  const loaded = await loadMap(message.mapSources);
+  if (closed) return;
+  sessions = loaded.sessions;
+  authoredGraph = loaded.graph;
+  postCollisionDiagnostics(loaded.collisions);
   authoredTickHz = message.tickHz;
   endless = message.endless === true;
   playing = false;

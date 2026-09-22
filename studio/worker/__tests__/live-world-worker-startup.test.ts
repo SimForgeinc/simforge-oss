@@ -15,11 +15,13 @@ import type { LiveWorldWorkerRequest, LiveWorldWorkerResponse } from '../../app/
 
 let resolveSessions: (runtime: unknown) => void = () => {};
 let rejectSessions: (error: Error) => void = () => {};
+let sessionLoads = 0;
 const applied: unknown[] = [];
 
 mock.module('@simforge-oss/training-env/browser', {
   namedExports: {
     loadSessions: () => new Promise((resolve, reject) => {
+      sessionLoads += 1;
       resolveSessions = resolve;
       rejectSessions = reject;
     }),
@@ -72,11 +74,12 @@ const input = {
 };
 
 let generation = 0;
-async function bootWorker() {
+async function bootWorker(options: { preload?: boolean } = {}) {
   (globalThis as { self?: unknown }).self = scope;
   // A fresh module instance per test: the worker keeps its world in module state.
   await import(`../live-world-worker.ts?generation=${generation++}`);
   const send = (message: LiveWorldWorkerRequest) => scope.onmessage!({ data: message } as MessageEvent<LiveWorldWorkerRequest>);
+  if (options.preload) send({ type: 'preload-map', mapSources: {} as never });
   send({ type: 'init-authored', input: input as never, mapSources: {} as never, tickHz: 50, endless: true });
   return send;
 }
@@ -86,6 +89,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 beforeEach(() => {
   posted.length = 0;
   applied.length = 0;
+  sessionLoads = 0;
   mock.method(globalThis, 'setInterval', (handler: unknown) => {
     intervals.push(handler);
     return 0 as never;
@@ -127,5 +131,13 @@ describe('live world worker start-up', () => {
       posted.filter((message) => message.type === 'error'),
       [{ type: 'error', message: 'simforge wasm failed to instantiate: out of memory' }],
     );
+  });
+
+  it('loads the engine and the map once when the page preloaded them before the scenario compiled', async () => {
+    await bootWorker({ preload: true });
+    resolveSessions(fakeRuntime());
+    for (let index = 0; index < 5; index += 1) await flush();
+    assert.equal(sessionLoads, 1);
+    assert.ok(posted.some((message) => message.type === 'ready'));
   });
 });
