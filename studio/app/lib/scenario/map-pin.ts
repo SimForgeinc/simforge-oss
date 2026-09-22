@@ -136,7 +136,7 @@ export async function verifyScenarioMapPin(
   if (!matches) {
     throw new ScenarioMapResolutionError(
       "scenario_map_pin_mismatch",
-      `Map version ${pinned.mapVersionId} was republished with different content (closure ${current.mapClosureSha256.slice(0, 12)}, pinned ${pinned.mapClosureSha256.slice(0, 12)}). Move the scenario to a map version explicitly before committing.`,
+      `Map version ${pinned.mapVersionId} was republished with different content (closure ${current.mapClosureSha256.slice(0, 12)}, pinned ${(pinned.mapClosureSha256 ?? "").slice(0, 12)}). Move the scenario to a map version explicitly before committing.`,
       pinned.mapVersionId,
     );
   }

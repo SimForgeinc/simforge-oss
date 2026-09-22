@@ -850,6 +850,18 @@ pub fn ambient_turn_verdicts_json(graph: &Graph) -> String {
     simforge_compiler::ambient_turns::turn_verdicts_json(graph.lane_graph())
 }
 
+/// The complete verdict table of a map (every transition, every steered
+/// class): what a map publish ships beside the closure. `{schema, engineSemVer,
+/// closureDigest, verdicts}`.
+pub fn build_ambient_turn_verdicts_json(asset: &MapAsset) -> Result<String> {
+    let graph = asset.bundle().graph();
+    simforge_compiler::ambient_turns::compute_all_turn_verdicts(graph);
+    let table = simforge_compiler::ambient_turns::turn_verdicts_json(graph);
+    let mut value: serde_json::Value = serde_json::from_str(&table)?;
+    value["closureDigest"] = serde_json::Value::String(asset.bundle().closure_digest().to_owned());
+    Ok(simforge_core::hash::canonical_json(&value)?)
+}
+
 /// Seed the process memo from a persisted verdict table; returns the count.
 /// Refuses a table from another `ENGINE_SEM_VER`.
 pub fn load_ambient_turn_verdicts(json: &str) -> Result<usize> {

@@ -162,6 +162,27 @@ export class SimulationHandle {
   }
 }
 
+/** `simforge.ambient-turn-verdicts/v1`: persisted ambient turn-feasibility verdicts. */
+export interface AmbientTurnVerdictTable {
+  readonly schema: 'simforge.ambient-turn-verdicts/v1';
+  readonly engineSemVer: string;
+  /** Present on published tables: the map closure the table was built for. */
+  readonly closureDigest?: string;
+  /** Classes the masks index: bit `i` is `classes[i]`. */
+  readonly classes: readonly string[];
+  /** `[transitionFingerprint, knownMask, feasibleMask]`, one row per transition, sorted. */
+  readonly verdicts: ReadonlyArray<readonly [string, number, number]>;
+}
+
+/** Verdicts (transition × class) a table holds. */
+export function ambientTurnVerdictCount(table: Pick<AmbientTurnVerdictTable, 'verdicts'>): number {
+  let count = 0;
+  for (const [, known] of table.verdicts) {
+    for (let mask = known; mask !== 0; mask &= mask - 1) count += 1;
+  }
+  return count;
+}
+
 export interface EngineVersionInfo {
   /** Engine semantics version: the compatibility identity of every trace. */
   readonly engineSemVer: string;
@@ -286,6 +307,19 @@ export class EngineRuntime {
   loadAmbientTurnVerdicts(json: string): number {
     const loader = this.module.loadAmbientTurnVerdicts;
     return loader ? guard(() => loader.call(this.module, json)) : 0;
+  }
+
+  /**
+   * The complete turn-verdict table of a map: every transition probed for
+   * every steered class, plus the bundle's `closureDigest`. A map publish
+   * builds it once per `(closureDigest, engineSemVer)` and ships it in the
+   * closure as `derived/ambient/turn-verdicts.json`, so no host probes that map
+   * again.
+   */
+  buildAmbientTurnVerdicts(bundle: NativeMap): AmbientTurnVerdictTable {
+    const build = this.module.buildAmbientTurnVerdicts;
+    if (!build) throw new Error('This native runtime predates ambient turn-verdict tables (engine 0.9.0); rebuild @simforge-oss/native-runtime');
+    return JSON.parse(guard(() => build.call(this.module, bundle))) as AmbientTurnVerdictTable;
   }
 
   /** Parse plain or gzip trace bytes, or re-validate an in-memory trace document. */

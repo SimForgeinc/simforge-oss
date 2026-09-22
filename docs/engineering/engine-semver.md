@@ -141,3 +141,39 @@ CLI and server runs were silently collision-free.
 
 `createMapBundle` without `staticColliders` is for non-simulating callers only:
 control plans, matching and authoring previews.
+
+## Derived artifact: the ambient turn-verdict table
+
+Since 0.9.0 the ambient generator probes every tight junction transition with
+the dynamic-v1 plant before it routes a vehicle through it. Cold, that costs
+0.5 s on Richmond and 3–4 s on San Ramon, in both the WASM and N-API builds.
+The verdicts are a pure function of the simulation closure and
+`ENGINE_SEM_VER`, so they are a published map derivative:
+
+- **Member:** `derived/ambient/turn-verdicts.json.gz` in the map's browser
+  closure. It is gzipped canonical JSON, `simforge.ambient-turn-verdicts/v1`:
+  `{schema, engineSemVer, closureDigest, classes, verdicts:
+  [[transitionFingerprint, knownMask, feasibleMask], ...]}`, with one row per
+  transition. Richmond: 4,368 verdicts, about 50 KB gzipped. San Ramon phase 1:
+  38,600 verdicts.
+- **Key:** `(engineSemVer, closureDigest)`. A host loads the table only when
+  both match its own engine and the closure it built
+  (`loadShippedAmbientTurnVerdicts`). The engine itself also refuses another
+  semver. A table changes timing, never the generated population.
+- **Producers:**
+  - The map build's web-runtime stage (`runMapPipeline({ ambientTurnVerdicts })`,
+    passed by `simforge maps build|ingest`; `SIMFORGE_MAP_AMBIENT_VERDICTS=skip`
+    opts out). The engine semver is part of the stage key, so a bump rebuilds
+    the table.
+  - `pnpm maps:ambient-verdicts -- --map <id>|--all [--check]` for installed
+    maps.
+  - SimCloud's `reconcile-ambient-turn-verdicts` for published map versions.
+    It rebinds the version to a new closure with the table and records
+    `descriptor.ambientTurnVerdicts`. Draft pins are unaffected, because they
+    cover the simulation members only (`docs/engineering/document-pinning.md`).
+- **Consumers:**
+  - The editor's scenario worker: the descriptor's `ambientTurnVerdicts`
+    becomes a closure URL, `loadMapGraph` fetches it through the map cache, and
+    the worker falls back to its Cache Storage table (`ambient-turn-cache.ts`).
+  - Workers and the CLI: `createSimulationMapBundle` loads the shipped member,
+    then the disk cache (`restoreAmbientTurnVerdictsFromDisk`).

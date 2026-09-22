@@ -457,6 +457,8 @@ export interface NativeModule {
   ambientTurnVerdictsJson?(graph: NativeLaneGraph): string;
   /** Seed this module's turn-verdict memo from a persisted table; refuses another ENGINE_SEM_VER. */
   loadAmbientTurnVerdicts?(json: string): number;
+  /** Probe every transition of a map for every steered class; the complete table with `closureDigest` (a map publish artifact). */
+  buildAmbientTurnVerdicts?(bundle: NativeMapBundle): string;
 
   parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;

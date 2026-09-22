@@ -722,6 +722,11 @@ pub fn compile_situation(
 pub fn ambient_turn_verdicts_json(graph: &WasmLaneGraph) -> String {
     rt::ambient_turn_verdicts_json(&graph.inner)
 }
+/// Complete verdict table of a map (every transition, every steered class), with `closureDigest`.
+#[wasm_bindgen(js_name = buildAmbientTurnVerdicts)]
+pub fn build_ambient_turn_verdicts(bundle: &WasmMapBundle) -> Result<String, JsValue> {
+    rt::build_ambient_turn_verdicts_json(&bundle.inner).js()
+}
 /// Load persisted ambient turn verdicts into this module; returns the count. Refuses another ENGINE_SEM_VER.
 #[wasm_bindgen(js_name = loadAmbientTurnVerdicts)]
 pub fn load_ambient_turn_verdicts(json: &str) -> Result<u32, JsValue> {

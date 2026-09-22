@@ -32,6 +32,12 @@ export interface MapEntry {
   readonly derivedTopology: string;
   readonly locations: string;
   readonly sumoManifest: string | null;
+  /**
+   * The closure's published ambient turn-verdict table, when the version
+   * ships one; the scenario worker loads it if it was built for its engine and
+   * closure (see ambient-turn-cache.ts).
+   */
+  readonly ambientTurnVerdicts: string | null;
 }
 
 function withoutTrailingSlash(url: string): string {
@@ -70,5 +76,6 @@ export function playbackMapEntry(map: ScenarioMapEntry): MapEntry {
     sumoManifest: map.sumoNetworkSha256
       ? assetUrl('derived/sumo/sumo-network-manifest.json')
       : null,
+    ambientTurnVerdicts: map.ambientTurnVerdicts ? assetUrl('derived/ambient/turn-verdicts.json.gz') : null,
   };
 }

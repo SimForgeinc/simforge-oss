@@ -366,6 +366,9 @@ export interface BevShape {
   channels: number
 }
 
+/** Probe every transition of a map for every steered class and return the complete verdict table (with `closureDigest`); what a map publish ships. */
+export declare function buildAmbientTurnVerdicts(bundle: MapBundle): string
+
 export declare function canonicalJson(document: string): string
 
 /** `sha256(templateId|paramsVersion|siteId|drawIndex)`, the per-cell seed. */

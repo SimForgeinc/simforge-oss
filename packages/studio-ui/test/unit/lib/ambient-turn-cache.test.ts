@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { EngineRuntime, LaneGraph } from '@simforge-oss/engine';
 
-const table = (count: number) => JSON.stringify({ schema: 'simforge.ambient-turn-verdicts/v1', engineSemVer: '0.9.0', verdicts: Array.from({ length: count }, (_, i) => [String(i).padStart(64, '0'), 1, true]) });
+const table = (count: number) => JSON.stringify({ schema: 'simforge.ambient-turn-verdicts/v1', engineSemVer: '0.9.0', classes: ['car'], verdicts: Array.from({ length: count }, (_, i) => [String(i).padStart(64, '0'), 1, 1]) });
 
 function fakeCaches() {
   const store = new Map<string, string>();

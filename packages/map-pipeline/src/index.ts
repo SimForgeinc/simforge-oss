@@ -88,7 +88,25 @@ export interface RunMapPipelineOptions {
    * `runtimeDir` (or SIMFORGE_SUMO_RUNTIME_DIR) adds the headless gate.
    */
   sumo?: false | { runtimeDir?: string };
+  /**
+   * Producer of the ambient turn-verdict table (`derived/ambient/turn-verdicts.json`,
+   * docs/engineering/engine-semver.md). Injected so this package does not
+   * depend on the native engine; the CLI passes
+   * `createAmbientTurnVerdictBuilder()` from `@simforge-oss/compiler/node`.
+   * Absent: the web closure ships no table (hosts then probe on first use).
+   */
+  ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
 }
+
+/** Builds a map's ambient turn-verdict table from its master and web-runtime stage content. */
+export interface AmbientTurnVerdictBuilder {
+  /** Identity of the verdict semantics (the engine's semver), folded into the stage key. */
+  readonly fingerprint: string;
+  build(input: { mapId: string; masterDir: string; runtimeDir: string }): Promise<Uint8Array>;
+}
+
+/** Web-closure member holding the ambient turn-verdict table. */
+export const AMBIENT_TURN_VERDICTS_MEMBER = 'derived/ambient/turn-verdicts.json.gz';
 
 export interface RegistryClosureArtifact {
   kind: MapClosure['kind'];
@@ -136,6 +154,8 @@ export interface DeriveClosuresOptions {
   cellSize?: number;
   /** KTX-Software installation used for offline native tier transcoding. */
   ktxBinDir?: string;
+  /** See `RunMapPipelineOptions.ambientTurnVerdicts`. */
+  ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
 }
 
 function registryArtifact(stage: ClosureStageResult): RegistryClosureArtifact {
@@ -337,7 +357,8 @@ async function webRuntimeStage(master: MasterStageResult, geometry: WebStageResu
   const topologyMember = master.closure.members['topology-index.json.gz'];
   const masterMember = master.closure.members['master.gltf'];
   if (!topologyMember || !masterMember) throw new Error('Scenario-ready web maps require canonical geometry and topology');
-  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0canonical-static-colliders-v2`);
+  const verdicts = options.ambientTurnVerdicts;
+  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0canonical-static-colliders-v2${verdicts ? `\0ambient-turn-verdicts=${verdicts.fingerprint}` : ''}`);
   const inputDigest = sha256(canonicalJson({ mapId: options.name, geometry: geometry.closureDigest, master: masterMember.sha256, topology: topologyMember.sha256 }));
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'web-runtime', cacheKey);
@@ -374,6 +395,13 @@ async function webRuntimeStage(master: MasterStageResult, geometry: WebStageResu
     // copyMembers hardlinks immutable inputs: replace the manifest, never truncate it.
     await writeFile(`${variantManifestPath}.tmp`, `${canonicalJson(variants)}\n`);
     await rename(`${variantManifestPath}.tmp`, variantManifestPath);
+    if (verdicts) {
+      // After the colliders: the table is keyed by the simulation closure they belong to.
+      const bytes = await verdicts.build({ mapId: options.name, masterDir: master.outputDir, runtimeDir: contentDir });
+      const target = path.join(contentDir, ...AMBIENT_TURN_VERDICTS_MEMBER.split('/'));
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, bytes);
+    }
     const stage = await finishStage('web-runtime', outputDir, 'web', keys, { toolFingerprint });
     return { ...stage, report: geometry.report };
   });
@@ -396,6 +424,7 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
     return { name: options.name, canonical: registryArtifact(master), derived: [], stages: { master } };
   }
   return deriveClosures(master, { name: options.name, workDir: options.workDir,
+    ...(options.ambientTurnVerdicts ? { ambientTurnVerdicts: options.ambientTurnVerdicts } : {}),
     ...(options.cellSize ? { cellSize: options.cellSize } : {}),
     ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}) });
 }
