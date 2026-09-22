@@ -1,6 +1,6 @@
 import type { IUniform, Material, Mesh, Object3D, Texture, Vector4 } from 'three';
 import { Vector4 as Vec4 } from 'three';
-import { isMaskOnlyAlbedo } from './albedo-color';
+import { isMaskOnlyAlbedo, onAlbedoMaskOnly } from './albedo-color';
 
 export interface ShadowPatchOptions {
   atlas: Texture;
@@ -84,6 +84,9 @@ export function patchMaterialWithBakedShadow(material: Material, opts: ShadowPat
   material.userData.cityShadow = uniforms;
   const albedoMaterial = material as Material & { map?: Texture | null };
   const maskOnly = (): boolean => !!opts.maskOnlyAlbedo && isMaskOnlyAlbedo(albedoMaterial.map);
+  // The albedo classification settles after upload; a mask-only answer must
+  // swap this material onto the mask-only program it would have compiled.
+  if (opts.maskOnlyAlbedo && albedoMaterial.map) onAlbedoMaskOnly(albedoMaterial.map, () => { material.needsUpdate = true; });
 
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms, { uShadowNear: sharedSuppression });
