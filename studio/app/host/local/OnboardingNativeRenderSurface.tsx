@@ -14,7 +14,7 @@ const POLL_MS = 1_500;
  * maps step, so leaving here (install or skip) just goes to the dashboard;
  * an install in flight keeps running on the host either way.
  */
-export function OnboardingNativeRenderClient() {
+export function OnboardingNativeRenderSurface() {
   const router = useRouter();
   const [install, setInstall] = useState<NativeRenderInstall | null>(null);
   const [error, setError] = useState<string | null>(null);

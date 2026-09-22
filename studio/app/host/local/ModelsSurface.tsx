@@ -12,9 +12,9 @@ import * as stylex from "@stylexjs/stylex";
 import { ModelStorePanel } from "@simforge-oss/studio-ui/evaluation/model-store";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
-import { styles } from "./models-page.stylex";
+import { styles } from "@/app/dashboard/models/models-page.stylex";
 
-export function ModelsPageClient() {
+export function ModelsSurface() {
   useSetPageTitle("Models");
 
   return (

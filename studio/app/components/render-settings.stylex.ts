@@ -2,8 +2,8 @@ import * as stylex from "@stylexjs/stylex";
 import { text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  root: { position: "relative", height: "100%", minHeight: 0, overflow: "hidden", color: "#fff" },
-  scroll: { position: "relative", zIndex: 10, height: "100%", minHeight: 0, overflowY: "auto" },
+  /** Fills the switcher's content column; the confirmation overlays cover it. */
+  root: { position: "relative", minHeight: 0, color: "#fff" },
   footer: { display: "grid", gap: "1rem" },
   footerRow: { display: "flex", flexDirection: "column", alignItems: "center", gap: ".5rem" },
   current: { textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,.35)" },

@@ -7,9 +7,9 @@ import { z } from "zod";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import type { RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
-import { setup } from "./setup-preparation.stylex";
-import { MapPreparationProgress } from "./map-preparation/MapPreparationProgress";
-import { useMapPreparation } from "./map-preparation/useMapPreparation";
+import { setup } from "@/app/components/setup-preparation.stylex";
+import { MapPreparationProgress } from "@/app/components/map-preparation/MapPreparationProgress";
+import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 
 const CatalogSchema = z.object({
   maps: z.array(z.object({

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { plate } from "@/app/components/AppStage.stylex";
-import { form } from "@/app/components/cloud/cloud-account.stylex";
+import { form } from "./cloud/cloud-account.stylex";
 import type {
   AiCredentialSource,
   AiProviderSettingsStatus,

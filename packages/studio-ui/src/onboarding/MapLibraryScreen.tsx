@@ -41,7 +41,8 @@ export type MapLibraryMap = MapGridMap & {
 };
 
 /** The word for a card's state, in the badge over its thumbnail. */
-function stateLabel(map: MapLibraryMap): string {
+function stateLabel(map: MapLibraryMap, catalog: boolean): string {
+  if (catalog) return map.locked ? "Not in your plan" : "Available";
   if (map.install?.state === "installing") return "Installing";
   if (map.install?.state === "pending") return "Queued";
   if (map.install?.state === "error") return "Failed";
@@ -57,6 +58,7 @@ export function MapLibraryScreen({
   catalogError,
   freeBytes,
   onInstall,
+  catalog = false,
   signedIn,
   signIn,
   onSignIn,
@@ -70,6 +72,13 @@ export function MapLibraryScreen({
   freeBytes: number | null;
   /** Install, re-install or retry exactly this map; the host owns the queue. */
   onInstall: (mapVersionId: string) => void;
+  /**
+   * Read-only: the maps this deployment publishes, with no residency on any
+   * disk to report and nothing to download. A hosted deployment streams every
+   * map it lists, so "installed", download sizes, free space and the install
+   * control are not disabled here — they have no subject.
+   */
+  catalog?: boolean;
   signedIn: boolean;
   /** The host's sign-in flow, once the user asked for it. */
   signIn?: ReactNode;
@@ -86,11 +95,13 @@ export function MapLibraryScreen({
     <section {...stylex.props(onboarding.stepSection)} data-testid="map-library">
       <header {...stylex.props(onboarding.stepHeader)}>
         <p {...stylex.props(onboarding.eyebrow)}>Map library</p>
-        <h1 {...stylex.props(onboarding.welcomeTitle)}>Maps on this computer</h1>
+        <h1 {...stylex.props(onboarding.welcomeTitle)}>
+          {catalog ? "Maps in this workspace" : "Maps on this computer"}
+        </h1>
         <p {...stylex.props(onboarding.welcomeLede)}>
-          Every map this installation can use. Installed maps are downloaded once and shared by
-          the editor, the viewer and local rendering; installing again repairs a map whose files
-          were removed or whose cache was cleared.
+          {catalog
+            ? "Every map this workspace can open. They stream straight into the editor, the viewer and rendering — there is nothing to download first."
+            : "Every map this installation can use. Installed maps are downloaded once and shared by the editor, the viewer and local rendering; installing again repairs a map whose files were removed or whose cache was cleared."}
         </p>
       </header>
 
@@ -103,7 +114,9 @@ export function MapLibraryScreen({
         ) : empty ? (
           <p {...stylex.props(onboarding.cautionNote)} role="alert" data-testid="map-library-empty">
             {catalogError
-              ? `SimCloud did not answer for the map catalog (${catalogError}). The maps installed on this computer are listed as soon as it does.`
+              ? catalog
+                ? `The map catalog could not be read (${catalogError}).`
+                : `SimCloud did not answer for the map catalog (${catalogError}). The maps installed on this computer are listed as soon as it does.`
               : "SimCloud published no maps for this installation."}
           </p>
         ) : (
@@ -121,7 +134,7 @@ export function MapLibraryScreen({
                       <LoaderCircle {...stylex.props(onboarding.iconSmall, onboarding.spinner)} aria-hidden="true" />
                     ) : map.install?.state === "error" ? (
                       <CircleAlert {...stylex.props(onboarding.iconSmall, onboarding.iconDanger)} aria-hidden="true" />
-                    ) : map.installed ? (
+                    ) : !catalog && map.installed ? (
                       <Check {...stylex.props(onboarding.iconSmall, onboarding.iconAccent)} aria-hidden="true" />
                     ) : map.locked ? (
                       <Lock {...stylex.props(onboarding.iconSmall, onboarding.iconMuted)} aria-hidden="true" />
@@ -129,7 +142,7 @@ export function MapLibraryScreen({
                       <Download {...stylex.props(onboarding.iconSmall, onboarding.iconMuted)} aria-hidden="true" />
                     )
                   }
-                  installed={map.installed}
+                  installed={!catalog && map.installed}
                   key={map.mapVersionId}
                   locked={map.locked}
                   map={map}
@@ -155,8 +168,8 @@ export function MapLibraryScreen({
                         </>
                       ) : (
                         <>
-                          {map.bytes === null ? "—" : formatBytes(map.bytes)}
-                          {map.locked ? null : (
+                          {catalog ? null : map.bytes === null ? "—" : formatBytes(map.bytes)}
+                          {catalog || map.locked ? null : (
                             <Button
                               xstyle={library.cardAction}
                               data-testid="map-library-install"
@@ -178,15 +191,15 @@ export function MapLibraryScreen({
                     <span
                       {...stylex.props(
                         onboarding.mapCardTag,
-                        map.install?.state === "error"
+                        !catalog && map.install?.state === "error"
                           ? library.tagFailed
-                          : map.installed
+                          : !catalog && map.installed
                             ? onboarding.includedTag
                             : library.tagAvailable,
                       )}
                       data-testid="map-library-state"
                     >
-                      {stateLabel(map)}
+                      {stateLabel(map, catalog)}
                     </span>
                   }
                   testId="map-library-card"
@@ -198,6 +211,14 @@ export function MapLibraryScreen({
       </div>
 
       <div {...stylex.props(onboarding.stepFooter)}>
+        {catalog ? (
+          <dl {...stylex.props(onboarding.summaryLine)}>
+            <dt {...stylex.props(onboarding.summaryTerm)}>Maps</dt>
+            <dd {...stylex.props(onboarding.summaryValue)} data-testid="map-library-count">
+              {maps.length}
+            </dd>
+          </dl>
+        ) : (
         <dl {...stylex.props(onboarding.summaryLine)}>
           <dt {...stylex.props(onboarding.summaryTerm)}>Installed</dt>
           <dd {...stylex.props(onboarding.summaryValue)} data-testid="map-library-installed-count">
@@ -208,6 +229,7 @@ export function MapLibraryScreen({
             {freeBytes === null ? "Unknown" : formatBytes(freeBytes)}
           </dd>
         </dl>
+        )}
 
         {error ? (
           <p {...stylex.props(onboarding.errorNote)} role="alert">

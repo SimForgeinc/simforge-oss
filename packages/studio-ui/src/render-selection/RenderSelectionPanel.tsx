@@ -516,7 +516,7 @@ function gpuCheck(hardware: RenderingBenchmarkHardware | null): DiagnosticCheck 
       id: "gpu",
       status: "warn",
       title: `Integrated graphics: ${name}`,
-      detail: "If this machine also has a discrete GPU, set the browser or app to \"high performance\" graphics so it is used instead.",
+      detail: "If this device also has a discrete GPU, set the browser to \"high performance\" graphics so it is used instead.",
     };
   }
   return {

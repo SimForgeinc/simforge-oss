@@ -34,7 +34,15 @@ export type NavItem = {
    */
   localOnly?: boolean;
   disabled?: boolean;
+  /**
+   * A utility the switcher shows inline instead of navigating to: the
+   * switcher's content becomes this view and `href` is only its deep link.
+   */
+  inlineView?: SwitcherInlineView;
 };
+
+/** Views the app switcher can show in place of its app tabs. */
+export type SwitcherInlineView = "render-settings";
 
 /**
  * The product is three pages, and the app switcher is those three tabs. Every
@@ -97,22 +105,29 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     // the one place that says what this computer already holds. It is a
     // utility rather than a fourth app tab for the same reason Models is:
     // the product is three pages, and this one prepares what they open.
+    //
+    // Both hosts have it, and it means a different thing on each: a local
+    // installation manages residency on its own disk, a cloud host lists the
+    // maps its workspace can stream.
     href: "/dashboard/map-library",
     label: "Map Library",
-    description: "Install maps on this computer, and see what is already installed",
+    description: "Every map this workspace can open",
     icon: HardDriveDownload,
     highlights: [
       "Every map this installation can use",
-      "Download size before you download",
-      "Repair an installed map",
+      "Locality and preview before you open",
+      "What a plan does not unlock",
     ],
     match: (p) => p.startsWith("/dashboard/map-library"),
   },
   {
+    // Local-only: the store downloads weights to this installation's disk and
+    // prepares an isolated runtime for them. Cloud runs need neither.
     href: "/dashboard/models",
     label: "Models",
     description: "Download, verify and remove model weights",
     icon: Brain,
+    localOnly: true,
     match: (p) => p.startsWith("/dashboard/models"),
   },
   {
@@ -135,17 +150,22 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     match: (p) => p.startsWith("/dashboard/simcloud"),
   },
   {
-    href: "/dashboard/render-settings",
+    href: "/dashboard/apps?view=render-settings",
     label: "Render Settings",
-    description: "Rendering profile and map preparation",
+    description: "Graphics level and map cache",
     icon: MonitorCog,
-    match: (p) => p.startsWith("/dashboard/render-settings"),
+    /** Not a route: the switcher swaps its content to this view in place. */
+    inlineView: "render-settings",
+    match: () => false,
   },
   {
+    // Local-only: everything here is about the machine this installation runs
+    // on — its data folder, its credential vault, its map cache.
     href: "/dashboard/settings",
     label: "Settings",
     description: "This computer, AI providers and storage",
     icon: Settings,
+    localOnly: true,
     match: (p) => p.startsWith("/dashboard/settings"),
   },
 ];

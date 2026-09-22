@@ -8,7 +8,7 @@ import type { StudioCloudProvider, StudioCloudStatus } from "@simforge-oss/studi
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { action, cloud } from "@/app/components/host-status-cards.stylex";
-import { banner, form } from "@/app/components/cloud/cloud-account.stylex";
+import { banner, form } from "./cloud-account.stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**

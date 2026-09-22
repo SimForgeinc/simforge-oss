@@ -6,13 +6,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
-import { isCloudHost } from "@simforge-oss/studio-host";
-import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
-import { studioHost } from "@/app/lib/host";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { LocalMapDescriptor, LocalMapInstallState } from "@/app/lib/cloud/maps";
 import { followMapInstall, mapInstallErrorMessage, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
-import { setup } from "./setup-preparation.stylex";
+import { setup } from "@/app/components/setup-preparation.stylex";
 
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
 
@@ -158,28 +155,20 @@ function ProfileRow({
 
 /**
  * What of this map lives on this computer, and the explicit controls to get
- * the rest — on a host where that question has an answer.
+ * the rest.
  *
  * A cloud host has no "this computer": the map is in object storage and every
  * client streams it, so there is nothing to download and nothing to prepare.
- * The panel is absent there rather than empty or disabled, because a control
- * that cannot apply is not a control in a disabled state — it is a statement
- * about a machine that is not in this deployment.
+ * This module is part of the local host's surface set and is never imported
+ * into a cloud build at all — the panel is absent there, not empty, disabled
+ * or waiting on a probe to tell it so.
+ *
+ * The residency rows are the browser closure for the viewport and the semantic
+ * closure the local Bevy renderer needs. Every state comes from the local
+ * service; nothing here claims a map is ready before its closure is complete
+ * and registered.
  */
 export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescriptor; xstyle?: stylex.StyleXStyles }) {
-  const hostCapabilities = useStudioHostCapabilities(studioHost);
-  if (hostCapabilities.status === "ready" && isCloudHost(hostCapabilities.capabilities)) return null;
-  return <LocalMapResidency map={map} xstyle={xstyle} />;
-}
-
-/**
- * The residency rows themselves: the browser closure for the viewport and the
- * semantic closure the local Bevy renderer needs. Every state comes from the
- * local service; nothing here claims a map is ready before its closure is
- * complete and registered. Separate from the gate above so that a host with
- * no local storage never starts the installation polling these rows drive.
- */
-function LocalMapResidency({ map, xstyle }: { map: LocalMapDescriptor; xstyle?: stylex.StyleXStyles }) {
   const cloud = useStudioCloudStatus();
   const router = useRouter();
   const remoteHost = useRemoteHostOrigin();

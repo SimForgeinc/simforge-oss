@@ -53,7 +53,7 @@ export function ModelPicker({
   disabled = false,
   families = MODEL_FAMILIES,
   uploadedVideo = false,
-  cloudOnly = false,
+  cloudOnly: cloudOnlyRequested = false,
   kind = null,
 }: {
   host: HostExecutionSnapshot;
@@ -65,13 +65,18 @@ export function ModelPicker({
   /** Restricts this picker without changing the shared model-store catalog. */
   families?: readonly ModelFamilyId[];
   uploadedVideo?: boolean;
+  /** Offer managed capacity only, whatever the host could otherwise run. */
   cloudOnly?: boolean;
   /** The job kind this picker is choosing a model for. */
   kind?: ComputeJobKind | null;
 }) {
+  // The browser portal has no model store and no native runner, so every
+  // model it can choose runs on managed capacity: the same picker a caller
+  // asks for explicitly is the only one this host has.
+  const cloudOnly = cloudOnlyRequested || host.host === "browser";
   const entry = MODEL_CATALOG[selection.family];
   const key = runtimeKey(selection.family, selection.quant);
-  const allOffers = executionOffers(
+  const offers = executionOffers(
     host,
     entry,
     selection.quant,
@@ -79,8 +84,7 @@ export function ModelPicker({
     runtime?.eligibility[key] ?? null,
     runtime ? runtime.prepared[selection.family] ?? null : null,
     kind,
-  );
-  const offers = cloudOnly ? allOffers.filter((offer) => offer.target === "runpod") : allOffers;
+  ).filter((offer) => !cloudOnly || offer.target === "runpod");
 
   // The measured envelope is exclusive-use: the runtime's own requirement, or
   // the catalog's if the probe did not report one.

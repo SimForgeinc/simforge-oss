@@ -4,22 +4,20 @@ import * as stylex from "@stylexjs/stylex";
 import { studioHost } from "@/app/lib/host";
 import { DatabaseZap } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProfileMapPreparation } from "@/app/components/ProfileMapPreparation";
-import { AppStage } from "@/app/components/AppStage";
+import { ProfileMapPreparation } from "./ProfileMapPreparation";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { readRenderingPreference, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
-import { styles } from "./render-settings-page.stylex";
+import { styles } from "@/app/components/render-settings.stylex";
 
 /**
- * Render Settings in the app switcher's chrome: `AppStage` supplies the smoke
- * backdrop and the fixed, non-scrolling stage, and the surface itself is the
- * single-page `RenderSelectionPanel` this route already used — which carries
- * its own heading, so the stage omits its own.
+ * Render Settings, inline in the app switcher: the single-page
+ * `RenderSelectionPanel` (which carries its own heading) plus the cache
+ * controls, swapped into the switcher's content in place of the app tabs. It
+ * is not a route of its own — `onDone` hands the switcher back.
  */
 
 type Preparation = {
@@ -40,8 +38,7 @@ const RenderSelectionPanel = dynamic(
   { ssr: false },
 );
 
-export function RenderSettingsPageClient() {
-  const router = useRouter();
+export function RenderSettings({ onDone }: { onDone: () => void }) {
   const [currentProfile, setCurrentProfile] =
     useState<RenderingPreference | null>(null);
   const [preparation, setPreparation] = useState<Preparation | null>(null);
@@ -100,10 +97,10 @@ export function RenderSettingsPageClient() {
     }
   };
 
-  const finish = () => router.push("/dashboard/map-assets");
+  const finish = onDone;
 
   return (
-    <AppStage eyebrow="Utility" title="Render Settings" ownsHeading testId="render-settings-panel">
+    <div {...stylex.props(styles.root)} data-testid="render-settings-panel">
       {preparation ? (
         <ProfileMapPreparation
           profile={preparation.profile}
@@ -167,7 +164,7 @@ export function RenderSettingsPageClient() {
           onPrimary={() => void clearThenPrepare(currentProfile)}
         />
       ) : null}
-    </AppStage>
+    </div>
   );
 }
 

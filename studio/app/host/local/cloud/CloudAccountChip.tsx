@@ -12,7 +12,7 @@ import {
 } from "@simforge-oss/studio-ui/components/ui/sheet";
 import type { XStyle } from "@simforge-oss/studio-ui/components/stylex";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
-import { CloudAccountPanel } from "@/app/components/cloud/CloudAccountPanel";
+import { CloudAccountPanel } from "./CloudAccountPanel";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 const CLOUD_STATE_LABELS: Record<StudioCloudStatus["state"], string> = {

@@ -247,6 +247,54 @@ export const styles = stylex.create({
   },
 
   tabHead: { display: "flex", alignItems: "center", gap: "0.5rem" },
+  /**
+   * The app's artwork: a square tile at the top of the tab, dimmed until the
+   * tab is current or hovered, so the row reads as three pictures first and
+   * three names second.
+   */
+  art: {
+    display: "grid",
+    placeItems: "center",
+    width: "100%",
+    aspectRatio: "4 / 3",
+    paddingBlock: "0.5rem",
+  },
+  /** The whole picture, never clipped: it is the square source scaled to fit the tile. */
+  artImage: {
+    display: "block",
+    width: "auto",
+    height: "100%",
+    maxWidth: "100%",
+    objectFit: "contain",
+    transitionProperty: { default: "opacity, filter", [REDUCED]: "none" },
+    transitionDuration: "300ms",
+    transitionTimingFunction: EASE,
+  },
+  artFrame: { display: "grid", placeItems: "center", height: "100%", width: "100%", minHeight: 0 },
+  artIdle: { opacity: 0.55, filter: "grayscale(0.6)" },
+  artActive: { opacity: 1, filter: "none" },
+  artDisabled: { opacity: 0.3, filter: "grayscale(1)" },
+  /** Inline views (Render Settings) replace the tabs inside the same column. */
+  inlineView: { display: "grid", gap: "1rem" },
+  inlineHead: { display: "flex", alignItems: "center", gap: "0.75rem" },
+  inlineBack: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "0.375rem",
+    paddingBlock: "0.375rem",
+    paddingInline: "0.75rem",
+    fontSize: "0.75rem",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: { default: "rgb(255 255 255 / 0.6)", ":hover": "#fff" },
+    backgroundColor: "rgb(255 255 255 / 0.04)",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    cursor: "pointer",
+    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
+  },
+  inlineBackIcon: { width: "0.875rem", height: "0.875rem" },
   tabIcon: {
     width: "1rem",
     height: "1rem",
