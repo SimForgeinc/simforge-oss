@@ -168,9 +168,9 @@ export function SimCloudSurface() {
 
   return (
     <AppStage
+      fill
       eyebrow="SimCloud"
       title="SimCloud"
-      description="Your SimForge account, and what it unlocks on this computer."
       testId="simcloud-panel"
       actions={
         connected ? (

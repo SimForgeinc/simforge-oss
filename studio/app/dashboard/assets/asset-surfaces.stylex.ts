@@ -10,19 +10,6 @@ const ACCENT = "#E8E044";
 const SURFACE = "rgba(255,255,255,0.025)";
 const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-export const gallery = stylex.create({
-  root: { minHeight: "100%", backgroundColor: colors.bg, color: colors.text },
-  toolbar: { position: "sticky", top: 0, zIndex: 20, borderBottomWidth: "1px", borderBottomStyle: "solid", borderBottomColor: colors.border, backgroundColor: "hsl(var(--background) / 0.85)", paddingInline: "1.25rem", backdropFilter: "blur(8px)", [SM]: { paddingInline: "2rem" } },
-  main: { paddingInline: "1.25rem", paddingBlock: "1.5rem", [SM]: { paddingInline: "2rem" } },
-  measure: { width: "100%", maxWidth: "1500px", marginInline: "auto" },
-  alert: { marginBottom: "1rem", borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(248,113,113,0.2)", borderRadius: "0.5rem", backgroundColor: "rgba(248,113,113,0.05)", paddingInline: "1rem", paddingBlock: "0.75rem", fontSize: text.sizeSm, lineHeight: "1.25rem", color: "#fecaca" },
-  actions: { display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "0.5rem" },
-  icon: { width: "1.75rem", height: "1.75rem" },
-  emptyState: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.border },
-  loadMore: { marginTop: "2rem", display: "flex", justifyContent: "center" },
-  spinner: { animationName: stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }), animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
-});
-
 export const maps = stylex.create({
   grid: { display: "grid", gridTemplateColumns: "repeat(1, minmax(0, 1fr))", gap: "1rem", [SM]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }, [LG]: { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }, [XL]: { gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }, [XXL]: { gridTemplateColumns: "repeat(5, minmax(0, 1fr))" } },
   error: { borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(248,113,113,0.2)", borderRadius: "0.5rem", backgroundColor: "rgba(248,113,113,0.05)", paddingInline: "1rem", paddingBlock: "0.75rem", fontSize: text.sizeSm, lineHeight: "1.25rem", color: "#fecaca" },
@@ -77,14 +64,4 @@ export const picker = stylex.create({
   move: { borderRadius: "0.25rem", padding: "0.25rem", color: "rgba(255,255,255,0.55)", ":hover": { backgroundColor: "rgba(255,255,255,0.1)", color: "#fff" }, ":disabled": { opacity: 0.2 } },
   view: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "10px", color: "rgba(255,255,255,0.45)" },
   note: { fontSize: text.sizeXs, lineHeight: "1.25rem", color: "rgba(255,255,255,0.4)" },
-});
-export const assetPage = stylex.create({
-  root: { minHeight: "100%", backgroundColor: colors.bg },
-  chrome: { borderBottomWidth: "1px", borderBottomStyle: "solid", borderBottomColor: colors.border, backgroundColor: colors.bg, paddingInline: "1.25rem", [SM]: { paddingInline: "2rem" } },
-  measure: { width: "100%", maxWidth: "1500px", marginInline: "auto" },
-  skeletonLabel: { width: "6rem", height: "0.75rem" },
-  skeletonTitle: { marginTop: "0.625rem", width: "14rem", height: "2rem" },
-  skeletonDescription: { marginTop: "0.75rem", width: "100%", maxWidth: "36rem", height: "1rem" },
-  skeletonButton: { marginTop: "1.25rem", width: "10rem", height: "2.25rem", borderRadius: "0.375rem" },
-  content: { paddingInline: "1.25rem", paddingBlock: "1.5rem", [SM]: { paddingInline: "2rem" } },
 });

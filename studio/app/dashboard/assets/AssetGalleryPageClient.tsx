@@ -1,10 +1,14 @@
 "use client";
 
-import { Boxes, Loader2, SearchX } from "lucide-react";
+import { Boxes, Loader2, SearchX, Sparkles, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
+import { plate } from "@/app/components/AppStage.stylex";
+import { AppStage } from "@/app/components/AppStage";
+import { AssetsTabs } from "./AssetsTabs";
 import {
   type GalleryActorClass,
   type GalleryAssetSummary,
@@ -16,7 +20,7 @@ import { AssetGalleryToolbar } from "./AssetGalleryToolbar";
 import { AssetGenerateDialog } from "./AssetGenerateDialog";
 import { AssetUploadDialog, type AssetUploadKind } from "./AssetUploadDialog";
 import { MapList } from "./MapList";
-import { gallery } from "./asset-surfaces.stylex";
+import { gallery } from "./AssetGalleryPageClient.stylex";
 import {
   galleryVisibleAssets,
   type GalleryCarlaFilter,
@@ -29,7 +33,7 @@ const PAGE_SIZE = 24;
 /** Long enough that a typed word is one request, short enough to feel live. */
 const SEARCH_DEBOUNCE_MS = 250;
 
-export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }) {
+export function AssetGalleryPageClient({ initialPage }: { initialPage: GalleryPage }) {
   const [items, setItems] = useState(initialPage.items);
   const [nextCursor, setNextCursor] = useState(initialPage.nextCursor);
   const [query, setQuery] = useState("");
@@ -47,6 +51,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
   const [reloading, setReloading] = useState(false);
   const [appending, setAppending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const trimmedQuery = query.trim();
   useEffect(() => {
@@ -92,7 +97,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
         if (!abort.signal.aborted) setReloading(false);
       });
     return () => abort.abort();
-  }, [debouncedQuery, actorClass]);
+  }, [debouncedQuery, actorClass, refreshVersion]);
 
   const loadMore = async () => {
     if (!nextCursor || appending) return;
@@ -133,15 +138,18 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
   };
 
   return (
-    <div {...stylex.props(gallery.root)}>
+    <AppStage fill title="Assets" eyebrow="Asset library" testId="assets-stage" actions={
+      <div {...stylex.props(gallery.actions)}>
+        {section === "models" ? <Button onClick={() => setGenerateOpen(true)}><Sparkles aria-hidden="true" />Generate model</Button> : null}
+        <Button variant="outline" onClick={() => { setUploadKind(section === "maps" ? "map" : "model"); setUploadOpen(true); }}><Upload aria-hidden="true" />{section === "maps" ? "Import map" : "Import model"}</Button>
+      </div>
+    }>
+      <div {...stylex.props(plate.scroller)}>
+      <div>
+      <AssetsTabs />
       <AssetGalleryHeader
         section={section}
         onSectionChange={setSection}
-        onGenerate={() => setGenerateOpen(true)}
-        onUpload={() => {
-          setUploadKind(section === "maps" ? "map" : "model");
-          setUploadOpen(true);
-        }}
       />
 
       {/* Model-only catalog controls are hidden for the compact map catalog. */}
@@ -163,7 +171,8 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
         </div>
       ) : null}
 
-      <main {...stylex.props(gallery.main)}>
+      </div>
+      <section {...stylex.props(plate.pane, gallery.main)}>
         <div {...stylex.props(gallery.measure)}>
           {section === "maps" ? (
             <MapList
@@ -176,14 +185,12 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
           ) : (
             <>
               {error ? (
-                <p role="alert" {...stylex.props(gallery.alert)}>
-                  {error}
-                </p>
+                <PaneErrorState title="Could not load the asset library" description={error} onRetry={() => setRefreshVersion((value) => value + 1)} exitHref="/dashboard/apps" />
               ) : null}
 
               {reloading && visibleItems.length === 0 ? (
                 <AssetGalleryGridSkeleton />
-              ) : visibleItems.length > 0 ? (
+              ) : error && visibleItems.length === 0 ? null : visibleItems.length > 0 ? (
                 <AssetGalleryGrid assets={visibleItems} onSelect={setSelected} />
               ) : filtered ? (
                 <EmptyState
@@ -234,7 +241,8 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
             </>
           )}
         </div>
-      </main>
+      </section>
+      </div>
 
       <AssetUploadDialog
         open={uploadOpen}
@@ -270,6 +278,6 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
           setSelected(renamed);
         }}
       />
-    </div>
+    </AppStage>
   );
 }

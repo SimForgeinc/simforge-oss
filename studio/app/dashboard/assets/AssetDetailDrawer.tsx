@@ -251,7 +251,7 @@ export function AssetDetailDrawer({
                   {...stylex.props(dialog.deleteBox)}
                 >
                   <p id="asset-delete-heading" {...stylex.props(dialog.deleteHeading)}>
-                    Remove “{asset.title}” from the local library?
+                    Remove “{asset.title}” from the asset library?
                   </p>
 
                   {usage.phase === "loading" ? (

@@ -181,7 +181,7 @@ export function LocalExecutionCard({ className }: { className?: string }) {
             </dl>
           ) : !error ? (
             <p {...stylex.props(local.probing)}>
-              <LoaderCircle className={stylex.props(local.probingSpinner).className} aria-hidden="true" />
+              <LoaderCircle {...stylex.props(local.probingSpinner)} aria-hidden="true" />
               Reading local host capabilities…
             </p>
           ) : null}

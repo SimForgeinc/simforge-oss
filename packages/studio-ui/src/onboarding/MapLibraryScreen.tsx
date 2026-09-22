@@ -4,6 +4,10 @@ import type { CSSProperties, ReactNode } from "react";
 import { Check, CircleAlert, Download, LoaderCircle, Lock, LogIn, RotateCcw } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
+import { PaneErrorState } from "../components/state-frames";
+import { ListSkeleton } from "../components/ListSkeleton";
+import { EmptyState } from "../components/ui/empty-state";
+import { styles } from "./MapLibraryScreen.stylex";
 import { formatBytes } from "../scenario/scene/map-load-progress";
 import { MapCard, MapGrid, type MapGridMap } from "./MapGrid";
 import { installRows, library, onboarding, PROGRESS_VAR } from "./onboarding.stylex";
@@ -63,6 +67,7 @@ export function MapLibraryScreen({
   signIn,
   onSignIn,
   onCancelSignIn,
+  onRetry,
 }: {
   maps: readonly MapLibraryMap[];
   loading: boolean;
@@ -84,6 +89,7 @@ export function MapLibraryScreen({
   signIn?: ReactNode;
   onSignIn: () => void;
   onCancelSignIn?: () => void;
+  onRetry?: () => void;
 }) {
   const installed = maps.filter((map) => map.installed);
   const installedBytes = installed.reduce((total, map) => total + (map.bytes ?? 0), 0);
@@ -92,12 +98,9 @@ export function MapLibraryScreen({
   const empty = !loading && maps.length === 0;
 
   return (
-    <section {...stylex.props(onboarding.stepSection)} data-testid="map-library">
+    <section {...stylex.props(styles.frame)} data-testid="map-library">
       <header {...stylex.props(onboarding.stepHeader)}>
-        <p {...stylex.props(onboarding.eyebrow)}>Map library</p>
-        <h1 {...stylex.props(onboarding.welcomeTitle)}>
-          {catalog ? "Maps in this workspace" : "Maps on this computer"}
-        </h1>
+        <h2 {...stylex.props(onboarding.eyebrow)}>Map availability</h2>
         <p {...stylex.props(onboarding.welcomeLede)}>
           {catalog
             ? "Every map this workspace can open. They stream straight into the editor, the viewer and rendering — there is nothing to download first."
@@ -105,22 +108,15 @@ export function MapLibraryScreen({
         </p>
       </header>
 
-      <div {...stylex.props(onboarding.mapRegion)}>
+      <div {...stylex.props(styles.catalog)}>
         {loading ? (
-          <p {...stylex.props(onboarding.catalogLoading)}>
-            <LoaderCircle {...stylex.props(onboarding.icon, onboarding.spinner)} aria-hidden="true" />
-            Loading the map catalog…
-          </p>
+          <ListSkeleton label="Loading the map catalog" />
+        ) : empty && (error || catalogError) ? (
+          <PaneErrorState title="Could not load the map catalog" description={error ?? catalogError} onRetry={onRetry} exitHref="/dashboard/apps" />
         ) : empty ? (
-          <p {...stylex.props(onboarding.cautionNote)} role="alert" data-testid="map-library-empty">
-            {catalogError
-              ? catalog
-                ? `The map catalog could not be read (${catalogError}).`
-                : `SimCloud did not answer for the map catalog (${catalogError}). The maps installed on this computer are listed as soon as it does.`
-              : "SimCloud published no maps for this installation."}
-          </p>
+          <EmptyState title="No maps available" description={catalog ? "No maps have been published to this workspace." : "No maps have been published for this installation."} />
         ) : (
-          <MapGrid testId="map-library-list">
+          <MapGrid testId="map-library-list" xstyle={styles.grid}>
             {maps.map((map) => {
               const running = map.install?.state === "installing" || map.install?.state === "pending";
               const percent = map.install && map.install.bytes > 0
@@ -208,6 +204,12 @@ export function MapLibraryScreen({
             })}
           </MapGrid>
         )}
+        {failed.map((map) => (
+          <p key={map.mapVersionId} {...stylex.props(library.failure)} role="alert" data-testid="map-library-failure">
+            <CircleAlert {...stylex.props(onboarding.icon, onboarding.iconDanger)} aria-hidden="true" />
+            {map.install?.message ?? `${map.label} could not be installed.`}
+          </p>
+        ))}
       </div>
 
       <div {...stylex.props(onboarding.stepFooter)}>
@@ -231,17 +233,9 @@ export function MapLibraryScreen({
         </dl>
         )}
 
-        {error ? (
-          <p {...stylex.props(onboarding.errorNote)} role="alert">
-            {error}
-          </p>
+        {!empty && (error || catalogError) ? (
+          <PaneErrorState title="Could not refresh the map catalog" description={error ?? catalogError} onRetry={onRetry} exitHref="/dashboard/apps" />
         ) : null}
-        {failed.map((map) => (
-          <p key={map.mapVersionId} {...stylex.props(library.failure)} role="alert" data-testid="map-library-failure">
-            <CircleAlert {...stylex.props(onboarding.icon, onboarding.iconDanger)} aria-hidden="true" />
-            {map.install?.message ?? `${map.label} could not be installed.`}
-          </p>
-        ))}
 
         {signedIn || signIn ? null : (
           <div {...stylex.props(onboarding.welcomeActions)}>

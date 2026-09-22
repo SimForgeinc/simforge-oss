@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
-import { shelf } from "./asset-gallery.stylex";
+import { shelf } from "./AssetsTabs.stylex";
 
 const TABS = [
   { href: "/dashboard/assets", label: "Gallery" },

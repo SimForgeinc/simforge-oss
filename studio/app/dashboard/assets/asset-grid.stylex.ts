@@ -1,28 +1,13 @@
-/**
- * StyleX styles for the asset gallery's tiles and the grid that lays them out:
- * `AssetCard` and `AssetGalleryGrid` (plus its loading skeleton).
- *
- * Translated one-for-one from the Tailwind these components shipped with, in
- * the same spirit as `asset-gallery.stylex.ts`: literal rems where the utility
- * compiled to a literal rem, Tailwind's own transition curve and durations,
- * and no rounding onto a nearer token step. Nothing here changes a pixel.
- *
- * Radii are absent throughout. The Tailwind config resolves the whole radius
- * scale to `0` and `styles.css` re-asserts it with
- * `*, *::before, *::after { border-radius: 0 !important }`, so `rounded-lg`
- * and `rounded-full` contributed nothing to render on these surfaces.
- */
-
 import * as stylex from "@stylexjs/stylex";
 import { colors, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
-/** Tailwind's default breakpoints, the only ones the grid responds to. */
+/** Catalog density breakpoints. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
 const XL = "@media (min-width: 1280px)";
 const XXL = "@media (min-width: 1536px)";
 
-/** Tailwind's default transition curve and the two durations used here. */
+/** Catalog interaction easing. */
 const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 /**
@@ -161,7 +146,7 @@ export const card = stylex.create({
     lineHeight: "inherit",
     color: colors.primary,
   },
-  // size-3 animate-pulse
+
   animatedIcon: {
     width: "0.75rem",
     height: "0.75rem",
@@ -199,13 +184,12 @@ export const card = stylex.create({
     transitionDuration: "200ms",
     transitionTimingFunction: EASE,
   },
-  // size-3.5
+
   revealIcon: {
     width: "0.875rem",
     height: "0.875rem",
   },
 
-  // flex flex-1 flex-col gap-2 p-3.5
   body: {
     display: "flex",
     flexGrow: 1,
@@ -215,7 +199,7 @@ export const card = stylex.create({
     gap: "0.5rem",
     padding: "0.875rem",
   },
-  // flex items-start justify-between gap-2
+
   titleRow: {
     display: "flex",
     alignItems: "flex-start",
@@ -262,7 +246,7 @@ export const card = stylex.create({
     textTransform: "capitalize",
     color: colors.mutedForeground,
   },
-  // mt-auto text-right text-xs text-muted-foreground
+
   meta: {
     marginTop: "auto",
     textAlign: "right",
@@ -327,14 +311,14 @@ export const grid = stylex.create({
     aspectRatio: "1 / 1",
     backgroundColor: "hsl(var(--muted) / 0.4)",
   },
-  // flex flex-col gap-2.5 p-3.5
+
   skeletonBody: {
     display: "flex",
     flexDirection: "column",
     gap: "0.625rem",
     padding: "0.875rem",
   },
-  // flex items-center justify-between gap-2
+
   skeletonRow: {
     display: "flex",
     alignItems: "center",

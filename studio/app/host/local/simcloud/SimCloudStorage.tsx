@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { styles } from "./SimCloudStorage.stylex";
 import * as stylex from "@stylexjs/stylex";
 import {
   CloudDownload,
@@ -236,6 +237,7 @@ export function SimCloudStorage({
 
   return (
     <div {...stylex.props(styles.pane)} data-testid="simcloud-storage">
+      <div>
       <div {...stylex.props(plate.spread)}>
         <div {...stylex.props(plate.row)}>
           <label {...stylex.props(plate.eyebrow)} htmlFor="simcloud-organization">
@@ -282,7 +284,8 @@ export function SimCloudStorage({
         </p>
       ) : null}
 
-      <div {...stylex.props(plate.columns)}>
+      </div>
+      <div {...stylex.props(styles.lists)}>
         <ListPlate
           title="Datasets in SimCloud"
           icon={<Database {...stylex.props(plate.icon)} aria-hidden="true" />}
@@ -430,7 +433,8 @@ function ListPlate<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <section {...stylex.props(plate.root)}>
+    <section {...stylex.props(plate.root, plate.scroller)}>
+      <div>
       <div {...stylex.props(plate.spread)}>
         <div {...stylex.props(plate.row)}>
           {icon}
@@ -439,10 +443,11 @@ function ListPlate<T>({
         <span {...stylex.props(plate.eyebrow)}>{items.length}</span>
       </div>
       <p {...stylex.props(plate.copy, plate.truncate)}>{subtitle}</p>
+      </div>
       {items.length === 0 ? (
         <p {...stylex.props(plate.empty)}>{empty}</p>
       ) : (
-        <ul {...stylex.props(plate.list)}>{items.map(renderItem)}</ul>
+        <ul {...stylex.props(plate.list, plate.pane)}>{items.map(renderItem)}</ul>
       )}
     </section>
   );
@@ -471,19 +476,3 @@ function Row({
   );
 }
 
-const styles = stylex.create({
-  pane: { display: "grid", alignContent: "start", gap: "0.75rem", minWidth: 0 },
-  select: {
-    height: "2rem",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.14)",
-    backgroundColor: "rgb(255 255 255 / 0.04)",
-    paddingInline: "0.5rem",
-    fontSize: "0.75rem",
-    color: "#fff",
-  },
-  targetSelect: { maxWidth: "11rem" },
-  rowBody: { display: "grid", gap: "0.125rem", minWidth: 0, flex: "1 1 12rem" },
-  rowTitle: { fontSize: "0.8125rem" },
-});

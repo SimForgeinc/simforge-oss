@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import {
-  HeroFlowShell,
   MapLibraryScreen,
   type MapLibraryMap,
 } from "@simforge-oss/studio-ui/onboarding";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { AppStage } from "@/app/components/AppStage";
 
 /**
  * The map library on a cloud host: what this workspace can open.
@@ -42,6 +43,7 @@ export function MapLibrarySurface() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,13 +79,15 @@ export function MapLibrarySurface() {
       setLoading(false);
     });
     return () => controller.abort();
-  }, []);
+  }, [retry]);
 
   return (
-    <HeroFlowShell as="section" fill>
+    <AppStage fill title="Maps in this workspace" eyebrow="Map library" testId="map-library-stage">
+      {loading && maps.length === 0 ? <CloudLoadingSurface scope="screen" title="Loading the map catalog" /> : null}
       <MapLibraryScreen
         catalog
         catalogError={catalogError}
+        onRetry={() => { setLoading(true); setRetry((value) => value + 1); }}
         error={error}
         freeBytes={null}
         loading={loading}
@@ -94,6 +98,6 @@ export function MapLibrarySurface() {
         onSignIn={() => undefined}
         signedIn
       />
-    </HeroFlowShell>
+    </AppStage>
   );
 }

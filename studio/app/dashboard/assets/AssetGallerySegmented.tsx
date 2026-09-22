@@ -2,11 +2,8 @@
 
 import type { LucideIcon } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
-import {
-  mergeStyleProps,
-  type XStyle,
-} from "@simforge-oss/studio-ui/components/stylex";
-import { segmented } from "./asset-gallery.stylex";
+import type { XStyle } from "@simforge-oss/studio-ui/components/stylex";
+import { segmented } from "./AssetGallerySegmented.stylex";
 
 /**
  * The page's two either/or switches — Models vs Maps, and All vs Mine.
@@ -24,15 +21,12 @@ export function AssetGallerySegmented<Value extends string>({
   value,
   options,
   onChange,
-  className,
   xstyle,
 }: {
   label: string;
   value: Value;
   options: readonly { value: Value; label: string; icon?: LucideIcon }[];
   onChange: (value: Value) => void;
-  /** Tailwind classes from a caller that has not migrated. Applied last. */
-  className?: string;
   /** Placement styles from a StyleX caller. */
   xstyle?: XStyle;
 }) {
@@ -40,7 +34,7 @@ export function AssetGallerySegmented<Value extends string>({
     <div
       role="group"
       aria-label={label}
-      {...mergeStyleProps(stylex.props(segmented.group, xstyle), className)}
+      {...stylex.props(segmented.group, xstyle)}
     >
       {options.map((option) => {
         const Icon = option.icon;
