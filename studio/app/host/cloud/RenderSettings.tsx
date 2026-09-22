@@ -7,7 +7,10 @@ import { RenderSelectionPanel } from "@simforge-oss/studio-ui/render-selection/R
 import { styles } from "@/app/components/render-settings.stylex";
 import type { RenderSettingsProps } from "@/app/host/contract";
 
-/** Browser graphics and device cache only; managed job quality is independent. */
+/**
+ * Browser graphics and this browser's map cache (usage, budget and an explicit
+ * clear); managed job quality is independent.
+ */
 export function RenderSettings(_props: RenderSettingsProps) {
   const preference = useRenderingPreference();
   return (
@@ -17,7 +20,7 @@ export function RenderSettings(_props: RenderSettingsProps) {
         onChoose={saveRenderingPreference}
         titleId="render-settings-title"
         descriptionId="render-settings-description"
-        footer={<MapAssetCacheStorage compact allowClear={false} refreshKey={preference} />}
+        footer={<MapAssetCacheStorage compact refreshKey={preference} />}
       />
     </div>
   );
