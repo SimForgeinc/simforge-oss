@@ -176,3 +176,35 @@ describe("dataset strip home sections", () => {
     expect(overflow.getAttribute("href")).toBe("/dashboard/simcloud");
   });
 });
+
+describe("dataset strip tiles", () => {
+  it("draws every tile monochrome: no per-dataset colour on local, active or cloud tiles", () => {
+    render(
+      <DatasetStrip
+        datasets={[dataset({ id: "usds_a", name: "Alpha" }), dataset({ id: "usds_b", name: "Beta" })]}
+        cloudHome={{
+          state: "connected",
+          organizationName: "Acme",
+          organizationCount: 1,
+          datasets: [dataset({ id: "usds_cloud", name: "Remote" })],
+        }}
+        loading={false}
+        creating={false}
+        busyDatasetId={null}
+        activeDatasetId="usds_b"
+        onSelectDataset={vi.fn()}
+        onOpenNewDatasetDialog={vi.fn()}
+        onEditDatasetDetails={vi.fn()}
+        onDeleteDataset={vi.fn()}
+      />,
+    );
+    const tiles = [
+      ...screen.getAllByTestId("scenario-dataset-icon"),
+      ...screen.getAllByTestId("scenario-cloud-dataset-icon"),
+    ];
+    expect(tiles).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("aria-current")).toBe("true");
+    // State is carried by the shared neutral tokens (brightness, pill, ring), never an inline hue.
+    for (const tile of tiles) expect(tile.getAttribute("style")).toBeNull();
+  });
+});
