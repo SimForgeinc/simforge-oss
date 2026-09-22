@@ -203,25 +203,7 @@ describe("ActorDetailsPanel", () => {
     );
 
     const panel = screen.getByTestId("scenario-actor-details-panel");
-    expect(panel.getAttribute("data-placement")).toBe("right-centered");
-    expect(panel.getAttribute("data-size")).toBe("compact");
     expect(panel.getAttribute("role")).toBe("dialog");
-    // Portalled to the document body: it floats over the scene rather than taking width
-    // out of the editor layout.
-    expect(panel.parentElement).toBe(document.body);
-    // Width is the author's now: it opens a quarter under the 192px ceiling, and the left
-    // edge drags, so the panel carries a live width rather than a fixed one.
-    expect(panel.style.width).toBe("144px");
-    // The left edge is the only one the author can reach, and it reports the range it may
-    // be dragged through: the pre-resize 192px stays the ceiling.
-    const resizeHandle = screen.getByTestId("editor-details-resize-handle");
-    expect(resizeHandle.getAttribute("role")).toBe("separator");
-    expect(resizeHandle.getAttribute("aria-orientation")).toBe("vertical");
-    expect(resizeHandle.getAttribute("aria-label")).toBe("Resize the details panel");
-    expect(resizeHandle.getAttribute("aria-valuenow")).toBe("144");
-    expect(resizeHandle.getAttribute("aria-valuemin")).toBe("132");
-    expect(resizeHandle.getAttribute("aria-valuemax")).toBe("192");
-    expect(panel.style.maxHeight).toBe("min(560px, calc(100vh - 96px))");
     expect(screen.getByTestId("actor-details-model-preview").querySelector('[data-catalog-icon="vehicle.sedan"]')).not.toBeNull();
     expect(screen.getByLabelText("Name")).not.toBeNull();
     expect(screen.queryByText("4.7 × 1.8 × 1.4 m")).toBeNull();

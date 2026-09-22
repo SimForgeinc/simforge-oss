@@ -10,14 +10,8 @@ import {
 import { createPortal } from "react-dom";
 import { Square, X } from "lucide-react";
 
-import { usePanelEdgeResize } from "../usePanelEdgeResize";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorDetailsPanel.stylex";
-
-/** The width this panel had before it could be resized, and so the widest it may be. */
-export const DETAILS_MAX_WIDTH = 192;
-/** A quarter slimmer, which is where it opens until the author drags it. */
-export const DETAILS_DEFAULT_WIDTH = Math.round(DETAILS_MAX_WIDTH * 0.75);
 
 const EditorConfigurationBlockedContext = createContext(false);
 
@@ -70,19 +64,10 @@ export function EditorDetailsPanel({
 }) {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const configurationBlocked = useContext(EditorConfigurationBlockedContext);
-  const { width, panelRef, separatorProps } = usePanelEdgeResize({
-    storageKey: "uniscenario.editor.details-width",
-    // 192 was this panel's only width, so it stays the ceiling. The default is a quarter slimmer:
-    // the panel overlays the scene, and most of what it holds reads fine narrower.
-    defaultWidth: DETAILS_DEFAULT_WIDTH,
-    minWidth: 132,
-    maxWidth: DETAILS_MAX_WIDTH,
-    edge: "left",
-    viewportReserve: 96,
-    label: "Resize the details panel",
-  });
 
-  useEffect(() => setPortalRoot(window.document.body), []);
+  useEffect(() => setPortalRoot(
+    window.document.querySelector<HTMLElement>("[data-editor-stage]") ?? window.document.body,
+  ), []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -108,30 +93,20 @@ export function EditorDetailsPanel({
   }, [configurationBlocked, onClose, onDelete]);
 
   if (!portalRoot) return null;
+  const panelStyles = stylex.props(styles.fixedFlexCol, styles.frame(height ?? "auto", maxHeight));
 
   return createPortal(
     <aside
-      ref={panelRef as React.RefObject<HTMLElement>}
       aria-label={ariaLabel}
-      className={`${stylex.props(styles.fixedFlexCol).className} editor-actor-details-enter`}
+      {...panelStyles}
+      className={`${panelStyles.className} editor-actor-details-enter`}
       data-placement="right-centered"
       data-size="compact"
       data-testid={testId}
       id={id}
       role="dialog"
       aria-disabled={configurationBlocked}
-      style={{ height, maxHeight, width }}
     >
-      {/*
-        The panel is docked to the right edge, so its left edge is the only one the author can
-        reach. Sits just inside the border, over the scroll area rather than beside it, because
-        there is no room to spare at this width.
-      */}
-      <div
-        {...separatorProps}
-        {...stylex.props(styles.abs)}
-        data-testid="editor-details-resize-handle"
-      />
       <header {...stylex.props(styles.relTightRuleB)}>
         <div {...stylex.props(styles.preview, previewXstyle ?? styles.previewDefault)}>
           {preview}

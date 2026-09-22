@@ -955,6 +955,7 @@ export function ScenarioEditorSurface({
         canvasMode={externalWorld ? "passthrough" : "interactive"}
         data-external-world={String(externalWorld)}
         data-testid="scenario-editor-surface"
+        data-editor-stage=""
         header={null}
         leftSidebar={sharedPlayback?.inspecting ? null : (slotProps) => (
           <div {...slotProps} >

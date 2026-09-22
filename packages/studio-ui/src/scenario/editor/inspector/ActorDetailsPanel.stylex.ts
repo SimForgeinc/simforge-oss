@@ -15,6 +15,7 @@ export const profileArtVars = stylex.defineVars({ opacity: "0.55" });
 export const styles = stylex.create({
   // border-t border-white/[0.07] bg-black/15 px-3 py-2
   ruleT: {
+    minWidth: 0,
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.07)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
@@ -38,6 +39,7 @@ export const styles = stylex.create({
   // flex items-center justify-between gap-1
   flexCenterBetween: {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.xs,

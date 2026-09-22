@@ -67,7 +67,7 @@ const DRIVER_PROFILE_ICONS: Readonly<Record<DriverProfile, string>> = {
   violator: "/scenario-editor/driver-behaviors/violator.png",
 };
 
-/** Fixed, viewport-level actor inspector shared by map and timeline selection. */
+/** Stage-docked actor inspector shared by map and timeline selection. */
 export function ActorDetailsPanel({
   actor,
   controller,

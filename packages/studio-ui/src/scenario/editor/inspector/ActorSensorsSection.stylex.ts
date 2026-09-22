@@ -69,12 +69,15 @@ export const styles = stylex.create({
   // flex gap-1.5
   flexGap15: {
     display: "flex",
+    flexWrap: "wrap",
+    minWidth: 0,
     gap: space.sm,
   },
   // motionStyles.editorMotion + flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/12 bg-white/[0.035] px-2 py-1.5 text-[9px] font-semibold text-white/70 hover:border-[#E8E044]/45 hover:bg-[#E8E044]/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   flexCenterMid: {
     display: "flex",
-    flex: "1 1 0%",
+    flex: "1 1 auto",
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
     gap: space.xs,
@@ -119,6 +122,7 @@ export const styles = stylex.create({
   // motionStyles.editorMotion + flex items-center justify-center gap-1 rounded-lg border border-[#E8E044]/35 bg-[#E8E044]/10 px-2 py-1.5 text-[9px] font-semibold text-[#E8E044] hover:bg-[#E8E044]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   flexCenterMid2: {
     display: "flex",
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
     gap: space.xs,
