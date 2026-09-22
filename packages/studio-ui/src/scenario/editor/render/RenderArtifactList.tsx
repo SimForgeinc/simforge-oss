@@ -7,6 +7,7 @@ import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface"
 import { Button } from "../../../components/ui/button";
 import {
   artifactAvailability,
+  artifactDisplayName,
   formatBytes,
   groupArtifacts,
   isImage,
@@ -51,7 +52,7 @@ export function RenderArtifactList({
   return (
     <div {...stylex.props(styles.flexColGap4)}>
       {groupArtifacts(artifacts).map((group) => (
-        <section {...stylex.props(styles.flexColGap1)} key={group.title}>
+        <section {...stylex.props(styles.flexColGap1)} key={group.key}>
           <h4 {...stylex.props(styles.capsMicroMuted)}>
             {group.title} · {group.items.length}
           </h4>
@@ -100,9 +101,12 @@ function ArtifactRow({
         : FileText;
   const openable = availability.kind === "ready" || availability.kind === "resolvable";
   const media = artifact.mediaType.startsWith("video/") || isImage(artifact);
-  const displayName = artifact.identity?.actorId
-    ? `${artifact.identity.actorId}/${artifact.identity.sensorId} · ${artifact.identity.modality} · ${artifact.identity.role}`
-    : artifact.identity?.role ?? artifact.artifactKind;
+  const displayName = artifactDisplayName(artifact);
+  const metadata = [
+    formatBytes(artifact.byteLength),
+    artifact.durationSeconds != null ? `${artifact.durationSeconds.toLocaleString()} s` : null,
+    artifact.mediaType,
+  ].filter(Boolean).join(" · ");
 
   /** Signed rows act immediately; unsigned rows mint a URL first, then act on the result. */
   async function act(intent: "preview" | "download") {
@@ -142,10 +146,9 @@ function ArtifactRow({
         ).className}
       />
       <div {...stylex.props(styles.fillNarrowable)}>
-        <p {...stylex.props(styles.xsInkMedium)}>{displayName}</p>
-        <p {...stylex.props(styles.microMutedTruncate)}>
-          {formatBytes(artifact.byteLength)} · {artifact.mediaType}
-          {artifact.relationship ? ` · ${artifact.relationship}` : ""}
+        <p {...stylex.props(styles.xsInkMedium)} title={displayName}>{displayName}</p>
+        <p {...stylex.props(styles.microMutedTruncate)} title={`${metadata} · ${artifact.sha256}`}>
+          {metadata}
           {" · "}
           <span title={artifact.sha256}>{shortDigest(artifact.sha256)}</span>
         </p>

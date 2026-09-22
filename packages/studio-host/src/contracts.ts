@@ -584,6 +584,8 @@ export type ScenarioRenderProgressDto =
       completed: number;
       total: number;
       unit: "frames" | "bytes" | "items" | "seconds";
+      downloadedBytes?: number;
+      totalBytes?: number;
     })
   | (RenderProgressBase & {
       event: "artifact.ready";
@@ -686,6 +688,10 @@ export type ScenarioRenderArtifactDto = {
   relationship: string | null;
   renderAttemptId: string | null;
   identity: ScenarioArtifactIdentityDto | null;
+  /** Human sensor name from the immutable render revision, never an identifier. */
+  sensorLabel?: string | null;
+  /** Simulated clip duration, absent for non-temporal evidence. */
+  durationSeconds?: number | null;
   createdAt: string;
   verifiedAt: string | null;
 };
@@ -708,6 +714,8 @@ export type ScenarioRenderJobDetailDto = {
   jobState: ScenarioRenderJobState;
   progressPercent: number | null;
   progressDetail: ScenarioRenderProgressDto | null;
+  /** Latest durable record per worker stage for the current attempt. */
+  progressRecords?: ScenarioRenderProgressDto[];
   rendererEngine: ScenarioRendererEngine | null;
   intentSha256: string | null;
   priority: number;

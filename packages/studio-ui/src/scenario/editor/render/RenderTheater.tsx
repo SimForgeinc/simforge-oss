@@ -12,6 +12,7 @@ import { PostprocessPanel } from "./PostprocessPanel";
 import { RenderStateChip } from "./RenderStatePieces";
 import { VideoPreviewModal } from "./VideoPreviewModal";
 import {
+  artifactDisplayName,
   formatCostCents,
   formatElapsed,
   formatTimestamp,
@@ -266,8 +267,8 @@ export function RenderTheater({
                   <track kind="captions" />
                 </video>
                 <figcaption {...stylex.props(styles.flexBetweenBaseline)}>
-                  <span {...stylex.props(styles.xsInkMedium)}>
-                    {hero.artifactKind}
+                  <span {...stylex.props(styles.xsInkMedium)} title={artifactDisplayName(hero)}>
+                    {artifactDisplayName(hero)}
                   </span>
                   <span {...stylex.props(styles.tightCapsMicro)}>
                     {hero.mediaType}
@@ -299,6 +300,7 @@ export function RenderTheater({
                       key={artifact.id}
                       onClick={() => setHeroArtifactId(artifact.id)}
                       role="tab"
+                      title={artifactDisplayName(artifact)}
                       type="button"
                     >
                       <video
@@ -312,7 +314,7 @@ export function RenderTheater({
                         <track kind="captions" />
                       </video>
                       <span {...stylex.props(styles.blockCapsMicro)}>
-                        {artifact.artifactKind}
+                        {artifactDisplayName(artifact)}
                       </span>
                     </button>
                   );
@@ -438,7 +440,7 @@ export function RenderTheater({
         mediaType={preview?.mediaType ?? "video/mp4"}
         onClose={() => setPreview(null)}
         open={preview != null}
-        title={preview?.artifactKind ?? "Preview"}
+        title={preview ? artifactDisplayName(preview) : "Preview"}
         url={preview?.url ?? null}
       />
     </section>

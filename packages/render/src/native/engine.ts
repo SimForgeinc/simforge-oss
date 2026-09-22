@@ -386,6 +386,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         }
         videoRecords.push({
           actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, relativePath,
+          sensor: {
+            ...(encoder.source.sensorLabel ? { label: encoder.source.sensorLabel } : {}),
+            role: encoder.source.modality === 'lidar' || encoder.source.modality === 'radar' ? encoder.source.modality : 'camera',
+            modality: encoder.source.modality,
+            mount: encoder.source.transform,
+          },
           width: encoder.width, height: encoder.height,
           framesPerSecond: encoder.framesPerSecond, frameCount: encoder.frames,
           sha256: digest.sha256, sizeBytes: digest.sizeBytes,

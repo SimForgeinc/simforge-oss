@@ -187,6 +187,8 @@ export const RenderRadarAttributesSchema = z.strictObject({
 const RenderSourceCommonShape = {
   actorId: EntityIdSchema,
   sensorId: EntityIdSchema,
+  /** Human sensor position/name, pinned with the capture rather than reconstructed from its ID. */
+  sensorLabel: z.string().trim().min(1).max(200).optional(),
   outputName: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/),
   transform: RenderSourceTransformSchema,
 } as const;

@@ -2,6 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows } from "@/app/lib/db/data-api";
 import { MEDIA_URL_TTL_SECONDS, getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import { RenderArtifactIdentitySchema } from "@/app/lib/scenario/render-wire-contracts";
+import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
 import type {
   ScenarioPresignedArtifactDto,
   ScenarioRenderArtifactDto,
@@ -35,6 +36,22 @@ const ARTIFACT_SELECT = `
          a.artifact_state, a.created_at, a.verified_at,
          al.relationship, al.render_job_id, al.render_attempt_id,
          al.artifact_role, al.artifact_actor_id, al.artifact_sensor_id, al.artifact_modality,
+         COALESCE(
+           (SELECT source->>'sensorLabel'
+              FROM jsonb_array_elements(job.render_intent->'renderSpec'->'sources') source
+             WHERE source->>'actorId' = al.artifact_actor_id
+               AND source->>'sensorId' = al.artifact_sensor_id
+               AND source->>'modality' = al.artifact_modality LIMIT 1),
+           (SELECT sensor->>'label'
+              FROM jsonb_array_elements(revision.canonical_content->'roles') role,
+                   jsonb_array_elements(role->'actor'->'sensors') sensor
+             WHERE role->>'id' = al.artifact_actor_id
+               AND sensor->>'id' = al.artifact_sensor_id LIMIT 1)
+         ) AS sensor_label,
+         CASE WHEN al.artifact_sensor_id IS NOT NULL THEN
+           (job.render_intent->'renderSpec'->'clip'->>'endSeconds')::double precision
+           - (job.render_intent->'renderSpec'->'clip'->>'startSeconds')::double precision
+         END AS duration_seconds,
          CASE
            WHEN al.relationship IN ('source', 'job_level', 'output') AND al.render_attempt_id IS NULL THEN TRUE
            WHEN al.render_attempt_id IS NULL OR ra.id IS NULL THEN FALSE
@@ -48,7 +65,11 @@ const ARTIFACT_SELECT = `
     LEFT JOIN simforge.render_attempts ra
       ON ra.id = al.render_attempt_id
      AND ra.workspace_id = al.workspace_id
-     AND ra.render_job_id = al.render_job_id`;
+     AND ra.render_job_id = al.render_job_id
+    LEFT JOIN simforge.render_jobs job
+      ON job.id = al.render_job_id AND job.workspace_id = al.workspace_id
+    LEFT JOIN simforge.revisions revision
+      ON revision.id = job.revision_id AND revision.workspace_id = job.workspace_id`;
 
 type ArtifactRow = {
   id: string;
@@ -67,6 +88,8 @@ type ArtifactRow = {
   artifact_sensor_id: string | null;
   artifact_modality: string | null;
   attempt_lineage_valid: boolean;
+  sensor_label: string | null;
+  duration_seconds: number | string | null;
 };
 
 function assertPublicArtifactLineage(rows: readonly ArtifactRow[]): void {
@@ -93,6 +116,8 @@ function artifactDto(row: ArtifactRow): ScenarioRenderArtifactDto {
           modality: row.artifact_modality,
         })
       : null,
+    sensorLabel: row.sensor_label ?? (row.artifact_sensor_id === PRONTO_CHASE_CAMERA_SENSOR_ID ? PRONTO_CHASE_CAMERA_SENSOR.label : null),
+    durationSeconds: row.duration_seconds == null ? null : Number(row.duration_seconds),
     createdAt: row.created_at,
     verifiedAt: row.verified_at,
   };
