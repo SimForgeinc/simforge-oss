@@ -157,8 +157,8 @@ export class NativeServiceClient {
   }
 
   /** `render_bundle`: one submission of the resident scene, identity-stamped. */
-  async renderBundle(body: Readonly<Record<string, unknown>>): Promise<NativeBundleResponse> {
-    const value = await this.rpc({ ...body, op: 'render_bundle' });
+  async renderBundle(body: Readonly<Record<string, unknown>>, timeoutMs?: number): Promise<NativeBundleResponse> {
+    const value = await this.rpc({ ...body, op: 'render_bundle' }, timeoutMs);
     const { frame, frames } = value;
     if (
       typeof frame?.simTick !== 'number'

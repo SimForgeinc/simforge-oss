@@ -69,6 +69,13 @@ export const RenderWorkerConfigSchema = z.strictObject({
     /** Blobs no published set wants are deleted once unused this long. */
     unwantedGraceMs: z.number().int().min(0).default(7 * 86_400_000),
   }).prefault({}),
+  /**
+   * Ceiling on one job's execution (scene load + render + encode + upload),
+   * after its inputs are ready. Heartbeats keep a lease alive indefinitely,
+   * so without it a wedged engine holds the GPU forever. Input downloads are
+   * bounded separately (no byte for 5 min fails them).
+   */
+  maxJobExecutionMs: z.number().int().min(60_000).max(86_400_000).default(4 * 3_600_000),
   /** Job workspaces: deleted right after success; failed ones kept this long for debugging. */
   workspaceRetentionMs: z.number().int().min(0).default(3 * 86_400_000),
   health: z.strictObject({
