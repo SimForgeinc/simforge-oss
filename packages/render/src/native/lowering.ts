@@ -1,3 +1,13 @@
+/**
+ * LEGACY FALLBACK: OpenSCENARIO → native scene states.
+ *
+ * The render contract is the render timeline (`timeline-lowering.ts`,
+ * `docs/engineering/render-timeline.md`): renderers replay the authoritative
+ * trace through the shared sampler. This xosc lowering re-derives poses from
+ * a derived export and survives only for execution packages produced before
+ * the timeline existed (no `render.timeline` input). Do not extend it.
+ */
+
 import { createHash } from 'node:crypto';
 
 import {
@@ -13,6 +23,10 @@ export interface NativeActorState {
   readonly kind: 'spawn' | 'update' | 'despawn';
   readonly catalogId: string;
   readonly actorClass: string;
+  /** Authored L/W/H extents (timeline lowering). */
+  readonly dims?: { readonly l: number; readonly w: number; readonly h: number };
+  /** Authored sRGB body colour (timeline lowering). */
+  readonly color?: string;
   readonly transform: {
     readonly position: readonly [number, number, number];
     readonly rotation: readonly [number, number, number, number];
@@ -27,6 +41,11 @@ export interface NativeSceneState {
   readonly tickHz: number;
   readonly weather: { readonly preset: 'clear' | 'rain' | 'fog' | 'night' };
   readonly timeOfDay: number;
+  /**
+   * Ground fallback for actors whose scene `y` is ~0. The timeline lowering
+   * sends `0`: its `y` is the baked height, authoritative even at 0.
+   */
+  readonly groundY?: number;
   readonly actors: readonly NativeActorState[];
 }
 
@@ -41,8 +60,11 @@ export interface NativeActorAppearance {
   readonly authored: boolean;
 }
 
-export interface NativeLowering {
-  readonly plan: OpenScenarioExecutionPlan;
+/** What the native engine renders from, whichever source it was lowered from. */
+export interface NativeSceneLowering {
+  readonly source: 'render-timeline' | 'openscenario-legacy';
+  readonly mapId: string;
+  readonly fixedTimestepSeconds: number;
   readonly states: readonly NativeSceneState[];
   readonly frameTimes: readonly number[];
   /** Every actor that appears in at least one state, sorted by id. */
@@ -50,8 +72,17 @@ export interface NativeLowering {
   readonly sha256: string;
 }
 
+export interface NativeLowering extends NativeSceneLowering {
+  readonly source: 'openscenario-legacy';
+  readonly plan: OpenScenarioExecutionPlan;
+}
+
 function q(value: number): number {
   return Number(value.toFixed(6));
+}
+
+export function canonicalSceneJson(value: unknown): string {
+  return canonicalJson(value);
 }
 
 function canonicalJson(value: unknown): string {
@@ -95,6 +126,11 @@ function sampleAt(actor: OpenScenarioPlanActor, time: number): OpenScenarioPlanS
     speedMps: left.speedMps + (right.speedMps - left.speedMps) * ratio,
     present: left.present && right.present,
   };
+}
+
+/** The native service's actor class vocabulary for a trace actor kind. */
+export function nativeActorClass(kind: string): string {
+  return actorClass(kind);
 }
 
 function actorClass(kind: string): string {
@@ -194,5 +230,8 @@ export function lowerOpenScenarioToNative(
       };
     });
   const sha256 = createHash('sha256').update(canonicalJson({ planSource: sourceSha256, states })).digest('hex');
-  return { plan, states, frameTimes, appearances, sha256 };
+  return {
+    source: 'openscenario-legacy', mapId: plan.mapId, fixedTimestepSeconds: plan.dt,
+    plan, states, frameTimes, appearances, sha256,
+  };
 }

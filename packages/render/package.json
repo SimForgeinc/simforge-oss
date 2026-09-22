@@ -21,6 +21,10 @@
       "./native": {
         "types": "./dist/native/index.d.ts",
         "default": "./dist/native/index.js"
+      },
+      "./timeline": {
+        "types": "./dist/timeline/index.d.ts",
+        "default": "./dist/timeline/index.js"
       }
     }
   },
@@ -43,6 +47,11 @@
       "development": "./src/native/index.ts",
       "types": "./dist/native/index.d.ts",
       "default": "./dist/native/index.js"
+    },
+    "./timeline": {
+      "development": "./src/timeline/index.ts",
+      "types": "./dist/timeline/index.d.ts",
+      "default": "./dist/timeline/index.js"
     }
   },
   "files": [
@@ -69,7 +78,7 @@
     "vitest": "^3.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/web/index.ts src/native/index.ts --format esm --dts --sourcemap --clean --out-dir dist && tsup --config tsup.browser.config.ts && node scripts/copy-dist-assets.mjs",
+    "build": "tsup src/index.ts src/web/index.ts src/native/index.ts src/timeline/index.ts --format esm --dts --sourcemap --clean --out-dir dist && tsup --config tsup.browser.config.ts && node scripts/copy-dist-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   }

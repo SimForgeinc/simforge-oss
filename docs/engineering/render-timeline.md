@@ -11,7 +11,9 @@ input.
 | Rust types, builder, height source, sampler | `native/crates/simforge-core/src/trace/timeline/` (`mod.rs`, `height.rs`, `sampler.rs`) |
 | WASM (editor, Node) | `RenderTimeline` in `@simforge-oss/native-runtime/browser` (`native/crates/simforge-bindings-wasm`) |
 | Python (CARLA adapter) | `simforge-oss-timeline` wheel, module `simforge_oss_timeline` (`adapters/timeline`, crate `native/crates/simforge-timeline-python`) |
-| Scene-state projection (Bevy) | `sampler::scene_yup`; Bevy consumes it via `load_scene_state` |
+| Node hosts (timeline job, CLI, Bevy lowering) | `@simforge-oss/render/timeline`: `buildRenderTimeline`, `openRenderTimeline`, `pose`, `compareObserved` (WASM loaded in Node) |
+| Scene-state projection (Bevy) | `sampler::scene_yup`; `packages/render/src/native/timeline-lowering.ts` → `load_scene_state` |
+| Parity comparator | `native/crates/simforge-core/src/trace/timeline/parity.rs`; Python `compare_observed`, WASM `compareObservedJson`, CLI `simforge render parity` |
 
 ## 1. Pipeline position
 
@@ -56,6 +58,17 @@ timelineKey = sha256(canonicalJson({
   rules. Changing either one bumps it, which changes every key.
 
 **Content digest.** `timelineSha256 = sha256(canonicalJson(timeline))`.
+The stored and shipped bytes are exactly `canonicalJson(timeline)`
+(`to_canonical_json` / `toCanonicalJson`), so the sha256 of the artifact
+bytes equals `timelineSha256`.
+
+**`catalogDigest` in v1.** Pass `null`. The v1 timeline derives everything
+from the trace: catalog ids come from `catalog:<id>` tags and class
+defaults, and dimensions come from the trace header. Both are already
+covered by `traceSha256`. The key reserves this slot for a later sampler
+that reads catalog data (wheelbase, track, body gains). That sampler will
+take the actor-asset closure digest (`actors.native-closure`), and its
+`samplerVersion` bump will change every key anyway.
 Render jobs reference `timelineSha256`. Storage layout (owned by WS-D):
 `timelines/sha256/<timelineSha256>.json.gz`, indexed by `timelineKey`.
 
@@ -120,9 +133,18 @@ mesh-vs-XODR delta.
 | `t[]` | Clip-relative tick times, quantised to 6 decimals, length `tickCount`. |
 
 A renderer samples at its exact frame times: `t = frame / fps` from
-integer-microsecond schedules. It never assumes its own dt. CARLA (fixed
-0.02 s) captures on tick boundaries. Its frame rates must divide 50 Hz (10,
-25, 50 Hz), or it must render at 50 Hz and decimate.
+integer-microsecond schedules. It never assumes its own dt. A fixed-step
+renderer (CARLA, 0.02 s) chooses one capture policy per job and records it in
+its manifest as `capture.policy`:
+
+- **`tick-aligned`**: frame rates that divide 50 Hz (10, 25, 50). Every
+  frame falls on a tick, and the renderer samples at the tick time.
+- **`sub-tick-sampled`**: any other rate, such as 20, 24 or 30 fps. The
+  renderer steps every 50 Hz tick. On the tick nearest each frame (within
+  half a tick) it poses every actor with `pose(tl, id, k / fps)`, the exact
+  frame time, and captures that tick. The drawn poses are therefore exact
+  at the frame time. Only the world clock the renderer runs on is
+  quantised.
 
 ## 6. Document
 
@@ -138,7 +160,7 @@ integer-microsecond schedules. It never assumes its own dt. CARLA (fixed
   "time": { "timeOriginS": 0, "warmupS": 1, "clipEndS": 20, "xoscTimeOffsetS": 1 },
   "environment": { "weather": {...scene-state.v1...}, "timeOfDay": 12, "profile": "sensor", "lowBeams": false },
   "actors": [ /* sorted by id */ {
-    "id", "kind", "catalogId", "actorClass", "dims": {"l","w","h"}, "color"?, "static",
+    "id", "kind", "catalogId", "catalogAuthored", "actorClass", "dims": {"l","w","h"}, "color"?, "static",
     "origin": "authored" | "native-ambient" | "sumo",
     "lifecycle": [ { "spawnTick": 0, "despawnTick": 907 | null } ],
     "track": {                          // index-aligned with t[]; zeros at absent ticks
@@ -147,7 +169,8 @@ integer-microsecond schedules. It never assumes its own dt. CARLA (fixed
       "pitchRad", "rollRad",            // = road + body; what renderers apply
       "wheelSteerRad"?, "wheelSpinRad"? // vehicles only
     },
-    "lights": [ { "tick", "light", "mode": "on" | "off" | "flashing" } ]
+    "lights": [ { "tick", "light", "mode": "on" | "off" | "flashing" } ],
+    "downedSinceTick"?: 201             // knocked off its feet from this tick on
   } ],
   "props": [ { "id", "catalogId", "x", "y", "z", "headingRad", "dims", "scale" } ],
   "signals": { "<signalId>": [ { "tick", "indication" } ] }
@@ -196,6 +219,15 @@ explicitly: `spawnTick` is inclusive and `despawnTick` is the first absent
 tick. Validation rejects a lifecycle that disagrees with `present`. A body
 is **absent strictly before its spawn tick and at or after its despawn
 tick**. Consumers never infer presence from gaps or from missing poses.
+
+### Posture
+
+`downedSinceTick` is optional. It is the first tick at which the body is
+knocked off its feet: the trace's `downSinceS`, rounded up to the tick grid.
+The state is monotonic, so the body stays down. The sampler reports it as
+`downed`, which is true once `i >= downedSinceTick`. A renderer lays the body
+prone. The same instant appears in a derived xosc as
+`uniscenarios.trajectoryReplay.knockedDownAtS.<actor>`, whose value is the clip-relative `downSinceS` (not shifted by the warm-up).
 
 ### Lights
 
@@ -254,7 +286,7 @@ A single Rust function (`sampler::pose`). Its rules:
      bits.
 
 The sampler returns a `TimelinePose` with these fields:
-`{present, tick, x, y, z, headingRad, pitchRad, rollRad, speedMps, velocity[3], acceleration[3], roadPitchRad, roadRollRad, bodyPitchRad, bodyRollRad, wheelSteerRad?, wheelSpinRad?}`.
+`{present, tick, x, y, z, headingRad, pitchRad, rollRad, speedMps, velocity[3], acceleration[3], roadPitchRad, roadRollRad, bodyPitchRad, bodyRollRad, wheelSteerRad?, wheelSpinRad?, downed}`.
 Bindings also expose a flat, lossless encoding of 20 f64 values:
 `[present, x, y, z, h, p, r, speed, vx, vy, vz, ax, ay, az, roadP, roadR, bodyP, bodyR, steer|NaN, spin|NaN]`.
 
@@ -301,6 +333,49 @@ The companions follow the same domain rules:
     never shown as the scenario's render.
 - **Editor.** Samples the same timeline through WASM. A local preview trace
   and the worker trace are compared by `traceSha256`.
+
+### Parity report (`simforge.render-parity/v1`)
+
+`compare_observed_jsonl(timeline, observedJsonl, profile)` reads one JSON
+record per rendered frame:
+`{"t" | "time", "actors": [{"id", "position": [3], "rotation"?: [x,y,z,w], "headingRad"?, "pitchRad"?, "rollRad"?, "visible"?}]}`.
+It samples the timeline at each record's own `t`. For every drawn body it
+reports:
+
+- position error: horizontal, vertical and 3D;
+- heading error, plus pitch and roll errors when the profile compares
+  attitude;
+- presence mismatches: bodies drawn but absent from the timeline, and bodies
+  present in the timeline but not drawn.
+
+The report also carries p95s, the ten worst observations, per-actor maxima,
+and `pass`.
+
+Profiles:
+
+- `bevy`: scene-yup quaternions, ground-contact roots, 1e-3 m / 0.05°.
+- `carla`: `xodr-local` with OSC `h/p/r`, 1 cm / 0.1°.
+- A JSON profile can override the tolerance, the frame, the height reference
+  (`ground` | `body-centre`) and `compareAttitude`.
+
+A failing report fails the render. `simforge render parity` exits 2 on
+failure.
+
+### Tooling
+
+```sh
+simforge render timeline trace.json.gz --map <mapId> --out scenario.timeline.json   # prints the key and digests
+simforge render sample scenario.timeline.json --t 3.04 [--actor <id>]
+simforge render parity scenario.timeline.json observed-frames.jsonl --profile bevy
+```
+
+The native render engine uses the timeline when a job carries the
+`render.timeline` input. That input holds the canonical bytes, and their
+sha256 must equal `timelineSha256`. The engine records
+`sceneSource: "render-timeline"` and `timelineSha256` in its manifest and
+diagnostics. Without that input it falls back to re-lowering the xosc,
+records `sceneSource: "openscenario-legacy"`, and adds the warning
+`scene_source_openscenario_legacy`.
 
 ## 9. Compatibility and versioning
 
