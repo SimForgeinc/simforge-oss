@@ -384,6 +384,12 @@ export const DEFAULT_MAX_OBJECTS: number
 
 export const ENGINE_HZ: number
 
+/** Build provenance JSON (never a cache key). */
+export declare function engineBuild(): string
+
+/** Engine semantics version; `engineVersion()` is its former name. */
+export declare function engineSemVer(): string
+
 export declare function engineVersion(): string
 
 /** Resolve one site: `siteId = null` picks the top-ranked site. */

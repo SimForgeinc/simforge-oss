@@ -11,7 +11,7 @@ import {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   allSumoSignalsGreenFromExtensions,
   ambientSignalCycleSettingsFromExtensions,
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForEditor,
 } from "@simforge-oss/playback/traffic";
 import {
   AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
@@ -45,7 +45,7 @@ export function AmbientEditor({
 }) {
   const extensions = document.data.extensions;
   const provider = ambientTrafficProviderFromExtensions(extensions);
-  const profile = ambientTrafficProfileFromExtensions(extensions);
+  const profile = ambientTrafficProfileForEditor(document.data);
   const acceleratedSignalCycles = ambientSignalCycleSettingsFromExtensions(
     extensions,
   ).acceleratedSignalCycles;

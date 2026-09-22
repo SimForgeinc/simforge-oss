@@ -83,6 +83,25 @@
       ],
       "additionalProperties": false
     },
+    "simulation": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "dtS": {
+          "type": "number",
+          "const": 0.02
+        }
+      },
+      "required": [
+        "seed",
+        "dtS"
+      ],
+      "additionalProperties": false
+    },
     "params": {
       "default": {},
       "type": "object",

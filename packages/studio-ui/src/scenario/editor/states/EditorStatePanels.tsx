@@ -23,11 +23,14 @@ export function EditorEmptyState({
   detail,
   href,
   action,
+  onAction,
 }: {
   title: string;
   detail: string;
   href?: string;
   action?: string;
+  /** A button instead of a link: the action runs in place (e.g. an explicit map re-pin). */
+  onAction?: () => void;
 }) {
   return (
     <div
@@ -49,13 +52,16 @@ export function EditorEmptyState({
             <Link href={href}>{action}</Link>
           </Button>
         ) : null}
+        {!href && action && onAction ? (
+          <Button xstyle={styles.mt6} onClick={onAction}>{action}</Button>
+        ) : null}
       </div>
     </div>
   );
 }
 
-/** Map choice for a new, unbound scenario. Once chosen, the draft follows new
- * compatible immutable builds of that same source map during release activation. */
+/** Map choice for a new, unbound scenario. Once chosen, the draft is pinned to
+ * that immutable map version; moving it to a newer build is an explicit step. */
 export function MapChooser({
   maps,
   onChoose,
@@ -72,8 +78,9 @@ export function MapChooser({
           </p>
           <h1 {...stylex.props(styles.xxlSemibold)}>Choose a map</h1>
           <p {...stylex.props(styles.smMuted2)}>
-            This scenario will follow compatible new builds of the selected map.
-            Choosing a different map creates a separate scenario.
+            This scenario is pinned to the selected map version. Moving it to a
+            newer build is an explicit step. Choosing a different map creates a
+            separate scenario.
           </p>
         </div>
         <div {...stylex.props(styles.gridGap3)}>

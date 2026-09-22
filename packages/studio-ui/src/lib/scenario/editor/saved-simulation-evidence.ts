@@ -1,4 +1,5 @@
 import {
+  ambientProfileMissingDefault,
   ambientTrafficProviderFromExtensions,
   browserRevisionTraffic,
   previewAmbientTrafficProfile,
@@ -53,6 +54,7 @@ export async function savedSimulationRevisionEvidence(
           ambientTrafficProviderFromExtensions(document.content.extensions),
           document.content.extensions,
           document.content.mapSignalPlans.length > 0,
+          ambientProfileMissingDefault(document.content),
         ),
         undefined,
         { backgroundPreview: true },

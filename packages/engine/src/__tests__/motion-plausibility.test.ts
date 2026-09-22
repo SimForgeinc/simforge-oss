@@ -127,7 +127,7 @@ function stopCase(seed: number) {
   } else {
     actors = [drawn('ego', kind, zigZagPath(100, 250, 40 + 60 * r(), 1 + 2.5 * r(), 25 + 20 * r()), Math.min(speed, 10))];
   }
-  return { shape, kind: shape === 'walker' ? 'pedestrian' : kind, input: scenario({ seed: `stop-${seed}`, clipSeconds: 60, warmupSeconds: 0, dt: 0.05, actors }) };
+  return { shape, kind: shape === 'walker' ? 'pedestrian' : kind, input: scenario({ seed: `stop-${seed}`, clipSeconds: 60, warmupSeconds: 0, dt: 0.02, actors }) };
 }
 
 interface Violation { actor: string; t: number; check: string; measured: number; limit: number }
@@ -197,7 +197,7 @@ describe('motion plausibility around stops', () => {
   });
 
   it('flags a trace in which a stopped car turns in place', () => {
-    const input = scenario({ seed: 'spin-injection', clipSeconds: 30, warmupSeconds: 0, dt: 0.05, actors: [drawn('ego', 'car', [{ x: 20, y: 0 }, { x: 80, y: 0 }], 8)] });
+    const input = scenario({ seed: 'spin-injection', clipSeconds: 30, warmupSeconds: 0, dt: 0.02, actors: [drawn('ego', 'car', [{ x: 20, y: 0 }, { x: 80, y: 0 }], 8)] });
     const { trace } = runSimulation(input, { graph });
     expect(evaluateTrace(trace).findings.filter((f) => f.code === 'implausible_motion')).toEqual([]);
     const ego = trace.ticks.actors['ego']!;

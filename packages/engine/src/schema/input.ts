@@ -915,6 +915,9 @@ export function resolvePhysicsConfig(input: Pick<SimScenarioInput, 'physics'>): 
 
 /* ------------------------------------------------------------- the document */
 
+/** The only simulation step SimForge executes (the document's `simulation.dtS`). */
+export const SIMULATION_DT_S = 0.02;
+
 export const simScenarioInputSchema = z
   .object({
     schemaVersion: z.literal(1).default(1),
@@ -924,8 +927,12 @@ export const simScenarioInputSchema = z
     clipSeconds: positive.default(20),
     /** Unrecorded prologue `t ∈ [-warmupSeconds, 0)`. */
     warmupSeconds: nonNeg.default(5),
-    /** Fixed integration step, seconds. */
-    dt: positive.max(0.2).default(0.02),
+    /**
+     * Fixed integration step, seconds. SimForge executes exactly one step,
+     * 20 ms ({@link SIMULATION_DT_S}); any other value is rejected rather than
+     * run, so a trace's time base is never a per-producer choice.
+     */
+    dt: z.literal(SIMULATION_DT_S).default(SIMULATION_DT_S),
     seed: z.union([z.number().int(), z.string()]).default(0),
     /** Omitted means the current simulation default and stays hash-stable. */
     physics: physicsConfigSchema.optional(),

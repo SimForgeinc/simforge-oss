@@ -15,7 +15,7 @@ import type { RoleBinding } from './schema/v2/roles.js';
 import type { ReasoningTraceSegment } from './schema/v2/reasoning-trace.js';
 import type { ActorSensor } from './schema/v2/sensors.js';
 import type { LogicalAnchorInput } from './schema/v2/anchor.js';
-import { SCENARIO_TEMPLATE_VERSION, type ScenarioTemplateV2 } from './schema/v2/template.js';
+import { SCENARIO_TEMPLATE_VERSION, SIMULATION_DT_S, type ScenarioTemplateV2 } from './schema/v2/template.js';
 import type { Variant } from './schema/v2/variants.js';
 import type { MapRef } from './schema/v1.js';
 import {
@@ -112,6 +112,8 @@ export class TemplateDocument {
         appVersion: init.appVersion ?? '0.0.0-dev',
       },
       ...(init.sourceMap ? { sourceMap: init.sourceMap } : {}),
+      // New documents pin their seed at birth, so a later rename never changes the simulation.
+      simulation: { seed: init.anchor?.id ?? init.name, dtS: SIMULATION_DT_S },
       anchor: init.anchor ?? { features: [] },
       roles: [],
       props: [],
