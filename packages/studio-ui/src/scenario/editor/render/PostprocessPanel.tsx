@@ -12,6 +12,7 @@ import { useVisiblePolling } from "../../../lib/use-visible-polling";
 import { useScenarioNotification } from "../status";
 import { RenderProgressBar, RenderStateChip } from "./RenderStatePieces";
 import {
+  artifactDisplayName,
   formatTimestamp,
   hasLiveJob,
   humanizeCode,
@@ -20,6 +21,7 @@ import {
 } from "./render-view-model";
 import type {
   ScenarioGalleryItemDto,
+  ScenarioRenderArtifactDto,
   ScenarioRenderJobState,
 } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
@@ -217,7 +219,7 @@ function PostprocessForm({
 }: {
   mode: PostprocessMode;
   parentJobId: string;
-  sources: readonly { id: string; artifactKind: string }[];
+  sources: readonly ScenarioRenderArtifactDto[];
   onSubmitted: () => void;
   onError: (message: string | null) => void;
 }) {
@@ -230,7 +232,7 @@ function PostprocessForm({
   const [busy, setBusy] = useState(false);
 
   const sourceOptions = useMemo(
-    () => sources.map((artifact) => ({ value: artifact.id, label: artifact.artifactKind })),
+    () => sources.map((artifact) => ({ value: artifact.id, label: artifactDisplayName(artifact) })),
     [sources],
   );
 

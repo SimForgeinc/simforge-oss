@@ -82,8 +82,8 @@ export function ArtifactsWorkspacePanel() {
   // Kind options come from what actually loaded, not a hardcoded list: `artifact_kind` is a free-form
   // column (max 100 chars) that workers extend, so an enum here would silently hide new kinds.
   const kindOptions = useMemo(() => {
-    const kinds = [...new Set(artifacts.map((artifact) => artifact.artifactKind))].sort();
-    return [{ value: "all", label: "All kinds" }, ...kinds.map((value) => ({ value }))];
+    const kinds = new Map(artifacts.map((artifact) => [artifact.artifactKind, artifactDisplayName(artifact)]));
+    return [{ value: "all", label: "All kinds" }, ...[...kinds].map(([value, label]) => ({ value, label }))];
   }, [artifacts]);
 
   const filtered = useMemo(() => {
@@ -164,7 +164,7 @@ export function ArtifactsWorkspacePanel() {
       </div>
 
       <VideoPreviewModal
-        eyebrow={preview?.artifactKind ?? null}
+        eyebrow={preview?.mediaType ?? null}
         mediaType={preview?.mediaType ?? ""}
         onClose={() => setPreview(null)}
         open={preview != null}
