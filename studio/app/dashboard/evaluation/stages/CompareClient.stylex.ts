@@ -2,6 +2,13 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
+  verdict: { fontSize: text.sizeXs, borderColor: "transparent" },
+  verdictMatched: { color: colors.signalGreen, backgroundColor: colors.muted },
+  verdictDifferent: { color: colors.accent, backgroundColor: colors.muted },
+  verdictUnknown: { color: colors.mutedForeground, backgroundColor: colors.muted },
+  verdictInvalid: { color: colors.danger, backgroundColor: colors.muted },
+  disclosureIcon: { width: "0.75rem", height: "0.75rem", transitionProperty: "transform", transitionDuration: "150ms" },
+  disclosureOpen: { transform: "rotate(180deg)" },
   // grid grid-cols-2 gap-2
   dlGrid: {
     display: "grid",

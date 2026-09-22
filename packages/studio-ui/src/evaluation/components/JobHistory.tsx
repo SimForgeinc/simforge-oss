@@ -27,13 +27,13 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { EmptyState } from "../../components/ui/empty-state";
-import { cn } from "../../lib/utils";
 import type { ComputeJob } from "@simforge-oss/evaluation/client";
 import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
 import { useJobList } from "../workspace/useJobList";
 import { elapsedSeconds, formatCents, formatSeconds, jobStatusPresentation } from "../presentation";
 import type { JobStatusTone } from "../presentation";
-import { RefusalNotice } from "./RefusalNotice";
+import { PaneErrorState } from "../../components/state-frames";
+import { ListSkeleton } from "../../components/ListSkeleton";
 
 const TONE_STYLES: Record<JobStatusTone, XStyle> = {
   neutral: s.toneNeutral,
@@ -59,28 +59,24 @@ export function JobHistory({
   gateway,
   onOpenJob,
   refreshToken,
-  className,
+  xstyle,
 }: {
   gateway: EvaluationGateway;
   onOpenJob: (jobId: string) => void;
   /** Change this after a submission to pull the new job in immediately. */
   refreshToken?: unknown;
-  className?: string;
+  xstyle?: stylex.StyleXStyles;
 }) {
-  const { jobs, error, nextCursor, cancelling, loadMore, cancel } = useJobList(gateway, refreshToken);
+  const { jobs, error, nextCursor, cancelling, loadMore, cancel, retry } = useJobList(gateway, refreshToken);
 
-  if (jobs === null) {
-    return (
-      <p className={cn(stylex.props(s.inlineGap2, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineGap2, s.textSm, s.textMuted).style}>
-        <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />Loading runs…
-      </p>
-    );
-  }
+  if (jobs === null) return error
+    ? <PaneErrorState title="Could not load runs" description={error} onRetry={retry} xstyle={xstyle} />
+    : <ListSkeleton label="Loading runs" xstyle={xstyle} />;
 
   return (
-    <div className={cn(stylex.props(s.section4).className, className)} data-testid="job-history">
-      {error ? <RefusalNotice tone="warn" title="Job list" reasons={[error]} /> : null}
-      {jobs.length === 0 ? (
+    <div {...stylex.props(s.section4, xstyle)} data-testid="job-history">
+      {error ? <PaneErrorState title="Could not refresh runs" description={error} onRetry={retry} /> : null}
+      {jobs.length === 0 && error ? null : jobs.length === 0 ? (
         <EmptyState
           title="No runs yet"
           description="Runs you submit here and from the desktop app both appear in this list, for everyone in the workspace."

@@ -1,4 +1,8 @@
 "use client";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
 import * as stylex from "@stylexjs/stylex";
 
 import { ShieldAlert, ShieldCheck } from "lucide-react";
@@ -25,7 +29,7 @@ import type {
   ModelRunRecord,
   ModelVersionRecord,
 } from "@/app/lib/models/contracts";
-import { PanelMessage, StatusBadge, useJsonFetch } from "../shared";
+import { StatusBadge, useJsonFetch } from "../shared";
 import { styles } from "../route-residuals.stylex";
 
 type PromotionResult =
@@ -80,9 +84,9 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
     }
   }
 
-  if (version.kind === "loading") return <PanelMessage>Loading model version…</PanelMessage>;
+  if (version.kind === "loading") return <CloudLoadingSurface scope="pane" title="Loading model version…" />;
   if (version.kind === "error") {
-    return <PanelMessage>Failed to load version: {version.message}</PanelMessage>;
+    return <PaneErrorState title="Could not load model version" description={version.message} onRetry={version.retry} exitHref="/dashboard/evaluation" exitLabel="Back to evaluation" />;
   }
   const record = version.data.version;
 
@@ -147,12 +151,12 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {runs.kind === "loading" ? <PanelMessage>Loading runs…</PanelMessage> : null}
+          {runs.kind === "loading" ? <ListSkeleton label="Loading runs" /> : null}
           {runs.kind === "error" ? (
-            <PanelMessage>Failed to load runs: {runs.message}</PanelMessage>
+            <PaneErrorState title="Could not load runs" description={runs.message} onRetry={runs.retry} />
           ) : null}
           {runs.kind === "ready" && runs.data.runs.length === 0 ? (
-            <PanelMessage>No eval runs recorded for this version.</PanelMessage>
+            <EmptyState title="No eval runs recorded for this version." />
           ) : null}
           {runs.kind === "ready" && runs.data.runs.length > 0 ? (
             <Table>

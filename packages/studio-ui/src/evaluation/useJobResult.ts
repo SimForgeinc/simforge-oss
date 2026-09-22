@@ -45,6 +45,7 @@ export type JobResultBundle = {
   loading: boolean;
   /** Problems reading the job or its documents, each already user-readable. */
   problems: string[];
+  retry: () => void;
 };
 
 /** A manifest-declared artifact joined to the id the control plane stored it under. */
@@ -88,6 +89,8 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
   const [frameUrls, setFrameUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [problems, setProblems] = useState<string[]>([]);
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = useCallback(() => setRetryKey((key) => key + 1), []);
 
   const poll = useCallback(
     async (signal: AbortSignal) => {
@@ -109,7 +112,7 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
   );
 
   const live = job === null || jobStatusPresentation(job.status).live;
-  useVisiblePolling(poll, POLL_INTERVAL_MS, live, jobId);
+  useVisiblePolling(poll, POLL_INTERVAL_MS, live, `${jobId}:${retryKey}`);
 
   const artifacts = job?.result?.artifacts ?? null;
 
@@ -241,5 +244,6 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
     frameUrls,
     loading,
     problems,
+    retry,
   };
 }

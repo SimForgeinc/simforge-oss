@@ -1,4 +1,7 @@
 "use client";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
 import * as stylex from "@stylexjs/stylex";
 
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
@@ -18,7 +21,7 @@ import {
   TableRow,
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { EvalPolicyDetail } from "@/app/lib/evaluation/contracts";
-import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "../shared";
+import { formatScore, StatusBadge, useJsonFetch } from "../shared";
 import { styles } from "../route-residuals.stylex";
 
 function ProvenanceCard({
@@ -36,7 +39,7 @@ function ProvenanceCard({
           <CardTitle xstyle={styles.cardTitle} >Provenance</CardTitle>
         </CardHeader>
         <CardContent>
-          <PanelMessage>No provenance.json recorded for this policy.</PanelMessage>
+          <EmptyState title="No provenance.json recorded for this policy." />
         </CardContent>
       </Card>
     );
@@ -102,9 +105,9 @@ export function PolicyDetailClient({
     `/api/evaluation/campaigns/${campaignId}/policies/${policyId}`,
   );
 
-  if (state.kind === "loading") return <PanelMessage>Loading policy run…</PanelMessage>;
+  if (state.kind === "loading") return <CloudLoadingSurface scope="pane" title="Loading policy run…" />;
   if (state.kind === "error") {
-    return <PanelMessage>Failed to load policy run: {state.message}</PanelMessage>;
+    return <PaneErrorState title="Could not load policy run" description={state.message} onRetry={state.retry} exitHref="/dashboard/evaluation" exitLabel="Back to evaluation" />;
   }
   const detail = state.data;
   const infractionsTotal = detail.episodes.reduce(
@@ -149,7 +152,7 @@ export function PolicyDetailClient({
         </CardHeader>
         <CardContent>
           {detail.episodes.length === 0 ? (
-            <PanelMessage>No completed episodes in the ledger yet.</PanelMessage>
+            <EmptyState title="No completed episodes in the ledger yet." />
           ) : (
             <Table>
               <TableHeader>

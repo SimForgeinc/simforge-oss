@@ -29,6 +29,7 @@ export type JobList = {
   nextCursor: string | null;
   /** The job whose cancel is in flight. */
   cancelling: string | null;
+  retry: () => void;
   loadMore: () => Promise<void>;
   cancel: (job: ComputeJob) => Promise<void>;
 };
@@ -38,6 +39,8 @@ export function useJobList(
   /** Change after a submission to pull the new job in immediately. */
   refreshToken?: unknown,
 ): JobList {
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = useCallback(() => setRetryKey((key) => key + 1), []);
   const [jobs, setJobs] = useState<ComputeJob[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function useJobList(
   );
 
   const anyLive = jobs?.some((job) => jobStatusPresentation(job.status).live) ?? true;
-  useVisiblePolling(refresh, JOB_POLL_INTERVAL_MS, true, `${anyLive}:${String(refreshToken)}`);
+  useVisiblePolling(refresh, JOB_POLL_INTERVAL_MS, true, `${anyLive}:${String(refreshToken)}:${retryKey}`);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor) return;
@@ -97,5 +100,5 @@ export function useJobList(
     [gateway],
   );
 
-  return { jobs, error, nextCursor, cancelling, loadMore, cancel };
+  return { jobs, error, nextCursor, cancelling, loadMore, cancel, retry };
 }

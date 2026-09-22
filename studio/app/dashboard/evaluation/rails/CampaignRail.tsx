@@ -1,4 +1,5 @@
 "use client";
+import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
 
 /**
  * The campaigns rail. The open campaign expands its policies inline, because a
@@ -76,12 +77,7 @@ export function CampaignRail({
       count={loading ? null : campaigns.length}
       ariaLabel="Evaluation campaigns"
       groups={groups}
-      empty={
-        <EmptyState
-          title={loading ? "Loading campaigns…" : "No eval campaigns yet"}
-          description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
-        />
-      }
+      empty={loading ? <ListSkeleton label="Loading evaluation list" /> : <EmptyState title="No eval campaigns yet" description="Campaigns group policy runs and their retained evidence." />}
     />
   );
 }

@@ -1,4 +1,7 @@
 "use client";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./CompareClient.stylex";
 
@@ -29,8 +32,7 @@ import type {
   EvalPolicySummary,
   EvalRunComparison,
 } from "@/app/lib/evaluation/contracts";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
-import { formatScore, PanelMessage, useJsonFetch } from "../shared";
+import { formatScore, useJsonFetch } from "../shared";
 import { styles as residual } from "../route-residuals.stylex";
 
 /** Metric ids the page shows, with the label a person reads. */
@@ -48,13 +50,13 @@ const VERDICT_LABEL: Record<EvalComparabilityVerdict, string> = {
   incomparable: "Not comparable",
 };
 
-const VERDICT_CLASS: Record<EvalComparabilityVerdict, string> = {
-  matched: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-transparent",
-  "sensor-different": "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-transparent",
-  "runtime-different": "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-transparent",
-  "incomplete-identity": "bg-muted text-muted-foreground border-transparent",
-  "identity-integrity": "bg-destructive/15 text-destructive border-transparent",
-  incomparable: "bg-muted text-muted-foreground border-transparent",
+const VERDICT_STYLE = {
+  matched: styles.verdictMatched,
+  "sensor-different": styles.verdictDifferent,
+  "runtime-different": styles.verdictDifferent,
+  "incomplete-identity": styles.verdictUnknown,
+  "identity-integrity": styles.verdictInvalid,
+  incomparable: styles.verdictUnknown,
 };
 
 const UNRANKABLE_LABEL: Record<string, string> = {
@@ -73,7 +75,7 @@ const UNRANKABLE_LABEL: Record<string, string> = {
 
 function VerdictBadge({ verdict }: { verdict: EvalComparabilityVerdict }) {
   return (
-    <Badge variant="outline" className={cn("text-[10px]", VERDICT_CLASS[verdict])}>
+    <Badge variant="outline" xstyle={[styles.verdict, VERDICT_STYLE[verdict]]}>
       {VERDICT_LABEL[verdict]}
     </Badge>
   );
@@ -150,7 +152,7 @@ function ColumnCard({
           {...stylex.props(styles.buttonFlexXs)}
           onClick={() => setShowAdvanced((value) => !value)}
         >
-          <ChevronDown className={cn("h-3 w-3 transition-transform", showAdvanced ? "rotate-180" : null)} />
+          <ChevronDown {...stylex.props(styles.disclosureIcon, showAdvanced && styles.disclosureOpen)} />
           {showAdvanced ? "Hide" : "Show"} exact identity
         </button>
         {showAdvanced ? (
@@ -293,16 +295,13 @@ export function CompareClient({
   if (policies.length < 2) {
     return (
       <div {...stylex.props(residual.content4)}>
-        <PanelMessage>
-          A comparison needs at least two policies. Pick them on the campaign, or start a new
-          comparison here; the first column is the baseline.
-        </PanelMessage>
+        <EmptyState title="A comparison needs at least two policies. Pick them on the campaign, or start a new comparison here; the first column is the baseline." />
         <ComparisonLauncher campaignId={campaignId} onSelectCampaign={onSelectCampaign} />
       </div>
     );
   }
-  if (state.kind === "loading") return <PanelMessage>Comparing runs…</PanelMessage>;
-  if (state.kind === "error") return <PanelMessage>Failed to compare: {state.message}</PanelMessage>;
+  if (state.kind === "loading") return <CloudLoadingSurface scope="pane" title="Comparing runs…" />;
+  if (state.kind === "error") return <PaneErrorState title="Could not compare runs" description={state.message} onRetry={state.retry} exitHref="/dashboard/evaluation" exitLabel="Back to evaluation" />;
   const comparison = state.data;
   const columnCount = comparison.columns.length;
   const firstCellByColumn = comparison.columns.map((_, index) => {
@@ -360,7 +359,7 @@ export function CompareClient({
         </CardHeader>
         <CardContent>
           {comparison.episodes.length === 0 ? (
-            <PanelMessage>No overlapping scenario+seed episodes between these runs.</PanelMessage>
+            <EmptyState title="No overlapping scenario+seed episodes between these runs." />
           ) : (
             <Table>
               <TableHeader>

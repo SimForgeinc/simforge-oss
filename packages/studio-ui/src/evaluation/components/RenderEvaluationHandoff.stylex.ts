@@ -4,6 +4,7 @@ import { colors, space, text } from "../../stylex/tokens.stylex";
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
+  root: { display: "flex", flexDirection: "column", gap: space.xl, minWidth: 0 },
   // space-y-1
   header: {
     display: "flex",

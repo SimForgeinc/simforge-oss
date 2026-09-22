@@ -16,15 +16,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
-import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
-import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { useRouteHeader } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import {
   EvaluationShell,
   LaunchStage,
-  RefusalNotice,
   jobStatusPresentation,
   sourceRenderJobIds,
   useEvaluationSelection,
@@ -50,19 +49,27 @@ import { PolicyDetailClient } from "./stages/PolicyDetailClient";
 import { RunDetailClient } from "./stages/RunDetailClient";
 import { VersionDetailClient } from "./stages/VersionDetailClient";
 import { useJsonFetch } from "./shared";
-import { styles } from "./evaluation-page.stylex";
+import { styles } from "./EvaluationPageClient.stylex";
 
 export function EvaluationPageClient() {
-  const { selection, select, selectSection } = useEvaluationSelection();
+  const { selection, select: updateSelection, selectSection: updateSection } = useEvaluationSelection();
+  const [activePane, setActivePane] = useState<"list" | "detail" | "inspector">(
+    (selection.section === "runs" ? selection.run || selection.local : selection.section === "campaigns" ? selection.campaign : selection.version) ? "detail" : "list",
+  );
+  const select = useCallback((next: EvaluationSelection) => { updateSelection(next); setActivePane("detail"); }, [updateSelection]);
+  const selectSection = useCallback((next: EvaluationSelection["section"]) => { updateSection(next); setActivePane("list"); }, [updateSection]);
   const [organizations, setOrganizations] = useState<StudioCloudOrganization[] | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [organizationRefresh, setOrganizationRefresh] = useState(0);
+  const [retryOperation, setRetryOperation] = useState<(() => void) | undefined>();
   const [localRunsRefresh, setLocalRunsRefresh] = useState(0);
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
 
   const gateway = useEvaluationGateway(organizationId);
   const host = useHostExecutionSnapshot(organizationId);
-  const { jobs, error: jobsError } = useJobList(gateway, submittedJobId);
+  const [jobsRefresh, setJobsRefresh] = useState(0);
+  const { jobs, error: jobsError } = useJobList(gateway, `${submittedJobId}:${jobsRefresh}`);
 
   // Local runs are a desktop concept: staged on that machine's disk and leased
   // by its model-run queue. A cloud host has no such queue to list.
@@ -72,6 +79,10 @@ export function EvaluationPageClient() {
   );
   const campaigns = useJsonFetch<{ campaigns: EvalCampaignSummary[] }>("/api/evaluation/campaigns");
   const versions = useJsonFetch<{ versions: ModelVersionRecord[] }>("/api/models/versions");
+  const [entering, setEntering] = useState(true);
+  const requiredLoading = selection.section === "campaigns" ? campaigns.kind === "loading"
+    : selection.section === "models" ? versions.kind === "loading" : jobs === null && !jobsError;
+  useEffect(() => { if (!requiredLoading) setEntering(false); }, [requiredLoading]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,10 +102,12 @@ export function EvaluationPageClient() {
         }
         if (!response.ok) throw new Error(`organizations request failed (${response.status})`);
         setOrganizations(payload?.organizations ?? []);
+        setError(null);
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
         setOrganizations([]);
+        setRetryOperation(() => () => setOrganizationRefresh((key) => key + 1));
         setError(
           cause instanceof Error
             ? `Your SimCloud organizations could not be listed: ${cause.message}`
@@ -102,7 +115,7 @@ export function EvaluationPageClient() {
         );
       });
     return () => controller.abort();
-  }, []);
+  }, [organizationRefresh]);
 
   const renderJobIds = useMemo(() => sourceRenderJobIds(jobs ?? []), [jobs]);
   const scenarioTitles = useScenarioTitles(renderJobIds);
@@ -132,6 +145,7 @@ export function EvaluationPageClient() {
         setLocalRunsRefresh((key) => key + 1);
         select({ section: "runs", local: started.runId });
       } catch (cause) {
+        setRetryOperation(undefined);
         setError(
           cause instanceof LocalRunUnavailable
             ? cause.message
@@ -163,9 +177,11 @@ export function EvaluationPageClient() {
         : selectedJob
           ? `${selectedJob.model.family} run`
           : "Evaluation";
-  useSetPageTitle(pageTitle);
+  useRouteHeader({ title: pageTitle, context: "Evaluation" });
 
-  const rail =
+  const listFailure = selection.section === "campaigns" && campaigns.kind === "error" ? campaigns
+    : selection.section === "models" && versions.kind === "error" ? versions : null;
+  const rail = listFailure ? <PaneErrorState title="Could not load evaluation list" description={listFailure.message} onRetry={listFailure.retry} /> :
     selection.section === "campaigns" ? (
       <CampaignRail
         campaigns={campaignList}
@@ -188,6 +204,7 @@ export function EvaluationPageClient() {
       <RunRail
         jobs={jobs}
         listError={jobsError}
+        onRetry={() => setJobsRefresh((key) => key + 1)}
         localRuns={localRunList}
         scenarioTitles={scenarioTitles}
         selectedRunId={selection.run ?? null}
@@ -222,10 +239,11 @@ export function EvaluationPageClient() {
   // clears is a click shield rather than a message.
 
   function renderStage() {
+    if (listFailure) return <PaneErrorState title="Could not load evaluation data" description={listFailure.message} onRetry={listFailure.retry} />;
     if (selection.section === "models") {
       if (!selection.version) {
         return versions.kind === "loading" ? (
-          <CloudLoadingSurface scope="pane" title="Loading models" detail="Reading the local model registry." />
+          <CloudLoadingSurface scope="pane" title="Loading models" detail="Reading the model registry." />
         ) : (
           <EmptyState
             xstyle={styles.stagePad}
@@ -240,12 +258,12 @@ export function EvaluationPageClient() {
     if (selection.section === "campaigns") {
       if (!selection.campaign) {
         return campaigns.kind === "loading" ? (
-          <CloudLoadingSurface scope="pane" title="Loading campaigns" detail="Reading the runs root." />
+          <CloudLoadingSurface scope="pane" title="Loading campaigns" detail="Reading campaign records." />
         ) : (
           <EmptyState
             xstyle={styles.stagePad}
             title="Pick a campaign"
-            description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
+            description="Choose a campaign to review its policies, episodes and retained evidence."
           />
         );
       }
@@ -295,11 +313,11 @@ export function EvaluationPageClient() {
       }
       if (!selectedCampaign) {
         return campaigns.kind === "loading" ? (
-          <CloudLoadingSurface scope="pane" title="Loading campaign" detail="Reading the runs root." />
+          <CloudLoadingSurface scope="pane" title="Loading campaign" detail="Reading campaign records." />
         ) : (
           <EmptyState
             xstyle={styles.stagePad}
-            title="This campaign is not in the runs root"
+            title="This campaign is not available"
             description={`No ledger was found for ${campaignId}.`}
           />
         );
@@ -349,29 +367,19 @@ export function EvaluationPageClient() {
     );
   }
 
+  if (entering && requiredLoading) return <CloudLoadingSurface scope="screen" title="Loading evaluation" detail="Reading this workspace’s evaluation data." />;
   const stage = renderStage();
   return (
     <EvaluationShell
+      activePane={activePane}
+      onActivePaneChange={setActivePane}
       section={selection.section}
       onSectionChange={selectSection}
       rail={rail}
       stage={stage}
       overlay={
         error ? (
-          <>
-            <span {...stylex.props(styles.overlayMessage)}>{error}</span>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setError(null);
-                setLocalRunsRefresh((key) => key + 1);
-              }}
-            >
-              Try again
-            </Button>
-          </>
+          <PaneErrorState title="Evaluation operation failed" description={error} onRetry={retryOperation} exitHref="/dashboard/evaluation" exitLabel="Back to evaluation" />
         ) : null
       }
     />

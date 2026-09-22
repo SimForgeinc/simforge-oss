@@ -13,7 +13,6 @@
 import { useMemo, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
 import { styles as s } from "./evaluation-components.stylex";
 import type { OpenLoopItem, TrajectoryProjection } from "@simforge-oss/evaluation/client";
@@ -27,12 +26,12 @@ export function FrameOverlay({
   item,
   projection,
   source,
-  className,
+  xstyle,
 }: {
   item: OpenLoopItem;
   projection: TrajectoryProjection;
   source: FrameSource;
-  className?: string;
+  xstyle?: stylex.StyleXStyles;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [frameIndex, setFrameIndex] = useState(0);
@@ -70,7 +69,7 @@ export function FrameOverlay({
   };
 
   return (
-    <figure className={cn(stylex.props(s.figure).className, className)}>
+    <figure {...stylex.props(s.figure, xstyle)}>
       <div {...stylex.props(s.relative, s.black)} style={{ aspectRatio: `${width} / ${height}` }}>
         {source.kind === "video" ? (
           <video
