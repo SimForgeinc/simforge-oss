@@ -244,8 +244,7 @@ export async function listRenderJobEvents(
  * hidden render must still resolve — `hiddenAt` is on the DTO so the UI can show that state and offer
  * to unhide. Making this 404 instead would make hidden renders unrecoverable through the UI.
  *
- * The three child reads are issued concurrently. They are independent, and the details tab is the one
- * surface a user sits and watches, so serialising four round-trips would be felt.
+ * Child reads run concurrently; progress is bounded to one latest record per stage in this attempt.
  */
 export async function getRenderJobDetail(
   context: AppContext,
@@ -271,7 +270,7 @@ export async function getRenderJobDetail(
     || !Number.isSafeInteger(Number(job.attempt_count))
     || Number(job.attempt_count) < 0) invalidLineage();
 
-  const [attempts, events, artifacts] = await Promise.all([
+  const [attempts, events, artifacts, progressRows] = await Promise.all([
     listRenderJobAttempts(context, jobId, {
       executionPackageId: job.execution_package_id,
       controlSha256: job.execution_package_control_sha256!,
@@ -279,6 +278,17 @@ export async function getRenderJobDetail(
     }),
     listRenderJobEvents(context, jobId),
     listRenderJobArtifacts(context, jobId),
+    queryRows<{ record: string | Record<string, unknown> }>(
+      `SELECT DISTINCT ON (p.record->>'stage') p.record
+         FROM simforge.render_progress_records p
+         JOIN simforge.render_attempts a ON a.id = p.render_attempt_id
+         JOIN simforge.render_jobs j ON j.id = p.render_job_id
+        WHERE j.id = :job_id AND j.workspace_id = :workspace_id
+          AND a.attempt_number = :attempt_number
+          AND p.record->>'event' IN ('stage.started', 'stage.progress')
+        ORDER BY p.record->>'stage', p.sequence DESC`,
+      { job_id: jobId, workspace_id: context.workspaceId, attempt_number: Number(job.attempt_count) },
+    ),
   ]);
 
   return {
@@ -293,6 +303,7 @@ export async function getRenderJobDetail(
     progressDetail: job.progress_detail
       ? RenderProgressRecordSchema.parse(parseJsonObject(job.progress_detail))
       : null,
+    progressRecords: progressRows.map((row) => RenderProgressRecordSchema.parse(parseJsonObject(row.record))),
     rendererEngine: job.renderer_engine
       ? ScenarioRendererEngineSchema.parse(job.renderer_engine)
       : null,

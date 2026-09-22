@@ -8,12 +8,11 @@ import { useVisiblePolling } from "../../../lib/use-visible-polling";
 import { RenderProgressBar, RenderStateChip } from "./RenderStatePieces";
 import {
   activeRetry,
+  artifactDisplayName,
   formatBytes,
   formatElapsed,
   formatTimestamp,
-  humanizeCode,
   jobFailureMessage,
-  latestRenderEvent,
   renderJobLabel,
   renderPipelineStages,
   renderStateVisual,
@@ -98,8 +97,8 @@ export function RenderProgressView({
     return () => clearInterval(timer);
   }, [live]);
 
-  const stages = detail ? renderPipelineStages(detail.events, detail.jobState) : [];
-  const newest = detail ? latestRenderEvent(detail.events) : null;
+  const progress = detail ? renderPipelineStages(detail) : null;
+  const stages = progress?.stages ?? [];
   const attempt = detail?.attempts.at(-1) ?? null;
   const retry = detail ? activeRetry(detail) : null;
   const retryLabel = retry ? `Retrying · attempt ${retry.attempt} ${retry.phase}` : null;
@@ -111,21 +110,7 @@ export function RenderProgressView({
   const sinceStart = detail
     ? formatElapsed(detail.startedAt ?? detail.createdAt, detail.completedAt ?? new Date(now).toISOString())
     : "—";
-  const sinceEvent = newest ? formatElapsed(newest.createdAt, new Date(now).toISOString()) : null;
-  const progressRecord = detail?.progressDetail ?? null;
-  const progressStage = progressRecord && "stage" in progressRecord ? progressRecord.stage : null;
-  const progressAmount = progressRecord?.event === "stage.progress"
-    ? `${progressRecord.completed}/${progressRecord.total} ${progressRecord.unit}`
-    : null;
-  const elapsedSeconds = detail
-    ? Math.max(0, (Date.parse(detail.completedAt ?? new Date(now).toISOString()) - Date.parse(detail.startedAt ?? detail.createdAt)) / 1000)
-    : 0;
-  const etaSeconds = progressRecord?.event === "stage.progress" && progressRecord.completed > 0
-    ? Math.max(0, elapsedSeconds * (progressRecord.total - progressRecord.completed) / progressRecord.completed)
-    : null;
-  const latestSensor = progressRecord?.event === "artifact.ready" && progressRecord.identity.actorId !== null
-    ? `${progressRecord.identity.actorId}/${progressRecord.identity.sensorId} · ${progressRecord.identity.modality}`
-    : null;
+  const sinceEvent = progress ? formatElapsed(progress.updatedAt, new Date(now).toISOString()) : null;
 
   return (
     <section
@@ -150,11 +135,11 @@ export function RenderProgressView({
             {detail ? renderJobLabel(detail) : "Render"}
           </p>
           <h2 {...stylex.props(styles.inkTruncateBase)}>
-            {retryLabel ?? (detail ? renderStateVisual(detail.jobState).label : "Reading status…")}
+            {progress?.label ?? "Reading status…"}
             <span {...stylex.props(styles.monoXsMuted)}>{sinceStart}</span>
           </h2>
         </div>
-        {detail ? <RenderStateChip state={detail.jobState} /> : <CloudActivityIndicator />}
+        {detail ? <RenderStateChip state={detail.jobState} label={progress?.label} /> : <CloudActivityIndicator />}
         {playable ? (
           <button
             className={stylex.props(styles.inlineFlexCenterTight, motionStyles.editorMotion).className}
@@ -178,26 +163,22 @@ export function RenderProgressView({
             <RenderProgressBar
               xstyle={styles.mb1}
               label="Render progress"
-              progressPercent={detail.progressPercent}
+              progressPercent={progress?.percent ?? null}
               state={detail.jobState}
             />
             <p {...stylex.props(styles.flexBaselineWrap)}>
               <span data-testid="render-progress-percent">
-                {detail.progressPercent == null
+                {progress?.percent == null
                   ? "No percentage reported yet"
-                  : `${Math.round(detail.progressPercent)}% reported`}
+                  : `${Math.round(progress.percent)}% · ${progress.label}`}
               </span>
               {sinceEvent !== null ? (
                 <span data-testid="render-progress-heartbeat">
-                  Last event {humanizeCode(newest!.eventKind).toLowerCase()} · {sinceEvent} ago
+                  Last update · {sinceEvent} ago
                 </span>
               ) : (
-                <span data-testid="render-progress-heartbeat">No events yet</span>
+                <span data-testid="render-progress-heartbeat">Waiting for worker progress</span>
               )}
-              {progressStage ? <span>Phase {humanizeCode(progressStage).toLowerCase()}</span> : null}
-              {progressAmount ? <span>{progressAmount}</span> : null}
-              {etaSeconds !== null ? <span>ETA {Math.ceil(etaSeconds)}s</span> : null}
-              {latestSensor ? <span>Sensor {latestSensor}</span> : null}
               {error !== null ? <span {...stylex.props(styles.danger)}>Status read failed · retrying</span> : null}
             </p>
 
@@ -230,7 +211,7 @@ export function RenderProgressView({
                     <span {...stylex.props(styles.microMuted)}>{stage.hint}</span>
                   </span>
                   <span {...stylex.props(styles.tightMonoMicro)}>
-                    {stage.at ? formatTimestamp(stage.at) : stage.state === "active" ? "waiting" : ""}
+                    {stage.at ? formatTimestamp(stage.at) : ""}
                   </span>
                 </li>
               ))}
@@ -305,10 +286,8 @@ export function RenderProgressView({
                       {...stylex.props(styles.flexBetweenBaseline)}
                       key={artifact.id}
                     >
-                      <span {...stylex.props(styles.inkMediumTruncate)}>
-                        {artifact.identity?.actorId
-                          ? `${artifact.identity.actorId}/${artifact.identity.sensorId} · ${artifact.identity.modality} · ${artifact.identity.role}`
-                          : humanizeCode(artifact.identity?.role ?? artifact.artifactKind)}
+                      <span {...stylex.props(styles.inkMediumTruncate)} title={artifactDisplayName(artifact)}>
+                        {artifactDisplayName(artifact)}
                       </span>
                       <span {...stylex.props(styles.tightMonoMicro)}>
                         {formatBytes(artifact.byteLength)} · {artifact.artifactState}

@@ -157,6 +157,8 @@ export const ScenarioRenderProgressSchema = discriminated<"event", ScenarioRende
     completed: number(),
     total: number(),
     unit: oneOf(["frames", "bytes", "items", "seconds"] as const),
+    downloadedBytes: optional(number()),
+    totalBytes: optional(number()),
   }),
   "artifact.ready": object({
     ...progressBase,
@@ -207,6 +209,7 @@ export const ScenarioRenderJobDetailSchema = object<ScenarioRenderJobDetailDto>(
   jobState: oneOf(RENDER_JOB_STATUSES),
   progressPercent: nullable(number()),
   progressDetail: nullable(ScenarioRenderProgressSchema),
+  progressRecords: optional(array(ScenarioRenderProgressSchema)),
   rendererEngine: nullable(oneOf(SCENARIO_RENDERER_ENGINES)),
   intentSha256: nullable(string()),
   priority: number(),

@@ -141,7 +141,7 @@ async function executeClaim(
   const heartbeat = runHeartbeat(transport, job, state, heartbeatIntervalMs, config.retries);
   let gpuLock: GpuJobLock | undefined;
 
-  const forward = async (candidate: RenderProgressRecord): Promise<void> => {
+  const sendProgress = async (candidate: RenderProgressRecord): Promise<void> => {
     const record = RenderProgressRecordSchema.parse({
       ...candidate,
       jobId: job.jobId,
@@ -159,6 +159,16 @@ async function executeClaim(
     if (ack.acceptedThroughSequence < record.sequence) throw new Error('control plane did not accept forwarded progress sequence');
     state.progressSequence += 1;
   };
+  // Download/upload pools may report together; allocate sequences only after the prior ack.
+  let progressQueue = Promise.resolve();
+  const forward = (candidate: RenderProgressRecord): Promise<void> => {
+    progressQueue = progressQueue.then(() => sendProgress(candidate));
+    return progressQueue;
+  };
+  const stageStarted = (stage: 'preparing' | 'uploading' | 'finalizing') => forward({
+    schema: 'simforge.render-progress/v1', event: 'stage.started', stage,
+    jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
+  });
 
   try {
     const actualIntentSha256 = hashRenderIntent(job.intent);
@@ -175,7 +185,13 @@ async function executeClaim(
       workspace,
       config.cacheDir,
       state.controller.signal,
+      { progress: (progress) => forward({
+        schema: 'simforge.render-progress/v1', event: 'stage.progress', stage: 'downloading', unit: 'items',
+        jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
+        ...progress,
+      }) },
     ));
+    await stageStarted('preparing');
     const containerIdentity = configuredContainerIdentity(config);
     if (containerIdentity) await chownWorkspace(workspace, containerIdentity);
     if (engine.capabilities.requiresGpu) gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId);
@@ -197,6 +213,13 @@ async function executeClaim(
     // sensor archives and videos otherwise serialize behind one another. The
     // completion manifest preserves engine artifact order by index.
     const completed: CompletedArtifact[] = new Array<CompletedArtifact>(manifest.artifacts.length);
+    await stageStarted('uploading');
+    let uploadedArtifacts = 0;
+    if (manifest.artifacts.length > 0) await forward({
+      schema: 'simforge.render-progress/v1', event: 'stage.progress', stage: 'uploading',
+      completed: 0, total: manifest.artifacts.length, unit: 'items',
+      jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
+    });
     let nextArtifactIndex = 0;
     const uploadOne = async (): Promise<void> => {
       while (true) {
@@ -233,6 +256,12 @@ async function executeClaim(
           sizeBytes: artifact.sizeBytes,
           mediaType: artifact.mediaType,
         };
+        uploadedArtifacts += 1;
+        await forward({
+          schema: 'simforge.render-progress/v1', event: 'stage.progress', stage: 'uploading',
+          completed: uploadedArtifacts, total: manifest.artifacts.length, unit: 'items',
+          jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
+        });
       }
     };
     await Promise.all(Array.from(
@@ -240,6 +269,7 @@ async function executeClaim(
       uploadOne,
     ));
     if (completed.length === 0) throw new Error('engine produced no artifacts');
+    await stageStarted('finalizing');
     state.heartbeatController.abort(new Error('render complete; stop heartbeats before fencing completion'));
     await heartbeat;
     if (state.heartbeatError) throw state.heartbeatError;
