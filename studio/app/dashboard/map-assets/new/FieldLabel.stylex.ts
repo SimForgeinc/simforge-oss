@@ -3,15 +3,15 @@ import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.style
 
 export const styles = stylex.create({
   fieldLabel: {
-    marginBottom: space.sm,
+    marginBottom: space.s1_5,
     display: "block",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   requiredIndicator: {
-    marginLeft: space.xxs,
+    marginLeft: space.s0_5,
     color: colors.danger,
   },
 });

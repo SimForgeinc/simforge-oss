@@ -20,6 +20,7 @@ import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-os
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const CityViewDynamic = dynamic(
   () => import("@simforge-oss/viewer/react").then((module) => module.CityView),
@@ -28,7 +29,7 @@ const CityViewDynamic = dynamic(
     loading: () => (
       <div {...stylex.props(styles.viewerLoadingContainer)}>
         <div {...stylex.props(styles.emptyStateIconWrapper)}>
-          <Box {...stylex.props(styles.loadingPlaceholderIcon)} />
+          <Box {...stylex.props([motionRecipe.pulse, styles.loadingPlaceholderIcon])} />
         </div>
       </div>
     ),
@@ -194,7 +195,7 @@ export function DigitalTwinViewerPanel({
   if (has3D === null) {
     return (
       <div {...stylex.props(styles.viewerLoadingContainer)}>
-        <Loader2 {...stylex.props(styles.loadingSpinner)} />
+        <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingSpinner])} />
       </div>
     );
   }

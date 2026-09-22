@@ -4,6 +4,7 @@ import { styles } from "./ScenarioTagsSection.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import { getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the ScenarioTagsSection component. */
 type ScenarioTagsSectionProps = {
@@ -28,11 +29,11 @@ export function ScenarioTagsSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.toggleButton)}
+          {...stylex.props([motionRecipe.colors, styles.toggleButton])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           Scenario tags ({tags.length})
         </button>
@@ -41,7 +42,7 @@ export function ScenarioTagsSection({
           onClick={() => onCopy(tags.join(","), "tags")}
           aria-label="Copy tags as CSV"
           title="Copy tags as CSV"
-          {...stylex.props(styles.copyButton)}
+          {...stylex.props([motionRecipe.colors, styles.copyButton])}
         >
           {copiedKey === "tags" ? <Check {...stylex.props(styles.checkIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         </button>

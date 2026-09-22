@@ -5,6 +5,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { artifactTypeFromExtension } from "@/app/lib/maps/frontend/add-map-utils";
 import { UploadStatusBadge, type TrackedUpload } from "./UploadStatusBadge";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface AdditionalArtifactsPanelProps {
   files: File[];
@@ -47,7 +48,7 @@ export function AdditionalArtifactsPanel({
         <ul {...stylex.props(styles.artifactsList)}>
           {files.map((f, i) => (
             <li key={f.name} {...stylex.props(styles.artifactItem)}>
-              <span {...stylex.props(styles.artifactFilename)}>{f.name}</span>
+              <span {...stylex.props(textLayout.truncate)}>{f.name}</span>
               <Badge variant="outline" xstyle={styles.artifactTypeBadge}>
                 {artifactTypeFromExtension(f.name) ?? "?"}
               </Badge>

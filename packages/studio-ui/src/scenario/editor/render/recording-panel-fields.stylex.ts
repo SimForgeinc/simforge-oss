@@ -1,19 +1,19 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // mt-3 border-t render-hairline pt-3
   ruleT: {
-    marginTop: space.lg,
-    borderTopWidth: "1px",
-    paddingTop: space.lg,
+    marginTop: space.s3,
+    borderTopWidth: stroke.hairline,
+    paddingTop: space.s3,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // flex items-center gap-2
   flexCenterGap2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // size-3.5 text-muted-foreground
   muted: {
@@ -24,7 +24,7 @@ export const styles = stylex.create({
   // text-micro font-bold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -32,23 +32,23 @@ export const styles = stylex.create({
   },
   // mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4
   gridXsCols2: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, minmax(0, 1fr))",
-      "@media (min-width: 640px)": "repeat(4, minmax(0, 1fr))",
+      [layout.bpSm]: "repeat(4, minmax(0, 1fr))",
     },
     MozColumnGap: "0.75rem",
-    columnGap: space.lg,
-    rowGap: space.xs,
+    columnGap: space.s3,
+    rowGap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // mt-1.5 text-micro text-muted-foreground
   microMuted: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // text-muted-foreground
@@ -67,58 +67,34 @@ export const styles = stylex.create({
   // text-xs
   xs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // (was the label's space-y-1)
   stackedXs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
   },
   // h-9 w-full render-glass border px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   smBorderedWide: {
     height: "2.25rem",
     width: "100%",
-    borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    backgroundColor: colors.glass,
+    lineHeight: text.lineSm,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
-    },
   },
   // h-9 w-full render-glass border px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   xsBorderedWide: {
     height: "2.25rem",
     width: "100%",
-    borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    backgroundColor: colors.glass,
+    lineHeight: text.lineXs,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
-    },
   },
 });

@@ -1,14 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /** Catalog density breakpoints. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
 const XL = "@media (min-width: 1280px)";
 const XXL = "@media (min-width: 1536px)";
-
-/** Catalog interaction easing. */
-const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 /**
  * The tile's hover state, published to its own descendants.
@@ -65,7 +62,7 @@ export const card = stylex.create({
     width: "100%",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.border, ":hover": "hsl(var(--border) / 0.8)" },
     backgroundColor: colors.card,
@@ -73,7 +70,7 @@ export const card = stylex.create({
     transform: { default: "none", ":hover": "translateY(-0.125rem)" },
     transitionProperty: "transform, border-color, box-shadow",
     transitionDuration: "200ms",
-    transitionTimingFunction: EASE,
+    transitionTimingFunction: motion.easeStandard,
     /**
      * Hover and focus can be true at once, and Tailwind would render both
      * shadows then — `--tw-shadow` and `--tw-ring-shadow` are separate slots in
@@ -92,7 +89,7 @@ export const card = stylex.create({
      * the ring above is a box-shadow, which forced-colors mode discards, and
      * the transparent outline is what remains visible there.
      */
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -120,7 +117,7 @@ export const card = stylex.create({
     transform: `var(${CARD_ZOOM})`,
     transitionProperty: "transform",
     transitionDuration: "300ms",
-    transitionTimingFunction: EASE,
+    transitionTimingFunction: motion.easeStandard,
   },
   // absolute left-2 top-2
   pillSlot: {
@@ -135,12 +132,12 @@ export const card = stylex.create({
     display: "inline-flex",
     height: "1.25rem",
     alignItems: "center",
-    gap: "0.25rem",
-    borderWidth: 1,
+    gap: space.s1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.25)",
     backgroundColor: "hsl(var(--background) / 0.8)",
-    paddingInline: "0.375rem",
+    paddingInline: space.s1_5,
     paddingBlock: 0,
     fontSize: "10px",
     lineHeight: "inherit",
@@ -151,8 +148,8 @@ export const card = stylex.create({
     width: "0.75rem",
     height: "0.75rem",
     animationName: stylex.keyframes({ "50%": { opacity: 0.5 } }),
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
   },
 
@@ -170,19 +167,19 @@ export const card = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: "0.25rem",
+    gap: space.s1,
     backgroundImage: "linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent)",
-    paddingInline: "0.75rem",
-    paddingBottom: "0.5rem",
-    paddingTop: "2rem",
+    paddingInline: space.s3,
+    paddingBottom: space.s2,
+    paddingTop: space.s8,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.primary,
     opacity: `var(${CARD_REVEAL})`,
     transitionProperty: "opacity",
     transitionDuration: "200ms",
-    transitionTimingFunction: EASE,
+    transitionTimingFunction: motion.easeStandard,
   },
 
   revealIcon: {
@@ -196,15 +193,15 @@ export const card = stylex.create({
     flexShrink: 1,
     flexBasis: "0%",
     flexDirection: "column",
-    gap: "0.5rem",
-    padding: "0.875rem",
+    gap: space.s2,
+    padding: space.s3_5,
   },
 
   titleRow: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: "0.5rem",
+    gap: space.s2,
   },
   /**
    * min-w-0 truncate text-sm font-semibold leading-snug transition-colors
@@ -220,13 +217,13 @@ export const card = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: 1.375,
-    fontWeight: 600,
+    lineHeight: text.lineSnug,
+    fontWeight: text.weightSemibold,
     color: `var(${CARD_TITLE_INK})`,
     transitionProperty:
       "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: EASE,
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
   },
   /**
    * shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px]
@@ -237,11 +234,11 @@ export const card = stylex.create({
    */
   classChip: {
     flexShrink: 0,
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
-    paddingInline: "0.5rem",
-    paddingBlock: "0.125rem",
+    paddingInline: space.s2,
+    paddingBlock: space.s0_5,
     fontSize: "10px",
     textTransform: "capitalize",
     color: colors.mutedForeground,
@@ -251,7 +248,7 @@ export const card = stylex.create({
     marginTop: "auto",
     textAlign: "right",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // font-mono tabular-nums
@@ -270,7 +267,7 @@ export const grid = stylex.create({
    */
   grid: {
     display: "grid",
-    gap: "1rem",
+    gap: space.s4,
     gridTemplateColumns: {
       default: "repeat(1, minmax(0, 1fr))",
       [SM]: "repeat(2, minmax(0, 1fr))",
@@ -301,7 +298,7 @@ export const grid = stylex.create({
   // overflow-hidden rounded-lg border border-border bg-card
   skeletonCard: {
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.card,
@@ -315,15 +312,15 @@ export const grid = stylex.create({
   skeletonBody: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.625rem",
-    padding: "0.875rem",
+    gap: space.s2_5,
+    padding: space.s3_5,
   },
 
   skeletonRow: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "0.5rem",
+    gap: space.s2,
   },
   // h-3.5 w-2/3
   skeletonTitle: {

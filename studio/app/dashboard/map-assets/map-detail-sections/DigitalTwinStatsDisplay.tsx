@@ -14,6 +14,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import type { ThreeDStats as ThreeDStatsResponse } from "@/app/lib/3d-manifest-stats";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 // ---------------------------------------------------------------------------
 // Formatters
@@ -61,7 +62,7 @@ function CollapsibleSection({
         aria-expanded={open}
       >
         <ChevronRight
-          {...stylex.props(styles.chevronMutedShrink, open && styles.rotate90)}
+          {...stylex.props([motionRecipe.transform, styles.chevronMutedShrink], open && styles.rotate90)}
         />
         <Icon {...stylex.props(styles.sectionIcon)} />
         <span {...stylex.props(styles.sectionLabel)}>{label}</span>
@@ -115,7 +116,7 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         <button
           type="button"
           onClick={toggleAll}
-          {...stylex.props(styles.expandCollapseButton)}
+          {...stylex.props([motionRecipe.colors, styles.expandCollapseButton])}
         >
           <ChevronsUpDown {...stylex.props(styles.expandCollapseIcon)} />
           {allExpanded ? "Collapse all" : "Expand all"}

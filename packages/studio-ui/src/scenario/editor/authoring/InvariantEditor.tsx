@@ -5,6 +5,7 @@ import { styles } from "./authoring.stylex";
 import { SelectMenuField } from "../../../components/ui/select-menu";
 import type { EditorDocument } from "@simforge-oss/editor";
 import { DeleteButton, Heading, MiniAdd, TextField, uniqueId } from "./fields";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 const ESSENTIALITY = ["required", "preferred", "cosmetic"] as const;
 
@@ -43,7 +44,7 @@ export function InvariantEditor({ document }: { document: EditorDocument }) {
       {document.data.invariants.map((rule) => (
         <div key={rule.id} {...stylex.props(styles.item)}>
           <div {...stylex.props(styles.row)}>
-            <span {...stylex.props(styles.truncate)}>
+            <span {...stylex.props(textLayout.truncate)}>
               {rule.label ?? rule.id} · {rule.kind}
             </span>
             <DeleteButton

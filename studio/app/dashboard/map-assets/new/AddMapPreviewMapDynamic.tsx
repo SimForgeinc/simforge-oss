@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./AddMapPreviewMapDynamic.stylex";
 
 import dynamic from "next/dynamic";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type Bbox = { min_lat: number; min_lng: number; max_lat: number; max_lng: number };
 
@@ -14,7 +15,7 @@ type Props = {
 
 const AddMapPreviewMap = dynamic(() => import("./AddMapPreviewMap"), {
   ssr: false,
-  loading: () => <div {...stylex.props(styles.mapPreviewLoadingPlaceholder)} />,
+  loading: () => <div {...stylex.props([motionRecipe.pulse, styles.mapPreviewLoadingPlaceholder])} />,
 });
 
 export default function AddMapPreviewMapDynamic(props: Props) {

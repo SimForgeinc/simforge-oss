@@ -21,6 +21,7 @@ import {
   type TwinFidelityScorecard,
   type TwinFidelitySubLayerId,
 } from "@/app/lib/maps/frontend/twin-fidelity-layers";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const ENRICHMENT_DOTS: Record<string, string> = {
   bus_stops: "#60a5fa",
@@ -214,11 +215,11 @@ export function MapLayersSection(props: MapLayersSectionProps) {
       <button
         type="button"
         onClick={onToggleOpen}
-        {...stylex.props(styles.mapLayersToggle)}
+        {...stylex.props([motionRecipe.colors, styles.mapLayersToggle])}
         aria-expanded={open}
       >
         <ChevronRight
-          {...stylex.props(styles.chevron, open && styles.rotate90)}
+          {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
         />
         Map Layers
       </button>
@@ -236,14 +237,14 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Road Network"
                 >
                   <ChevronRight
-                    {...stylex.props(styles.chevronMuted, roadNetworkExpanded && styles.rotate90)}
+                    {...stylex.props([motionRecipe.transform, styles.chevronMuted], roadNetworkExpanded && styles.rotate90)}
                   />
                 </button>
-                <span {...stylex.props(styles.groupTitle)}>
+                <span {...stylex.props([textLayout.truncate, styles.groupTitle])}>
                   Road Network
                 </span>
                 {geojsonLoading && (
-                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIndicator])} />
                 )}
                 <Switch
                   checked={allFeatureTypesEnabled}
@@ -258,7 +259,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       Only meaningful when the map has a lane-polygon sidecar. */}
                   {lanePolygonsAvailable && (
                     <li {...stylex.props(styles.groupHeaderRow)}>
-                      <span {...stylex.props(styles.layerLabel)}>
+                      <span {...stylex.props([textLayout.truncate, styles.layerLabel])}>
                         Lane display
                       </span>
                       <div
@@ -275,7 +276,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                             type="button"
                             onClick={() => onSetLaneRenderMode?.(mode)}
                             aria-pressed={laneRenderMode === mode}
-                            {...stylex.props(styles.laneModeButton, laneRenderMode === mode ? styles.laneModeButtonActive : styles.laneModeButtonIdle)}
+                            {...stylex.props([motionRecipe.colors, styles.laneModeButton], laneRenderMode === mode ? styles.laneModeButtonActive : styles.laneModeButtonIdle)}
                           >
                             {label}
                           </button>
@@ -296,7 +297,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                           style={{ backgroundColor: ft.color }}
                           aria-hidden="true"
                         />
-                        <span {...stylex.props(styles.layerLabel)}>
+                        <span {...stylex.props([textLayout.truncate, styles.layerLabel])}>
                           {ft.label}
                         </span>
                         <span {...stylex.props(styles.layerCount)}>
@@ -321,7 +322,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         aria-hidden="true"
                       />
                       <span
-                        {...stylex.props(styles.layerLabel)}
+                        {...stylex.props([textLayout.truncate, styles.layerLabel])}
                         title="XODR-authored per-lane speed limits, labelled in mph on driving lanes"
                       >
                         Speed limits (XODR)
@@ -355,17 +356,17 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Signals and Signs"
                 >
                   <ChevronRight
-                    {...stylex.props(styles.chevronMuted, signalsLayerExpanded && styles.rotate90)}
+                    {...stylex.props([motionRecipe.transform, styles.chevronMuted], signalsLayerExpanded && styles.rotate90)}
                   />
                 </button>
-                <span {...stylex.props(styles.groupTitle)}>
+                <span {...stylex.props([textLayout.truncate, styles.groupTitle])}>
                   Signals & Signs
                 </span>
                 <span {...stylex.props(styles.layerCount)}>
                   {signalFeatureCount}
                 </span>
                 {signalOverlayLoading && (
-                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIndicator])} />
                 )}
                 <Switch
                   checked={allSignalsEnabled}
@@ -389,7 +390,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                           style={{ backgroundColor: cat.color }}
                           aria-hidden="true"
                         />
-                        <span {...stylex.props(styles.layerLabel)}>
+                        <span {...stylex.props([textLayout.truncate, styles.layerLabel])}>
                           {cat.label}
                         </span>
                         <span {...stylex.props(styles.layerCount)}>
@@ -425,7 +426,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
               >
                 {enrichBusy ? (
                   <>
-                    <Loader2 {...stylex.props(styles.enrichmentLoadingIcon)} />
+                    <Loader2 {...stylex.props([motionRecipe.spin, styles.enrichmentLoadingIcon])} />
                     Enriching…
                   </>
                 ) : (
@@ -448,10 +449,10 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Enrichment Layers"
                 >
                   <ChevronRight
-                    {...stylex.props(styles.chevronMuted, enrichmentLayersExpanded && styles.rotate90)}
+                    {...stylex.props([motionRecipe.transform, styles.chevronMuted], enrichmentLayersExpanded && styles.rotate90)}
                   />
                 </button>
-                <span {...stylex.props(styles.groupTitle)}>
+                <span {...stylex.props([textLayout.truncate, styles.groupTitle])}>
                   Enrichment Layers
                 </span>
                 <Switch
@@ -510,7 +511,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                             aria-hidden="true"
                           />
                         )}
-                        <span {...stylex.props(styles.layerLabel)}>
+                        <span {...stylex.props([textLayout.truncate, styles.layerLabel])}>
                           {layer.label}
                         </span>
                         <span {...stylex.props(styles.layerCount)}>
@@ -541,7 +542,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         aria-hidden="true"
                       />
                       <span
-                        {...stylex.props(styles.layerLabel)}
+                        {...stylex.props([textLayout.truncate, styles.layerLabel])}
                         title="Overture posted speed limits (blue border), labelled on driving lanes"
                       >
                         Speed limits (Overture)
@@ -578,14 +579,14 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Scenario Candidates"
                 >
                   <ChevronRight
-                    {...stylex.props(styles.chevronMuted, candidatesLayerExpanded && styles.rotate90)}
+                    {...stylex.props([motionRecipe.transform, styles.chevronMuted], candidatesLayerExpanded && styles.rotate90)}
                   />
                 </button>
-                <span {...stylex.props(styles.groupTitle)}>
+                <span {...stylex.props([textLayout.truncate, styles.groupTitle])}>
                   Scenario Candidates
                 </span>
                 {candidateLocationsLoading && (
-                  <Loader2 {...stylex.props(styles.loadingIndicator)} />
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIndicator])} />
                 )}
                 <Switch
                   checked={allCandidateFamiliesEnabled}
@@ -612,7 +613,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         {...stylex.props(styles.layerColorDot, styles.dotScenarioCandidate)}
                         aria-hidden="true"
                       />
-                      <span {...stylex.props(styles.layerLabel)}>
+                      <span {...stylex.props([textLayout.truncate, styles.layerLabel])}>
                         {layer.label}
                       </span>
                       <span {...stylex.props(styles.layerCount)}>
@@ -642,10 +643,10 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Twin Fidelity"
                 >
                   <ChevronRight
-                    {...stylex.props(styles.chevronMuted, twinFidelityExpanded && styles.rotate90)}
+                    {...stylex.props([motionRecipe.transform, styles.chevronMuted], twinFidelityExpanded && styles.rotate90)}
                   />
                 </button>
-                <span {...stylex.props(styles.groupTitle)}>
+                <span {...stylex.props([textLayout.truncate, styles.groupTitle])}>
                   Twin Fidelity
                 </span>
                 <span
@@ -687,7 +688,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         aria-hidden="true"
                       />
                       <span
-                        {...stylex.props(styles.layerLabel)}
+                        {...stylex.props([textLayout.truncate, styles.layerLabel])}
                         title={sub.description}
                       >
                         {sub.label}
