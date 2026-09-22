@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, text } from "../../stylex/tokens.stylex";
+import { colors, radii, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   field: { minWidth: 0 },
@@ -9,17 +9,17 @@ export const styles = stylex.create({
     alignItems: "center",
     width: "100%",
     height: "2.5rem",
-    gap: "0.5rem",
-    borderWidth: 1,
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
+    borderColor: colors.input,
     borderRadius: radii.md,
-    paddingInline: "0.75rem",
+    paddingInline: space.s3,
     textAlign: "left",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": colors.ring },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     backgroundColor: { default: colors.bg, ":hover": colors.muted },

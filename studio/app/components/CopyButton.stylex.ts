@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, radii, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const COLOR_TRANSITION =
   "color, background-color, border-color, text-decoration-color, fill, stroke";
@@ -11,10 +11,10 @@ export const styles = stylex.create({
     flexShrink: 0,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: COLOR_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
@@ -23,16 +23,16 @@ export const styles = stylex.create({
   },
   compact: {
     alignItems: "center",
-    gap: "0.25rem",
-    borderWidth: 1,
+    gap: space.s1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
       default: colors.border,
       ":hover": "hsl(var(--foreground) / 0.4)",
     },
     borderRadius: radii.sm,
-    paddingInline: "0.375rem",
-    paddingBlock: "0.125rem",
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontSize: "11px",
   },
   compactIcon: {

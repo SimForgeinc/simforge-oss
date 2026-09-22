@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /**
@@ -21,7 +21,7 @@ export const styles = stylex.create({
    */
   item: { marginTop: space.s2, backgroundColor: "hsl(var(--muted) / 0.3)", padding: space.s2 },
   /** mt-2 border border-border bg-muted/20 p-2 */
-  itemBorder: { marginTop: space.s2, borderWidth: "1px", borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / 0.2)", padding: space.s2 },
+  itemBorder: { marginTop: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / 0.2)", padding: space.s2 },
   /** mt-1 h-8 font-mono text-micro */
   monoInput: { marginTop: space.s1, height: "2rem", fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: text.lineMicro },
   stack: { marginTop: space.s2, display: "flex", flexDirection: "column", gap: space.s2 },
@@ -36,7 +36,7 @@ export const styles = stylex.create({
   label: { display: "block", color: colors.mutedForeground },
   input: { marginTop: space.s1, height: "2rem" },
   /** h-8 text-xs */
-  selectField: { height: "2rem", fontSize: text.sizeXs, lineHeight: "1rem" },
+  selectField: { height: "2rem", fontSize: text.sizeXs, lineHeight: text.lineXs },
   /**
    * motionStyles.editorMotion + ml-auto text-primary hover:text-primary/80
    * focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -63,7 +63,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
   },
   /**
@@ -88,7 +88,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
   },
   icon: { width: "0.75rem", height: "0.75rem" },

@@ -6,8 +6,8 @@ export const styles = stylex.create({
     marginBottom: space.s1_5,
     display: "block",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   requiredIndicator: {

@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "rea
 import * as stylex from "@stylexjs/stylex";
 
 import { driveColors, driveRadius } from "../drive.stylex";
+import { motion, stroke } from "../../stylex/tokens.stylex";
 
 /** One lane centreline in scene metres, as the lane index stores it. */
 export interface MinimapLane {
@@ -31,12 +32,12 @@ const EGO_COLOR = "#E8E044";
 const styles = stylex.create({
   disc: {
     display: "block",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.line,
     borderRadius: driveRadius.pill,
     backgroundColor: driveColors.panelReadout,
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
   },
 });
 

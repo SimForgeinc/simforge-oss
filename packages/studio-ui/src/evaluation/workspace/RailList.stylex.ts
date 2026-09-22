@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     gap: space.s2,
     paddingInline: space.s3,
     paddingBlock: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.hairline,
   },
@@ -88,7 +88,7 @@ export const styles = stylex.create({
     alignItems: "flex-start",
     gap: space.s2,
     borderWidth: 0,
-    borderLeftWidth: "2px",
+    borderLeftWidth: stroke.thick,
     borderLeftStyle: "solid",
     borderLeftColor: "transparent",
     paddingInline: space.s3,
@@ -154,7 +154,7 @@ export const styles = stylex.create({
   status: {
     paddingInline: space.s3,
     paddingBlock: space.s2,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.hairline,
   },

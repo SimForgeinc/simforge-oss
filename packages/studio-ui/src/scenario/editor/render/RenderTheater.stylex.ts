@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // render-view-enter flex min-h-0 flex-1 flex-col
@@ -15,11 +15,11 @@ export const styles = stylex.create({
     flexShrink: "0",
     flexDirection: "column",
     gap: space.s2,
-    borderBottomWidth: "1px",
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
-    paddingTop: "0.875rem",
-    paddingBottom: "0.875rem",
+    borderBottomWidth: stroke.hairline,
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
+    paddingTop: space.s3_5,
+    paddingBottom: space.s3_5,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // flex items-center gap-3
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     height: "2rem",
     flexShrink: "0",
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
@@ -52,7 +52,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // size-4
@@ -71,7 +71,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -85,7 +85,7 @@ export const styles = stylex.create({
     columnGap: space.s3,
     rowGap: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // inline-flex items-center gap-1
@@ -105,7 +105,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--destructive) / 0.4)",
     backgroundColor: {
       default: "hsl(var(--destructive) / 0.1)",
@@ -116,7 +116,7 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightMedium,
     color: colors.danger,
     opacity: {
@@ -133,7 +133,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // motionStyles.editorMotion + render-glass inline-flex shrink-0 items-center gap-1.5 border px-3 py-1 text-micro font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50
@@ -142,13 +142,13 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightMedium,
     color: {
       default: colors.mutedForeground,
@@ -170,13 +170,13 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // text-xs text-destructive
   xsDanger: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   // min-h-0 flex-1
@@ -191,13 +191,13 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     gridTemplateRows: {
       default: "minmax(0, 1fr) auto",
-      "@media (min-width: 1280px)": "repeat(1, minmax(0, 1fr))",
+      [layout.bpXl]: "repeat(1, minmax(0, 1fr))",
     },
     gap: 0,
     overflow: "hidden",
     gridTemplateColumns: {
       default: null,
-      "@media (min-width: 1280px)": "minmax(0, 1fr) 22rem",
+      [layout.bpXl]: "minmax(0, 1fr) 22rem",
     },
   },
   // flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-4
@@ -216,7 +216,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     minHeight: "0px",
     flexDirection: "column",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
@@ -244,7 +244,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
   },
@@ -252,7 +252,7 @@ export const styles = stylex.create({
   tightCapsMicro: {
     flexShrink: "0",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -266,11 +266,11 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s3,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     padding: space.s8,
     textAlign: "center",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
@@ -306,7 +306,7 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -319,7 +319,7 @@ export const styles = stylex.create({
     borderColor: "rgb(255 255 255 / 10%)",
     borderLeftWidth: {
       default: null,
-      "@media (min-width: 1280px)": "1px",
+      [layout.bpXl]: stroke.hairline,
     },
   },
   // flex shrink-0 items-center gap-1 border-b render-hairline px-2 py-1.5
@@ -328,7 +328,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     gap: space.s1,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1_5,
@@ -345,7 +345,7 @@ export const styles = stylex.create({
   flexColGap5: {
     display: "flex",
     flexDirection: "column",
-    gap: "1.25rem",
+    gap: space.s5,
     padding: space.s3,
   },
   // p-3
@@ -357,7 +357,7 @@ export const styles = stylex.create({
     padding: space.s3,
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: "hsl(var(--foreground) / 0.75)",
   },
   // flex h-full items-center justify-center text-muted-foreground
@@ -389,16 +389,16 @@ export const styles = stylex.create({
     columnGap: space.s4,
     rowGap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     gridTemplateColumns: {
       default: null,
-      "@media (min-width: 640px)": "7.5rem minmax(0, 1fr)",
+      [layout.bpSm]: "7.5rem minmax(0, 1fr)",
     },
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -409,7 +409,7 @@ export const styles = stylex.create({
     width: "10rem",
     flexShrink: "0",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.primary,
     textAlign: "left",
     outline: {
@@ -422,7 +422,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // motionStyles.editorMotion + relative w-40 shrink-0 overflow-hidden border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass hover:border-primary/50
@@ -431,7 +431,7 @@ export const styles = stylex.create({
     width: "10rem",
     flexShrink: "0",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     textAlign: "left",
     backgroundColor: colors.fillSubtle,
     borderColor: {
@@ -448,18 +448,18 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass-raised border text-foreground
   xsInkMedium2: {
-    borderWidth: "1px",
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
     backgroundColor: colors.glassRaised,
@@ -474,17 +474,17 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground
   xsMutedMedium: {
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: {
       default: colors.mutedForeground,
@@ -500,7 +500,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // min-w-0 break-all text-foreground font-mono text-micro
@@ -509,7 +509,7 @@ export const styles = stylex.create({
     wordBreak: "break-all",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.text,
   },
   // min-w-0 break-all text-foreground

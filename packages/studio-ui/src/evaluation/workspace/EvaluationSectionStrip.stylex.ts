@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const ICON_SIZE = "2.5rem";
 const TRANSITION_PROPERTY = "opacity, background-color, transform, height, color, box-shadow";
@@ -12,7 +12,7 @@ export const styles = stylex.create({
     height: "100%",
     width: space.datasetStripWidth,
     minWidth: space.datasetStripWidth,
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.22)",
@@ -89,7 +89,7 @@ export const styles = stylex.create({
     gap: space.s1,
     paddingTop: space.s2,
     marginTop: space.s1,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.hairline,
   },

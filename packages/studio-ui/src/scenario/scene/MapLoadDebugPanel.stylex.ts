@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { colors, motion, stroke, text } from "../../stylex/tokens.stylex";
 
 /**
  * The diagnostics live in a dropdown under the loading plate's telemetry, not
@@ -14,20 +15,20 @@ export const styles = stylex.create({
     paddingBlock: 6,
     paddingInline: 10,
     fontSize: 11,
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
     cursor: "pointer",
     color: "rgb(255 255 255 / 55%)",
     backgroundColor: "rgb(0 0 0 / 15%)",
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 8%)",
+    borderColor: colors.hairline,
     borderRadius: 999,
-    ":hover": { color: "#fff", borderColor: "rgb(255 255 255 / 20%)" },
+    ":hover": { color: colors.ink, borderColor: "rgb(255 255 255 / 20%)" },
   },
-  toggleOpen: { color: "#fff", borderColor: "rgb(255 255 255 / 20%)" },
-  chevron: { width: 12, height: 12, transitionProperty: "transform", transitionDuration: "120ms" },
+  toggleOpen: { color: colors.ink, borderColor: "rgb(255 255 255 / 20%)" },
+  chevron: { width: 12, height: 12, transitionProperty: "transform", transitionDuration: motion.durFast },
   chevronOpen: { transform: "rotate(180deg)" },
   content: {
     position: "absolute",
@@ -53,7 +54,7 @@ export const styles = stylex.create({
     overflowWrap: "anywhere",
     marginTop: 8,
     fontSize: 11,
-    lineHeight: 1.5,
+    lineHeight: text.lineNormal,
     userSelect: "text",
   },
 });

@@ -1,9 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   dangerZone: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.4)",
     backgroundColor: "hsl(var(--destructive) / 0.05)",
@@ -26,10 +26,10 @@ export const styles = stylex.create({
   dangerHeading: {
     flex: "1 1 0%",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.danger,
   },
   dangerChevron: {
@@ -39,7 +39,7 @@ export const styles = stylex.create({
     color: "hsl(var(--destructive) / 0.7)",
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   dangerChevronOpen: { transform: "rotate(180deg)" },
   dangerContent: {
@@ -48,7 +48,7 @@ export const styles = stylex.create({
   deletionWarning: {
     marginBottom: space.s2,
     fontSize: "11px",
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   dangerMessage: {
@@ -64,13 +64,13 @@ export const styles = stylex.create({
   sessionEmailDisplay: {
     marginBottom: space.s2,
     wordBreak: "break-all",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.4)",
     paddingInline: space.s2,
     paddingBlock: space.s1,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: "10px",
     color: colors.text,
   },
@@ -88,9 +88,9 @@ export const styles = stylex.create({
   emailConfirmationInput: {
     marginBottom: space.s2,
     height: "2rem",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   deleteButton: {
     width: "100%",

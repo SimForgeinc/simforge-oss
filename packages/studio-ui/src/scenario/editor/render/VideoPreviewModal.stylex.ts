@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur
@@ -12,7 +12,7 @@ export const styles = stylex.create({
     justifyContent: "center",
     backgroundColor: "hsl(var(--background) / 0.9)",
     padding: space.s4,
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
   },
   // flex h-[85vh] w-full max-w-[1200px] flex-col overflow-hidden border border-border bg-card shadow-2xl
   flexColBordered: {
@@ -22,20 +22,20 @@ export const styles = stylex.create({
     maxWidth: "1200px",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
   },
   // flex items-center gap-3 border-b border-border px-5 py-3
   flexCenterRuleB: {
     display: "flex",
     alignItems: "center",
     gap: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
     paddingTop: space.s3,
     paddingBottom: space.s3,
   },
@@ -50,7 +50,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -61,7 +61,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: "hsl(var(--card-foreground))",
   },
@@ -84,7 +84,7 @@ export const styles = stylex.create({
     height: "100%",
     placeItems: "center",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,

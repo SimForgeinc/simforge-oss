@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, radii, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "56rem",
     marginInline: "auto",
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.hairline,
     paddingTop: space.s4,
@@ -73,7 +73,7 @@ export const styles = stylex.create({
     padding: space.s2,
     textAlign: "left",
     cursor: "pointer",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
     borderRadius: radii.md,

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "../../../../stylex/tokens.stylex";
 
 /** `animate-spin`. One revolution per second, as the utility was. */
 const spin = stylex.keyframes({
@@ -19,27 +19,27 @@ export const styles = stylex.create({
   xsInkBordered: {
     height: "2rem",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s2,
     paddingRight: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // h-8 gap-2 rounded-none border border-[#7DD3FC]/45 bg-card/90 px-3 text-[#7DD3FC] shadow-sm backdrop-blur hover:border-[#7DD3FC] hover:bg-[#7DD3FC] hover:text-black disabled:border-border disabled:text-muted-foreground
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(125 211 252 / 0.45)",
       ":disabled": colors.border,
-      ":hover": "rgb(125 211 252 / 1)",
+      ":hover": colors.info,
     },
     backgroundColor: {
       default: "hsl(var(--card) / 0.9)",
@@ -48,20 +48,20 @@ export const styles = stylex.create({
     paddingLeft: space.s3,
     paddingRight: space.s3,
     color: {
-      default: "rgb(125 211 252 / 1)",
+      default: colors.info,
       ":disabled": colors.mutedForeground,
       ":hover": "rgb(0 0 0 / 1)",
     },
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // size-4 animate-spin
   spinner: {
     width: "1rem",
     height: "1rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   // size-4
@@ -76,25 +76,25 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.95)",
     padding: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurMd,
   },
   // size-4 animate-spin text-[#7DD3FC]
   spinner2: {
     width: "1rem",
     height: "1rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
-    color: "rgb(125 211 252 / 1)",
+    color: colors.info,
   },
   // ml-auto h-6 px-2
   pushRight: {
@@ -110,15 +110,15 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "flex-start",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(239 68 68 / 0.5)",
     backgroundColor: "hsl(var(--card) / 0.95)",
     padding: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(254 202 202 / 1)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurMd,
   },
   // min-w-0
   narrowable: {
@@ -133,18 +133,18 @@ export const styles = stylex.create({
   borderedLiveWide: {
     pointerEvents: "auto",
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.95)",
-    boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationXl,
+    backdropFilter: motion.blurMd,
   },
   // flex items-center justify-between border-b border-border/60 px-2 py-1
   flexCenterBetween: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.6)",
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -156,8 +156,8 @@ export const styles = stylex.create({
     fontSize: "11px",
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
-    color: "rgb(125 211 252 / 1)",
+    letterSpacing: text.trackingWide,
+    color: colors.info,
   },
   // h-6 px-1.5
   h6Px15: {
@@ -204,7 +204,7 @@ export const styles = stylex.create({
     MozColumnGap: "0.75rem",
     columnGap: space.s3,
     rowGap: space.s0_5,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.6)",
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -212,7 +212,7 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     fontFamily: text.fontMono,
     fontSize: "10px",
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
 });

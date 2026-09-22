@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex flex-col gap-3 border-t render-hairline pt-4
@@ -7,7 +7,7 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s3,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     paddingTop: space.s4,
     borderColor: "rgb(255 255 255 / 10%)",
   },
@@ -20,7 +20,7 @@ export const styles = stylex.create({
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -41,7 +41,7 @@ export const styles = stylex.create({
   // text-micro text-muted-foreground
   microMuted: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // flex flex-col gap-1
@@ -53,7 +53,7 @@ export const styles = stylex.create({
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted2: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -65,13 +65,13 @@ export const styles = stylex.create({
    */
   // render-glass border
   borderedDivided: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // (was the list's render-divide divide-y)
   rowDivided: {
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopColor: "rgb(255 255 255 / 10%)",
   },
   // flex flex-col gap-1 px-2.5 py-2
@@ -79,8 +79,8 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s1,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingTop: space.s2,
     paddingBottom: space.s2,
   },
@@ -92,14 +92,14 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // shrink-0 text-micro text-muted-foreground
   tightMicroMuted: {
     flexShrink: "0",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // flex flex-col gap-2 render-glass border p-2.5
@@ -107,8 +107,8 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s2,
-    borderWidth: "1px",
-    padding: "0.625rem",
+    borderWidth: stroke.hairline,
+    padding: space.s2_5,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
@@ -116,13 +116,13 @@ export const styles = stylex.create({
   xs: {
     minHeight: "4rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // h-8 text-xs
   xs2: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // self-start
   selfStart: {
@@ -132,7 +132,7 @@ export const styles = stylex.create({
   // text-micro uppercase tracking-meta
   fieldMetaLabel: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
   },

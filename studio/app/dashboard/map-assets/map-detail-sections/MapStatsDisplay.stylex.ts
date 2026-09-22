@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionToggle: {
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -29,8 +29,8 @@ export const styles = stylex.create({
   },
   sectionLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
   },
   sectionContent: {
     display: "flex",
@@ -47,13 +47,13 @@ export const styles = stylex.create({
   },
   statLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   statValue: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     fontVariantNumeric: "tabular-nums",
     textAlign: "right",
   },
@@ -76,7 +76,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   expandCollapseIcon: {
     width: "0.75rem",
@@ -91,13 +91,13 @@ export const styles = stylex.create({
   speedLimitValue: {
     display: "inline-flex",
     alignItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
   },
   crosswalkSourceDetail: {
     marginLeft: space.s1,
@@ -117,7 +117,7 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: "#4ade80",
   },
   phaseTimingUnavailable: {
@@ -127,13 +127,13 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.mutedForeground,
   },
   providerAttribution: {
     marginTop: space.s1_5,
     fontSize: "10px",
-    lineHeight: 1.375,
+    lineHeight: text.lineSnug,
     color: "hsl(var(--muted-foreground) / 0.8)",
   },
 });

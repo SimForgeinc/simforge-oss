@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionHeader: {
@@ -10,16 +10,16 @@ export const styles = stylex.create({
   },
   sectionTitle: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   tagCount: {
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     fontVariantNumeric: "tabular-nums",
   },
   tagCountFilled: {
@@ -32,7 +32,7 @@ export const styles = stylex.create({
   },
   loadingStatus: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   tagList: {
@@ -45,13 +45,13 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   tagChipAuto: {
     borderColor: "rgba(29, 78, 216, 0.6)",
@@ -68,7 +68,7 @@ export const styles = stylex.create({
     paddingInline: space.s1,
     paddingBlock: "1px",
     fontSize: "9px",
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     lineHeight: 1,
     color: "#93c5fd",
@@ -77,7 +77,7 @@ export const styles = stylex.create({
     marginLeft: space.s0_5,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   tagRemoveAuto: {
     color: { default: "rgba(96, 165, 250, 0.7)", ":hover": "#bfdbfe" },
@@ -96,19 +96,19 @@ export const styles = stylex.create({
   compactOutlineControl: {
     height: "1.75rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   tagDropdownPanel: {
     position: "absolute",
     left: "0",
     top: "2rem",
-    zIndex: 20,
+    zIndex: layers.float,
     width: "20rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+    boxShadow: shadows.elevationLg,
   },
   searchInputWrapper: {
     padding: space.s2,
@@ -121,7 +121,7 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   tagOptionButton: {
@@ -133,13 +133,13 @@ export const styles = stylex.create({
     paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
   },
   tagOptionLabel: {
     flexShrink: 0,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
-    fontWeight: 500,
+    fontFamily: text.fontMono,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   tagOptionDescription: {
@@ -150,11 +150,11 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
@@ -162,7 +162,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotateMinus90: {
     transform: "rotate(-90deg)",
@@ -174,15 +174,15 @@ export const styles = stylex.create({
   csvTextarea: {
     width: "100%",
     resize: "none",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
+    borderColor: colors.input,
     backgroundColor: colors.bg,
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s1_5,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
     /*
      * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
@@ -190,7 +190,7 @@ export const styles = stylex.create({
      * forced-colours mode discards, and this transparent outline is what
      * remains visible there.
      */
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -200,10 +200,10 @@ export const styles = stylex.create({
   stackY1_5: { marginTop: { default: space.s1_5, ":first-child": 0 } },
   csvErrorMessage: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   csvErrorList: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
   },
 });

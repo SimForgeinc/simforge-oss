@@ -18,14 +18,14 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
@@ -33,7 +33,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -43,7 +43,7 @@ export const styles = stylex.create({
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   copiedCheckIcon: {
     width: "0.75rem",
@@ -62,7 +62,7 @@ export const styles = stylex.create({
   },
   emptyMetadataNotice: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   populateMetadataEmphasis: {
@@ -71,14 +71,14 @@ export const styles = stylex.create({
   metadataSubsectionHeading: {
     marginBottom: space.s1,
     fontSize: "11px",
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   locationValue: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "hsl(var(--foreground) / 0.9)",
   },
   metadataDefinitionList: {
@@ -87,19 +87,19 @@ export const styles = stylex.create({
     columnGap: space.s2,
     rowGap: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   metadataLabel: {
     color: "hsl(var(--muted-foreground) / 0.7)",
   },
   metadataValue: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     color: "hsl(var(--foreground) / 0.9)",
   },
   metadataSecondaryValue: {
     wordBreak: "break-all",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     color: "hsl(var(--foreground) / 0.9)",
   },
   projLabel: {
@@ -108,9 +108,9 @@ export const styles = stylex.create({
   },
   projStringValue: {
     wordBreak: "break-all",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: "10px",
-    lineHeight: 1.375,
+    lineHeight: text.lineSnug,
     color: "hsl(var(--foreground) / 0.85)",
   },
   metadataTimestamp: {
@@ -128,14 +128,14 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   populateMetadataError: {
     marginTop: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
 });

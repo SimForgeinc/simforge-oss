@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   column: {
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s1_5,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.hairlineStrong,
     paddingInline: space.s3,
@@ -81,7 +81,7 @@ export const styles = stylex.create({
   description: {
     margin: 0,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.65)",
     display: "-webkit-box",
     WebkitBoxOrient: "vertical",
@@ -116,7 +116,7 @@ export const styles = stylex.create({
   searchInput: {
     height: "2rem",
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: "hsl(var(--border) / 0.8)", ":focus-visible": "hsl(var(--primary) / 0.7)" },
     backgroundColor: "hsl(var(--background) / 0.5)",
@@ -138,7 +138,7 @@ export const styles = stylex.create({
   },
   /** Errors and notices, between the header and the list. */
   messages: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
     paddingInline: space.s3,
@@ -186,15 +186,15 @@ export const styles = stylex.create({
     justifyContent: "flex-start",
     gap: space.s2,
     borderWidth: 0,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.hairlineStrong,
     backgroundColor: { default: "transparent", ":hover": colors.fillSubtle },
     paddingInline: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
-    color: { default: "rgb(255 255 255 / 0.7)", ":hover": colors.text },
+    color: { default: colors.inkSecondary, ":hover": colors.text },
   },
   footerAddIcon: {
     display: "grid",

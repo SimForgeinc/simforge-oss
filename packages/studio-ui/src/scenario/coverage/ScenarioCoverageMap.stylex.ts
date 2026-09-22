@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -32,7 +32,7 @@ export const styles = stylex.create({
       default: colors.scrim,
       ":hover": colors.panelSolid,
     },
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
       default: colors.hairlineStrong,
@@ -69,7 +69,7 @@ export const styles = stylex.create({
   action: {
     appearance: "none",
     backgroundColor: "transparent",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
       default: colors.hairlineStrong,
@@ -102,7 +102,7 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     backgroundColor: colors.scrim,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.hairline,
     backdropFilter: "blur(6px)",
@@ -128,7 +128,7 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     backgroundColor: colors.scrim,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.hairline,
     fontSize: text.sizeXs,

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../stylex/tokens.stylex";
 
 const WIDE = "@media (min-width: 1024px)";
 export const styles = stylex.create({
@@ -13,14 +13,14 @@ export const styles = stylex.create({
   choice: {
     display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: space.s2,
     minWidth: 0, minHeight: "8rem", textAlign: "left", padding: space.s3,
-    borderWidth: 1, borderStyle: "solid", borderColor: colors.hairlineStrong, backgroundColor: colors.fillSubtle,
+    borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.hairlineStrong, backgroundColor: colors.fillSubtle,
     color: colors.ink, cursor: "pointer", transitionProperty: "background-color, border-color", transitionDuration: motion.durFast,
     ":hover": { backgroundColor: colors.fillStronger },
-    ":focus-visible": { outlineWidth: 2, outlineStyle: "solid", outlineColor: colors.accent, outlineOffset: -2 },
+    ":focus-visible": { outlineWidth: stroke.thick, outlineStyle: "solid", outlineColor: colors.accent, outlineOffset: -2 },
   },
   choiceCurrent: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   choiceLabel: { fontSize: text.sizeSm, lineHeight: text.lineTight, fontWeight: text.weightSemibold },
   choiceCopy: { fontSize: text.sizeXs, lineHeight: text.lineNormal, color: colors.textSubtle, minWidth: 0 },
   choiceTag: { fontFamily: text.fontMeta, fontSize: text.sizeXs, color: colors.accent },
-  cache: { minWidth: 0, borderWidth: 1, borderStyle: "solid", borderColor: colors.hairlineStrong, padding: space.s3, backgroundColor: colors.fillSubtle },
+  cache: { minWidth: 0, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.hairlineStrong, padding: space.s3, backgroundColor: colors.fillSubtle },
 });

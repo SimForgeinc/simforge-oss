@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors } from "../../../stylex/tokens.stylex";
+import { colors, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // relative h-2.5 overflow-hidden bg-black/30
@@ -31,9 +31,9 @@ export const styles = stylex.create({
   },
   // border-y border-l border-dashed border-[#E8E044] bg-[#E8E044]/20
   barArmed: {
-    borderTopWidth: "1px",
-    borderBottomWidth: "1px",
-    borderLeftWidth: "1px",
+    borderTopWidth: stroke.hairline,
+    borderBottomWidth: stroke.hairline,
+    borderLeftWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.accent,
     backgroundColor: "rgb(232 224 68 / 0.2)",

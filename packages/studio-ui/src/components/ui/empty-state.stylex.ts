@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "../../stylex/tokens.stylex";
+import { colors, space, text } from "../../stylex/tokens.stylex";
 
 /**
  * The empty-state block, translated one-for-one from its Tailwind utilities.
@@ -20,32 +20,32 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    paddingInline: "1.5rem",
-    paddingBlock: "2.5rem",
+    paddingInline: space.s6,
+    paddingBlock: space.s10,
     textAlign: "center",
   },
   // mb-4 text-muted-foreground
   icon: {
-    marginBottom: "1rem",
+    marginBottom: space.s4,
     color: colors.mutedForeground,
   },
   // text-base font-semibold text-foreground
   title: {
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
-    fontWeight: 600,
+    lineHeight: text.lineBase,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   // mt-1 max-w-md text-sm leading-6 text-muted-foreground
   description: {
-    marginTop: "0.25rem",
+    marginTop: space.s1,
     maxWidth: "28rem",
     fontSize: text.sizeSm,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     color: colors.mutedForeground,
   },
   // mt-5
   action: {
-    marginTop: "1.25rem",
+    marginTop: space.s5,
   },
 });

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layers, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "inset 0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ringInset,
     },
   },
   // pointer-events-none absolute bottom-4 right-4 z-20 max-w-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive shadow-lg
@@ -25,9 +25,9 @@ export const styles = stylex.create({
     position: "absolute",
     bottom: space.s4,
     right: space.s4,
-    zIndex: 20,
+    zIndex: layers.float,
     maxWidth: "24rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--destructive) / 0.5)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
     paddingLeft: space.s3,
@@ -35,9 +35,9 @@ export const styles = stylex.create({
     paddingTop: space.s2,
     paddingBottom: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+    boxShadow: shadows.elevationLg,
   },
   // pointer-events-none absolute bottom-4 right-4 z-20 text-xs text-white/65
   absXsInert: {
@@ -45,9 +45,9 @@ export const styles = stylex.create({
     position: "absolute",
     bottom: space.s4,
     right: space.s4,
-    zIndex: 20,
+    zIndex: layers.float,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.65)",
   },
   // pointer-events-auto

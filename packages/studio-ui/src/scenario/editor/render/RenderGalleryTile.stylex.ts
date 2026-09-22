@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /**
  * Opacity the hovered tile publishes for its overlay controls.
@@ -77,7 +77,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.secondaryForeground,
@@ -90,7 +90,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -104,7 +104,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primary,
@@ -117,10 +117,10 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: "rgb(252 211 77 / 1)",
+    color: colors.warning,
   },
   // motionStyles.editorMotion + absolute right-2 top-2 z-20 inline-flex size-7 items-center justify-center render-overlay-control opacity-0 backdrop-blur hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 disabled:opacity-40
   absInlineFlexCenter: {
@@ -139,7 +139,7 @@ export const styles = stylex.create({
       ":disabled": "0.4",
       ":focus-visible": "1",
     },
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
     backgroundColor: colors.scrim,
     color: {
       default: "rgb(255 255 255 / 80%)",
@@ -155,7 +155,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // size-3.5
@@ -180,7 +180,7 @@ export const styles = stylex.create({
       ":disabled": "0.4",
       ":focus-visible": "1",
     },
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
     backgroundColor: colors.scrim,
     color: {
       default: "rgb(255 255 255 / 80%)",
@@ -196,7 +196,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ring,
     },
   },
   // pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1 render-scrim px-2.5 pb-2 pt-6
@@ -210,8 +210,8 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s1,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
     paddingBottom: space.s2,
     paddingTop: space.s6,
     backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 75%) 0%, rgb(0 0 0 / 35%) 50%, transparent 100%)",
@@ -229,14 +229,14 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -244,7 +244,7 @@ export const styles = stylex.create({
   // text-micro font-semibold text-foreground
   microInkSemibold: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -255,7 +255,7 @@ export const styles = stylex.create({
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: "2",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.danger,
   },
   // render-glass render-surface-motion relative flex aspect-video w-full flex-col overflow-hidden border text-left focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background
@@ -267,7 +267,7 @@ export const styles = stylex.create({
     width: "100%",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     textAlign: "left",
     backgroundColor: colors.fillSubtle,
     // `hover:border-primary/60` is folded in here (and into the failed variant

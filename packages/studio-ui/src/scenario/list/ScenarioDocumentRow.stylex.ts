@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex shrink-0 items-center justify-end gap-1
@@ -48,13 +48,13 @@ export const styles = stylex.create({
   renameInput: {
     height: "1.75rem",
     width: "7rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: "hsl(var(--primary) / 0.4)", ":focus": colors.primary },
     backgroundColor: colors.bg,
     paddingInline: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
     outline: "2px solid transparent",
@@ -107,7 +107,7 @@ export const styles = stylex.create({
     marginTop: space.s1,
     marginRight: space.s1,
     display: "inline-flex",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(56 189 248 / 0.45)",
     backgroundColor: "rgb(56 189 248 / 0.1)",
@@ -117,7 +117,7 @@ export const styles = stylex.create({
     fontSize: "9px",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaTight,
-    color: "rgb(125 211 252 / 1)",
+    color: colors.info,
   },
   // mt-1 line-clamp-2 text-[12px] leading-snug text-white/70
   div2: {
@@ -127,8 +127,8 @@ export const styles = stylex.create({
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
     fontSize: "12px",
-    lineHeight: "1.375",
-    color: "rgb(255 255 255 / 0.7)",
+    lineHeight: text.lineSnug,
+    color: colors.inkSecondary,
   },
   // mt-2 flex flex-wrap gap-1.5
   tagsFor: {
@@ -139,7 +139,7 @@ export const styles = stylex.create({
   },
   // rounded-full border border-primary/70 bg-primary/15 px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-primary
   letGoToApplyTag: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.7)",
     backgroundColor: "hsl(var(--primary) / 0.15)",
@@ -153,7 +153,7 @@ export const styles = stylex.create({
   },
   // rounded-full border px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight
   spanMetaUppercase: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
@@ -164,7 +164,7 @@ export const styles = stylex.create({
   },
   // rounded-full border border-dashed border-border px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-muted-foreground
   authoredInTheScenarioContent: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.border,
     paddingInline: space.s2,
@@ -186,7 +186,7 @@ export const styles = stylex.create({
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // truncate
   divTruncate: {

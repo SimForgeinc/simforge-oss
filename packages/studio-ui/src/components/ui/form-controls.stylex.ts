@@ -33,7 +33,7 @@ const common = {
 
 export const input = stylex.create({
   base: { ...common, height: "2.5rem" },
-  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeSm, lineHeight: "1.25rem", fontWeight: 500, color: colors.text } },
+  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightMedium, color: colors.text } },
 });
 
 export const textarea = stylex.create({ base: { ...common, minHeight: "5rem" } });

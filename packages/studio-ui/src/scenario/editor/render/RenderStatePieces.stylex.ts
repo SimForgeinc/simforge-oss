@@ -23,7 +23,7 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -18,14 +18,14 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
@@ -33,7 +33,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -44,13 +44,13 @@ export const styles = stylex.create({
     height: "1.25rem",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.3)" },
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
@@ -59,8 +59,8 @@ export const styles = stylex.create({
     width: "0.75rem",
     height: "0.75rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   enrichSparklesIcon: {
@@ -69,7 +69,7 @@ export const styles = stylex.create({
   },
   enrichTooltip: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   contentPanel: {
     display: "flex",
@@ -79,12 +79,12 @@ export const styles = stylex.create({
   },
   statusText: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   emptyStateText: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   stackY2: { marginTop: { default: space.s2, ":first-child": 0 } },
@@ -96,8 +96,8 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   buttonSparklesIcon: {
@@ -107,7 +107,7 @@ export const styles = stylex.create({
   },
   emptyStateError: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   provenanceLabel: {
@@ -116,12 +116,12 @@ export const styles = stylex.create({
   loadedError: {
     marginTop: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   attributionText: {
     fontSize: "10px",
-    lineHeight: 1.375,
+    lineHeight: text.lineSnug,
     color: colors.mutedForeground,
   },
 });

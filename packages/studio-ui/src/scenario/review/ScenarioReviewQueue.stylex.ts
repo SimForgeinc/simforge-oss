@@ -1,10 +1,10 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, space, text } from "../../stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const spin = stylex.keyframes({ to: { transform: "rotate(360deg)" } });
 export const styles = stylex.create({
-  refreshing: { animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
-  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, borderWidth: 1, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
+  refreshing: { animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
+  reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
   activeCard: { borderColor: colors.accent },
   failedCard: { borderColor: colors.danger },
   divFlex: {
@@ -17,21 +17,21 @@ export const styles = stylex.create({
     backgroundColor: colors.bg,
   },
   div: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.25)",
-    paddingInline: { default: layout.gutterNarrow, "@media (min-width: 640px)": layout.gutter },
+    paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
     paddingBlock: space.s3,
   },
   reviewQueueKeyboardShortcuts: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    columnGap: "1.25rem",
+    columnGap: space.s5,
     rowGap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   shortcuts: {
@@ -39,22 +39,22 @@ export const styles = stylex.create({
     color: colors.text,
   },
   alert: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.4)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
-    paddingInline: { default: layout.gutterNarrow, "@media (min-width: 640px)": layout.gutter },
+    paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
     paddingBlock: space.s3,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   div2: {
     minHeight: 0,
     overflowY: "auto",
     flex: "1 1 0%",
-    paddingInline: { default: layout.gutterNarrow, "@media (min-width: 640px)": layout.gutter },
-    paddingBlock: "1.25rem",
+    paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
+    paddingBlock: space.s5,
   },
   clipboardcheckIcon: {
     width: space.s6,
@@ -76,13 +76,13 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
   pXs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   pXs2: {
@@ -91,7 +91,7 @@ export const styles = stylex.create({
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "hsl(var(--muted-foreground) / 0.9)",
   },
   divFlex2: {
@@ -107,7 +107,7 @@ export const styles = stylex.create({
     gap: space.s1_5,
   },
   divFlex3: {
-    marginTop: "1.25rem",
+    marginTop: space.s5,
     display: "flex",
     justifyContent: "center",
   },

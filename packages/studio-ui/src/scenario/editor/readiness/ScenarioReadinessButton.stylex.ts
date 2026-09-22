@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // size-4
@@ -25,17 +25,17 @@ export const styles = stylex.create({
     padding: 0,
     maxWidth: {
       default: null,
-      "@media (min-width: 640px)": "420px",
+      [layout.bpSm]: "420px",
     },
   },
   // border-b border-border px-5 py-5 pr-12
   ruleB: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
-    paddingLeft: "1.25rem",
-    paddingRight: "3rem",
-    paddingTop: "1.25rem",
-    paddingBottom: "1.25rem",
+    paddingLeft: space.s5,
+    paddingRight: space.s12,
+    paddingTop: space.s5,
+    paddingBottom: space.s5,
   },
   // flex min-h-0 flex-1 flex-col
   flexColFill: {
@@ -48,7 +48,7 @@ export const styles = stylex.create({
   tightRuleBScrollX: {
     flexShrink: "0",
     overflowX: "auto",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
     paddingLeft: space.s4,
     paddingRight: space.s4,
@@ -95,7 +95,7 @@ export const styles = stylex.create({
   },
   // border border-border bg-card/45
   bordered: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.45)",
   },
@@ -105,17 +105,17 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s3,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
   },
   // text-xs font-semibold text-foreground
   xsInkSemibold: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -123,7 +123,7 @@ export const styles = stylex.create({
   size35TextEmerald400: {
     width: "0.875rem",
     height: "0.875rem",
-    color: "rgb(52 211 153 / 1)",
+    color: colors.positive,
   },
   // text-[10px] text-muted-foreground
   muted: {
@@ -137,14 +137,14 @@ export const styles = stylex.create({
     paddingTop: space.s3,
     paddingBottom: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex items-start gap-2.5 text-left
   flexStartGap25: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "0.625rem",
+    gap: space.s2_5,
     textAlign: "left",
   },
   // min-w-0
@@ -154,7 +154,7 @@ export const styles = stylex.create({
   // text-xs font-medium text-foreground
   xsInkMedium: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
   },
@@ -163,15 +163,15 @@ export const styles = stylex.create({
     marginTop: space.s1,
     overflowWrap: "break-word",
     fontSize: "11px",
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   // mt-2 border-l-2 border-[#E8E044]/70 pl-2.5
   mt2BorderL2Border70: {
     marginTop: space.s2,
-    borderLeftWidth: "2px",
+    borderLeftWidth: stroke.thick,
     borderColor: "rgb(232 224 68 / 0.7)",
-    paddingLeft: "0.625rem",
+    paddingLeft: space.s2_5,
   },
   // text-[9px] font-semibold uppercase tracking-[0.16em] text-[#E8E044]
   capsSemibold: {
@@ -186,7 +186,7 @@ export const styles = stylex.create({
     marginTop: space.s1,
     overflowWrap: "break-word",
     fontSize: "11px",
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: "hsl(var(--foreground) / 0.85)",
   },
   // block w-full px-3 py-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
@@ -207,7 +207,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "inset 0 0 0 2px hsl(var(--ring))",
+      ":focus-visible": shadows.ringInset,
     },
     backgroundColor: {
       default: null,
@@ -226,7 +226,7 @@ export const styles = stylex.create({
     height: "2rem",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(52 211 153 / 0.35)",
     backgroundColor: {
       default: "hsl(var(--card) / 0.9)",
@@ -235,15 +235,15 @@ export const styles = stylex.create({
     paddingLeft: space.s3,
     paddingRight: space.s3,
     color: "rgb(110 231 183 / 1)",
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // h-8 gap-2 rounded-none border bg-card/90 px-3 shadow-sm backdrop-blur border-amber-400/45 text-amber-200 hover:bg-amber-500/10
   borderedGlassyGap22: {
     height: "2rem",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(251 191 36 / 0.45)",
     backgroundColor: {
       default: "hsl(var(--card) / 0.9)",
@@ -252,8 +252,8 @@ export const styles = stylex.create({
     paddingLeft: space.s3,
     paddingRight: space.s3,
     color: "rgb(253 230 138 / 1)",
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // mt-0.5 size-3.5 shrink-0 text-destructive
   tightDanger: {
@@ -269,7 +269,7 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: "0",
-    color: "rgb(252 211 77 / 1)",
+    color: colors.warning,
   },
   /*
    * `divide-y divide-border/70` was a `> * + *` rule, which StyleX cannot
@@ -278,7 +278,7 @@ export const styles = stylex.create({
    */
   rowDivided: {
     borderTopWidth: {
-      default: "1px",
+      default: stroke.hairline,
       ":first-child": "0",
     },
     borderTopColor: "hsl(var(--border) / 0.7)",

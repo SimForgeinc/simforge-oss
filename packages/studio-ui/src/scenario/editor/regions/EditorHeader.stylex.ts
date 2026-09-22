@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex min-w-0 items-center gap-2
@@ -14,10 +14,10 @@ export const styles = stylex.create({
     height: "2rem",
     gap: space.s1_5,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--background) / 0.7)",
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+    boxShadow: shadows.elevationSm,
   },
   // size-3.5
   size35: {
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     height: "2rem",
     gap: space.s2,
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(232 224 68 / 0.45)",
       ":disabled": colors.border,
@@ -52,8 +52,8 @@ export const styles = stylex.create({
       ":disabled": colors.mutedForeground,
       ":hover": "rgb(0 0 0 / 1)",
     },
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
   // size-4
   size4: {

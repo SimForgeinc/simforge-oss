@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -27,14 +27,14 @@ export const styles = stylex.create({
   generateThumbnailButton: {
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   loadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   thumbnailIcon: {

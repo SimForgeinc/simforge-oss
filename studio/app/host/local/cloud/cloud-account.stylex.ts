@@ -5,7 +5,7 @@
  * and inside the account sheet.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
 const AMBER_400_30 = "rgba(251, 191, 36, 0.3)";
@@ -24,13 +24,13 @@ export const form = stylex.create({
   },
   heading: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   intro: {
     fontSize: text.sizeSm,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     color: colors.mutedForeground,
   },
   field: {
@@ -41,13 +41,13 @@ export const form = stylex.create({
   label: {
     fontFamily: text.fontMeta,
     fontSize: "9px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   input: {
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: colors.fillSubtle,
     borderColor: colors.hairlineStrong,
     color: colors.text,
   },
@@ -93,7 +93,7 @@ export const form = stylex.create({
     borderWidth: 0,
     backgroundColor: "transparent",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     textDecorationLine: { default: "none", ":hover": "underline" },
     cursor: { default: "pointer", ":disabled": "not-allowed" },
@@ -105,7 +105,7 @@ export const form = stylex.create({
     gap: space.s2,
     fontFamily: text.fontMeta,
     fontSize: "9px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -122,17 +122,17 @@ export const form = stylex.create({
   },
   error: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   success: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: AMBER_300_90,
   },
   note: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   icon: {
@@ -140,9 +140,9 @@ export const form = stylex.create({
     height: "1rem",
   },
   spin: {
-    animationName: { default: spin, "@media (prefers-reduced-motion: reduce)": "none" },
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationName: { default: spin, [layout.reducedMotion]: "none" },
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
 });
@@ -153,8 +153,8 @@ export const banner = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: space.s2,
-    marginTop: "0.75rem",
-    borderWidth: 1,
+    marginTop: space.s3,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: AMBER_400_30,
     borderRadius: radii.xl,
@@ -166,13 +166,13 @@ export const banner = stylex.create({
     alignItems: "center",
     gap: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   detail: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
 });

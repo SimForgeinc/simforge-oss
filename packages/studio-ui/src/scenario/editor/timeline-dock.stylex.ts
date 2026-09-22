@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { layers, motion } from "../../stylex/tokens.stylex";
 
 /**
  * Highlight published by a hovered or keyboard-focused resize handle for the
@@ -33,7 +34,7 @@ export const styles = stylex.create({
     position: "absolute",
     top: 0,
     bottom: 0,
-    zIndex: 50,
+    zIndex: layers.popover,
     width: "0.75rem",
     cursor: "ew-resize",
     touchAction: "none",
@@ -62,7 +63,7 @@ export const styles = stylex.create({
     backgroundColor: handleState.markerColor,
     boxShadow: "0 0 10px rgba(255,255,255,0.12)",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-    transitionDuration: "150ms",
+    transitionTimingFunction: motion.easeStandard,
+    transitionDuration: motion.durStandard,
   },
 });

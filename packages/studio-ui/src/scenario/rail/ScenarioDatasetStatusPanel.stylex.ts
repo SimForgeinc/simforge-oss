@@ -50,7 +50,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -73,7 +73,7 @@ export const styles = stylex.create({
   noNamedContributorsYet: {
     marginTop: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // mt-1 space-y-1
@@ -90,7 +90,7 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     gap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // min-w-0 truncate text-foreground
   spanTruncate: {

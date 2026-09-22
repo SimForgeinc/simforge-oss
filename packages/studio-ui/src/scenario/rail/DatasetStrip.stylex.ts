@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const ICON_SIZE = "2.5rem";
 const TRANSITION_PROPERTY = "opacity, background-color, transform, height, color, box-shadow";
@@ -12,7 +12,7 @@ export const styles = stylex.create({
     height: "100%",
     width: space.datasetStripWidth,
     minWidth: space.datasetStripWidth,
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
     borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.22)",
@@ -138,7 +138,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1,
     paddingTop: space.s2,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.hairline,
     marginTop: space.s2,
@@ -193,7 +193,7 @@ export const styles = stylex.create({
     width: "100%",
     textAlign: "center",
     fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
+    fontSize: text.sizeTag,
     lineHeight: 1.2,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -209,7 +209,7 @@ export const styles = stylex.create({
     width: "100%",
     textAlign: "center",
     fontFamily: text.fontMeta,
-    fontSize: "0.5rem",
+    fontSize: text.sizeNano,
     lineHeight: 1.2,
     textTransform: "uppercase",
     letterSpacing: "0.02em",
@@ -232,7 +232,7 @@ export const styles = stylex.create({
     height: ICON_SIZE,
     backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised },
     color: { default: colors.textSubtle, ":hover": colors.text },
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: { default: colors.hairlineStrong, ":hover": colors.accent },
     transitionProperty: TRANSITION_PROPERTY,

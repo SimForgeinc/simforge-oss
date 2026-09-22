@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -18,9 +18,9 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   pathLabel: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: "hsl(var(--muted-foreground) / 0.8)",
   },
   pathStepWrapper: {
@@ -42,13 +42,13 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   stepChipOn: {
     borderColor: "hsl(var(--primary) / 0.6)",
@@ -68,11 +68,11 @@ export const styles = stylex.create({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     color: "hsl(var(--muted-foreground) / 0.9)",
   },
   pathStepDistance: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     color: "hsl(var(--muted-foreground) / 0.8)",
   },
   pathStepSeparator: {
@@ -106,7 +106,7 @@ export const styles = stylex.create({
     justifyContent: "center",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   highlightToggleOn: {
     backgroundColor: { default: "hsl(var(--primary) / 0.3)", ":hover": "hsl(var(--primary) / 0.4)" },
@@ -138,13 +138,13 @@ export const styles = stylex.create({
   },
   queryPromptHeading: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   queryPromptDescription: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   searchExamplesPanel: {
@@ -164,13 +164,13 @@ export const styles = stylex.create({
   resultsHeader: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.625rem",
+    gap: space.s2_5,
   },
   debugPanel: {
     display: "flex",
     flexDirection: "column",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--secondary) / 0.2)",
@@ -181,7 +181,7 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   parsedQueryLabel: {
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   debugTokenList: {
@@ -192,7 +192,7 @@ export const styles = stylex.create({
   debugTokenBadge: {
     paddingInline: space.s1_5,
     paddingBlock: 0,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
     fontSize: "10px",
     lineHeight: "inherit",
   },
@@ -213,7 +213,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   debugToggleOn: {
@@ -226,18 +226,18 @@ export const styles = stylex.create({
   },
   tooltipContent: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   relationChip: {
     display: "inline-flex",
     alignItems: "center",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.4)",
     backgroundColor: "hsl(var(--primary) / 0.1)",
     fontSize: "11px",
-    fontWeight: 400,
+    fontWeight: text.weightNormal,
   },
   relationOperator: {
     paddingInline: space.s1_5,
@@ -257,7 +257,7 @@ export const styles = stylex.create({
     paddingBlock: 0,
     fontSize: "11px",
     lineHeight: "inherit",
-    fontWeight: 400,
+    fontWeight: text.weightNormal,
     color: colors.text,
   },
   freeTextBadge: {
@@ -267,7 +267,7 @@ export const styles = stylex.create({
     paddingBlock: 0,
     fontSize: "11px",
     lineHeight: "inherit",
-    fontWeight: 400,
+    fontWeight: text.weightNormal,
     color: colors.mutedForeground,
   },
   resultsContent: {
@@ -276,7 +276,7 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     flexDirection: "column",
     overflow: "hidden",
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     borderColor: colors.border,
     paddingTop: space.s2,
@@ -287,18 +287,18 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   loadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   resultsHeaderActions: {
@@ -307,10 +307,10 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   resultList: {
@@ -326,14 +326,14 @@ export const styles = stylex.create({
   resultCard: {
     width: "100%",
     cursor: "pointer",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     paddingInline: space.s3,
-    paddingBlock: "0.625rem",
+    paddingBlock: space.s2_5,
     textAlign: "left",
     transitionProperty: "all",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   resultCardSelected: {
     borderColor: "hsl(var(--primary) / 0.5)",
@@ -361,8 +361,8 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   selectedCheckIcon: {
@@ -391,15 +391,15 @@ export const styles = stylex.create({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   confidenceValue: {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontWeight: 500,
-    color: "#34d399",
+    fontWeight: text.weightMedium,
+    color: colors.positive,
   },
   attributeBadgeRow: {
     marginTop: space.s1_5,
@@ -427,7 +427,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: space.s0_5,
   },
-  refChip: { display: "flex", alignItems: "center", gap: space.s1_5, padding: space.s1, borderWidth: "1px", borderStyle: "solid", fontSize: text.sizeXs },
+  refChip: { display: "flex", alignItems: "center", gap: space.s1_5, padding: space.s1, borderWidth: stroke.hairline, borderStyle: "solid", fontSize: text.sizeXs },
   refChipOn: { backgroundColor: colors.secondary, borderColor: colors.primary },
   refChipOff: { backgroundColor: colors.muted, borderColor: colors.border },
   relationLabelRow: {
@@ -437,7 +437,7 @@ export const styles = stylex.create({
     color: colors.primary,
   },
   relationText: {
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
   },
   relatedRefIcon: {
     width: "0.75rem",
@@ -467,7 +467,7 @@ export const styles = stylex.create({
     color: "hsl(var(--muted-foreground) / 0.8)",
   },
   debugValue: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
   },
   resultDebugPanel: {
     display: "flex",
@@ -504,7 +504,7 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   emptyResultsState: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "dashed",
     borderColor: colors.border,
     paddingInline: space.s3,
@@ -517,19 +517,19 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   noResultsHeading: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   noResultsGuidance: {
     marginTop: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   alternativeQueriesSection: {
@@ -550,17 +550,17 @@ export const styles = stylex.create({
     gap: space.s1_5,
   },
   alternativeQueryButton: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },
     backgroundColor: { default: "hsl(var(--secondary) / 0.3)", ":hover": "hsl(var(--primary) / 0.1)" },
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
 });

@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
@@ -28,8 +29,8 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   // size-3.5

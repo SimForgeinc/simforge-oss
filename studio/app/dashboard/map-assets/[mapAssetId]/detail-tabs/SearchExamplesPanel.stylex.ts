@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchExamplesPanel: {
@@ -19,10 +19,10 @@ export const styles = stylex.create({
   },
   groupTitle: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightSemibold,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   comingSoonBadge: {
@@ -30,9 +30,9 @@ export const styles = stylex.create({
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
     fontSize: "9px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   exampleChipList: {
@@ -41,15 +41,15 @@ export const styles = stylex.create({
     gap: space.s1_5,
   },
   examplePill: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: "0.625rem",
+    paddingInline: space.s2_5,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   examplePillAvailable: {
     borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },

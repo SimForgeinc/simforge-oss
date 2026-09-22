@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /**
  * `space-y-*` has no StyleX form: it is a `> * + *` sibling rule and StyleX
@@ -17,7 +17,7 @@ export const styles = stylex.create({
   inlineFlexMicroAccent: {
     display: "inline-flex",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightMedium,
     color: colors.primary,
     textUnderlineOffset: "4px",
@@ -30,12 +30,12 @@ export const styles = stylex.create({
   xs: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // text-micro leading-relaxed text-muted-foreground
   microMutedRelaxed: {
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   // text-muted-foreground
@@ -55,7 +55,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s3,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -72,7 +72,7 @@ export const styles = stylex.create({
   blockMicroMuted: {
     display: "block",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // grid grid-cols-3 gap-2
@@ -114,7 +114,7 @@ export const styles = stylex.create({
   swatch: {
     width: "1.5rem",
     height: "1.5rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -129,7 +129,7 @@ export const styles = stylex.create({
     borderColor: colors.primary,
     boxShadow: {
       default: "0 0 0 1px hsl(var(--primary))",
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
   },
   // border-border
@@ -137,7 +137,7 @@ export const styles = stylex.create({
     borderColor: colors.border,
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
   },
 });

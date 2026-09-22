@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-none fixed inset-0 z-[80]
@@ -12,7 +12,7 @@ export const styles = stylex.create({
   // tutorial-spotlight-ring absolute border-2 border-primary
   abs: {
     position: "absolute",
-    borderWidth: "2px",
+    borderWidth: stroke.thick,
     borderColor: colors.primary,
   },
   // pointer-events-auto absolute w-[min(22rem,calc(100vw-2rem))] border border-border bg-popover p-4 text-popover-foreground shadow-2xl
@@ -20,12 +20,12 @@ export const styles = stylex.create({
     pointerEvents: "auto",
     position: "absolute",
     width: "min(22rem, calc(100vw - 2rem))",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.popover,
     padding: space.s4,
     color: "hsl(var(--popover-foreground))",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
   },
   // flex items-start gap-2
   flexStartGap2: {
@@ -41,7 +41,7 @@ export const styles = stylex.create({
   // text-micro font-bold uppercase tracking-meta-wider text-primary
   capsMicroAccent: {
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
@@ -51,7 +51,7 @@ export const styles = stylex.create({
   smSemibold: {
     marginTop: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
   },
   // motionStyles.editorMotion + -mr-1 -mt-1 inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-popover
@@ -82,7 +82,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": "hsl(var(--accent))",
+      ":hover": colors.hoverWash,
     },
   },
   // size-4
@@ -94,7 +94,7 @@ export const styles = stylex.create({
   xsMuted: {
     marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // mt-4 flex items-center gap-2
@@ -117,7 +117,7 @@ export const styles = stylex.create({
   microMuted: {
     marginTop: space.s2,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
 });

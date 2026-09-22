@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchContainer: {
@@ -23,7 +23,7 @@ export const styles = stylex.create({
     paddingLeft: "2.25rem",
     paddingRight: "2.25rem",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   clearButton: {
     position: "absolute",
@@ -34,7 +34,7 @@ export const styles = stylex.create({
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   clearIcon: {
     width: "0.875rem",
@@ -45,9 +45,9 @@ export const styles = stylex.create({
     left: "0",
     right: "0",
     top: "100%",
-    zIndex: 20,
+    zIndex: layers.float,
     marginTop: space.s1,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.popover,
@@ -62,11 +62,11 @@ export const styles = stylex.create({
     paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.text,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   suggestionHighlighted: {

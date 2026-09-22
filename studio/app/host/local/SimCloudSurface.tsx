@@ -36,6 +36,7 @@ import {
 } from "./simcloud/CloudDeleteAccountAction";
 import { SimCloudStorage } from "./simcloud/SimCloudStorage";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
  * SimCloud: the one surface for the account and everything the account
@@ -506,38 +507,38 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
 }
 
 const styles = stylex.create({
-  pane: { display: "grid", alignContent: "start", gap: "0.75rem", minWidth: 0 },
+  pane: { display: "grid", alignContent: "start", gap: space.s3, minWidth: 0 },
   card: { alignContent: "start" },
-  identity: { display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 },
-  identityBody: { display: "grid", gap: "0.125rem", minWidth: 0 },
+  identity: { display: "flex", alignItems: "center", gap: space.s3, minWidth: 0 },
+  identityBody: { display: "grid", gap: space.s0_5, minWidth: 0 },
   avatar: {
     display: "grid",
     placeItems: "center",
     width: "2.75rem",
     height: "2.75rem",
     flexShrink: 0,
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.12)",
-    backgroundColor: "rgb(255 255 255 / 0.04)",
-    color: "#fff",
+    backgroundColor: colors.fillSubtle,
+    color: colors.ink,
   },
   name: {
-    fontFamily: "var(--font-display), system-ui, sans-serif",
-    fontSize: "1.125rem",
-    lineHeight: "1.5rem",
-    fontWeight: 600,
+    fontFamily: text.fontDisplay,
+    fontSize: text.sizeLg,
+    lineHeight: text.lineBase,
+    fontWeight: text.weightSemibold,
     letterSpacing: "-0.02em",
   },
-  capabilityHead: { marginTop: "0.25rem" },
+  capabilityHead: { marginTop: space.s1 },
   capability: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "0.5rem",
-    fontSize: "0.75rem",
+    gap: space.s2,
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
     color: "rgb(255 255 255 / 0.65)",
   },
-  deviceBody: { display: "grid", gap: "0.125rem", minWidth: 0, flex: "1 1 12rem" },
-  deviceTitle: { display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" },
+  deviceBody: { display: "grid", gap: space.s0_5, minWidth: 0, flex: "1 1 12rem" },
+  deviceTitle: { display: "flex", alignItems: "center", gap: space.s1_5, fontSize: "0.8125rem" },
 });

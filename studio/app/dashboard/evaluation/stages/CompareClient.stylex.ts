@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   verdict: { fontSize: text.sizeXs, borderColor: "transparent" },
@@ -7,7 +7,7 @@ export const styles = stylex.create({
   verdictDifferent: { color: colors.accent, backgroundColor: colors.muted },
   verdictUnknown: { color: colors.mutedForeground, backgroundColor: colors.muted },
   verdictInvalid: { color: colors.danger, backgroundColor: colors.muted },
-  disclosureIcon: { width: "0.75rem", height: "0.75rem", transitionProperty: "transform", transitionDuration: "150ms" },
+  disclosureIcon: { width: "0.75rem", height: "0.75rem", transitionProperty: "transform", transitionDuration: motion.durStandard },
   disclosureOpen: { transform: "rotate(180deg)" },
   // grid grid-cols-2 gap-2
   dlGrid: {
@@ -18,7 +18,7 @@ export const styles = stylex.create({
   // text-xs text-muted-foreground
   episodes: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // font-mono
@@ -28,7 +28,7 @@ export const styles = stylex.create({
   // text-xs text-muted-foreground
   meanScore: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // font-mono
@@ -38,7 +38,7 @@ export const styles = stylex.create({
   // text-xs text-amber-700 dark:text-amber-400
   cameraHistoryWasResampled: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(251 191 36 / 1)",
   },
   // flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground
@@ -47,7 +47,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   // grid grid-cols-1 gap-1 border-t pt-2 text-[11px]
@@ -55,7 +55,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
     gap: space.s1,
-    borderTopWidth: "1px",
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     paddingTop: space.s2,
     fontSize: "11px",
@@ -88,7 +88,7 @@ export const styles = stylex.create({
   },
   // space-y-1 border-b py-3 last:border-b-0
   div2: {
-    borderBottomWidth: { default: "1px", ":last-child": 0 },
+    borderBottomWidth: { default: stroke.hairline, ":last-child": 0 },
     borderBottomStyle: "solid",
     paddingBlock: space.s3,
     display: "flex",
@@ -105,7 +105,7 @@ export const styles = stylex.create({
   // text-sm font-medium
   spanSmMedium: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightMedium,
   },
   // bg-amber-500/15 text-[10px] text-amber-700 border-transparent dark:text-amber-400
@@ -119,17 +119,17 @@ export const styles = stylex.create({
   divGrid: {
     display: "grid",
     gap: space.s2,
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(3, minmax(0, 1fr))" },
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(3, minmax(0, 1fr))" },
   },
   // text-sm
   divSm: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // text-xs text-muted-foreground
   divXs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // font-mono
@@ -174,7 +174,7 @@ export const styles = stylex.create({
   // text-xs text-muted-foreground
   none: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   /** `font-medium` on a table cell whose content is a scenario link */

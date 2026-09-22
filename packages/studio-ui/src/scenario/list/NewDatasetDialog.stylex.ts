@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-auto fixed inset-0 z-50 flex items-center justify-center px-4
@@ -18,7 +18,7 @@ export const styles = stylex.create({
     position: "absolute",
     inset: "0",
     backgroundColor: "rgb(0 0 0 / 0.7)",
-    backdropFilter: "blur(4px)",
+    backdropFilter: motion.blurSm,
   },
   // relative z-10 w-full max-w-sm border border-border bg-background p-5 shadow-2xl
   dialog: {
@@ -26,17 +26,17 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     width: "100%",
     maxWidth: "24rem",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    padding: "1.25rem",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    padding: space.s5,
+    boxShadow: shadows.elevation2xl,
   },
   // text-base font-semibold text-foreground
   h2BaseSemibold: {
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -44,7 +44,7 @@ export const styles = stylex.create({
   pXs: {
     marginTop: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // sr-only
@@ -63,11 +63,11 @@ export const styles = stylex.create({
   copyableerrormessageXs: {
     marginTop: space.s3,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // mt-5 flex justify-end gap-2
   divFlex: {
-    marginTop: "1.25rem",
+    marginTop: space.s5,
     display: "flex",
     justifyContent: "flex-end",
     gap: space.s2,

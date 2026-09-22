@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, layout, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // fixed inset-0 z-50 flex items-center justify-center px-4
@@ -17,7 +17,7 @@ export const styles = stylex.create({
     position: "absolute",
     inset: "0",
     backgroundColor: "rgb(0 0 0 / 0.7)",
-    backdropFilter: "blur(4px)",
+    backdropFilter: motion.blurSm,
   },
   // relative z-10 max-h-[88vh] w-full max-w-2xl space-y-4 overflow-y-auto border border-border bg-background p-6 shadow-2xl
   xoscImportDialog: {
@@ -27,12 +27,12 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "42rem",
     overflowY: "auto",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
     padding: space.s6,
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
     display: "flex",
     flexDirection: "column",
     gap: space.s4,
@@ -40,7 +40,7 @@ export const styles = stylex.create({
   // text-lg font-semibold text-foreground
   xoscImportTitle: {
     fontSize: text.sizeLg,
-    lineHeight: "1.75rem",
+    lineHeight: text.lineLg,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -48,7 +48,7 @@ export const styles = stylex.create({
   createANewScenarioFromThePar: {
     marginTop: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // hidden
@@ -62,13 +62,13 @@ export const styles = stylex.create({
   },
   // border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive
   alert: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.6)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
     padding: space.s3,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   // space-y-4
@@ -81,14 +81,14 @@ export const styles = stylex.create({
   divGridSm: {
     display: "grid",
     gap: space.s2,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.surfaceDeep,
     padding: space.s3,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+    lineHeight: text.lineSm,
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(2, minmax(0, 1fr))" },
   },
   // text-muted-foreground
   format: {
@@ -100,7 +100,7 @@ export const styles = stylex.create({
   },
   // sm:col-span-2 break-all
   div: {
-    gridColumn: { default: null, "@media (min-width: 640px)": "span 2 / span 2" },
+    gridColumn: { default: null, [layout.bpSm]: "span 2 / span 2" },
     wordBreak: "break-all",
   },
   // text-muted-foreground
@@ -119,7 +119,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightMedium,
   },
   // size-4 text-emerald-500
@@ -138,7 +138,7 @@ export const styles = stylex.create({
   labelSm: {
     display: "block",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
   // mb-1 block text-muted-foreground
   map: {
@@ -150,33 +150,33 @@ export const styles = stylex.create({
   resolvedMapSelect: {
     height: "2.5rem",
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
+    borderColor: colors.input,
     backgroundColor: colors.bg,
     paddingInline: space.s3,
   },
   // text-xs text-amber-600
   multipleMapsMatchedNoMapWasS: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(217 119 6 / 1)",
   },
   // text-xs text-amber-600
   noKnownMapMatchedSelectTheIn: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(217 119 6 / 1)",
   },
   // text-xs text-destructive
   theFileContainsContradictory: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
   // border border-border p-3
   xoscConversionSummary: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     padding: space.s3,
@@ -184,14 +184,14 @@ export const styles = stylex.create({
   // text-sm font-semibold
   whatWillBeConverted: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
   },
   // mt-2 space-y-1 text-xs
   ulXs: {
     marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     display: "flex",
     flexDirection: "column",
     gap: space.s1,
@@ -203,7 +203,7 @@ export const styles = stylex.create({
     alignItems: "flex-start",
     gap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // mt-0.5 size-4
   xoscUnsupportedAcknowledgemeInput: {
@@ -215,7 +215,7 @@ export const styles = stylex.create({
   technicalConversionDetails: {
     cursor: "pointer",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightMedium,
   },
   // mt-2 space-y-2
@@ -227,12 +227,12 @@ export const styles = stylex.create({
   },
   // border border-border p-2 text-xs
   liXs: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     padding: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // font-mono
   divMono: {

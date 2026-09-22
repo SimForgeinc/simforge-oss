@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -10,12 +10,12 @@ export const styles = stylex.create({
   quickStatCard: {
     padding: space.s3,
     backgroundColor: { default: "hsl(var(--secondary) / 0.5)", ":hover": "hsl(var(--secondary) / 0.7)" },
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   quickStatLabelRow: {
     display: "flex",
@@ -26,24 +26,24 @@ export const styles = stylex.create({
   },
   quickStatLabel: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
   },
   quickStatValue: {
     fontSize: text.sizeLg,
-    lineHeight: "1.75rem",
-    fontWeight: 600,
+    lineHeight: text.lineLg,
+    fontWeight: text.weightSemibold,
     color: colors.text,
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
+    fontFamily: text.fontMono,
   },
   quickStatTooltip: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
   },
   overviewContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "1.25rem",
+    gap: space.s5,
   },
   assetHeader: {
     display: "flex",
@@ -56,8 +56,8 @@ export const styles = stylex.create({
   },
   assetTitle: {
     fontSize: text.sizeSm,
-    lineHeight: 1.375,
-    fontWeight: 600,
+    lineHeight: text.lineSnug,
+    fontWeight: text.weightSemibold,
   },
   assetLocation: {
     marginTop: space.s0_5,
@@ -69,7 +69,7 @@ export const styles = stylex.create({
   },
   overviewDescription: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   clamp2: {
@@ -84,7 +84,7 @@ export const styles = stylex.create({
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   sectionHeader: {
     display: "flex",
@@ -94,9 +94,9 @@ export const styles = stylex.create({
   },
   sectionTitle: {
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   viewAllButton: {
@@ -107,7 +107,7 @@ export const styles = stylex.create({
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   viewAllChevron: {
     width: "0.75rem",
@@ -116,7 +116,7 @@ export const styles = stylex.create({
   quickStatsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "0.625rem",
+    gap: space.s2_5,
   },
   quickStatIcon: {
     width: "1rem",
@@ -142,8 +142,8 @@ export const styles = stylex.create({
     width: "0.625rem",
     height: "0.625rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   familyCount: {
@@ -162,8 +162,8 @@ export const styles = stylex.create({
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
     fontSize: "10px",
-    color: "#34d399",
-    borderWidth: "1px",
+    color: colors.positive,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgba(4, 120, 87, 0.3)",
   },
@@ -174,16 +174,16 @@ export const styles = stylex.create({
   },
   familyCard: {
     minWidth: 0,
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: "hsl(var(--muted) / 0.2)", ":hover": "hsl(var(--muted) / 0.4)" },
     paddingInline: space.s3,
-    paddingBlock: "0.625rem",
+    paddingBlock: space.s2_5,
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   familyCardHeader: {
     display: "flex",
@@ -201,8 +201,8 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 500,
+    lineHeight: text.lineXs,
+    fontWeight: text.weightMedium,
     color: colors.text,
   },
   familySummary: {
@@ -216,10 +216,10 @@ export const styles = stylex.create({
     gap: space.s1,
     maxWidth: "20rem",
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
   },
   tooltipLabel: {
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
   },
   tooltipAction: {
     color: colors.mutedForeground,
@@ -233,14 +233,14 @@ export const styles = stylex.create({
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   chevronBare: {
     width: "0.75rem",
     height: "0.75rem",
     transitionProperty: "transform",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",

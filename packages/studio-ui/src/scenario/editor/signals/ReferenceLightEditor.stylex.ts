@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0 (was min-w-0 space-y-2)
@@ -29,7 +29,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -39,7 +39,7 @@ export const styles = stylex.create({
     height: "0.5rem",
     width: "100%",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.muted,
   },
@@ -47,7 +47,7 @@ export const styles = stylex.create({
   borderedClip: {
     overflow: "hidden",
     borderRadius: "0",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
   },
   // grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border bg-muted/60 px-1.5 py-1 text-micro uppercase tracking-wide text-muted-foreground
@@ -55,7 +55,7 @@ export const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: "20px minmax(0, 1fr) 58px 42px",
     alignItems: "center",
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.6)",
     paddingLeft: space.s1_5,
@@ -63,9 +63,9 @@ export const styles = stylex.create({
     paddingTop: space.s1,
     paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // text-right
@@ -87,12 +87,12 @@ export const styles = stylex.create({
   // text-micro leading-relaxed text-muted-foreground
   microMutedRelaxed: {
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   // border border-signal-yellow/50 bg-signal-yellow/10 px-2 py-1.5 text-micro leading-relaxed text-signal-yellow
   microBorderedRelaxed: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--signal-yellow) / 0.5)",
     backgroundColor: "hsl(var(--signal-yellow) / 0.1)",
     paddingLeft: space.s2,
@@ -100,7 +100,7 @@ export const styles = stylex.create({
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: "hsl(var(--signal-yellow) / 1)",
   },
   // grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border px-1.5 py-1 last:border-b-0
@@ -109,7 +109,7 @@ export const styles = stylex.create({
     gridTemplateColumns: "20px minmax(0, 1fr) 58px 42px",
     alignItems: "center",
     borderBottomWidth: {
-      default: "1px",
+      default: stroke.hairline,
       ":last-child": "0px",
     },
     borderColor: colors.border,
@@ -142,7 +142,7 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // relative
@@ -157,7 +157,7 @@ export const styles = stylex.create({
     paddingRight: space.s3,
     textAlign: "right",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontVariantNumeric: "tabular-nums",
   },
   // pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-muted-foreground

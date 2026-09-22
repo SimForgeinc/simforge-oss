@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // fixed inset-0 z-[100] flex items-center justify-center
@@ -16,7 +16,7 @@ export const styles = stylex.create({
     position: "absolute",
     inset: "0",
     backgroundColor: "rgb(0 0 0 / 0.55)",
-    backdropFilter: "blur(12px)",
+    backdropFilter: motion.blurGlass,
   },
   // relative flex h-[80vh] w-[80vw] flex-col overflow-hidden border border-border bg-background shadow-2xl
   selectMap: {
@@ -26,11 +26,11 @@ export const styles = stylex.create({
     width: "80vw",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
   },
   // flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-6 py-4
   divFlex: {
@@ -39,7 +39,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s4,
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
@@ -54,7 +54,7 @@ export const styles = stylex.create({
   selectMap2: {
     fontFamily: text.fontHeavy,
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
@@ -64,7 +64,7 @@ export const styles = stylex.create({
   pXs: {
     marginTop: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex min-w-0 items-center gap-3
@@ -110,7 +110,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // mx-auto grid max-w-7xl gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
@@ -153,7 +153,7 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: colors.primaryForeground,
   },
@@ -182,7 +182,7 @@ export const styles = stylex.create({
     width: space.s3,
     height: space.s3,
     flexShrink: 0,
-    color: "rgb(255 255 255 / 0.7)",
+    color: colors.inkSecondary,
   },
   // truncate text-xs text-white/70
   pTruncateXs: {
@@ -190,8 +190,8 @@ export const styles = stylex.create({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 0.7)",
+    lineHeight: text.lineXs,
+    color: colors.inkSecondary,
   },
   // line-clamp-2 text-base font-bold leading-tight text-white
   pBaseBold: {
@@ -202,7 +202,7 @@ export const styles = stylex.create({
     fontSize: text.sizeBase,
     lineHeight: text.lineTight,
     fontWeight: text.weightBold,
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // px-4 py-3
   div4: {

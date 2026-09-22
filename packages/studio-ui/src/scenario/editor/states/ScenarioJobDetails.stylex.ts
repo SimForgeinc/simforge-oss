@@ -1,16 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // h-full overflow-y-auto border border-border bg-card p-5 shadow-2xl
   borderedScrollYTall: {
     height: "100%",
     overflowY: "auto",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    padding: "1.25rem",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    padding: space.s5,
+    boxShadow: shadows.elevation2xl,
   },
   // flex items-start
   flexStart: {
@@ -20,7 +20,7 @@ export const styles = stylex.create({
   // text-xs uppercase tracking-meta text-muted-foreground
   capsXsMuted: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -54,11 +54,11 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
     backgroundColor: {
       default: null,
-      ":hover": "hsl(var(--accent))",
+      ":hover": colors.hoverWash,
     },
   },
   // size-4
@@ -82,11 +82,11 @@ export const styles = stylex.create({
   flexXsBordered: {
     marginBottom: space.s2,
     display: "flex",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     padding: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // motionStyles.editorMotion + min-w-0 flex-1 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card
   fillNarrowableLeftText: {
@@ -103,7 +103,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+      ":focus-visible": shadows.ringOffset,
     },
     color: {
       default: null,
@@ -125,7 +125,7 @@ export const styles = stylex.create({
     height: "auto",
     padding: 0,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
@@ -133,15 +133,15 @@ export const styles = stylex.create({
   },
   // mt-5 border-t border-border pt-4
   ruleT: {
-    marginTop: "1.25rem",
-    borderTopWidth: "1px",
+    marginTop: space.s5,
+    borderTopWidth: stroke.hairline,
     borderColor: colors.border,
     paddingTop: space.s4,
   },
   // text-xs font-semibold uppercase tracking-meta text-muted-foreground
   capsXsMuted2: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -169,7 +169,7 @@ export const styles = stylex.create({
     display: "flex",
     gap: space.s4,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
   // w-32 shrink-0 text-muted-foreground
   tightMuted: {

@@ -13,13 +13,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const LG = "@media (min-width: 1024px)";
-const REDUCED = "@media (prefers-reduced-motion: reduce)";
-
-/** Tailwind's default transition curve and its `transition-colors` set. */
-const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const COLOR_TRANSITION =
   "color, background-color, border-color, text-decoration-color, fill, stroke";
 
@@ -35,20 +29,20 @@ export const plate = stylex.create({
   /** A hairline plate: the switcher tab's idle treatment. */
   root: {
     display: "grid",
-    gap: "0.5rem",
+    gap: space.s2,
     minWidth: 0,
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.08)",
+    borderColor: colors.hairline,
     backgroundColor: "rgb(255 255 255 / 0.025)",
-    paddingInline: "1rem",
-    paddingBlock: "1rem",
+    paddingInline: space.s4,
+    paddingBlock: space.s4,
   },
   /** A plate that frames its own scroller: header fixed, list scrolling. */
   scroller: {
     display: "grid",
     gridTemplateRows: "auto minmax(0, 1fr)",
-    gap: "0.5rem",
+    gap: space.s2,
     minHeight: 0,
     overflow: "hidden",
   },
@@ -60,43 +54,43 @@ export const plate = stylex.create({
   /** Two columns from LG, stacked below it — the switcher's tab row rule. */
   columns: {
     display: "grid",
-    gap: "0.75rem",
+    gap: space.s3,
     minHeight: 0,
-    gridTemplateColumns: { default: null, [LG]: "repeat(2, minmax(0, 1fr))" },
+    gridTemplateColumns: { default: null, [layout.bpLg]: "repeat(2, minmax(0, 1fr))" },
   },
   sidebarColumns: {
     display: "grid",
-    gap: "0.75rem",
+    gap: space.s3,
     minHeight: 0,
-    gridTemplateColumns: { default: null, [LG]: "minmax(0, 20rem) minmax(0, 1fr)" },
+    gridTemplateColumns: { default: null, [layout.bpLg]: "minmax(0, 20rem) minmax(0, 1fr)" },
   },
 
   eyebrow: {
     fontFamily: text.fontMeta,
     fontSize: "10px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
     color: "rgb(255 255 255 / 0.3)",
   },
   title: {
     fontFamily: text.fontDisplay,
-    fontSize: "1rem",
+    fontSize: text.sizeBase,
     lineHeight: "1.375rem",
-    fontWeight: 600,
+    fontWeight: text.weightSemibold,
     letterSpacing: "-0.02em",
-    color: "#fff",
+    color: colors.ink,
   },
   copy: {
-    fontSize: "0.75rem",
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   row: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: "0.5rem",
+    gap: space.s2,
     minWidth: 0,
   },
   spread: {
@@ -104,7 +98,7 @@ export const plate = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "0.5rem",
+    gap: space.s2,
     minWidth: 0,
   },
   truncate: {
@@ -115,14 +109,14 @@ export const plate = stylex.create({
   },
 
   /** Name/value facts: the switcher's highlight lines, given a label. */
-  facts: { display: "grid", gap: "0.375rem", margin: 0 },
-  fact: { display: "flex", alignItems: "baseline", gap: "0.5rem", minWidth: 0 },
+  facts: { display: "grid", gap: space.s1_5, margin: 0 },
+  fact: { display: "flex", alignItems: "baseline", gap: space.s2, minWidth: 0 },
   factLabel: {
     flexShrink: 0,
     width: "6.5rem",
     fontFamily: text.fontMeta,
     fontSize: "10px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
     color: "rgb(255 255 255 / 0.3)",
@@ -130,7 +124,7 @@ export const plate = stylex.create({
   factValue: {
     margin: 0,
     minWidth: 0,
-    fontSize: "0.75rem",
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
     color: "rgb(255 255 255 / 0.65)",
   },
@@ -141,38 +135,38 @@ export const plate = stylex.create({
   tabs: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "0.25rem",
-    borderWidth: 1,
+    gap: space.s1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.07)",
     backgroundColor: "rgb(255 255 255 / 0.025)",
-    padding: "0.25rem",
+    padding: space.s1,
   },
   tab: {
     display: "flex",
     minHeight: "2rem",
     alignItems: "center",
-    gap: "0.375rem",
-    paddingInline: "0.625rem",
+    gap: space.s1_5,
+    paddingInline: space.s2_5,
     fontSize: "10px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     whiteSpace: "nowrap",
-    transitionProperty: { default: COLOR_TRANSITION, [REDUCED]: "none" },
-    transitionDuration: "150ms",
-    transitionTimingFunction: EASE,
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    transitionProperty: { default: COLOR_TRANSITION, [layout.reducedMotion]: "none" },
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
   },
   tabActive: {
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
   tabIdle: {
     backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.05)" },
-    color: { default: "rgb(255 255 255 / 0.45)", ":hover": "#fff" },
+    color: { default: colors.inkMuted, ":hover": colors.ink },
   },
   tabIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },
 
@@ -180,43 +174,43 @@ export const plate = stylex.create({
   pill: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "0.25rem",
-    borderWidth: 1,
+    gap: space.s1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.12)",
-    paddingInline: "0.375rem",
-    paddingBlock: "0.125rem",
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
     fontSize: "10px",
-    fontWeight: 700,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
     color: "rgb(255 255 255 / 0.55)",
   },
   pillAccent: {
     borderColor: "rgb(232 224 68 / 0.35)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
+    backgroundColor: colors.accentWash,
     color: colors.accent,
   },
-  pillMuted: { color: "rgb(255 255 255 / 0.35)" },
+  pillMuted: { color: colors.inkFaint },
 
   /** The switcher's own button treatment, for actions on a plate. */
   button: {
     height: "2rem",
-    gap: "0.375rem",
-    borderWidth: 1,
+    gap: space.s1_5,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
-      default: "rgb(255 255 255 / 0.14)",
+      default: colors.hairlineStrong,
       ":hover": "rgb(255 255 255 / 0.28)",
     },
     backgroundColor: {
       default: "rgb(255 255 255 / 0.025)",
-      ":hover": "rgb(255 255 255 / 0.06)",
+      ":hover": colors.fill,
     },
-    paddingInline: "0.75rem",
-    fontSize: "0.75rem",
-    color: "#fff",
+    paddingInline: space.s3,
+    fontSize: text.sizeXs,
+    color: colors.ink,
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   buttonAccent: {
@@ -233,8 +227,8 @@ export const plate = stylex.create({
       from: { transform: "rotate(0deg)" },
       to: { transform: "rotate(360deg)" },
     }),
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
 
@@ -242,41 +236,41 @@ export const plate = stylex.create({
   notice: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "0.5rem",
-    borderWidth: 1,
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgb(232 224 68 / 0.3)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: "rgb(232 224 68 / 0.08)",
-    paddingInline: "0.75rem",
-    paddingBlock: "0.5rem",
-    fontSize: "0.75rem",
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
     color: colors.accent,
   },
   noticeError: {
     borderColor: "rgb(248 113 113 / 0.35)",
     backgroundColor: "rgb(248 113 113 / 0.1)",
-    color: "#fca5a5",
+    color: colors.critical,
   },
 
   /** The `ul` reset used by every list on these plates. */
-  list: { display: "grid", gap: "0.25rem", margin: 0, padding: 0, listStyle: "none" },
+  list: { display: "grid", gap: space.s1, margin: 0, padding: 0, listStyle: "none" },
   item: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "0.5rem",
+    gap: space.s2,
     minWidth: 0,
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.06)",
-    paddingInline: "0.625rem",
-    paddingBlock: "0.5rem",
+    paddingInline: space.s2_5,
+    paddingBlock: space.s2,
   },
   empty: {
-    fontSize: "0.75rem",
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
-    color: "rgb(255 255 255 / 0.35)",
+    color: colors.inkFaint,
   },
 });

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /** `animate-pulse`. */
 const pulse = stylex.keyframes({
@@ -24,7 +24,7 @@ export const styles = stylex.create({
   // absolute border-2 border-[#E8E044] shadow-[0_0_0_4px_rgba(232,224,68,0.16),0_0_24px_rgba(232,224,68,0.3)]
   abs: {
     position: "absolute",
-    borderWidth: "2px",
+    borderWidth: stroke.thick,
     borderColor: colors.accent,
     boxShadow: "0 0 0 4px rgba(232, 224, 68, 0.16), 0 0 24px rgba(232, 224, 68, 0.3)",
   },
@@ -33,13 +33,13 @@ export const styles = stylex.create({
     pointerEvents: "auto",
     position: "absolute",
     width: "min(360px, calc(100vw - 24px))",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.55)",
     backgroundColor: "rgb(17 18 15 / 0.95)",
     padding: space.s4,
-    color: "rgb(255 255 255 / 1)",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
-    backdropFilter: "blur(24px)",
+    color: colors.ink,
+    boxShadow: shadows.elevation2xl,
+    backdropFilter: motion.blurPane,
     outline: {
       default: null,
       ":focus": "2px solid transparent",
@@ -73,7 +73,7 @@ export const styles = stylex.create({
   semiboldBase: {
     marginTop: space.s1_5,
     fontSize: text.sizeBase,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     fontWeight: text.weightSemibold,
   },
   // grid size-7 shrink-0 place-items-center text-white/55 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
@@ -85,7 +85,7 @@ export const styles = stylex.create({
     placeItems: "center",
     color: {
       default: "rgb(255 255 255 / 0.55)",
-      ":hover": "rgb(255 255 255 / 1)",
+      ":hover": colors.ink,
     },
     outline: {
       default: null,
@@ -97,7 +97,7 @@ export const styles = stylex.create({
     },
     boxShadow: {
       default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      ":focus-visible": shadows.ringAccent,
     },
     backgroundColor: {
       default: null,
@@ -113,7 +113,7 @@ export const styles = stylex.create({
   xs: {
     marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: "rgb(255 255 255 / 0.6)",
   },
   // mt-4 flex items-center gap-2 border border-[#E8E044]/30 bg-[#E8E044]/[0.08] px-3 py-2.5
@@ -122,13 +122,13 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: "1px",
-    borderColor: "rgb(232 224 68 / 0.3)",
+    borderWidth: stroke.hairline,
+    borderColor: colors.accentLineSubtle,
     backgroundColor: "rgb(232 224 68 / 0.08)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    paddingTop: "0.625rem",
-    paddingBottom: "0.625rem",
+    paddingTop: space.s2_5,
+    paddingBottom: space.s2_5,
   },
   // size-4 shrink-0 text-[#E8E044]
   tight: {
@@ -144,10 +144,10 @@ export const styles = stylex.create({
     flexShrink: "0",
     animationName: {
       default: pulse,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+    animationDuration: motion.durPulse,
+    animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
     borderRadius: "0",
     backgroundColor: colors.accent,
@@ -155,7 +155,7 @@ export const styles = stylex.create({
   // text-xs font-medium text-[#E8E044]
   xsMedium: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.accent,
   },
@@ -169,7 +169,7 @@ export const styles = stylex.create({
   mt3TextLeading4: {
     marginTop: space.s3,
     fontSize: "10px",
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: "rgb(255 255 255 / 0.4)",
   },
 });

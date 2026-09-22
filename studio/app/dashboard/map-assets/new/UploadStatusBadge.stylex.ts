@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
@@ -18,8 +18,8 @@ export const styles = stylex.create({
     width: "0.75rem",
     height: "0.75rem",
     animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
   uploadingStatus: {
@@ -34,7 +34,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s1,
     fontSize: "10px",
-    color: "#34d399",
+    color: colors.positive,
   },
   statusIcon: {
     width: "0.75rem",
