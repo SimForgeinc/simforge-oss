@@ -21,6 +21,29 @@ import type { SumoRuntime, SumoWasmModule } from './sumo-runtime.js';
 export const PINNED_SUMO_WASM_SHA256 = 'e93c001444732ee95c4e0030e824d7d1883b84c4994ac6fbe8b04b336ced3e93';
 export const PINNED_SUMO_RUNTIME_VERSION = '1.27.1-7717f237';
 
+/**
+ * Load the packaged Emscripten factory. A native dynamic import is used when
+ * the host allows it; inside VM-sandboxed test runners (no dynamic-import
+ * callback) the same pinned source is evaluated with its three module-level
+ * references (`import.meta.url`, `await import('node:module')`, the default
+ * export) bound explicitly.
+ */
+async function importSumoFactory(directory: string, moduleUrl: string): Promise<SumoFactory> {
+  try {
+    const nativeImport = new Function('url', 'return import(url)') as (url: string) => Promise<{ default: SumoFactory }>;
+    return (await nativeImport(moduleUrl)).default;
+  } catch (error) {
+    if (!(error instanceof Error) || !/dynamic import callback|ERR_VM_DYNAMIC_IMPORT/.test(`${error.message} ${(error as { code?: string }).code ?? ''}`)) throw error;
+  }
+  const source = await readFile(path.join(directory, 'sumo.mjs'), 'utf8');
+  const body = source
+    .replaceAll('import.meta.url', '__sumoModuleUrl')
+    .replace("await import('node:module')", '__sumoNodeModule')
+    .replace(/export default Module;?\s*$/, 'return Module;');
+  const nodeModule = await import('node:module');
+  return new Function('__sumoModuleUrl', '__sumoNodeModule', body)(moduleUrl, nodeModule) as SumoFactory;
+}
+
 type SumoFactory = (options: {
   noInitialRun: boolean;
   locateFile: (file: string) => string;
@@ -45,7 +68,7 @@ export async function loadSumoRuntime(
   }
   const compiled = await WebAssembly.compile(wasm);
   const moduleUrl = pathToFileURL(path.join(directory, 'sumo.mjs')).href;
-  const factory = (await import(moduleUrl) as { default: SumoFactory }).default;
+  const factory = await importSumoFactory(directory, moduleUrl);
   const commit = String((manifest as SumoRuntimeManifest & { sumoCommit?: string }).sumoCommit ?? '');
   return {
     version: `${manifest.sumoVersion}-${commit.slice(0, 8)}`,

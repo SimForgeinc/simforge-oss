@@ -34,6 +34,7 @@ import {
   loadInstalledSumoNetwork,
   loadInstalledSumoRuntime,
   runWorkerSumo,
+  sumoExecutionInput,
   type WorkerSumoRun,
 } from '../sumo-headless.js';
 
@@ -151,16 +152,7 @@ async function resolveScenario(options: TrafficSumoOptions): Promise<ResolvedSce
   if (kind === 'instance') {
     const instance = await readInstance(options.file);
     const bundle = await loadMap(instance.input.mapId);
-    const controls = bundle.controlPlan();
-    const signalIds = new Set(instance.input.signalPrograms.map((program) => program.id));
-    const controlIds = new Set(instance.input.roadControls.map((control) => control.id));
-    const input: SimScenarioInput = withClip({
-      ...instance.input,
-      // The native ambient population is replaced by SUMO, never mixed with it.
-      actors: instance.input.actors.filter((actor) => !actor.tags.includes('ambient')),
-      signalPrograms: [...instance.input.signalPrograms, ...controls.signalPrograms.filter((program) => !signalIds.has(program.id))],
-      roadControls: [...instance.input.roadControls, ...controls.roadControls.filter((control) => !controlIds.has(control.id))],
-    }, options.durationSeconds);
+    const input = withClip(sumoExecutionInput(instance.input, bundle), options.durationSeconds);
     return { kind, input, bundle, profile: profileFrom(undefined, options), sourceInputDigest: executionSourceInputDigest(input) };
   }
   const content = JSON.parse(await readFile(options.file, 'utf8')) as {

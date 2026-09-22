@@ -89,3 +89,9 @@ drive (pedestrian heads, for example), are reported as warnings.
 `pnpm maps:sumo:smoke -- --maps representative --require-runtime` also builds
 Richmond Field Station, Yale Street, Garching and San Ramon phase 2 with the
 headless gate.
+
+## Consumers
+
+The authoritative consumer is the worker SUMO traffic step, which bakes SUMO
+traffic into the simulation trace (`docs/engineering/sumo-worker-traffic.md`).
+The editor's in-browser SUMO is a display-only preview of the same network.
