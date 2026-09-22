@@ -1,8 +1,8 @@
 /**
  * StyleX styles for the two "what is this installation" cards: the local
  * execution card (what runs on this computer) and the SimCloud connection card
- * (the optional account), plus the one-line connection chip the app switcher
- * mounts. They share a header shape — icon, eyebrow, title, lede, a definition
+ * (the optional account), plus the account segments of the app switcher's
+ * bar. They share a header shape — icon, eyebrow, title, lede, a definition
  * list of facts, then an action row — so the shared half lives in {@link card}
  * and each card keeps only what is genuinely its own.
  *
@@ -41,6 +41,11 @@ const COLOR_TRANSITION =
 
 /** `focus-visible:ring-2 ring-[#E8E044]` with the default zero ring offset. */
 const ACCENT_RING = `0 0 0 2px ${colors.accent}`;
+const ACCENT_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
+
+/** The switcher bar's divider hairline, and the width its segments go one-line at. */
+const BAR_HAIRLINE = "rgba(255, 255, 255, 0.08)";
+const XL = "@media (min-width: 1200px)";
 
 /** `bg-[#E8E044]/10`, `/20`, `border-[#E8E044]/30`, and the connected glow. */
 const ACCENT_10 = `color-mix(in srgb, ${colors.accent} 10%, transparent)`;
@@ -279,85 +284,102 @@ export const cloud = stylex.create({
 });
 
 /**
- * The app-switcher chip. Its surface is appearance-frozen — the switcher is a
- * protected overlay — so every value here is the literal the utility resolved
- * to, including the lighter-than-`colors.line` hairlines it was tuned with.
+ * The app-switcher bar segments: workspace, account or SimCloud connection,
+ * each a full-height cell of the switcher's one bar, divided from its
+ * neighbour by a hairline rather than framed as a card of its own.
  */
 export const chip = stylex.create({
-  // flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5
   root: {
     display: "flex",
+    // Stacked below XL the segments share their row evenly.
+    flex: { default: "1 1 0", [XL]: "0 1 auto" },
     minWidth: 0,
     alignItems: "center",
-    gap: space.lg,
-    borderWidth: 1,
+    gap: "0.625rem",
+    paddingInlineStart: "0.875rem",
+    borderWidth: 0,
     borderStyle: "solid",
-    borderColor: "rgba(255, 255, 255, 0.07)",
-    borderRadius: radii.xl,
-    backgroundColor: "rgba(255, 255, 255, 0.025)",
-    paddingInline: "0.75rem",
-    paddingBlock: "0.625rem",
+    borderColor: BAR_HAIRLINE,
+    // Stacked below XL the first segment starts at the frame's own edge.
+    borderInlineStartWidth: { default: 1, ":first-child": { default: 0, [XL]: 1 } },
   },
-  // min-w-0 flex-1
-  body: {
-    minWidth: 0,
-    flex: 1,
-  },
-  // mb-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.16em] text-white/30
-  eyebrow: {
-    marginBottom: "0.125rem",
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: "rgba(255, 255, 255, 0.3)",
-  },
-  // truncate text-xs font-semibold text-white/80
-  summary: {
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
-    color: "rgba(255, 255, 255, 0.8)",
-  },
-  // shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] transition-colors
-  // focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
-  action: {
-    flexShrink: 0,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderRadius: radii.lg,
-    paddingInline: "0.625rem",
-    paddingBlock: "0.375rem",
-    fontSize: "10px",
+  /** A segment that is itself a button (the workspace menu trigger). */
+  trigger: {
+    paddingInlineEnd: "0.875rem",
+    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.04)" },
+    color: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
     transitionProperty: COLOR_TRANSITION,
     transitionDuration: "150ms",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-    // `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-    // `outline: none`, so forced-colours mode still has an outline to repaint.
     outlineWidth: { default: null, ":focus-visible": "2px" },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": ACCENT_RING },
+    outlineOffset: { default: null, ":focus-visible": "-2px" },
+    boxShadow: { default: null, ":focus-visible": ACCENT_RING_INSET },
+    opacity: { default: null, ":disabled": 0.6 },
   },
-  // border border-white/[0.06] font-medium text-white/50 hover:border-white/15 hover:text-white
+  body: {
+    display: "grid",
+    minWidth: 0,
+    flex: { default: "1 1 auto", [XL]: "0 1 auto" },
+  },
+  eyebrow: {
+    fontFamily: text.fontMeta,
+    fontSize: "8px",
+    lineHeight: "0.75rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMetaWide,
+    color: "rgba(255, 255, 255, 0.35)",
+  },
+  summary: {
+    maxWidth: "11rem",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    fontWeight: 600,
+    color: "rgba(255, 255, 255, 0.85)",
+  },
+  chevron: {
+    width: "0.875rem",
+    height: "0.875rem",
+    flexShrink: 0,
+    color: "rgba(255, 255, 255, 0.45)",
+  },
+  /** An action cell inside a segment: full height, divided by a hairline. */
+  action: {
+    display: "flex",
+    flexShrink: 0,
+    alignItems: "center",
+    alignSelf: "stretch",
+    paddingInline: "0.875rem",
+    borderWidth: 0,
+    borderInlineStartWidth: 1,
+    borderStyle: "solid",
+    borderColor: BAR_HAIRLINE,
+    fontSize: "11px",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+    transitionProperty: COLOR_TRANSITION,
+    transitionDuration: "150ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineColor: { default: null, ":focus-visible": "transparent" },
+    outlineOffset: { default: null, ":focus-visible": "-2px" },
+    boxShadow: { default: null, ":focus-visible": ACCENT_RING_INSET },
+    opacity: { default: null, ":disabled": 0.5 },
+  },
   manage: {
-    borderColor: {
-      default: "rgba(255, 255, 255, 0.06)",
-      ":hover": "rgba(255, 255, 255, 0.15)",
-    },
     fontWeight: 500,
-    color: { default: "rgba(255, 255, 255, 0.5)", ":hover": "#ffffff" },
+    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.04)" },
+    color: { default: "rgba(255, 255, 255, 0.55)", ":hover": "#ffffff" },
   },
-  // border-[#E8E044]/30 bg-[#E8E044]/10 font-semibold text-[#E8E044]
-  // hover:bg-[#E8E044]/20 disabled:opacity-50
   connect: {
-    borderColor: ACCENT_30,
     backgroundColor: { default: ACCENT_10, ":hover": ACCENT_20 },
     fontWeight: 600,
     color: colors.accent,
-    opacity: { default: null, ":disabled": 0.5 },
   },
 });
 

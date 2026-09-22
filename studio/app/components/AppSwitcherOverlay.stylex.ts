@@ -2,8 +2,8 @@
  * StyleX styles for `AppSwitcherOverlay` — the full-screen app switcher that
  * the top bar's logo button opens.
  *
- * The surface is deliberately plain: a centred column with three tabs and one
- * footer line. The overlay and dialog fades are the ones the switcher shipped
+ * The surface is deliberately plain: a centred column with three equal app
+ * cards and one continuous bar beneath them. The overlay and dialog fades are the ones the switcher shipped
  * with (`tailwindcss-animate`'s `fade-in-0`/`fade-out-0` and the former
  * `app-switcher-center-fade` class in `styles.css`), each keeping the
  * `prefers-reduced-motion` cancel the original carried.
@@ -21,6 +21,8 @@ import {
 /** The breakpoints this overlay responds to. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
+/** Wide enough for utilities and account segments to share one bar line. */
+const XL = "@media (min-width: 1200px)";
 const REDUCED = "@media (prefers-reduced-motion: reduce)";
 
 /** Tailwind's default transition curve and its `transition-colors` set. */
@@ -35,6 +37,12 @@ const COLOR_TRANSITION =
  */
 const FOCUS_RING = `0 0 0 2px ${colors.accent}`;
 const FOCUS_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
+
+/** The hairline every card edge and bar divider is drawn with. */
+const HAIRLINE = "rgb(255 255 255 / 0.08)";
+/** The bar's one height: every utility and segment is exactly this tall. */
+const BAR_HEIGHT = "3.25rem";
+
 
 /**
  * `animate-in fade-in-0` / `animate-out fade-out-0` from `tailwindcss-animate`:
@@ -171,56 +179,51 @@ export const styles = stylex.create({
   // size-5
   closeIcon: { width: "1.25rem", height: "1.25rem" },
 
+
   /**
-   * The page frame: a centred column, narrow enough that three tabs read as
-   * one row of choices rather than a wall of cards. It is never taller than
-   * the viewport, so the switcher does not scroll on a desktop screen.
+   * The page frame: a centred column, never taller than the viewport, so the
+   * switcher does not scroll on a desktop screen.
    */
   container: {
     position: "relative",
     marginInline: "auto",
     display: "grid",
     alignContent: "safe center",
-    gap: "1.5rem",
+    gap: "1rem",
     minHeight: "100%",
     height: "100%",
     overflow: "hidden",
     width: "100%",
-    maxWidth: layout.utilityFrame,
+    maxWidth: "1080px",
     paddingInline: { default: layout.gutterNarrow, [SM]: layout.gutter },
     paddingBlock: space.xxl,
   },
 
-  /** The three product tabs: stacked on narrow viewports, a row from LG. */
+  /** The three app cards: stacked on narrow viewports, one row of equal cards from LG. */
   tabs: {
     display: "grid",
     gap: "0.75rem",
-    gridTemplateColumns: {
-      default: null,
-      [LG]: "repeat(3, minmax(0, 1fr))",
-    },
+    gridTemplateColumns: { default: "minmax(0, 1fr)", [LG]: "repeat(3, minmax(0, 1fr))" },
+    gridAutoRows: { default: null, [LG]: "1fr" },
   },
 
   /**
-   * One tab: a hairline plate with its name, what the page is, and the three
-   * things it does. No artwork, no badge, no index.
+   * One app card: an artwork stage over a text body. Beside each other from
+   * LG, the stage on the left below it. Every card has the same frame, so the
+   * row reads as three equal choices.
    */
   tab: {
-    "@media (max-width: 1023px)": { display: "grid", gridTemplateColumns: "4rem minmax(0, 1fr)", columnGap: space.lg },
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
+    position: "relative",
+    display: "grid",
+    gridTemplateColumns: { default: "7rem minmax(0, 1fr)", [LG]: "minmax(0, 1fr)" },
+    gridTemplateRows: { default: null, [LG]: "auto 1fr" },
     minWidth: 0,
+    overflow: "hidden",
     borderWidth: 1,
     borderStyle: "solid",
-    paddingInline: "1rem",
-    paddingBlock: "1rem",
     textAlign: "left",
-    transitionProperty: {
-      default: "border-color, background-color, color",
-      [REDUCED]: "none",
-    },
-    transitionDuration: "150ms",
+    transitionProperty: { default: "border-color, background-color, box-shadow", [REDUCED]: "none" },
+    transitionDuration: "200ms",
     transitionTimingFunction: EASE,
     outlineWidth: { default: null, ":focus-visible": "2px" },
     outlineStyle: { default: null, ":focus-visible": "solid" },
@@ -228,58 +231,91 @@ export const styles = stylex.create({
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },
   tabIdle: {
-    borderColor: {
-      default: "rgb(255 255 255 / 0.08)",
-      ":hover": "rgb(255 255 255 / 0.2)",
-    },
-    backgroundColor: {
-      default: "rgb(255 255 255 / 0.025)",
-      ":hover": "rgb(255 255 255 / 0.05)",
-    },
+    borderColor: { default: HAIRLINE, ":hover": "rgb(255 255 255 / 0.18)" },
+    backgroundColor: { default: "rgb(255 255 255 / 0.02)", ":hover": "rgb(255 255 255 / 0.04)" },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
+  /** The app you are in: an accent rule across the top and a warmer plate. */
   tabActive: {
-    borderColor: "rgb(232 224 68 / 0.25)",
-    backgroundColor: "rgb(232 224 68 / 0.07)",
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
+    borderColor: "rgb(232 224 68 / 0.28)",
+    backgroundColor: "rgb(232 224 68 / 0.05)",
+    boxShadow: {
+      default: `inset 0 2px 0 ${colors.accent}`,
+      ":focus-visible": `inset 0 2px 0 ${colors.accent}, ${FOCUS_RING}`,
+    },
   },
   tabDisabled: {
     cursor: "not-allowed",
     borderColor: "rgb(255 255 255 / 0.05)",
     backgroundColor: "rgb(0 0 0 / 0.2)",
     opacity: 0.6,
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
 
-  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem", "@media (max-width: 1023px)": { gridColumn: 2 } },
   /**
-   * The app's artwork: a square tile at the top of the tab, dimmed until the
-   * tab is current or hovered, so the row reads as three pictures first and
-   * three names second.
+   * The artwork stage: a fixed-height well with a soft floor light, so every
+   * card's picture sits at the same height whatever the card's text.
    */
   art: {
-    display: "grid",
-    placeItems: "center",
-    width: "100%",
-    aspectRatio: "4 / 3",
-    paddingBlock: "0.5rem",
-    "@media (max-width: 1023px)": { aspectRatio: "1", width: "4rem", gridRow: "1 / span 3", alignSelf: "center" },
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: { default: "auto", [LG]: "11rem" },
+    minHeight: { default: "7rem", [LG]: null },
+    paddingBlock: { default: "0.75rem", [LG]: "1.25rem" },
+    paddingInline: "0.75rem",
+    borderColor: HAIRLINE,
+    borderStyle: "solid",
+    borderWidth: 0,
+    borderBottomWidth: { default: 0, [LG]: 1 },
+    borderInlineEndWidth: { default: 1, [LG]: 0 },
+    backgroundImage:
+      "radial-gradient(60% 55% at 50% 62%, rgb(255 255 255 / 0.06), transparent 70%)",
   },
-  /** The whole picture, never clipped: it is the square source scaled to fit the tile. */
-  artImage: {
-    display: "block",
-    width: "auto",
-    height: "100%",
-    maxWidth: "100%",
-    objectFit: "contain",
-    transitionProperty: { default: "opacity, filter", [REDUCED]: "none" },
+  artStageActive: {
+    backgroundImage:
+      "radial-gradient(60% 55% at 50% 62%, rgb(232 224 68 / 0.1), transparent 70%)",
+  },
+  /** The box the artwork is fitted into; each picture takes a share of its height. */
+  artFrame: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: { default: "4.5rem", [LG]: "8.5rem" },
+    minHeight: 0,
+    transitionProperty: { default: "opacity, filter, transform", [REDUCED]: "none" },
     transitionDuration: "300ms",
     transitionTimingFunction: EASE,
   },
-  artFrame: { display: "grid", placeItems: "center", height: "100%", width: "100%", minHeight: 0 },
-  artIdle: { opacity: 0.55, filter: "grayscale(0.6)" },
+  /** Card hover and keyboard focus both wake the artwork inside it. */
+  artIdle: {
+    opacity: { default: 0.6, [stylex.when.ancestor(":hover")]: 1, [stylex.when.ancestor(":focus-visible")]: 1 },
+    filter: {
+      default: "grayscale(0.6)",
+      [stylex.when.ancestor(":hover")]: "none",
+      [stylex.when.ancestor(":focus-visible")]: "none",
+    },
+    transform: { default: null, [stylex.when.ancestor(":hover")]: "translateY(-3px)" },
+  },
   artActive: { opacity: 1, filter: "none" },
   artDisabled: { opacity: 0.3, filter: "grayscale(1)" },
+  /**
+   * The picture cropped to its drawn content: the source files carry uneven
+   * transparent margins, so the crop, not the file, is what gets sized.
+   */
+  artCrop: {
+    position: "relative",
+    display: "block",
+    maxWidth: "100%",
+    overflow: "hidden",
+  },
+  artImage: {
+    position: "absolute",
+    display: "block",
+    maxWidth: "none",
+  },
+
   /** Inline views (Render Settings) replace the tabs inside the same column. */
   inlineView: { display: "grid", gap: space.xl, minWidth: 0, minHeight: 0, overflow: "hidden" },
   inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.lg },
@@ -301,6 +337,17 @@ export const styles = stylex.create({
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   inlineBackIcon: { width: "0.875rem", height: "0.875rem" },
+
+  /** The card's words: name, what it is, and what it does. */
+  tabBody: {
+    display: "grid",
+    alignContent: "start",
+    gap: "0.375rem",
+    minWidth: 0,
+    paddingInline: { default: "1rem", [LG]: "1.25rem" },
+    paddingBlock: { default: "0.875rem", [LG]: "1rem 1.25rem" },
+  },
+  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 },
   tabIcon: {
     width: "1rem",
     height: "1rem",
@@ -318,9 +365,9 @@ export const styles = stylex.create({
   tabTitleActive: { color: colors.accent },
   tabTitleIdle: { color: "#fff" },
   tabDescription: {
-    "@media (max-width: 1023px)": { gridColumn: 2 },
     fontFamily: text.fontMeta,
     fontSize: "10px",
+    lineHeight: "0.875rem",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
@@ -330,8 +377,11 @@ export const styles = stylex.create({
   tabHighlights: {
     display: "grid",
     gap: "0.125rem",
-    marginTop: "0.25rem",
-    "@media (max-width: 1023px)": { gridColumn: 2 },
+    marginTop: "0.375rem",
+    paddingTop: "0.625rem",
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+    borderTopColor: "rgb(255 255 255 / 0.05)",
   },
   tabHighlight: {
     fontSize: "0.75rem",
@@ -339,101 +389,76 @@ export const styles = stylex.create({
     color: "rgb(255 255 255 / 0.45)",
   },
 
-  /** Utilities on the left, account and graphics level on the right. */
+  /**
+   * The bar under the cards: one hairline frame holding the utilities and,
+   * after them, the workspace and account segments. One line from
+   * XL; below it the same frame holds two rows split by a hairline.
+   */
   footer: {
-    display: "grid",
-    gap: "0.75rem",
-    alignItems: "center",
-    gridTemplateColumns: {
-      default: null,
-      [LG]: "minmax(0, 1fr) auto",
-    },
-  },
-  footerAside: {
     display: "flex",
-    alignItems: "center",
-    justifyContent: { default: "flex-start", [LG]: "flex-end" },
-    gap: "0.5rem",
+    flexDirection: { default: "column", [XL]: "row" },
+    alignItems: "stretch",
     minWidth: 0,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: HAIRLINE,
+    backgroundColor: "rgb(14 14 16 / 0.72)",
+    backdropFilter: "blur(14px)",
   },
-
-  /** grid gap-1 border border-white/[0.07] bg-white/[0.025] p-1 */
+  /** The utilities: text tabs, scrolling sideways rather than wrapping. */
   utilities: {
     display: "flex",
-    flexWrap: "wrap",
-    gap: "0.25rem",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.07)",
-    backgroundColor: "rgb(255 255 255 / 0.025)",
-    padding: "0.25rem",
+    flex: { default: null, [XL]: "1 1 auto" },
+    minWidth: 0,
+    overflowX: "auto",
+    scrollbarWidth: "none",
+    // On a phone the row scrolls; the fade says there is more to the right.
+    maskImage: { default: "linear-gradient(to right, #000 calc(100% - 2.5rem), transparent)", [SM]: null },
+    borderBottomWidth: { default: 1, [XL]: 0 },
+    borderBottomStyle: "solid",
+    borderBottomColor: HAIRLINE,
   },
-
-  /**
-   * flex min-h-8 items-center gap-2 px-2 text-[10px] font-medium
-   * transition-colors focus-visible:ring-2 focus-visible:ring-inset
-   * focus-visible:ring-[#E8E044]
-   */
   utility: {
     display: "flex",
-    minHeight: "2rem",
+    flexShrink: 0,
     alignItems: "center",
-    gap: "0.375rem",
-    paddingInline: "0.5rem",
-    fontSize: "10px",
+    gap: "0.5rem",
+    height: BAR_HEIGHT,
+    paddingInline: "0.875rem",
+    fontSize: "11px",
     fontWeight: 500,
     whiteSpace: "nowrap",
-    transitionProperty: COLOR_TRANSITION,
+    cursor: "pointer",
+    transitionProperty: `${COLOR_TRANSITION}, box-shadow`,
     transitionDuration: "150ms",
     transitionTimingFunction: EASE,
     outlineWidth: { default: null, ":focus-visible": "2px" },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
+    outlineOffset: { default: null, ":focus-visible": "-2px" },
+  },
+  /** The current utility: accent text over an accent underline. */
+  utilityActive: {
+    color: colors.accent,
+    backgroundColor: "rgb(232 224 68 / 0.06)",
+    boxShadow: {
+      default: `inset 0 -2px 0 ${colors.accent}`,
+      ":focus-visible": FOCUS_RING_INSET,
+    },
+  },
+  utilityIdle: {
+    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.04)" },
+    color: { default: "rgb(255 255 255 / 0.55)", ":hover": "#fff" },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
   },
-  // bg-[#E8E044]/10 text-[#E8E044]
-  utilityActive: {
-    backgroundColor: "rgb(232 224 68 / 0.1)",
-    color: colors.accent,
-  },
-  // text-white/45 hover:bg-white/[0.05] hover:text-white
-  utilityIdle: {
-    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.05)" },
-    color: { default: "rgb(255 255 255 / 0.45)", ":hover": "#fff" },
-  },
-  // size-3.5 shrink-0
   utilityIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },
 
-  /**
-   * The graphics level: one square icon button that advances to the next
-   * level, sized to the utility row beside it.
-   */
-  graphicsButton: {
-    display: "grid",
-    placeItems: "center",
-    width: "2.25rem",
-    height: "2.25rem",
+  /** Workspace and account: segments divided by hairlines. */
+  footerAside: {
+    display: "flex",
     flexShrink: 0,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: {
-      default: "rgb(255 255 255 / 0.07)",
-      ":hover": "rgb(255 255 255 / 0.2)",
-    },
-    backgroundColor: {
-      default: "rgb(255 255 255 / 0.025)",
-      ":hover": "rgb(255 255 255 / 0.05)",
-    },
-    color: { default: colors.accent, ":hover": colors.accent },
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: EASE,
-    outlineWidth: { default: null, ":focus-visible": "2px" },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
+    alignItems: "stretch",
+    minWidth: 0,
+    height: BAR_HEIGHT,
   },
-  graphicsIcon: { width: "1rem", height: "1rem" },
 });

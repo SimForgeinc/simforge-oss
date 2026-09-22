@@ -5,7 +5,6 @@ import * as stylex from "@stylexjs/stylex";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
-import { AppSwitcherGraphicsLevel } from "@/app/components/AppSwitcherGraphicsLevel";
 import { RenderSettingsSurface } from "@/app/host";
 import { SwitcherAccount } from "@/app/components/SwitcherAccount";
 import { useDashboardNav, type NavItem, type SwitcherInlineView } from "@/app/lib/dashboard-nav";
@@ -13,10 +12,11 @@ import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 /**
  * The switcher's one screen: the product tabs — Maps, Datasets, Evaluation —
- * each with its artwork, and utilities, the cloud account and the graphics
- * level on one footer line. Rendered by the top-bar overlay and, as the place
- * a sign-in lands, by `/dashboard/apps`: choosing what to do costs nothing,
- * whereas landing inside an app means waiting for a map.
+ * as three equal cards, each an artwork stage over its words, and beneath
+ * them one bar holding the utilities and the workspace and account.
+ * Rendered by the top-bar overlay and, as the place a sign-in lands, by
+ * `/dashboard/apps`: choosing what to do costs nothing, whereas landing inside
+ * an app means waiting for a map.
  *
  * A utility marked `inlineView` (Render Settings) does not navigate: the tabs
  * are replaced by that view in the same column, with a way back. `/dashboard/
@@ -82,7 +82,6 @@ export function AppSwitcherPanel({
         </nav>
         <div {...stylex.props(styles.footerAside)}>
           <SwitcherAccount capabilities={capabilities} onNavigate={onNavigate} />
-          <AppSwitcherGraphicsLevel />
         </div>
       </div>
     </div>
@@ -101,37 +100,41 @@ function AppTab({
   const Icon = app.icon;
   const content = (
     <>
-      <span {...stylex.props(styles.art)}>
+      <span {...stylex.props(styles.art, active && styles.artStageActive)}>
         <span {...stylex.props(styles.artFrame, app.disabled ? styles.artDisabled : active ? styles.artActive : styles.artIdle)}>
           <AppSwitcherArt href={app.href} />
         </span>
       </span>
-      <span {...stylex.props(styles.tabHead)}>
-        <Icon
-          {...stylex.props(styles.tabIcon, active && styles.tabIconActive)}
-          aria-hidden="true"
-        />
-        <span
-          {...stylex.props(styles.tabTitle, active ? styles.tabTitleActive : styles.tabTitleIdle)}
-        >
-          {app.label}
+      <span {...stylex.props(styles.tabBody)}>
+        <span {...stylex.props(styles.tabHead)}>
+          <Icon
+            {...stylex.props(styles.tabIcon, active && styles.tabIconActive)}
+            aria-hidden="true"
+          />
+          <span
+            {...stylex.props(styles.tabTitle, active ? styles.tabTitleActive : styles.tabTitleIdle)}
+          >
+            {app.label}
+          </span>
         </span>
+        <span {...stylex.props(styles.tabDescription)}>{app.description}</span>
+        {app.highlights !== undefined ? (
+          <span {...stylex.props(styles.tabHighlights)}>
+            {app.highlights.map((highlight) => (
+              <span key={highlight} {...stylex.props(styles.tabHighlight)}>
+                {highlight}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </span>
-      <span {...stylex.props(styles.tabDescription)}>{app.description}</span>
-      {app.highlights !== undefined ? (
-        <span {...stylex.props(styles.tabHighlights)}>
-          {app.highlights.map((highlight) => (
-            <span key={highlight} {...stylex.props(styles.tabHighlight)}>
-              {highlight}
-            </span>
-          ))}
-        </span>
-      ) : null}
     </>
   );
+  // The marker lets the artwork answer the card's hover and focus.
   const tabProps = stylex.props(
     styles.tab,
     app.disabled ? styles.tabDisabled : active ? styles.tabActive : styles.tabIdle,
+    stylex.defaultMarker(),
   );
 
   return app.disabled ? (
