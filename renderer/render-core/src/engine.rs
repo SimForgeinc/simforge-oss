@@ -1715,6 +1715,9 @@ pub struct SceneApp {
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
     actor_models: HashMap<String, (Entity, f32, usize)>,
+    /// Layer-1 ID clone of each actor's cuboid; moved with the actor so the
+    /// instance-ID pass never shows a body at its spawn pose.
+    actor_id_clones: HashMap<String, Entity>,
     /// Per-actor cloned tint material handles. Catalog materials are shared
     /// assets, so tinting must never mutate the source GLB material.
     actor_tint_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
@@ -1958,6 +1961,7 @@ impl SceneApp {
             ready: false,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
+            actor_id_clones: HashMap::new(),
             actor_tint_materials: HashMap::new(),
             actor_asset_cache: HashMap::new(),
             actor_animations: HashMap::new(),
@@ -3244,6 +3248,11 @@ impl SceneApp {
             if let Some(mut t) = world.get_mut::<Transform>(*entity) {
                 *t = transform;
             }
+            if let Some(clone) = self.actor_id_clones.get(id) {
+                if let Some(mut t) = world.get_mut::<Transform>(*clone) {
+                    *t = transform;
+                }
+            }
             return;
         }
         let instance_id = self.next_instance_id + 1;
@@ -3277,15 +3286,16 @@ impl SceneApp {
             InstanceId(instance_id),
             transform,
         )).id();
-        world.spawn((
+        let clone = world.spawn((
             IdClone,
             Name::new(format!("actor:{id}")),
             Mesh3d(mesh_handle),
             MeshMaterial3d(id_mat),
             RenderLayers::layer(1),
             transform,
-        ));
+        )).id();
         self.actors.insert(id.to_string(), (e, instance_id));
+        self.actor_id_clones.insert(id.to_string(), clone);
         self.actor_classes.insert(instance_id, class.to_string());
         self.apply_actor_layers(id);
     }
@@ -3548,6 +3558,21 @@ impl SceneApp {
         Ok(())
     }
 
+    /// The world transform the renderer last drew for an actor's canonical
+    /// body (the centre-origin cuboid that also drives the ID/sensor passes),
+    /// read back from the ECS after propagation: an observation, not the
+    /// requested pose. `None` for unknown actors.
+    pub fn actor_world_pose(&self, actor_id: &str) -> Option<(Vec3, Quat)> {
+        let (entity, _) = self.actors.get(actor_id)?;
+        world_pose(self.app.world(), *entity)
+    }
+
+    /// Same for the actor's attached catalog model, when one is attached.
+    pub fn actor_model_world_pose(&self, actor_id: &str) -> Option<(Vec3, Quat)> {
+        let (entity, _, _) = self.actor_models.get(actor_id)?;
+        world_pose(self.app.world(), *entity)
+    }
+
     pub fn actor_has_model(&self, actor_id: &str) -> bool {
         self.actor_models.contains_key(actor_id)
     }
@@ -3581,6 +3606,7 @@ impl SceneApp {
     /// layer-1 ID clone).
     pub fn remove_actor(&mut self, id: &str) {
         self.scene_revision += 1;
+        self.actor_id_clones.remove(id);
         if let Some((entity, instance)) = self.actors.remove(id) {
             let world = self.app.world_mut();
             let name = format!("actor:{id}");
@@ -5040,4 +5066,16 @@ mod tests {
         assert_eq!(unmounted.passes["spectator:rgb"].bytes, *spectator);
         std::mem::forget(app);
     }
+}
+
+/// `GlobalTransform` when propagated, else the local `Transform` (top-level
+/// actor entities have no parent, so both name the same pose).
+fn world_pose(world: &World, entity: Entity) -> Option<(Vec3, Quat)> {
+    if let Some(global) = world.get::<GlobalTransform>(entity) {
+        let (_, rotation, translation) = global.to_scale_rotation_translation();
+        return Some((translation, rotation));
+    }
+    world
+        .get::<Transform>(entity)
+        .map(|transform| (transform.translation, transform.rotation))
 }
