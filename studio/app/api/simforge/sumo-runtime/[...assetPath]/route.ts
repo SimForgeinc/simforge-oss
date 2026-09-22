@@ -5,6 +5,7 @@ import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-
 import { requireScenarioContext } from "@/app/lib/scenario/http";
 import { mapAccessErrorResponse, streamCachedObject } from "@/app/lib/cloud/asset-response";
 import { MapCacheError } from "@/app/lib/map-cache/service";
+import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
 
 type Context = { params: Promise<{ assetPath: string[] }> };
 
@@ -28,6 +29,7 @@ function resolveRuntimeAsset(assetPath: string[]) {
     throw new AssetUrlServiceError("sumo_runtime_asset_not_found", "SUMO runtime asset not found.", 404);
   }
   return {
+    fileName,
     mediaType,
   };
 }
@@ -43,9 +45,17 @@ async function serveRuntimeAsset(request: NextRequest, route: Context, headOnly:
     const canonicalUrl = `${url.pathname}${url.search}`;
     const identity = await authorizeLocalMapAssetUrl(canonicalUrl);
     if (!identity.sha256 || identity.sizeBytes === undefined) throw new Error("sumo_runtime_identity_missing");
+    // The runtime lives in an object store like any closure member: a host
+    // serving from object storage redirects there instead of filling its
+    // local cache from itself, which can never succeed.
     return await streamCachedObject(request, {
       sha256: identity.sha256, byteLength: identity.sizeBytes, mediaType: asset.mediaType,
-    }, canonicalUrl, headOnly);
+    }, canonicalUrl, headOnly, {
+      mapVersionId: `sumo-runtime-${SUMO_RUNTIME_VERSION}`,
+      bucket: SUMO_RUNTIME_BUCKET,
+      key: `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/${asset.fileName}`,
+      attestDigest: false,
+    });
   } catch (error) {
     if (error instanceof MapAccessError || error instanceof MapCacheError) return mapAccessErrorResponse(error);
     if (error instanceof AssetUrlServiceError) {
