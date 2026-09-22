@@ -81,6 +81,12 @@ class ActorFrame:
     #: time in a `uniscenarios.trajectoryReplay.knockedDownAtS.*` header property
     #: and the backend lays the actor down from here.
     downed: bool = False
+    #: Body attitude in OpenSCENARIO semantics (degrees): positive pitch is
+    #: nose down, positive roll is right side down. Carried from the
+    #: WorldPosition ``p``/``r`` the exporter (or the render timeline) bakes;
+    #: zero when the source declares none.
+    pitch_deg: float = 0.0
+    roll_deg: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -99,6 +105,13 @@ class ExecutionPlan:
     frames: tuple[PlanFrame, ...]
     sha256: str
     semantic_metadata: Mapping[str, object] = field(default_factory=dict)
+    #: Timeline time origin. Plan frame ``t`` is clip time: ``t = 0`` is the
+    #: clip start after the simulation warm-up, which is never rendered.
+    #: ``source_time_offset_s`` is the xosc time of clip ``t = 0`` (the
+    #: exporter shifts every vertex and trigger by the warm-up).
+    warmup_s: float = 0.0
+    clip_seconds: float | None = None
+    source_time_offset_s: float = 0.0
 
 
 def _semantic_metadata(
@@ -297,6 +310,8 @@ def _initial_positions(root: ET.Element, actors: Mapping[str, ActorBinding], abo
                 _finite(position.get("z", "0"), "initial z"),
                 _finite(position.get("h", "0"), "initial heading"),
                 0.0,
+                _finite(position.get("p", "0"), "initial pitch"),
+                _finite(position.get("r", "0"), "initial roll"),
             )
     return result
 
@@ -332,6 +347,8 @@ def _trajectory_vertices(action: ET.Element, abort: Callable[[], None]) -> list[
             _finite(world.get("z", "0"), "trajectory z"),
             _finite(world.get("h", "0"), "trajectory heading"),
             _finite(motion.get("speed_longitudinal"), "trajectory speed") if motion is not None else math.nan,
+            _finite(world.get("p", "0"), "trajectory pitch"),
+            _finite(world.get("r", "0"), "trajectory roll"),
         ))
     if not vertices:
         raise ContractError("trajectory Polyline must contain vertices")
@@ -513,13 +530,13 @@ def _sample(points: list[tuple[float, ...]], t: float, abort: Callable[[], None]
         speed = value[4]
         if math.isnan(speed):
             speed = _derived_longitudinal_speed(points[0], points[1], value[3]) if len(points) > 1 else 0.0
-        return (*value[:4], speed)
+        return (*value[:4], speed, *value[5:7])
     if t >= points[-1][0]:
         value = points[-1][1:]
         speed = value[4]
         if math.isnan(speed):
             speed = _derived_longitudinal_speed(points[-2], points[-1], value[3]) if len(points) > 1 else 0.0
-        return (*value[:4], speed)
+        return (*value[:4], speed, *value[5:7])
     low, high = 0, len(points) - 1
     while high - low > 1:
         abort()
@@ -541,7 +558,8 @@ def _sample(points: list[tuple[float, ...]], t: float, abort: Callable[[], None]
         # old Euclidean magnitude silently turned reverse trajectories into
         # forward throttle requests in native CARLA execution.
         speed = _derived_longitudinal_speed(left, right, heading)
-    return (*values, heading, speed)
+    attitude = tuple(left[index] + (right[index] - left[index]) * ratio for index in (6, 7))
+    return (*values, heading, speed, *attitude)
 
 
 def _canonical_plan_sha256(
@@ -549,6 +567,7 @@ def _canonical_plan_sha256(
     frames: tuple[PlanFrame, ...],
     semantic_metadata: Mapping[str, object],
     abort: Callable[[], None],
+    source_time_offset_s: float = 0.0,
 ) -> str:
     digest = hashlib.sha256()
     first = True
@@ -562,6 +581,10 @@ def _canonical_plan_sha256(
     add(str(STEP_SECONDS))
     if semantic_metadata.get("complete"):
         add(f"M|{semantic_metadata['sha256']}")
+    if source_time_offset_s:
+        # Only a warm-up-shifted source adds its origin, so a plan whose clip
+        # starts at xosc t=0 keeps the digest it always had.
+        add(f"O|{source_time_offset_s:.9f}")
     for actor_id in sorted(actors):
         abort()
         actor = actors[actor_id]
@@ -577,6 +600,10 @@ def _canonical_plan_sha256(
                 # Appended only when a body went down, so every plan that came
                 # before knockdowns existed keeps its exact digest.
                 add(f"D|{actor_id}")
+            if state.pitch_deg or state.roll_deg:
+                # Appended only for a non-level body, so plans from sources
+                # that bake no attitude keep their exact digest.
+                add(f"R|{actor_id}|{state.pitch_deg:.9f}|{state.roll_deg:.9f}")
             if state.appearance:
                 # Appended only when present, so plans without appearance state
                 # keep the exact digest they had before appearance existed.
@@ -613,8 +640,42 @@ def substitute_actor_catalog_bindings(
         )
         for actor_id, binding in plan.actors.items()
     }
-    digest = _canonical_plan_sha256(actors, plan.frames, plan.semantic_metadata, check)
+    digest = _canonical_plan_sha256(
+        actors, plan.frames, plan.semantic_metadata, check, plan.source_time_offset_s,
+    )
     return replace(plan, actors=actors, sha256=digest)
+
+
+def _time_origin(properties: Mapping[str, str], source_end_s: float) -> tuple[float, float]:
+    """Resolve (warm-up, clip length) from the exporter's replay header.
+
+    The trajectory-replay exporter shifts every vertex and trigger by the
+    simulation warm-up and declares it (``trajectoryReplay.warmupSeconds`` and
+    ``clipSeconds``). The warm-up is simulation history, not part of the
+    render: clip ``t = 0`` is xosc ``t = warmup``. Sources that predate the
+    header (local fixtures, third-party packages) have no warm-up and a clip
+    that ends at their last vertex.
+    """
+    def declared(name: str) -> float | None:
+        for prefix in ("simforge.trajectoryReplay.", "uniscenario.trajectoryReplay.", "uniscenarios.trajectoryReplay."):
+            raw = properties.get(prefix + name)
+            if raw is not None:
+                value = _finite(raw, f"trajectory replay {name}")
+                if value < 0:
+                    raise ContractError(f"trajectory replay {name} must be non-negative")
+                return value
+        return None
+
+    warmup = declared("warmupSeconds") or 0.0
+    clip = declared("clipSeconds")
+    if clip is None:
+        clip = source_end_s - warmup
+    if clip <= 0 or warmup + clip > source_end_s + STEP_SECONDS / 2:
+        raise ContractError(
+            "trajectory replay warm-up and clip must lie inside the authored trajectories "
+            f"(warmup={warmup:g}s clip={clip:g}s, trajectories end at {source_end_s:g}s)"
+        )
+    return warmup, clip
 
 
 def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) -> ExecutionPlan:
@@ -694,14 +755,20 @@ def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) ->
     missing = [actor_id for actor_id in actors if actor_id not in trajectories and actor_id not in initial]
     if missing:
         raise ContractError(f"actors lack an executable position or trajectory: {', '.join(sorted(missing))}")
-    end = max(points[-1][0] for points in trajectories.values())
-    if end > MAX_DURATION_SECONDS:
+    source_end = max(points[-1][0] for points in trajectories.values())
+    warmup_s, clip_seconds = _time_origin(header_properties, source_end)
+    if clip_seconds > MAX_DURATION_SECONDS:
         raise ContractError(f"scenario duration exceeds {MAX_DURATION_SECONDS:g} seconds")
-    count = int(round(end / STEP_SECONDS)) + 1
+    count = int(round(clip_seconds / STEP_SECONDS)) + 1
     if count < 1 or count > MAX_FRAMES:
         raise ContractError(f"compiled plan must contain 1..{MAX_FRAMES} frames")
     if count * len(actors) > MAX_ACTOR_FRAME_STATES:
         raise ContractError(f"compiled plan exceeds {MAX_ACTOR_FRAME_STATES} actor-frame states")
+    # Every source time (vertex, trigger) is xosc time; the plan is clip time.
+    # State latched during the warm-up is already in force at clip t=0.
+    signal_events = [(at - warmup_s, signal_id, state) for at, signal_id, state in signal_events]
+    appearance_settings = [(at - warmup_s, actor_id, key, value) for at, actor_id, key, value in appearance_settings]
+    despawn_at = {actor_id: at - warmup_s for actor_id, at in despawn_at.items()}
     frames: list[PlanFrame] = []
     signal_state = dict(initial_signals)
     signal_event_index = 0
@@ -711,6 +778,7 @@ def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) ->
         if index % 50 == 0:
             check()
         t = round(index * STEP_SECONDS, 9)
+        source_t = t + warmup_s
         while signal_event_index < len(signal_events) and signal_events[signal_event_index][0] <= t + 1e-9:
             _, signal_id, state = signal_events[signal_event_index]
             signal_state[signal_id] = state
@@ -724,22 +792,24 @@ def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) ->
             if len(states) % 32 == 0:
                 check()
             points = trajectories.get(actor_id)
-            raw = _sample(points, t, check) if points else initial.get(actor_id, (0, 0, 0, 0, 0))
+            raw = _sample(points, source_t, check) if points else initial.get(actor_id, (0, 0, 0, 0, 0, 0, 0))
             despawn = despawn_at.get(actor_id)
             if despawn is not None and t >= despawn - 1e-9:
                 lifecycle = LIFECYCLE_ABSENT
             else:
                 lifecycle = LIFECYCLE_SPAWN if index == 0 else LIFECYCLE_ACTIVE
+            # Knockdown times are recorded in clip time by the simulator.
             downed_at = knocked_down_at.get(actor_id)
             states[actor_id] = ActorFrame(
                 lifecycle, raw[0], raw[1], raw[2], math.degrees(raw[3]), raw[4],
                 dict(appearance_state.get(actor_id, {})),
                 downed_at is not None and t >= downed_at - 1e-9,
+                math.degrees(raw[5]), math.degrees(raw[6]),
             )
         frames.append(PlanFrame(index, t, states, dict(signal_state)))
     immutable = tuple(frames)
     check()
-    digest = _canonical_plan_sha256(actors, immutable, semantic_metadata, check)
+    digest = _canonical_plan_sha256(actors, immutable, semantic_metadata, check, warmup_s)
     return ExecutionPlan(
         "simforge.execution-plan/v1",
         STEP_SECONDS,
@@ -747,4 +817,7 @@ def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) ->
         immutable,
         digest,
         semantic_metadata,
+        warmup_s,
+        clip_seconds,
+        warmup_s,
     )

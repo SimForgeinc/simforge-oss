@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   isScenarioParityEvidenceAccepted,
+  isScenarioRenderEvidence,
+  SCENARIO_REPLAY_PARITY_LIMITS,
   SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS,
   SCENARIO_REFERENCE_EQUIVALENCE_LIMITS,
   ScenarioParityEvidenceV1Schema,
@@ -12,7 +14,7 @@ const digest = "a".repeat(64);
 
 function acceptedEvidence() {
   return {
-    schema: "simforge.parity-evidence/v1" as const,
+    schema: "uniscenario.parity-evidence/v1" as const,
     identity: {
       revisionId: "usrv_1",
       executionPackageId: "usep_1",
@@ -97,6 +99,45 @@ describe("managed render control contracts", () => {
       ...diagnostic,
       verdict: "pass",
     })).toThrow(/verdict/i);
+  });
+
+  it("accepts trace replay as the scenario render only inside the blocking replay limits", () => {
+    const replay = {
+      ...acceptedEvidence(),
+      execution: { mode: "trace-replay" as const, purpose: "scenario-render" as const, fixedTimestepS: 0.02 as const, mapBinding: "exact" as const },
+      trajectory: {
+        verdict: "pass" as const,
+        acceptanceGate: "replay-sampler-parity" as const,
+        evaluatedActorCount: 3,
+        failedActorIds: [],
+        postContactClassification: "not-applicable" as const,
+        metrics: { "max.positionM": 0.0004, "max.rotationDeg": 0.02 },
+      },
+      collisions: { verdict: "pass" as const, source: "timeline" as const, evaluatedPairCount: 0, failedPairs: [] },
+      divergences: [{ code: "spawn-placement:staged:ped", classification: "informational" as const }],
+    };
+    const parsed = ScenarioParityEvidenceV1Schema.parse(replay);
+    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(true);
+    expect(isScenarioRenderEvidence(parsed)).toBe(true);
+    expect(SCENARIO_REPLAY_PARITY_LIMITS).toEqual({ positionM: 0.01, rotationDeg: 0.1 });
+    // A worker claiming pass outside the limits is not believed.
+    expect(ScenarioParityEvidenceV1Schema.safeParse({
+      ...replay,
+      trajectory: { ...replay.trajectory, metrics: { "max.positionM": 0.02, "max.rotationDeg": 0.02 } },
+    }).success).toBe(false);
+    expect(ScenarioParityEvidenceV1Schema.safeParse({
+      ...replay,
+      trajectory: { ...replay.trajectory, metrics: {} },
+    }).success).toBe(false);
+  });
+
+  it("never presents a physics-validation run as the scenario render", () => {
+    const parsed = ScenarioParityEvidenceV1Schema.parse({
+      ...acceptedEvidence(),
+      execution: { mode: "native-physics", purpose: "physics-validation", fixedTimestepS: 0.02 },
+    });
+    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(true);
+    expect(isScenarioRenderEvidence(parsed)).toBe(false);
   });
 
   it("keeps resource admission and worker identity provider neutral", () => {
