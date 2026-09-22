@@ -22,7 +22,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
 import {
   ambientTrafficProfileForDocument,
@@ -30,14 +30,24 @@ import {
   contentHash,
   createDisabledMaterializedTrafficArtifact,
   MaterializedTrafficRecorder,
+  createSumoTrafficStep,
   TRACE_FORMAT_VERSION,
+  type SumoRuntime,
+  type SumoTrafficNetwork,
   type MaterializedTrafficArtifactEnvelope,
   type MaterializedTrafficFrameActor,
   type ResolvedAmbientTrafficProfile,
   type SimTrace,
 } from '@simforge-oss/engine';
 import { engine, runtimeIdentity } from '@simforge-oss/engine/node';
-import { loadMapGraph, type MapGraphDigests, type MapGraphSources } from '@simforge-oss/playback';
+import {
+  buildSimulationMapClosure,
+  loadMapGraph,
+  type MapClosureFiles,
+  type MapGraph,
+  type MapGraphDigests,
+  type MapGraphSources,
+} from '@simforge-oss/playback';
 import {
   ambientTrafficProviderFromExtensions,
   previewExecutionTrafficProvider,
@@ -195,6 +205,32 @@ export async function loadSimulationMapClosure(options: {
     fetcher,
   });
   if (!topology) throw new Error('simulation_closure_topology_missing');
+  return closureFromGraph(graph, options, plainBytes(topology));
+}
+
+/** Members are served gzipped or plain; the closure keeps the plain JSON bytes whichever way they arrived. */
+function plainBytes(bytes: Uint8Array): Uint8Array {
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? new Uint8Array(gunzipSync(bytes)) : bytes;
+}
+
+/**
+ * A simulation map closure from the map's files (an installed map directory,
+ * `readInstalledMapClosureFiles`, or fixtures), built through the same
+ * constructor the editor's loader uses. Colliders verify or it fails closed.
+ */
+export async function simulationMapClosureFromFiles(
+  files: MapClosureFiles,
+  identity: { readonly mapVersionId: string; readonly mapAssetId: string; readonly browserClosureSha256: string },
+): Promise<SimulationMapClosure> {
+  const graph = await buildSimulationMapClosure(engine().module, files);
+  return closureFromGraph(graph, identity, plainBytes(files.topology));
+}
+
+function closureFromGraph(
+  graph: MapGraph,
+  options: { readonly mapVersionId: string; readonly mapAssetId: string; readonly browserClosureSha256: string },
+  topology: Uint8Array,
+): SimulationMapClosure {
   const bundle = new MapBundle(graph.bundle, { derived: graph.derived as never, catalog: graph.locations as never });
   const identity = { browserClosureSha256: options.browserClosureSha256, colliderDigest: graph.collision.diagnostics.digest };
   if (!graph.closureDigest) throw new Error('simulation_closure_digest_missing');
@@ -210,10 +246,10 @@ export async function loadSimulationMapClosure(options: {
 }
 
 /**
- * The ambient provider a document executes with, as the editor preview runs
- * it: SUMO with authored map signal plans executes native traffic; SUMO
- * without them is produced by the host's SUMO bridge (server-side SUMO is
- * WS-E), so the scenario itself simulates with ambient traffic off.
+ * The ambient provider a document executes with. A SUMO document simulates
+ * its authored actors with ambient traffic off; its traffic is the external
+ * SUMO step (`prepareSumoTrafficStep`), one-way against the authored trace
+ * and merged into it.
  */
 export function executionTrafficProvider(content: {
   readonly extensions?: Readonly<Record<string, unknown>>;
@@ -237,6 +273,31 @@ export interface SimulationAmbientProvenanceSumo {
   readonly ambientConfig: Readonly<Record<string, unknown>>;
   readonly configSha256: string;
   readonly resultSha256: string;
+}
+
+/**
+ * The external traffic step for a SUMO document (WS-E): the pinned SUMO
+ * runtime runs at the fixed step against the authored trace (one-way coupling,
+ * obeying the SimForge signal book) and its vehicles are merged into the
+ * trace as ordinary actors. Prepare one per simulation; a prepared module runs
+ * once.
+ */
+export async function prepareSumoTrafficStep(
+  content: { readonly simulation?: unknown; readonly extensions?: Readonly<Record<string, unknown>> },
+  runtime: SumoRuntime,
+  network: SumoTrafficNetwork,
+): Promise<ExternalTrafficStep> {
+  const step = await createSumoTrafficStep(runtime, {
+    profile: ambientTrafficProfileForDocument(content),
+    network,
+    traceDigest: (trace) => engine().traceDigest(trace),
+  });
+  return (input) => step({
+    authoredTrace: input.authoredTrace,
+    resolvedInput: input.resolvedInput,
+    sourceInputDigest: input.sourceInputDigest,
+    closure: { mapAssetId: input.closure.mapAssetId, mapVersionId: input.closure.mapVersionId },
+  });
 }
 
 /** The ambient provenance a revision records for its materialized traffic. */
