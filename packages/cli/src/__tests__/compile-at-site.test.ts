@@ -2,8 +2,9 @@
  * Compiling at a known site. A pinned template (a transferred variation)
  * resolves only its own site, `compileTemplateAtSite` reuses that resolution
  * instead of matching again, and both give exactly the product the id-based
- * `compileTemplate` does. Requires installed map assets and the built N-API
- * addon.
+ * `compileTemplate` does. Documents naming measured CARLA objects compile
+ * without the caller passing the CARLA catalog in. Requires installed map
+ * assets and the built N-API addon.
  */
 
 import { readFileSync } from 'node:fs';
@@ -62,5 +63,19 @@ describe.skipIf(!assets.available)(`compile at a resolved site${assets.missingRe
     const resolved = resolveSite(portable, bundle, site.siteId);
     const other = parseTemplate({ ...portable, anchor: { ...portable.anchor, id: 'another-anchor' } });
     expect(() => compileTemplateAtSite(other, bundle, resolved)).toThrow(/site_mismatch|was not matched for this template/);
+  }, 120_000);
+
+  it('compiles a document naming a CARLA object without a passed-in catalog', async () => {
+    const bundle = await loadMap(MAP_ID);
+    const portable = example();
+    const site = matchSites(portable, bundle, { maxSites: 1 }).report.sites[0]!;
+    const withCarla = parseTemplate({
+      ...portable,
+      roles: portable.roles.map((role) =>
+        role.id === 'oncoming' ? { ...role, actor: { ...role.actor, catalogId: 'carla.vehicle_ue4_bmw_grantourer' } } : role),
+    });
+    const product = compileTemplate(withCarla, bundle, site.siteId, { drawIndex: -1 });
+    const oncoming = (product.input.actors as unknown as Array<{ id: string; dims?: { l: number } }>).find((a) => a.id === 'oncoming');
+    expect(oncoming?.dims?.l).toBeCloseTo(4.611, 3);
   }, 120_000);
 });
