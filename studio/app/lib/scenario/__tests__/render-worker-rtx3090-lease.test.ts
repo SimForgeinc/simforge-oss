@@ -275,6 +275,25 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   });
   assert.match(registration.registrationId, /^uswr_/);
 
+  // Idle workers must remain discoverable without a queued compatible job.
+  await execute(
+    `UPDATE simforge.worker_nodes SET last_heartbeat_at = to_timestamp(0),
+       last_idle_heartbeat_at = to_timestamp(0) WHERE id = :id`,
+    { id: WORKER_NODE_ID },
+  );
+  assert.equal((await claimResponseV2("stale-registration", WORKER_NODE_ID)).type, "job.none");
+  assert.equal((await queryOne<{ fresh: boolean }>(
+    `SELECT last_heartbeat_at > to_timestamp(0) AS fresh FROM simforge.worker_nodes WHERE id = :id`,
+    { id: WORKER_NODE_ID },
+  ))?.fresh, false, "a stale registration cannot keep a node alive");
+  assert.equal((await claimResponseV2(registration.registrationId, WORKER_NODE_ID)).type, "job.none");
+  assert.deepEqual(await queryOne(
+    `SELECT last_heartbeat_at >= NOW() - INTERVAL '90 seconds' AS live,
+       last_idle_heartbeat_at >= NOW() - INTERVAL '90 seconds' AS idle
+       FROM simforge.worker_nodes WHERE id = :id`,
+    { id: WORKER_NODE_ID },
+  ), { live: true, idle: true });
+
   const job = await createRenderIntentJob(
     { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
     {
@@ -295,12 +314,13 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
 
   // The lease is real in the ledger: the trigger that refuses ineligible
   // hardware profiles let it through.
-  const persisted = await queryOne<{ worker_node_id: string; lease_state: string }>(
-    `SELECT worker_node_id, lease_state FROM simforge.worker_leases WHERE render_job_id = :job_id`,
+  const persisted = await queryOne<{ workspace_id: string; worker_node_id: string; lease_state: string }>(
+    `SELECT workspace_id, worker_node_id, lease_state FROM simforge.worker_leases WHERE render_job_id = :job_id`,
     { job_id: job.id },
   );
-  assert.deepEqual(persisted, { worker_node_id: WORKER_NODE_ID, lease_state: "active" });
-  assert.equal(typeof canonicalJsonSha256(RENDER_SPEC), "string");
+  assert.deepEqual(persisted, {
+    workspace_id: LOCAL_WORKSPACE_ID, worker_node_id: WORKER_NODE_ID, lease_state: "active",
+  });
 });
 
 test("the profile gate still refuses hardware that does not match its name", async () => {
