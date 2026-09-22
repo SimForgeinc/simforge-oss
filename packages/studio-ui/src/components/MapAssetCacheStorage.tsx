@@ -126,7 +126,7 @@ export function MapAssetCacheStorage({
             {filesystem ? "Map cache on disk" : "Browser cache"}
           </p>
           <p
-            {...stylex.props(styles.location)}
+            {...stylex.props(styles.location, compact && styles.compactLocation)}
             title={location}
             data-testid="map-asset-cache-location"
           >
