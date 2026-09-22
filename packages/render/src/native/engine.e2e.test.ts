@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import { extractOpenScenarioExecutionPlan } from '@simforge-oss/openscenario';
-import type { RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createFixedSchedules } from '../schedule.js';
@@ -86,7 +86,10 @@ suite('native retained service GPU e2e', () => {
             position: { x: 1.5, y: 1.8, z: 0 },
             rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
           },
-          attributes: { width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000 },
+          attributes: {
+            width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
+            cameraProfile: CameraProfileSchema.parse({}),
+          },
         }],
         clip: { startSeconds: clipStart, endSeconds: clipEnd },
         video: { width: 320, height: 180, fps: 12, container: 'mp4', codec: 'h264', quality: 'high' },

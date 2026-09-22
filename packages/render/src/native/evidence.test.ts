@@ -1,8 +1,9 @@
-import type { RenderIntentV1, RenderSourceV3 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 import {
+  NativeRenderManifestSchema,
   NativeRunDiagnosticsSchema,
   nativeEvidenceFailure,
   nativeRunExpectations,
@@ -21,7 +22,10 @@ function camera(sensorId: string, fps: number): RenderSourceV3 {
     outputName: `ego-${sensorId}`,
     modality: 'rgb',
     transform: { position: { x: 1.6, y: 0, z: 1.7 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
-    attributes: { width: 320, height: 180, fps, horizontalFovDeg: 90, nearM: 0.1, farM: 1_000 },
+    attributes: {
+      width: 320, height: 180, fps, horizontalFovDeg: 90, nearM: 0.1, farM: 1_000,
+      cameraProfile: CameraProfileSchema.parse({}),
+    },
   };
 }
 
@@ -83,6 +87,7 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
       schema: 'simforge.native-render-manifest/v1',
       ...lineage,
       look: { profile: 'cinematic', lighting: {}, profileConfig: {}, autoMeter: true, provenance: {} },
+      cameraProfiles: [],
       videos: [
         { actorId: 'ego', sensorId: 'fast', relativePath: 'video/ego-fast.mp4', width: 320, height: 180, framesPerSecond: 24, frameCount: 48, sha256: HEX('2'), sizeBytes: 256 },
         { actorId: 'ego', sensorId: 'slow', relativePath: 'video/ego-slow.mp4', width: 320, height: 180, framesPerSecond: 12, frameCount: slowFrames, sha256: HEX('1'), sizeBytes: 128 },
@@ -106,6 +111,27 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
 }
 
 describe('native run expectations', () => {
+  it('records requested and effective camera profiles without hiding review bypasses', () => {
+    const profile = CameraProfileSchema.parse({});
+    const parsed = NativeRenderManifestSchema.parse({
+      ...evidence().manifest,
+      fidelityMode: 'review',
+      cameraProfiles: [{
+        actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
+        requested: profile, effective: null,
+        differences: ['cameraProfile: not applied by cinematic capture'],
+      }],
+    });
+
+    expect(parsed.cameraProfiles[0]).toMatchObject({
+      requested: {
+        outputStage: 'linear',
+        encoding: { transfer: 'srgb', bitDepth: 8 },
+      },
+      effective: null,
+    });
+  });
+
   it('derives each source schedule, the union tick count and the pinned actor closure from the intent', () => {
     const expectations = nativeRunExpectations(intent, lease);
     expect(expectations.frameCount).toBe(48);

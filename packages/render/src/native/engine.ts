@@ -452,6 +452,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           autoMeter: options.autoMeter ?? true,
           provenance: look.provenance,
         },
+        fidelityMode: intent.renderSpec.capabilityIntent.fidelity,
+        cameraProfiles: sources.flatMap((source) => source.modality === 'rgb' ? [{
+          actorId: source.actorId,
+          sensorId: source.sensorId,
+          outputName: source.outputName,
+          requested: source.attributes.cameraProfile,
+          effective: null,
+          differences: ['cameraProfile: not applied by cinematic capture'],
+        }] : []),
         videos: videoRecords,
       }));
       const nativeManifestDigest = await hashFile(nativeManifestPath);

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID } from './actor-assets.js';
@@ -41,6 +41,15 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     autoMeter: z.boolean(),
     provenance: z.record(z.string(), z.unknown()),
   }),
+  fidelityMode: z.enum(['review', 'dataset']).optional(),
+  cameraProfiles: z.array(z.strictObject({
+    actorId: IdentifierSchema,
+    sensorId: IdentifierSchema,
+    outputName: IdentifierSchema,
+    requested: CameraProfileSchema,
+    effective: CameraProfileSchema.nullable(),
+    differences: z.array(z.string()),
+  })).default([]),
   videos: z.array(z.strictObject({
     actorId: IdentifierSchema,
     sensorId: IdentifierSchema,

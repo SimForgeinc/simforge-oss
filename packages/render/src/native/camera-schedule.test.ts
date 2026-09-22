@@ -1,4 +1,4 @@
-import type { RenderSensorSourceHost, RenderSourceV3 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderSensorSourceHost, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
 import { createNativeCameraSchedule } from './camera-schedule.js';
@@ -13,7 +13,10 @@ const source: RenderSourceV3 = {
     position: { x: 2, y: 1.2, z: 0 },
     rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
   },
-  attributes: { width: 1280, height: 720, fps: 24, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000 },
+  attributes: {
+    width: 1280, height: 720, fps: 24, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
+    cameraProfile: CameraProfileSchema.parse({}),
+  },
 };
 const host: RenderSensorSourceHost = {
   sourceId: source.outputName,
