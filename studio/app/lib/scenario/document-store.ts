@@ -16,6 +16,7 @@ import {
   MAP_GRAPH_SIDECARS,
 } from "./contracts";
 import { canonicalContentSha256, scenarioId } from "./core";
+import { MATERIALIZED_TRAFFIC_RESERVATION_SQL } from "./materialized-traffic-binding";
 import { simforgeEnv } from "@/lib/simforge-env";
 
 type DocumentRow = {
@@ -1016,14 +1017,26 @@ export async function createScenarioRevision(
     current.mapVersionId = resolveScenarioMap(current, installedMaps).mapVersionId;
     if (traffic) {
       const bound = await tx.queryOne<{ id: string }>(
-        `SELECT id FROM simforge.artifacts
-         WHERE id = :artifact_id AND workspace_id = :workspace_id
-           AND artifact_kind = 'materialized-traffic' AND artifact_state = 'available'
-           AND sha256 = :sha256 AND byte_length = :size_bytes
-           AND metadata->>'documentId' = :document_id
-           AND metadata->>'sourceInputDigest' = :source_input_digest
-           AND metadata->>'mapAssetId' = :map_asset_id
-           AND metadata->>'mapVersionId' = :map_version_id LIMIT 1`,
+        // The bytes are shared by content; which documents they are bound to
+        // is recorded per reservation on the producer jobs. The metadata arm
+        // keeps blobs reserved before that (one document per blob) binding.
+        `SELECT a.id FROM simforge.artifacts a
+         WHERE a.id = :artifact_id AND a.workspace_id = :workspace_id
+           AND a.artifact_kind = 'materialized-traffic' AND a.artifact_state = 'available'
+           AND a.sha256 = :sha256 AND a.byte_length = :size_bytes
+           AND (
+             EXISTS (
+               SELECT 1 FROM simforge.artifact_postprocess_jobs j
+                WHERE j.workspace_id = a.workspace_id AND j.state = 'succeeded'
+                  AND ${MATERIALIZED_TRAFFIC_RESERVATION_SQL}
+             )
+             OR (
+               a.metadata->>'documentId' = :document_id
+               AND a.metadata->>'sourceInputDigest' = :source_input_digest
+               AND a.metadata->>'mapAssetId' = :map_asset_id
+               AND a.metadata->>'mapVersionId' = :map_version_id
+             )
+           ) LIMIT 1`,
         {
           artifact_id: traffic.artifactId, workspace_id: context.workspaceId, sha256: traffic.sha256,
           size_bytes: traffic.sizeBytes, document_id: documentId, source_input_digest: traffic.sourceInputDigest,
