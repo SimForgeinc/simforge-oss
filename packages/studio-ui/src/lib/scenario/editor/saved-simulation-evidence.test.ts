@@ -29,6 +29,7 @@ vi.mock("@simforge-oss/playback/traffic", async (importOriginal) => ({
   ambientProvenanceForRevisionTraffic: vi.fn(() => ({})),
 }));
 
+import { downloadSimulationPreview } from "../playback/simulationPreview";
 import { savedSimulationRevisionEvidence } from "./saved-simulation-evidence";
 
 const document = {
@@ -83,10 +84,35 @@ describe("savedSimulationRevisionEvidence", () => {
     });
   });
 
-  it("reuses a valid preview for the same draft without starting a worker", async () => {
+  it("reuses a valid preview for the same draft, bound to this browser's engine and map closure", async () => {
+    vi.mocked(downloadSimulationPreview).mockClear();
     await savedSimulationRevisionEvidence(host({ draftVersion: 9 } as ScenarioSimulationPreviewDto), document);
     expect(prepare).not.toHaveBeenCalled();
-    expect(dispose).not.toHaveBeenCalled();
+    expect(downloadSimulationPreview).toHaveBeenCalledWith(
+      { draftVersion: 9 },
+      { engine: { engineVersion: "test", abiVersion: 2 }, mapClosureSha256: "closure" },
+      undefined,
+    );
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("re-simulates instead of freezing a saved run from a different engine build", async () => {
+    vi.mocked(downloadSimulationPreview).mockRejectedValueOnce(
+      new Error("Saved simulation was produced by a different engine or map runtime"),
+    );
+    const services = host({ draftVersion: 9 } as ScenarioSimulationPreviewDto);
+    await expect(savedSimulationRevisionEvidence(services, document)).resolves.toMatchObject({
+      materializedTraffic: { artifactId: "artifact" },
+    });
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(services.projects.saveSimulationPreview).toHaveBeenCalledOnce();
+  });
+
+  it("does not swallow an abort while reading the saved run", async () => {
+    const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+    vi.mocked(downloadSimulationPreview).mockRejectedValueOnce(abort);
+    await expect(savedSimulationRevisionEvidence(host({ draftVersion: 9 } as ScenarioSimulationPreviewDto), document)).rejects.toBe(abort);
+    expect(prepare).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -99,6 +125,7 @@ describe("savedSimulationRevisionEvidence", () => {
     });
     await savedSimulationRevisionEvidence(services, document);
     expect(prepare).toHaveBeenCalledOnce();
-    expect(dispose).toHaveBeenCalledOnce();
+    // Every call releases the worker it asked for the engine identity.
+    expect(dispose).toHaveBeenCalledTimes(2);
   });
 });

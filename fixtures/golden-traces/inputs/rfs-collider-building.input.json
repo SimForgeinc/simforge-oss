@@ -1,0 +1,77 @@
+{
+  "actors": [
+    {
+      "behavior": {
+        "cruiseSpeedMps": 10,
+        "route": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 160,
+              "z": -107.6
+            },
+            {
+              "x": 60,
+              "z": -107.6
+            }
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": false,
+          "obeySignals": false,
+          "speedFactor": 1,
+          "yieldToPedestrians": true,
+          "yieldToVehicles": true
+        }
+      },
+      "dims": {
+        "h": 1.5,
+        "l": 4.6,
+        "w": 1.85
+      },
+      "id": "ego",
+      "initial": {
+        "pose": {
+          "headingRad": 3.141592653589793,
+          "x": 160,
+          "z": -107.6
+        },
+        "speedMps": 10
+      },
+      "kind": "car",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:car"
+      ]
+    }
+  ],
+  "clipSeconds": 10,
+  "dt": 0.02,
+  "interactions": [],
+  "mapId": "richmond-field-station",
+  "occluders": [],
+  "occlusionPairs": [],
+  "operationalConditions": {
+    "effects": {
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1,
+      "visibilityRangeM": 10000
+    },
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "weather": "clear"
+  },
+  "physics": {
+    "mode": "dynamic-v1"
+  },
+  "props": [],
+  "roadControls": [],
+  "schemaVersion": 1,
+  "seed": "golden:rfs-collider",
+  "signalPrograms": [],
+  "surfacePatches": [],
+  "warmupSeconds": 0
+}

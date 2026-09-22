@@ -3,7 +3,9 @@ import {
   MaterializedTrafficRecorder,
   type MaterializedTrafficArtifactEnvelope,
   type MaterializedTrafficFrameActor,
+  type AmbientProfileMissingDefault,
   type ResolvedAmbientTrafficProfile,
+  ambientProfileMissingDefault,
   ambientTrafficProfileFromExtensions,
 } from "@simforge-oss/engine";
 import type { PlaybackBundle } from "../model";
@@ -30,14 +32,19 @@ export function previewExecutionTrafficProvider(
  * the engine with ambient traffic off: under one-way coupling the authored
  * actors are solved first, and SUMO traffic is added afterwards by the worker
  * SUMO step (or shown live by the display-only editor preview).
+ *
+ * `missing` is what an absent profile means for this document
+ * (`ambientProfileMissingDefault(content)`: `off` once it has a pinned
+ * `simulation` block). A malformed profile throws `AmbientTrafficProfileError`.
  */
 export function previewAmbientTrafficProfile(
   provider: AmbientTrafficProviderId,
   extensions: Readonly<Record<string, unknown>> | undefined,
   hasAuthoredMapSignals: boolean,
+  missing: AmbientProfileMissingDefault = "legacy-city",
 ): ResolvedAmbientTrafficProfile {
   return previewExecutionTrafficProvider(provider, hasAuthoredMapSignals) === "native"
-    ? ambientTrafficProfileFromExtensions(extensions)
+    ? ambientTrafficProfileFromExtensions(extensions, missing)
     : ambientTrafficProfileFromExtensions({
         "studio.ambientTraffic.profile.v1": {
           version: 1,
@@ -117,14 +124,14 @@ export function materializeBrowserRevisionTraffic(
  * a playback bundle.
  */
 export function browserRevisionTraffic(
-  content: { readonly extensions?: Readonly<Record<string, unknown>>; readonly mapSignalPlans: readonly unknown[] },
+  content: { readonly simulation?: unknown; readonly extensions?: Readonly<Record<string, unknown>>; readonly mapSignalPlans: readonly unknown[] },
   map: RevisionTrafficMap,
   bundle: PlaybackBundle,
 ): { artifact: MaterializedTrafficArtifactEnvelope; profile: ResolvedAmbientTrafficProfile } | null {
   const requested = ambientTrafficProviderFromExtensions(content.extensions);
   const provider = previewExecutionTrafficProvider(requested, content.mapSignalPlans.length > 0);
   if (provider === "sumo") return null;
-  const profile = ambientTrafficProfileFromExtensions(content.extensions);
+  const profile = ambientTrafficProfileFromExtensions(content.extensions, ambientProfileMissingDefault(content));
   return { artifact: materializeBrowserRevisionTraffic(provider, profile, map, bundle), profile };
 }
 

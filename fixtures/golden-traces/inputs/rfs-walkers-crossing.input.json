@@ -1,0 +1,218 @@
+{
+  "actors": [
+    {
+      "behavior": {
+        "cruiseSpeedMps": 9,
+        "route": {
+          "kind": "lanePath",
+          "lanes": [
+            "51:0:-1",
+            "106:0:-1",
+            "16:0:1",
+            "339:0:1",
+            "15:0:1",
+            "80:0:1",
+            "60:0:1",
+            "132:0:1",
+            "59:0:1"
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": true,
+          "obeySignals": true,
+          "speedFactor": 1,
+          "yieldToPedestrians": true,
+          "yieldToVehicles": true
+        }
+      },
+      "dims": {
+        "h": 1.5,
+        "l": 4.6,
+        "w": 1.85
+      },
+      "id": "ego",
+      "initial": {
+        "laneRef": {
+          "rsl": "51:0:-1",
+          "s": 5,
+          "tFrac": 0
+        },
+        "pose": {
+          "headingRad": 1.127309917110332,
+          "x": -64.13631425266233,
+          "z": -183.64439163525273
+        },
+        "speedMps": 9
+      },
+      "kind": "car",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:car"
+      ]
+    },
+    {
+      "behavior": {
+        "route": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -50.86225266413852,
+              "z": -226.8989542335078
+            },
+            {
+              "x": -37.92449289774538,
+              "z": -232.2481945746309
+            }
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": false,
+          "obeySignals": true,
+          "speedFactor": 1,
+          "yieldToPedestrians": false,
+          "yieldToVehicles": false
+        }
+      },
+      "dims": {
+        "h": 1.75,
+        "l": 0.6,
+        "w": 0.6
+      },
+      "id": "ped-a",
+      "initial": {
+        "pose": {
+          "headingRad": -0.3920553210206189,
+          "x": -50.86225266413852,
+          "z": -226.8989542335078
+        },
+        "speedMps": 1.4
+      },
+      "kind": "pedestrian",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:pedestrian"
+      ]
+    },
+    {
+      "behavior": {
+        "route": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -34.103606939800244,
+              "z": -241.48945155062597
+            },
+            {
+              "x": -47.0413667061934,
+              "z": -236.14021120950287
+            }
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": false,
+          "obeySignals": true,
+          "speedFactor": 1,
+          "yieldToPedestrians": false,
+          "yieldToVehicles": false
+        }
+      },
+      "dims": {
+        "h": 1.75,
+        "l": 0.6,
+        "w": 0.6
+      },
+      "id": "ped-b",
+      "initial": {
+        "pose": {
+          "headingRad": 2.7495373325691745,
+          "x": -34.103606939800244,
+          "z": -241.48945155062597
+        },
+        "speedMps": 1.1
+      },
+      "kind": "pedestrian",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:pedestrian"
+      ]
+    },
+    {
+      "behavior": {
+        "route": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -41.31003776927571,
+              "z": -250.0020966734955
+            },
+            {
+              "x": -28.372278002882563,
+              "z": -255.3513370146186
+            }
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": false,
+          "obeySignals": true,
+          "speedFactor": 1,
+          "yieldToPedestrians": false,
+          "yieldToVehicles": false
+        }
+      },
+      "dims": {
+        "h": 1.75,
+        "l": 0.6,
+        "w": 0.6
+      },
+      "id": "ped-c",
+      "initial": {
+        "pose": {
+          "headingRad": -0.3920553210206188,
+          "x": -41.31003776927571,
+          "z": -250.0020966734955
+        },
+        "speedMps": 1.7
+      },
+      "kind": "pedestrian",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:pedestrian"
+      ]
+    }
+  ],
+  "clipSeconds": 16,
+  "dt": 0.02,
+  "interactions": [],
+  "mapId": "richmond-field-station",
+  "occluders": [],
+  "occlusionPairs": [],
+  "operationalConditions": {
+    "effects": {
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1,
+      "visibilityRangeM": 10000
+    },
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "weather": "clear"
+  },
+  "physics": {
+    "mode": "dynamic-v1"
+  },
+  "props": [],
+  "roadControls": [],
+  "schemaVersion": 1,
+  "seed": "golden:rfs-walkers",
+  "signalPrograms": [],
+  "surfacePatches": [],
+  "warmupSeconds": 0
+}

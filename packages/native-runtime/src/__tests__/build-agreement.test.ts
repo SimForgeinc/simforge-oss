@@ -41,7 +41,7 @@ const REFERENCE_INPUT = JSON.stringify({
   mapId: 'build-agreement',
   clipSeconds: 2,
   warmupSeconds: 0,
-  dt: 0.05,
+  dt: 0.02,
   seed: 'build-agreement',
   physics: { mode: 'dynamic-v1' },
   actors: [{

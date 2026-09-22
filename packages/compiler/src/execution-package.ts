@@ -22,7 +22,7 @@
 import { createHash } from 'node:crypto';
 
 import {
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
   canonicalJson,
   type AmbientTrafficProvenance,
   type LaneGraph,
@@ -229,7 +229,7 @@ function concreteInput(
     controlled,
     bundle.graph,
     ambientMode === 'native'
-      ? ambientTrafficProfileFromExtensions(template.extensions)
+      ? ambientTrafficProfileForDocument(template)
       : { version: 1, preset: 'off', seed: 'execution-provider-off' },
   );
   return {
