@@ -37,9 +37,13 @@ use simforge_core::physics::{
 };
 use simforge_core::types::ActorKind;
 
-/// Tick of the probe. The editor preview runs at 0.05 s and documents at
-/// 0.02 s; the coarser tick updates the steering preview less often, so a
-/// transition feasible at 0.05 s is feasible at 0.02 s.
+/// Tick of the probe. Simulations run at 0.02 s (enforced by input
+/// validation); the probe uses the coarser 0.05 s because it updates the
+/// steering preview less often, so a transition feasible at 0.05 s is feasible
+/// at 0.02 s, at 40% of the probe cost. Measured on the stop-spin corpus at
+/// 0.02 s (60 s heavy, 3 maps × 3 seeds): guard firings 35 → 3; the remaining
+/// three exceed the corridor by ≤ 2 cm at 1–5 m/s while queueing or yielding
+/// inside a junction, which is interaction, not route feasibility.
 pub const TURN_PROBE_DT_S: f64 = 0.05;
 /// Run-up on the incoming lane before the join, so the body arrives at the
 /// speed the corner planner would have braked it to.

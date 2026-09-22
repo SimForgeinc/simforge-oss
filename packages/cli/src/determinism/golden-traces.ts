@@ -327,7 +327,9 @@ export function writeManifest(run: GoldenRun, previous: GoldenManifest | null, c
   mkdirSync(path.join(GOLDEN_ROOT, 'inputs'), { recursive: true });
   for (const testCase of corpus.cases) {
     const input = run.inputs[testCase.id];
-    if (testCase.source.kind === 'input' || !input) continue;
+    // Only the public-map tier: a resolved input on a private map carries its
+    // lane ids and coordinates, and private maps never enter the repository.
+    if (testCase.tier !== 'ci' || testCase.source.kind === 'input' || !input) continue;
     // gzip with no name/mtime: the same input always writes the same bytes.
     writeFileSync(resolvedInputPath(testCase), gzipSync(Buffer.from(`${JSON.stringify(input)}\n`), { level: 9 }));
   }
