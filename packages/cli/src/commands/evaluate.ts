@@ -77,9 +77,12 @@ export function filtersFor(
 export function criticalityBand(
   verdict: 'accept' | 'reject',
   findings: ReadonlyArray<{ code: string }>,
-): 'critical' | 'trivially-safe' | 'no-interaction' | 'unavoidable' | 'out-of-window' | 'never-fired' {
+): 'critical' | 'trivially-safe' | 'no-interaction' | 'unavoidable' | 'out-of-window' | 'never-fired' | 'implausible-motion' {
   if (verdict === 'accept') return 'critical';
   const codes = new Set(findings.map((f) => f.code));
+  // A trace with physically impossible motion is wrong before it is anything
+  // else; no criticality reading of it means what it says.
+  if (codes.has('implausible_motion')) return 'implausible-motion';
   if (codes.has('no_interaction')) return 'no-interaction';
   if (codes.has('trivially_safe')) return 'trivially-safe';
   if (codes.has('physically_unavoidable')) return 'unavoidable';

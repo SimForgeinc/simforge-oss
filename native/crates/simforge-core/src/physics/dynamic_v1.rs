@@ -52,6 +52,12 @@ pub const SLIDING_FRICTION_COEFFICIENT: f64 = 0.55;
 /// after [`DynamicV1Backend::step_world`].
 pub const BALANCE_RECOVERY_DELTA_V_MPS: f64 = 0.6;
 
+/// Below this rolling speed the tyre slip angle is regularised: slip is
+/// taken as `slip velocity / max(|u|, this)` so it stays finite at rest. The
+/// same floor turns the lateral tyre force into viscous damping of any
+/// sideways or yaw motion near standstill.
+const LOW_SPEED_SLIP_REGULARISATION_MPS: f64 = 0.75;
+
 const DEFAULT_FOOTPRINT_LENGTH_M: f64 = 4.8;
 const DEFAULT_FOOTPRINT_WIDTH_M: f64 = 1.9;
 
@@ -70,6 +76,11 @@ struct VehicleEntry {
     /// Remaining torque cut of the shift in progress, seconds.
     #[serde(default)]
     shift_cut_remaining_s: f64,
+    /// Yaw rate a contact impulse gave the body beyond what rolling allows,
+    /// rad/s. Tyre forces may bleed it off but never feed it: it only ever
+    /// shrinks, and it is zero for a body no contact has spun.
+    #[serde(default)]
+    contact_yaw_rate_radps: f64,
     length_m: f64,
     width_m: f64,
 }
@@ -364,6 +375,7 @@ fn integrate(
     };
     let p = entry.profile;
     let width_m = entry.width_m;
+    let contact_yaw_rate_radps = entry.contact_yaw_rate_radps;
     let s = &mut entry.state;
 
     let steer_target = control.steer * p.max_steer_rad;
@@ -403,6 +415,25 @@ fn integrate(
         * s.longitudinal_velocity_mps.abs();
     let rolling_n =
         p.rolling_resistance_coefficient * p.mass_kg * G * tanh(s.longitudinal_velocity_mps / 0.1);
+    // A brake is a friction reaction: it can stop the wheels, never drive
+    // them backwards, and on a stopped body it only pushes back as hard as
+    // something pushes it. Quoting the full pedal force at rest would claim
+    // the whole friction circle for a force that does no work and leave the
+    // tyres no grip to hold the body against sideways or yaw motion.
+    let brake_reaction_limit_n = (p.mass_kg * s.longitudinal_velocity_mps.abs() / h
+        + direction * (drive_n - drag_n - rolling_n))
+        .max(0.0);
+    // When the brakes can absorb the body's whole longitudinal momentum this
+    // substep they hold it: the wheels stop and static friction takes over,
+    // so the body ends the substep at exactly zero rather than decaying
+    // towards it for ever.
+    let brakes_hold = brake_n + handbrake_n > brake_reaction_limit_n;
+    let (brake_n, handbrake_n) = if brakes_hold {
+        let scale = brake_reaction_limit_n / (brake_n + handbrake_n);
+        (brake_n * scale, handbrake_n * scale)
+    } else {
+        (brake_n, handbrake_n)
+    };
     let requested_fx = drive_n - direction * (brake_n + handbrake_n) - drag_n - rolling_n;
     let requested_ax = requested_fx / p.mass_kg;
 
@@ -427,18 +458,32 @@ fn integrate(
     let front_fx = clamp(front_fx_request, -mu * front_normal, mu * front_normal);
     let rear_fx = clamp(rear_fx_request, -mu * rear_normal, mu * rear_normal);
 
-    let speed_for_slip = s.longitudinal_velocity_mps.abs().max(0.75);
-    // The steer contribution to front-tyre slip is signed by the direction of
-    // travel: a tyre is symmetric, so the lateral slip velocity it sees from a
-    // steer angle `d` is `-u * sin(d)`, which changes sign with `u`. Dropping
-    // that sign makes a reversing car respond to steering the wrong way — the
-    // controller's correction becomes positive feedback, the steer saturates,
-    // and the body peels off its path. The yaw-rate and sideslip terms enter
-    // through `atan2(.., |u|)`, whose sign is carried by the numerator.
+    let speed_for_slip = s
+        .longitudinal_velocity_mps
+        .abs()
+        .max(LOW_SPEED_SLIP_REGULARISATION_MPS);
+    // The steer contribution to front-tyre slip is the lateral slip velocity
+    // a steer angle `d` produces, `-u * sin(d)`, over the same regularised
+    // speed as the other terms. It is signed by the direction of travel — a
+    // tyre is symmetric, so dropping that sign makes a reversing car respond
+    // to steering the wrong way — and it scales with the rolling speed: a
+    // wheel turned on a stopped car has no slip velocity and so no lateral
+    // force. At or above the regularisation speed `u / speed_for_slip` is
+    // exactly `sign(u)`, the familiar `alpha = atan(..) - d`. Below it the
+    // term fades to zero at rest instead of pushing a stopped body sideways
+    // and spinning it about its centre of gravity. The yaw-rate and sideslip
+    // terms enter through `atan2(.., |u|)`, whose sign is carried by the
+    // numerator.
+    let steer_slip_scale =
+        if s.longitudinal_velocity_mps.abs() >= LOW_SPEED_SLIP_REGULARISATION_MPS {
+            direction
+        } else {
+            s.longitudinal_velocity_mps / speed_for_slip
+        };
     let front_slip = atan2(
         s.lateral_velocity_mps + lf * s.yaw_rate_radps,
         speed_for_slip,
-    ) - direction * s.steer_rad;
+    ) - steer_slip_scale * s.steer_rad;
     let rear_slip = atan2(
         s.lateral_velocity_mps - lr * s.yaw_rate_radps,
         speed_for_slip,
@@ -481,15 +526,23 @@ fn integrate(
     s.longitudinal_velocity_mps += u_dot * h;
     // Braking stops the body; it never drags it through zero into the other
     // direction. Reversing is a gear change, not a negative brake.
-    if travel_sign * s.longitudinal_velocity_mps < 0.0 {
+    if brakes_hold || travel_sign * s.longitudinal_velocity_mps < 0.0 {
         s.longitudinal_velocity_mps = 0.0;
     }
     s.lateral_velocity_mps += v_dot * h;
-    s.yaw_rate_radps = clamp(
-        s.yaw_rate_radps + yaw_dot * h,
-        -p.max_yaw_rate_radps,
-        p.max_yaw_rate_radps,
-    );
+    // Non-holonomic envelope: tyres that roll can turn the body no faster
+    // than `|u| tan(max steer) / wheelbase`, and not at all at rest. Yaw a
+    // contact impulse added (`contact_yaw_rate_radps`) is the exception — a
+    // struck car does spin — but the tyres only ever scrub it off. This is a
+    // constraint, not a filter over a correct model: with the slip terms
+    // above the unconstrained yaw already converges to the kinematic
+    // `u tan(steer) / wheelbase` at crawl speed. The clamp is what makes a
+    // stopped car that turns in place unrepresentable rather than unlikely.
+    let rolling_limit = p
+        .rolling_yaw_rate_limit_radps(s.longitudinal_velocity_mps)
+        .unwrap_or(f64::INFINITY);
+    let yaw_limit = p.max_yaw_rate_radps.min(rolling_limit.max(contact_yaw_rate_radps));
+    s.yaw_rate_radps = clamp(s.yaw_rate_radps + yaw_dot * h, -yaw_limit, yaw_limit);
     s.yaw_rad = normalize_angle(old_yaw + 0.5 * (old_yaw_rate + s.yaw_rate_radps) * h);
     let (old_sin, old_cos) = sin_cos(old_yaw);
     let (new_sin, new_cos) = sin_cos(s.yaw_rad);
@@ -511,6 +564,13 @@ fn integrate(
         s.wheel_angular_speed_radps = 0.0;
     }
 
+    let yaw_rate_magnitude = s.yaw_rate_radps.abs();
+    let wheel_speeds_radps = corner_wheel_speeds(s, &p, width_m);
+    entry.contact_yaw_rate_radps = if yaw_rate_magnitude <= rolling_limit {
+        0.0
+    } else {
+        contact_yaw_rate_radps.min(yaw_rate_magnitude)
+    };
     PhysicsTelemetrySample {
         control,
         longitudinal_force_n: total_fx,
@@ -523,7 +583,7 @@ fn integrate(
         rear_tire_utilization: rear.utilization,
         engine_rpm: drive.rpm,
         gear: drive.gear,
-        wheel_speeds_radps: corner_wheel_speeds(s, &p, width_m),
+        wheel_speeds_radps,
         lateral_acceleration_mps2: (rear_fy + front_fy * cos_steer + front_fx * sin_steer)
             / p.mass_kg,
         substeps: 1,
@@ -1035,6 +1095,11 @@ impl DynamicV1Backend {
             let (sin, cos) = sin_cos(s.yaw_rad);
             s.longitudinal_velocity_mps = resolved.vx * cos + resolved.vy * sin;
             s.lateral_velocity_mps = -resolved.vx * sin + resolved.vy * cos;
+            if resolved.angular_velocity != s.yaw_rate_radps {
+                // The solver changed the spin: whatever it is now came from
+                // contact, and rolling may carry it only while it decays.
+                e.contact_yaw_rate_radps = resolved.angular_velocity.abs();
+            }
             s.yaw_rate_radps = resolved.angular_velocity;
             e.telemetry.collision_impulse_ns = 0.0;
             e.telemetry.collision_count = 0;
@@ -1126,6 +1191,7 @@ impl MotionBackend for DynamicV1Backend {
                 1
             },
             shift_cut_remaining_s: 0.0,
+            contact_yaw_rate_radps: 0.0,
             length_m,
             width_m,
         };
@@ -1161,6 +1227,7 @@ impl MotionBackend for DynamicV1Backend {
         };
         entry.state = state;
         entry.commanded_acceleration_mps2 = state.longitudinal_acceleration_mps2;
+        entry.contact_yaw_rate_radps = 0.0;
         Ok(())
     }
 

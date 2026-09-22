@@ -152,7 +152,7 @@ export type {
 } from './trace/trace.js';
 export { decodeTraceGz, encodeTraceGz, gunzipBytes, gzipBytes, isGzipBytes } from './trace/gzip.js';
 export { DEFAULT_MAX_DECEL_MPS2, DEFAULT_TRIVIAL_PET_S, DEFAULT_TRIVIAL_TTC_S } from './trace/evaluate.js';
-export type { EvaluateFilters, InvariantCheckOptions, InvariantResidualReport, RejectCode, RejectFinding, TraceEvaluation } from './trace/evaluate.js';
+export type { EvaluateFilters, InvariantCheckOptions, InvariantResidualReport, MotionFinding, MotionFindingCode, RejectCode, RejectFinding, TraceEvaluation } from './trace/evaluate.js';
 export { intentCriterionSchema, intentRubricSchema } from './trace/intent-rubric.js';
 export type {
   BehaviorSummary,

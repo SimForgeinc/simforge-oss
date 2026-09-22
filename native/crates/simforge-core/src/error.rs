@@ -96,6 +96,8 @@ pub enum SimIssueCode {
     LaneChangeIllegal,
     LateralDurationClamped,
     LateralTrackingFailed,
+    // physical plausibility of the executed motion
+    ImplausibleMotion,
 }
 
 impl SimIssueCode {
@@ -125,6 +127,7 @@ impl SimIssueCode {
             Self::LaneChangeIllegal => "lane_change_illegal",
             Self::LateralDurationClamped => "lateral_duration_clamped",
             Self::LateralTrackingFailed => "lateral_tracking_failed",
+            Self::ImplausibleMotion => "implausible_motion",
         }
     }
 }
