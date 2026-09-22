@@ -43,6 +43,17 @@ export const NoJobResponseSchema = z.strictObject({
   type: z.literal('job.none'),
   retryAfterMs: z.number().int().min(100).max(300_000),
 });
+export const InputDownloadSchema = z.strictObject({
+  url: z.url(),
+  headers: HeadersSchema,
+  expiresAt: z.iso.datetime({ offset: true }).optional(),
+  refresh: z.strictObject({ url: z.url(), headers: HeadersSchema }).optional(),
+});
+/** Worker label announcing lazy, batched input URL signing (see `JobInputTransferSchema.download`). */
+export const WORKER_INPUT_URLS_LABEL = 'inputUrls' as const;
+export const WORKER_INPUT_URLS_BATCH_V1 = 'batch-v1' as const;
+export const INPUT_URLS_MAX_BATCH = 500;
+
 export const JobInputTransferSchema = z.strictObject({
   inputId: z.string().min(1).max(256),
   relativePath: z.string().min(1).max(1024).refine((value) =>
@@ -51,12 +62,12 @@ export const JobInputTransferSchema = z.strictObject({
   { message: 'must be a safe relative map member path' }).optional(),
   sha256: RenderSha256Schema,
   sizeBytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  download: z.strictObject({
-    url: z.url(),
-    headers: HeadersSchema,
-    expiresAt: z.iso.datetime({ offset: true }).optional(),
-    refresh: z.strictObject({ url: z.url(), headers: HeadersSchema }).optional(),
-  }),
+  /**
+   * Omitted for a worker that registered `labels.inputUrls = "batch-v1"`: it
+   * serves most inputs from its content-addressed cache and asks for URLs
+   * only for the misses (`render-jobs/{jobId}/input-urls`).
+   */
+  download: InputDownloadSchema.optional(),
 });
 export const JobLeasedResponseSchema = z.strictObject({
   ...ControlBaseShape,
@@ -162,6 +173,110 @@ export const WorkerDrainResponseSchema = z.strictObject({
   type: z.literal('worker.draining'),
 });
 
+/** Batch URL signing for a lease's inputs (`render-jobs/{jobId}/input-urls`). */
+export const InputUrlsRequestSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('lease.input-urls'),
+  ...LeaseShape,
+  inputIds: z.array(z.string().min(1).max(256)).min(1).max(INPUT_URLS_MAX_BATCH),
+});
+export const InputUrlsResponseSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('lease.input-urls'),
+  downloads: z.record(z.string().min(1).max(256), InputDownloadSchema),
+});
+
+/** Published native map closures a worker may prewarm (`workers/prewarm`). */
+export const PrewarmSetSchema = z.strictObject({
+  setId: IdSchema,
+  mapVersionId: IdSchema,
+  mapId: z.string().min(1).max(256),
+  closureSha256: RenderSha256Schema,
+  objectCount: z.number().int().nonnegative(),
+  byteLength: z.number().int().nonnegative(),
+  createdAt: z.string().min(1).max(64),
+});
+export const PrewarmManifestRequestSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.prewarm-manifest'),
+});
+export const PrewarmManifestResponseSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.prewarm-manifest'),
+  /** Digest over the set list: unchanged generation means nothing to re-plan. */
+  generation: RenderSha256Schema,
+  sets: z.array(PrewarmSetSchema).max(10_000),
+});
+export const PrewarmMembersRequestSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.prewarm-members'),
+  setId: IdSchema,
+  after: z.string().max(1024).nullable(),
+});
+export const PrewarmMemberSchema = z.strictObject({
+  relativePath: z.string().min(1).max(1024),
+  sha256: RenderSha256Schema,
+  sizeBytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+});
+export const PrewarmMembersResponseSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.prewarm-members'),
+  members: z.array(PrewarmMemberSchema).max(10_000),
+  /** Pass back as `after` for the next page; null on the last page. */
+  next: z.string().max(1024).nullable(),
+});
+export const BlobUrlsRequestSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.blob-urls'),
+  /** The published set the digests belong to: signing is authorized per set. */
+  setId: IdSchema,
+  sha256s: z.array(RenderSha256Schema).min(1).max(INPUT_URLS_MAX_BATCH),
+});
+export const BlobUrlsResponseSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.blob-urls'),
+  /** Keyed by sha256; a digest that is not a published map blob is absent. */
+  downloads: z.record(RenderSha256Schema, InputDownloadSchema),
+});
+/** What a worker reports about its cache so operators and the UI can see readiness. */
+export const WorkerCacheStatusSchema = z.strictObject({
+  state: z.enum(['disabled', 'starting', 'prewarming', 'ready', 'over-budget', 'error']),
+  maps: z.strictObject({ ready: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+  blobs: z.strictObject({ cached: z.number().int().nonnegative(), wanted: z.number().int().nonnegative() }),
+  bytes: z.strictObject({
+    cached: z.number().int().nonnegative(),
+    wanted: z.number().int().nonnegative(),
+    budget: z.number().int().nonnegative(),
+    diskFree: z.number().int().nonnegative().optional(),
+  }),
+  lastError: z.string().max(2048).optional(),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+export const WorkerCacheReportRequestSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.cache-status'),
+  registrationId: IdSchema,
+  cache: WorkerCacheStatusSchema,
+});
+export const WorkerCacheReportResponseSchema = z.strictObject({
+  ...ControlBaseShape,
+  type: z.literal('worker.cache-status'),
+});
+
+export type InputDownload = z.infer<typeof InputDownloadSchema>;
+export type InputUrlsRequest = z.infer<typeof InputUrlsRequestSchema>;
+export type InputUrlsResponse = z.infer<typeof InputUrlsResponseSchema>;
+export type PrewarmSet = z.infer<typeof PrewarmSetSchema>;
+export type PrewarmMember = z.infer<typeof PrewarmMemberSchema>;
+export type PrewarmManifestRequest = z.infer<typeof PrewarmManifestRequestSchema>;
+export type PrewarmManifestResponse = z.infer<typeof PrewarmManifestResponseSchema>;
+export type PrewarmMembersRequest = z.infer<typeof PrewarmMembersRequestSchema>;
+export type PrewarmMembersResponse = z.infer<typeof PrewarmMembersResponseSchema>;
+export type BlobUrlsRequest = z.infer<typeof BlobUrlsRequestSchema>;
+export type BlobUrlsResponse = z.infer<typeof BlobUrlsResponseSchema>;
+export type WorkerCacheStatus = z.infer<typeof WorkerCacheStatusSchema>;
+export type WorkerCacheReportRequest = z.infer<typeof WorkerCacheReportRequestSchema>;
+export type WorkerCacheReportResponse = z.infer<typeof WorkerCacheReportResponseSchema>;
 export type WorkerRegisterRequest = z.infer<typeof WorkerRegisterRequestSchema>;
 export type WorkerRegisteredResponse = z.infer<typeof WorkerRegisteredResponseSchema>;
 export type JobClaimRequest = z.infer<typeof JobClaimRequestSchema>;
