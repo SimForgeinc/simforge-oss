@@ -60,6 +60,25 @@ jobs:
       - run: pnpm release:verify-artifacts
       - run: pnpm release:smoke-packages
 
+  studio-style:
+    # StyleX discipline for Studio (docs/engineering/studio-style-guide.md):
+    # per-file literal budgets that only go down, and the StyleX lint. The
+    # lint toolchain installs into scripts/style/eslint on its own lockfile.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm style:ratchet --check
+      - run: pnpm lint:style
+      - run: node --test scripts/__tests__/style-ratchet.test.mjs
+
   carla-bridge:
     runs-on: ubuntu-latest
     steps:
