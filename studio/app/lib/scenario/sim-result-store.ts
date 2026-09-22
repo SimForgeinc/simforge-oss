@@ -10,7 +10,11 @@ import {
 import {
   engineBuildProvenance,
   engineSemantics,
+  hostTrafficStep,
   SIMULATION_RESOLUTION_MEDIA_TYPE,
+  SUMO_RUNTIME_FILES,
+  SUMO_RUNTIME_OBJECT_PREFIX,
+  sumoStepIdentity,
   SIMULATION_TRACE_MEDIA_TYPE,
   simulateAuthoritative,
   simulationCompletion,
@@ -31,6 +35,7 @@ import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
+import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
 import { evaluateTrace, type EvaluateFilters, type TraceEvaluation } from "@simforge-oss/engine/node";
 import { simforgeEnv } from "@/lib/simforge-env";
 
@@ -39,7 +44,9 @@ import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { createLocalArtifactProducer } from "./jobs/local-artifact-producer-store";
 import {
   loadServerSimulationClosure,
+  readServerMapMember,
   readSimulationMapIdentity,
+  serverSumoRuntime,
   type SimulationMapIdentity,
 } from "./sim-closure.server";
 
@@ -61,7 +68,7 @@ import {
  */
 
 /** Bump when the TypeScript half of the pipeline changes what a request resolves to. */
-export const SIMULATION_PIPELINE_REVISION = 1;
+export const SIMULATION_PIPELINE_REVISION = 2;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
@@ -129,6 +136,8 @@ async function requestIdentity(subject: SimulationSubject): Promise<RequestIdent
     // into the same `sim_key` whenever the semantics did not change.
     engineBuild: build.addonSha256 ?? `${build.engineVersion}:${build.abiVersion}`,
     pipeline: SIMULATION_PIPELINE_REVISION,
+    // SUMO documents: the network and the pinned runtime their traffic step runs.
+    sumo: sumoStepIdentity(subject.canonicalContent, map.sumoNetworkSha256),
   });
   return { requestKey, map, catalogSha256, engineSemVer, catalogEntries };
 }
@@ -593,10 +602,16 @@ async function executeInline(
       simulation = await inlineExecutorOverride(subject);
     } else {
       const closure = await loadServerSimulationClosure(identity.map);
+      const trafficStep = await hostTrafficStep(subject.canonicalContent, {
+        sumoNetworkSha256: identity.map.sumoNetworkSha256,
+        readMember: (relativePath) => readServerMapMember(identity.map.mapVersionId, relativePath),
+        runtime: serverSumoRuntime,
+      });
       simulation = simulateAuthoritative({
         canonicalContent: subject.canonicalContent,
         closure,
         catalogEntries: identity.catalogEntries,
+        trafficStep,
       });
       timeline = await buildSimulationTimeline(simulation, closure);
     }
@@ -627,7 +642,7 @@ async function executeInline(
         ? error.message.split(":")[0]!.slice(0, 100)
         : "simulation_failed";
     // Scenario errors (infeasible, invalid) fail the request; infrastructure errors requeue it.
-    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog)/.test(code);
+    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog|sumo_network_unavailable)/.test(code);
     console.warn(`[simulation] inline execution of ${identity.requestKey} failed (${scenarioError ? "scenario" : "retryable"}): ${error instanceof Error ? error.message : String(error)}`);
     await failSimulationRequest({
       workspaceId: subject.workspaceId,
@@ -745,7 +760,8 @@ export async function claimSimulationJob(input: { workerId: string; leaseSeconds
     const content = parseJsonObject(row.canonical_content as string | Record<string, unknown>) ?? {};
     try {
       const map = await readSimulationMapIdentity(row.map_version_id);
-      const members = await presignedMapMembers(row.map_version_id);
+      const runsSumo = sumoStepIdentity(content, map.sumoNetworkSha256) !== null;
+      const members = await presignedMapMembers(row.map_version_id, runsSumo);
       return {
         contract: "simforge.sim-job-claim/v1" as const,
         workspaceId: candidate.workspace_id,
@@ -756,6 +772,8 @@ export async function claimSimulationJob(input: { workerId: string; leaseSeconds
         canonicalContent: content,
         catalogEntries: await catalogEntriesFor(content),
         map: { ...map, members },
+        // SUMO documents: the pinned runtime, verified against the pin on load.
+        sumoRuntime: runsSumo ? await presignedSumoRuntime() : null,
       };
     } catch (error) {
       await failSimulationRequest({
@@ -771,7 +789,14 @@ export async function claimSimulationJob(input: { workerId: string; leaseSeconds
   return null;
 }
 
-async function presignedMapMembers(mapVersionId: string) {
+async function presignedSumoRuntime() {
+  return Promise.all(SUMO_RUNTIME_FILES.map(async (file) => ({
+    file,
+    downloadUrl: await getPresignedGetUrl(`${SUMO_RUNTIME_OBJECT_PREFIX}${file}`, SUMO_RUNTIME_BUCKET),
+  })));
+}
+
+async function presignedMapMembers(mapVersionId: string, includeSumo: boolean) {
   const rows = await queryRows<{ relative_path: string; sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
     `SELECT bm.relative_path, bb.sha256, bb.byte_length, bb.storage_bucket, bb.storage_key
        FROM simforge.map_versions mv
@@ -781,8 +806,9 @@ async function presignedMapMembers(mapVersionId: string) {
       WHERE mv.id = :map_version_id
         AND (bm.relative_path IN (${MAP_MEMBER_PATHS.map((_, index) => `:p${index}`).join(", ")})
              OR bm.relative_path = '3d/variants/manifest.json'
-             OR bm.relative_path LIKE '3d/variants/static-colliders%')`,
-    { map_version_id: mapVersionId, ...Object.fromEntries(MAP_MEMBER_PATHS.map((path, index) => [`p${index}`, path])) },
+             OR bm.relative_path LIKE '3d/variants/static-colliders%'
+             OR (:include_sumo AND bm.relative_path LIKE 'derived/sumo/%'))`,
+    { map_version_id: mapVersionId, include_sumo: includeSumo, ...Object.fromEntries(MAP_MEMBER_PATHS.map((path, index) => [`p${index}`, path])) },
   );
   return Promise.all(rows.map(async (row) => ({
     relativePath: row.relative_path,

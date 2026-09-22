@@ -39,7 +39,16 @@ import {
   type ResolvedAmbientTrafficProfile,
   type SimTrace,
 } from '@simforge-oss/engine';
-import { engine, runtimeIdentity } from '@simforge-oss/engine/node';
+import {
+  engine,
+  loadSumoRuntime,
+  PINNED_SUMO_RUNTIME_VERSION,
+  PINNED_SUMO_WASM_SHA256,
+  runtimeIdentity,
+  stageSumoRuntime,
+  sumoTrafficNetworkFromMembers,
+  type SumoRuntimeFile,
+} from '@simforge-oss/engine/node';
 import {
   buildSimulationMapClosure,
   loadMapGraph,
@@ -298,6 +307,78 @@ export async function prepareSumoTrafficStep(
     sourceInputDigest: input.sourceInputDigest,
     closure: { mapAssetId: input.closure.mapAssetId, mapVersionId: input.closure.mapVersionId },
   });
+}
+
+/** The map version member that names and pins the SUMO network. */
+export const SUMO_NETWORK_MANIFEST_MEMBER = 'derived/sumo/sumo-network-manifest.json';
+export const SUMO_RUNTIME_FILES: readonly SumoRuntimeFile[] = ['sumo.mjs', 'sumo.wasm', 'runtime-manifest.json'];
+/** Where the pinned runtime lives in the runtime bucket. */
+export const SUMO_RUNTIME_OBJECT_PREFIX = `uniscenario/sumo-runtime/${PINNED_SUMO_RUNTIME_VERSION}/`;
+
+/**
+ * What the SUMO step of a request depends on beyond the document and the
+ * closure: the map version's network digest and the pinned runtime build.
+ * `null` for documents that do not run SUMO. Hosts fold it into the request
+ * key so a request never resolves to a result computed without the step.
+ */
+export function sumoStepIdentity(
+  content: unknown,
+  sumoNetworkSha256: string | null,
+): { readonly sumoNetworkSha256: string | null; readonly wasmSha256: string } | null {
+  if (executionTrafficProvider(content as { extensions?: Record<string, unknown> }) !== 'sumo') return null;
+  return { sumoNetworkSha256, wasmSha256: PINNED_SUMO_WASM_SHA256 };
+}
+
+/**
+ * The pinned SUMO runtime, staged once per directory and process from
+ * wherever the host keeps it (object store, presigned URLs, a volume). The
+ * compiled module is shared; every step instantiates a fresh one.
+ */
+const stagedRuntimes = new Map<string, Promise<SumoRuntime>>();
+export function stagedSumoRuntime(
+  directory: string,
+  read: (file: SumoRuntimeFile) => Promise<Uint8Array>,
+): Promise<SumoRuntime> {
+  const cached = stagedRuntimes.get(directory);
+  if (cached) return cached;
+  const staging = stageSumoRuntime({ directory, read }).then(() => loadSumoRuntime(directory));
+  stagedRuntimes.set(directory, staging);
+  staging.catch(() => { if (stagedRuntimes.get(directory) === staging) stagedRuntimes.delete(directory); });
+  return staging;
+}
+
+/**
+ * The external traffic step a host runs for `content`, or `undefined` when
+ * the document does not run SUMO. A SUMO document on a map version without a
+ * SUMO network is a scenario error (`sumo_network_unavailable`): simulating it
+ * without its traffic would store a result that is not what the author asked
+ * for.
+ */
+export async function hostTrafficStep(
+  content: unknown,
+  sources: {
+    readonly sumoNetworkSha256: string | null;
+    /** A verified map version member by relative path (`derived/sumo/...`). */
+    readonly readMember: (relativePath: string) => Promise<Uint8Array>;
+    readonly runtime: () => Promise<SumoRuntime>;
+  },
+): Promise<ExternalTrafficStep | undefined> {
+  const document = content as { simulation?: unknown; extensions?: Record<string, unknown> };
+  if (executionTrafficProvider(document) !== 'sumo') return undefined;
+  if (!sources.sumoNetworkSha256) {
+    throw new Error('sumo_network_unavailable: the map version publishes no SUMO network; republish the map with its SUMO derivative');
+  }
+  const manifestBytes = await sources.readMember(SUMO_NETWORK_MANIFEST_MEMBER);
+  const { networkFile } = JSON.parse(new TextDecoder().decode(manifestBytes)) as { networkFile?: unknown };
+  if (typeof networkFile !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(networkFile)) {
+    throw new Error('sumo_network_unavailable: the SUMO network manifest names no network file');
+  }
+  const network = sumoTrafficNetworkFromMembers({
+    manifest: manifestBytes,
+    network: await sources.readMember(`derived/sumo/${networkFile}`),
+    expectedSha256: sources.sumoNetworkSha256,
+  });
+  return prepareSumoTrafficStep(document, await sources.runtime(), network);
 }
 
 /** The ambient provenance a revision records for its materialized traffic. */

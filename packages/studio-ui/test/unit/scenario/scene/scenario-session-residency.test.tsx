@@ -152,6 +152,22 @@ describe("scenario session trace residency", () => {
     expect(worker.prepare).toHaveBeenCalledTimes(1);
   });
 
+  it("verifies a SUMO preview against its authored trace, then replays the worker's SUMO traffic", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
+    resolveSimulation.mockImplementation(async () => ({
+      ...succeeded(),
+      result: { ...succeeded().result, traceSha256: "s".repeat(64), authoredTraceSha256: "t".repeat(64), trafficProvider: "sumo" },
+    }));
+    worker.prepare.mockImplementation(async () => fakeBundle("local"));
+    authoritative.bundle.mockImplementation(async () => fakeBundle("authoritative-sumo", "s".repeat(64)));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "authoritative-sumo" }));
+    expect(rendered.result.current.playback.simulationVerification).toMatchObject({ status: "verified", traceSha256: "s".repeat(64) });
+    expect(authoritative.bundle).toHaveBeenCalledTimes(1);
+    expect(resolveSimulation).toHaveBeenCalledTimes(1);
+    expect(worker.prepare).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the preview local while the simulation is queued on a worker, then verifies", async () => {
     const { services, resolveSimulation } = host(documentAt(1));
     resolveSimulation

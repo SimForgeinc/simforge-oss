@@ -1,14 +1,19 @@
-import { hostname } from "node:os";
+import { createHash } from "node:crypto";
+import { hostname, tmpdir } from "node:os";
+import path from "node:path";
 import { setTimeout as wait } from "node:timers/promises";
 
 import {
+  hostTrafficStep,
   loadSimulationMapClosure,
   simulateAuthoritative,
   simulationCompletion,
+  stagedSumoRuntime,
   type AuthoritativeSimulation,
   type SimulationMapClosure,
   type SimulationTimeline,
 } from "@simforge-oss/compiler/node";
+import { PINNED_SUMO_RUNTIME_VERSION, type SumoRuntimeFile } from "@simforge-oss/engine/node";
 import { buildRenderTimeline } from "@simforge-oss/render/timeline";
 
 import { simforgeEnv } from "../lib/simforge-env";
@@ -40,8 +45,12 @@ export type SimulationJobClaim = {
     mapVersionId: string;
     mapAssetId: string;
     browserClosureSha256: string;
+    /** `map_versions.sumo_network_sha256`. */
+    sumoNetworkSha256?: string | null;
     members: Array<{ relativePath: string; sha256: string; sizeBytes: number; downloadUrl: string }>;
   };
+  /** The pinned SUMO runtime, for documents whose traffic is the SUMO step; `null` otherwise. */
+  sumoRuntime?: Array<{ file: SumoRuntimeFile; downloadUrl: string }> | null;
 };
 
 type Reservation = { uploadRequired: boolean; uploadUrl: string | null; mediaType: string };
@@ -57,7 +66,7 @@ const REQUIRED_MEMBERS = [
   "signals.geojson.gz",
 ] as const;
 /** Scenario errors fail the request for good; everything else is retried by the next claim. */
-const SCENARIO_ERROR = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog|simulation_input_identity_mismatch)/;
+const SCENARIO_ERROR = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog|simulation_input_identity_mismatch|sumo_network_unavailable)/;
 
 export function parseSimulationJobClaim(value: unknown): SimulationJobClaim {
   const claim = value as SimulationJobClaim;
@@ -87,7 +96,15 @@ export function claimMemberFetcher(claim: SimulationJobClaim, base: string, host
     if (!url.href.startsWith(base)) throw new Error(`simulation member outside the claimed closure: ${url.href}`);
     const member = members.get(decodeURIComponent(url.href.slice(base.length)));
     if (!member) return new Response(null, { status: 404 });
-    return fetchImpl(new URL(member.downloadUrl, hostUrl), { redirect: "follow", signal: AbortSignal.timeout(120_000) });
+    const response = await fetchImpl(new URL(member.downloadUrl, hostUrl), { redirect: "follow", signal: AbortSignal.timeout(120_000) });
+    if (!response.ok) return response;
+    // An object store's presigned GET carries no digest header: verify the
+    // bytes against the digest the claim pins, then attest it to the loader.
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (createHash("sha256").update(bytes).digest("hex") !== member.sha256) {
+      throw new Error(`simulation_map_member_digest_mismatch:${member.relativePath}`);
+    }
+    return new Response(bytes, { status: 200, headers: { "x-content-sha256": member.sha256 } });
   }) as typeof fetch;
 }
 
@@ -130,6 +147,40 @@ async function closureFor(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: ty
   }
 }
 
+async function download(url: URL, fetchImpl: typeof fetch, label: string): Promise<Uint8Array> {
+  const response = await fetchImpl(url, { redirect: "follow", signal: AbortSignal.timeout(120_000) });
+  if (!response.ok) throw new Error(`simulation_member_download_failed:${response.status}:${label}`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/** A claimed map member, verified against the digest the claim pins. */
+async function claimMember(claim: SimulationJobClaim, relativePath: string, hostUrl: URL, fetchImpl: typeof fetch): Promise<Uint8Array> {
+  const member = claim.map.members.find((candidate) => candidate.relativePath === relativePath);
+  if (!member) throw new Error(`simulation_map_member_missing:${relativePath}`);
+  const bytes = await download(new URL(member.downloadUrl, hostUrl), fetchImpl, relativePath);
+  if (createHash("sha256").update(bytes).digest("hex") !== member.sha256) {
+    throw new Error(`simulation_map_member_digest_mismatch:${relativePath}`);
+  }
+  return bytes;
+}
+
+/** The traffic step a claim runs: the SUMO step for SUMO documents, from the claimed network and runtime. */
+export function claimTrafficStep(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch) {
+  return hostTrafficStep(claim.canonicalContent, {
+    sumoNetworkSha256: claim.map.sumoNetworkSha256 ?? null,
+    readMember: (relativePath) => claimMember(claim, relativePath, hostUrl, fetchImpl),
+    runtime: () => stagedSumoRuntime(
+      path.join(tmpdir(), "simforge-sumo-runtime", PINNED_SUMO_RUNTIME_VERSION),
+      async (file) => {
+        const source = claim.sumoRuntime?.find((candidate) => candidate.file === file);
+        if (!source) throw new Error(`sumo_runtime_unavailable:${file}`);
+        // The runtime is verified against the pinned digests when it loads.
+        return download(new URL(source.downloadUrl, hostUrl), fetchImpl, file);
+      },
+    ),
+  });
+}
+
 /** Simulate a claim and derive its render timeline, exactly as a host does inline. */
 export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch): Promise<{ simulation: AuthoritativeSimulation; timeline: SimulationTimeline | null }> {
   const closure = await closureFor(claim, hostUrl, fetchImpl);
@@ -137,6 +188,7 @@ export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fet
     canonicalContent: claim.canonicalContent,
     closure,
     catalogEntries: claim.catalogEntries as never,
+    trafficStep: await claimTrafficStep(claim, hostUrl, fetchImpl),
   });
   let timeline: SimulationTimeline | null = null;
   try {

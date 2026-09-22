@@ -324,6 +324,16 @@ export function useScenarioSession({
               traceSha256: result.traceSha256,
               engineSemVer: result.engineSemVer,
             });
+            // A SUMO document's preview verified its authored actors; the
+            // authoritative trace adds the worker's SUMO traffic. Replay that
+            // trace so the traffic on screen is the traffic every render and
+            // evaluation replays (the in-browser SUMO preview stands down).
+            if (result.traceSha256 !== localTraceSha256) {
+              const authoritative = await authoritativePlaybackBundle(result, nextBundle, abort.signal);
+              if (!current()) return;
+              bundleContentIdentityRef.current.set(authoritative, sourceContentIdentity);
+              setBundle(authoritative);
+            }
             return;
           }
           // A different trace under the same content is a determinism bug: show

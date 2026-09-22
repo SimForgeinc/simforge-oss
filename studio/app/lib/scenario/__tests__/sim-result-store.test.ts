@@ -28,6 +28,7 @@ import {
 } from "../../../../../packages/engine/src/__tests__/fixtures/scenarios";
 import {
   claimSimulationJob,
+  failSimulationRequest,
   completeSimulationRequest,
   evaluateSimulationResult,
   getSimulationResult,
@@ -277,6 +278,48 @@ test("authoritative simulation results", async (t) => {
       assert.equal(done.state === "succeeded" && done.result.producer, "cpu:runner-2");
     } finally {
       process.env.SIMFORGE_SIMULATION_INLINE = "1";
+    }
+  });
+
+  await t.test("a SUMO document's runner claim carries its network members and the pinned runtime; others do not", async () => {
+    await execute(`UPDATE simforge.map_versions SET sumo_network_sha256 = :sha WHERE id = :id`, { id: MAP_VERSION, sha: DIGEST("5") });
+    for (const [index, relativePath] of ["map.xodr", "derived/sumo/sumo-network-manifest.json", "derived/sumo/map.net.xml"].entries()) {
+      await execute(
+        `INSERT INTO simforge.browser_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state)
+         VALUES (:id, 'local-artifacts', :key, :sha, 1, :media, 'verified') ON CONFLICT DO NOTHING`,
+        { id: `usbab_sumo_${index}`, key: `maps/${relativePath}`, sha: DIGEST(String(6 + index)), media: `application/x-test-${index}` },
+      );
+      await execute(
+        `INSERT INTO simforge.browser_asset_members (asset_set_id, relative_path, blob_id, role)
+         VALUES ('usbas_sim', :path, :blob, 'metadata') ON CONFLICT DO NOTHING`,
+        { path: relativePath, blob: `usbab_sumo_${index}` },
+      );
+    }
+    process.env.SIMFORGE_SIMULATION_INLINE = "0";
+    try {
+      const sumo = { roles: [], meta: { name: "sumo-claim" }, extensions: { "studio.ambientTraffic.provider.v1": "sumo" } };
+      const plain = { roles: [], meta: { name: "plain-claim" } };
+      const sumoRequest = await resolveSimulation(subject(sumo));
+      const plainRequest = await resolveSimulation(subject(plain));
+      const claims = [await claimSimulationJob({ workerId: "runner-3", leaseSeconds: 300 }), await claimSimulationJob({ workerId: "runner-3", leaseSeconds: 300 })];
+      const sumoClaim = claims.find((claim) => claim?.requestKey === sumoRequest.requestKey);
+      const plainClaim = claims.find((claim) => claim?.requestKey === plainRequest.requestKey);
+      assert.ok(sumoClaim && plainClaim);
+      assert.equal(sumoClaim.map.sumoNetworkSha256, DIGEST("5"));
+      assert.deepEqual(
+        sumoClaim.map.members.map((member) => member.relativePath).filter((path) => path.startsWith("derived/sumo/")).sort(),
+        ["derived/sumo/map.net.xml", "derived/sumo/sumo-network-manifest.json"],
+      );
+      assert.deepEqual(sumoClaim.sumoRuntime?.map((file) => file.file), ["sumo.mjs", "sumo.wasm", "runtime-manifest.json"]);
+      assert.ok(sumoClaim.sumoRuntime?.every((file) => file.downloadUrl.includes("sumo-runtime")));
+      assert.equal(plainClaim.sumoRuntime, null);
+      assert.ok(plainClaim.map.members.every((member) => !member.relativePath.startsWith("derived/sumo/")));
+      for (const claim of [sumoClaim, plainClaim]) {
+        await failSimulationRequest({ workspaceId: WORKSPACE, requestKey: claim.requestKey, fenceToken: claim.fenceToken, code: "test_done", message: "", retryable: false });
+      }
+    } finally {
+      process.env.SIMFORGE_SIMULATION_INLINE = "1";
+      await execute(`UPDATE simforge.map_versions SET sumo_network_sha256 = NULL WHERE id = :id`, { id: MAP_VERSION });
     }
   });
 

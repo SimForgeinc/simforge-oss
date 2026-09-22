@@ -153,10 +153,18 @@ describe("local worker simulate lane", () => {
   test("resolves the editor loader's member URLs to the claim's objects only", async () => {
     const seen: string[] = [];
     const base = "https://simulation-closure.invalid/k/";
-    const fetcher = claimMemberFetcher(claimBody(), base, new URL("http://127.0.0.1:5199"), (async (target: URL) => { seen.push(String(target)); return new Response("ok"); }) as never);
-    await fetcher(`${base}map.xodr`);
+    const claim = claimBody();
+    const xodr = claim.map.members.find((member) => member.relativePath === "map.xodr")!;
+    xodr.sha256 = createHash("sha256").update("ok").digest("hex");
+    let body = "ok";
+    const fetcher = claimMemberFetcher(claim, base, new URL("http://127.0.0.1:5199"), (async (target: URL) => { seen.push(String(target)); return new Response(body); }) as never);
+    const response = await fetcher(`${base}map.xodr`);
     // Root-relative local-object URLs resolve against the host, never the synthetic closure base.
     assert.deepEqual(seen, ["http://127.0.0.1:5199/api/local-objects/map.xodr?sig"]);
+    // Presigned object-store GETs carry no digest header: the claim's digest is verified and attested.
+    assert.equal(response.headers.get("x-content-sha256"), xodr.sha256);
+    body = "tampered";
+    await assert.rejects(fetcher(`${base}map.xodr`), /simulation_map_member_digest_mismatch:map.xodr/);
     assert.equal((await fetcher(`${base}unknown.bin`)).status, 404);
     await assert.rejects(fetcher("https://elsewhere.example/map.xodr"), /outside the claimed closure/);
   });
