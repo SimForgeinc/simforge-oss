@@ -27,6 +27,7 @@ pub mod pairs;
 pub mod perception;
 pub mod recorder;
 pub mod scene_state;
+pub mod timeline;
 
 use std::collections::BTreeMap;
 
