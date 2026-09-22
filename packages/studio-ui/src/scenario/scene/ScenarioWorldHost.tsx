@@ -594,7 +594,7 @@ export function ScenarioWorldHost({
         <CityView
           key={`world-viewer:${retryNonce}`}
           manifestUrl={retainedTarget.manifestUrl}
-          initialOptions={{ ...sceneViewerOptions(preference), resolveMapAssetUrls }}
+          initialOptions={{ ...sceneViewerOptions(preference), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
           onReady={(viewer) => {
             viewerRef.current = viewer;
             startMetadataProgress(viewer, retainedTarget.label);
