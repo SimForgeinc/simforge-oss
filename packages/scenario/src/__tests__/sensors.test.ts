@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { ScenarioOperationError, ScenarioValidationError } from '../errors.js';
+import { buildCanonicalRenderSpec } from '../render-spec-builders.js';
+import { parseRenderSpecV3 } from '../render-spec.js';
 import { parseTemplate, serializeTemplate } from '../serialize.js';
 import { TemplateDocument } from '../template-document.js';
 import {
@@ -45,6 +47,41 @@ describe('actor-attached sensors', () => {
       outputStage: 'linear',
       encoding: { transfer: 'srgb', bitDepth: 8 },
     });
+
+    const spec = buildCanonicalRenderSpec({
+      content: second,
+      selections: [{ actorId: second.roles[0]!.id, sensorId: camera.id, modalities: ['rgb'] }],
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    const source = spec.sources.find((candidate) => candidate.modality === 'rgb');
+    expect(source?.attributes).toMatchObject({
+      cameraProfile: {
+        profileId: 'generic-rgb@1',
+        outputStage: 'linear',
+        encoding: { transfer: 'srgb', bitDepth: 8 },
+      },
+    });
+
+    const withoutProfile = JSON.parse(JSON.stringify(spec));
+    delete withoutProfile.sources[0].attributes.cameraProfile;
+    expect(parseRenderSpecV3(withoutProfile).sources[0]?.attributes).toMatchObject({
+      cameraProfile: { profileId: 'generic-rgb@1' },
+    });
+
+    const depthSpec = buildCanonicalRenderSpec({
+      content: second,
+      selections: [{ actorId: second.roles[0]!.id, sensorId: camera.id, modalities: ['depth'] }],
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    expect(depthSpec.capabilityIntent.required).toContain('camera.output.linear_rgb');
   });
 
   it('requires rolling-shutter profiles to declare their readout span', () => {

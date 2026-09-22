@@ -1,6 +1,7 @@
 import {
   PRONTO_CHASE_CAMERA_SENSOR,
   PRONTO_CHASE_CAMERA_SENSOR_ID,
+  cameraProfileCapabilities,
   hasTrailingChaseCamera,
   RENDER_SPEC_V3_SCHEMA,
   parseRenderSpecV3,
@@ -162,6 +163,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
               horizontalFovDeg: sensor.camera.horizontalFovDeg,
               nearM: sensor.camera.nearM,
               farM: sensor.camera.farM,
+              cameraProfile: sensor.profile,
             },
           };
         }
@@ -200,6 +202,10 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
   const artifacts = [...new Set(["manifest" as const, ...input.artifacts])];
   const required = [
     ...sources.map((source) => `sensor.${source.modality}`),
+    ...sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar'
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []),
     ...artifacts.map((artifact) => artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`),
     "environment.authored",
     "timing.fixed_step",

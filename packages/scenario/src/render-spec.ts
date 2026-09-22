@@ -16,7 +16,7 @@ import {
   WeatherSchema,
   type Environment,
 } from './schema/v2/environment.js';
-import { SensorMountSchema } from './schema/v2/sensors.js';
+import { CameraProfileSchema, SensorMountSchema, cameraProfileCapabilities } from './schema/v2/sensors.js';
 
 export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
 
@@ -158,6 +158,7 @@ export const RenderCameraAttributesSchema = z.strictObject({
   horizontalFovDeg: z.number().finite().positive().max(180),
   nearM: z.number().finite().positive(),
   farM: z.number().finite().positive(),
+  cameraProfile: CameraProfileSchema.prefault({}),
 }).check((ctx) => {
   if (ctx.value.farM <= ctx.value.nearM) {
     ctx.issues.push({
@@ -924,6 +925,10 @@ function requiredCapabilities(renderSpec: RenderSpecV3): string[] {
   return [...new Set([
     ...renderSpec.capabilityIntent.required,
     ...renderSpec.sources.map((source) => `sensor.${source.modality}`),
+    ...renderSpec.sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar'
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []),
     ...renderSpec.artifacts.map(artifactCapability),
   ])];
 }
