@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import {
-  HeroFlowShell,
   MapLibraryScreen,
   type MapLibraryMap,
 } from "@simforge-oss/studio-ui/onboarding";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
+import { AppStage } from "@/app/components/AppStage";
 import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
-// The library is a screen of the hero flow, so it composes the account panel
-// exactly the way the onboarding sign-in step does.
 import { inlineSignIn } from "@/app/onboarding/onboarding-layout.stylex";
 
 const CatalogSchema = z.object({
@@ -55,6 +54,7 @@ export function MapLibrarySurface() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   /** The maps this page asked the host to install, in this visit. */
   const [requested, setRequested] = useState<string[]>([]);
   const [revealSignIn, setRevealSignIn] = useState(false);
@@ -91,7 +91,7 @@ export function MapLibrarySurface() {
       setLoading(false);
     });
     return () => controller.abort();
-  }, [cloudState, preparation.phase]);
+  }, [cloudState, preparation.phase, retry]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -134,9 +134,11 @@ export function MapLibrarySurface() {
   });
 
   return (
-    <HeroFlowShell as="section" fill>
+    <AppStage fill title="Maps on this computer" eyebrow="Map library" testId="map-library-stage">
+      {loading && catalog.length === 0 ? <CloudLoadingSurface scope="screen" title="Loading the map catalog" /> : null}
       <MapLibraryScreen
         catalogError={catalogError}
+        onRetry={() => { setLoading(true); setRetry((value) => value + 1); }}
         // The revealed flow reports its own failures, so only this page's
         // catalog errors go to the screen while it is open.
         error={error ?? (signingIn ? null : cloud.error)}
@@ -154,6 +156,6 @@ export function MapLibrarySurface() {
         signedIn={signedIn}
         signIn={signingIn ? <CloudAccountPanel xstyle={inlineSignIn.panel} /> : undefined}
       />
-    </HeroFlowShell>
+    </AppStage>
   );
 }

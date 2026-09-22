@@ -12,7 +12,7 @@ const SM = "@media (min-width: 640px)";
  * conflict against the primitive's own atoms by declaration order.
  */
 export const carla = stylex.create({
-  section: { display: "flex", flexDirection: "column", gap: "1rem" },
+  section: { display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: "1rem", minHeight: 0, minWidth: 0, overflow: "hidden" },
   tools: { display: "flex", flexDirection: "column", gap: "0.5rem", [SM]: { flexDirection: "row" } },
   searchWrap: { position: "relative", minWidth: 0, flex: 1 },
   searchIcon: { pointerEvents: "none", position: "absolute", left: "0.75rem", top: "50%", width: "1rem", height: "1rem", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)" },
@@ -20,7 +20,7 @@ export const carla = stylex.create({
   // `width` is one merge key, so the sm step has to restate the trigger's own
   // `100%`: baseline was `w-full` with `sm:w-56` layered on top of it.
   select: { width: { default: "100%", [SM]: "14rem" } },
-  tableWrap: { overflow: "hidden", borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)", borderRadius: "0.75rem", backgroundColor: "rgba(255,255,255,0.02)" },
+  tableWrap: { minHeight: 0, overflow: "auto", overscrollBehavior: "contain", borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.02)" },
   table: { minWidth: "1050px", fontSize: text.sizeXs, lineHeight: "1rem" },
   header: { backgroundColor: "rgba(255,255,255,0.035)" },
   // A conditional `backgroundColor` replaces the primitive's whole

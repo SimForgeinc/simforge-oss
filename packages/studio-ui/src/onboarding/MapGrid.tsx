@@ -26,9 +26,9 @@ export type MapGridMap = {
   bytes: number | null;
 };
 
-export function MapGrid({ children, testId }: { children: ReactNode; testId: string }) {
+export function MapGrid({ children, testId, xstyle }: { children: ReactNode; testId: string; xstyle?: stylex.StyleXStyles }) {
   return (
-    <ul {...stylex.props(onboarding.mapList)} data-testid={testId}>
+    <ul {...stylex.props(onboarding.mapList, xstyle)} data-testid={testId}>
       {children}
     </ul>
   );

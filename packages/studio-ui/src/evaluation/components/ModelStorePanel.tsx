@@ -33,9 +33,11 @@ import {
 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { cn } from "../../lib/utils";
+import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
+import { RouteErrorState } from "../../components/state-frames";
 import { Button } from "../../components/ui/button";
 import { styles as s } from "./evaluation-components.stylex";
+import { styles } from "./ModelStorePanel.stylex";
 import { Input } from "../../components/ui/input";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
 import type {
@@ -267,7 +269,7 @@ function QuantRow({
   );
 }
 
-export function ModelStorePanel({ className }: { className?: string }) {
+export function ModelStorePanel({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
   const [view, setView] = useState<ModelStoreView | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -337,12 +339,9 @@ export function ModelStorePanel({ className }: { className?: string }) {
 
   if (!view) {
     return (
-      <div className={cn(stylex.props(s.section4).className, className)}>
-        {error ? <RefusalNotice title="Model store" reasons={[error]} /> : (
-          <p {...stylex.props(s.inlineGap2, s.textSm, s.textMuted)}>
-            <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
-            Reading the model store…
-          </p>
+      <div {...stylex.props(s.section4, xstyle)}>
+        {error ? <RouteErrorState title="Could not read the model store" description={error} onRetry={() => void reload()} /> : (
+          <CloudLoadingSurface scope="screen" title="Reading the model store" />
         )}
       </div>
     );
@@ -351,7 +350,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
   const snapshot = toRuntimeSnapshot(view);
 
   return (
-    <div className={cn(stylex.props(s.section6).className, className)} data-testid="model-store-panel">
+    <div {...stylex.props(styles.frame, xstyle)} data-testid="model-store-panel">
       {error ? <RefusalNotice title="Model store" reasons={[error]} /> : null}
       {(view.reviewGates ?? []).length > 0 ? (
         <RefusalNotice
@@ -383,7 +382,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
         />
       ) : null}
 
-      <div {...stylex.props(s.flexEndGap3, s.borderP4)}>
+      <div {...stylex.props(s.flexEndGap3, s.borderP4, styles.chrome)}>
         <div {...stylex.props(s.minW64, s.flex1, s.stack15)}>
           <label
             htmlFor="hf-token"
@@ -414,6 +413,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
         </div>
       </div>
 
+      <div {...stylex.props(styles.inventory)} aria-label="Model inventory">
       {MODEL_FAMILIES.map((family) => {
         const entry = view.catalog[family] ?? MODEL_CATALOG[family];
         return (
@@ -484,8 +484,9 @@ export function ModelStorePanel({ className }: { className?: string }) {
           </Card>
         );
       })}
+      </div>
 
-      <div {...stylex.props(s.flexCenterGap3, s.borderTop, s.pt4)}>
+      <div {...stylex.props(s.flexCenterGap3, s.borderTop, s.pt4, styles.chrome)}>
         <Button
           type="button"
           variant="outline"
