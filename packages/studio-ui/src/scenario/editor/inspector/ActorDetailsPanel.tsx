@@ -16,6 +16,7 @@ import {
   loadCarlaCompatibility,
   type CarlaCompatibilityTable,
 } from "../../../lib/scenario/carla-compatibility";
+import { registerCarlaObjects, type CarlaObjectDto } from "../../../lib/scenario/carla-objects";
 import { getEntry, type CatalogId } from "@simforge-oss/asset-catalog";
 import type {
   ActorRecord,
@@ -43,6 +44,8 @@ import {
 } from "../regions/DynamicActorCatalogIcon";
 import { EditorDetailsPanel } from "./EditorDetailsPanel";
 import { ActorSensorsSection } from "./ActorSensorsSection";
+import { SelectMenuField } from "../../../components/ui/select-menu";
+import { Readout } from "../regions/Readout";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorDetailsPanel.stylex";
 
@@ -96,16 +99,26 @@ export function ActorDetailsPanel({
   // never blocks the inspector.
   const [carlaTable, setCarlaTable] = useState<CarlaCompatibilityTable | null>(null);
   const [carlaLoadFailed, setCarlaLoadFailed] = useState(false);
+  const [carlaObjects, setCarlaObjects] = useState<readonly CarlaObjectDto[]>([]);
   useEffect(() => {
     let active = true;
     void loadCarlaCompatibility()
       .then((table) => { if (active) setCarlaTable(table); })
       .catch(() => { if (active) setCarlaLoadFailed(true); });
+    void registerCarlaObjects()
+      .then((objects) => { if (active) setCarlaObjects(objects); })
+      .catch(() => { /* compatibility status below remains useful when catalog is unavailable */ });
     return () => { active = false; };
   }, []);
   const carlaCompatibility = carlaTable
     ? carlaCompatibilityFor(actor.catalogId, carlaTable)
     : null;
+  const carlaCandidates = carlaObjects.filter((object) => {
+    if (actor.kind === "vehicle") return object.class === "vehicle";
+    if (actor.kind === "pedestrian") return object.class === "pedestrian";
+    return object.actorClass === "static_object";
+  });
+  const selectedCarlaObject = carlaObjects.find((object) => object.catalogId === actor.catalogId);
 
   return (
     <EditorDetailsPanel
@@ -193,6 +206,31 @@ export function ActorDetailsPanel({
             )}
           </div>
         )}
+        <section
+          aria-labelledby={`actor-carla-heading-${actor.id}`}
+          {...stylex.props(styles.stackedXs)}
+        >
+          <span id={`actor-carla-heading-${actor.id}`} {...stylex.props(styles.caps)}>CARLA object</span>
+          {selectedCarlaObject ? (
+            <dl {...stylex.props(styles.stackedXs)}>
+              <Readout label="Blueprint" value={selectedCarlaObject.blueprintId} />
+              <Readout label="Dimensions" value={`${selectedCarlaObject.dims.l} × ${selectedCarlaObject.dims.w} × ${selectedCarlaObject.dims.h} m`} />
+              <Readout label="Mesh" value={entry.model?.kind === "glb" ? "GLB shipped" : "Proxy — export required"} />
+            </dl>
+          ) : null}
+          {carlaCandidates.length > 0 ? (
+            <SelectMenuField
+              label="Choose CARLA object"
+              value={selectedCarlaObject?.catalogId ?? ""}
+              options={carlaCandidates.map((object) => ({ value: object.catalogId, label: `${object.label} · ${object.blueprintId}` }))}
+              onChange={(catalogId) => controller?.updateActorAppearance(actor.id, { catalogId: catalogId as CatalogId })}
+            />
+          ) : (
+            <p {...stylex.props(styles.textLeading3TextWhite35, styles.stackedXs)}>
+              CARLA objects are unavailable.
+            </p>
+          )}
+        </section>
 
         {actor.kind === "prop" ? (
           <label {...stylex.props(styles.block2)} htmlFor={rotationId}>
