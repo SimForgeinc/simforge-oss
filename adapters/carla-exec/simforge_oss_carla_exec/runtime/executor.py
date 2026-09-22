@@ -1505,6 +1505,15 @@ def execute_lease(
                 check_abort("configure_sensors")
             stability = backend.prepare_scenario(plan.frames[0], abort=lambda: backend_fence("prepare_scenario"))
             check_abort("prepare_scenario")
+            # Fail closed before t=0 on an actor that is displaced from its
+            # placement, hanging above the ground or buried in it. Per-tick
+            # readback/airborne/motion gates run inside backend.tick().
+            _optional_backend_call(
+                backend,
+                "validate_placement",
+                abort=lambda: backend_fence("validate_placement"),
+            )
+            check_abort("validate_placement")
             emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": len(plan.frames), "executionMode": lease.render_spec.execution_mode})
             for frame in plan.frames:
                 check_abort("execute", frame.index, len(plan.frames))

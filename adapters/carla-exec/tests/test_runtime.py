@@ -3279,11 +3279,17 @@ class _PlacementWorld:
 
 
 class _RaycastWorld(_PlacementWorld):
-    def ground_projection(self, location, search_distance):
-        self.probes.append((location.x, location.y, location.z, search_distance))
-        if self.ground_z is None:
-            return None
-        return type("Hit", (), {"location": type("L", (), {"z": self.ground_z})()})()
+    """Vertical rays return every labelled surface they cross, like CARLA's cast_ray."""
+    def __init__(self, hits=(), **kwargs):
+        super().__init__(**kwargs)
+        self.hits = list(hits)
+    def cast_ray(self, start, end):
+        self.probes.append((start.x, start.y, start.z, end.z))
+        return [
+            type("Hit", (), {"label": label, "location": type("L", (), {"z": z})()})()
+            for label, z in self.hits
+            if end.z <= z <= start.z
+        ]
 
 
 class _WaypointWorld(_PlacementWorld):
@@ -3314,19 +3320,34 @@ _PLACEMENT_CATALOG = {"vehicle.sedan": {"blueprintId": "vehicle.lincoln.mkz"}}
 
 
 def test_spawn_projects_each_actor_to_the_rendered_ground_surface():
-    backend = _placement_backend(_RaycastWorld(ground_z=58.4))
+    # The first surfaces under the probe are an unlabelled cook volume and a
+    # tree canopy -- exactly what world.ground_projection used to return. Only
+    # the ground-labelled road surface counts.
+    backend = _placement_backend(_RaycastWorld(hits=[("NONE", 62.9), ("Vegetation", 62.5), ("Roads", 61.7)]))
     frame = PlanFrame(0, 0, {"ego": ActorFrame("spawn", 143.269, -338.977, 61.796, -5.782, 0)}, {})
     backend.spawn({"ego": _vehicle_binding("ego")}, frame, _PLACEMENT_CATALOG)
     spawned = backend.world.transforms[0]
-    assert spawned.location.z == pytest.approx(58.4 + 0.25)
+    assert spawned.location.z == pytest.approx(61.7 + 0.25)
     assert spawned.location.y == pytest.approx(338.977)
-    # The probe starts above the authored elevation, in the CARLA frame.
-    assert backend.world.probes[0][2] == pytest.approx(61.796 + 2.0)
+    # The ray is searched in a bounded window around the authored elevation.
+    start_z, end_z = backend.world.probes[0][2], backend.world.probes[0][3]
+    assert start_z == pytest.approx(61.796 + 1.5) and end_z == pytest.approx(61.796 - 4.0)
     report = backend.spawn_placement_report()
     assert report["actors"]["ego"]["outcome"] == "placed"
-    assert report["actors"]["ego"]["groundSource"] == "ground-projection"
+    assert report["actors"]["ego"]["groundSource"] == "ground-raycast"
+    assert report["actors"]["ego"]["motion"] == "native-physics"
     assert report["droppedActorIds"] == [] and report["nudgedActorIds"] == []
     assert backend.spawn_planar_targets["ego"] == (pytest.approx(143.269), pytest.approx(-338.977))
+
+
+def test_ground_raycast_uses_the_top_walkable_surface_not_the_driving_lane():
+    # A sidewalk slab sits 0.15 m above the road mesh under it; the top
+    # walkable surface is the one an actor stands on.
+    backend = _placement_backend(_RaycastWorld(hits=[("Sidewalks", 2.152), ("Roads", 2.0)]))
+    assert backend._ground_elevation(1.0, 2.0, 2.0) == (pytest.approx(2.152), "ground-raycast")
+    # An overpass deck above the window is not the ground.
+    high = _placement_backend(_RaycastWorld(hits=[("Bridge", 9.0), ("Roads", 2.0)]))
+    assert high._ground_elevation(1.0, 2.0, 2.0) == (pytest.approx(2.0), "ground-raycast")
 
 
 def test_spawn_falls_back_to_waypoint_elevation_and_rejects_far_surfaces():
@@ -3530,39 +3551,23 @@ def test_prepare_scenario_resets_a_nudged_actor_to_its_placed_position():
     assert backend.actors["ego"].transform.location.z == pytest.approx(7)
 
 
-def test_apply_drives_walker_natively_and_never_teleports():
+def test_apply_refuses_walker_pursuit_control_for_an_unregistered_walker():
+    # WalkerControl pursuit moved CARLA 0.10 walkers at ~5% of the commanded
+    # speed; walkers are replayed kinematically (test_pose_gates.py) and a
+    # walker that bypassed spawn registration fails instead of standing still.
     Carla = _placement_carla()
     class Walker:
         type_id = "walker.pedestrian.0001"
-        def __init__(self):
-            self.controls, self.teleports = [], 0
-            self.transform = Carla.Transform(Carla.Location(), Carla.Rotation())
-        def get_transform(self): return self.transform
+        def get_transform(self): return Carla.Transform(Carla.Location(), Carla.Rotation())
         def get_velocity(self): return Carla.Vector3D()
-        def apply_control(self, control): self.controls.append(control)
-        def set_transform(self, _value): self.teleports += 1
-    walker = Walker()
     backend = object.__new__(CarlaBackend)
     backend.carla = Carla
     backend.execution_mode = "native-physics"
     backend.fixed_timestep_s = 0.02
-    backend.actors = {"ped": walker}
+    backend.actors = {"ped": Walker()}
     backend.signals = {}
-    backend.apply(PlanFrame(0, 0, {"ped": ActorFrame("active", 2.0, 0.0, 0.0, 0.0, 1.4)}, {}))
-    assert walker.teleports == 0
-    control = walker.controls[-1]
-    # Along-track catch-up: 2.0 m error * 0.45 = +0.9 m/s over the authored
-    # speed, always clamped to at most +1.0 m/s.
-    assert control.speed == pytest.approx(1.4 + 0.9)
-    assert control.direction.x == pytest.approx(1.0)
-    assert control.direction.y == pytest.approx(0.0)
-    assert control.direction.z == 0.0
-    assert control.jump is False
-
-    # A stationary walker within tolerance holds still natively.
-    backend.apply(PlanFrame(1, 0.02, {"ped": ActorFrame("active", 0.0, 0.0, 0.0, 0.0, 0.0)}, {}))
-    assert walker.controls[-1].speed == 0.0
-    assert walker.teleports == 0
+    with pytest.raises(RuntimeError, match="not registered for kinematic replay"):
+        backend.apply(PlanFrame(0, 0, {"ped": ActorFrame("active", 2.0, 0.0, 0.0, 0.0, 1.4)}, {}))
 
 
 def test_apply_skips_actors_dropped_at_spawn():

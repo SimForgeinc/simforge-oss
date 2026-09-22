@@ -150,6 +150,14 @@ actors so CARLA cannot silently rewrite semantics. Collision sensors still
 record overlaps, but CARLA response does not alter the next authoritative pose.
 This is a renderer parity mode, not a CARLA-physics validation mode.
 
+In the `native-physics` execution mode, vehicles are the only actors CARLA
+physics moves. Walkers and props are always replayed kinematically with
+physics off, grounded on the cooked mesh by a label-filtered ray, and verified
+by the pose gates (see `adapters/carla-exec/README.md`). CARLA 0.10 props ignore
+post-spawn transforms and never simulate physics, and `WalkerControl` reaches
+only about 5% of the commanded walker speed. Left to physics, props floated at
+their spawn lift and pedestrians stood still.
+
 For a later control-input mode, apply throttle/brake/steer or WalkerControl and
 let CARLA physics own motion. That mode needs a different capability label and
 looser comparator profile. Never show its result as trajectory replay.

@@ -29,6 +29,7 @@ import type { DatasetCloudHome } from "./rail/dataset-home";
 export type { DatasetCloudHome } from "./rail/dataset-home";
 import { ScenarioCoverageMap } from "./coverage/ScenarioCoverageMap";
 import { useScenarioSession } from "./scene/useScenarioSession";
+import { ScenarioSumoTraffic } from "./scene/ScenarioSumoTraffic";
 import { ScenarioSessionProvider } from "./scene/ScenarioSessionContext";
 import {
   type ScenarioWorldState,
@@ -872,6 +873,8 @@ export function ScenarioDatasetsClient({
             sharedPlayback={scenarioSession.playback}
             onSessionDocumentChange={scenarioSession.updateDocument}
           />
+          {/* Browser SUMO for the edited scenario: status, signal heads and revision evidence. */}
+          <ScenarioSumoTraffic session={scenarioSession} />
         </div>
       ) : null}
 

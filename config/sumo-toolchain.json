@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "note": "Pinned Eclipse SUMO used to build map SUMO derivatives. Must match the browser/CLI WebAssembly runtime (SUMO_RUNTIME_VERSION 1.27.1-7717f237) and SUMO_VERSION in packages/map-pipeline/scripts/sumo-network.mjs. Install with `pnpm maps:sumo:toolchain`.",
+  "sumo": "1.27.1",
+  "runtimeVersion": "1.27.1-7717f237",
+  "license": "EPL-2.0 OR GPL-2.0-or-later",
+  "source": "https://pypi.org/project/eclipse-sumo/1.27.1/",
+  "requirements": {
+    "eclipse-sumo==1.27.1": [
+      "sha256:2255536237d81383efe5e53862b030e2dee6e18025210ff6ba4819f11edbb0d4",
+      "sha256:e557879511b66511943f0fa1b0f95d2c135d26e2b681665546deb8001133edd5",
+      "sha256:97abddcb7395c25538f22a272ef67ca77c8a625d3eec6010eed5b62dfac011f3",
+      "sha256:4b56e8bb331bee39d5a102feda7b3441fdfca4704a9ba4f7ed2cdf99ac19d915",
+      "sha256:fd96ace26bccb78312c8c04464c0894a5432db8e2c072388b73e8ae3a6a43586",
+      "sha256:80f68e916d10696a677a60db81f13d5340efae9451eaa8f3088e67e89870d6aa"
+    ],
+    "sumo-data==1.27.1": [
+      "sha256:2e547fd20558e07d6004d576eeaf85f4aa061efb4a9bab7675233726364fba61",
+      "sha256:cc3f71bbeac8dc45a67ef90b023fa8d7ee4bd25c7f62f8006c5c036d545a9527",
+      "sha256:fa53a3cd34c2f9fd7137d055451b19c44b8972b65dcc15328d2f469647d6d38d"
+    ]
+  }
+}

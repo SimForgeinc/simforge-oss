@@ -3,6 +3,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioEditorSurface.stylex";
 import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
+import { sumoUnavailableReason } from "../../lib/scenario/ambient/sumoAvailability";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Raycaster, Vector2, Vector3 } from "three";
@@ -968,6 +969,7 @@ export function ScenarioEditorSurface({
               document={editorDocument}
               sumoAvailable={Boolean(map.sumoNetworkSha256)}
               sumoStatus={sharedPlayback?.sumoStatus}
+              sumoUnavailableReason={sumoUnavailableReason(map)}
               parkedCars={{
                 settings: parkedCarsSettings,
                 onChange: parkedCarsOnChange,
@@ -983,6 +985,7 @@ export function ScenarioEditorSurface({
                   sumoStatus={sharedPlayback?.sumoStatus}
                   provenance={sharedPlayback?.bundle?.ambientTraffic ?? null}
                   sumoAvailable={Boolean(map.sumoNetworkSha256)}
+                  sumoUnavailableReason={sumoUnavailableReason(map)}
                 />
               ) : (
                 <div {...stylex.props(styles.divGridXs)}>

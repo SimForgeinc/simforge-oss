@@ -221,6 +221,9 @@ describe("a page that cannot cache (plain HTTP on a LAN or tailnet address)", ()
     const status = await mapAssetCacheStatus();
     expect(status.backend).toBe("browser");
     expect(status.backend === "browser" && status.unavailable).toMatch(/isn't served over HTTPS/);
+    // Nothing that reads as usable space or usage: the panel prints the reason instead.
+    expect(status.backend === "browser" && status.availableBytes).toBeNull();
+    expect(status.backend === "browser" && status.usedBytes).toBeNull();
     expect(warn.mock.calls.filter(([message]) => String(message).includes("Browser caching unavailable"))).toHaveLength(1);
 
     const [loaded] = await viewerLoad(["3d/tiles/tile_0_0.lod0.glb"]);

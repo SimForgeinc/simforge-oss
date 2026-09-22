@@ -74,6 +74,41 @@ substitution in `carlaVehicleFallbacks`; execution fails closed only when the
 claimed catalog has no native blueprint for that actor class. Parent readback
 verifies the resolved actor identity without imposing a model-specific host.
 
+## Actor motion, grounding and pose gates
+
+Vehicles are driven by native CARLA physics (throttle/brake/steer toward the
+authored trajectory). Walkers and props are replayed kinematically from the
+authored plan with physics off, because on CARLA 0.10 neither can be left to
+physics: props never simulate physics and ignore `set_transform` after spawn,
+and `WalkerControl` moves a walker at about 5% of the commanded speed. Walkers
+also receive the authored velocity and a matching `WalkerControl` so their
+animation follows the authored speed.
+
+Every actor is grounded on the cooked mesh: a vertical `cast_ray` around the
+OpenDRIVE lane elevation, keeping only ground-labelled surfaces (roads,
+sidewalks, terrain). The bottom of each actor's measured bounding box is placed
+on that surface, so the pivot (base for props and vehicles, capsule centre for
+walkers) is never guessed. Props spawn directly at that elevation.
+
+Pose gates fail the render instead of shipping it (`SIMFORGE_CARLA_POSE_GATES`,
+`enforce` by default, `report` to record only):
+
+- before t=0, an actor displaced from its placement, or hanging above or buried
+  below the ground;
+- on every tick, a kinematic actor that does not read back its commanded pose;
+- a vehicle airborne for 1 s (outside its own contacts) or below the ground;
+- an actor whose plan moves at least 0.5 m in a 1 s window but covers less than
+  25% of it, for two windows in a row.
+
+The gate report is in the runtime evidence as `poseGates`. To qualify a CARLA
+runtime without sensors (this also works against a `-nullrhi` server), run:
+
+```sh
+simforge-oss-carla-exec --host 127.0.0.1 --port 2000 pose-smoke --map Belmont_Office_Park_Belmont_CA
+```
+
+It exits 1 on a floating, buried, displaced or non-moving actor.
+
 ## Develop and verify
 
 ```sh

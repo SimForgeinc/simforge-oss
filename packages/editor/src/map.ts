@@ -1,3 +1,8 @@
+export interface ScenarioMapSumoStatus {
+  readonly state: 'ready' | 'missing' | 'failed' | 'building' | (string & {});
+  readonly reason: string | null;
+}
+
 /** Immutable map artifact closure consumed by Scenario authoring. */
 export interface ScenarioMapEntry {
   /** Immutable published map-version identity used for editor selection. */
@@ -21,6 +26,12 @@ export interface ScenarioMapEntry {
     readonly lanePolygonsSha256: string;
   };
   readonly sumoNetworkSha256: string | null;
+  /**
+   * Why SUMO traffic is (un)available for this map revision: `ready` with a
+   * network digest, or `missing`/`failed`/`building` with an actionable reason.
+   * Absent from older servers.
+   */
+  readonly sumoStatus?: ScenarioMapSumoStatus | null;
   /** Compatibility aliases retained for existing editor consumers. */
   readonly manifestUrl: string;
   readonly topologyUrl: string;

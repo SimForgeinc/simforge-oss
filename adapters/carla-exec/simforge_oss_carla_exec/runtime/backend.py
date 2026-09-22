@@ -17,6 +17,17 @@ from typing import Any, Callable, Iterable, Mapping, Protocol
 
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
 from .contract import ASSET_CATALOG_SCHEMA, CAMERA_MODALITIES, ContractError, Environment, RenderSpec
+from .pose_gates import (
+    GROUND_SEARCH_DOWN_M,
+    GROUND_SEARCH_UP_M,
+    PROP,
+    VEHICLE,
+    WALKER,
+    PoseGate,
+    gate_mode,
+    motion_class,
+    select_ground_z,
+)
 # historical name retained for stored-data compat
 
 #: Period of one deterministic flash cycle, 50% duty, phase-locked to plan time.
@@ -166,12 +177,15 @@ SPAWN_NUDGE_OFFSETS_M: tuple[float, ...] = (0.0, 1.5, -1.5, 3.0, -3.0, 4.5, -4.5
 #: Clearance kept between spawn footprints so settled bodies never touch.
 SPAWN_FOOTPRINT_CLEARANCE_M = 0.15
 
-#: Ground probes start this far above the authored elevation and search this
-#: far down. A hit farther than the acceptance delta from the authored z is
-#: treated as the wrong surface (overpass, tunnel roof) and ignored.
-SPAWN_GROUND_PROBE_UP_M = 2.0
-SPAWN_GROUND_PROBE_DEPTH_M = 12.0
+#: An OpenDRIVE lane elevation farther than this from the authored z is the
+#: wrong surface (overpass, tunnel roof) and is not used as the reference.
 SPAWN_GROUND_MAX_DELTA_M = 12.0
+
+#: Ground cache resolution for per-tick kinematic grounding (metres).
+GROUND_CACHE_CELL_M = 0.25
+
+#: Vehicles are sampled against the ground this often (ticks) by the pose gate.
+VEHICLE_GROUND_CHECK_EVERY_TICKS = 10
 
 
 def _spawn_footprint_half_extents(entry: object, kind: str) -> tuple[float, float]:
@@ -892,35 +906,91 @@ class CarlaBackend:
         }
 
     def _ground_elevation(self, x: float, y_carla: float, authored_z: float) -> tuple[float, str]:
-        """Project one spawn to the rendered ground surface (CARLA frame).
+        """Resolve the walkable/drivable surface under one point (CARLA frame).
 
-        Authored elevations come from the source XODR, but the cooked map mesh
-        is the surface CARLA actually simulates against; spawning on the
-        authored z leaves a mis-cooked actor floating (a static actor is frozen
-        mid-air by the settle phase before it finishes falling). Prefer a real
-        mesh raycast, then the OpenDRIVE waypoint elevation, then the authored
-        value when the runtime offers neither API (unit fakes, older builds).
+        The reference elevation is the OpenDRIVE lane the point lies in (any
+        lane type, so a sidewalk is not snapped to the nearest driving lane),
+        falling back to the nearest road and then to the authored z. The
+        surface itself is then read from the cooked mesh with a vertical ray,
+        keeping only ground-labelled hits near the reference.
+
+        `world.ground_projection` is deliberately not used: it returns the
+        first geometry under the probe whatever it is. On the cooked
+        RoadRunner maps that is an unlabelled volume ~1.6 m above the road, so
+        it returned nothing and every spawn fell back to the driving-lane
+        centre (0.15 m below any sidewalk); elsewhere it returned the probe
+        start inside a canopy/sign volume and a pedestrian was placed 2.0 m up.
         """
-        project = getattr(self.world, "ground_projection", None)
-        if callable(project):
-            probe = self.carla.Location(x=x, y=y_carla, z=authored_z + SPAWN_GROUND_PROBE_UP_M)
-            hit = project(probe, SPAWN_GROUND_PROBE_DEPTH_M)
-            if hit is not None:
-                ground = float(hit.location.z)
-                if abs(ground - authored_z) <= SPAWN_GROUND_MAX_DELTA_M:
-                    return ground, "ground-projection"
-        map_getter = getattr(self.world, "get_map", None)
-        runtime_map = map_getter() if callable(map_getter) else None
+        cache = getattr(self, "_ground_cache", None)
+        if cache is None:
+            cache = self._ground_cache = {}
+        key = (round(x / GROUND_CACHE_CELL_M), round(y_carla / GROUND_CACHE_CELL_M), round(authored_z * 2.0))
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        reference, source = authored_z, "authored-z"
+        # world.get_map() re-downloads the whole OpenDRIVE on every call; the
+        # map is immutable for a loaded world, so fetch it once.
+        cached_map = getattr(self, "_ground_map", None)
+        if cached_map is None or cached_map[0] is not self.world:
+            map_getter = getattr(self.world, "get_map", None)
+            cached_map = self._ground_map = (self.world, map_getter() if callable(map_getter) else None)
+        runtime_map = cached_map[1]
         waypoint_getter = getattr(runtime_map, "get_waypoint", None)
         if callable(waypoint_getter):
-            waypoint = waypoint_getter(
-                self.carla.Location(x=x, y=y_carla, z=authored_z), project_to_road=True,
-            )
+            location = self.carla.Location(x=x, y=y_carla, z=authored_z)
+            lane_type = getattr(getattr(self.carla, "LaneType", None), "Any", None)
+            waypoint = None
+            if lane_type is not None:
+                waypoint = waypoint_getter(location, project_to_road=False, lane_type=lane_type)
+            if waypoint is None:
+                waypoint = waypoint_getter(location, project_to_road=True)
             if waypoint is not None:
-                ground = float(waypoint.transform.location.z)
-                if abs(ground - authored_z) <= SPAWN_GROUND_MAX_DELTA_M:
-                    return ground, "road-waypoint"
-        return authored_z, "authored-z"
+                lane_z = float(waypoint.transform.location.z)
+                if abs(lane_z - authored_z) <= SPAWN_GROUND_MAX_DELTA_M:
+                    reference, source = lane_z, "road-waypoint"
+        cast_ray = getattr(self.world, "cast_ray", None)
+        if callable(cast_ray):
+            hits = cast_ray(
+                self.carla.Location(x=x, y=y_carla, z=reference + GROUND_SEARCH_UP_M),
+                self.carla.Location(x=x, y=y_carla, z=reference - GROUND_SEARCH_DOWN_M),
+            ) or ()
+            ground = select_ground_z(
+                ((str(getattr(hit, "label", "")), float(hit.location.z)) for hit in hits),
+                reference,
+            )
+            if ground is not None:
+                cache[key] = (ground, "ground-raycast")
+                return cache[key]
+        cache[key] = (reference, source)
+        return cache[key]
+
+    def _bottom_offset(self, actor: Any, klass: str, entry: Mapping[str, Any] | None = None) -> float:
+        """Signed offset from the actor origin to the bottom of its bounding box.
+
+        CARLA vehicle and prop origins sit at the base (offset ~0); a walker's
+        origin is its capsule centre (~-0.93 m). Measured on the spawned actor,
+        so a per-blueprint pivot is never guessed.
+        """
+        box = getattr(actor, "bounding_box", None)
+        location = getattr(box, "location", None)
+        extent = getattr(box, "extent", None)
+        if location is not None and extent is not None:
+            try:
+                return float(location.z) - float(extent.z)
+            except (TypeError, ValueError):
+                pass
+        if klass == WALKER:
+            dims = entry.get("dims") if isinstance(entry, Mapping) else None
+            height = dims.get("h") if isinstance(dims, Mapping) else None
+            return -(float(height) / 2.0 if isinstance(height, (int, float)) else 0.9)
+        return 0.0
+
+    def _hold_kinematic(self, actor_id: str, actor: Any) -> None:
+        setter = getattr(actor, "set_simulate_physics", None)
+        if not callable(setter):
+            raise RuntimeError(f"CARLA actor {actor_id} cannot be held kinematically for replay")
+        setter(False)
 
     def spawnable_blueprints(
         self,
@@ -974,6 +1044,13 @@ class CarlaBackend:
         self.frozen_static_actor_ids = set()
         self.dropped_actor_ids: set[str] = set()
         self.spawn_planar_targets: dict[str, tuple[float, float]] = {}
+        # Walkers and props are replayed kinematically from the authored plan
+        # (physics off, grounded every tick); vehicles stay native-physics.
+        self.kinematic_actor_ids: set[str] = set()
+        self.actor_classes: dict[str, str] = {}
+        self.bottom_offsets: dict[str, float] = {}
+        self.kinematic_commands: dict[str, tuple[float, float, float]] = {}
+        self.pose_gate = PoseGate(float(getattr(self, "fixed_timestep_s", 0.02)), mode=gate_mode())
         placements: dict[str, dict[str, Any]] = {}
         placed_footprints: list[tuple[float, float, float, float, float, float]] = []
         # Actors the executor decided to drop before any CARLA body exists
@@ -1013,7 +1090,14 @@ class CarlaBackend:
                 float(entry_height) / 2.0
                 if isinstance(entry_height, (int, float)) else 0.0
             )
-            spawn_lift = max(0.25, half_height + 0.15)
+            spawn_class = motion_class(blueprint_id)
+            # Props cannot be moved after spawn in CARLA 0.10 (set_transform
+            # and set_location are ignored and they never simulate physics),
+            # so a prop is spawned directly on the ground: its origin is the
+            # base of its mesh. Vehicles and walkers keep a lift so their
+            # collision shapes clear the surface; physics settles vehicles and
+            # walkers are grounded kinematically right after spawn.
+            spawn_lift = 0.0 if spawn_class == PROP else max(0.25, half_height + 0.15)
             half_length, half_width = _spawn_footprint_half_extents(entry, binding.kind)
             heading_rad = radians(state.heading_deg)
             cos_h, sin_h = cos(heading_rad), sin(heading_rad)
@@ -1081,6 +1165,53 @@ class CarlaBackend:
                     if blueprint_id != requested_blueprint_id else {}
                 ),
             }
+            klass = motion_class(observed_type_id)
+            bottom_offset = self._bottom_offset(actor, klass, entry if isinstance(entry, Mapping) else None)
+            self.actor_classes[actor_id] = klass
+            self.bottom_offsets[actor_id] = bottom_offset
+            if klass != VEHICLE:
+                # CARLA props never simulate physics and CARLA 0.10 walkers
+                # barely respond to WalkerControl, so neither may be left to
+                # physics: a prop kept the spawn lift for the whole render and a
+                # walker stood still while its plan walked away. Hold the body
+                # kinematically with the bottom of its bounding box exactly on
+                # the resolved ground surface.
+                placed = placement["placed"]
+                grounded_z = float(placement["groundZ"]) - bottom_offset
+                try:
+                    self._hold_kinematic(actor_id, actor)
+                    if klass == PROP:
+                        if abs(float(placed["z"]) - grounded_z) > 0.01:
+                            # Pivot is not at the mesh base: respawn once at the
+                            # corrected elevation, since a prop cannot be moved.
+                            actor.destroy()
+                            actor = self.world.try_spawn_actor(blueprint, self.carla.Transform(
+                                self.carla.Location(x=float(placed["x"]), y=-float(placed["y"]), z=grounded_z),
+                                self.carla.Rotation(yaw=-state.heading_deg),
+                            ))
+                            if actor is None:
+                                raise RuntimeError(
+                                    f"CARLA refused to respawn prop {actor_id} at its grounded elevation"
+                                )
+                            self._hold_kinematic(actor_id, actor)
+                    else:
+                        actor.set_transform(self.carla.Transform(
+                            self.carla.Location(x=float(placed["x"]), y=-float(placed["y"]), z=grounded_z),
+                            self.carla.Rotation(yaw=-state.heading_deg),
+                        ))
+                except BaseException:
+                    if actor is not None:
+                        actor.destroy()
+                    raise
+                placed["z"] = grounded_z
+                placement["spawnLiftM"] = 0.0
+                placement["bottomOffsetM"] = bottom_offset
+                placement["motion"] = "kinematic-replay"
+                self.kinematic_actor_ids.add(actor_id)
+                self.kinematic_commands[actor_id] = (float(placed["x"]), float(placed["y"]), grounded_z)
+            else:
+                placement["motion"] = "native-physics"
+            self.pose_gate.register(actor_id, klass)
             self.actors[actor_id] = actor
             placed_footprints.append(footprint)
             placed = placement["placed"]
@@ -1093,6 +1224,8 @@ class CarlaBackend:
         if actors and not self.actors:
             raise RuntimeError("spawn placement dropped every scenario actor")
         self.static_actor_ids -= self.dropped_actor_ids
+        # A kinematic static body is already held; it has nothing to settle.
+        self.frozen_static_actor_ids |= self.static_actor_ids & self.kinematic_actor_ids
         self.spawn_placement = {
             "schema": "simforge.spawn-placement/v1",
             "actors": placements,
@@ -1435,9 +1568,9 @@ class CarlaBackend:
             check()
             state = first_frame.actors[actor_id]
             target_x, target_y = planar_targets.get(actor_id, (state.x, state.y))
-            settled = actor.get_transform()
+            settled_z = self._settled_z(actor_id, actor)
             actor.set_transform(self.carla.Transform(
-                self.carla.Location(x=target_x, y=-target_y, z=settled.location.z),
+                self.carla.Location(x=target_x, y=-target_y, z=settled_z),
                 self.carla.Rotation(yaw=-state.heading_deg),
             ))
             actor.set_target_velocity(zero)
@@ -1453,9 +1586,9 @@ class CarlaBackend:
             check()
             state = first_frame.actors[actor_id]
             target_x, target_y = planar_targets.get(actor_id, (state.x, state.y))
-            settled = actor.get_transform()
+            settled_z = self._settled_z(actor_id, actor)
             initial = self.carla.Transform(
-                self.carla.Location(x=target_x, y=-target_y, z=settled.location.z),
+                self.carla.Location(x=target_x, y=-target_y, z=settled_z),
                 self.carla.Rotation(yaw=-state.heading_deg),
             )
             actor.set_transform(initial)
@@ -1497,6 +1630,19 @@ class CarlaBackend:
             },
             "phases": reports,
         }
+
+    def _settled_z(self, actor_id: str, actor: Any) -> float:
+        """Settled elevation for the pre-t0 reset.
+
+        A kinematic body is exactly where it was commanded. Reading its
+        transform back instead is wrong: the client snapshot can predate the
+        grounding teleport made at spawn, and writing that stale z back
+        re-created the floating prop the grounding had just removed.
+        """
+        command = getattr(self, "kinematic_commands", {}).get(actor_id)
+        if command is not None:
+            return command[2]
+        return float(actor.get_transform().location.z)
 
     def _wait_for_native_stability(self, phase: str, *, minimum_ticks: int, maximum_ticks: int, abort: Callable[[], None] | None = None) -> Mapping[str, Any]:
         """Fail closed unless every actor is physically stable for five ticks."""
@@ -2021,6 +2167,7 @@ class CarlaBackend:
         self.appearance_verification = getattr(self, "appearance_verification", {})
         self.last_controls = getattr(self, "last_controls", {})
         self.current_plan_frame = (frame.index, frame.t)
+        self.current_frame_actors = frame.actors
         if not set(frame.signals).issubset(self.signals):
             missing = sorted(set(frame.signals) - set(self.signals))
             raise RuntimeError(f"authored OpenDRIVE traffic signal heads were not preflighted: {', '.join(missing)}")
@@ -2057,56 +2204,22 @@ class CarlaBackend:
                 actor.set_transform(target)
                 actor.set_target_velocity(target.transform_vector(self.carla.Vector3D(x=state.speed_mps, y=0, z=0)))
                 continue
+            if actor_id in getattr(self, "kinematic_actor_ids", set()):
+                self._apply_kinematic(actor_id, actor, state)
+                continue
             if actor_id in getattr(self, "static_actor_ids", set()):
                 if abs(state.speed_mps) > 1e-6:
                     raise RuntimeError(f"authored static actor {actor_id} has non-zero speed")
                 continue
             velocity = actor.get_velocity()
             if actor.type_id.startswith("walker."):
-                if state.speed_mps < -1e-6:
-                    raise RuntimeError(f"native physics does not support reverse pedestrian motion for {actor_id}")
-                if state.downed:
-                    raise RuntimeError(
-                        f"native physics cannot execute a downed pedestrian {actor_id} "
-                        "without forbidden post-spawn teleport repair"
-                    )
-                # Walkers are driven exclusively through CARLA's native
-                # WalkerControl so vehicle-walker contact resolves with the
-                # real momenta of both bodies. The previous per-tick
-                # set_transform kinematically re-embedded the walker into any
-                # colliding vehicle, which the physics engine resolved as an
-                # unbounded depenetration impulse — the "pedestrian launched
-                # into the sky" failure.
-                forward = self._forward_vector(target)
-                current_transform = actor.get_transform()
-                delta_x = state.x - current_transform.location.x
-                delta_y = -state.y - current_transform.location.y
-                along_error = delta_x * forward[0] + delta_y * forward[1]
-                # Pure pursuit: aim at the plan point plus a short lookahead
-                # along the authored heading, closing along-track error with a
-                # bounded native speed command instead of imposed positions.
-                lookahead = max(0.5, state.speed_mps * 0.5)
-                aim_x = delta_x + forward[0] * lookahead
-                aim_y = delta_y + forward[1] * lookahead
-                aim_norm = sqrt(aim_x ** 2 + aim_y ** 2)
-                if aim_norm > 1e-6:
-                    direction = self.carla.Vector3D(x=aim_x / aim_norm, y=aim_y / aim_norm, z=0.0)
-                else:
-                    direction = self.carla.Vector3D(x=forward[0], y=forward[1], z=0.0)
-                command_speed = max(0.0, state.speed_mps + max(-1.0, min(1.0, along_error * 0.45)))
-                if state.speed_mps <= 1e-6 and sqrt(delta_x ** 2 + delta_y ** 2) <= 0.25:
-                    # A stationary walker within tolerance holds still instead
-                    # of oscillating around the authored point.
-                    command_speed = 0.0
-                actor.apply_control(
-                    self.carla.WalkerControl(direction=direction, speed=command_speed, jump=False)
+                # Walkers are never driven through WalkerControl pursuit: on
+                # CARLA 0.10 a walker moves at ~5% of the commanded speed
+                # (1.4 m/s -> 0.068 m/s, independent of timestep), which left
+                # authored pedestrians standing still for the whole render.
+                raise RuntimeError(
+                    f"walker {actor_id} was not registered for kinematic replay at spawn"
                 )
-                self.last_controls[actor_id] = {
-                    "targetSpeedMps": state.speed_mps,
-                    "commandSpeedMps": command_speed,
-                    "alongTrackErrorM": along_error,
-                }
-                continue
             if actor.type_id.startswith(("vehicle.", "bike.")):
                 current_transform = actor.get_transform()
                 current_yaw = current_transform.rotation.yaw
@@ -2151,6 +2264,121 @@ class CarlaBackend:
             if abs(state.speed_mps) > 1e-6:
                 raise RuntimeError(f"native physics does not support moving actor type {actor.type_id}")
         check()
+
+    def _apply_kinematic(self, actor_id: str, actor: Any, state: Any) -> None:
+        """Replay one authored pose exactly, grounded on the cooked surface.
+
+        The body is held with physics off, so a kinematic walker can never be
+        re-embedded into a vehicle and launched by a depenetration impulse (the
+        reason set_transform replay was once removed for walkers). Walkers also
+        receive the authored velocity and a matching WalkerControl so the
+        animation blueprint is driven by the authored speed rather than a
+        near-zero physics velocity.
+        """
+        if actor_id in getattr(self, "static_actor_ids", set()):
+            if abs(state.speed_mps) > 1e-6:
+                raise RuntimeError(f"authored static actor {actor_id} has non-zero speed")
+            return
+        ground_z, ground_source = self._ground_elevation(state.x, -state.y, state.z)
+        z = ground_z - self.bottom_offsets.get(actor_id, 0.0)
+        transform = self.carla.Transform(
+            self.carla.Location(x=state.x, y=-state.y, z=z),
+            self.carla.Rotation(yaw=-state.heading_deg),
+        )
+        actor.set_transform(transform)
+        self.kinematic_commands[actor_id] = (state.x, state.y, z)
+        control: dict[str, Any] = {
+            "motion": "kinematic-replay",
+            "targetSpeedMps": state.speed_mps,
+            "groundZ": ground_z,
+            "groundSource": ground_source,
+        }
+        if self.actor_classes.get(actor_id) == WALKER:
+            forward = self._forward_vector(transform)
+            speed = abs(state.speed_mps)
+            sign = -1.0 if state.speed_mps < 0 else 1.0
+            setter = getattr(actor, "set_target_velocity", None)
+            if callable(setter):
+                setter(self.carla.Vector3D(
+                    x=forward[0] * speed * sign, y=forward[1] * speed * sign, z=0.0,
+                ))
+            actor.apply_control(self.carla.WalkerControl(
+                direction=self.carla.Vector3D(x=forward[0] * sign, y=forward[1] * sign, z=0.0),
+                speed=speed,
+                jump=False,
+            ))
+            control["animationSpeedMps"] = speed
+        self.last_controls[actor_id] = control
+
+    def validate_placement(self, abort: Callable[[], None] | None = None) -> Mapping[str, Any] | None:
+        """Fail loudly before t=0 on any displaced, airborne or buried actor."""
+        check = abort or (lambda: None)
+        gate = getattr(self, "pose_gate", None)
+        if gate is None:
+            return None
+        placement = getattr(self, "spawn_placement", {}) or {}
+        records = placement.get("actors", {}) if isinstance(placement, Mapping) else {}
+        planar_targets = getattr(self, "spawn_planar_targets", {})
+        for actor_id, actor in self.actors.items():
+            check()
+            transform = actor.get_transform()
+            record = records.get(actor_id, {}) if isinstance(records, Mapping) else {}
+            authored = record.get("authored", {}) if isinstance(record, Mapping) else {}
+            reference_z = float(authored.get("z", transform.location.z)) if isinstance(authored, Mapping) else float(transform.location.z)
+            ground_z, ground_source = self._ground_elevation(
+                float(transform.location.x), float(transform.location.y), reference_z,
+            )
+            gate.check_placement(
+                actor_id,
+                self.actor_classes.get(actor_id, VEHICLE),
+                intended=planar_targets.get(actor_id, (float(transform.location.x), -float(transform.location.y))),
+                actual=(float(transform.location.x), -float(transform.location.y)),
+                bottom_z=float(transform.location.z) + self.bottom_offsets.get(actor_id, 0.0),
+                ground_z=None if ground_source == "authored-z" else ground_z,
+                ground_source=ground_source,
+            )
+        return gate.report()
+
+    def _observe_pose_gates(self, result: Mapping[str, Mapping[str, Any]]) -> None:
+        gate = getattr(self, "pose_gate", None)
+        frame = getattr(self, "current_plan_frame", None)
+        targets = getattr(self, "current_frame_actors", None)
+        if gate is None or frame is None or not targets:
+            return
+        frame_index = int(frame[0])
+        contacted = {
+            actor_id
+            for item in getattr(self, "collision_history", ())
+            for actor_id in item.get("pair", ())
+        }
+        planned: dict[str, tuple[float, float]] = {}
+        actual: dict[str, tuple[float, float]] = {}
+        for actor_id, value in result.items():
+            state = targets.get(actor_id)
+            if state is None or not value.get("present"):
+                continue
+            if self.actor_classes.get(actor_id) == VEHICLE and actor_id in contacted:
+                gate.exempt_motion(actor_id)
+            planned[actor_id] = (state.x, state.y)
+            actual[actor_id] = (float(value["x"]), float(value["y"]))
+            command = self.kinematic_commands.get(actor_id)
+            if actor_id in self.kinematic_actor_ids and command is not None:
+                gate.observe_kinematic_readback(
+                    actor_id, frame_index, command[2], float(value["z"]),
+                    sqrt((float(value["x"]) - command[0]) ** 2 + (float(value["y"]) - command[1]) ** 2),
+                )
+            elif (
+                self.actor_classes.get(actor_id) == VEHICLE
+                and frame_index % VEHICLE_GROUND_CHECK_EVERY_TICKS == 0
+            ):
+                ground_z, ground_source = self._ground_elevation(float(value["x"]), -float(value["y"]), state.z)
+                if ground_source != "authored-z":
+                    gate.observe_vehicle_ground(
+                        actor_id, frame_index, float(value["contactZ"]) - ground_z,
+                        VEHICLE_GROUND_CHECK_EVERY_TICKS * self.fixed_timestep_s,
+                        actor_id in contacted,
+                    )
+        gate.observe_motion(frame_index, planned, actual)
 
     def _destroy_absent_actor(self, actor_id: str) -> None:
         """Execute DeleteEntityAction without teleporting a native actor."""
@@ -2343,6 +2571,10 @@ class CarlaBackend:
                 "x": transform.location.x,
                 "y": -transform.location.y,
                 "z": transform.location.z,
+                # Ground-contact elevation (bounding-box bottom): the quantity
+                # the authored z describes for every actor class, including
+                # walkers whose origin is their capsule centre.
+                "contactZ": transform.location.z + getattr(self, "bottom_offsets", {}).get(actor_id, 0.0),
                 "headingDeg": -transform.rotation.yaw,
                 "speedMps": signed_speed,
                 "speedMagnitudeMps": sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2),
@@ -2357,6 +2589,7 @@ class CarlaBackend:
                 "lifecycle": LIFECYCLE_ABSENT,
                 "appearance": dict(applied_appearance.get(actor_id, {})),
             }
+        self._observe_pose_gates(result)
         return result
 
     def collision_readback(self, frame_index: int, t: float, abort: Callable[[], None] | None = None) -> list[Mapping[str, Any]]:
@@ -2402,7 +2635,15 @@ class CarlaBackend:
             "executionMode": self.execution_mode,
             "physicsAuthority": self.execution_mode == "native-physics",
             "acceptanceEligible": self.execution_mode == "native-physics",
-            "motionApplication": "native-controls" if self.execution_mode == "native-physics" else "diagnostic-teleport-replay",
+            "motionApplication": (
+                ("native-controls+kinematic-replay" if getattr(self, "kinematic_actor_ids", None) else "native-controls")
+                if self.execution_mode == "native-physics" else "diagnostic-teleport-replay"
+            ),
+            "actorMotion": {
+                actor_id: ("kinematic-replay" if actor_id in getattr(self, "kinematic_actor_ids", set()) else "native-physics")
+                for actor_id in sorted(getattr(self, "actor_classes", {}))
+            },
+            "poseGates": getattr(self, "pose_gate", None).report() if getattr(self, "pose_gate", None) is not None else None,
             "carlaClientVersion": str(client_version),
             "carlaServerVersion": str(server_version),
             "runtimeImage": {

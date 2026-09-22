@@ -378,6 +378,7 @@ export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
   const bridge = desktopMapCacheBridge();
   if (bridge) return bridge.status();
   const active = browserCache();
+  const unavailable = active ? null : browserMapCacheUnavailableReason() ?? "Cache Storage is unavailable in this browser.";
   const status = await active?.status();
   const originFree = status?.quotaBytes != null
     ? Math.max(0, status.quotaBytes - (status.originUsageBytes ?? 0))
@@ -389,11 +390,12 @@ export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
     backend: "browser",
     persistent: status?.persistent ?? false,
     usedBytes: status?.originUsageBytes ?? null,
-    availableBytes: originFree === null ? headroom : Math.min(originFree, headroom),
+    // No cache, no room to report: a budget figure here reads as usable space.
+    availableBytes: unavailable ? null : originFree === null ? headroom : Math.min(originFree, headroom),
     mapBytes,
     budgetBytes,
     entryCount: status?.entryCount ?? 0,
-    unavailable: active ? null : browserMapCacheUnavailableReason() ?? "Cache Storage is unavailable in this browser.",
+    unavailable,
   };
 }
 
