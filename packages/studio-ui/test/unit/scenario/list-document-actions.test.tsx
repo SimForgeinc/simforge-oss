@@ -205,20 +205,16 @@ describe("useScenarioDocumentActions", () => {
     });
   });
 
-  describe("transferDocument", () => {
-    it("splices the cross-map variation without refetching the list", async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        ...FULL_DOCUMENT,
-        id: "uscn_transfer",
-        contentSha256: "a".repeat(64),
-        mapVersionId: "usmap_2",
-      }, 201));
+  describe("recordTransferredDocument", () => {
+    it("splices a variation the transfer overlay created, with its lineage, without a request", () => {
       const { result } = setup();
-      await act(async () => {
-        await result.current.transferDocument(summary(), {
-          targetMapVersionId: "usmap_2",
-          siteId: "site_2",
-        });
+      act(() => {
+        result.current.recordTransferredDocument(summary(), {
+          ...FULL_DOCUMENT,
+          id: "uscn_transfer",
+          contentSha256: "a".repeat(64),
+          mapVersionId: "usmap_2",
+        } as never);
       });
       expect(spliced).toHaveLength(1);
       expect(spliced[0]).toMatchObject({
@@ -227,8 +223,7 @@ describe("useScenarioDocumentActions", () => {
         derivationKind: "cross_map_variation",
         derivedFromDocumentId: "uscn_1",
       });
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/documents/uscn_1/transfer");
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 
