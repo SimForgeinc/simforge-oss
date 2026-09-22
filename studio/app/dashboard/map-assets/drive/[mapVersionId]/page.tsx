@@ -9,7 +9,9 @@ import { FreeDrive } from "./FreeDrive";
  *
  * There is no document here — that is the point. The maps page hands this
  * route a map version and the browser builds a throwaway scenario holding a
- * single drivable car, so driving a map costs nothing and saves nothing.
+ * single drivable car, so driving a map costs nothing and saves nothing. The
+ * descriptor resolved here is everything the drive needs to lease the shared
+ * world and place its car; the browser fetches no catalog of its own.
  */
 export default async function FreeDrivePage({
   params,
@@ -24,12 +26,5 @@ export default async function FreeDrivePage({
   );
   if (!map) notFound();
 
-  return (
-    <FreeDrive
-      label={map.label}
-      mapSourceMapId={map.sourceMapId}
-      mapVersionId={map.mapVersionId}
-      mapXodrSha256={map.xodr.sha256}
-    />
-  );
+  return <FreeDrive map={map} />;
 }

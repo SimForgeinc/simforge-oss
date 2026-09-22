@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CityViewer, TierSelection } from "@simforge-oss/viewer";
+import type { CityViewer, CityViewerStats, TierSelection } from "@simforge-oss/viewer";
 import { ActorRenderer } from "@simforge-oss/viewer";
 import { CityView, waitForCanvasPresentation } from "@simforge-oss/viewer/react";
 import { cn } from "../../lib/utils";
@@ -98,6 +98,13 @@ export type MapTransitionPhase =
  * A transient null target retains the usable map while the next surface
  * resolves; the provider fences visibility and releases non-world routes.
  */
+/** Tiles the current view asks for across layers; the cover shows resident vs wanted. */
+function wantedTiles(stats: CityViewerStats): number | undefined {
+  const layers = [stats.coverage.roads, stats.coverage.city, stats.coverage.vegetation];
+  const known = layers.filter((layer): layer is NonNullable<typeof layer> => layer !== null);
+  return known.length === 0 ? undefined : known.reduce((sum, layer) => sum + layer.wantedTiles, 0);
+}
+
 export function ScenarioWorldHost({
   target,
   pendingTarget = false,
@@ -386,6 +393,10 @@ export function ScenarioWorldHost({
           // reported as reduced detail once the map is up.
           streamingError: stats.requiredError ?? null,
           detailFailures: stats.detailFailures ?? 0,
+          downloads: stats.downloads,
+          residentTiles: stats.residentTiles,
+          wantedTiles: wantedTiles(stats),
+          residentBytes: stats.residentBytes,
         };
       },
       () => {
@@ -664,6 +675,9 @@ export function ScenarioWorldHost({
                     pendingTextureUploads: stats.pendingTextureUploads,
                     downloads: stats.downloads,
                     streamingError: stats.streamingError,
+                    residentTiles: stats.residentTiles,
+                    wantedTiles: wantedTiles(stats),
+                    residentBytes: stats.residentBytes,
                   };
                 },
                 completeMapLoad,

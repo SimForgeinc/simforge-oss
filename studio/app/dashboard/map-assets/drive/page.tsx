@@ -22,12 +22,5 @@ export default async function FreeDriveEntryPage({
   );
   if (!map) notFound();
 
-  return (
-    <FreeDrive
-      label={map.label}
-      mapSourceMapId={map.sourceMapId}
-      mapVersionId={map.mapVersionId}
-      mapXodrSha256={map.xodr.sha256}
-    />
-  );
+  return <FreeDrive map={map} />;
 }

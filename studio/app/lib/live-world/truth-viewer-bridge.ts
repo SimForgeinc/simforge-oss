@@ -35,6 +35,15 @@ export interface TruthViewerBridge {
    */
   reset(): void;
   rendered(actorId: string): ActorRenderState | null;
+  /**
+   * Draw one actor before the world has produced a frame: the car at its
+   * authored pose while the physics world is still booting, so a drive that
+   * takes over a live scene has its car on screen from the first commit. The
+   * world's first frame replaces it; `null` clears it by hand. Nothing is
+   * drawn once a frame has been shown. Returns the actor as drawn, lifted to
+   * the ground like a frame's actors, or null when nothing was drawn.
+   */
+  standIn(actor: ActorRenderState | null): ActorRenderState | null;
   setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
   dispose(): void;
 }
@@ -44,6 +53,7 @@ export function createTruthViewerBridge(
   opts: TruthViewerBridgeOptions = {},
 ): TruthViewerBridge {
   const layer = opts.layer ?? 'live-world';
+  const standInLayer = `${layer}:stand-in`;
   const shouldGroundLift = opts.groundLift ?? true;
   const adapter = new ThreeRendererAdapter(viewer);
   const sampleGround = indexedWorldHeightSampler(viewer);
@@ -55,6 +65,7 @@ export function createTruthViewerBridge(
   let followMode: 'chase' | 'dash' = 'chase';
   let disposed = false;
   let lastRendered = new Map<string, ActorRenderState>();
+  let standInShown = false;
   const appearance = new Map<string, { catalogId: string; authored: boolean }>();
 
   const appearanceOf = (actorId: string, actorClass: TruthFrame['actors'][number]['class']) => {
@@ -129,6 +140,7 @@ export function createTruthViewerBridge(
       actors,
     });
     lastRendered = new Map(actors.map((actor) => [actor.id, actor]));
+    clearStandIn();
     if (followId) applyFollow();
   };
 
@@ -150,6 +162,12 @@ export function createTruthViewerBridge(
     });
   };
 
+  const clearStandIn = (): void => {
+    if (!standInShown) return;
+    standInShown = false;
+    adapter.actors.clearLayer(standInLayer);
+  };
+
   return {
     actors: adapter.actors,
     apply(frame) {
@@ -162,6 +180,23 @@ export function createTruthViewerBridge(
     },
     rendered(actorId) {
       return lastRendered.get(actorId) ?? null;
+    },
+    standIn(actor) {
+      if (disposed || !actor || latest) {
+        clearStandIn();
+        return null;
+      }
+      const groundReady = shouldGroundLift && viewer.getGroundIndex() !== null;
+      const drawn = { ...actor, y: groundReady ? sampleGround(actor.x, actor.z) ?? actor.y : actor.y };
+      adapter.applyActorFrame({
+        contractVersion: adapter.contractVersion,
+        layer: standInLayer,
+        tick: -1,
+        timeS: 0,
+        actors: [drawn],
+      });
+      standInShown = true;
+      return drawn;
     },
     reset() {
       if (disposed) return;
@@ -186,6 +221,7 @@ export function createTruthViewerBridge(
       followId = null;
       viewer.controls.setEnabled(true);
       if (viewer.onFrame === frameHook) viewer.onFrame = previousFrameHook;
+      clearStandIn();
       adapter.actors.clearLayer(layer);
       adapter.actors.dispose();
       earlier = null;

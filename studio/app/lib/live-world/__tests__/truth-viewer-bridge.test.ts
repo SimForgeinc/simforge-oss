@@ -110,4 +110,30 @@ describe('truth viewer bridge', () => {
     expect(sync).not.toHaveBeenCalled();
     bridge.dispose();
   });
+
+  it('shows a stand-in only until the world produces its first frame', () => {
+    const { bridge, sync } = bridgeWithSpy();
+    const clear = vi.spyOn(bridge.actors, 'clearLayer');
+    const spawn = { id: 'ego', catalogId: 'vehicle.sedan', x: 12, y: 0, z: -3, headingRad: 1, dims: { l: 4.5, w: 1.9, h: 1.5 }, kind: 'car' as const };
+
+    // Drawn on its own layer, lifted like a frame's actors (no ground here: authored y).
+    expect(bridge.standIn(spawn)).toMatchObject({ x: 12, y: 0, z: -3 });
+    expect(sync.mock.calls.at(-1)?.[0]).toBe('test:stand-in');
+    expect(sync.mock.calls.at(-1)?.[1][0]).toMatchObject({ id: 'ego', catalogId: 'vehicle.sedan', headingRad: 1 });
+
+    // The world's first frame replaces it, and a later stand-in is refused.
+    bridge.apply(frame(0, 0));
+    expect(clear).toHaveBeenCalledWith('test:stand-in');
+    expect(sync.mock.calls.at(-1)?.[0]).toBe('test');
+    clear.mockClear();
+    expect(bridge.standIn(spawn)).toBeNull();
+    expect(sync.mock.calls.at(-1)?.[0]).toBe('test');
+
+    // A rebuild restarts from no frame, so a stand-in may bridge the gap again.
+    bridge.reset();
+    expect(bridge.standIn(spawn)).not.toBeNull();
+    bridge.standIn(null);
+    expect(clear).toHaveBeenLastCalledWith('test:stand-in');
+    bridge.dispose();
+  });
 });

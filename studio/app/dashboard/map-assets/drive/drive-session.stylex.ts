@@ -18,30 +18,39 @@ import { driveColors } from "@simforge-oss/studio-ui/drive/drive.stylex";
  */
 export const driveFrame = stylex.create({
   /**
-   * The session's stacking frame. `relative` is load-bearing: the HUD, the
-   * status line and the pause menu are all absolutely positioned against it,
-   * and the canvas is the only thing in normal flow. It fills whatever the
-   * host gives it and never scrolls: the canvas resizes to its box, so a frame
-   * that could scroll would let a stray gesture drag the world out of frame.
+   * A drive route's page box: the shared world's viewport is leased into it
+   * and the session is laid over that. `relative` is load-bearing for both.
+   * It fills whatever the dashboard gives it and never scrolls: the canvas
+   * resizes to its box, so a frame that could scroll would let a stray gesture
+   * drag the world out of frame.
    */
-  session: {
+  route: {
     position: "relative",
     height: "100%",
     width: "100%",
     overflow: "hidden",
     backgroundColor: driveColors.void,
-    color: driveColors.textPrimary,
+  },
+
+  /** Where the leased world paints inside a drive route. */
+  world: {
+    position: "absolute",
+    inset: 0,
   },
 
   /**
-   * The world canvas. It is focusable (`role="application"`, `tabIndex={0}`)
-   * so the keyboard can reach the car, but it takes no focus ring: the ring
-   * would trace the whole viewport, and the HUD is the feedback that the
-   * session has the keys.
+   * The session's stacking frame, laid over the shared world's viewport. It
+   * fills the box the host gives it and never scrolls: the HUD, the status
+   * line and the pause menu are all absolutely positioned against it, and it
+   * paints nothing of its own — the world underneath is the picture. It takes
+   * the pointer so the orbit view can be dragged over a canvas that is not
+   * interactive while a drive owns its camera.
    */
-  canvas: {
-    height: "100%",
-    width: "100%",
+  session: {
+    position: "absolute",
+    inset: 0,
+    overflow: "hidden",
+    color: driveColors.textPrimary,
     outlineStyle: { default: null, ":focus-visible": "none" },
   },
 
