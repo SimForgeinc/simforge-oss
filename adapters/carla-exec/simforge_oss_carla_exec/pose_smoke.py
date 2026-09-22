@@ -3,9 +3,13 @@
 Builds a small trajectory-replay scenario on the loaded cooked map (a moving
 and a parked vehicle, a walking and a standing pedestrian, and three props of
 different heights on the road and the sidewalk), then runs it through the
-production backend -- spawn, native settle, placement validation, and the
-per-tick apply/tick loop with the pose gates enforced. No sensors are attached,
-so it also runs against a render-less (``-nullrhi``) simulator.
+production backend in the default trace-replay mode -- spawn with physics off,
+the per-tick batched pose application, and the blocking replay parity gate
+against the sampler. ``--mode native-physics`` runs the physics-validation
+path instead (native settle, placement validation, pose gates). It also probes
+CARLA's attitude sign conventions, which the replay pose mapping relies on. No
+sensors are attached, so it also runs against a render-less (``-nullrhi``)
+simulator.
 
 It fails (exit 1) when any actor ends above or below the ground surface, is
 displaced from its authored pose, or does not follow its authored motion. It is
@@ -19,12 +23,19 @@ from typing import Any, Mapping
 
 from .runtime.backend import CarlaBackend
 from .runtime.compiler import compile_xosc14
+from .runtime.contract import EXECUTION_MODE_TRACE_REPLAY, normalize_execution_mode
 from .runtime.pose_gates import GROUND_LABELS, PoseGateError
+from .runtime.replay import CARLA_PITCH_SIGN, CARLA_ROLL_SIGN, ReplayParityGate, expected_replay_poses
+from .runtime.timeline import PlanTimeline
 
 SMOKE_DURATION_S = 6.0
 SMOKE_VERTEX_STEP_S = 0.1
 #: Final checks, independent of the in-loop gates (defence in depth).
 MAX_GROUND_GAP_M = {"vehicle": 0.30, "walker": 0.05, "prop": 0.05}
+#: Under trace replay the timeline z is authoritative and the cooked-mesh gap
+#: is the map's own XODR-vs-cook delta (kerb heights are absent from XODR
+#: elevation v1), so only a gross gap -- a broken height source -- fails.
+MAX_REPLAY_GROUND_GAP_M = 0.25
 MIN_TRAVEL_FRACTION = 0.9
 
 SMOKE_CATALOG: Mapping[str, Mapping[str, Any]] = {
@@ -78,7 +89,21 @@ def smoke_scenario(carla: Any, runtime_map: Any, map_name: str) -> bytes:
         ("bench", "static_object", "MiscObject", "smoke.bench", sx + fx * 6, sy + fy * 6, sz, None),
     ]
 
+    lane_any = getattr(getattr(carla, "LaneType", None), "Any", None)
+
+    def surface_z(x: float, y: float, z: float) -> float:
+        """The OpenDRIVE lane elevation under (x, y), as a baked timeline has
+        it. The anchor's z is not valid 24 m away on a sloped street."""
+        if not hasattr(carla, "Location") or not hasattr(runtime_map, "get_waypoint"):
+            return z
+        location = carla.Location(x=x, y=-y, z=z)
+        waypoint = runtime_map.get_waypoint(location, project_to_road=False, lane_type=lane_any) if lane_any is not None else None
+        if waypoint is None:
+            waypoint = runtime_map.get_waypoint(location, project_to_road=True)
+        return float(waypoint.transform.location.z) if waypoint is not None else z
+
     def pose(x: float, y: float, z: float) -> str:
+        z = surface_z(x, y, z)
         return f'<WorldPosition x="{x:.4f}" y="{y:.4f}" z="{z:.4f}" h="{heading:.6f}" p="0" r="0"/>'
 
     entities, inits = [], []
@@ -139,10 +164,48 @@ def _ground_gap(backend: CarlaBackend, actor: Any) -> float | None:
     return None if not ground else bottom - max(ground)
 
 
-def run_pose_smoke(host: str, port: int, map_name: str | None = None) -> dict[str, object]:
+def attitude_probe(backend: CarlaBackend, anchor: Any) -> dict[str, object]:
+    """Verify the CARLA rotation sign conventions replay depends on.
+
+    An OSC pitch of +10 deg (nose down) and roll of +10 deg (right side down)
+    are mapped through ``CARLA_PITCH_SIGN``/``CARLA_ROLL_SIGN`` and applied to
+    a kinematic vehicle; the forward/right vectors CARLA reports must agree.
+    """
+    carla, world = backend.carla, backend.world
+    blueprint = world.get_blueprint_library().find(SMOKE_CATALOG["smoke.car"]["blueprintId"])
+    location = anchor.transform.location
+    actor = world.try_spawn_actor(blueprint, carla.Transform(
+        carla.Location(x=location.x, y=location.y, z=location.z + 30.0), anchor.transform.rotation,
+    ))
+    if actor is None:
+        return {"verdict": "fail", "reason": "attitude probe vehicle could not spawn"}
+    try:
+        actor.set_simulate_physics(False)
+        yaw = anchor.transform.rotation.yaw
+        actor.set_transform(carla.Transform(actor.get_transform().location, carla.Rotation(pitch=CARLA_PITCH_SIGN * 10.0, yaw=yaw, roll=0.0)))
+        world.tick()
+        forward_z = float(world.get_snapshot().find(actor.id).get_transform().get_forward_vector().z)
+        actor.set_transform(carla.Transform(actor.get_transform().location, carla.Rotation(pitch=0.0, yaw=yaw, roll=CARLA_ROLL_SIGN * 10.0)))
+        world.tick()
+        right_z = float(world.get_snapshot().find(actor.id).get_transform().get_right_vector().z)
+    finally:
+        actor.destroy()
+    nose_down, right_down = forward_z < -0.1, right_z < -0.1
+    return {
+        "verdict": "pass" if nose_down and right_down else "fail",
+        "oscPitchPlus10": {"forwardZ": forward_z, "noseDown": nose_down},
+        "oscRollPlus10": {"rightZ": right_z, "rightSideDown": right_down},
+    }
+
+
+def run_pose_smoke(
+    host: str, port: int, map_name: str | None = None, mode: str = EXECUTION_MODE_TRACE_REPLAY,
+) -> dict[str, object]:
+    mode = normalize_execution_mode(mode, "pose-smoke mode")
     backend = CarlaBackend(host, port)
-    result: dict[str, object] = {"schema": "simforge.carla-pose-smoke/v1", "verdict": "fail"}
+    result: dict[str, object] = {"schema": "simforge.carla-pose-smoke/v1", "mode": mode, "verdict": "fail"}
     failures: list[str] = []
+    replay = mode == EXECUTION_MODE_TRACE_REPLAY
     try:
         world = backend.client.get_world()
         loaded = str(world.get_map().name).rsplit("/", 1)[-1]
@@ -152,18 +215,35 @@ def run_pose_smoke(host: str, port: int, map_name: str | None = None) -> dict[st
         runtime_map = world.get_map()
         xosc = smoke_scenario(backend.carla, runtime_map, target)
         plan = compile_xosc14(xosc)
-        backend.configure_execution("native-physics")
+        backend.configure_execution(mode)
         backend.load_opendrive(target, str(runtime_map.to_opendrive()).encode("utf-8"), plan.fixed_timestep_s)
+        if replay:
+            result["attitude"] = attitude_probe(backend, _anchor(backend.carla, backend.world.get_map())[0])
+            if result["attitude"]["verdict"] != "pass":
+                failures.append(f"CARLA attitude conventions differ from the replay mapping: {result['attitude']}")
         backend.spawn(plan.actors, plan.frames[0], SMOKE_CATALOG)
         backend.prepare_scenario(plan.frames[0])
         backend.validate_placement()
+        sampler = PlanTimeline(plan)
+        gate = ReplayParityGate()
         travelled = {actor_id: [0.0, 0.0] for actor_id in plan.actors}
         previous: dict[str, tuple[float, float, float, float]] = {}
         max_gap: dict[str, float] = {}
-        for frame in plan.frames:
+        for index in range(sampler.tick_count()):
+            frame = sampler.frame_at_tick(index)
             backend.apply(frame)
             readback = backend.tick(None)
-            backend.collision_readback(frame.index, frame.t)
+            if replay:
+                gate.observe(
+                    frame,
+                    expected_replay_poses(frame, backend.actor_classes, backend.bottom_offsets, backend.z_offset_m),
+                    {
+                        actor_id: _observed(value)
+                        for actor_id, value in readback.items() if value.get("present")
+                    },
+                )
+            else:
+                backend.collision_readback(frame.index, frame.t)
             for actor_id, value in readback.items():
                 if not value.get("present"):
                     continue
@@ -183,15 +263,23 @@ def run_pose_smoke(host: str, port: int, map_name: str | None = None) -> dict[st
             planned, actual = travelled[actor_id]
             gap = max_gap.get(actor_id, 0.0)
             actors[actor_id] = {"class": klass, "plannedTravelM": planned, "actualTravelM": actual, "maxGroundGapM": gap}
-            if abs(gap) > MAX_GROUND_GAP_M[klass]:
+            if abs(gap) > (MAX_REPLAY_GROUND_GAP_M if replay else MAX_GROUND_GAP_M[klass]):
                 failures.append(f"{actor_id} ({klass}) is {gap:+.3f} m from the ground")
             if planned > 1.0 and actual < MIN_TRAVEL_FRACTION * planned:
                 failures.append(f"{actor_id} ({klass}) travelled {actual:.2f} m of a planned {planned:.2f} m")
-        result.update({
-            "map": target,
-            "actors": actors,
-            "poseGates": backend.pose_gate.report(),
-        })
+        result.update({"map": target, "actors": actors})
+        if replay:
+            parity = gate.report()
+            result["replayParity"] = {key: value for key, value in parity.items() if key != "violations"}
+            result["replayParity"]["firstViolations"] = parity["violations"][:4]
+            if parity["verdict"] != "pass":
+                failures.append(
+                    f"replay parity failed: max {parity['maxPositionErrorM']:.4f} m / "
+                    f"{parity['maxRotationErrorDeg']:.3f} deg over {parity['samples']} samples"
+                )
+            result["replay"] = backend.replay_evidence()
+        else:
+            result["poseGates"] = backend.pose_gate.report()
     except PoseGateError as exc:
         failures.append(str(exc))
     finally:
@@ -199,3 +287,11 @@ def run_pose_smoke(host: str, port: int, map_name: str | None = None) -> dict[st
     result["failures"] = failures
     result["verdict"] = "pass" if not failures else "fail"
     return result
+
+
+def _observed(value: Mapping[str, Any]) -> Any:
+    from .runtime.replay import RenderPose
+    return RenderPose(
+        float(value["x"]), float(value["y"]), float(value["z"]),
+        float(value["headingDeg"]), float(value.get("pitchDeg", 0.0)), float(value.get("rollDeg", 0.0)),
+    )
