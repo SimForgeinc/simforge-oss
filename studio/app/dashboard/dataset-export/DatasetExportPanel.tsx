@@ -1,8 +1,11 @@
 "use client";
 
+import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames";
+import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "./dataset-export.stylex";
+import { styles } from "./DatasetExportPanel.stylex";
 import {
   Download,
   LoaderCircle,
@@ -222,6 +225,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   const toastTimerRef = useRef<number | null>(null);
   const [polling, setPolling] = useState(true);
   const [refreshGeneration, setRefreshGeneration] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const recipeOptions = useMemo(
     () =>
@@ -275,6 +279,8 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
       setPolling(hasLiveExportJobs(jobs));
       setState("error");
       setError(loadError instanceof Error ? loadError.message : "fetch failed");
+    } finally {
+      if (!signal.aborted) setRefreshing(false);
     }
   }, [datasetId, jobs]);
 
@@ -293,6 +299,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   );
 
   const refreshExports = useCallback(() => {
+    setRefreshing(true);
     setPolling(true);
     setRefreshGeneration((generation) => generation + 1);
   }, []);
@@ -391,8 +398,8 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
           </p>
         </div>
         <div {...stylex.props(styles.actions)}>
-          <button type="button" onClick={refreshExports} disabled={state === "loading"} {...stylex.props(styles.button)}>
-            <RefreshCw {...stylex.props(styles.iconSmall, state === "loading" && styles.iconSpin)} /> Refresh
+          <button type="button" onClick={refreshExports} aria-busy={refreshing} disabled={refreshing || state === "loading"} {...stylex.props(styles.button)}>
+            <RefreshCw {...stylex.props(styles.iconSmall, (refreshing || state === "loading") && styles.iconSpin)} /> Refresh
           </button>
           {latestJob ? (
             <button type="button" onClick={() => void handleDownload(latestJob)} disabled={!latestReady || downloadingId === latestJob.id} {...stylex.props(styles.button, styles.primaryButton)}>
@@ -432,11 +439,11 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
             <span {...stylex.props(styles.monoLabel, styles.mutedColor)}>Export jobs</span>
             <span {...stylex.props(styles.count)}>{jobs.length}</span>
           </div>
-          {error && jobs.length > 0 ? <div {...stylex.props(styles.error)}>{error}</div> : null}
+          {error && jobs.length > 0 ? <PaneErrorState title="Could not refresh exports" description={error} onRetry={refreshExports} /> : null}
           {state === "loading" && jobs.length === 0 ? (
-            <div {...stylex.props(styles.skeletonWrap)}>{[1, 2, 3].map((key) => <div key={key} {...stylex.props(styles.skeleton)} />)}</div>
+            <ListSkeleton rows={3} label="Loading exports" />
           ) : error && jobs.length === 0 ? (
-            <div {...stylex.props(styles.error)}>{error}</div>
+            <PaneErrorState title="Could not load exports" description={error} onRetry={refreshExports} />
           ) : jobs.length === 0 ? (
             <div {...stylex.props(styles.empty)}>No exports yet. Pick a recipe and queue the first bundle.</div>
           ) : (
