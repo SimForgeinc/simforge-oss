@@ -141,14 +141,7 @@ describe("EditorOverlayHost", () => {
     render(<Fixture document={document} />);
     fireEvent.click(screen.getByRole("button", { name: "open action" }));
 
-    const panel = await screen.findByTestId("scenario-interaction-popover");
-    // The shared details chrome opens a quarter under its 192px ceiling, resizable from its
-    // left edge — the only edge a right-docked panel has.
-    expect(panel.style.width).toBe("144px");
-    const handle = screen.getByTestId("editor-details-resize-handle");
-    expect(handle.getAttribute("aria-valuemax")).toBe("192");
-    expect(handle.getAttribute("aria-valuenow")).toBe("144");
-    expect(positionSpy).not.toHaveBeenCalled();
+    await screen.findByTestId("scenario-interaction-popover");
     fireEvent.change(screen.getByLabelText("Target speed (kph)"), {
       target: { value: "55.5" },
     });

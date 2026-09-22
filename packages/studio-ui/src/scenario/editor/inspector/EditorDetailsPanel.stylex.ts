@@ -1,15 +1,26 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "../../../stylex/tokens.stylex";
+import { colors, text, space } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  // editor-actor-details-enter fixed right-[calc(100%-100vw)] top-1/2 z-[82] flex min-w-0 -translate-y-1/2 flex-col overflow-hidden rounded-l-xl border border-r-0 border-white/15 bg-[linear-gradient(155deg,rgba(24,24,22,0.98),rgba(9,9,9,0.98))] text-white shadow-[-12px_20px_60px_rgba(0,0,0,0.62),0_0_0_1px_rgba(232,224,68,0.1)] backdrop-blur-2xl
+  frame: (height: string, maxHeight: string) => ({
+    height,
+    maxHeight: `min(${maxHeight}, 100%)`,
+  }),
+  // Dock within the editor stage, not a viewport-width offset from a portal.
   fixedFlexCol: {
-    position: "fixed",
-    right: "calc(100% - 100vw)",
+    position: "absolute",
+    right: space.none,
     top: "50%",
     zIndex: "82",
     display: "flex",
     minWidth: "0px",
+    width: {
+      default: space.inspectorWidth,
+      "@media (min-width: 1600px)": space.inspectorWidthXl,
+    },
+    maxWidth: "100%",
+    minHeight: 0,
+    pointerEvents: "auto",
     transform: "translate(0, -50%)",
     flexDirection: "column",
     overflow: "hidden",
@@ -22,33 +33,6 @@ export const styles = stylex.create({
     color: "rgb(255 255 255 / 1)",
     boxShadow: "-12px 20px 60px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(232, 224, 68, 0.1)",
     backdropFilter: "blur(40px)",
-  },
-  // absolute bottom-0 left-0 top-0 z-[60] w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-[#E8E044]/40 focus-visible:bg-[#E8E044]/60 focus-visible:outline-none
-  abs: {
-    position: "absolute",
-    bottom: space.none,
-    left: space.none,
-    top: space.none,
-    zIndex: layers.editorChrome,
-    width: "0.375rem",
-    cursor: "col-resize",
-    touchAction: "none",
-    backgroundColor: {
-      default: "transparent",
-      ":focus-visible": "rgb(232 224 68 / 0.6)",
-      ":hover": "rgb(232 224 68 / 0.4)",
-    },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
   },
   // relative shrink-0 overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_75%_15%,rgba(232,224,68,0.14),transparent_42%),linear-gradient(145deg,#191a18,#0d0e0d)]
   relTightRuleB: {
@@ -111,6 +95,7 @@ export const styles = stylex.create({
     gap: space.lg,
     minHeight: "0px",
     minWidth: "0px",
+    overflowWrap: "anywhere",
     flex: "1 1 0%",
     overflowY: "auto",
     overflowX: "hidden",
