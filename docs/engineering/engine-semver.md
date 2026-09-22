@@ -48,7 +48,7 @@ The corpus lives in `fixtures/golden-traces/`:
 - `corpus.json` defines the cases.
 - `manifest.json` records, per case, `mapClosureDigest`, `inputHash`,
   `traceSha256`, tick count and actor count, under one `engineSemVer`.
-- `inputs/` holds the authored inputs and the resolved ambient and template
+- `inputs/` holds the authored inputs and the resolved ambient and template (ci tier only; private-map inputs are never written)
   inputs; `templates/` holds template fixtures.
 - `maps/richmond-field-station/` holds the committed simulation closure of the
   one public map: topology, derived index, locations, xodr, signals, and the
