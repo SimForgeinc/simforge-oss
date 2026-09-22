@@ -28,8 +28,26 @@ export type ScenarioRenderResourceRequest = z.infer<
   typeof ScenarioRenderResourceRequestSchema
 >;
 
+// historical name retained for stored-data compat: the CARLA worker emits this
+// tag and `simforge.render_evidence_accepted` pins it, so it is not renamed.
 export const SCENARIO_PARITY_EVIDENCE_VERSION =
-  "simforge.parity-evidence/v1" as const;
+  "uniscenario.parity-evidence/v1" as const;
+
+/**
+ * CARLA execution modes. `trace-replay` is the default and the only mode whose
+ * output is the scenario's render: every actor is kinematic and posed from the
+ * shared timeline sampler. `native-physics` is the opt-in physics-validation
+ * mode; it is never presented as the scenario render. `diagnostic-replay` is
+ * the historical name of trace replay.
+ */
+export const SCENARIO_CARLA_EXECUTION_MODES = ["trace-replay", "native-physics", "diagnostic-replay"] as const;
+export type ScenarioCarlaExecutionMode = (typeof SCENARIO_CARLA_EXECUTION_MODES)[number];
+
+/** Blocking replay parity: observed CARLA transforms against the sampler. */
+export const SCENARIO_REPLAY_PARITY_LIMITS = {
+  positionM: 0.01,
+  rotationDeg: 0.1,
+} as const;
 
 /**
  * Hard acceptance ceiling for CARLA-owned vehicle motion. The tighter
@@ -71,8 +89,10 @@ export const ScenarioParityEvidenceV1Schema = z
       planSha256: Sha256Schema,
     }),
     execution: z.strictObject({
-      mode: z.enum(["native-physics", "diagnostic-replay"]),
+      mode: z.enum(SCENARIO_CARLA_EXECUTION_MODES),
+      purpose: z.enum(["scenario-render", "physics-validation"]).optional(),
       fixedTimestepS: z.literal(0.02),
+      mapBinding: z.enum(["exact", "approximate"]).nullable().optional(),
     }),
     semantics: z.strictObject({
       verdict: ComparisonVerdictSchema,
@@ -82,7 +102,7 @@ export const ScenarioParityEvidenceV1Schema = z
     }),
     trajectory: z.strictObject({
       verdict: ComparisonVerdictSchema,
-      acceptanceGate: z.enum(["full-trajectory", "through-first-contact"]).optional(),
+      acceptanceGate: z.enum(["full-trajectory", "through-first-contact", "replay-sampler-parity"]).optional(),
       evaluatedActorCount: z.number().int().nonnegative(),
       failedActorIds: z.array(z.string().trim().min(1)).max(10_000),
       // Grounded-spawn placement evidence from the CARLA worker: actors the
@@ -91,11 +111,13 @@ export const ScenarioParityEvidenceV1Schema = z
       droppedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
       nudgedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
       postContactFailedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
-      postContactClassification: z.enum(["blocking", "expected-carla-physics"]).optional(),
+      postContactClassification: z.enum(["blocking", "expected-carla-physics", "not-applicable"]).optional(),
       metrics: z.record(z.string(), z.number().finite().nonnegative()),
     }),
     collisions: z.strictObject({
       verdict: ComparisonVerdictSchema,
+      // Trace replay simulates nothing: contacts are the trace's own events.
+      source: z.literal("timeline").optional(),
       evaluatedPairCount: z.number().int().nonnegative(),
       failedPairs: z.array(z.tuple([z.string().trim().min(1), z.string().trim().min(1)])).max(10_000),
     }),
@@ -108,7 +130,14 @@ export const ScenarioParityEvidenceV1Schema = z
       .array(
         z.strictObject({
           code: z.string().trim().min(1).max(200),
-          classification: z.enum(["expected-carla-physics", "unclassified"]),
+          classification: z.enum([
+            "expected-carla-physics",
+            "unclassified",
+            "spawn-placement-drop",
+            "spawn-placement-nudge",
+            "approximate-map",
+            "informational",
+          ]),
           actorId: z.string().trim().min(1).max(200).optional(),
           details: z.record(z.string(), z.unknown()).optional(),
         }),
@@ -120,10 +149,18 @@ export const ScenarioParityEvidenceV1Schema = z
     const hasUnclassifiedDivergence = evidence.divergences.some(
       (item) => item.classification === "unclassified",
     );
-    // Diagnostic replay stays transportable for inspection, but teleport-
-    // driven playback can never satisfy the native CARLA acceptance gate.
+    // Trace replay is accepted only inside the replay parity limits, whatever
+    // the worker claims; the historical `diagnostic-replay` tag predates the
+    // blocking gate and is never accepted.
+    const replayWithinLimits =
+      evidence.execution.mode !== "trace-replay" || (
+        evidence.trajectory.acceptanceGate === "replay-sampler-parity" &&
+        (evidence.trajectory.metrics["max.positionM"] ?? Infinity) <= SCENARIO_REPLAY_PARITY_LIMITS.positionM &&
+        (evidence.trajectory.metrics["max.rotationDeg"] ?? Infinity) <= SCENARIO_REPLAY_PARITY_LIMITS.rotationDeg
+      );
     const accepted =
-      evidence.execution.mode === "native-physics" &&
+      evidence.execution.mode !== "diagnostic-replay" &&
+      replayWithinLimits &&
       evidence.semantics.verdict === "pass" &&
       evidence.semantics.unclassifiedDifferenceCount === 0 &&
       evidence.semantics.failedCheckIds.length === 0 &&
@@ -150,7 +187,16 @@ export type ScenarioParityEvidenceV1 = z.infer<
 export function isScenarioParityEvidenceAccepted(
   evidence: ScenarioParityEvidenceV1,
 ): boolean {
-  return evidence.execution.mode === "native-physics" && evidence.verdict === "pass";
+  return evidence.execution.mode !== "diagnostic-replay" && evidence.verdict === "pass";
+}
+
+/**
+ * Whether a CARLA run is the scenario's render. A physics-validation run can
+ * be accepted as a valid validation result, but it must never be presented as
+ * the render of the scenario.
+ */
+export function isScenarioRenderEvidence(evidence: ScenarioParityEvidenceV1): boolean {
+  return evidence.execution.mode === "trace-replay";
 }
 
 export const SIMFORGE_RTX3080_HARDWARE_PROFILE = "rtx3080-10gb-v1" as const;

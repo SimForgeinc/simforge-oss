@@ -540,9 +540,13 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           WHERE id = :job_id`,
         { attempt, job_id: row.id },
       );
-      let inputs: ClaimedInput[];
-      if (worker.renderer_engine === "native") {
-        inputs = await tx.queryRows<StoredInput>(
+      // Every engine claims the intent's own input identities: the scenario as
+      // `scenario.xosc` and each declared asset under its `assetId` (the XODR
+      // and asset-catalog artifact ids). The worker admits exactly that set
+      // (`validateClaimedInputs`) and the CARLA engine requires it
+      // (`local.py` `_intent_lease`), so legacy package-role names such as
+      // `openscenario`/`map`/`catalog`/`execution-package` would fail every lease.
+      const inputs: ClaimedInput[] = await tx.queryRows<StoredInput>(
           `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
                   storage_bucket AS bucket, storage_key AS key
              FROM (
@@ -565,6 +569,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
              ) input_rows`,
           { package_id: row.execution_package_id },
         );
+      if (worker.renderer_engine === "native") {
         const nativeMembers = await tx.queryRows<{
           relative_path: string;
           sha256: string;
@@ -630,31 +635,16 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           throw new Error("native_render_input_declaration_mismatch");
         }
       } else {
-        inputs = await tx.queryRows<StoredInput>(
-          `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
-                  storage_bucket AS bucket, storage_key AS key
-             FROM (
-               SELECT 'openscenario'::text AS input_id, a.sha256, a.byte_length AS size_bytes,
-                      a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.xosc_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'map', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.xodr_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'catalog', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep
-                 JOIN simforge.asset_catalog_versions c ON c.id = ep.asset_catalog_version_id
-                 JOIN simforge.artifacts a ON a.id = c.manifest_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'execution-package', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.package_artifact_id
-                WHERE ep.id = :package_id
-             ) input_rows`,
-          { package_id: row.execution_package_id },
-        );
+        const byInputId = new Map(inputs.map((input) => [input.inputId, input]));
+        if (byInputId.size !== inputs.length
+          || inputs.length !== intent.assets.length + 1
+          || !byInputId.has("scenario.xosc")
+          || intent.assets.some((asset) => {
+            const declared = byInputId.get(asset.assetId);
+            return !declared || declared.sha256 !== asset.sha256 || Number(declared.sizeBytes) !== asset.sizeBytes;
+          })) {
+          throw new Error("carla_render_input_declaration_mismatch");
+        }
       }
       return {
         jobId: row.id,
@@ -785,18 +775,14 @@ export async function refreshRenderInputV2(input: {
   if (!lease || lease.cancel_requested_at) return null;
   const intent = parseRenderIntent(lease.render_intent);
   const declared = intent.assets.find((asset) => asset.assetId === input.inputId);
-  const scenarioInput = input.inputId === (lease.renderer_engine === "native" ? "scenario.xosc" : "openscenario");
-  const packageInput = scenarioInput || (lease.renderer_engine !== "native" && ["map", "catalog", "execution-package"].includes(input.inputId));
-  if (!declared && !packageInput) return null;
-  const rows = packageInput
+  const scenarioInput = input.inputId === "scenario.xosc";
+  if (!declared && !scenarioInput) return null;
+  const rows = scenarioInput
     ? await queryRows<{ storage_bucket: string; storage_key: string }>(
       `SELECT a.storage_bucket, a.storage_key FROM simforge.execution_packages ep
-       JOIN simforge.asset_catalog_versions c ON c.id = ep.asset_catalog_version_id
-       JOIN simforge.artifacts a ON a.id = CASE :input_id
-         WHEN 'map' THEN ep.xodr_artifact_id WHEN 'catalog' THEN c.manifest_artifact_id
-         WHEN 'execution-package' THEN ep.package_artifact_id ELSE ep.xosc_artifact_id END
+       JOIN simforge.artifacts a ON a.id = ep.xosc_artifact_id
        WHERE ep.id = :package_id`,
-      { package_id: lease.execution_package_id, input_id: input.inputId },
+      { package_id: lease.execution_package_id },
     )
     : await queryRows<{ storage_bucket: string; storage_key: string }>(
       `SELECT storage_bucket, storage_key FROM simforge.artifacts
