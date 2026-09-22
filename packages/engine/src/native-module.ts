@@ -451,7 +451,12 @@ export interface NativeModule {
   parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;
   sha256Hex(data: Uint8Array): string;
+  /** Former name of `engineSemVer()`; always the same value. */
   engineVersion(): string;
+  /** Engine semantics version (absent on runtimes built before 0.8.0; use `engineVersion()`). */
+  engineSemVer?(): string;
+  /** Build provenance JSON (absent on runtimes built before 0.8.0). Never a cache key. */
+  engineBuild?(): string;
   abiVersion(): number;
   actionFields(): string[];
 }

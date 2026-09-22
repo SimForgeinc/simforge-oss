@@ -351,4 +351,4 @@ export type {
 
 /* ------------------------------------------------------ host-neutral façade */
 export { EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
-export type { LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';
+export type { EngineBuildInfo, EngineVersionInfo, LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';

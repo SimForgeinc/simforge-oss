@@ -103,7 +103,19 @@ pub fn sha256_hex(data: Uint8Array) -> String {
 
 #[napi]
 pub fn engine_version() -> String {
-    simforge_bindings_common::ENGINE_VERSION.to_owned()
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+
+/// Engine semantics version; `engineVersion()` is its former name.
+#[napi]
+pub fn engine_sem_ver() -> String {
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+
+/// Build provenance JSON (never a cache key).
+#[napi]
+pub fn engine_build() -> String {
+    simforge_bindings_common::engine_build_json()
 }
 
 #[napi]

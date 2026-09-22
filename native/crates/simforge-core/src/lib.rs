@@ -58,10 +58,18 @@ pub use types::{
 /// Crate-wide result type.
 pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 
-/// Engine semantics version recorded in every trace header. Bump on any change
-/// that can move a trace byte — controller gains, integration order,
-/// quantisation, metric definitions — so a cached artefact from an older
-/// engine is never silently trusted.
+/// Engine semantics version (`engineSemVer`): recorded in every trace header
+/// and part of every simulation cache key.
+///
+/// It is bumped BY HAND on any change that can move a trace byte (controller
+/// gains, integration order, quantisation, metric definitions, ambient
+/// generation, input resolution), so a cached artefact from older semantics is
+/// never silently trusted. CI enforces it: the golden-trace corpus
+/// (`fixtures/golden-traces/`) records the digests produced under this
+/// version, and any digest change without a bump fails
+/// (`docs/engineering/engine-semver.md`). Build digests (source revision,
+/// toolchain) are provenance only (`simforge_bindings_common::engine_build_json`)
+/// and never part of a key, or every rebuild would miss every cache.
 ///
 /// History: 0.3.0 made omitted physics resolve to `dynamic-v1`; 0.4.0 added
 /// deterministic rigid-body contact response and impulse telemetry; 0.5.0
@@ -70,8 +78,15 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// physics-controlled braking handoff; 0.7.0 added recorded tracks (verbatim
 /// pose / body yaw / signed speed replay with the gear engaged from the
 /// recorded sign), made a staged action override release a timed route, and
-/// signed the world-session truth velocity by the engaged gear.
-pub const ENGINE_VERSION: &str = "0.7.0";
+/// signed the world-session truth velocity by the engaged gear; 0.8.0 is the
+/// stop-spin fix (no tyre side force or yaw at standstill, a yaw-rate limit at
+/// rest, no full steering lock at the route end, no projection jumps on
+/// self-overlapping routes), which changed every `dynamic-v1` trace.
+pub const ENGINE_SEM_VER: &str = "0.8.0";
+
+/// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
+/// name in new code.
+pub const ENGINE_VERSION: &str = ENGINE_SEM_VER;
 
 /// Validate canonical scenario JSON bytes into a typed document. Does not
 /// normalise; call [`SimScenarioInput::normalized`] before hashing or running.
