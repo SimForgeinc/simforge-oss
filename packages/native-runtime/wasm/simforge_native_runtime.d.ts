@@ -463,6 +463,11 @@ export function compileSituation(document_json: string, bundle: MapBundle, optio
  */
 export function compileTemplate(template_json: string, bundle: MapBundle, site: string | null | undefined, seed: any, options_json?: string | null): CompileResult;
 
+/**
+ * Compile at a site already resolved by `findSite`, without re-matching.
+ */
+export function compileTemplateAtSite(template_json: string, bundle: MapBundle, site: Site, seed: any, options_json?: string | null): CompileResult;
+
 export function contentHash(document: string): string;
 
 export function engineHz(): number;
@@ -625,6 +630,7 @@ export interface InitOutput {
     readonly compareSituation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly compileSituation: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly compileTemplate: (a: number, b: number, c: number, d: number, e: number, f: any, g: number, h: number) => [number, number, number];
+    readonly compileTemplateAtSite: (a: number, b: number, c: number, d: number, e: any, f: number, g: number) => [number, number, number];
     readonly compileresult_input: (a: number) => number;
     readonly compileresult_manifestJson: (a: number) => [number, number];
     readonly compileresult_observationsJson: (a: number) => [number, number];

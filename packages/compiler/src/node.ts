@@ -11,11 +11,14 @@ import { engine } from '@simforge-oss/engine/node';
 import type { MatchedSite } from './anchor/index.js';
 import {
   cellSeedWith,
+  compileTemplateAtSiteWith,
   compileTemplateWith,
   findSitesWith,
   liftMapBoundTemplateWith,
+  resolveSiteWith,
   templateIdentityWith,
   type CompiledTemplate,
+  type ResolvedSite,
   type MaterializeOptions,
   type PortableLiftOptions,
   type PortableLiftResult,
@@ -40,6 +43,16 @@ export {
 /** Materialise `template × bundle × site × seed` natively. `site` is a site id, a matched site, or `null` for the top-ranked site. */
 export function compileTemplate(template: ScenarioTemplateV2, bundle: MapBundle, site: string | MatchedSite | null, options: MaterializeOptions = {}): CompiledTemplate {
   return compileTemplateWith(engine().module, template, bundle, site, options);
+}
+
+/** Resolve one site by id natively (scoring only that site), with the handle `compileTemplateAtSite` reuses. */
+export function resolveSite(template: ScenarioTemplateV2, bundle: MapBundle, siteId: string | null): ResolvedSite {
+  return resolveSiteWith(engine().module, template, bundle, siteId);
+}
+
+/** `compileTemplate` at a site `resolveSite` already resolved, without re-running the matcher. */
+export function compileTemplateAtSite(template: ScenarioTemplateV2, bundle: MapBundle, site: ResolvedSite, options: MaterializeOptions = {}): CompiledTemplate {
+  return compileTemplateAtSiteWith(engine().module, template, bundle, site.native, options);
 }
 
 /** Site ids in `bundle` that satisfy the template's anchor, ranked by the native matcher. */

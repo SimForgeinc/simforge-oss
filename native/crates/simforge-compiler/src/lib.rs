@@ -58,7 +58,7 @@ pub use catalog::{ActorCatalog, ExternalCatalogEntry};
 pub use error::{CompileError, CompileResult};
 pub use expr::{evaluate_expr, parse_expr, ExprScope, NumberOrExpr};
 pub use materialize::{
-    instantiate, materialize, materialize_map_bound, InstanceManifest, MaterializeOptions,
+    instantiate, instantiate_at_site, materialize, materialize_map_bound, InstanceManifest, MaterializeOptions,
     MaterializeResult, Note, SiteSelection,
 };
 pub use params::{cell_seed, params_version, resolve_params, ParamDraw};

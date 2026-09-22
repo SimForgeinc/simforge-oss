@@ -106,6 +106,18 @@ pub fn match_on_map(
     bundle: &MapBundle,
     options: &SiteMatchOptions,
 ) -> CompileResult<SiteMatch> {
+    match_on_map_scoped(template, bundle, options, None)
+}
+
+/// `match_on_map`, scoring only `only_site_id`'s frames when it is given (see
+/// `MatchOptions::only_site_id`): the report then holds that site alone, as
+/// the full match would have produced it.
+fn match_on_map_scoped(
+    template: &ScenarioTemplate,
+    bundle: &MapBundle,
+    options: &SiteMatchOptions,
+    only_site_id: Option<&str>,
+) -> CompileResult<SiteMatch> {
     let adapted = adapt_template(template);
     assert_matchable_anchor(&adapted.notes)?;
     let mut anchor = adapted.anchor;
@@ -125,6 +137,7 @@ pub fn match_on_map(
         &MatchOptions {
             roles: adapted.roles,
             max_frames: None,
+            only_site_id: only_site_id.map(str::to_owned),
         },
     );
     let report = filter_executable_map_control_sites(template, bundle, report)?;
@@ -149,7 +162,8 @@ pub fn match_on_maps<'a>(
 
 /// Resolve one site on a map: the top-ranked site, or an explicit id (which
 /// may name a rejected site; the materializer then fails with the precise
-/// reason).
+/// reason). An explicit id scores only that site's frames, so resolving a
+/// known site costs one site's evaluation, not the whole map's.
 pub fn find_site(
     template: &ScenarioTemplate,
     bundle: &MapBundle,
@@ -159,7 +173,11 @@ pub fn find_site(
         max_sites: Some(100),
         ..Default::default()
     };
-    let matched = match_on_map(template, bundle, &options)?;
+    let only_site_id = match selection {
+        SiteSelection::Auto => None,
+        SiteSelection::Id(id) => Some(id),
+    };
+    let matched = match_on_map_scoped(template, bundle, &options, only_site_id)?;
     match selection {
         SiteSelection::Auto => matched.report.sites.into_iter().next().ok_or_else(|| {
             CompileError::at(
@@ -187,33 +205,34 @@ pub fn find_site(
             ]))
         }),
         SiteSelection::Id(site_id) => {
-            let available: Vec<Value> = matched
+            if let Some(site) = matched
+                .report
+                .sites
+                .into_iter()
+                .chain(matched.report.rejected)
+                .find(|s| s.site_id == site_id)
+            {
+                return Ok(site);
+            }
+            // Not produced: only now pay for the whole map, so the error can
+            // name the sites that are available and why others failed.
+            let full = match_on_map(template, bundle, &options)?;
+            let available: Vec<Value> = full
                 .report
                 .sites
                 .iter()
                 .take(10)
                 .map(|s| Value::String(s.site_id.clone()))
                 .collect();
-            matched
-                .report
-                .sites
-                .into_iter()
-                .chain(matched.report.rejected)
-                .find(|s| s.site_id == site_id)
-                .ok_or_else(|| {
-                    CompileError::at(
-                        "unknown_site",
-                        "--site",
-                        format!("site \"{site_id}\" was not produced on {}", bundle.map_id()),
-                    )
-                    .with_detail(detail(&[
-                        ("available", Value::Array(available)),
-                        (
-                            "failureSummary",
-                            Value::String(matched.report.failure_summary),
-                        ),
-                    ]))
-                })
+            Err(CompileError::at(
+                "unknown_site",
+                "--site",
+                format!("site \"{site_id}\" was not produced on {}", bundle.map_id()),
+            )
+            .with_detail(detail(&[
+                ("available", Value::Array(available)),
+                ("failureSummary", Value::String(full.report.failure_summary)),
+            ])))
         }
     }
 }
