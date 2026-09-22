@@ -95,7 +95,17 @@ pub fn action_fields() -> Vec<JsValue> {
 }
 #[wasm_bindgen(js_name = engineVersion)]
 pub fn engine_version() -> String {
-    simforge_bindings_common::ENGINE_VERSION.to_owned()
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+/// Engine semantics version; `engineVersion()` is its former name.
+#[wasm_bindgen(js_name = engineSemVer)]
+pub fn engine_sem_ver() -> String {
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+/// Build provenance JSON (never a cache key).
+#[wasm_bindgen(js_name = engineBuild)]
+pub fn engine_build() -> String {
+    simforge_bindings_common::engine_build_json()
 }
 #[wasm_bindgen(js_name = actorRow)]
 pub fn actor_row() -> u32 {
@@ -465,6 +475,11 @@ impl WasmMapBundle {
     #[wasm_bindgen(getter)]
     pub fn digest(&self) -> String {
         self.inner.digest().to_owned()
+    }
+    /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+    #[wasm_bindgen(getter, js_name = closureDigest)]
+    pub fn closure_digest(&self) -> String {
+        self.inner.bundle().closure_digest().to_owned()
     }
     #[wasm_bindgen(getter)]
     pub fn graph(&self) -> WasmLaneGraph {
@@ -1845,6 +1860,15 @@ impl WasmRenderTimeline {
             }
         }
         Ok(Float64Array::from(&out[..]))
+    }
+
+    /// A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+    /// scene-state projection of the timeline for whole-document consumers.
+    #[wasm_bindgen(js_name = sceneStateJson)]
+    pub fn scene_state_json(&self, times: &[f64], yaw_only: bool) -> Result<String, JsValue> {
+        let doc = timeline_sampler::scene_state_document(&self.inner, times, yaw_only)
+            .map_err(timeline_err)?;
+        serde_json_string(&doc)
     }
 
     /// Static actor descriptions (`id, kind, catalogId, actorClass, dims,

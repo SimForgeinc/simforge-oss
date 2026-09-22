@@ -34,7 +34,7 @@ function playedActors(bodyColor: unknown, { decorate = true } = {}) {
     mapId: MAP_ID,
     clipSeconds: 1,
     warmupSeconds: 0,
-    dt: 0.2,
+    dt: 0.02,
     seed: `studio-body-color:${MAP_ID}`,
     actors: [
       {

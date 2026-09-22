@@ -9,7 +9,9 @@ const CLASSES = new Set<StaticColliderClass>(['building', 'wall', 'barrier', 'pr
  * map-wide merged `Roads_Curb` mesh as a road-boundary slab the size of the
  * map, which every vehicle spawns inside. Published closures are immutable, so
  * the loader drops those here rather than waiting for every map to be
- * republished.
+ * republished. The native bundle applies the same rule
+ * (`simforge-compiler` bundle.rs `ROAD_BOUNDARY_MAX_THICKNESS_M`), so a host
+ * that hands it unfiltered colliders still simulates the same map.
  */
 const ROAD_BOUNDARY_MAX_THICKNESS_M = 2;
 
@@ -97,21 +99,58 @@ async function loadArtifact(manifestUrl: string, fetcher: typeof fetch): Promise
   const [sourceResponse, manifestResponse] = await Promise.all([fetcher(manifestUrl), fetcher(derivativeUrl)]);
   if (!sourceResponse.ok) throw new Error(`Map bundle manifest unavailable (${sourceResponse.status})`);
   if (!manifestResponse.ok) throw new Error(`Static collision derivative manifest unavailable (${manifestResponse.status})`);
-  const sourceBytes = await sourceResponse.arrayBuffer();
-  const manifest = await manifestResponse.json() as DerivativeManifest;
-  if (!isSha256(manifest.sourceManifestSha256) || await sha256BytesAsync(sourceBytes) !== manifest.sourceManifestSha256) {
+  const sourceBytes = new Uint8Array(await sourceResponse.arrayBuffer());
+  const derivativeManifestBytes = new Uint8Array(await manifestResponse.arrayBuffer());
+  const manifest = parseDerivativeManifest(derivativeManifestBytes);
+  const variant = manifest.variants?.['static-colliders'];
+  if (variant?.schemaVersion !== 1 || typeof variant.file !== 'string') {
+    throw new Error('Static collision derivative is not published for this map');
+  }
+  const artifactUrl = new URL(variant.file, new URL('.', derivativeUrl)).toString();
+  const artifactResponse = await fetcher(artifactUrl);
+  if (!artifactResponse.ok) throw new Error(`Static collision artifact unavailable (${artifactResponse.status})`);
+  return verifyStaticColliderArtifact({
+    sourceManifest: sourceBytes,
+    derivativeManifest: derivativeManifestBytes,
+    artifact: new Uint8Array(await artifactResponse.arrayBuffer()),
+  });
+}
+
+/** The three published files a map's static colliders are verified from (`3d/manifest.json`, `3d/variants/manifest.json`, the artifact it names). */
+export interface StaticColliderArtifactSources {
+  readonly sourceManifest: Uint8Array;
+  readonly derivativeManifest: Uint8Array;
+  readonly artifact: Uint8Array;
+}
+
+function parseDerivativeManifest(bytes: Uint8Array): DerivativeManifest {
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes)) as DerivativeManifest;
+  } catch {
+    throw new Error('Static collision derivative manifest is not JSON');
+  }
+}
+
+/**
+ * Verify a map's published static-collider artifact and apply the
+ * road-boundary rule. The ONE verification every simulation host uses: the
+ * browser loader above fetches the three files and calls this; Node hosts
+ * (workers, the compiler, the golden-trace corpus) read them from disk or S3
+ * and call it too (`buildSimulationMapClosure`, `createSimulationMapBundle`).
+ * Throws on any mismatch; a simulation must never silently run without the
+ * map's colliders.
+ */
+export async function verifyStaticColliderArtifact(sources: StaticColliderArtifactSources): Promise<StaticColliderBundle> {
+  const manifest = parseDerivativeManifest(sources.derivativeManifest);
+  if (!isSha256(manifest.sourceManifestSha256) || await sha256BytesAsync(sources.sourceManifest) !== manifest.sourceManifestSha256) {
     throw new Error('Static collision derivative targets a stale map bundle');
   }
   const variant = manifest.variants?.['static-colliders'];
   if (variant?.schemaVersion !== 1 || typeof variant.file !== 'string' || !isSha256(variant.outputSha256)) {
     throw new Error('Static collision derivative is not published for this map');
   }
-  const artifactUrl = new URL(variant.file, new URL('.', derivativeUrl)).toString();
-  const artifactResponse = await fetcher(artifactUrl);
-  if (!artifactResponse.ok) throw new Error(`Static collision artifact unavailable (${artifactResponse.status})`);
-  const bytes = await artifactResponse.arrayBuffer();
-  if (await sha256BytesAsync(bytes) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
-  const artifact = JSON.parse(new TextDecoder().decode(bytes)) as StaticColliderArtifact;
+  if (await sha256BytesAsync(sources.artifact) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
+  const artifact = JSON.parse(new TextDecoder().decode(sources.artifact)) as StaticColliderArtifact;
   validateArtifact(artifact, manifest, variant.digest);
   const colliders = artifact.colliders.filter(
     (collider) => collider.class !== 'road-boundary' || Math.min(collider.obb.lengthM, collider.obb.widthM) <= ROAD_BOUNDARY_MAX_THICKNESS_M,

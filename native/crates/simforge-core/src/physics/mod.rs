@@ -25,6 +25,8 @@ mod handoff;
 mod motion;
 mod profile;
 #[cfg(test)]
+mod standstill_tests;
+#[cfg(test)]
 mod tests;
 
 pub use collision::{

@@ -8,12 +8,15 @@
 //! has passed the actor is released onto a straight freeform runway
 //! ([`TimedRoute::released_route`]) so it brakes naturally.
 //!
-//! Under `dynamic-v1` the schedule is a target, not a teleport: the drawn
-//! polyline is the actor's route, so the path tracker steers along it while
-//! this sampler supplies the speed the body should be doing — plus a station
-//! correction when it lags the schedule. The body therefore drives to its
-//! waypoints under tyre and drivetrain limits instead of being placed on
-//! them.
+//! The schedule owns the pose: until its final timestamp the engine places
+//! the body on the sampled spline every tick (and writes that state into the
+//! `dynamic-v1` body), so an exact-time trajectory is replayed, not driven.
+//! Tyre and drivetrain limits therefore do not shape it; the feasibility
+//! guards (`timed_route_*_unreachable`) check the demanded speed,
+//! acceleration and turn, and the trace plausibility audit
+//! ([`crate::trace::plausibility`]) flags a schedule that makes the body turn
+//! in place or move faster than it is going. After the final keyframe the
+//! body is released to physics.
 //!
 //! A `recordedTrack` is the same ownership with a different source of truth:
 //! every keyframe also carries the body yaw and signed speed the engine itself

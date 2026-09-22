@@ -19,10 +19,12 @@
  * caller that needs a digest in the browser goes through one of those two and
  * never touches `crypto.subtle` directly.
  *
- * This module is a leaf: it imports nothing. That is what lets the browser-safe
- * `@simforge-oss/studio-ui/evaluation` barrel reach it on the
+ * This module imports only the leaf canonical-JSON module. That is what lets
+ * the browser-safe `@simforge-oss/studio-ui/evaluation` barrel reach it on the
  * `@simforge-oss/engine/hash` subpath without pulling the engine in.
  */
+
+import { canonicalJson } from '@simforge-oss/scenario/canonical-json';
 
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -209,34 +211,13 @@ export async function sha256Blob(
 }
 
 /**
- * Canonical JSON: object keys sorted, no whitespace, `undefined` dropped,
- * non-finite numbers rejected. Two structurally equal inputs always serialise
- * to the same string, so `sha256(canonicalJson(x))` is a stable content id.
+ * Canonical JSON is the single SimForge rule in `@simforge-oss/scenario/canonical-json`
+ * (sorted keys by UTF-16 code unit, ECMAScript numbers, no rounding, no
+ * whitespace); the native core implements the same rule in `hash.rs`, and both
+ * run `fixtures/canonical-json/vectors.json`. Re-exported so existing engine
+ * imports keep one implementation.
  */
-export function canonicalJson(value: unknown): string {
-  return write(value);
-}
-
-function write(value: unknown): string {
-  if (value === null) return 'null';
-  const t = typeof value;
-  if (t === 'number') {
-    const n = value as number;
-    if (!Number.isFinite(n)) throw new Error(`canonicalJson: non-finite number ${String(n)}`);
-    return JSON.stringify(n + 0);
-  }
-  if (t === 'string' || t === 'boolean') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((v) => write(v === undefined ? null : v)).join(',')}]`;
-  if (t === 'object') {
-    const obj = value as Record<string, unknown>;
-    const keys = Object.keys(obj)
-      .filter((k) => obj[k] !== undefined)
-      .sort();
-    return `{${keys.map((k) => `${JSON.stringify(k)}:${write(obj[k])}`).join(',')}}`;
-  }
-  // `undefined`, functions and symbols never appear in validated input.
-  return 'null';
-}
+export { canonicalJson, CANONICAL_JSON_RULE } from '@simforge-oss/scenario/canonical-json';
 
 /** Content id for a validated `SimScenarioInput` (or any JSON value). */
 export function contentHash(value: unknown): string {

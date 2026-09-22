@@ -45,6 +45,17 @@ export class MapBundle<A extends MapBundleArtifacts = MapBundleArtifacts> {
     return this.native.digest;
   }
 
+  /**
+   * `simforge.map-closure/v1`: identity of everything a simulation reads from
+   * this map (topology with speed limits, static colliders, signal catalog).
+   * Two bundles with equal closure digests simulate identically.
+   */
+  get closureDigest(): string {
+    const digest = this.native.closureDigest;
+    if (!digest) throw new Error('This native runtime predates map closure digests (engine 0.8.0); rebuild @simforge-oss/native-runtime');
+    return digest;
+  }
+
   /** The topology index with map speed limits applied, as the native bundle holds it. */
   get topology(): TopologyIndex {
     if (!this.topologyCache) this.topologyCache = JSON.parse(guard(() => this.native.topologyJson())) as TopologyIndex;

@@ -4,6 +4,7 @@ import { RenderSpecV3Schema } from './render-spec.js';
 import { EntityIdSchema } from './schema/v1.js';
 import { DashCameraSensorSchema, type ActorSensor, type DashCameraSensor } from './schema/v2/sensors.js';
 import { Sha256 } from './sha256.js';
+import { canonicalJson } from './canonical-json.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
 /**
@@ -172,24 +173,6 @@ export type RenderIntentV1 = z.infer<typeof RenderIntentV1Schema>;
 
 export function parseRenderIntent(value: unknown): RenderIntentV1 {
   return RenderIntentV1Schema.parse(value);
-}
-
-function canonicalJson(value: unknown): string {
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new TypeError('canonical JSON cannot contain non-finite numbers');
-    return JSON.stringify(Object.is(value, -0) ? 0 : value);
-  }
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(',')}}`;
-  }
-  throw new TypeError(`canonical JSON cannot contain ${typeof value}`);
 }
 
 function compareSourceId(
