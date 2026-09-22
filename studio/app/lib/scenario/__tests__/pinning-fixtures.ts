@@ -1,8 +1,44 @@
+import { createHash } from "node:crypto";
+
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
 import { execute } from "../../db/data-api";
 
 export const CLOSURE_A = "a".repeat(64);
 export const CLOSURE_B = "b".repeat(64);
+
+/** The simulation members of the seeded closure, by path → blob digest. */
+export const SIMULATION_MEMBERS: Record<string, string> = {
+  "map.xodr": "2".repeat(64),
+  "topology-index.json.gz": "3".repeat(64),
+  "signals.geojson.gz": "4".repeat(64),
+  "derived/topology-derived.json.gz": "5".repeat(64),
+  "derived/locations.json.gz": "6".repeat(64),
+  "3d/variants/static-colliders-v1.json": "8".repeat(64),
+};
+
+/** `simforge.map-pin-closure/v1` of a member map, as the pin query computes it. */
+export function simulationClosureSha256(members: Record<string, string>): string {
+  const lines = Object.keys(members).sort().map((path) => `${path} ${members[path]}\n`).join("");
+  return createHash("sha256").update(lines).digest("hex");
+}
+
+/** Put `members` (path → digest) into asset set `setId`, creating blobs as needed. */
+export async function setMembers(setId: string, members: Record<string, string>): Promise<void> {
+  for (const [path, sha256] of Object.entries(members)) {
+    const blobId = `usbab_${sha256.slice(0, 12)}_${path.length}`;
+    await execute(
+      `INSERT INTO simforge.browser_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state, verified_at)
+       VALUES (:id, 'local-assets', :id, :sha256, :bytes, 'application/octet-stream', 'verified', NOW()) ON CONFLICT (id) DO NOTHING`,
+      { id: blobId, sha256, bytes: path.length },
+    );
+    await execute(
+      `INSERT INTO simforge.browser_asset_members (asset_set_id, relative_path, blob_id, role, required)
+       VALUES (:set, :path, :blob, 'metadata', TRUE)
+       ON CONFLICT (asset_set_id, relative_path) DO UPDATE SET blob_id = EXCLUDED.blob_id`,
+      { set: setId, path, blob: blobId },
+    );
+  }
+}
 
 /** A workspace, dataset `usds_pin`, and one published map version `usmapv_pin` (closure A, catalog `usacv_pin`). */
 export async function seedPinnedMap(): Promise<void> {
@@ -57,6 +93,7 @@ export async function seedPinnedMap(): Promise<void> {
      VALUES ('usbas_pin', :workspace_id, 'usmapv_pin', :closure, 1, 1, 'available') ON CONFLICT (id) DO NOTHING`,
     { workspace_id: LOCAL_WORKSPACE_ID, closure: CLOSURE_A },
   );
+  await setMembers("usbas_pin", SIMULATION_MEMBERS);
   await execute(`UPDATE simforge.map_versions SET browser_asset_set_id = 'usbas_pin' WHERE id = 'usmapv_pin'`);
   await execute(
     `INSERT INTO simforge.datasets (id, workspace_id, name) VALUES ('usds_pin', :workspace_id, 'pinning') ON CONFLICT (id) DO NOTHING`,
