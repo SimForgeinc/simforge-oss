@@ -153,6 +153,8 @@ export interface SimulationMapClosure {
   readonly mapAssetId: string;
   readonly bundle: MapBundle;
   readonly xodr: string;
+  /** The exact `topology-index.json(.gz)` bytes the graph was built from (the timeline's height source input). */
+  readonly topology: Uint8Array;
   readonly identity: MapClosureIdentity;
   readonly mapClosureDigest: string;
 }
@@ -172,12 +174,24 @@ export async function loadSimulationMapClosure(options: {
   readonly digests?: MapGraphDigests;
   readonly fetcher: typeof fetch;
 }): Promise<SimulationMapClosure> {
+  // Keep the topology member's exact bytes: the render timeline derives its
+  // height field from them, so every executor must hand it the same bytes.
+  let topology: Uint8Array | null = null;
+  const topologyUrl = new URL(options.sources.topology, 'http://closure.invalid/').href;
+  const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await options.fetcher(input, init);
+    const url = new URL(input instanceof Request ? input.url : String(input), 'http://closure.invalid/').href;
+    if (url !== topologyUrl || !response.ok) return response;
+    topology = new Uint8Array(await response.arrayBuffer());
+    return new Response(topology.slice(), { status: response.status, headers: response.headers });
+  }) as typeof fetch;
   const graph = await loadMapGraph({
     module: engine().module,
     sources: { ...options.sources, mapId: options.mapAssetId },
     ...(options.digests ? { digests: options.digests } : {}),
-    fetcher: options.fetcher,
+    fetcher,
   });
+  if (!topology) throw new Error('simulation_closure_topology_missing');
   const bundle = new MapBundle(graph.bundle, { derived: graph.derived as never, catalog: graph.locations as never });
   const identity = { browserClosureSha256: options.browserClosureSha256, colliderDigest: graph.collision.diagnostics.digest };
   return {
@@ -185,6 +199,7 @@ export async function loadSimulationMapClosure(options: {
     mapAssetId: options.mapAssetId,
     bundle,
     xodr: graph.xodr,
+    topology,
     identity,
     mapClosureDigest: mapClosureDigest(identity),
   };
@@ -487,14 +502,39 @@ export interface SimulationCompletionRecord {
     readonly sourceInputDigest: string;
     readonly ambient: Record<string, unknown>;
   } | null;
+  /**
+   * The render timeline derived from the trace (WS-B contract). The stored
+   * object is its canonical JSON, uncompressed, so `sha256` is `timelineSha256`.
+   */
+  readonly timeline: {
+    readonly timelineKey: string;
+    readonly timelineSha256: string;
+    readonly sizeBytes: number;
+  } | null;
   readonly metrics: Record<string, number>;
 }
 
+/** The timeline step's output as `@simforge-oss/render/timeline` `buildRenderTimeline` returns it. */
+export interface SimulationTimeline {
+  readonly timelineKey: string;
+  readonly timelineSha256: string;
+  readonly traceSha256: string;
+  readonly bytes: Uint8Array;
+}
+
 /** The completion record of a simulation this process executed, plus the bytes to store. */
-export function simulationCompletion(simulation: AuthoritativeSimulation): {
+export function simulationCompletion(simulation: AuthoritativeSimulation, timeline: SimulationTimeline | null = null): {
   readonly completion: SimulationCompletionRecord;
-  readonly bytes: { readonly trace: Uint8Array; readonly resolution: Uint8Array; readonly traffic: Uint8Array | null };
+  readonly bytes: {
+    readonly trace: Uint8Array;
+    readonly resolution: Uint8Array;
+    readonly traffic: Uint8Array | null;
+    readonly timeline: Uint8Array | null;
+  };
 } {
+  if (timeline && (timeline.traceSha256 !== simulation.traceSha256 || sha256Hex(timeline.bytes) !== timeline.timelineSha256)) {
+    throw new Error(`simulation_timeline_mismatch: timeline of trace ${timeline.traceSha256}, simulated ${simulation.traceSha256}`);
+  }
   const resolution = encodeSimulationResolution(simulation);
   return {
     completion: {
@@ -519,8 +559,16 @@ export function simulationCompletion(simulation: AuthoritativeSimulation): {
             ambient: { ...simulation.traffic.ambient },
           }
         : null,
+      timeline: timeline
+        ? { timelineKey: timeline.timelineKey, timelineSha256: timeline.timelineSha256, sizeBytes: timeline.bytes.byteLength }
+        : null,
       metrics: { simulateMs: Math.round(simulation.simulateMs), traceGzipBytes: simulation.traceGzip.byteLength },
     },
-    bytes: { trace: simulation.traceGzip, resolution, traffic: simulation.traffic?.envelope.bytes ?? null },
+    bytes: {
+      trace: simulation.traceGzip,
+      resolution,
+      traffic: simulation.traffic?.envelope.bytes ?? null,
+      timeline: timeline?.bytes ?? null,
+    },
   };
 }

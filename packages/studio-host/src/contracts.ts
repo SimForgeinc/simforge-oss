@@ -230,6 +230,8 @@ export type ScenarioSimulationResultDto = {
   resolution: { sizeBytes: number; sha256: string; downloadUrl: string };
   /** Render timeline (scene-state + baked heights) once derived; null until then. */
   timelineSha256: string | null;
+  /** Byte length of the timeline's canonical JSON (the `render.timeline` render input). */
+  timelineSizeBytes: number | null;
   producer: string;
   createdAt: string;
 };

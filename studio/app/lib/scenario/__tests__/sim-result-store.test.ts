@@ -29,6 +29,7 @@ import {
 import {
   claimSimulationJob,
   completeSimulationRequest,
+  evaluateSimulationResult,
   getSimulationResult,
   recordSimulationVerification,
   reserveSimulationJobOutputs,
@@ -180,6 +181,11 @@ test("authoritative simulation results", async (t) => {
     const stored = await getSimulationResult(WORKSPACE, simulation.simKey);
     assert.equal(stored?.trace.gzipSha256, simulation.traceGzipSha256);
     assert.match(stored?.trace.downloadUrl ?? "", /sim\/sha256\//);
+    // Evaluation reads the same stored trace by key.
+    const evaluated = await evaluateSimulationResult(WORKSPACE, simulation.simKey);
+    assert.equal(evaluated?.traceSha256, simulation.traceSha256);
+    assert.ok(["accept", "reject"].includes(evaluated?.evaluation.verdict ?? ""));
+    assert.equal(await evaluateSimulationResult(WORKSPACE, DIGEST("0")), null);
   });
 
   await t.test("two contents resolving to one input share one immutable result", async () => {

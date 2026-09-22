@@ -171,6 +171,12 @@ export interface StudioProjectService {
     verification: ScenarioSimulationVerificationDto,
     signal?: AbortSignal,
   ): Promise<{ outcome: "verified" | "mismatch"; authoritativeTraceSha256: string }>;
+  /** Evaluate the authoritative trace by key (the same bytes every render replays). */
+  evaluateSimulation(
+    simKey: string,
+    filters?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<{ simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } }>;
   /** The authoritative simulation a revision renders and is evaluated against. */
   resolveRevisionSimulation(
     revisionId: string,

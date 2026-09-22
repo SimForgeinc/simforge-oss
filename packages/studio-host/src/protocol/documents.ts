@@ -392,6 +392,8 @@ export type CreateRevisionRequest = {
 
 export type ResolveSimulationRequest = { expectedVersion?: number; waitMs?: number };
 export type SimulationVerificationOutcomeDto = { outcome: "verified" | "mismatch"; authoritativeTraceSha256: string };
+/** The native evaluation of one authoritative trace (`TraceEvaluation` from `@simforge-oss/engine`). */
+export type SimulationEvaluationDto = { simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } };
 
 // ── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -564,6 +566,12 @@ export const documentsProtocol = {
     method: "POST",
     path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/verification`,
     response: passthrough<SimulationVerificationOutcomeDto>(),
+  }),
+  /** Grade the authoritative trace by key with the native evaluator (never re-simulates). */
+  evaluateSimulation: endpoint<{ simKey: string }, void, { filters?: Record<string, unknown> }, SimulationEvaluationDto>({
+    method: "POST",
+    path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/evaluation`,
+    response: passthrough<SimulationEvaluationDto>(),
   }),
   /** The authoritative simulation a revision renders and is evaluated against (lazily re-simulated if needed). */
   resolveRevisionSimulation: endpoint<{ revisionId: string }, void, { waitMs?: number }, ScenarioSimulationStatusDto>({

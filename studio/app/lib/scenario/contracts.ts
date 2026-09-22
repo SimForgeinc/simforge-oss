@@ -672,6 +672,11 @@ export const SimulationCompletionSchema = z.strictObject({
     sourceInputDigest: SimulationDigestSchema,
     ambient: z.record(z.string(), z.unknown()),
   }).nullable(),
+  timeline: z.strictObject({
+    timelineKey: SimulationDigestSchema,
+    timelineSha256: SimulationDigestSchema,
+    sizeBytes: z.number().int().positive().max(1024 * 1024 * 1024),
+  }).nullable().default(null),
   metrics: z.record(z.string(), z.number()),
 });
 
