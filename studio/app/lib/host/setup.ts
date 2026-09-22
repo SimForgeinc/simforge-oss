@@ -1,4 +1,5 @@
 import type { ScenarioAuthoringQuality } from "@simforge-oss/studio-host";
+import { markLocalSetupCompleted } from "@simforge-oss/studio-ui/components/rendering-preference";
 
 /**
  * First-run setup state of this installation, read and written through the
@@ -35,5 +36,7 @@ export async function completeStudioSetup(
     signal,
   });
   if (!response.ok) throw new Error(`Studio setup state could not be saved (${response.status}).`);
-  return (await response.json()) as StudioSetup;
+  const setup = (await response.json()) as StudioSetup;
+  if (setup.completedAt !== null) markLocalSetupCompleted();
+  return setup;
 }

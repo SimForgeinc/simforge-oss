@@ -9,6 +9,8 @@ import { OnboardingMapsSurface as OnboardingMaps } from "./OnboardingMapsSurface
 import { OnboardingNativeRenderSurface as OnboardingNativeRender } from "./OnboardingNativeRenderSurface";
 import { LocalMapPreparationPanel } from "./LocalMapPreparationPanel";
 import { CloudAccountChip, CloudAccountSheet } from "./cloud/CloudAccountChip";
+import type { ReactNode } from "react";
+import { OnboardingGate } from "./OnboardingGate";
 
 /**
  * The local desktop host's surfaces.
@@ -27,6 +29,7 @@ export const SettingsSurface: HostSurface = Settings;
 export const MapLibrarySurface: HostSurface = MapLibrary;
 export const ModelsSurface: HostSurface = Models;
 export const SimCloudSurface: HostSurface = SimCloud;
+export const OnboardingGateSurface: HostSurface<{ children: ReactNode }> = OnboardingGate;
 export const OnboardingWelcomeSurface: HostSurface = OnboardingWelcome;
 export const OnboardingMapsSurface: HostSurface = OnboardingMaps;
 export const OnboardingNativeRenderSurface: HostSurface = OnboardingNativeRender;
