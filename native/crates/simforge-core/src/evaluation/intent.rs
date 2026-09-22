@@ -1985,6 +1985,7 @@ mod tests {
             },
             is_static: false,
             tags: vec![],
+            origin: None,
         };
         let header = TraceHeader {
             trace_version: 4,

@@ -132,6 +132,7 @@ export type {
   ActorPhysicsTrack,
   ActorPhysicsBackendProvenance,
   TraceActorMetadata,
+  TraceActorOrigin,
   DeclaredOcclusionMetric,
   DeclaredOcclusionStatus,
   EpisodeMetrics,

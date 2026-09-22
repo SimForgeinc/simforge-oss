@@ -81,8 +81,12 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// signed the world-session truth velocity by the engaged gear; 0.8.0 is the
 /// stop-spin fix (no tyre side force or yaw at standstill, a yaw-rate limit at
 /// rest, no full steering lock at the route end, no projection jumps on
-/// self-overlapping routes), which changed every `dynamic-v1` trace.
-pub const ENGINE_SEM_VER: &str = "0.8.0";
+/// self-overlapping routes), which changed every `dynamic-v1` trace; 0.9.0
+/// makes generated ambient traffic feasible for its class (the generator never
+/// routes a vehicle through a turn its class cannot make, and caps its spawn
+/// speed to the corner planner's approach speed), and requires the 20 ms step
+/// (`dt` other than 0.02 is rejected).
+pub const ENGINE_SEM_VER: &str = "0.9.0";
 
 /// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
 /// name in new code.
