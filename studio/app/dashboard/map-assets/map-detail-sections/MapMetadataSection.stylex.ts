@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionHeaderRow: {
@@ -23,17 +18,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -41,9 +30,6 @@ export const styles = stylex.create({
   copyMetadataButton: {
     flexShrink: 0,
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   copiedCheckIcon: {
     width: "0.75rem",
@@ -127,10 +113,6 @@ export const styles = stylex.create({
     marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   populateMetadataError: {
     marginTop: space.s1_5,

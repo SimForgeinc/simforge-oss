@@ -63,9 +63,6 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   assetName: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSnug,
     fontWeight: text.weightSemibold,
@@ -98,17 +95,6 @@ export const styles = stylex.create({
     height: "1.75rem",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-  },
-  carlaFieldLabel: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
   },
   textInput: {
     height: "1.75rem",
@@ -191,9 +177,6 @@ export const styles = stylex.create({
   },
   removeTagButton: {
     color: { default: "rgba(250, 204, 21, 0.6)", ":hover": "#facc15" },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   removeTagIcon: {
     width: "0.625rem",
@@ -260,17 +243,11 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotateMinus90: {
     transform: "rotate(-90deg)",
@@ -336,9 +313,6 @@ export const styles = stylex.create({
   existingArtifactName: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
@@ -350,9 +324,6 @@ export const styles = stylex.create({
   removeArtifactButton: {
     flexShrink: 0,
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.danger },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   removeArtifactIcon: {
     width: "0.75rem",
@@ -385,9 +356,6 @@ export const styles = stylex.create({
   pendingFilename: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
   },
@@ -402,9 +370,6 @@ export const styles = stylex.create({
   clearPendingButton: {
     flexShrink: 0,
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   available3dRow: {
     marginBottom: space.s2,
@@ -435,9 +400,6 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.danger },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   deleted3dRow: {
     marginBottom: space.s2,

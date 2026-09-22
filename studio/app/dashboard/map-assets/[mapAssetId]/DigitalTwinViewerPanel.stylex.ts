@@ -1,15 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
-const pulse = stylex.keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.5 },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   viewerLoadingContainer: {
@@ -34,19 +24,11 @@ export const styles = stylex.create({
   loadingPlaceholderIcon: {
     width: "2rem",
     height: "2rem",
-    animationName: pulse,
-    animationDuration: motion.durPulse,
-    animationTimingFunction: motion.easePulse,
-    animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
   loadingSpinner: {
     width: "1.5rem",
     height: "1.5rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
   noAssetStateContainer: {

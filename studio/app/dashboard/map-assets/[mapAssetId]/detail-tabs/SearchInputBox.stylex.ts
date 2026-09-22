@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchContainer: {
@@ -32,9 +32,6 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     transform: "translateY(-50%)",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   clearIcon: {
     width: "0.875rem",
@@ -64,9 +61,6 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     color: colors.text,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   suggestionHighlighted: {

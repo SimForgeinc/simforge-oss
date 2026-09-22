@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { colors, motion, radii, space, stroke, text } from "../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../stylex/tokens.stylex";
 
 export const scrub = stylex.defineVars({
   trackHeight: "3px",
@@ -30,11 +30,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.full,
     color: colors.ink,
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
   },
   playControl: {
     width: "2rem",
@@ -103,7 +99,6 @@ export const styles = stylex.create({
   scrubTrack: {
     height: scrub.trackHeight,
     width: "100%",
-    borderRadius: radii.full,
     backgroundColor: colors.fillStronger,
     transitionProperty: "all",
     transitionDuration: motion.durStandard,
@@ -112,7 +107,6 @@ export const styles = stylex.create({
   scrubProgress: {
     position: "relative",
     height: "100%",
-    borderRadius: radii.full,
     backgroundColor: colors.primary,
     transitionProperty: "width",
     transitionDuration: "75ms",
@@ -123,12 +117,8 @@ export const styles = stylex.create({
     top: "50%",
     width: "0.625rem",
     height: "0.625rem",
-    borderRadius: radii.full,
     backgroundColor: colors.primary,
     transform: `translateY(-50%) scale(${scrub.thumbScale})`,
-    transitionProperty: "transform",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
   },
   body: {
     minHeight: 0,

@@ -1,7 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
-
-const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
+import { colors, layout, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: { display: "flex", flexDirection: "column", gap: space.s4, minWidth: 0 },
@@ -62,9 +60,6 @@ export const styles = stylex.create({
   // mt-1 truncate font-mono text-foreground
   ddTruncateMono: {
     marginTop: space.s1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     color: colors.text,
   },
@@ -85,10 +80,6 @@ export const styles = stylex.create({
   loader2Icon: {
     width: space.s4,
     height: space.s4,
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   // size-4
   arrowrightIcon: {
@@ -145,9 +136,6 @@ export const styles = stylex.create({
   // min-w-0 truncate font-mono text-foreground
   spanTruncateMono: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     color: colors.text,
   },

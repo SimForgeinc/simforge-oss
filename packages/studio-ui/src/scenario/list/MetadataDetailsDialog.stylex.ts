@@ -84,11 +84,8 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     color: { default: colors.text, "::placeholder": colors.mutedForeground },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
     cursor: { default: null, ":disabled": "not-allowed" },
     opacity: { default: null, ":disabled": 0.5 },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // mt-3 text-xs
   copyableerrormessageXs: {

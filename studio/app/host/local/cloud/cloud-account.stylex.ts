@@ -5,7 +5,7 @@
  * and inside the account sheet.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
 const AMBER_400_30 = "rgba(251, 191, 36, 0.3)";
@@ -74,7 +74,6 @@ export const form = stylex.create({
   submit: {
     height: "2.5rem",
     gap: space.s2,
-    borderRadius: radii.full,
     backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
     color: colors.accentText,
     opacity: { default: null, ":disabled": 0.6 },
@@ -82,7 +81,6 @@ export const form = stylex.create({
   secondary: {
     height: "2.5rem",
     gap: space.s2,
-    borderRadius: radii.full,
     borderColor: colors.hairlineStrong,
     backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
     color: colors.text,
@@ -157,7 +155,6 @@ export const banner = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: AMBER_400_30,
-    borderRadius: radii.xl,
     backgroundColor: AMBER_400_10,
     padding: space.s4,
   },

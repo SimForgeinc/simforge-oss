@@ -44,18 +44,6 @@ export const styles = stylex.create({
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
-    },
     backgroundColor: {
       default: null,
       ":hover": colors.hoverWash,
@@ -93,18 +81,6 @@ export const styles = stylex.create({
     minWidth: "0px",
     flex: "1 1 0%",
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
-    },
     color: {
       default: null,
       ":hover": colors.primary,

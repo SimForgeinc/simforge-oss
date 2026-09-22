@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   mapLayersToggle: {
@@ -17,17 +12,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -56,16 +45,10 @@ export const styles = stylex.create({
     width: "0.75rem",
     height: "0.75rem",
     color: colors.mutedForeground,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   groupTitle: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
@@ -75,10 +58,6 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: 0,
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
   partiallyEnabled: {
@@ -93,9 +72,6 @@ export const styles = stylex.create({
   layerLabel: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: "hsl(var(--foreground) / 0.9)",
@@ -113,9 +89,6 @@ export const styles = stylex.create({
     paddingBlock: space.s0_5,
     fontSize: "11px",
     fontWeight: text.weightMedium,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   laneModeButtonActive: {
     backgroundColor: colors.primary,
@@ -182,10 +155,6 @@ export const styles = stylex.create({
     marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   enrichmentActionIcon: {
     marginRight: space.s1_5,

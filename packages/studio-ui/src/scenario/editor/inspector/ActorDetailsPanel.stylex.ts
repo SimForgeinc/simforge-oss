@@ -24,18 +24,6 @@ export const styles = stylex.create({
     paddingTop: space.s2,
     paddingBottom: space.s2,
   },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
-  },
   // flex items-center justify-between gap-1
   flexCenterBetween: {
     display: "flex",
@@ -56,7 +44,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.45)",
     backgroundColor: "rgb(232 224 68 / 0.08)",
@@ -72,7 +59,6 @@ export const styles = stylex.create({
     height: "1.75rem",
     flexShrink: "0",
     placeItems: "center",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.25)",
     backgroundColor: colors.accentWash,
@@ -194,7 +180,6 @@ export const styles = stylex.create({
     WebkitAppearance: "none",
     MozAppearance: "none",
     appearance: "none",
-    borderRadius: "0",
     backgroundColor: colors.fillStrong,
     accentColor: colors.accent,
     "::-moz-range-progress": {
@@ -235,9 +220,6 @@ export const styles = stylex.create({
   },
   // truncate text-[9px] font-medium
   mediumTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "9px",
     fontWeight: text.weightMedium,
   },
@@ -274,20 +256,7 @@ export const styles = stylex.create({
     width: "18px",
     height: "18px",
     flexShrink: 0,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // border-[#E8E044] ring-1 ring-[#E8E044]
   paintSwatchActive: {
@@ -309,7 +278,6 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "center",
     gap: space.s1_5,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
@@ -319,18 +287,6 @@ export const styles = stylex.create({
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
     transitionTimingFunction: motion.easeStandard,
     transitionDuration: motion.durStandard,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]
   profileOptionActive: {

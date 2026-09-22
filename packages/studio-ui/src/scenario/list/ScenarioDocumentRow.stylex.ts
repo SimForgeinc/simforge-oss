@@ -188,16 +188,4 @@ export const styles = stylex.create({
     letterSpacing: text.trackingMeta,
     color: colors.inkSecondary,
   },
-  // truncate
-  divTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  // truncate
-  divTruncate2: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
 });

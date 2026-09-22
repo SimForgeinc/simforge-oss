@@ -12,6 +12,7 @@ import {
 } from "../../../lib/scenario/timeline";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./TimelineRuler.stylex";
+import { a11y } from "../../../stylex/recipes.stylex";
 
 /**
  * The time axis above the interaction rows — manifest 84.
@@ -95,7 +96,7 @@ export function TimelineRuler({
         words on its own row by `triggerLabel`, so announcing tick positions would be noise, and a
         screen-reader user gets the times without needing the geometry.
       */}
-      <span {...stylex.props(styles.srOnly)}>
+      <span {...stylex.props(a11y.srOnly)}>
         Timeline over {choreography.clipSeconds} seconds.
       </span>
     </div>

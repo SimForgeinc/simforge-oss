@@ -30,6 +30,7 @@ import {
 } from "./readiness-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioReadinessButton.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 const SECTION_COPY: Record<
   ReadinessSection,
@@ -246,7 +247,7 @@ function ReadinessIssueRow({
   if (onSelectIssue) {
     return (
       <button
-        {...stylex.props(styles.blockWide, styles.rowDivided)}
+        {...stylex.props([focus.ringInset, styles.blockWide], styles.rowDivided)}
         data-testid="scenario-readiness-issue"
         onClick={() => onSelectIssue(item.issue)}
         type="button"

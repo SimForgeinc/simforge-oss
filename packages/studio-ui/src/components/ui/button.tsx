@@ -8,6 +8,7 @@ import {
   buttonSizes,
   buttonVariants as buttonVariantStyles,
 } from "./controls.stylex";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 type ButtonStyle = stylex.StyleXStyles;
 export type ButtonVariant =
@@ -47,7 +48,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, xstyle, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const styleProps = stylex.props(
-      buttonBase.base,
+      [motionRecipe.colors, buttonBase.base],
       variant == null ? (variant === null ? null : buttonVariantStyles.default) : buttonVariantStyles[variant],
       size == null ? (size === null ? null : buttonSizes.default) : buttonSizes[size],
       xstyle,

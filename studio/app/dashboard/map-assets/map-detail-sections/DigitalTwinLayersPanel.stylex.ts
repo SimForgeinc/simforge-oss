@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   panel: {
@@ -29,9 +29,6 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   qualitySegmentActive: {
     backgroundColor: colors.bg,
@@ -70,9 +67,6 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": colors.muted },
     opacity: { default: null, ":disabled": 0.5 },
   },

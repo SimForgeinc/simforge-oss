@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   header: {
@@ -61,9 +61,6 @@ export const styles = stylex.create({
     minWidth: 0,
   },
   policyId: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     fontWeight: text.weightMedium,
     color: colors.text,
@@ -83,21 +80,18 @@ export const styles = stylex.create({
     position: "relative",
     height: "0.5rem",
     width: "100%",
-    borderRadius: radii.sm,
     backgroundColor: colors.fillStrong,
   },
   barFillScore: {
     position: "absolute",
     insetBlock: 0,
     left: 0,
-    borderRadius: radii.sm,
     backgroundColor: colors.accent,
   },
   barFillRoute: {
     position: "absolute",
     insetBlock: 0,
     left: 0,
-    borderRadius: radii.sm,
     backgroundColor: colors.signalGreen,
   },
   barLegend: {

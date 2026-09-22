@@ -54,7 +54,6 @@ export const styles = stylex.create({
       // while the pointer is over it.
       '[data-active="true"]': "rgba(232, 224, 68, 0.62)",
     },
-    borderRadius: "13px",
     backgroundColor: {
       default: "rgba(255, 255, 255, 0.045)",
       ":hover": "rgba(232, 224, 68, 0.07)",

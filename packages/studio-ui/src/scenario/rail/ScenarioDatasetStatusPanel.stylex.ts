@@ -46,9 +46,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-foreground
   pTruncateSmSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -95,9 +92,6 @@ export const styles = stylex.create({
   // min-w-0 truncate text-foreground
   spanTruncate: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     color: colors.text,
   },
   // shrink-0 font-meta text-micro uppercase tracking-meta text-muted-foreground

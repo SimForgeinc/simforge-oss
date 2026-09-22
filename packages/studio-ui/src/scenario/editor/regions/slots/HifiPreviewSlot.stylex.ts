@@ -1,12 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, layers, motion, shadows, space, stroke, text } from "../../../../stylex/tokens.stylex";
 
-/** `animate-spin`. One revolution per second, as the utility was. */
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
 export const styles = stylex.create({
   // pointer-events-auto flex items-center gap-1.5
   flexCenterLive: {
@@ -18,7 +12,6 @@ export const styles = stylex.create({
   // h-8 rounded-none border border-border/70 bg-card/90 px-2 text-xs text-foreground shadow-sm backdrop-blur
   xsInkBordered: {
     height: "2rem",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--card) / 0.9)",
@@ -34,7 +27,6 @@ export const styles = stylex.create({
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(125 211 252 / 0.45)",
@@ -59,10 +51,6 @@ export const styles = stylex.create({
   spinner: {
     width: "1rem",
     height: "1rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   // size-4
   size4: {
@@ -90,10 +78,6 @@ export const styles = stylex.create({
   spinner2: {
     width: "1rem",
     height: "1rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
     color: colors.info,
   },
   // ml-auto h-6 px-2

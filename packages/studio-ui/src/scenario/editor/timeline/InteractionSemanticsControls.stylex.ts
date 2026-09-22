@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // grid min-w-0 grid-cols-1 gap-3 border-t border-white/10 pt-3
@@ -83,7 +83,6 @@ export const styles = stylex.create({
 
   // rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   styleOption: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -93,18 +92,6 @@ export const styles = stylex.create({
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
     transitionTimingFunction: motion.easeStandard,
     transitionDuration: motion.durStandard,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]
   styleOptionActive: {

@@ -47,18 +47,6 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
-  // sr-only
-  labelSrOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
-  },
   // mt-3 text-xs
   copyableerrormessageXs: {
     marginTop: space.s3,

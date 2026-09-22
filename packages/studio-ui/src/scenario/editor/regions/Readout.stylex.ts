@@ -20,9 +20,6 @@ export const styles = stylex.create({
   // mt-1 truncate font-mono text-foreground/90
   monoTruncate: {
     marginTop: space.s1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     color: "hsl(var(--foreground) / 0.9)",
   },

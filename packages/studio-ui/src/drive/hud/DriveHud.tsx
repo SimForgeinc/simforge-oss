@@ -155,7 +155,6 @@ const styles = stylex.create({
     marginTop: "-3px",
     width: "6px",
     height: "6px",
-    borderRadius: driveRadius.pill,
     backgroundColor: driveColors.accent,
   },
   gReadout: { color: driveColors.textMeta },

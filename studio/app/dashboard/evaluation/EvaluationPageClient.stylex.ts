@@ -16,14 +16,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     color: colors.mutedForeground,
   },
-  /** The error overlay's message column, beside its retry. */
-  overlayMessage: {
-    minWidth: 0,
-    flex: "1 1 0%",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineNormal,
-    color: colors.text,
-  },
   stagePad: {
     paddingInline: space.s6,
     paddingBlock: space.s6,

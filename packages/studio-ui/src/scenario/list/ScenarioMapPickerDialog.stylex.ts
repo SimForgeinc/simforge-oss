@@ -186,9 +186,6 @@ export const styles = stylex.create({
   },
   // truncate text-xs text-white/70
   pTruncateXs: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.inkSecondary,

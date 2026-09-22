@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // absolute inset-0 z-10 focus-visible:outline-none
@@ -103,9 +103,6 @@ export const styles = stylex.create({
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
     color: colors.text,
@@ -181,18 +178,6 @@ export const styles = stylex.create({
       ":hover": colors.fillStronger,
     },
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3
   size3: {

@@ -73,7 +73,6 @@ export const driveChrome = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
-    borderRadius: driveRadius.dialog,
     backgroundColor: driveColors.dialog,
     boxShadow: shadows.elevation2xl,
     color: driveColors.textPrimary,
@@ -83,7 +82,6 @@ export const driveChrome = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
-    borderRadius: driveRadius.chip,
     backgroundColor: driveColors.panelReadout,
   },
   /** The session's own line: loading, starting, or why it could not spawn. */
@@ -91,7 +89,6 @@ export const driveChrome = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.lineFaint,
-    borderRadius: driveRadius.pill,
     backgroundColor: driveColors.scrim,
   },
   /** An instrument face — round, dark, ruled. */
@@ -99,7 +96,6 @@ export const driveChrome = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.line,
-    borderRadius: driveRadius.pill,
     backgroundColor: driveColors.panelDial,
   },
 
@@ -133,7 +129,6 @@ const controls = stylex.create({
   base: {
     display: "inline-flex",
     alignItems: "center",
-    borderRadius: driveRadius.pill,
     transitionProperty: COLOR_TRANSITION,
     transitionDuration: motion.durStandard,
     transitionTimingFunction: motion.easeStandard,

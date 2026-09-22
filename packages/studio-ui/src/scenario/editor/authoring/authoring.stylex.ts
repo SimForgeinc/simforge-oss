@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /**
@@ -11,7 +11,6 @@ export const styles = stylex.create({
   heading: { color: colors.mutedForeground, fontWeight: text.weightSemibold, textTransform: "uppercase", letterSpacing: text.trackingMeta },
   row: { display: "flex", alignItems: "center" },
   mono: { fontFamily: text.fontMono },
-  truncate: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   /**
    * mt-2 bg-muted/30 p-2
    *
@@ -53,18 +52,6 @@ export const styles = stylex.create({
       default: null,
       ":disabled": 0.3,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
-    },
   },
   /**
    * motionStyles.editorMotion + ml-auto text-muted-foreground
@@ -77,18 +64,6 @@ export const styles = stylex.create({
     color: {
       default: colors.mutedForeground,
       ":hover": colors.danger,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
     },
   },
   icon: { width: "0.75rem", height: "0.75rem" },

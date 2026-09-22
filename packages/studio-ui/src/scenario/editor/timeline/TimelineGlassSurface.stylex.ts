@@ -9,7 +9,6 @@ export const styles = stylex.create({
     inset: 0,
     zIndex: layers.base,
     overflow: "hidden",
-    borderRadius: "inherit",
   },
   // absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.025] to-sky-400/[0.1]
   absInset0: {
@@ -24,7 +23,6 @@ export const styles = stylex.create({
     top: "-6rem",
     height: "13rem",
     width: "13rem",
-    borderRadius: "0",
     filter: "blur(64px)",
   },
   // absolute -bottom-28 right-[-3rem] h-56 w-56 rounded-full bg-sky-400/15 blur-3xl
@@ -34,7 +32,6 @@ export const styles = stylex.create({
     right: "-3rem",
     height: "14rem",
     width: "14rem",
-    borderRadius: "0",
     backgroundColor: "rgb(56 189 248 / 0.15)",
     filter: "blur(64px)",
   },
@@ -62,7 +59,6 @@ export const styles = stylex.create({
     position: "relative",
     isolation: "isolate",
     overflow: "hidden",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.25)",
     backgroundColor: "rgb(0 0 0 / 0.15)",

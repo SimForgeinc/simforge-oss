@@ -3,6 +3,7 @@ import { styles } from "./MapAssetDangerZone.stylex";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { a11y, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type MapAssetDangerZoneProps = {
   dangerOpen: boolean;
@@ -45,7 +46,7 @@ export function MapAssetDangerZone({
           Delete map
         </h3>
         <ChevronDown
-          {...stylex.props(styles.dangerChevron, dangerOpen ? styles.dangerChevronOpen : null)}
+          {...stylex.props([motionRecipe.transform, styles.dangerChevron], dangerOpen ? styles.dangerChevronOpen : null)}
         />
       </button>
       {dangerOpen && (
@@ -68,7 +69,7 @@ export function MapAssetDangerZone({
               <p {...stylex.props(styles.sessionEmailDisplay)}>
                 {sessionEmail}
               </p>
-              <label htmlFor="delete-confirm-email" {...stylex.props(styles.emailConfirmationLabel)}>
+              <label htmlFor="delete-confirm-email" {...stylex.props(a11y.srOnly)}>
                 Type your email to confirm deletion
               </label>
               <Input

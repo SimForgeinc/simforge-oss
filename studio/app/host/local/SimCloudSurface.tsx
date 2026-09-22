@@ -37,6 +37,7 @@ import {
 import { SimCloudStorage } from "./simcloud/SimCloudStorage";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * SimCloud: the one surface for the account and everything the account
@@ -264,10 +265,10 @@ function ProfileCard({
           <p {...stylex.props(plate.eyebrow)}>
             {connected ? "Signed in" : expired ? "Session ended" : status === null ? "Checking…" : "Signed out"}
           </p>
-          <p {...stylex.props(styles.name, plate.truncate)}>
+          <p {...stylex.props(styles.name, [textLayout.truncate, plate.truncate])}>
             {user?.name ?? user?.email ?? "No SimCloud account"}
           </p>
-          {user?.email ? <p {...stylex.props(plate.copy, plate.truncate)}>{user.email}</p> : null}
+          {user?.email ? <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{user.email}</p> : null}
         </div>
       </div>
 
@@ -303,7 +304,7 @@ function ProfileCard({
         </div>
         <div {...stylex.props(plate.fact)}>
           <dt {...stylex.props(plate.factLabel)}>Server</dt>
-          <dd {...stylex.props(plate.factValue, plate.mono, plate.truncate)}>
+          <dd {...stylex.props(plate.factValue, plate.mono, [textLayout.truncate, plate.truncate])}>
             {status ? status.origin.replace(/^https?:\/\//, "") : "—"}
           </dd>
         </div>
@@ -471,12 +472,12 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
             {account.sessions.map((session) => (
               <li key={session.id} {...stylex.props(plate.item)} data-current={session.current || undefined}>
                 <div {...stylex.props(styles.deviceBody)}>
-                  <p {...stylex.props(plate.title, styles.deviceTitle, plate.truncate)}>
+                  <p {...stylex.props(plate.title, styles.deviceTitle, [textLayout.truncate, plate.truncate])}>
                     {session.label ?? session.userAgent ?? "Unnamed device"}
                     {session.current ? <span {...stylex.props(plate.pill, plate.pillAccent)}>This computer</span> : null}
                     {session.active ? null : <span {...stylex.props(plate.pill, plate.pillMuted)}>Signed out</span>}
                   </p>
-                  <p {...stylex.props(plate.copy, plate.truncate)}>
+                  <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>
                     Signed in {formatWhen(session.createdAt)} · last used {formatWhen(session.lastUsedAt)}
                   </p>
                 </div>

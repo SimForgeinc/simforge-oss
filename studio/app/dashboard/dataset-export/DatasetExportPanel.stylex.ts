@@ -3,7 +3,6 @@ import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/sty
 
 const LG = "@media (min-width: 1024px)";
 const MD = "@media (min-width: 768px)";
-const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
   panel: { minWidth: 0, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "hsl(var(--border) / .6)", backgroundColor: "hsl(var(--card) / .4)" },
@@ -21,7 +20,6 @@ export const styles = stylex.create({
   queueButton: { paddingInline: space.s4, paddingBlock: space.s2_5, fontSize: "11px", letterSpacing: text.trackingMetaNarrow, borderColor: colors.accentLine, color: colors.bg, backgroundColor: colors.accent, ":hover": { borderColor: colors.accentLine, backgroundColor: "#f5ed5a" }, ":disabled": { opacity: 0.6 } },
   iconSmall: { width: "0.75rem", height: "0.75rem" },
   iconMedium: { width: "0.875rem", height: "0.875rem" },
-  iconSpin: { animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
   borderSection: { borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border) / .6)", [LG]: { borderBottomWidth: 0, borderRightWidth: stroke.hairline, borderRightStyle: "solid", borderRightColor: "hsl(var(--border) / .6)" } },
   recipeGrid: { display: "grid", gap: 0, [MD]: { gridTemplateColumns: "repeat(3, minmax(0,1fr))" } },
   recipeCard: { minHeight: "150px", borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border) / .6)", borderRightWidth: stroke.hairline, borderRightStyle: "solid", borderRightColor: "hsl(var(--border) / .6)", padding: space.s4, textAlign: "left", transitionProperty: "color, background-color", transitionDuration: motion.durStandard, backgroundColor: "hsl(var(--background) / .3)", color: colors.mutedForeground, [MD]: { borderBottomWidth: 0 }, ":hover": { backgroundColor: colors.fillSubtle, color: colors.text } },
@@ -39,7 +37,7 @@ export const styles = stylex.create({
   jobsList: { margin: 0, padding: 0, listStyle: "none" },
   job: { display: "grid", gap: space.s3, paddingInline: space.s4, paddingBlock: space.s3, borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border) / .6)" },
   jobTop: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: space.s3 },
-  truncate: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightMedium, color: colors.text },
+  truncate: { minWidth: 0, fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightMedium, color: colors.text },
   jobMeta: { marginTop: space.s1, fontFamily: text.fontMono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(var(--muted-foreground) / .65)" },
   status: { borderWidth: stroke.hairline, borderStyle: "solid", paddingInline: space.s2, paddingBlock: space.s0_5, fontFamily: text.fontMono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase" },
   statusSmall: { flexShrink: 0, borderWidth: stroke.hairline, borderStyle: "solid", paddingInline: space.s2, paddingBlock: space.s0_5, fontFamily: text.fontMono, fontSize: "9px", letterSpacing: "0.08em", textTransform: "uppercase" },

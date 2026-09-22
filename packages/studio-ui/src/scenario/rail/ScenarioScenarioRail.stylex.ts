@@ -68,21 +68,12 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
     color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3 shrink-0
   chevronleftIcon: {
@@ -90,31 +81,16 @@ export const styles = stylex.create({
     height: space.s3,
     flexShrink: 0,
   },
-  // truncate
-  spanTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
   // min-w-0 flex-1 truncate font-meta text-micro uppercase tracking-meta-wider text-white/75 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   openTheFullScenarioListLink: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
     color: { default: "rgb(255 255 255 / 0.75)", ":hover": colors.primary },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // mr-1 inline size-3
   layoutlistIcon: {
@@ -208,9 +184,6 @@ export const styles = stylex.create({
   },
   // truncate font-meta text-micro uppercase tracking-meta-tight text-white/70
   spanTruncateMetaMicro: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,

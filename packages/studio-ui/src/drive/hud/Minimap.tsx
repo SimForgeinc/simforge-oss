@@ -35,7 +35,6 @@ const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: driveColors.line,
-    borderRadius: driveRadius.pill,
     backgroundColor: driveColors.panelReadout,
     backdropFilter: motion.blurMd,
   },

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   frame: (height: string, maxHeight: string) => ({
@@ -24,8 +24,6 @@ export const styles = stylex.create({
     transform: "translate(0, -50%)",
     flexDirection: "column",
     overflow: "hidden",
-    borderTopLeftRadius: "0",
-    borderBottomLeftRadius: "0",
     borderWidth: stroke.hairline,
     borderRightWidth: "0px",
     borderColor: "rgb(255 255 255 / 0.15)",
@@ -52,22 +50,9 @@ export const styles = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     placeItems: "center",
-    borderRadius: "0",
     color: {
       default: colors.inkMuted,
       ":hover": colors.ink,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
     },
     backgroundColor: {
       default: null,

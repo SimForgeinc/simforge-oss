@@ -104,7 +104,6 @@ export const styles = stylex.create({
   metaBordered: {
     marginRight: space.s1,
     marginTop: space.s1,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.1)",

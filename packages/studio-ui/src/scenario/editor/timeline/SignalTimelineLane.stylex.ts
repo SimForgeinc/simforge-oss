@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0
@@ -20,18 +20,6 @@ export const styles = stylex.create({
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringOffset,
-    },
   },
   // size-3
   size3: {
@@ -42,9 +30,6 @@ export const styles = stylex.create({
   fillMicroInk: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     color: colors.text,
@@ -62,9 +47,6 @@ export const styles = stylex.create({
   // block truncate text-micro text-muted-foreground
   blockMicroMuted: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     color: colors.mutedForeground,
@@ -88,18 +70,6 @@ export const styles = stylex.create({
       default: "hsl(var(--foreground) / 0.4)",
       ":hover": colors.primary,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringInset,
-    },
   },
   // absolute top-0 flex h-4 items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
   absFlexCenter: {
@@ -110,18 +80,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringInset,
-    },
   },
   // cursor-pointer
   pointer: {

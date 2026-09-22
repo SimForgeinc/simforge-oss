@@ -13,7 +13,6 @@ export const styles = stylex.create({
   flexCenterPad05: {
     display: "flex",
     alignItems: "center",
-    borderRadius: "0",
     backgroundColor: "rgb(0 0 0 / 0.15)",
     padding: space.s0_5,
   },

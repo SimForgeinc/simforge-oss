@@ -15,6 +15,7 @@ import { Pause, Play, RotateCcw } from "lucide-react";
 
 import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./VideoGroupPlayer.stylex";
+import { motionRecipe } from "../stylex/recipes.stylex";
 
 interface VideoGroupContextValue {
   register: (el: HTMLVideoElement) => void;
@@ -201,7 +202,7 @@ export function VideoGroupPlayer({
             <button
               type="button"
               onClick={handlePlayPause}
-              {...stylex.props(styles.control, styles.playControl)}
+              {...stylex.props([motionRecipe.colors, styles.control], styles.playControl)}
               aria-label={playing ? "Pause all" : "Play all"}
             >
               {playing ? (
@@ -216,7 +217,7 @@ export function VideoGroupPlayer({
             <button
               type="button"
               onClick={handleRestart}
-              {...stylex.props(styles.control, styles.restartControl)}
+              {...stylex.props([motionRecipe.colors, styles.control], styles.restartControl)}
               aria-label="Restart"
             >
               <RotateCcw {...stylex.props(styles.restartIcon)} />
@@ -239,7 +240,7 @@ export function VideoGroupPlayer({
                   {...stylex.props(styles.scrubProgress)}
                   style={{ width: `${progress * 100}%` }}
                 >
-                  <div {...stylex.props(styles.scrubThumb)} />
+                  <div {...stylex.props([motionRecipe.transform, styles.scrubThumb])} />
                 </div>
               </div>
             </div>

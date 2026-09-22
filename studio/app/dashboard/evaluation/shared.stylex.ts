@@ -2,7 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  status: { display: "inline-flex", alignItems: "center", borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "transparent", borderRadius: "9999px", paddingInline: space.s2, paddingBlock: space.s0_5, fontSize: text.sizeXs, lineHeight: text.lineXs, textTransform: "capitalize" },
+  status: { display: "inline-flex", alignItems: "center", borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "transparent", paddingInline: space.s2, paddingBlock: space.s0_5, fontSize: text.sizeXs, lineHeight: text.lineXs, textTransform: "capitalize" },
   queued: { backgroundColor: colors.muted, color: colors.mutedForeground },
   /** `bg-blue-500/15 text-blue-600 dark:text-blue-400` — the shell is permanently dark, so the dark value is folded. */
   running: { backgroundColor: "rgba(59,130,246,.15)", color: "rgb(96,165,250)" },

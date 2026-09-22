@@ -2,7 +2,7 @@ import * as React from "react";
 import * as stylex from "@stylexjs/stylex";
 
 import { motionRecipe } from "../../stylex/recipes.stylex";
-import { colors, radii, stroke } from "../../stylex/tokens.stylex";
+import { colors, stroke } from "../../stylex/tokens.stylex";
 import { type PlacementStyle } from "../stylex/surface";
 
 export type SpinnerSize = "xs" | "sm" | "md" | "lg";
@@ -43,7 +43,6 @@ const styles = stylex.create({
     display: "inline-block",
     flexShrink: 0,
     boxSizing: "border-box",
-    borderRadius: radii.full,
     borderStyle: "solid",
     borderWidth: stroke.thick,
     borderTopColor: "transparent",

@@ -23,7 +23,6 @@ export const styles = stylex.create({
   whitePad0: {
     width: "1.5rem",
     height: "1.5rem",
-    borderRadius: "0",
     borderWidth: "0px",
     backgroundColor: {
       default: "transparent",

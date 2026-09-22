@@ -11,9 +11,6 @@ export const styles = stylex.create({
   spanTruncate: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // text-micro text-muted-foreground
   spanMicro: {
@@ -33,9 +30,6 @@ export const styles = stylex.create({
   spanTruncate2: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // text-micro text-muted-foreground
   spanMicro2: {

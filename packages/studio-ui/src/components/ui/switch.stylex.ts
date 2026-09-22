@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, shadows, stroke } from "../../stylex/tokens.stylex";
+import { colors, shadows, stroke } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -11,10 +11,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "transparent",
-    borderRadius: radii.full,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": colors.ring },
@@ -28,12 +24,8 @@ export const styles = stylex.create({
     display: "block",
     width: "0.75rem",
     height: "0.75rem",
-    borderRadius: radii.full,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevationLg,
-    transitionProperty: "transform",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     transform: { default: "translateX(0.125rem)", "[data-state=checked]": "translateX(0.875rem)", "[data-state=unchecked]": "translateX(0.125rem)" },
   },
 });

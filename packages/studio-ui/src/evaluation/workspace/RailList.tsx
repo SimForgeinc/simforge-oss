@@ -15,6 +15,7 @@
 import { useCallback, type KeyboardEvent, type ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RailList.stylex";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 export type RailRow = {
   id: string;
@@ -51,7 +52,7 @@ function Row({ row }: { row: RailRow }) {
       >
         {row.leading}
         <span {...stylex.props(styles.rowBody)}>
-          <span {...stylex.props(styles.rowTitle)}>{row.title}</span>
+          <span {...stylex.props([textLayout.truncate, styles.rowTitle])}>{row.title}</span>
           {row.meta ? <span {...stylex.props(styles.rowMeta)}>{row.meta}</span> : null}
         </span>
         {row.trailing ? <span {...stylex.props(styles.rowTrailing)}>{row.trailing}</span> : null}
@@ -133,7 +134,7 @@ export function RailList({
               <div key={group.key} {...stylex.props(styles.group)}>
                 {group.label ? (
                   <div {...stylex.props(styles.groupHeader)}>
-                    <span {...stylex.props(styles.groupTitle)} title={group.label}>
+                    <span {...stylex.props([textLayout.truncate, styles.groupTitle])} title={group.label}>
                       {group.label}
                     </span>
                     {group.note}

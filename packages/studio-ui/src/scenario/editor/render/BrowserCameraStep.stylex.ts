@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // mb-3 flex shrink-0 items-start justify-between gap-4
@@ -128,18 +128,6 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3.5 shrink-0 text-muted-foreground
   tightMuted: {
@@ -152,9 +140,6 @@ export const styles = stylex.create({
   fillXsInk: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
@@ -185,18 +170,6 @@ export const styles = stylex.create({
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     color: "hsl(var(--muted-foreground) / 0.4)",
-  },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
   },
   // px-1 py-1 text-center
   centerText2: {
@@ -235,18 +208,6 @@ export const styles = stylex.create({
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // border-t render-hairline first:border-t-0
   ruleT: {

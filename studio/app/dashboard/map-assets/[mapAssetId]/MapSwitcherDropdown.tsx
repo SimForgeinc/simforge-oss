@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface MapSwitcherDropdownProps {
   currentAsset: MapAsset;
@@ -56,9 +57,9 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          {...stylex.props(styles.dropdownTrigger)}
+          {...stylex.props([motionRecipe.colors, styles.dropdownTrigger])}
         >
-          <span {...stylex.props(styles.currentMapName)}>{currentAsset.name}</span>
+          <span {...stylex.props([textLayout.truncate, styles.currentMapName])}>{currentAsset.name}</span>
           <ChevronDown {...stylex.props(styles.dropdownChevron)} />
         </button>
       </DropdownMenuTrigger>
@@ -114,7 +115,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     if (!isCurrent) switchToMap(asset.map_asset_id);
                     setOpen(false);
                   }}
-                  {...stylex.props(styles.switcherItem, isCurrent ? styles.switcherItemCurrent : styles.switcherItemOther)}
+                  {...stylex.props([motionRecipe.colors, styles.switcherItem], isCurrent ? styles.switcherItemCurrent : styles.switcherItemOther)}
                 >
                   {isCurrent ? (
                     <Check {...stylex.props(styles.selectedMapIcon)} />
@@ -122,11 +123,11 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     <div {...stylex.props(styles.unselectedMapIndicator)} />
                   )}
                   <div {...stylex.props(styles.mapItemText)}>
-                    <p {...stylex.props(styles.switcherLabel, isCurrent && styles.switcherLabelCurrent)}>
+                    <p {...stylex.props([textLayout.truncate, styles.switcherLabel], isCurrent && styles.switcherLabelCurrent)}>
                       {asset.name}
                     </p>
                     {place && (
-                      <p {...stylex.props(styles.mapLocation)}>{place}</p>
+                      <p {...stylex.props([textLayout.truncate, styles.mapLocation])}>{place}</p>
                     )}
                   </div>
                 </button>

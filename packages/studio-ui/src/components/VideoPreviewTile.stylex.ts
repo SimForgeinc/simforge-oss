@@ -47,9 +47,6 @@ export const styles = stylex.create({
   },
   labelWrap: { minWidth: 0 },
   eyebrow: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "10px",
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
@@ -57,9 +54,6 @@ export const styles = stylex.create({
     color: "rgb(255 255 255 / 55%)",
   },
   label: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs, lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     textTransform: "capitalize",
@@ -106,7 +100,6 @@ export const styles = stylex.create({
     top: "50%",
     width: "0.625rem",
     height: "0.625rem",
-    borderRadius: "9999px",
     backgroundColor: colors.primary,
     transform: `translateY(-50%) scale(${thumbScale.value})`,
     transitionProperty: "transform",

@@ -13,7 +13,6 @@ export const styles = stylex.create({
     transform: "translate(-50%, -50%)",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: colors.critical,
     backgroundColor: "rgb(69 10 10 / 1)",
@@ -24,18 +23,6 @@ export const styles = stylex.create({
   size25: {
     width: "0.625rem",
     height: "0.625rem",
-  },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
   },
   // relative mb-1 h-5 select-none border-b border-white/10 bg-black/20
   relRuleB: {

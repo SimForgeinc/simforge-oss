@@ -1,17 +1,13 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   card: {
-    borderRadius: "0.375rem",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.card,
     color: "hsl(var(--card-foreground))",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
   },
   header: {
     display: "grid",

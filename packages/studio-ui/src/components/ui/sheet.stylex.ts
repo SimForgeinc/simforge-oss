@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, motion, radii, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, layers, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const fadeIn = stylex.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
 const fadeOut = stylex.keyframes({ from: { opacity: 1 }, to: { opacity: 0 } });
@@ -36,7 +36,7 @@ export const styles = stylex.create({
   left: { insetBlock: 0, left: 0, width: "75%", height: "100%", borderRightWidth: stroke.hairline, borderRightStyle: "solid", borderRightColor: colors.border, animationName: { default: null, "[data-state=open]": slideLeftIn, "[data-state=closed]": slideLeftOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
   right: { insetBlock: 0, right: 0, width: "75%", height: "100%", borderLeftWidth: stroke.hairline, borderLeftStyle: "solid", borderLeftColor: colors.border, animationName: { default: null, "[data-state=open]": slideRightIn, "[data-state=closed]": slideRightOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
   close: {
-    position: "absolute", top: "1rem", right: "1rem", borderRadius: radii.sm, opacity: 0.7,
+    position: "absolute", top: "1rem", right: "1rem", opacity: 0.7,
     transitionProperty: "opacity", transitionDuration: motion.durBase,
     ":hover": { opacity: 1 },
     // `focus:outline-none` is Tailwind's transparent 2px outline, not `outline: none`,

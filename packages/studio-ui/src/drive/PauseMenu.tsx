@@ -112,7 +112,6 @@ const styles = stylex.create({
       default: driveColors.line,
       ":hover": driveColors.lineHoverStrong,
     },
-    borderRadius: driveRadius.pill,
     backgroundColor: "transparent",
     padding: 0,
     color: driveColors.textBody,

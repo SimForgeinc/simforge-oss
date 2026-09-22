@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // render-view-enter flex min-h-0 flex-1 flex-col
@@ -42,18 +42,6 @@ export const styles = stylex.create({
     },
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-4
   size4: {
@@ -67,9 +55,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-foreground
   smInkSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -123,18 +108,6 @@ export const styles = stylex.create({
       default: null,
       ":disabled": "0.5",
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + render-glass inline-flex shrink-0 items-center gap-1.5 border px-3 py-1 text-micro font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50
   inlineFlexCenterTight2: {
@@ -159,18 +132,6 @@ export const styles = stylex.create({
     opacity: {
       default: null,
       ":disabled": "0.5",
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
     },
   },
   // text-xs text-destructive
@@ -240,9 +201,6 @@ export const styles = stylex.create({
   },
   // truncate text-xs font-medium text-foreground
   xsInkMedium: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
@@ -298,9 +256,6 @@ export const styles = stylex.create({
   // block truncate px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground
   blockCapsMicro: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1,
@@ -412,18 +367,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderColor: colors.primary,
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + relative w-40 shrink-0 overflow-hidden border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass hover:border-primary/50
   relTightBordered2: {
@@ -437,18 +380,6 @@ export const styles = stylex.create({
     borderColor: {
       default: "rgb(255 255 255 / 10%)",
       ":hover": "hsl(var(--primary) / 0.5)",
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
     },
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass-raised border text-foreground
@@ -464,18 +395,6 @@ export const styles = stylex.create({
     color: colors.text,
     backgroundColor: colors.glassRaised,
     borderColor: colors.hairlineStrong,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground
   xsMutedMedium: {
@@ -489,18 +408,6 @@ export const styles = stylex.create({
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
     },
   },
   // min-w-0 break-all text-foreground font-mono text-micro

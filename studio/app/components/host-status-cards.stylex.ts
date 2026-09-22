@@ -18,7 +18,7 @@
  * accepts arbitrary child SVGs and cannot style them through inherited values.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, motion, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /** `sm:` — the one breakpoint these cards respond to. */
 const SM = "@media (min-width: 640px)";
@@ -101,12 +101,6 @@ export const card = stylex.create({
     lineHeight: text.lineLg,
     fontWeight: text.weightSemibold,
   },
-  // flex items-center gap-2 — the cloud title carries its state lamp inline.
-  titleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: space.s2,
-  },
   // ml-2 font-mono text-xs font-normal text-white/40
   titleVersion: {
     marginLeft: space.s2,
@@ -122,12 +116,6 @@ export const card = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineBase,
     color: "rgba(255, 255, 255, 0.55)",
-  },
-  // truncate
-  truncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // font-mono
   mono: {
@@ -162,33 +150,14 @@ export const action = stylex.create({
   outline: {
     height: "2.5rem",
     gap: space.s2,
-    borderRadius: radii.full,
     borderColor: "rgba(255, 255, 255, 0.15)",
     backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
     color: colors.ink,
-  },
-  // h-10 gap-2 rounded-full bg-[#E8E044] text-black hover:bg-[#f1ea55]
-  accent: {
-    height: "2.5rem",
-    gap: space.s2,
-    borderRadius: radii.full,
-    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
-    color: "#000000",
-  },
-  // Accent connect action with the caller's disabled opacity.
-  accentConnect: {
-    height: "2.5rem",
-    gap: space.s2,
-    borderRadius: radii.full,
-    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
-    color: "#000000",
-    opacity: { default: null, ":disabled": 0.6 },
   },
   // h-9 gap-2 rounded-full bg-amber-300 text-black hover:bg-amber-200
   amber: {
     height: "2.25rem",
     gap: space.s2,
-    borderRadius: radii.full,
     backgroundColor: { default: "#fcd34d", ":hover": "#fde68a" },
     color: "#000000",
   },
@@ -217,7 +186,6 @@ export const lamp = stylex.create({
     width: "0.5rem",
     height: "0.5rem",
     flexShrink: 0,
-    borderRadius: radii.sm,
   },
   // bg-[#E8E044] shadow-[0_0_14px_rgba(232,224,68,0.35)]
   connected: {
@@ -256,7 +224,6 @@ export const cloud = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: AMBER_400_30,
-    borderRadius: radii.xl,
     backgroundColor: AMBER_400_10,
     padding: space.s4,
   },
@@ -306,9 +273,6 @@ export const chip = stylex.create({
     color: "inherit",
     textAlign: "left",
     cursor: "pointer",
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
@@ -478,7 +442,6 @@ export const readyPill = stylex.create({
     gap: space.s1_5,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderRadius: radii.full,
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
     fontFamily: text.fontMeta,
@@ -502,7 +465,6 @@ export const readyPill = stylex.create({
   dot: {
     width: "0.375rem",
     height: "0.375rem",
-    borderRadius: radii.sm,
   },
   // bg-[#E8E044]
   dotReady: {

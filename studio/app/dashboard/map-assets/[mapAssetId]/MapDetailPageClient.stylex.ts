@@ -1,11 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, layers, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
 export const styles = stylex.create({
   mapWorkspace: {
     position: "relative",
@@ -36,21 +31,7 @@ export const styles = stylex.create({
     height: "2rem",
     placeItems: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": colors.muted },
-    /*
-     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-     * `outline: none`: the focus ring above is a box-shadow, which
-     * forced-colours mode discards, and this transparent outline is what
-     * remains visible there.
-     */
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ring },
   },
   controlIcon: {
     width: "1rem",
@@ -74,10 +55,6 @@ export const styles = stylex.create({
     height: "1rem",
     width: "1rem",
     flexShrink: 0,
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   mainContent: {
     position: "relative",
@@ -113,9 +90,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   mapCanvas: {
     flex: "1 1 0%",
@@ -143,9 +117,6 @@ export const styles = stylex.create({
     backdropFilter: motion.blurMd,
     boxShadow: shadows.elevationSm,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   resetViewIcon: {
     width: "0.875rem",
@@ -168,9 +139,6 @@ export const styles = stylex.create({
     fontSize: "11px",
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   viewModeSegmentActive: {
     backgroundColor: colors.text,

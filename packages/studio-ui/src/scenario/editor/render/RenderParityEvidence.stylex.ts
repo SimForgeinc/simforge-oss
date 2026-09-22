@@ -214,18 +214,12 @@ export const styles = stylex.create({
   },
   // truncate font-mono text-micro
   evidenceValueMono: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
   },
   // truncate font-medium
   evidenceValue: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
   },
 });

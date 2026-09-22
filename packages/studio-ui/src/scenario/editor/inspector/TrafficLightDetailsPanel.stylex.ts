@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex flex-col items-center gap-1 text-center
@@ -26,9 +26,6 @@ export const styles = stylex.create({
   // max-w-52 truncate text-xs font-medium text-white
   xsWhiteMedium: {
     maxWidth: "13rem",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
@@ -42,7 +39,6 @@ export const styles = stylex.create({
   },
   // rounded-lg border border-amber-300/35 bg-amber-300/10 px-2.5 py-2 text-[10px] leading-relaxed text-amber-100
   borderedRelaxed: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.35)",
     backgroundColor: colors.warningWash,
@@ -61,7 +57,6 @@ export const styles = stylex.create({
     height: "1.5rem",
     flexShrink: "0",
     placeItems: "center",
-    borderRadius: "0",
     color: {
       default: "rgb(255 255 255 / 0.4)",
       ":hover": colors.critical,
@@ -95,7 +90,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.15)",
@@ -110,18 +104,6 @@ export const styles = stylex.create({
     color: {
       default: "rgb(255 255 255 / 0.6)",
       ":hover": colors.ink,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
     },
     backgroundColor: {
       default: null,

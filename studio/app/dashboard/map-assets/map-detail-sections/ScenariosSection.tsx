@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the ScenariosSection component. */
 type ScenariosSectionProps = {
@@ -43,11 +44,11 @@ export function ScenariosSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.scenarioToggle)}
+          {...stylex.props([motionRecipe.colors, styles.scenarioToggle])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           Scenarios ({scenarios.length})
         </button>
@@ -57,7 +58,7 @@ export function ScenariosSection({
               <TooltipTrigger asChild>
                 <Link
                   href={primaryEditorHref}
-                  {...stylex.props(styles.editorLink)}
+                  {...stylex.props([motionRecipe.colors, styles.editorLink])}
                   aria-label="Open latest scenario in editor"
                 >
                   <SquarePen {...stylex.props(styles.editorIcon)} />
@@ -86,7 +87,7 @@ export function ScenariosSection({
                       scenarioId: scenario.id,
                       mapName,
                     })}
-                    {...stylex.props(styles.scenarioLink)}
+                    {...stylex.props([textLayout.truncate, styles.scenarioLink])}
                   >
                     {scenario.displayName}
                   </Link>

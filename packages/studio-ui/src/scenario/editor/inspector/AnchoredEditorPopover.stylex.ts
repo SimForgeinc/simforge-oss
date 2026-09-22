@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex min-h-[52px] shrink-0 items-center gap-3 overflow-hidden rounded-t-[10px] border-b border-white/10 bg-[linear-gradient(180deg,#171717_0%,#111111_100%)] px-3 py-2
@@ -10,8 +10,6 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s3,
     overflow: "hidden",
-    borderTopLeftRadius: "10px",
-    borderTopRightRadius: "10px",
     borderBottomWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: "linear-gradient(180deg, #171717 0%, #111111 100%)",
@@ -37,9 +35,6 @@ export const styles = stylex.create({
   // mt-1 truncate text-sm font-semibold leading-none text-white
   smWhiteSemibold: {
     marginTop: space.s1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: "1",
     fontWeight: text.weightSemibold,
@@ -53,14 +48,10 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "0",
     color: {
       default: colors.textSubtle,
       ":hover": colors.ink,
     },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: {
       default: null,
       ":hover": colors.fillStrong,
@@ -76,8 +67,6 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    borderBottomRightRadius: "11px",
-    borderBottomLeftRadius: "11px",
     backgroundColor: "rgb(13 13 13 / 1)",
     padding: space.s4,
     scrollbarWidth: "thin",
@@ -96,7 +85,6 @@ export const styles = stylex.create({
     maxHeight: "560px",
     flexDirection: "column",
     overflow: "visible",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.8)",
     backgroundImage: "linear-gradient(155deg,#111111 0%,#090909 58%,#0d0d0d 100%)",

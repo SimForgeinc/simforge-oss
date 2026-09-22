@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const TRANSITION = "color, background-color, border-color, text-decoration-color, fill, stroke";
 const RING_OFFSET = "var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)";
@@ -14,13 +14,9 @@ export const button = stylex.create({
     justifyContent: "center",
     gap: space.s2,
     whiteSpace: "nowrap",
-    borderRadius: radii.md,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightMedium,
-    transitionProperty: TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     "--tw-ring-offset-color": colors.bg,
     "--tw-ring-offset-width": { default: null, ":focus-visible": "2px" },
     "--tw-ring-color": { default: null, ":focus-visible": colors.ring },
@@ -95,8 +91,8 @@ export const buttonVariants = stylex.create({
 
 export const buttonSizes = stylex.create({
   default: { height: "2.5rem", paddingInline: space.s4, paddingBlock: space.s2 },
-  sm: { height: "2.25rem", paddingInline: space.s3, borderRadius: radii.md },
-  lg: { height: "2.75rem", paddingInline: space.s6, borderRadius: radii.md },
+  sm: { height: "2.25rem", paddingInline: space.s3, },
+  lg: { height: "2.75rem", paddingInline: space.s6, },
   icon: { height: "2.5rem", width: "2.5rem" },
   // The control scale (recipes `control`): one height per step, shared with
   // Input, IconButton and Chip so a row of mixed controls lines up.
@@ -112,7 +108,6 @@ export const badge = stylex.create({
   base: {
     display: "inline-flex",
     alignItems: "center",
-    borderRadius: radii.md,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     paddingInline: space.s2_5,
@@ -120,9 +115,6 @@ export const badge = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
-    transitionProperty: TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     "--tw-ring-offset-width": { default: null, ":focus": "2px" },
     "--tw-ring-color": { default: null, ":focus": colors.ring },
     "--tw-ring-offset-shadow": { default: null, ":focus": RING_OFFSET },

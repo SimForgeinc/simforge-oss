@@ -10,6 +10,7 @@ import {
   RENDERING_PREFERENCE_CHOICES,
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 
 /** Controls shared authoring quality for the packaged @simforge-oss/viewer. */
@@ -38,7 +39,7 @@ export function DigitalTwinLayersPanel() {
               type="button"
               onClick={() => saveRenderingPreference(value)}
               {...stylex.props(
-                  styles.qualitySegment,
+                  [motionRecipe.colors, styles.qualitySegment],
                   quality === value ? styles.qualitySegmentActive : styles.qualitySegmentInactive,
                 )}
             >
@@ -61,7 +62,7 @@ export function DigitalTwinLayersPanel() {
         type="button"
         onClick={handleClearCache}
         disabled={cacheState === "clearing"}
-        {...stylex.props(styles.clearCacheButton)}
+        {...stylex.props([motionRecipe.colors, styles.clearCacheButton])}
       >
         <Trash2 {...stylex.props(styles.clearCacheIcon)} />
         {cacheState === "clearing"

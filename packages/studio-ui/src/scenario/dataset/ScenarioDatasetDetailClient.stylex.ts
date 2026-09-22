@@ -50,9 +50,6 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   title: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontDisplay,
     fontSize: text.sizeBase,
     lineHeight: text.lineTight,

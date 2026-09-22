@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   scenariosContainer: {
@@ -44,9 +44,6 @@ export const styles = stylex.create({
     fontSize: "11px",
     fontWeight: text.weightMedium,
     color: colors.text,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": colors.muted },
     cursor: { default: null, ":disabled": "not-allowed" },
     opacity: { default: null, ":disabled": 0.6 },
@@ -81,9 +78,6 @@ export const styles = stylex.create({
     padding: space.s2,
   },
   templateScenarioName: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,

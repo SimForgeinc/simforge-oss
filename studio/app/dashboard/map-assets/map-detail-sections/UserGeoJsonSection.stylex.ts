@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sliderRow: {
@@ -56,9 +56,6 @@ export const styles = stylex.create({
     fontSize: "11px",
     fontWeight: text.weightMedium,
     color: "hsl(var(--foreground) / 0.9)",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   uploadIcon: {
     width: "0.75rem",
@@ -124,9 +121,6 @@ export const styles = stylex.create({
   layerName: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: "hsl(var(--foreground) / 0.9)",
@@ -145,9 +139,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.danger },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--destructive) / 0.15)" },
   },
   removeIcon: {
@@ -163,9 +154,6 @@ export const styles = stylex.create({
   colorSwatch: {
     width: "1rem",
     height: "1rem",
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     transform: { default: null, ":hover": "scale(1.1)" },
     boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.2)",
   },

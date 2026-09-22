@@ -1,11 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
 export const styles = stylex.create({
   pathChain: {
     display: "flex",
@@ -46,9 +41,6 @@ export const styles = stylex.create({
     borderStyle: "solid",
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   stepChipOn: {
     borderColor: "hsl(var(--primary) / 0.6)",
@@ -65,9 +57,6 @@ export const styles = stylex.create({
   },
   pathStepObjectId: {
     maxWidth: "200px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     color: "hsl(var(--muted-foreground) / 0.9)",
   },
@@ -104,9 +93,6 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   highlightToggleOn: {
     backgroundColor: { default: "hsl(var(--primary) / 0.3)", ":hover": "hsl(var(--primary) / 0.4)" },
@@ -211,9 +197,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   debugToggleOn: {
@@ -296,10 +279,6 @@ export const styles = stylex.create({
   loadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   resultsHeaderActions: {
     marginBottom: space.s2,
@@ -357,9 +336,6 @@ export const styles = stylex.create({
   resultTitle: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -382,22 +358,13 @@ export const styles = stylex.create({
     minWidth: 0,
   },
   metadataLabel: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     color: colors.mutedForeground,
   },
   metadataValue: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
     color: colors.text,
   },
   confidenceValue: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
     color: colors.positive,
   },
@@ -448,9 +415,6 @@ export const styles = stylex.create({
   relatedRefTitle: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     color: colors.text,
   },
   relatedRefDistance: {
@@ -482,11 +446,6 @@ export const styles = stylex.create({
     flexWrap: "wrap",
     alignItems: "center",
     gap: space.s1,
-  },
-  matchReasons: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   resultActions: {
     marginTop: space.s2,
@@ -559,8 +518,5 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.text,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
 });
