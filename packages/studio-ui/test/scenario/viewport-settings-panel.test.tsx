@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render as renderView, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as renderView, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { ViewportSettingsPanel } from "../../src/scenario/editor/regions/slots/ViewportSettingsPanel";
 import { loadViewportSettings } from "../../src/scenario/editor/regions/slots/viewport-settings";
 import type { ReactNode } from "react";
 import { StudioHostTestProvider } from "../helpers/studio-host";
+import { saveRenderingPreference } from "../../src/components/rendering-preference";
 
 function render(ui: ReactNode) {
   return renderView(ui, { wrapper: StudioHostTestProvider });
@@ -35,6 +36,7 @@ function fakeViewer() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  saveRenderingPreference("low");
 });
 
 afterEach(cleanup);
@@ -135,6 +137,21 @@ describe("ViewportSettingsPanel", () => {
 
     fireEvent.click(screen.getByRole("switch", { name: "Vegetation" }));
     expect(viewer.setLayerVisible).toHaveBeenCalledWith("vegetation", false);
+  });
+
+  it("keeps foliage off and the toggle disabled until leaving the no-foliage profile", () => {
+    saveRenderingPreference("low-no-foliage");
+    const viewer = fakeViewer();
+    render(<ViewportSettingsPanel viewer={viewer} />);
+    fireEvent.click(screen.getByRole("button", { name: /Viewport and camera settings/ }));
+    const toggle = screen.getByRole("switch", { name: "Vegetation" }) as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(viewer.setLayerVisible).not.toHaveBeenCalledWith("vegetation", true);
+    act(() => saveRenderingPreference("medium"));
+    expect(toggle.disabled).toBe(false);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(viewer.setLayerVisible).toHaveBeenLastCalledWith("vegetation", true);
   });
 
   it("offers a reset only once something has moved, and it restores the defaults", () => {

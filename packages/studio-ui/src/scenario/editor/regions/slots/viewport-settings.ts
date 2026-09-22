@@ -3,6 +3,12 @@ import {
   type CameraControlPreferences,
 } from "@simforge-oss/viewer";
 import type { CameraMode } from "@simforge-oss/viewer";
+import { readRenderingPreference, type RenderingPreference } from "../../../../components/rendering-preference";
+
+/** The no-foliage profile wins without overwriting the user's saved layer toggle. */
+export function viewportVegetationVisible(settings: ViewportSettings, preference: RenderingPreference = readRenderingPreference()): boolean {
+  return preference !== "low-no-foliage" && settings.layers.vegetation;
+}
 
 /**
  * Viewport settings: the camera-control preferences plus what the scene draws.

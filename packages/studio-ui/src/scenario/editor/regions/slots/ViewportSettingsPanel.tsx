@@ -23,13 +23,14 @@ import {
   isDefaultViewportSettings,
   LOOK_SENSITIVITY_RANGE,
   loadViewportSettings,
+  viewportVegetationVisible,
   SENSITIVITY_RANGE,
   saveViewportSettings,
-  type ViewportLayerKey,
   type ViewportSettings,
 } from "./viewport-settings";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ViewportSettingsPanel.stylex";
+import { useRenderingPreference } from "../../../../components/rendering-preference";
 
 /**
  * Editor, viewport, and camera settings for either the editor top bar or the idle canvas.
@@ -62,6 +63,8 @@ export function ViewportSettingsPanel({
   // Read from storage lazily so the first render already has the user's own settings and the camera never
   // briefly runs on defaults.
   const [settings, setSettings] = useState<ViewportSettings>(() => loadViewportSettings());
+  const preference = useRenderingPreference();
+  const foliageDisabled = preference === null || preference === "low-no-foliage";
   const panelId = useId();
 
   const update = useCallback((next: ViewportSettings) => {
@@ -82,10 +85,12 @@ export function ViewportSettingsPanel({
     if (!viewer) return;
     viewer.setCameraControlPreferences(settings.controls);
     viewer.setCameraMode(settings.cameraMode);
-    for (const [layer, visible] of Object.entries(settings.layers)) {
-      viewer.setLayerVisible(layer as ViewportLayerKey, visible);
-    }
+    viewer.setLayerVisible("city", settings.layers.city);
+    viewer.setLayerVisible("road", settings.layers.road);
   }, [viewer, settings]);
+  useEffect(() => {
+    viewer?.setLayerVisible("vegetation", viewportVegetationVisible(settings, preference ?? undefined));
+  }, [viewer, settings, preference]);
 
   const modified = !isDefaultViewportSettings(settings);
 
@@ -280,7 +285,8 @@ export function ViewportSettingsPanel({
           />
           <Toggle
             label="Vegetation"
-            checked={settings.layers.vegetation}
+            checked={settings.layers.vegetation && !foliageDisabled}
+            disabled={foliageDisabled}
             onChange={(value) =>
               update({ ...settings, layers: { ...settings.layers, vegetation: value } })
             }
@@ -291,7 +297,7 @@ export function ViewportSettingsPanel({
             onChange={(value) => update({ ...settings, layers: { ...settings.layers, road: value } })}
           />
           <p {...stylex.props(styles.microMutedSnug)}>
-            The quality preset can hide buildings and vegetation regardless of these.
+            Low · no foliage turns vegetation off. Choose Low or Medium in Render Settings to enable this toggle.
           </p>
         </Section>
         {getDebugInformation ? (
@@ -352,16 +358,19 @@ function Toggle({
   label,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       {...stylex.props(styles.flexCenterBetween2)}
     >

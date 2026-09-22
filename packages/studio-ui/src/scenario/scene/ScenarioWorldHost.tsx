@@ -7,8 +7,7 @@ import { CityView, waitForCanvasPresentation } from "@simforge-oss/viewer/react"
 import { cn } from "../../lib/utils";
 import { readRenderingPreference,
 RENDERING_PREFERENCE_CHANGE_EVENT,
-type RenderingPreference, } from "../../components/rendering-preference"
-import { useRegisterRenderingBenchmarkTarget } from "../../components/rendering-benchmark-target"
+type RenderingPreference, renderingPreferenceQuality, RENDERING_PREFERENCE_CHOICES } from "../../components/rendering-preference"
 import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
 import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
@@ -139,9 +138,9 @@ export function ScenarioWorldHost({
   const resolveMapAssetUrls = useDirectMapAssetUrlResolver(retainedTarget?.mapVersionId ?? null);
   const [tierSelection, setTierSelection] = useState<TierSelection | null>(null);
   const [preference, setPreference] = useState<RenderingPreference>(
-    () => readRenderingPreference() ?? "medium",
+    () => readRenderingPreference(),
   );
-  const quality = AUTHORING_QUALITY[preference];
+  const quality = AUTHORING_QUALITY[renderingPreferenceQuality(preference)];
   const uploadBudget = transitionPhase === "idle" || transitionPhase === "revealing" ? null : BOOT_UPLOAD_BUDGET;
   const uploadBudgetRef = useRef(uploadBudget);
   uploadBudgetRef.current = uploadBudget;
@@ -323,7 +322,7 @@ export function ScenarioWorldHost({
   const restoreEnvironmentRef = useRef<() => void>(() => undefined);
   const applyEnvironment = useCallback((viewer: CityViewer) => {
     restoreEnvironmentRef.current();
-    restoreEnvironmentRef.current = applyDefaultSceneEnvironment(viewer, preference);
+    restoreEnvironmentRef.current = applyDefaultSceneEnvironment(viewer, renderingPreferenceQuality(preference));
   }, [preference]);
   useEffect(() => () => restoreEnvironmentRef.current(), []);
 
@@ -343,7 +342,7 @@ export function ScenarioWorldHost({
       actorRendererRef.current.setContactShadows(!viewer.castsRealtimeShadows());
     }
     const current = targetRef.current ?? retainedTargetRef.current;
-    const tierChange = changed && supportsMapModelReadiness(viewer) ? viewer.setMapTextureTier(preference) : null;
+    const tierChange = changed && supportsMapModelReadiness(viewer) ? viewer.setMapTextureTier(renderingPreferenceQuality(preference)) : null;
     if (
       !changed ||
       !current ||
@@ -472,14 +471,6 @@ export function ScenarioWorldHost({
   );
 
   const effectiveTarget = stableTarget ?? retainedTarget;
-  const benchmarkTarget = useMemo(
-    () =>
-    effectiveTarget
-      ? { manifestUrl: effectiveTarget.manifestUrl, label: effectiveTarget.label }
-      : null,
-    [effectiveTarget],
-  );
-  useRegisterRenderingBenchmarkTarget(benchmarkTarget);
   const streaming = Boolean(
     effectiveTarget && loadedMapVersionId !== effectiveTarget.mapVersionId,
   );
@@ -519,7 +510,7 @@ export function ScenarioWorldHost({
       mapVersionId: effectiveTarget?.mapVersionId,
       manifestUrl: effectiveTarget?.manifestUrl,
       readinessAnnounced: Boolean(effectiveTarget && loadedMapVersionId === effectiveTarget.mapVersionId),
-      requestedTier: preference,
+      requestedTier: renderingPreferenceQuality(preference),
       phase: transitionPhase,
       error,
     }} />,
@@ -746,10 +737,7 @@ export function ScenarioWorldHost({
 
 
 function renderingPreferenceLabel(preference: RenderingPreference): string {
-  switch (preference) {
-    case "low": return "Low";
-    case "medium": return "Medium";
-  }
+  return RENDERING_PREFERENCE_CHOICES.find(choice => choice.id === preference)!.label;
 }
 
 function prefersReducedMotion(): boolean {

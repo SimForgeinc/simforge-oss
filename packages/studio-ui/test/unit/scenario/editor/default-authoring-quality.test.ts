@@ -14,7 +14,8 @@ describe("default authoring quality", () => {
     },
   );
 
-  it("defaults to high before a browser preference is saved", () => {
-    expect(defaultAuthoringQuality()).toBe("medium");
+  it("keeps no-foliage out of the editor texture-tier contract", () => {
+    saveRenderingPreference("low-no-foliage");
+    expect(defaultAuthoringQuality()).toBe("low");
   });
 });
