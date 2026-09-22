@@ -109,7 +109,7 @@ describe("editor SUMO host", () => {
 
   it("stands down when the loaded trace already carries the worker's SUMO traffic", () => {
     render(<ScenarioSumoTraffic session={session("sumo", "a".repeat(64), {
-      traceActorMetadata: { "sumo:0badf00d": { tags: ["ambient", "catalog:vehicle.sedan", "sumo"] } },
+      traceActorMetadata: { "sumo-0badf00d": { tags: ["ambient", "catalog:vehicle.sedan", "sumo"] } },
     }).value} />);
     expect(sumo.calls.at(-1)?.enabled).toBe(false);
   });

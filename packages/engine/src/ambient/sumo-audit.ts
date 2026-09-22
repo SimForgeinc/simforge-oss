@@ -55,7 +55,7 @@ export function auditSumoSignalCompliance(options: {
   readonly transform: SumoNetworkWorldTransform;
   readonly signalPrograms: readonly SignalProgram[];
   readonly roadControls?: readonly RoadControl[];
-  /** Actor ids to audit; default: every `sumo:` actor. */
+  /** Actor ids to audit; default: every actor tagged `sumo`. */
   readonly actorIds?: readonly string[];
 }): SumoSignalAudit {
   const network = parseSumoSignalNetwork(options.networkXml);
@@ -85,7 +85,9 @@ export function auditSumoSignalCompliance(options: {
   });
 
   const scene = traceToSceneFrame(options.trace);
-  const ids = options.actorIds ?? Object.keys(scene.ticks.actors).filter((id) => id.startsWith('sumo:')).sort();
+  const ids = options.actorIds ?? Object.keys(scene.ticks.actors)
+    .filter((id) => options.trace.header.actorMetadata?.[id]?.tags.includes('sumo'))
+    .sort();
   const signals = options.trace.ticks.signals ?? {};
   const crossingsByBinding: Record<SumoLinkBindingSource, number> = { 'stop-line': 0, head: 0, 'road-control': 0, none: 0 };
   const redViolations: SumoRedLightCrossing[] = [];
