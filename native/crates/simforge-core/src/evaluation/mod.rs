@@ -50,6 +50,7 @@ pub const DEFAULT_MAX_DECEL_MPS2: f64 = 0.8 * 9.81;
 /// | `collision` | opt-in |
 /// | `occlusion_unproven` | a declared occlusion never produced a reveal before conflict |
 /// | `no_interaction` | no pair produced any finite criticality |
+/// | `implausible_motion` | always on: some body moved in a way no vehicle can (see [`crate::trace::plausibility`]) |
 ///
 /// Wire form is the TS `EvaluateFilters` object: camelCase, unknown keys
 /// rejected, every field optional (`null`/absent = default), `window` as a
@@ -84,6 +85,10 @@ pub enum RejectCode {
     Collision,
     OcclusionUnproven,
     NoInteraction,
+    /// A body in the trace rotated at rest, turned faster than rolling
+    /// allows, or was placed rather than driven. Not a filter: a trace that
+    /// shows impossible motion is wrong regardless of the scenario.
+    ImplausibleMotion,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -124,6 +129,10 @@ pub struct EvaluationSummary {
     pub collisions: usize,
     pub never_fired: usize,
     pub occlusion_unproven: usize,
+    /// Unexplained physical-plausibility findings; `0` from `evaluate_metrics`,
+    /// which has no tracks to audit.
+    #[serde(default)]
+    pub implausible_motion: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -427,6 +436,7 @@ pub fn evaluate_metrics(
             collisions: metrics.collisions.len(),
             never_fired: never_fired.len(),
             occlusion_unproven: occlusion_unproven.len(),
+            implausible_motion: 0,
         },
         findings,
         tags,
@@ -468,7 +478,32 @@ pub fn evaluate_trace(trace: &SimTrace, filters: &EvaluateFilters) -> TraceEvalu
         negative_control: filters.negative_control,
         required_triggers: filters.required_triggers.clone(),
     };
-    evaluate_metrics(&trace.metrics, trace.header.clip_seconds, &resolved)
+    let mut evaluation = evaluate_metrics(&trace.metrics, trace.header.clip_seconds, &resolved);
+    let audit = crate::trace::plausibility::audit_motion(trace);
+    let unexplained: Vec<_> = audit.unexplained().collect();
+    if !unexplained.is_empty() {
+        let mut actors: Vec<&str> = unexplained.iter().map(|f| f.actor_id.as_str()).collect();
+        actors.sort_unstable();
+        actors.dedup();
+        evaluation.summary.implausible_motion = unexplained.len();
+        evaluation.findings.push(RejectFinding {
+            code: RejectCode::ImplausibleMotion,
+            reason: format!(
+                "{} tick(s) of physically impossible motion across {} actor(s); first: {} {} at t={:.2}s",
+                unexplained.len(),
+                actors.len(),
+                unexplained[0].actor_id,
+                unexplained[0].code.as_str(),
+                unexplained[0].t,
+            ),
+            detail: Some(json!({
+                "actors": actors,
+                "findings": unexplained.iter().take(20).collect::<Vec<_>>(),
+            })),
+        });
+        evaluation.verdict = Verdict::Reject;
+    }
+    evaluation
 }
 
 #[cfg(test)]

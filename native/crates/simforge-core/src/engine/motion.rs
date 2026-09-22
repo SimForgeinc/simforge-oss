@@ -94,6 +94,43 @@ impl Plan {
     }
 }
 
+/// How far behind its last route position a tracked dynamic body is looked
+/// for, and how far ahead beyond the distance it can have covered in a tick.
+/// Wide enough for any lateral excursion on a curve, far narrower than the
+/// gap between the two passes of a U-turn or an out-and-back route.
+const ROUTE_TRACK_BEHIND_M: f64 = 6.0;
+const ROUTE_TRACK_AHEAD_M: f64 = 6.0;
+
+/// Where a dynamic body is on its route: searched near its last arc length,
+/// never across to another pass of a route that doubles back on itself.
+fn track_on_route(a: &ActorRuntime, position: Vec2, dt: f64) -> crate::map::RouteProjection {
+    a.route.project_point_near(
+        position,
+        a.route_s,
+        ROUTE_TRACK_BEHIND_M,
+        ROUTE_TRACK_AHEAD_M + a.speed_mps.abs() * dt,
+    )
+}
+
+/// Steering preview on the route at `s`, continued straight along the
+/// terminal heading past the route end. Clamping the preview to the end point
+/// instead makes it collapse onto — and then fall behind — a body that is
+/// still braking there, and pure pursuit answers a point behind the body with
+/// full steering lock.
+fn preview_point_on_route(a: &ActorRuntime, s: f64, lateral_m: f64) -> Vec2 {
+    let length = a.route.length_m();
+    let base = a.route.point_with_offset(s.min(length), lateral_m);
+    let beyond = s - length;
+    if beyond <= 0.0 {
+        return base;
+    }
+    let heading = a.route.pose_at(length).heading_rad;
+    Vec2 {
+        x: base.x + cos(heading) * beyond,
+        y: base.y + sin(heading) * beyond,
+    }
+}
+
 impl Simulation {
     /* ------------------------------------------------------------ planning */
 
@@ -518,7 +555,7 @@ impl Simulation {
                 plan.accel = st.longitudinal_acceleration_mps2 * a.direction_sign();
                 plan.position = Vec2 { x: st.x, y: st.y };
                 plan.heading = st.yaw_rad;
-                let projected = a.route.project_point(plan.position);
+                let projected = track_on_route(a, plan.position, dt);
                 plan.route_s = projected.s;
                 plan.lateral_offset = a.route.lateral_offset_at(projected.s, plan.position);
                 plan.lateral_rate = st.lateral_velocity_mps;
@@ -792,6 +829,23 @@ impl Simulation {
         if corner.acceleration_cap_mps2 < accel {
             accel = corner.acceleration_cap_mps2;
         }
+        // A body brakes to a stop at the end of its route the way it brakes
+        // for a stop line. Without this it arrives at speed and the terminal
+        // hold below would have to stop it within one tick. Not a hazard, so
+        // it does not enter `required_decel`.
+        if a.body.is_some() {
+            // The fastest the body may be doing and still stop at the end at
+            // the driver's comfortable deceleration, from where it will be
+            // after this tick. It never drops to zero short of the end, so a
+            // body that stopped a little early creeps up to it.
+            let remaining = (a.route.length_m() - a.route_s).max(0.0);
+            let decel = a.driver.comfortable_deceleration_mps2.max(0.5);
+            let ahead = (remaining - a.speed_mps * dt).max(0.0);
+            let route_end_cap = ((2.0 * decel * ahead).sqrt() - a.speed_mps) / dt;
+            if route_end_cap < accel {
+                accel = route_end_cap;
+            }
+        }
         accel = accel.max(-lim.brake_hard * friction_scale);
         plan.required_decel = if leader_is_ambient && !a.is_ambient {
             gov.required_decel_excluding_leader
@@ -875,9 +929,9 @@ impl Simulation {
             } else {
                 short_lookahead
             };
-            let preview_s = a.route.length_m().min(a.route_s + steering_lookahead);
+            let preview_s = a.route_s + steering_lookahead;
             let preview_pose = a.route.pose_at(preview_s);
-            let preview_time = 0.4f64.max((preview_s - a.route_s) / a.speed_mps.abs().max(1.0));
+            let preview_time = 0.4f64.max(steering_lookahead / a.speed_mps.abs().max(1.0));
             let preview_ref = match &a.lat_cmd {
                 Some(cmd) => minimum_jerk_sample(
                     cmd.from,
@@ -903,9 +957,7 @@ impl Simulation {
                     motion_direction: a.motion_direction,
                     target_speed_mps: speed,
                     target_acceleration_mps2: accel,
-                    preview_point: a
-                        .route
-                        .point_with_offset(preview_s, tracking_preview_offset),
+                    preview_point: preview_point_on_route(a, preview_s, tracking_preview_offset),
                     preview_heading_rad: heading_with_slip(
                         preview_pose.heading_rad,
                         plan.lateral_reference_rate,
@@ -923,7 +975,7 @@ impl Simulation {
             let st = result.state;
             let a = &self.actors[index.index()];
             let position = Vec2 { x: st.x, y: st.y };
-            let projected = a.route.project_point(position);
+            let projected = track_on_route(a, position, dt);
             let projected_offset = a.route.lateral_offset_at(projected.s, position);
             let road_center_allowance =
                 0.2f64.max(a.route.width_at(projected.s) / 2.0 - a.dims.w / 2.0 + 0.5);
@@ -1000,7 +1052,24 @@ impl Simulation {
         }
 
         let a = &self.actors[index.index()];
-        if plan.route_s >= a.route.length_m() - ROUTE_END_SLACK_M {
+        if dynamic && plan.route_s >= a.route.length_m() - ROUTE_END_SLACK_M {
+            // A dynamic body owns its pose: the route end never places it.
+            // It is held where physics left it, facing the way it faces, and
+            // only once it has actually stopped — a body still moving keeps
+            // braking under physics (the route-end cap above) until it is at
+            // rest. Snapping it to the route's terminal pose instead stopped
+            // it dead from speed and turned it to the terminal heading inside
+            // one tick.
+            plan.route_s = a.route.length_m();
+            if plan.speed == 0.0 {
+                plan.accel = -a.speed_mps / dt;
+                plan.speed = 0.0;
+                plan.longitudinal_velocity = Some(0.0);
+                plan.lateral_rate = 0.0;
+                plan.lateral_accel = 0.0;
+                plan.retire = true;
+            }
+        } else if plan.route_s >= a.route.length_m() - ROUTE_END_SLACK_M {
             plan.route_s = a.route.length_m();
             // A route is a motion path, not a lifecycle instruction: hold the
             // terminal pose; only exist(absent) despawns.
