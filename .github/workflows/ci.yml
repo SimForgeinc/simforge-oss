@@ -72,6 +72,55 @@ jobs:
       - run: pnpm release:verify-artifacts
       - run: pnpm release:smoke-packages
 
+  determinism:
+    # Engine semantics lock (docs/engineering/engine-semver.md): the golden-trace
+    # corpus under the ENGINE_SEM_VER rule, and native (N-API) vs WASM byte
+    # identity. Builds both runtime artifacts with the pinned toolchain.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/target
+          key: determinism-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'native/Cargo.lock') }}
+      - run: pnpm install --frozen-lockfile
+      - name: ENGINE_SEM_VER rule (golden digests may only change with a bump)
+        run: node scripts/determinism/check-engine-semver.mjs --base "origin/${{ github.base_ref || 'main' }}"
+      - name: Build the N-API addon and the WASM module
+        env:
+          CARGO_TARGET_DIR: native/target
+          SIMFORGE_SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          pnpm --filter @simforge-oss/native-runtime run build:node
+          pnpm --filter @simforge-oss/native-runtime run build:wasm
+      - name: Golden-trace corpus
+        run: pnpm --filter @simforge-oss/cli exec vitest run src/__tests__/golden-traces.test.ts
+      - name: Native vs WASM trace identity
+        run: pnpm --filter @simforge-oss/native-runtime exec vitest run src/__tests__/build-agreement.test.ts src/__tests__/trace-identity.test.ts
+      - name: Canonical JSON conformance (TS and Rust)
+        run: |
+          pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/canonical-json.test.ts
+          cargo test --manifest-path native/Cargo.toml -p simforge-core --test canonical_json_vectors
+        env:
+          CARGO_TARGET_DIR: native/target
+      - name: Cross-renderer pose parity (hook; runs once the WS-B comparator is configured)
+        run: node scripts/determinism/renderer-parity.mjs
+
   studio-style:
     # StyleX discipline for Studio (docs/engineering/studio-style-guide.md):
     # per-file literal budgets that only go down, and the StyleX lint. The

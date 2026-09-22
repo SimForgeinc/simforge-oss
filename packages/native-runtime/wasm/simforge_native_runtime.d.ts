@@ -139,6 +139,10 @@ export class MapBundle {
     siteSignalPlanJson(site: Site): string;
     staticColliderDiagnosticsJson(): string;
     topologyJson(): string;
+    /**
+     * `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+     */
+    readonly closureDigest: string;
     readonly digest: string;
     readonly graph: LaneGraph;
     readonly mapId: string;
@@ -241,6 +245,11 @@ export class RenderTimeline {
      * (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
      */
     sceneFramesArray(times: Float64Array, yaw_only: boolean): Float64Array;
+    /**
+     * A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+     * scene-state projection of the timeline for whole-document consumers.
+     */
+    sceneStateJson(times: Float64Array, yaw_only: boolean): string;
     /**
      * `{signalId: indication}` held at `t`, as JSON.
      */
@@ -564,7 +573,17 @@ export function compileTemplate(template_json: string, bundle: MapBundle, site: 
 
 export function contentHash(document: string): string;
 
+/**
+ * Build provenance JSON (never a cache key).
+ */
+export function engineBuild(): string;
+
 export function engineHz(): number;
+
+/**
+ * Engine semantics version; `engineVersion()` is its former name.
+ */
+export function engineSemVer(): string;
 
 export function engineVersion(): string;
 
@@ -729,7 +748,9 @@ export interface InitOutput {
     readonly compileresult_manifestJson: (a: number) => [number, number];
     readonly compileresult_observationsJson: (a: number) => [number, number];
     readonly contentHash: (a: number, b: number) => [number, number, number, number];
+    readonly engineBuild: () => [number, number];
     readonly engineHz: () => number;
+    readonly engineSemVer: () => [number, number];
     readonly engineVersion: () => [number, number];
     readonly envsession_actorCount: (a: number) => [number, number, number];
     readonly envsession_actorDims: (a: number) => [number, number, number];
@@ -772,6 +793,7 @@ export interface InitOutput {
     readonly lanegraph_sampleLane: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly lanegraph_successors: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly lanegraph_turnRelationOf: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly mapbundle_closureDigest: (a: number) => [number, number];
     readonly mapbundle_controlPlanJson: (a: number) => [number, number, number, number];
     readonly mapbundle_digest: (a: number) => [number, number];
     readonly mapbundle_fromSources: (a: number, b: number, c: number, d: number) => [number, number, number];
@@ -817,6 +839,7 @@ export interface InitOutput {
     readonly rendertimeline_posesArray: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_samplerVersion: (a: number) => [number, number];
     readonly rendertimeline_sceneFramesArray: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly rendertimeline_sceneStateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly rendertimeline_sha256: (a: number) => [number, number, number, number];
     readonly rendertimeline_signalsAtJson: (a: number, b: number) => [number, number, number, number];
     readonly rendertimeline_tickCount: (a: number) => number;

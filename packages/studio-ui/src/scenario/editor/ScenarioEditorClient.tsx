@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { resolveScenarioMap, ScenarioVersionConflict } from "@simforge-oss/studio-host";
+import { resolveScenarioMap, ScenarioMapResolutionError, ScenarioVersionConflict } from "@simforge-oss/studio-host";
 import { SCENARIO_SCHEMA_VERSION, type ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -245,6 +245,9 @@ function ScenarioEditorWorkspace({
   const pinnedMapId = record?.content?.anchor?.pin?.mapId ?? null;
   let map: ScenarioMapEntry | null = null;
   let mapResolutionError: string | null = null;
+  // The pinned version is gone but a build with identical road geometry is
+  // installed: moving there is the author's explicit re-pin, never automatic.
+  let mapUpgradeTarget: string | null = null;
   if (maps) {
     try {
       map = record?.mapVersionId
@@ -254,6 +257,9 @@ function ScenarioEditorWorkspace({
           ?? null;
     } catch (reason) {
       mapResolutionError = reason instanceof Error ? reason.message : String(reason);
+      if (reason instanceof ScenarioMapResolutionError && reason.code === "scenario_map_version_superseded") {
+        mapUpgradeTarget = reason.installedMapVersionId;
+      }
     }
   }
   useEffect(() => {
@@ -525,7 +531,25 @@ function ScenarioEditorWorkspace({
     );
   }
   if (!quality) return shell(<EditorPlaceholder />);
-  if (mapResolutionError) return shell(<EditorEmptyState title="Scenario map unavailable" detail={mapResolutionError} />);
+  if (mapResolutionError) {
+    const current = record;
+    const target = mapUpgradeTarget;
+    const moveToMapVersion = current && target
+      ? () => {
+          void studioHost.projects
+            .updateDocument(current.id, { expectedVersion: current.draftVersion, mapVersionId: target })
+            .then(setRecord)
+            .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
+        }
+      : undefined;
+    return shell(
+      <EditorEmptyState
+        title={moveToMapVersion ? "Newer map version available" : "Scenario map unavailable"}
+        detail={mapResolutionError}
+        {...(moveToMapVersion ? { action: "Move to the newer map version", onAction: moveToMapVersion } : {})}
+      />,
+    );
+  }
   if (!map)
     return shell(<MapChooser maps={maps} onChoose={setSelectedMapId} />);
 
