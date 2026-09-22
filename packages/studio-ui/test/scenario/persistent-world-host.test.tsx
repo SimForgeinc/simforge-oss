@@ -197,6 +197,7 @@ describe("persistent SimForge world host", () => {
 
 
   it("keeps the same canvas, viewer, and instance identity across same-map mode renders", async () => {
+    saveRenderingPreference("low");
     const onViewerChange = vi.fn();
     const onStateChange = vi.fn();
     const view = render(
@@ -212,7 +213,8 @@ describe("persistent SimForge world host", () => {
     const viewer = onViewerChange.mock.calls[0]?.[0];
     const instanceId = host.getAttribute("data-world-instance-id");
 
-    act(() => saveRenderingPreference("low"));
+    act(() => saveRenderingPreference("low-no-foliage"));
+    expect(setLayerVisible).toHaveBeenLastCalledWith("vegetation", false);
     view.rerender(
       <ScenarioWorldHost
         target={{ ...first, manifestUrl: "/api/maps/mapv_one/browser-assets/manifest.json" }}

@@ -330,6 +330,7 @@ export function ScenarioWorldHost({
     const viewer = viewerRef.current;
     if (!viewer) return;
     const changed = appliedPreferenceRef.current !== preference;
+    const textureTierChanged = renderingPreferenceQuality(appliedPreferenceRef.current) !== renderingPreferenceQuality(preference);
     appliedPreferenceRef.current = preference;
     // Fidelity first, sky second: the fidelity switch hides the sun and sky
     // the browsing environment installs. The live budget is the one the upload
@@ -342,9 +343,9 @@ export function ScenarioWorldHost({
       actorRendererRef.current.setContactShadows(!viewer.castsRealtimeShadows());
     }
     const current = targetRef.current ?? retainedTargetRef.current;
-    const tierChange = changed && supportsMapModelReadiness(viewer) ? viewer.setMapTextureTier(renderingPreferenceQuality(preference)) : null;
+    const tierChange = textureTierChanged && supportsMapModelReadiness(viewer) ? viewer.setMapTextureTier(renderingPreferenceQuality(preference)) : null;
     if (
-      !changed ||
+      !textureTierChanged ||
       !current ||
       loadedMapVersionIdRef.current !== current.mapVersionId ||
       transitionPhaseRef.current !== "idle" ||
