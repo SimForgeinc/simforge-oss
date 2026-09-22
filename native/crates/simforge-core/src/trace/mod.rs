@@ -350,6 +350,38 @@ pub struct TraceActorMetadata {
     #[serde(rename = "static")]
     pub is_static: bool,
     pub tags: Vec<String>,
+    /// Who authored the body. Emitted on every current trace (derived from
+    /// tags and the ambient closure, [`actor_origin`]); absent on traces
+    /// recorded before it existed, where consumers derive it the same way.
+    /// Traffic is baked into actor data: no downstream consumer runs traffic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<ActorOrigin>,
+}
+
+/// Actor provenance: tags `sumo` / `sumo:*` → `sumo`; tags `ambient` /
+/// `ambient:*` or membership in `header.ambientActorIds` → `native-ambient`;
+/// otherwise `authored`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ActorOrigin {
+    Authored,
+    NativeAmbient,
+    Sumo,
+}
+
+/// The [`ActorOrigin`] rule, shared by the trace writer and the timeline.
+pub fn actor_origin(tags: &[String], listed_ambient: bool) -> ActorOrigin {
+    let has = |p: &str| {
+        tags.iter()
+            .any(|t| t == p || t.strip_prefix(p).is_some_and(|r| r.starts_with(':')))
+    };
+    if has("sumo") {
+        ActorOrigin::Sumo
+    } else if has("ambient") || listed_ambient {
+        ActorOrigin::NativeAmbient
+    } else {
+        ActorOrigin::Authored
+    }
 }
 
 /// Motion backend an actor track was produced by. `kinematic-v1` names the

@@ -33,6 +33,7 @@ use crate::types::{ActorKind, ControlIndication, Dims, SetValue, TimeOfDay};
 use super::scene_state::{
     actor_class_of, catalog_id_for, weather_from, ActorClass, RenderProfile, Weather,
 };
+pub use super::{actor_origin, ActorOrigin};
 use super::{SimEvent, SimTrace, TraceError};
 
 pub use height::{HeightError, HeightField, HeightQuery, HeightSource};
@@ -337,31 +338,6 @@ pub struct TimelineActor {
     /// `downSinceS`, rounded up to the tick grid.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub downed_since_tick: Option<u32>,
-}
-
-/// Actor provenance (`header.actorMetadata[id].origin` rule): tags `sumo` /
-/// `sumo:*` → `sumo`; tags `ambient` / `ambient:*` or membership in
-/// `header.ambientActorIds` → `native-ambient`; otherwise `authored`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ActorOrigin {
-    Authored,
-    NativeAmbient,
-    Sumo,
-}
-
-pub fn actor_origin(tags: &[String], listed_ambient: bool) -> ActorOrigin {
-    let has = |p: &str| {
-        tags.iter()
-            .any(|t| t == p || t.strip_prefix(p).is_some_and(|r| r.starts_with(':')))
-    };
-    if has("sumo") {
-        ActorOrigin::Sumo
-    } else if has("ambient") || listed_ambient {
-        ActorOrigin::NativeAmbient
-    } else {
-        ActorOrigin::Authored
-    }
 }
 
 /// Static description of an actor, without its per-tick channels.
@@ -1020,7 +996,9 @@ pub fn build_render_timeline(
                 .find_map(|t| t.strip_prefix("color:"))
                 .map(str::to_owned),
             is_static: meta.is_static,
-            origin: actor_origin(&meta.tags, ambient.contains(id.as_str())),
+            origin: meta
+                .origin
+                .unwrap_or_else(|| actor_origin(&meta.tags, ambient.contains(id.as_str()))),
             lifecycle: lifecycle_of(&present),
             track: tr,
             lights: dedup,

@@ -30,8 +30,7 @@ use crate::trace::{
     SimTrace, TraceActorMetadata, TraceFrame, TraceHeader, TraceRecorder, TraceSolver,
 };
 use crate::types::{
-    parse_scenario_input_value, ActorKind, ActorRules, Dynamics, SetValue,
-    SimActor, TurnRelation,
+    parse_scenario_input_value, ActorKind, ActorRules, Dynamics, SetValue, SimActor, TurnRelation,
 };
 
 use super::actor::{
@@ -70,6 +69,10 @@ impl Simulation {
                         dims: a.dims,
                         is_static: a.is_static,
                         tags: a.tags.clone(),
+                        origin: Some(crate::trace::actor_origin(
+                            &a.tags,
+                            self.ambient_actor_ids.contains(&a.id),
+                        )),
                     },
                 )
             })
@@ -119,9 +122,12 @@ impl Simulation {
             version: 2,
             profiles: actor_physics_profiles(),
             catalog_profiles: std::iter::once("pedestrian.child")
-                .chain(crate::catalog_aliases::CATALOG_ALIASES.iter()
-                    .filter(|(_, target)| *target == "pedestrian.child")
-                    .map(|(alias, _)| *alias))
+                .chain(
+                    crate::catalog_aliases::CATALOG_ALIASES
+                        .iter()
+                        .filter(|(_, target)| *target == "pedestrian.child")
+                        .map(|(alias, _)| *alias),
+                )
                 .map(|id| (id.to_owned(), child_pedestrian_physics_profile()))
                 .collect(),
             overrides: self
