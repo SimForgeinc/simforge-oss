@@ -160,6 +160,7 @@ export {
   parseTemplate,
   serializeTemplate,
   canonicalize,
+  quantizeDocument,
   roundFloat,
   deepFreeze,
   FLOAT_DECIMALS,
@@ -178,6 +179,8 @@ export * from './render-defaults.js';
 export * from './render-intent.js';
 export * from './situation.js';
 export { Sha256 } from './sha256.js';
+export { canonicalJson, canonicalJsonPretty, canonicalSha256, CANONICAL_JSON_RULE } from './canonical-json.js';
+export { simContentHash, simulationRelevantContent, SIM_CONTENT_HASH_VERSION, PRESENTATION_EXTENSION_PREFIX } from './sim-content-hash.js';
 
 export {
   detectScenarioKind,
