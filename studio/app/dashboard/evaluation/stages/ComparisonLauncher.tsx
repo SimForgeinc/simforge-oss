@@ -37,6 +37,7 @@ import {
   CardTitle,
 } from "@simforge-oss/studio-ui/components/ui/card";
 import { HOST_KIND } from "@/app/lib/host/kind";
+import { HOST_COMPUTE_API_PATH } from "@/app/lib/host/evaluation";
 
 type ModelVersion = {
   id: string;
@@ -183,11 +184,9 @@ export function ComparisonLauncher({
         // nothing to pick and the empty state says so.
       }
       try {
-        // `/api/simforge/compute/**` is SimCloud's control plane, on the
-        // Cloud's origin. The renderer holds no cloud credentials, so the
-        // browser asks this host's authenticated proxy, which forwards to
-        // the same route under the same contract.
-        const response = await fetch("/api/simforge/cloud/compute/capabilities", {
+        // Hosted sessions use the control plane directly; desktop sessions use
+        // the authenticated local proxy under the same contract.
+        const response = await fetch(`${HOST_COMPUTE_API_PATH}/capabilities`, {
           headers: { accept: "application/json" },
         });
         if (!response.ok) {
