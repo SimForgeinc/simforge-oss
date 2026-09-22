@@ -106,7 +106,7 @@ beforeEach(() => {
 });
 
 describe('authored world source', () => {
-  it('compiles the EditorDocument and starts the worker from PlaybackBundle.instance.input at 20 Hz', async () => {
+  it('preloads the map in the world worker, then starts it from PlaybackBundle.instance.input at 20 Hz', async () => {
     const document = await fixtureDocument();
     const source = await createAuthoredWorldSource({ document, map: TEST_MAP });
     const worker = FakeWorker.instances[0]!;
@@ -114,11 +114,14 @@ describe('authored world source', () => {
     expect(compilerMocks.prepareArgs?.[0]).toBe(document.data);
     expect(compilerMocks.prepareArgs?.[1]).toMatchObject({ sourceMapId: TEST_MAP.sourceMapId });
     expect(compilerMocks.prepareArgs?.[4]).toEqual({ materializeOnly: true });
-    expect(compilerMocks.disposeCount).toBe(1);
-    expect(worker.sent[0]).toMatchObject({
+    // The compile worker stays warm for the next drive rather than being torn down.
+    expect(compilerMocks.disposeCount).toBe(0);
+    // The world worker starts loading the map before the scenario is compiled.
+    expect(worker.sent[0]).toMatchObject({ type: 'preload-map', mapSources: { mapId: TEST_MAP.sourceMapId } });
+    expect(worker.sent[1]).toMatchObject({
       type: 'init-authored',
       input: compilerMocks.input,
-      laneGraphUrl: TEST_MAP.topologyUrl,
+      mapSources: worker.sent[0]!.type === 'preload-map' ? worker.sent[0]!.mapSources : null,
       tickHz: 20,
     });
     expect(source.transport.duration).toBe(20);

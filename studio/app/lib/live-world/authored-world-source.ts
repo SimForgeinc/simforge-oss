@@ -3,7 +3,7 @@
 import type { SimScenarioInput } from '@simforge-oss/engine';
 import type { EditorDocument, ScenarioMapEntry } from '@simforge-oss/editor';
 import { ambientTrafficProviderFromExtensions } from '@simforge-oss/playback/traffic';
-import type { StaticColliderDiagnostics } from '@simforge-oss/playback';
+import type { MapGraphSources, StaticColliderDiagnostics } from '@simforge-oss/playback';
 import { TruthStreamClient } from '@simforge-oss/training-env/browser';
 
 import { playbackMapEntry } from '@simforge-oss/studio-ui/lib/scenario/maps';
@@ -93,6 +93,47 @@ export type TakeEvent =
   | { kind: 'failed'; message: string };
 
 const AUTHORED_WORKER_READY_TIMEOUT_MS = 45_000;
+/** How long the drive's compile worker stays warm after its last compile. */
+const COMPILER_IDLE_MS = 120_000;
+
+/**
+ * The compile worker the drive materializes its scenario in, kept between
+ * sessions. Its WASM engine, map runtime and compiled worlds are cached by
+ * content hash inside the worker, so re-entering a drive on the same map (or
+ * driving the same take again from the list) skips the engine start, the map
+ * download and the compile. It is let go after a couple of idle minutes: it
+ * holds a whole map's lane graph.
+ */
+let sharedCompiler: { client: ScenarioWorkerClient; users: number; idle: ReturnType<typeof setTimeout> | null } | null = null;
+
+function acquireCompiler(): ScenarioWorkerClient {
+  sharedCompiler ??= { client: new ScenarioWorkerClient(), users: 0, idle: null };
+  if (sharedCompiler.idle) clearTimeout(sharedCompiler.idle);
+  sharedCompiler.idle = null;
+  sharedCompiler.users += 1;
+  return sharedCompiler.client;
+}
+
+function releaseCompiler(client: ScenarioWorkerClient, failed: boolean): void {
+  const shared = sharedCompiler;
+  if (!shared || shared.client !== client) {
+    client.dispose();
+    return;
+  }
+  shared.users -= 1;
+  // A worker that failed a compile may be wedged; do not hand it to the next drive.
+  if (failed && shared.users === 0) {
+    sharedCompiler = null;
+    client.dispose();
+    return;
+  }
+  if (shared.users > 0) return;
+  shared.idle = setTimeout(() => {
+    if (sharedCompiler !== shared || shared.users > 0) return;
+    sharedCompiler = null;
+    client.dispose();
+  }, COMPILER_IDLE_MS);
+}
 
 export async function createAuthoredWorldSource(opts: {
   document: EditorDocument;
@@ -101,8 +142,27 @@ export async function createAuthoredWorldSource(opts: {
   /** Run the world past the document's clip and never park it. See the worker protocol. */
   endless?: boolean;
 }): Promise<AuthoredWorldSource> {
-  const compiler = new ScenarioWorkerClient();
+  // The live world's worker starts now, not after the compile: its WASM engine
+  // and the map's lane graph and colliders do not depend on the scenario, and
+  // loading them was half of the time between "Drive" and a drivable car.
+  const entry = playbackMapEntry(opts.map);
+  const mapSources: MapGraphSources = {
+    mapId: entry.sourceMapId,
+    manifest: entry.manifest,
+    topology: entry.topology,
+    derivedTopology: entry.derivedTopology,
+    locations: entry.locations,
+    xodr: entry.xodr,
+    signals: entry.signals,
+  };
+  const worker = new Worker(new URL('../../../worker/live-world-worker.ts', import.meta.url), {
+    type: 'module',
+    name: 'simforge-authored-world',
+  });
+  worker.postMessage({ type: 'preload-map', mapSources } satisfies LiveWorldWorkerRequest);
+  const compiler = acquireCompiler();
   let input: SimScenarioInput;
+  let compiled = false;
   try {
     const bundle = await compiler.prepare(
       opts.document.data,
@@ -116,13 +176,18 @@ export async function createAuthoredWorldSource(opts: {
       { materializeOnly: true },
     );
     input = bundle.instance.input;
+    compiled = true;
+  } catch (error) {
+    worker.terminate();
+    throw error;
   } finally {
-    compiler.dispose();
+    releaseCompiler(compiler, !compiled);
   }
   return new AuthoredWorkerWorldSource(
+    worker,
     input,
     opts.document,
-    opts.map,
+    mapSources,
     opts.tickHz ?? 20,
     opts.endless === true,
   );
@@ -156,9 +221,10 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   mapCollisions: StaticColliderDiagnostics | null = null;
 
   constructor(
+    worker: Worker,
     input: SimScenarioInput,
     document: EditorDocument,
-    map: ScenarioMapEntry,
+    mapSources: MapGraphSources,
     tickHz: number,
     endless: boolean,
   ) {
@@ -187,10 +253,7 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     };
 
 
-    this.worker = new Worker(new URL('../../../worker/live-world-worker.ts', import.meta.url), {
-      type: 'module',
-      name: 'simforge-authored-world',
-    });
+    this.worker = worker;
     this.worker.onmessage = (event: MessageEvent<LiveWorldWorkerResponse>) => this.onMessage(event.data);
     this.worker.onerror = (event) => {
       clearTimeout(this.readyTimeout);
@@ -209,19 +272,10 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
         `Authored world worker did not become ready within ${AUTHORED_WORKER_READY_TIMEOUT_MS} ms while loading the lane topology.`,
       );
     }, AUTHORED_WORKER_READY_TIMEOUT_MS);
-    const entry = playbackMapEntry(map);
     this.worker.postMessage({
       type: 'init-authored',
       input,
-      mapSources: {
-        mapId: entry.sourceMapId,
-        manifest: entry.manifest,
-        topology: entry.topology,
-        derivedTopology: entry.derivedTopology,
-        locations: entry.locations,
-        xodr: entry.xodr,
-        signals: entry.signals,
-      },
+      mapSources,
       tickHz,
       endless,
     } satisfies LiveWorldWorkerRequest);
