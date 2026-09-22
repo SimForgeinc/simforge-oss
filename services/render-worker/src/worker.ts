@@ -230,6 +230,7 @@ async function executeClaim(
   const heartbeat = runHeartbeat(transport, job, state, heartbeatIntervalMs, config.retries);
   let gpuLock: GpuJobLock | undefined;
   let outcome: 'succeeded' | 'failed' = 'failed';
+  let budgetTimer: NodeJS.Timeout | undefined;
 
   const sendProgress = async (candidate: RenderProgressRecord): Promise<void> => {
     const record = RenderProgressRecordSchema.parse({
@@ -297,6 +298,11 @@ async function executeClaim(
       },
     );
     store.setMode('job-running');
+    const budgetMs = Number(process.env.SIMFORGE_MAX_JOB_EXECUTION_MS ?? config.maxJobExecutionMs);
+    budgetTimer = setTimeout(() => {
+      state.controller.abort(Object.assign(new Error(`render.job_budget_exceeded: execution exceeded ${Math.round(budgetMs / 60_000)} min after inputs were ready`), { code: 'native_job_budget_exceeded', retryable: true }));
+    }, budgetMs);
+    budgetTimer.unref();
     await stageStarted('preparing');
     const containerIdentity = configuredContainerIdentity(config);
     if (containerIdentity) await chownWorkspace(workspace, containerIdentity);
@@ -441,6 +447,7 @@ async function executeClaim(
       }));
     }
   } finally {
+    clearTimeout(budgetTimer);
     state.heartbeatController.abort(new Error('job finalized'));
     state.controller.abort(new RenderCanceledError('job finalized'));
     await heartbeat.catch(() => undefined);

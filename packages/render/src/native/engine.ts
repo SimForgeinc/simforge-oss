@@ -36,6 +36,10 @@ import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInput
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
+/** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
+export const NATIVE_LOAD_STATE_TIMEOUT_MS = 300_000;
+export const NATIVE_FIRST_BUNDLE_TIMEOUT_MS = 600_000;
+export const NATIVE_BUNDLE_TIMEOUT_MS = 120_000;
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
@@ -375,7 +379,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         timestamp: new Date().toISOString(),
       });
       try {
-        await client.rpc({ op: 'load_scene_state', states: lowering.states });
+        // A wedged service must fail the job, not hold the GPU (and a
+        // heartbeating lease) forever. The first bundle also compiles
+        // pipelines, so it gets the longer budget.
+        await client.rpc({ op: 'load_scene_state', states: lowering.states }, NATIVE_LOAD_STATE_TIMEOUT_MS);
         const cameras = cameraSchedule;
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
         for (const source of sources) {
@@ -403,7 +410,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             // The non-camera rig is retained by the service: declare it once.
             ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
             ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
-          });
+          }, tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS);
           if (response.frame.simTick !== tick) {
             throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
           }
