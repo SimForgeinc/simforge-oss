@@ -59,6 +59,7 @@ import {
 import { schemas } from './commands/schemas.js';
 import { simulate } from './commands/simulate.js';
 import { debugScenario } from './commands/debug.js';
+import { trafficSumo } from './commands/traffic.js';
 import { sitesMatch } from './commands/sites.js';
 import { templateNew, templateValidate } from './commands/template.js';
 import { variationFork, variationTransfer } from './commands/variation.js';
@@ -98,6 +99,7 @@ const COMMANDS = [
   { name: 'variation fork', summary: 'portable template × target site → an executable child variation with lineage' },
   { name: 'variation transfer', summary: 'lift a map-bound template and transfer it to one target map/site' },
   { name: 'debug', summary: 'compile a template/instance, run native or SUMO, and emit complete paths + diagnostics' },
+  { name: 'traffic sumo', summary: 'worker SUMO traffic: authored trace → one-way SUMO step → merged trace (--repeat N checks byte identity)' },
   { name: 'validate', summary: 'tier-1, or tier-2 (one engine pass + invariant residuals)' },
   { name: 'evaluate', summary: 'reject filters over a trace' },
   { name: 'evidence verify', summary: 'prove one instance/trace pair shares the same input hash' },
@@ -679,6 +681,29 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       return simulate({
         file: positional(args, 0, 'instance.json'),
         trace: optionalString(args, 'trace'),
+        pretty: boolFlag(args, 'pretty'),
+      });
+    }
+
+    case 'traffic': {
+      if (argv[1] !== 'sumo') throw new CliError('unknown_command', 'usage: simforge traffic sumo <scenario.json>', { path: 'traffic' });
+      const args = parseArgs(argv.slice(2), {
+        booleans: GLOBAL_BOOLEANS,
+        values: ['preset', 'seed', 'max-actors', 'duration', 'out', 'repeat', 'signal-authority'],
+      });
+      const signalAuthority = optionalString(args, 'signal-authority');
+      if (signalAuthority !== undefined && signalAuthority !== 'simforge' && signalAuthority !== 'netconvert') {
+        throw new CliError('bad_value', '--signal-authority must be simforge | netconvert', { path: '--signal-authority' });
+      }
+      return trafficSumo({
+        file: positional(args, 0, 'scenario.json'),
+        preset: optionalString(args, 'preset'),
+        seed: optionalString(args, 'seed'),
+        maxActors: optionalInt(args, 'max-actors'),
+        durationSeconds: optionalNumber(args, 'duration'),
+        out: optionalString(args, 'out'),
+        repeat: optionalInt(args, 'repeat') ?? 1,
+        ...(signalAuthority ? { signalAuthority } : {}),
         pretty: boolFlag(args, 'pretty'),
       });
     }
