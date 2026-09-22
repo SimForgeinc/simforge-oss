@@ -1,0 +1,5 @@
+/** A self-contained 404 document: no route mount, hydration, local hooks or asset requests. */
+export const UNSERVED_ROUTE_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Page not available — SimForge</title>
+<style>html{color-scheme:dark}body{margin:0;background:#0a0a0a;color:#fff;font:16px/1.5 system-ui,sans-serif;min-height:100svh;display:grid;place-items:center}main{box-sizing:border-box;width:100%;max-width:36rem;padding:32px}p{color:#b5b5b5}h1{font-size:1.5rem;line-height:1.25}a{display:inline-block;margin-top:16px;padding:12px 16px;background:#e8e044;color:#0a0a0a;font-weight:600;text-decoration:none}a:focus-visible{outline:2px solid white;outline-offset:4px}@media(max-width:640px){main{padding:16px}}</style></head>
+<body><main><p>404 · Page not available</p><h1>This page isn’t available here</h1><p>This Studio host doesn’t offer this page. Your available apps are still accessible.</p><a href="/dashboard/apps">Back to Apps</a></main></body></html>`;

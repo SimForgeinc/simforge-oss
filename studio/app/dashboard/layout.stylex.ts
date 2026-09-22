@@ -10,15 +10,17 @@ export const styles = stylex.create({
     overflow: "hidden",
     backgroundColor: colors.bg,
   },
-  // flex-1 min-h-0 overflow-y-auto
+  // The route, never the dashboard host, owns scrolling.
   main: {
     flex: "1 1 0%",
     minHeight: 0,
-    overflowY: "auto",
+    minWidth: 0,
+    overflow: "hidden",
   },
   // h-full min-h-0
   div: {
     height: "100%",
     minHeight: 0,
+    minWidth: 0,
   },
 });

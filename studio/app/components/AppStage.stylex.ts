@@ -17,7 +17,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, layout, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
@@ -44,69 +44,25 @@ export const styles = stylex.create({
     color: "#fff",
   },
 
-  /**
-   * The switcher's centred column, as two rows: the heading, then one pane
-   * that takes the remainder. `minmax(0, 1fr)` is what lets the pane below be
-   * the scroller rather than growing the grid.
-   */
+  /** A single bounded body; route chrome belongs to AppTopBar. */
   frame: {
     position: "relative",
     zIndex: layers.raised,
     display: "grid",
-    gridTemplateRows: "auto minmax(0, 1fr)",
-    gap: { default: "1rem", [SM]: "1.5rem" },
+    gridTemplateRows: "minmax(0, 1fr)",
     height: "100%",
     minHeight: 0,
     width: "100%",
-    maxWidth: "940px",
+    maxWidth: layout.utilityFrame,
     marginInline: "auto",
-    paddingInline: { default: "1.25rem", [SM]: "2rem" },
-    paddingBlock: { default: "1.25rem", [SM]: "2rem" },
+    padding: { default: layout.gutterNarrow, [SM]: layout.gutter, [LG]: layout.gutterWide },
   },
 
-  /** One row when the surface owns its heading: the pane is the whole frame. */
-  frameBare: { gridTemplateRows: "minmax(0, 1fr)" },
-
-  head: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: "0.75rem",
-    minWidth: 0,
-  },
-  headText: { minWidth: 0 },
-  headAside: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: "0.5rem",
-    minWidth: 0,
-  },
-
-  /** The switcher tab's `tabDescription`, above the title rather than below. */
-  eyebrow: {
-    fontFamily: text.fontMeta,
-    fontSize: "10px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: "rgb(255 255 255 / 0.3)",
-  },
-  /** The switcher tab's `tabTitle`, one step up because it names the surface. */
-  title: {
-    marginTop: "0.125rem",
-    fontFamily: text.fontDisplay,
-    fontSize: { default: "1.25rem", [SM]: "1.5rem" },
-    lineHeight: 1.2,
-    fontWeight: 600,
-    letterSpacing: "-0.03em",
-  },
   description: {
     marginTop: "0.25rem",
-    fontSize: "0.75rem",
-    lineHeight: "1.125rem",
-    color: "rgb(255 255 255 / 0.45)",
+    fontSize: text.sizeSm,
+    lineHeight: text.lineNormal,
+    color: colors.textSubtle,
   },
 
   /**
@@ -128,6 +84,7 @@ export const styles = stylex.create({
     gap: "0.75rem",
     height: "100%",
     minHeight: 0,
+    minWidth: 0,
     overflowY: "auto",
     overscrollBehavior: "contain",
   },
