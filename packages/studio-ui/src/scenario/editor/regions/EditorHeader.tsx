@@ -4,7 +4,7 @@ import { ArrowLeft, BrainCircuit } from "lucide-react";
 import {
   TopBarActionsPortal,
   TopBarTrailingPortal,
-  useSetPageTitle,
+  useRouteHeader,
   useSetTopBarActionsAlignment,
 } from "../../../components/TopBarSlot";
 import type { CityViewer } from "@simforge-oss/viewer";
@@ -54,7 +54,7 @@ export function EditorHeader({
   experience?: EditorExperience | null;
   onExperienceToggle?: () => void;
 }) {
-  useSetPageTitle("Editor");
+  useRouteHeader({ title: "Editor" });
   useSetTopBarActionsAlignment("start");
   const sensorSubjectId = document?.data.roles.find(
     (role) => role.actor.sensors.length > 0,

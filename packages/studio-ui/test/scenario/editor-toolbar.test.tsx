@@ -14,7 +14,7 @@ function TestTopBar() {
   const topBar = useTopBarSlotContext();
   return (
     <div data-testid="test-topbar">
-      <span data-testid="test-topbar-title">{topBar?.customTitle}</span>
+      <span data-testid="test-topbar-title">{topBar?.header?.title}</span>
       <div
         ref={topBar?.registerActionsSlot}
         data-alignment={topBar?.actionsAlignment}

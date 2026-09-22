@@ -32,7 +32,6 @@ import {
   useParkedCars,
 } from "../../lib/scenario/parking/useParkedCars";
 import { useStallOverlay } from "../../lib/scenario/parking/useStallOverlay";
-import { cn } from "../../lib/utils";
 import {
   loadCarlaCompatibility,
   type CarlaCompatibilityTable,
@@ -952,17 +951,13 @@ export function ScenarioEditorSurface({
         />
       ) : null}
       <ScenarioEditorShell
-        className={cn(
-          "h-full min-h-editor-shell text-foreground",
-          externalWorld ? "pointer-events-none" : "pointer-events-auto",
-          externalWorld ? "bg-transparent" : "bg-background",
-        )}
+        xstyle={[styles.editorShell, externalWorld && styles.externalShell]}
         canvasMode={externalWorld ? "passthrough" : "interactive"}
         data-external-world={String(externalWorld)}
         data-testid="scenario-editor-surface"
         header={null}
         leftSidebar={sharedPlayback?.inspecting ? null : (slotProps) => (
-          <div {...slotProps} className={cn(slotProps.className, "flex h-full")}>
+          <div {...slotProps} >
             <ActorLibraryRail
               controller={controller}
               state={state}
@@ -1006,7 +1001,7 @@ export function ScenarioEditorSurface({
           return (
             <div
               {...canvasSlotProps}
-              className={cn(canvasSlotProps.className, "flex")}
+              
               data-external-world={String(externalWorld)}
             >
               <EditorCanvasRegion
