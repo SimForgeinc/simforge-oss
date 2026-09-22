@@ -328,6 +328,13 @@ export type {
   SumoRuntimeManifest,
   SumoScenePoint,
 } from './ambient/sumo.js';
+export * from './ambient/sumo-demand.js';
+export * from './ambient/sumo-signals.js';
+export * from './ambient/sumo-runtime.js';
+export * from './ambient/sumo-traffic.js';
+export * from './ambient/sumo-trace-merge.js';
+export * from './ambient/sumo-traffic-step.js';
+export * from './ambient/sumo-audit.js';
 
 /* ------------------------------------------------------- native module shape */
 export type {

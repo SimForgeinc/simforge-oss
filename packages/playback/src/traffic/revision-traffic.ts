@@ -13,18 +13,26 @@ import { ambientTrafficProviderFromExtensions, type AmbientTrafficProviderId } f
 export type RevisionTrafficMap = { sourceMapId: string; mapVersionId: string; sumoNetworkSha256?: string | null };
 
 /**
- * Authored controllers must be the only signal authority. The browser SUMO
- * bridge cannot inject their tlLogic, so match Scenario Studio by running
- * native engine traffic—which consumes the compiled signal book—in that case.
+ * The provider a document executes with. SUMO stays SUMO, authored map
+ * signal plans included: both the worker's authoritative SUMO step and the
+ * editor's SUMO preview rewrite SUMO's traffic lights from the compiled
+ * signal book (`synthesizeSumoSignalPrograms`), so the book is the only signal
+ * authority either way. `hasAuthoredMapSignals` is kept for call-site
+ * compatibility.
  */
 export function previewExecutionTrafficProvider(
   provider: AmbientTrafficProviderId,
-  hasAuthoredMapSignals: boolean,
+  _hasAuthoredMapSignals: boolean,
 ): AmbientTrafficProviderId {
-  return provider === "sumo" && hasAuthoredMapSignals ? "native" : provider;
+  return provider;
 }
 
 /**
+ * The native ambient profile the engine simulates with. SUMO documents run
+ * the engine with ambient traffic off: under one-way coupling the authored
+ * actors are solved first, and SUMO traffic is added afterwards by the worker
+ * SUMO step (or shown live by the display-only editor preview).
+ *
  * `missing` is what an absent profile means for this document
  * (`ambientProfileMissingDefault(content)`: `off` once it has a pinned
  * `simulation` block). A malformed profile throws `AmbientTrafficProfileError`.

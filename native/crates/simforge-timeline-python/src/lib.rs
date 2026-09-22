@@ -232,6 +232,14 @@ impl PyTimeline {
         Ok(d)
     }
 
+    /// `simforge.scene-state.v1` document (JSON text) sampled at `times`.
+    #[pyo3(signature = (times, yaw_only=false))]
+    fn scene_state_json(&self, times: Vec<f64>, yaw_only: bool) -> PyResult<String> {
+        let doc =
+            sampler::scene_state_document(&self.inner, &times, yaw_only).map_err(sample_err)?;
+        tl::to_json_string(&doc).map_err(value_err)
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Timeline(map_id={:?}, ticks={}, actors={}, key={})",

@@ -110,6 +110,19 @@ export interface SumoRouteDocumentOptions {
   readonly replenishmentPeriodSeconds?: number;
   readonly replenishmentStride?: number;
   readonly flowEndSeconds?: number;
+  /**
+   * Body of every ambient vehicle. Omitted, SUMO uses its passenger default
+   * (5.0 × 1.8 m); the worker passes the rendered catalog body so car
+   * following and the drawn vehicle agree.
+   */
+  readonly vehicleDimensions?: { readonly lengthM: number; readonly widthM: number; readonly heightM: number };
+  /**
+   * Route the bridge assigns to externally owned proxies. A proxy SUMO could
+   * not place stays *pending* on this route, and SUMO may later insert it at
+   * the route's start; the worker therefore points it at an edge no ambient
+   * route uses. Defaults to the first candidate route (legacy behaviour).
+   */
+  readonly proxyRouteEdges?: readonly string[];
 }
 
 export function buildSumoRouteDocument(
@@ -125,7 +138,7 @@ export function buildSumoRouteDocument(
   const accel = (2.0 + aggression * 1.2).toFixed(2);
   const sigma = (0.15 + aggression * 0.45).toFixed(2);
   const speedDev = clamp(profile.speedVariance, 0, 0.8).toFixed(2);
-  const proxyEdges = candidates[0]!.map(xml).join(' ');
+  const proxyEdges = (options.proxyRouteEdges && options.proxyRouteEdges.length > 0 ? options.proxyRouteEdges : candidates[0]!).map(xml).join(' ');
   const departureWindowSeconds = Math.max(0, options.departureWindowSeconds ?? 0);
   const replenishmentPeriodSeconds = options.replenishmentPeriodSeconds;
   const replenishmentStride = Math.max(1, Math.trunc(options.replenishmentStride ?? 4));
@@ -138,9 +151,12 @@ export function buildSumoRouteDocument(
       ? `  <flow id="${id}" type="ambient" begin="${depart.toFixed(2)}" end="${flowEndSeconds}" period="${replenishmentPeriodSeconds}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></flow>`
       : `  <vehicle id="${id}" type="ambient" depart="${departureWindowSeconds > 0 ? depart.toFixed(2) : '0'}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></vehicle>`;
   }).join('\n');
+  const body = options.vehicleDimensions
+    ? ` length="${options.vehicleDimensions.lengthM}" width="${options.vehicleDimensions.widthM}" height="${options.vehicleDimensions.heightM}"`
+    : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <routes>
-  <vType id="ambient" carFollowModel="EIDM" laneChangeModel="SL2015" accel="${accel}" decel="4.5" emergencyDecel="9" sigma="${sigma}" tau="${tau}" speedFactor="1" speedDev="${speedDev}"/>
+  <vType id="ambient" carFollowModel="EIDM" laneChangeModel="SL2015" accel="${accel}" decel="4.5" emergencyDecel="9" sigma="${sigma}" tau="${tau}" speedFactor="1" speedDev="${speedDev}"${body}/>
   <route id="proxy-route" edges="${proxyEdges}"/>
 ${vehicles}
 </routes>`;
