@@ -2,6 +2,21 @@ import { z, type ZodType } from 'zod';
 
 import {
   ArtifactReservedResponseSchema,
+  BlobUrlsResponseSchema,
+  InputUrlsResponseSchema,
+  PrewarmManifestResponseSchema,
+  PrewarmMembersResponseSchema,
+  WorkerCacheReportResponseSchema,
+  type BlobUrlsRequest,
+  type BlobUrlsResponse,
+  type InputUrlsRequest,
+  type InputUrlsResponse,
+  type PrewarmManifestRequest,
+  type PrewarmManifestResponse,
+  type PrewarmMembersRequest,
+  type PrewarmMembersResponse,
+  type WorkerCacheReportRequest,
+  type WorkerCacheReportResponse,
   FencedMutationResponseSchema,
   JobClaimResponseSchema,
   LeaseHeartbeatResponseSchema,
@@ -38,6 +53,19 @@ export interface RenderControlTransport {
   fail(request: JobFailRequest, signal: AbortSignal): Promise<FencedMutationResponse>;
   drain(request: WorkerDrainRequest, signal: AbortSignal): Promise<WorkerDrainResponse>;
   close?(): Promise<void>;
+  /** Batch-signs URLs for lease inputs sent without one (worker label `inputUrls: batch-v1`). */
+  inputUrls?(request: InputUrlsRequest, signal: AbortSignal): Promise<InputUrlsResponse>;
+  /** Published native map closures to keep in the worker cache. */
+  prewarmManifest?(request: PrewarmManifestRequest, signal: AbortSignal): Promise<PrewarmManifestResponse>;
+  prewarmMembers?(request: PrewarmMembersRequest, signal: AbortSignal): Promise<PrewarmMembersResponse>;
+  /** Batch-signs URLs for published map blobs by digest (prewarm). */
+  blobUrls?(request: BlobUrlsRequest, signal: AbortSignal): Promise<BlobUrlsResponse>;
+  reportCacheStatus?(request: WorkerCacheReportRequest, signal: AbortSignal): Promise<WorkerCacheReportResponse>;
+}
+
+/** A control plane that predates an optional route answers 404/405. */
+export function isUnsupportedControlRoute(error: unknown): boolean {
+  return error instanceof Error && /returned (404|405)\b/.test(error.message);
 }
 
 export type RenderControlTransportModule = {
@@ -148,6 +176,21 @@ class HttpRenderControlTransport implements RenderControlTransport {
   }
   drain(request: WorkerDrainRequest, signal: AbortSignal): Promise<WorkerDrainResponse> {
     return this.post(`workers/${encodeURIComponent(this.workerNodeId)}/state`, request, WorkerDrainResponseSchema, signal);
+  }
+  inputUrls(request: InputUrlsRequest, signal: AbortSignal): Promise<InputUrlsResponse> {
+    return this.post(this.leasePath(request.leaseId, 'input-urls'), request, InputUrlsResponseSchema, signal);
+  }
+  prewarmManifest(request: PrewarmManifestRequest, signal: AbortSignal): Promise<PrewarmManifestResponse> {
+    return this.post('workers/prewarm', request, PrewarmManifestResponseSchema, signal);
+  }
+  prewarmMembers(request: PrewarmMembersRequest, signal: AbortSignal): Promise<PrewarmMembersResponse> {
+    return this.post('workers/prewarm/members', request, PrewarmMembersResponseSchema, signal);
+  }
+  blobUrls(request: BlobUrlsRequest, signal: AbortSignal): Promise<BlobUrlsResponse> {
+    return this.post('workers/blob-urls', request, BlobUrlsResponseSchema, signal);
+  }
+  reportCacheStatus(request: WorkerCacheReportRequest, signal: AbortSignal): Promise<WorkerCacheReportResponse> {
+    return this.post(`workers/${encodeURIComponent(this.workerNodeId)}/cache`, request, WorkerCacheReportResponseSchema, signal);
   }
 }
 

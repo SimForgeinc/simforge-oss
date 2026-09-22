@@ -1,12 +1,20 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { copyFile, link, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 
-import { hashFile, throwIfCanceled, type RenderInputFile } from '@simforge-oss/render';
-import { JobInputTransferSchema, type JobInputTransfer } from '@simforge-oss/render';
+import {
+  InputDownloadSchema,
+  INPUT_URLS_MAX_BATCH,
+  throwIfCanceled,
+  type InputDownload,
+  type JobInputTransfer,
+  type RenderEngineAdapter,
+  type RenderInputFile,
+} from '@simforge-oss/render';
+import type { RenderIntentV1 } from '@simforge-oss/scenario';
+
+import type { BlobSource, BlobStore } from './blob-store.js';
 
 function safeInputName(inputId: string): string {
   const stem = inputId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 96) || 'input';
@@ -14,132 +22,291 @@ function safeInputName(inputId: string): string {
   return `${stem}-${suffix}`;
 }
 
-async function verifyFile(path: string, expectedSha256: string, expectedSize: number): Promise<void> {
-  const actual = await hashFile(path);
-  if (actual.sha256 !== expectedSha256 || actual.sizeBytes !== expectedSize) {
-    throw new Error(`transfer integrity mismatch for ${basename(path)}: expected ${expectedSha256}/${expectedSize}, got ${actual.sha256}/${actual.sizeBytes}`);
-  }
-}
-
 export type InputDownloadProgress = { completed: number; total: number; downloadedBytes: number; totalBytes: number };
 
-async function freshDownload(transfer: JobInputTransfer, signal: AbortSignal): Promise<JobInputTransfer['download']> {
-  const download = transfer.download;
-  if (!download.expiresAt || Date.parse(download.expiresAt) - Date.now() > 120_000) return download;
-  if (!download.refresh) throw new Error(`input ${transfer.inputId} URL expires before download; refresh unavailable`);
-  const response = await fetch(download.refresh.url, { method: 'POST', headers: download.refresh.headers, redirect: 'error', signal });
-  if (!response.ok) throw new Error(`input ${transfer.inputId} refresh returned ${response.status}`);
-  const refreshed = JobInputTransferSchema.shape.download.parse(await response.json());
-  if (!refreshed.expiresAt || Date.parse(refreshed.expiresAt) - Date.now() <= 120_000) {
-    throw new Error(`input ${transfer.inputId} refresh did not extend expiry`);
-  }
-  return refreshed;
+export interface InputDownloadSummary {
+  readonly declared: number;
+  readonly declaredBytes: number;
+  readonly selected: number;
+  readonly selectedBytes: number;
+  readonly cacheHits: number;
+  readonly cacheHitBytes: number;
+  readonly fetchedBytes: number;
+  readonly selectMs: number;
+  readonly fetchMs: number;
+  readonly elapsedMs: number;
 }
 
+export interface DownloadInputsOptions {
+  /** Engine hook: which claimed inputs this intent renders from (default: all). */
+  readonly selectInputs?: RenderEngineAdapter['selectInputs'];
+  readonly intent?: RenderIntentV1;
+  /** `cache`: return paths inside the read-only blob cache; `workspace`: link/copy under `<workspace>/inputs`. */
+  readonly placement?: 'cache' | 'workspace';
+  /** Batch URL signer for inputs the lease sent without a URL. */
+  readonly inputUrls?: (inputIds: readonly string[], signal: AbortSignal) => Promise<Readonly<Record<string, InputDownload>>>;
+  readonly progress?: (progress: InputDownloadProgress) => Promise<void> | void;
+  readonly log?: (event: Record<string, unknown>) => void;
+}
+
+async function refreshedDownload(download: InputDownload, inputId: string, signal: AbortSignal): Promise<InputDownload> {
+  if (!download.refresh) throw new Error(`input ${inputId} URL expired; refresh unavailable`);
+  const response = await fetch(download.refresh.url, { method: 'POST', headers: download.refresh.headers, redirect: 'error', signal });
+  if (!response.ok) throw new Error(`input ${inputId} refresh returned ${response.status}`);
+  const refreshed = InputDownloadSchema.parse(await response.json());
+  return { ...refreshed, ...(refreshed.refresh || !download.refresh ? {} : { refresh: download.refresh }) };
+}
+
+/**
+ * Hands out one URL per input: the lease's own (refreshed when it is about
+ * to expire or was refused), or, for inputs the lease sent without a URL,
+ * one signed in a batch with every other miss that asked in the same tick.
+ */
+class InputUrlBook {
+  private readonly downloads = new Map<string, InputDownload>();
+  private pending = new Map<string, Array<{ resolve: (download: InputDownload) => void; reject: (error: unknown) => void }>>();
+  private timer: NodeJS.Timeout | undefined;
+
+  constructor(
+    transfers: readonly JobInputTransfer[],
+    private readonly signer: DownloadInputsOptions['inputUrls'],
+    private readonly signal: AbortSignal,
+  ) {
+    for (const transfer of transfers) if (transfer.download) this.downloads.set(transfer.inputId, transfer.download);
+  }
+
+  source(inputId: string): BlobSource {
+    return {
+      url: async (refresh) => {
+        let download = this.downloads.get(inputId);
+        const expiring = download?.expiresAt !== undefined && Date.parse(download.expiresAt) - Date.now() <= 120_000;
+        if (download && (refresh || expiring)) {
+          download = download.refresh
+            ? await refreshedDownload(download, inputId, this.signal)
+            : this.signer ? await this.sign(inputId) : download;
+          if (expiring && !download.refresh && !this.signer && download.expiresAt && Date.parse(download.expiresAt) - Date.now() <= 120_000) {
+            throw new Error(`input ${inputId} URL expires before download; refresh unavailable`);
+          }
+          this.downloads.set(inputId, download);
+        } else if (!download) {
+          download = await this.sign(inputId);
+          this.downloads.set(inputId, download);
+        }
+        return { url: download.url, headers: download.headers };
+      },
+    };
+  }
+
+  /** Signs every listed input that has no usable URL, in batches. */
+  async prefetch(inputIds: readonly string[]): Promise<void> {
+    const missing = inputIds.filter((inputId) => !this.downloads.has(inputId));
+    await Promise.all(missing.map((inputId) => this.sign(inputId).then((download) => this.downloads.set(inputId, download))));
+  }
+
+  private sign(inputId: string): Promise<InputDownload> {
+    if (!this.signer) return Promise.reject(new Error(`input ${inputId} has no download URL and the control plane cannot sign one`));
+    return new Promise((resolve, reject) => {
+      const waiters = this.pending.get(inputId) ?? [];
+      waiters.push({ resolve, reject });
+      this.pending.set(inputId, waiters);
+      if (!this.timer) this.timer = setTimeout(() => void this.flush(), 20);
+    });
+  }
+
+  private async flush(): Promise<void> {
+    this.timer = undefined;
+    const batch = this.pending;
+    this.pending = new Map();
+    const ids = [...batch.keys()];
+    for (let start = 0; start < ids.length; start += INPUT_URLS_MAX_BATCH) {
+      const chunk = ids.slice(start, start + INPUT_URLS_MAX_BATCH);
+      try {
+        const signed = await this.signer!(chunk, this.signal);
+        for (const inputId of chunk) {
+          const download = signed[inputId];
+          for (const waiter of batch.get(inputId)!) {
+            if (download) waiter.resolve(download);
+            else waiter.reject(new Error(`control plane did not sign input ${inputId}`));
+          }
+        }
+      } catch (error) {
+        for (const inputId of chunk) for (const waiter of batch.get(inputId)!) waiter.reject(error);
+      }
+    }
+  }
+}
+
+async function placeInWorkspace(blobPath: string, target: string, sizeBytes: number): Promise<void> {
+  await rm(target, { force: true });
+  try {
+    await link(blobPath, target);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'EXDEV' && code !== 'EPERM') throw error;
+    await copyFile(blobPath, target);
+    const copied = await stat(target);
+    if (copied.size !== sizeBytes) throw new Error(`input copy size mismatch for ${basename(target)}`);
+  }
+}
+
+/**
+ * Makes a job's inputs available: asks the engine which inputs it renders
+ * from, serves every cached one from the content-addressed blob store (no
+ * copy, no re-hash beyond its verification stamp), fetches the misses at job
+ * priority, and reports progress. Failures of the progress callback never
+ * fail the download.
+ */
 export async function downloadInputs(
   transfers: readonly JobInputTransfer[],
   workspace: string,
-  cacheDir: string,
+  store: BlobStore,
   signal: AbortSignal,
-  options: { concurrency?: number; progress?: (progress: InputDownloadProgress) => Promise<void> } = {},
-): Promise<ReadonlyMap<string, RenderInputFile>> {
-  const concurrency = options.concurrency ?? Number(process.env.SIMFORGE_INPUT_DOWNLOAD_CONCURRENCY ?? 16);
-  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 128) throw new Error('input download concurrency must be an integer from 1 to 128');
-  const ids = new Set<string>();
+  options: DownloadInputsOptions = {},
+): Promise<ReadonlyMap<string, RenderInputFile> & { summary?: InputDownloadSummary }> {
+  const log = options.log ?? ((event) => console.error(JSON.stringify(event)));
+  const byId = new Map<string, JobInputTransfer>();
   for (const transfer of transfers) {
-    if (ids.has(transfer.inputId)) throw new Error(`duplicate inputId ${transfer.inputId}`);
-    ids.add(transfer.inputId);
+    if (byId.has(transfer.inputId)) throw new Error(`duplicate inputId ${transfer.inputId}`);
+    byId.set(transfer.inputId, transfer);
   }
-  const controller = new AbortController();
-  signal = AbortSignal.any([signal, controller.signal]);
   const startedAt = Date.now();
-  const totalBytes = transfers.reduce((sum, input) => sum + input.sizeBytes, 0);
-  let downloadedBytes = 0;
-  let next = 0;
-  let lastReport = 0;
-  let progressTail = Promise.resolve();
-  const report = (completed: number) => {
-    if (completed !== transfers.length && completed !== 0 && Date.now() - lastReport < 1000) return;
-    lastReport = Date.now();
-    const snapshot = { completed, total: transfers.length, downloadedBytes, totalBytes };
-    progressTail = progressTail.then(() => options.progress?.(snapshot));
-    return progressTail;
-  };
-  const inputDir = join(workspace, 'inputs');
-  await mkdir(inputDir, { recursive: true });
-  await mkdir(cacheDir, { recursive: true });
-  const result = new Map<string, RenderInputFile>();
-
-  await report(0);
-  const materialize = async (transfer: JobInputTransfer) => {
+  const storeBytesAtStart = store.stats().downloadedBytes;
+  const urls = new InputUrlBook(transfers, options.inputUrls, signal);
+  const hits = new Set<string>();
+  const ensure = async (transfer: JobInputTransfer, onBytes?: (bytes: number) => void): Promise<string> => {
     throwIfCanceled(signal);
-    const cachePath = join(cacheDir, transfer.sha256);
-    let cacheValid = false;
-    try {
-      const cached = await stat(cachePath);
-      cacheValid = cached.isFile() && cached.size === transfer.sizeBytes;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if (await store.has(transfer.sha256, transfer.sizeBytes)) {
+      hits.add(transfer.inputId);
+      return store.path(transfer.sha256);
     }
-
-    if (!cacheValid) {
-      const temporaryPath = `${cachePath}.${randomUUID()}.part`;
-      const download = await freshDownload(transfer, signal);
-      const response = await fetch(download.url, { headers: download.headers, redirect: 'error', signal });
-      if (!response.ok || !response.body) throw new Error(`input ${transfer.inputId} download returned ${response.status}`);
-      const digest = createHash('sha256');
-      let sizeBytes = 0;
-      const hashingStream = new Transform({
-        transform(chunk: Buffer, _encoding, callback) {
-          sizeBytes += chunk.length;
-          digest.update(chunk);
-          callback(null, chunk);
-        },
-      });
-      try {
-        await pipeline(Readable.fromWeb(response.body as never), hashingStream, createWriteStream(temporaryPath, { mode: 0o600 }), { signal });
-        const sha256 = digest.digest('hex');
-        if (sha256 !== transfer.sha256 || sizeBytes !== transfer.sizeBytes) {
-          throw new Error(`input ${transfer.inputId} integrity mismatch: expected ${transfer.sha256}/${transfer.sizeBytes}, got ${sha256}/${sizeBytes}`);
-        }
-        await rename(temporaryPath, cachePath).catch(async (error: NodeJS.ErrnoException) => {
-          if (error.code !== 'EEXIST') throw error;
-          await rm(temporaryPath, { force: true });
-        });
-      } catch (error) {
-        await rm(temporaryPath, { force: true });
-        throw error;
-      }
-    }
-
-    const localPath = join(inputDir, safeInputName(transfer.inputId));
-    await copyFile(cachePath, localPath);
-    try {
-      await verifyFile(localPath, transfer.sha256, transfer.sizeBytes);
-    } catch (error) {
-      await Promise.all([rm(cachePath, { force: true }), rm(localPath, { force: true })]);
-      throw error;
-    }
-    result.set(transfer.inputId, { inputId: transfer.inputId, path: localPath, sha256: transfer.sha256, sizeBytes: transfer.sizeBytes, ...(transfer.relativePath === undefined ? {} : { relativePath: transfer.relativePath }) });
-    downloadedBytes += transfer.sizeBytes;
-    await report(result.size);
+    return store.ensure({
+      sha256: transfer.sha256,
+      sizeBytes: transfer.sizeBytes,
+      source: urls.source(transfer.inputId),
+      priority: 'job',
+      ...(onBytes ? { onBytes } : {}),
+    }, signal);
   };
-  const run = async () => {
+
+  // 1. Selection: the engine may read a few small inputs (a map master and
+  //    its manifests) to decide which of the rest it needs.
+  let selectedIds: ReadonlySet<string> = new Set(byId.keys());
+  if (options.selectInputs && options.intent) {
+    selectedIds = await options.selectInputs({
+      intent: options.intent,
+      inputs: transfers.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, ...(relativePath === undefined ? {} : { relativePath }), sha256, sizeBytes })),
+      read: async (inputId) => {
+        const transfer = byId.get(inputId);
+        if (!transfer) throw new Error(`engine asked for unclaimed input ${inputId}`);
+        return readFile(await ensure(transfer));
+      },
+      signal,
+    });
+    for (const inputId of selectedIds) if (!byId.has(inputId)) throw new Error(`engine selected unclaimed input ${inputId}`);
+  }
+  const selected = transfers.filter((transfer) => selectedIds.has(transfer.inputId));
+  const selectMs = Date.now() - startedAt;
+
+  // 2. Fetch. Presence first (one stat per blob), then batch-sign the misses
+  //    that have no lease URL before any lane opens.
+  const totalBytes = selected.reduce((sum, input) => sum + input.sizeBytes, 0);
+  const missing: JobInputTransfer[] = [];
+  let cachedBytes = 0;
+  await Promise.all(selected.map(async (transfer) => {
+    if (await store.has(transfer.sha256, transfer.sizeBytes)) {
+      hits.add(transfer.inputId);
+      cachedBytes += transfer.sizeBytes;
+    } else {
+      missing.push(transfer);
+    }
+  }));
+  if (options.inputUrls) await urls.prefetch(missing.filter((transfer) => !transfer.download).map((transfer) => transfer.inputId));
+
+  let completed = selected.length - missing.length;
+  let downloadedBytes = cachedBytes;
+  let lastReport = 0;
+  let reporting: Promise<void> | undefined;
+  const report = (force = false) => {
+    if (!options.progress) return;
+    if (!force && (reporting || Date.now() - lastReport < 1000)) return;
+    lastReport = Date.now();
+    const snapshot = { completed, total: selected.length, downloadedBytes: Math.min(downloadedBytes, totalBytes), totalBytes };
+    // Progress is best effort and never blocks a download lane.
+    reporting = Promise.resolve()
+      .then(() => options.progress!(snapshot))
+      .catch((error: unknown) => log({ event: 'inputs.progress_failed', error: error instanceof Error ? error.message : String(error) }))
+      .finally(() => { reporting = undefined; });
+  };
+  report(true);
+
+  const fetchStarted = Date.now();
+  const paths = new Map<string, string>();
+  for (const transfer of selected) if (hits.has(transfer.inputId)) paths.set(transfer.inputId, store.path(transfer.sha256));
+  const controller = new AbortController();
+  const jobSignal = AbortSignal.any([signal, controller.signal]);
+  // Larger blobs first: they dominate wall time and overlap the small tail.
+  missing.sort((left, right) => right.sizeBytes - left.sizeBytes);
+  await Promise.all(missing.map(async (transfer) => {
     try {
-      while (next < transfers.length) {
-        const transfer = transfers[next++]!;
-        await materialize(transfer);
-      }
+      let credited = 0;
+      const path = await store.ensure({
+        sha256: transfer.sha256,
+        sizeBytes: transfer.sizeBytes,
+        source: urls.source(transfer.inputId),
+        priority: 'job',
+        onBytes: (bytes) => {
+          credited += bytes;
+          downloadedBytes += bytes;
+          report();
+        },
+      }, jobSignal);
+      downloadedBytes += transfer.sizeBytes - credited;
+      paths.set(transfer.inputId, path);
+      completed += 1;
+      report();
     } catch (error) {
       controller.abort(error);
       throw error;
     }
+  })).catch((error: unknown) => {
+    throw controller.signal.reason ?? error;
+  });
+  report(true);
+  await reporting;
+
+  // 3. Placement.
+  const result = new Map<string, RenderInputFile>() as Map<string, RenderInputFile> & { summary?: InputDownloadSummary };
+  const inputDir = join(workspace, 'inputs');
+  if (options.placement !== 'cache') await mkdir(inputDir, { recursive: true });
+  for (const transfer of selected) {
+    const blobPath = paths.get(transfer.inputId)!;
+    let path = blobPath;
+    if (options.placement !== 'cache') {
+      path = join(inputDir, safeInputName(transfer.inputId));
+      await placeInWorkspace(blobPath, path, transfer.sizeBytes);
+    }
+    result.set(transfer.inputId, {
+      inputId: transfer.inputId,
+      path,
+      sha256: transfer.sha256,
+      sizeBytes: transfer.sizeBytes,
+      ...(transfer.relativePath === undefined ? {} : { relativePath: transfer.relativePath }),
+    });
+  }
+  const summary: InputDownloadSummary = {
+    declared: transfers.length,
+    declaredBytes: transfers.reduce((sum, input) => sum + input.sizeBytes, 0),
+    selected: selected.length,
+    selectedBytes: totalBytes,
+    cacheHits: [...hits].filter((inputId) => selectedIds.has(inputId)).length,
+    cacheHitBytes: cachedBytes,
+    fetchedBytes: store.stats().downloadedBytes - storeBytesAtStart,
+    selectMs,
+    fetchMs: Date.now() - fetchStarted,
+    elapsedMs: Date.now() - startedAt,
   };
-  const outcomes = await Promise.allSettled(Array.from({ length: Math.min(concurrency, transfers.length) }, run));
-  const failed = outcomes.find((outcome) => outcome.status === 'rejected');
-  if (failed?.status === 'rejected') throw controller.signal.reason ?? failed.reason;
-  await progressTail;
-  console.error(JSON.stringify({ event: 'inputs.ready', files: result.size, bytes: downloadedBytes, elapsedMs: Date.now() - startedAt, concurrency }));
+  result.summary = summary;
+  log({ event: 'inputs.ready', ...summary });
   return result;
 }
 
