@@ -453,6 +453,10 @@ export interface NativeModule {
    * Returns the generated scenario and its `AmbientTrafficProvenance` JSON.
    */
   materializeAmbientTraffic(input: NativeScenarioInput, graph: NativeLaneGraph, profileJson: string, optionsJson?: string | null): [NativeScenarioInput, string];
+  /** `simforge.ambient-turn-verdicts/v1` table of the turn verdicts this module holds for `graph` (absent before engine 0.9.0). */
+  ambientTurnVerdictsJson?(graph: NativeLaneGraph): string;
+  /** Seed this module's turn-verdict memo from a persisted table; refuses another ENGINE_SEM_VER. */
+  loadAmbientTurnVerdicts?(json: string): number;
 
   parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;

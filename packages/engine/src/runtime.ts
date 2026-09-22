@@ -269,6 +269,25 @@ export class EngineRuntime {
     return { scenario: generated, provenance: JSON.parse(provenanceJson) as AmbientTrafficProvenance };
   }
 
+  /**
+   * The ambient turn-feasibility verdicts this runtime holds for `graph`
+   * (`simforge.ambient-turn-verdicts/v1` JSON), or `null` on runtimes that
+   * predate them. Probing turns dominates the first ambient generation on a
+   * map; persist this beside the map closure, keyed by the closure digest and
+   * `engineSemVer`, and `loadAmbientTurnVerdicts` it in a later session. The
+   * generated population is identical either way.
+   */
+  ambientTurnVerdicts(graph: LaneGraph): string | null {
+    const exporter = this.module.ambientTurnVerdictsJson;
+    return exporter ? guard(() => exporter.call(this.module, graph)) : null;
+  }
+
+  /** Seed the turn-verdict memo from a persisted table; returns the verdicts loaded (0 on older runtimes). Throws on another `engineSemVer`. */
+  loadAmbientTurnVerdicts(json: string): number {
+    const loader = this.module.loadAmbientTurnVerdicts;
+    return loader ? guard(() => loader.call(this.module, json)) : 0;
+  }
+
   /** Parse plain or gzip trace bytes, or re-validate an in-memory trace document. */
   trace(source: TraceSource): TraceHandle {
     const bytes = source instanceof Uint8Array ? source : encoder.encode(typeof source === 'string' ? source : JSON.stringify(source));

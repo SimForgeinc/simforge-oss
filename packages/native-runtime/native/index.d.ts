@@ -336,6 +336,9 @@ export const ACTOR_ROW: number
 /** `AdaptNote[]` JSON (`{path, reason, severity, code?}`); needs no map. */
 export declare function adaptTemplateNotesJson(templateJson: string): string
 
+/** Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure. */
+export declare function ambientTurnVerdictsJson(graph: LaneGraph): string
+
 /** `SituationTransactionResult` JSON (no simulation). */
 export declare function applySituationTransaction(documentJson: string, transactionJson: string): string
 
@@ -410,6 +413,9 @@ export const HANDOFF_BODY_ROW: number
  * values with structured diagnostics (`template: null`, `issues: [...]`).
  */
 export declare function liftMapBoundTemplate(templateJson: string, bundle: MapBundle, optionsJson?: string | undefined | null): string
+
+/** Load persisted ambient turn verdicts into this process; returns the count. Refuses another ENGINE_SEM_VER. */
+export declare function loadAmbientTurnVerdicts(json: string): number
 
 /** Ranked `SiteMatch` JSON (`{mapId, report: MatchReport, notes}`); `optionsJson = {minScore?, maxSites?, exactCatalogSiteResolution?}`. */
 export declare function matchSites(templateJson: string, bundle: MapBundle, optionsJson?: string | undefined | null): string
