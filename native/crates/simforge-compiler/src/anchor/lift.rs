@@ -498,8 +498,11 @@ pub fn lift_map_bound_template(template: &ScenarioTemplate, index: &DerivedMapIn
             let delta = point - reference_point;
             let relative_s = projection.s - reference_projection.s;
             let relative_t = projection.lateral_m / projection.lane_width_m - reference_projection.lateral_m / reference_projection.lane_width_m;
+            // `rigidOffsetM` owns placement, so `tFrac` is informational here; it is
+            // still clamped to the schema's ±1 bound (as `frame_pose` does) so the
+            // portable template parses. The raw fraction can be several lanes wide.
             issues.push(issue(PortableLiftIssueCode::RoleBindingAmbiguous, PortableLiftSeverity::Warning, format!("roles.{}", role.id()), "actor is outside the source frame cross-section; its formation is carried as a rigid pair", "add a semantic crossing, parking-zone, or junction movement association", true));
-            RoleKind::RelativeTo { r#ref: reference.id().to_owned(), d_lane: relative_t.round().clamp(-8.0,8.0) as i32, ds_m: NumberOrExpr::Number(round(relative_s,6)), t_frac: round(projection.lateral_m / projection.lane_width_m,6), heading_offset_rad: round(angle_diff(scene_pose.heading_rad, scene_role(reference).unwrap().0.heading_rad),6), rigid_offset_m: Some(RigidOffsetM { along_m: round(delta.x * forward.x + delta.y * forward.y,4), across_m: round(-delta.x * forward.y + delta.y * forward.x,4) }) }
+            RoleKind::RelativeTo { r#ref: reference.id().to_owned(), d_lane: relative_t.round().clamp(-8.0,8.0) as i32, ds_m: NumberOrExpr::Number(round(relative_s,6)), t_frac: round((projection.lateral_m / projection.lane_width_m).clamp(-1.0, 1.0),6), heading_offset_rad: round(angle_diff(scene_pose.heading_rad, scene_role(reference).unwrap().0.heading_rad),6), rigid_offset_m: Some(RigidOffsetM { along_m: round(delta.x * forward.x + delta.y * forward.y,4), across_m: round(-delta.x * forward.y + delta.y * forward.x,4) }) }
         };
         let mut binding = FeatureBinding::new(role.id(), kind.name());
         binding.status = BindingStatus::Bound;
@@ -757,6 +760,26 @@ mod tests {
         assert!(codes.contains(&PortableLiftIssueCode::RoleBindingAmbiguous));
         assert!(codes.contains(&PortableLiftIssueCode::SpatialExtensionRemoved));
         assert!(!result.ok);
+    }
+
+    #[test]
+    fn rigid_pair_lateral_fraction_is_clamped_and_offset_keeps_the_true_distance() {
+        // 12 m left of a 3.5 m lane: the raw fraction is ~3.4 lanes, outside the
+        // schema's ±1 bound; the rigid offset keeps the exact lateral distance.
+        let source = template(json!([
+            scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref())),
+            scene_role("other", 18.0, -12.0, 0.0, None)
+        ]), json!([]));
+        let result = lift_map_bound_template(&source, &straight_index(), &PortableLiftOptions::default());
+        assert!(result.ok, "{:?}", result.issues);
+        let lifted = result.template.unwrap();
+        let other = lifted.roles.iter().find(|r| r.id() == "other").unwrap();
+        let RoleKind::RelativeTo { t_frac, rigid_offset_m: Some(offset), .. } = &other.kind else { panic!("expected a rigid pair, got {:?}", other.kind.name()) };
+        assert_eq!(*t_frac, 1.0);
+        assert_eq!((offset.along_m, offset.across_m), (8.0, 12.0));
+        let json = serde_json::to_value(&lifted).unwrap();
+        let back: ScenarioTemplate = serde_json::from_value(json).unwrap();
+        assert_eq!(back.roles.len(), 2);
     }
 
     #[test]
