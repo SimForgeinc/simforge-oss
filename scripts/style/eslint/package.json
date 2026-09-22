@@ -1,0 +1,11 @@
+{
+  "name": "@simforge-oss/style-lint",
+  "private": true,
+  "description": "Isolated ESLint toolchain for Studio StyleX rules. Installed on demand by scripts/style/lint.mjs with --ignore-workspace so it never touches the workspace lockfile.",
+  "type": "module",
+  "devDependencies": {
+    "@stylexjs/eslint-plugin": "0.19.1",
+    "@typescript-eslint/parser": "8.44.0",
+    "eslint": "9.36.0"
+  }
+}

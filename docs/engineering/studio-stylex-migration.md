@@ -6,8 +6,12 @@ component tree all still ship and still render the product; StyleX is the
 target for new and migrated component styling, and nothing is removed until a
 surface is fully converted.
 
-This document is the contract between the two systems. Read it before styling
-anything in Studio.
+This document records the mechanics of that migration: compile roots, package
+exports, precedence, focus-outline semantics, stacking and pointer events. It
+is still correct about all of those. **For how to style something today, and
+for the template a new component starts from, read
+[`studio-style-guide.md`](./studio-style-guide.md) first**; where the two
+disagree about policy, the style guide wins.
 
 ## The two trees
 
@@ -167,10 +171,12 @@ migration.
 
 ## Tokens
 
-`tokens.stylex.ts` exports exactly six `stylex.defineVars` groups: `colors`,
-`text`, `space`, `radii`, `layers`, `motion`. If a value does not belong in one
-of these, it is a component detail and belongs in that component's
-`*.stylex.ts`.
+`tokens.stylex.ts` holds every design value: `stylex.defineVars` groups for
+colour, type, space, radii, stacking, motion and the rest, plus `layout`, a
+`stylex.defineConsts` group for values that must be known at compile time
+(breakpoints). The style guide lists the groups and when to reach for each. A
+value with no token is either a missing token (add it in the same change) or
+layout geometry local to one component.
 
 Rules:
 
@@ -195,7 +201,7 @@ properties already in `styles.css` rather than redeclaring values:
 bg: "hsl(var(--background))",
 text: "hsl(var(--foreground))",
 danger: "hsl(var(--destructive))",
-accent: "var(--accent-brand)",
+textMuted: "hsl(var(--muted-foreground))",
 ```
 
 `styles.css` keeps the HSL-triplet convention (`--background: 0 0% 4%`,
@@ -204,8 +210,9 @@ switch**. We do not use `stylex.createTheme`. This bridge is what keeps a
 migrated StyleX component and its unmigrated Tailwind sibling the same colour
 on the same page — which is the whole reason an additive migration is safe.
 
-Colours that are not theme-dependent (the glass alphas, `panel`, `hairline`,
-`overlayScrim`) are literal values in the token module.
+Colours that are not theme-dependent (the brand accent `#E8E044`, the glass
+alphas, `panel`, `hairline`, `overlayScrim`) are literal values in the token
+module.
 
 ### Radii: the sharp-corner mandate
 
@@ -400,22 +407,21 @@ The migrated non-protected families currently include:
   passed per usage because the same controls also sit in grids that already
   space them
 
-The map page and scenario editor are now StyleX-backed and remain
-appearance-frozen. Their rendered output must not change — not a colour, not a
-transition. The app switcher and dashboard top bar follow the same rule.
+The map page, the scenario editor and the application chrome are StyleX-backed.
+They were migrated under a pixel-preserving rule, which is why so many of
+their files still hold the literal values Tailwind produced. **That freeze is
+lifted.** The migration itself is finished; what replaces it is the shared
+system in [`studio-style-guide.md`](./studio-style-guide.md):
 
-1. **Map page** — `studio/app/dashboard/map-assets/**` and
-   `studio/app/components/map-assets-map/**`.
-2. **Scenario editor** — `packages/studio-ui/src/scenario/editor/**`
-   (`regions/`, `inspector/`, `timeline/`, `tutorial/`, `states/`, `shell/`)
-   and the routes under `studio/app/dashboard/scenario/`.
-3. **Application chrome** — `AppSwitcherOverlay`, `AppSwitcherArt`,
-   `AppTopBar`, `AppTopBarFrame`, `AppSwitcherSkyScene`, and
-   `SkyCloudBackdrop`.
-
-The migration is a styling implementation change, not a visual redesign.
-What still is not StyleX on those surfaces is listed under
-[Residual exceptions](#residual-exceptions), and that list is exhaustive.
+- Moving a surface onto tokens, recipes and primitives is the goal, and a
+  change that does so may change what the surface looks like, as long as the
+  result is the shared look (the ink/hairline/fill ladders, the type roles,
+  the one focus ring) rather than a new local one. Show before/after
+  screenshots of every surface it touches in review.
+- A swap that keeps the rendered value (literal to equal token, inline copy to
+  the identical recipe) needs no screenshot review, and is always welcome.
+- What still is not StyleX on those surfaces is listed under
+  [Residual exceptions](#residual-exceptions), and that list is exhaustive.
 
 These files carry deliberately tuned, heavily commented visual detail:
 the glass scrollbar, the `backwards` animation fill that exists so hover lifts
@@ -423,9 +429,8 @@ keep working over the WebGL scene, the map dimming, and the
 dataset→scenario view-transition morph. Those comments are records of fixed
 bugs. Treat them as specifications.
 
-Shared components consumed by these surfaces are also appearance-frozen even
-when the implementation is migrated. Changing what they look like is not part
-of this work.
+The bug records are what stay protected, not the colours: a change that
+touches one of those behaviours keeps it working.
 
 ### Residual exceptions
 
@@ -451,8 +456,8 @@ are migrated, not bridged — `V1TimelineRail.stylex.ts` and
 as `":enabled:hover"` (`V1TimelineRail.stylex.ts:384`,
 `TimelineTransportControls.stylex.ts:35`), and attribute conditions:
 `"[data-state=active]"` compiles like any other condition, which is how
-`tabs.stylex.ts`, `sheet.stylex.ts`, `switch.stylex.ts` and the map page's
-`s_742` / `s_748` express Radix state.
+`tabs.stylex.ts`, `sheet.stylex.ts` and `switch.stylex.ts` express Radix
+state.
 
 A residual class also has to be able to *win*. StyleX guards every atomic rule
 with repeated `:not(#\#)`, so a compiled declaration outranks any plain class,
@@ -466,12 +471,10 @@ state. Check the property, not just the mechanism, before leaving one behind.
   that property undeclared, which is what lets the descendant selector apply.
   A StyleX rule styles only the element it is applied to, so no selector runs
   from a parent's `:hover` down to a child. Eight variants qualify and are the
-  whole of it: `group-hover:scale-105` / `group-hover:scale-110` /
-  `group-hover:text-primary` in `map-assets.stylex.ts`'s `bridge` (`s_182`,
-  `s_183`, `s_188`, `s_549`, `s_554`, under the markers `s_184`, `s_545`,
-  `s_552`), `group-hover:scale-[1.04]` in `EditorStatePanels.tsx`, and
+  whole of it: `group-hover:scale-[1.04]` in `EditorStatePanels.tsx`, and
   `group-hover:scale-105` / `group-hover:translate-x-1` in
-  `RenderingBenchmark.tsx`.
+  `RenderingBenchmark.tsx`. New work uses `stylex.when.ancestor` instead
+  (the app switcher's artwork does), which needs no Tailwind at all.
   Everywhere else — and always where the child declares the property — the
   marked ancestor publishes the finished value with `defineVars` and the child
   reads it: the top bar's logo mark, the catalog tile's glyph, the map page's
@@ -495,14 +498,6 @@ state. Check the property, not just the mechanism, before leaving one behind.
   `dark:*` utility survives on a migrated surface: `layout.tsx` fixes `dark`,
   so the dark value is the only one that ever painted and it is folded into
   the rule. A `dark:*` class beside a compiled `color` could not win anyway.
-- **`bridge` in `studio/app/dashboard/map-assets/map-assets.stylex.ts`.** The
-  map page does not scatter the entries above through its markup: it
-  exports one map of surviving Tailwind keyed by the rule each class came
-  from, appended at the callsite as
-  `stylex.props(styles.s_N).className + " " + bridge.s_N`. Its comment records
-  which mechanism each entry is; keep that comment true when you add or remove
-  one, and do not use the bridge for anything that has a self-scoped form —
-  including the attribute conditions it used to carry.
 - **The spinner.** The sharp-corner reset's one sanctioned exception is
   written as `.animate-spin.rounded-full`, so it matches only those literal
   Tailwind classes. A CSS border spinner must keep both.
@@ -527,9 +522,9 @@ state. Check the property, not just the mechanism, before leaving one behind.
 - **Runtime-derived values.** Geometry and paint that depend on live scene
   data stay explicit, travelling as inline custom properties per
   [Runtime values](#runtime-values) — never as a static `create()` entry.
-- **Literal `zIndex` on frozen surfaces.** See the note under
-  [z-index](#z-index): the appearance-frozen trees kept their original
-  literals verbatim, and that is deliberate.
+- **Literal `zIndex` carried over by the migration.** See the note under
+  [z-index](#z-index): the migrated trees kept their original literals
+  verbatim. They are debt, not precedent.
 - **Inline static style maps predating the migration.** Six scenario-editor
   components still hold their appearance in a plain
   `const styles: Record<string, CSSProperties>` handed to `style={…}`, exactly
@@ -538,9 +533,9 @@ state. Check the property, not just the mechanism, before leaving one behind.
   `ActorLibraryRail.tsx:910`, `AddTrafficPanel.tsx:153` and
   `panel-tiles.tsx:111`, all under
   `packages/studio-ui/src/scenario/editor/regions/`. They are not migrated and
-  not a convention — they are the frozen editor tree's remaining debt, listed
-  here so the exhaustiveness claim above stays true. Migrate one only with the
-  frozen-surface rule in force: the rendered output must not change.
+  not a convention — they are the editor tree's remaining debt, listed here so
+  the exhaustiveness claim above stays true. Migrate one onto the style
+  guide's tokens and recipes.
 
 ## Overlay invariants
 
@@ -550,8 +545,8 @@ Studio has one global stacking order, expressed by the `layers` token group.
 The tokens were derived from the literals already in the tree — the scale
 renumbers nothing, and a migration that changes a surface's band is a visual
 change, not a naming one. It is a scale for the bands that surfaces share, not
-a complete census: the migrated frozen surfaces carry their original literals
-verbatim wherever no token had that exact value.
+a complete census: the migrated surfaces still carry their original literals
+wherever no token had that exact value.
 
 | Token | Value | Occupants |
 | --- | --- | --- |
@@ -568,9 +563,8 @@ verbatim wherever no token had that exact value.
 
 - **Use a token, never a fresh literal.** A new `z-[95]` invisibly reorders a
   band someone tuned.
-- **Migrated literals are not new literals.** The pixel-preserving rule
-  outranks this one, so the frozen trees still hold values the table does not
-  name — `70` (notification dock), `81`/`82` (anchored popover, details and
+- **Migrated literals are debt.** The migration kept values the table does
+  not name — `70` (notification dock), `81`/`82` (anchored popover, details and
   tools panels), `85` (unanchored badges), `130`/`145` (tutorial overlay and
   guide) and the map's `999`. Carrying one across a migration is correct;
   inventing one is not. If you need a band that has no token, add the token
@@ -614,17 +608,22 @@ ratio is the invariant, not an accident.
    selectors StyleX has no form for, runtime-derived values, and the
    renderer-owned rule — and each survivor carries a comment saying which it
    is.
-2. **Pixel parity is the acceptance test.** This is a refactor. If a surface
-   looks different afterwards the migration is wrong, even if it looks better.
-3. **Preserve protected-surface behavior.** The map, scenario editor, app
-   switcher, and top bar are appearance-frozen while their implementation
-   moves to StyleX.
+2. **The shared look is the acceptance test.** A surface is done when it is
+   built from tokens, recipes and primitives (the style guide), not when it
+   matches its old pixels. Changes of appearance that follow from that are
+   expected; review them with before/after screenshots. Identical-value swaps
+   need none.
+3. **Keep the fixed-bug behaviours.** The commented details listed under
+   [Current migration status](#current-migration-status) (the scrollbar, the
+   `backwards` fill, the map dimming, the view-transition morph) are
+   specifications, whatever the surface looks like.
 4. **One owner per file.** The package manifests, compiler config, package
    exports, and CSS injection belong to the foundation change, not to a
    component migration.
-5. **Reach for a primitive before writing a `*.stylex.ts`.** If two surfaces
-   need the same thing, it is a primitive — but keep primitives small.
-6. **Tokens before literals; `tone` before colour; custom properties before
+5. **Reach for a primitive, then a recipe, before writing a `*.stylex.ts`.**
+   If two surfaces need the same thing, it is a recipe or a primitive — but
+   keep primitives small.
+6. **Tokens, never literals; `tone` before colour; custom properties before
    dynamic styles; relative imports inside the package; `src` by path for
    `defineVars`, the subpath export for everything else.**
 7. **Keep the comments.** When you move a styled element to StyleX, carry its

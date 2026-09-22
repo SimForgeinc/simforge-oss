@@ -94,6 +94,14 @@ roles); findings → exit 2. `export` formats: `xosc-1.4`, `xosc-1.3-esmini`,
 - Traces are gzipped and hash-pinned; `evidence verify` proves an instance and
   trace share one input hash before anyone reads metrics off the trace.
 
+## Studio styling
+
+Studio UI (`packages/studio-ui/src`, `studio/app`) is styled with StyleX from
+shared tokens, recipes and primitives. Before writing or changing any style,
+read `docs/engineering/studio-style-guide.md`; it has the rules and the
+template a new component starts from. `pnpm style:ratchet --check` and
+`pnpm lint:style` must pass.
+
 ## Docs
 
 - `docs/situation-authoring.md` — current situation-first experiment: gateway
