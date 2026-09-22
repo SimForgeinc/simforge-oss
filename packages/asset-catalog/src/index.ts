@@ -33,6 +33,7 @@ export type {
 } from './types';
 export { CARLA_VEHICLE_MODELS } from './vehicles-carla.generated';
 export { CARLA_PEDESTRIAN_MODELS } from './pedestrians-carla.generated';
+export { CARLA_OBJECT_CATALOG } from './carla-object-catalog.generated';
 export { PROP_CLASSES, PROP_TAGS } from './types';
 
 export {
