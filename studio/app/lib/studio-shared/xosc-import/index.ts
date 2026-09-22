@@ -796,7 +796,7 @@ export function importXoscToDraft(
     },
     simulationConfig: {
       duration_seconds: durationSeconds,
-      fixed_delta_seconds: 0.05,
+      fixed_delta_seconds: 0.02,
       physics_profile_id: "carla_default",
     },
     actors,
