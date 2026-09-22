@@ -45,5 +45,6 @@ describe("render worker stage projection", () => {
     expect(failed.label).toBe("Failed");
     expect(failed.stages.some((stage) => stage.state === "active")).toBe(false);
     expect(failed.percent).toBeNull();
+    expect(failed.stages.at(-1)).toMatchObject({ label: "Failed", hint: "Stopped before completion", state: "stopped" });
   });
 });
