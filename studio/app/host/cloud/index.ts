@@ -32,3 +32,5 @@ export const MapInstallPanel: HostSurface<MapInstallPanelProps> = null;
 /** No second account to connect, and no vault to keep its credential in. */
 export const CloudConnectorChip: HostSurface<{ onNavigate?: () => void }> = null;
 export const CloudConnectorSheet: HostSurface = null;
+
+export { useDatasetCloudHome } from "./useDatasetCloudHome";

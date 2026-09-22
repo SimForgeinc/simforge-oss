@@ -40,3 +40,6 @@ export type MapInstallPanelProps = {
   map: LocalMapDescriptor;
   xstyle?: stylex.StyleXStyles;
 };
+
+/** Dataset home is composed by the host before any connector effects mount. */
+export type DatasetHomeHook = () => import("@simforge-oss/studio-ui/scenario/ScenarioDatasetsClient").DatasetCloudHome;

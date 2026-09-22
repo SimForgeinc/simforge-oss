@@ -17,6 +17,9 @@ import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
  * reads as "you have no cloud datasets", which is a different claim.
  */
 export type DatasetCloudHome =
+  | { state: "managed-loading" }
+  | { state: "managed-unavailable"; message: string }
+  | { state: "managed"; workspaceId: string; organizationId: string | null; workspaceName: string }
   /** No usable connection: signed out, expired or never connected. Offers sign-in. */
   | { state: "signed-out" }
   /** The connection or the organization's dataset list is still resolving. */
