@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
@@ -6,7 +6,7 @@ import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import { hashFile, throwIfCanceled, type RenderInputFile } from '@simforge-oss/render';
-import type { JobInputTransfer } from '@simforge-oss/render';
+import { JobInputTransferSchema, type JobInputTransfer } from '@simforge-oss/render';
 
 function safeInputName(inputId: string): string {
   const stem = inputId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 96) || 'input';
@@ -21,20 +21,58 @@ async function verifyFile(path: string, expectedSha256: string, expectedSize: nu
   }
 }
 
+export type InputDownloadProgress = { completed: number; total: number; downloadedBytes: number; totalBytes: number };
+
+async function freshDownload(transfer: JobInputTransfer, signal: AbortSignal): Promise<JobInputTransfer['download']> {
+  const download = transfer.download;
+  if (!download.expiresAt || Date.parse(download.expiresAt) - Date.now() > 120_000) return download;
+  if (!download.refresh) throw new Error(`input ${transfer.inputId} URL expires before download; refresh unavailable`);
+  const response = await fetch(download.refresh.url, { method: 'POST', headers: download.refresh.headers, redirect: 'error', signal });
+  if (!response.ok) throw new Error(`input ${transfer.inputId} refresh returned ${response.status}`);
+  const refreshed = JobInputTransferSchema.shape.download.parse(await response.json());
+  if (!refreshed.expiresAt || Date.parse(refreshed.expiresAt) - Date.now() <= 120_000) {
+    throw new Error(`input ${transfer.inputId} refresh did not extend expiry`);
+  }
+  return refreshed;
+}
+
 export async function downloadInputs(
   transfers: readonly JobInputTransfer[],
   workspace: string,
   cacheDir: string,
   signal: AbortSignal,
+  options: { concurrency?: number; progress?: (progress: InputDownloadProgress) => Promise<void> } = {},
 ): Promise<ReadonlyMap<string, RenderInputFile>> {
+  const concurrency = options.concurrency ?? Number(process.env.SIMFORGE_INPUT_DOWNLOAD_CONCURRENCY ?? 16);
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 128) throw new Error('input download concurrency must be an integer from 1 to 128');
+  const ids = new Set<string>();
+  for (const transfer of transfers) {
+    if (ids.has(transfer.inputId)) throw new Error(`duplicate inputId ${transfer.inputId}`);
+    ids.add(transfer.inputId);
+  }
+  const controller = new AbortController();
+  signal = AbortSignal.any([signal, controller.signal]);
+  const startedAt = Date.now();
+  const totalBytes = transfers.reduce((sum, input) => sum + input.sizeBytes, 0);
+  let downloadedBytes = 0;
+  let next = 0;
+  let lastReport = 0;
+  let progressTail = Promise.resolve();
+  const report = (completed: number) => {
+    if (completed !== transfers.length && completed !== 0 && Date.now() - lastReport < 1000) return progressTail;
+    lastReport = Date.now();
+    const snapshot = { completed, total: transfers.length, downloadedBytes, totalBytes };
+    progressTail = progressTail.then(() => options.progress?.(snapshot));
+    return progressTail;
+  };
   const inputDir = join(workspace, 'inputs');
   await mkdir(inputDir, { recursive: true });
   await mkdir(cacheDir, { recursive: true });
   const result = new Map<string, RenderInputFile>();
 
-  for (const transfer of transfers) {
+  await report(0);
+  const materialize = async (transfer: JobInputTransfer) => {
     throwIfCanceled(signal);
-    if (result.has(transfer.inputId)) throw new Error(`duplicate inputId ${transfer.inputId}`);
     const cachePath = join(cacheDir, transfer.sha256);
     let cacheValid = false;
     try {
@@ -45,8 +83,9 @@ export async function downloadInputs(
     }
 
     if (!cacheValid) {
-      const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.part`;
-      const response = await fetch(transfer.download.url, { headers: transfer.download.headers, signal });
+      const temporaryPath = `${cachePath}.${randomUUID()}.part`;
+      const download = await freshDownload(transfer, signal);
+      const response = await fetch(download.url, { headers: download.headers, redirect: 'error', signal });
       if (!response.ok || !response.body) throw new Error(`input ${transfer.inputId} download returned ${response.status}`);
       const digest = createHash('sha256');
       let sizeBytes = 0;
@@ -82,7 +121,25 @@ export async function downloadInputs(
       throw error;
     }
     result.set(transfer.inputId, { inputId: transfer.inputId, path: localPath, sha256: transfer.sha256, sizeBytes: transfer.sizeBytes, ...(transfer.relativePath === undefined ? {} : { relativePath: transfer.relativePath }) });
-  }
+    downloadedBytes += transfer.sizeBytes;
+    await report(result.size);
+  };
+  const run = async () => {
+    try {
+      while (next < transfers.length) {
+        const transfer = transfers[next++]!;
+        await materialize(transfer);
+      }
+    } catch (error) {
+      controller.abort(error);
+      throw error;
+    }
+  };
+  const outcomes = await Promise.allSettled(Array.from({ length: Math.min(concurrency, transfers.length) }, run));
+  const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+  if (failed?.status === 'rejected') throw controller.signal.reason ?? failed.reason;
+  await progressTail;
+  console.error(JSON.stringify({ event: 'inputs.ready', files: result.size, bytes: downloadedBytes, elapsedMs: Date.now() - startedAt, concurrency }));
   return result;
 }
 

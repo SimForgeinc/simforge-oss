@@ -616,7 +616,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
   return null;
 }
 
-export async function claimResponseV2(registrationId: string, workerNodeId: string) {
+export async function claimResponseV2(registrationId: string, workerNodeId: string, request?: Request) {
   const claimed = await claimRenderJobV2(registrationId, workerNodeId);
   if (!claimed) {
     return { schema: CONTROL_SCHEMA, type: "job.none" as const, retryAfterMs: 2_000 };
@@ -642,6 +642,18 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
       download: {
         url: "url" in input ? input.url : await getPresignedGetUrl(input.key, input.bucket, LEASE_SECONDS),
         headers: {},
+        ...("url" in input ? {} : {
+          expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString(),
+          ...(request ? { refresh: {
+            url: new URL(`/api/simforge/internal/render-jobs/${claimed.jobId}/inputs/${encodeURIComponent(input.inputId)}`, request.url).href,
+            headers: {
+              authorization: request.headers.get("authorization") ?? "",
+              "x-simforge-worker-node-id": workerNodeId,
+              "x-simforge-lease-id": claimed.leaseId,
+              "x-simforge-fence-token": claimed.fenceToken,
+            },
+          } } : {}),
+        }),
       },
     }))),
   };
@@ -688,6 +700,41 @@ async function activeLease(
     { lease_id: leaseId, job_id: jobId, worker_node_id: workerNodeId, token_sha256: sha256(fenceToken) },
   );
   return rows[0] ?? null;
+}
+
+/** Re-authorize each refresh against the live lease and immutable input digest; no URL/session state is stored. */
+export async function refreshRenderInputV2(input: {
+  jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; inputId: string;
+}) {
+  const lease = await activeLease(input.leaseId, input.fenceToken, input.workerNodeId, input.jobId);
+  if (!lease || lease.cancel_requested_at) return null;
+  const intent = parseRenderIntent(lease.render_intent);
+  const declared = intent.assets.find((asset) => asset.assetId === input.inputId);
+  const scenarioInput = input.inputId === (lease.renderer_engine === "native" ? "scenario.xosc" : "openscenario");
+  const packageInput = scenarioInput || (lease.renderer_engine !== "native" && ["map", "catalog", "execution-package"].includes(input.inputId));
+  if (!declared && !packageInput) return null;
+  const rows = packageInput
+    ? await queryRows<{ storage_bucket: string; storage_key: string }>(
+      `SELECT a.storage_bucket, a.storage_key FROM simforge.execution_packages ep
+       JOIN simforge.asset_catalog_versions c ON c.id = ep.asset_catalog_version_id
+       JOIN simforge.artifacts a ON a.id = CASE :input_id
+         WHEN 'map' THEN ep.xodr_artifact_id WHEN 'catalog' THEN c.manifest_artifact_id
+         WHEN 'execution-package' THEN ep.package_artifact_id ELSE ep.xosc_artifact_id END
+       WHERE ep.id = :package_id`,
+      { package_id: lease.execution_package_id, input_id: input.inputId },
+    )
+    : await queryRows<{ storage_bucket: string; storage_key: string }>(
+      `SELECT storage_bucket, storage_key FROM simforge.artifacts
+       WHERE sha256 = :sha256 AND byte_length = :size
+       UNION ALL SELECT storage_bucket, storage_key FROM simforge.native_map_asset_blobs
+       WHERE sha256 = :sha256 AND byte_length = :size AND verification_state = 'verified'
+       LIMIT 1`,
+      { sha256: declared!.sha256, size: declared!.sizeBytes },
+    );
+  const object = rows[0];
+  if (!object) return null;
+  const url = await getPresignedGetUrl(object.storage_key, object.storage_bucket, LEASE_SECONDS);
+  return { url, headers: {}, expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString() };
 }
 
 export async function heartbeatRenderLeaseV2(input: {

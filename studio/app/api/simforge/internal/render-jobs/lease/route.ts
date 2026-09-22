@@ -16,6 +16,6 @@ export async function POST(request: Request) {
     );
   }
   const workerNodeId = renderWorkerNodeId(request)!;
-  const registered = await claimResponseV2(parsed.data.registrationId, workerNodeId);
+  const registered = await claimResponseV2(parsed.data.registrationId, workerNodeId, request);
   return NextResponse.json(registered);
 }
