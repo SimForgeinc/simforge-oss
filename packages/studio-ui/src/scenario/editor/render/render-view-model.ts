@@ -346,7 +346,14 @@ export function renderPipelineStages(detail: ScenarioRenderJobDetailDto) {
       : index === currentIndex && live ? "active"
       : index < currentIndex && (at !== null || stage.kind === "queued") ? "done"
       : !live || index < currentIndex ? "stopped" : "pending";
-    return { ...stage, hint, at, state };
+    const terminalFailure = stage.kind === "completed" && !live && detail.jobState !== "succeeded";
+    return {
+      ...stage,
+      label: terminalFailure ? renderStateVisual(detail.jobState).label : stage.label,
+      hint: terminalFailure ? "Stopped before completion" : hint,
+      at,
+      state,
+    };
   });
   const current = stages[currentIndex]!;
   const progress = newest?.event === "stage.progress" ? newest : null;
