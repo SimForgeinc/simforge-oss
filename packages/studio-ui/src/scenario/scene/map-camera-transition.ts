@@ -19,6 +19,11 @@ export type MapModelLoadSnapshot = {
   streamingError?: string | null;
   /** Optional detail tiles that gave up. A map with these is loaded, not failed. */
   detailFailures?: number;
+  /** Tiles resident on the GPU right now, and how many the current view wants. */
+  residentTiles?: number;
+  wantedTiles?: number;
+  /** Estimated GPU bytes held by resident tiles. */
+  residentBytes?: number;
 };
 
 export function mapModelsFullyLoaded(snapshot: MapModelLoadSnapshot): boolean {
