@@ -94,7 +94,7 @@ export const styles = stylex.create({
   },
   // space-y-2 border-border border-t pt-3
   handoffProvenance: {
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
     paddingTop: space.s3,
@@ -104,11 +104,6 @@ export const styles = stylex.create({
   },
   // text-xs font-semibold uppercase tracking-wide text-muted-foreground
   chainOfCustody: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // space-y-1.5 text-xs

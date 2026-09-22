@@ -42,25 +42,10 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: "rgb(0 0 0 / 1)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(255 255 255 / 1)",
-    },
   },
   // text-[9px] uppercase tracking-[0.16em] text-white/40
   caps: {
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // max-w-full truncate text-xs font-medium text-white
   xsWhiteMedium2: {
@@ -73,10 +58,7 @@ export const styles = stylex.create({
   // break-all text-[10px] uppercase tracking-[0.14em] text-white/40
   capsBreakAll: {
     wordBreak: "break-all",
-    fontSize: "10px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // grid grid-cols-1 gap-3
   gridCols1Gap3: {
@@ -87,7 +69,7 @@ export const styles = stylex.create({
   // border-t border-white/10 pt-3
   ruleT: {
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s3,
   },
   // motionStyles.editorMotion + flex w-full items-center justify-center gap-2 border border-red-400/30 px-3 py-2 text-xs text-red-300 hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300
@@ -98,7 +80,7 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(248 113 113 / 0.3)",
+    borderColor: colors.critical,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -106,21 +88,9 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.critical,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(252 165 165 / 1)",
-    },
     backgroundColor: {
       default: null,
-      ":hover": "rgb(248 113 113 / 0.1)",
+      ":hover": colors.criticalWash,
     },
   },
   // size-3.5

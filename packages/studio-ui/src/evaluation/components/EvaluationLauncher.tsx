@@ -27,7 +27,7 @@ import {
 } from "@simforge-oss/evaluation/client";
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { formatCentsRange, submissionIdempotencyKey } from "../presentation";
-import { textLayout } from "../../stylex/recipes.stylex";
+import { hairline, textLayout } from "../../stylex/recipes.stylex";
 
 const VIDEO_MODEL_FAMILIES = ["alpamayo-1.5", "alpamayo-2-super"] as const satisfies readonly ModelFamilyId[];
 const CAMERA_OPTIONS = [
@@ -295,7 +295,7 @@ export function EvaluationLauncher({
             title="Map cameras and timing"
             hint="Identify the physical view in each file. Input order remains exactly as uploaded; this mapping tells the model which real camera each input contains."
           />
-          <div {...stylex.props(s.borderBox)}>
+          <div {...stylex.props(hairline.all)}>
             {prepared.files.map((file, inputIndex) => {
               const camera = cameras.find((entry) => entry.inputIndex === inputIndex);
               if (!camera) return null;
@@ -364,7 +364,7 @@ export function EvaluationLauncher({
             invented.
           </p>
 
-          <details {...stylex.props(s.border, s.mutedSurface10)}>
+          <details {...stylex.props(hairline.all, s.mutedSurface10)}>
             <summary {...stylex.props(s.cursor, s.px4py3, s.textSm, s.fontMedium, s.textFg)}>
               Advanced assumptions
             </summary>

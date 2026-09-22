@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./tooltip.stylex";
+import { hairline } from "../../stylex/recipes.stylex";
 
 const TooltipProvider = TooltipPrimitive.Provider;
 const Tooltip = TooltipPrimitive.Root;
@@ -20,7 +21,7 @@ const TooltipContent = React.forwardRef<
   <TooltipPrimitive.Content
     ref={ref}
     sideOffset={sideOffset}
-    {...mergeStyleProps(stylex.props(styles.content, xstyle), className)}
+    {...mergeStyleProps(stylex.props([hairline.all, styles.content], xstyle), className)}
     {...props}
   />
 ));

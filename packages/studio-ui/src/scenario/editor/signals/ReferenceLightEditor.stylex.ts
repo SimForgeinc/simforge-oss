@@ -37,14 +37,14 @@ export const styles = stylex.create({
     width: "100%",
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.muted,
   },
   // overflow-hidden rounded-md border border-border
   borderedClip: {
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
   },
   // grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border bg-muted/60 px-1.5 py-1 text-micro uppercase tracking-wide text-muted-foreground
   gridCenterCaps: {
@@ -52,16 +52,12 @@ export const styles = stylex.create({
     gridTemplateColumns: "20px minmax(0, 1fr) 58px 42px",
     alignItems: "center",
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.6)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // text-right
@@ -96,7 +92,7 @@ export const styles = stylex.create({
       default: stroke.hairline,
       ":last-child": "0px",
     },
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
     paddingTop: space.s1,
@@ -111,7 +107,7 @@ export const styles = stylex.create({
   size3TextMutedForeground60: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   // flex min-w-0 items-center gap-1.5
   flexCenterNarrowable: {
@@ -132,13 +128,10 @@ export const styles = stylex.create({
   },
   // h-6 w-full pr-3 pl-1 text-right text-meta tabular-nums
   metaWideRightText: {
-    height: "1.5rem",
     width: "100%",
     paddingLeft: space.s1,
     paddingRight: space.s3,
     textAlign: "right",
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
     fontVariantNumeric: "tabular-nums",
   },
   // pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-muted-foreground
@@ -148,7 +141,7 @@ export const styles = stylex.create({
     right: space.s1,
     top: "50%",
     transform: "translate(0, -50%)",
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     color: colors.mutedForeground,
   },
   // flex justify-end

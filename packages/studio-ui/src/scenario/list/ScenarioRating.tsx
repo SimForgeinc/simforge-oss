@@ -8,6 +8,7 @@ import { Badge } from "../../components/ui/badge";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { cn } from "../../lib/utils";
 import { list } from "../scenario-controls.stylex";
+import { typography } from "../../stylex/recipes.stylex";
 
 /**
  * The 1–5 star widget, ported one-to-one from v1's `ScenarioRating`.
@@ -65,7 +66,7 @@ export function ScenarioRating({
         })}
       </div>
       <span
-        {...stylex.props(styles.spanMetaMicroUppercase)}
+        {...stylex.props([typography.eyebrow, styles.spanMetaMicroUppercase])}
         data-scenario-rating-aggregate=""
       >
         {saving || loading ? (
@@ -79,7 +80,7 @@ export function ScenarioRating({
       {aggregate?.reviewState === "rejected" ? (
         <Badge
           variant="outline"
-          xstyle={list.rejectedBadge}
+          xstyle={[typography.tag, list.rejectedBadge]}
         >
           Rejected (&lt;4)
         </Badge>

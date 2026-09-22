@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { layout, motion, stroke } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, stroke } from "../../../stylex/tokens.stylex";
 
 /**
  * The add-actor panel's two shared surfaces: the chip (a filter, a category, a
@@ -48,16 +48,16 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
-      default: "rgba(255, 255, 255, 0.1)",
-      ":hover": "rgba(232, 224, 68, 0.4)",
+      default: colors.hairline,
+      ":hover": colors.accentLineSubtle,
       // Last word, as in the cascade this replaced: a chosen tile stays lit
       // while the pointer is over it.
-      '[data-active="true"]': "rgba(232, 224, 68, 0.62)",
+      '[data-active="true"]': colors.accentLine,
     },
     backgroundColor: {
-      default: "rgba(255, 255, 255, 0.045)",
-      ":hover": "rgba(232, 224, 68, 0.07)",
-      '[data-active="true"]': "rgba(232, 224, 68, 0.12)",
+      default: colors.fillSubtle,
+      ":hover": colors.accentWash,
+      '[data-active="true"]': colors.accentWash,
     },
     boxShadow: {
       default: "inset 0 1px 0 rgba(255, 255, 255, 0.03)",
@@ -89,7 +89,7 @@ export const styles = stylex.create({
       default: tileIn,
       [layout.reducedMotion]: "none",
     },
-    animationDuration: "220ms",
+    animationDuration: motion.durBase,
     animationTimingFunction: motion.easeExpressive,
     // `backwards`, never `both`: a forwards fill keeps the animation's final
     // transform winning over the hover rules above, so a filled entrance
@@ -107,7 +107,7 @@ export const styles = stylex.create({
       default: "transform",
       [layout.reducedMotion]: "none",
     },
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
     transitionTimingFunction: motion.easeExpressive,
   },
 });

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   utilityButtonsContainer: {
@@ -11,20 +11,17 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   copiedCheckIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.75rem",

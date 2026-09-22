@@ -21,18 +21,13 @@ export const styles = stylex.create({
   },
   // text-micro font-bold uppercase tracking-meta opacity-70
   capsMicroBold: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     opacity: "0.7",
   },
   // border border-border/70 bg-muted/40 px-1 text-micro font-bold tabular-nums
   microBoldBordered: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.7)",
-    backgroundColor: "hsl(var(--muted) / 0.4)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
     paddingLeft: space.s1,
     paddingRight: space.s1,
     fontSize: text.sizeMicro,
@@ -66,11 +61,8 @@ export const styles = stylex.create({
   // mt-2 h-7 px-2.5 text-xs
   xs: {
     marginTop: space.s2,
-    height: "1.75rem",
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
   // size-3.5
   size35: {
@@ -96,8 +88,8 @@ export const styles = stylex.create({
       [layout.reducedMotion]: "none",
     },
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "300ms",
-    animationDuration: "300ms",
+    transitionDuration: motion.durSlow,
+    animationDuration: motion.durSlow,
   },
   /*
    * The card's two icon controls. `-mt-1` pulls them level with the heading's
@@ -115,25 +107,12 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     backgroundColor: {
-      default: "hsl(var(--muted) / 0.4)",
+      default: colors.fillSubtle,
       ":hover": colors.hoverWash,
     },
     color: "currentColor",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible":
-        "0 0 0 1px hsl(var(--background)), 0 0 0 3px hsl(var(--ring))",
-    },
   },
   // -mr-1
   iconButtonEdge: {
@@ -153,25 +132,25 @@ export const styles = stylex.create({
   },
   // border-destructive/50 bg-destructive/20 text-foreground
   cardError: {
-    borderColor: "hsl(var(--destructive) / 0.5)",
-    backgroundColor: "hsl(var(--destructive) / 0.2)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     color: colors.text,
   },
   // border-amber-400/40 bg-amber-500/15 text-foreground
   cardWarning: {
-    borderColor: "rgb(251 191 36 / 0.4)",
-    backgroundColor: "rgb(245 158 11 / 0.15)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     color: colors.text,
   },
   // border-emerald-400/40 bg-emerald-500/15 text-foreground
   cardSuccess: {
-    borderColor: "rgb(52 211 153 / 0.4)",
-    backgroundColor: "rgb(16 185 129 / 0.15)",
+    borderColor: colors.positive,
+    backgroundColor: colors.positiveWash,
     color: colors.text,
   },
   // border-border/70 bg-background/95 text-foreground
   cardNeutral: {
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.95)",
     color: colors.text,
   },

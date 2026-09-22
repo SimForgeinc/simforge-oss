@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionToggle: {
@@ -69,7 +69,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   expandCollapseIcon: {
@@ -85,12 +85,9 @@ export const styles = stylex.create({
   speedLimitValue: {
     display: "inline-flex",
     alignItems: "center",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s1_5,
     paddingBlock: "1px",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightMedium,
   },
   crosswalkSourceDetail: {
@@ -101,18 +98,18 @@ export const styles = stylex.create({
     marginLeft: space.s2,
   },
   signalDetailText: {
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontSize: text.sizeMicro,
+    color: colors.inkFaint,
   },
   phaseTimingAvailable: {
     display: "inline-flex",
     alignItems: "center",
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    backgroundColor: colors.positiveWash,
     paddingInline: space.s1_5,
     paddingBlock: "1px",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightMedium,
-    color: "#4ade80",
+    color: colors.positive,
   },
   phaseTimingUnavailable: {
     display: "inline-flex",
@@ -120,14 +117,14 @@ export const styles = stylex.create({
     backgroundColor: colors.muted,
     paddingInline: space.s1_5,
     paddingBlock: "1px",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightMedium,
     color: colors.mutedForeground,
   },
   providerAttribution: {
     marginTop: space.s1_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineSnug,
-    color: "hsl(var(--muted-foreground) / 0.8)",
+    color: colors.inkMuted,
   },
 });

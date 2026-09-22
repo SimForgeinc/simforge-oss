@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import type { MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type EnrichmentSectionProps = {
   open: boolean;
@@ -46,7 +46,7 @@ export function EnrichmentSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props([motionRecipe.colors, styles.sectionToggle])}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.sectionToggle]])}
           aria-expanded={open}
         >
           <ChevronRight

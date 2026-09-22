@@ -55,9 +55,6 @@ const ACCENT_GLOW = `0 0 14px color-mix(in srgb, ${colors.accent} 35%, transpare
  * they are the same amber in both themes for that reason.
  */
 const AMBER_400 = "#fbbf24";
-const AMBER_400_30 = "rgba(251, 191, 36, 0.3)";
-const AMBER_400_10 = "rgba(251, 191, 36, 0.1)";
-const AMBER_300_90 = "rgba(252, 211, 77, 0.9)";
 
 /** The shared card shell: header block, instrument type, action row. */
 export const card = stylex.create({
@@ -87,12 +84,7 @@ export const card = stylex.create({
   },
   // font-meta text-[9px] font-bold uppercase tracking-[0.16em] text-white/40
   eyebrow: {
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: "rgba(255, 255, 255, 0.4)",
+    color: colors.inkMuted,
   },
   // mt-1 text-lg font-semibold
   title: {
@@ -108,14 +100,14 @@ export const card = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightNormal,
-    color: "rgba(255, 255, 255, 0.4)",
+    color: colors.inkMuted,
   },
   // mt-2 text-sm leading-6 text-white/55
   lede: {
     marginTop: space.s2,
     fontSize: text.sizeSm,
     lineHeight: text.lineBase,
-    color: "rgba(255, 255, 255, 0.55)",
+    color: colors.inkMuted,
   },
   // font-mono
   mono: {
@@ -127,12 +119,7 @@ export const card = stylex.create({
   // usual ceiling because the meta face is only legible uppercase that wide.
   factLabel: {
     flexShrink: 0,
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "rgba(255, 255, 255, 0.3)",
+    color: colors.inkFaint,
   },
   // mt-5 flex flex-wrap items-center gap-2
   actions: {
@@ -148,15 +135,10 @@ export const card = stylex.create({
 export const action = stylex.create({
   // h-10 gap-2 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5
   outline: {
-    height: "2.5rem",
     gap: space.s2,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
-    color: colors.ink,
   },
   // h-9 gap-2 rounded-full bg-amber-300 text-black hover:bg-amber-200
   amber: {
-    height: "2.25rem",
     gap: space.s2,
     backgroundColor: { default: "#fcd34d", ":hover": "#fde68a" },
     color: "#000000",
@@ -223,8 +205,8 @@ export const cloud = stylex.create({
     gap: space.s3,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: AMBER_400_30,
-    backgroundColor: AMBER_400_10,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     padding: space.s4,
   },
   // text-sm font-semibold
@@ -237,7 +219,7 @@ export const cloud = stylex.create({
   confirmDetail: {
     fontSize: text.sizeXs,
     lineHeight: text.lineSm,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: colors.inkSecondary,
   },
   // flex gap-2
   confirmActions: {
@@ -273,11 +255,6 @@ export const chip = stylex.create({
     color: "inherit",
     textAlign: "left",
     cursor: "pointer",
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "-2px" },
-    boxShadow: { default: null, ":focus-visible": ACCENT_RING_INSET },
     opacity: { default: null, ":disabled": 0.6 },
   },
   body: {
@@ -286,12 +263,6 @@ export const chip = stylex.create({
     flex: { default: "1 1 auto", [XL]: "0 1 auto" },
   },
   eyebrow: {
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    lineHeight: "0.75rem",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.inkFaint,
   },
   summary: {
@@ -299,7 +270,7 @@ export const chip = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
-    color: "rgba(255, 255, 255, 0.85)",
+    color: colors.ink,
   },
   chevron: {
     width: "0.875rem",
@@ -318,10 +289,10 @@ export const chip = stylex.create({
   },
   menuMeta: {
     display: "block",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
     fontWeight: text.weightNormal,
-    color: "rgba(255, 255, 255, 0.5)",
+    color: colors.inkMuted,
   },
   menuIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0, marginInlineEnd: space.s2 },
 });
@@ -346,7 +317,7 @@ export const local = stylex.create({
     paddingBlock: space.s1_5,
     borderTopWidth: { default: stroke.hairline, ":first-child": 0 },
     borderTopStyle: "solid",
-    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    borderTopColor: colors.hairlineSubtle,
   },
   // w-32 leading-5 — the fact captions share one measure so the values line up.
   rowLabel: {
@@ -358,7 +329,7 @@ export const local = stylex.create({
     minWidth: 0,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgba(255, 255, 255, 0.75)",
+    color: colors.inkSecondary,
     // Paths, digests and target triples have no spaces to break at.
     overflowWrap: "anywhere",
   },
@@ -371,7 +342,7 @@ export const local = stylex.create({
     gap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgba(255, 255, 255, 0.75)",
+    color: colors.inkSecondary,
   },
   // text-white/45 — why the renderer is not on offer, in the host's words.
   rowNote: {
@@ -382,7 +353,7 @@ export const local = stylex.create({
     paddingBlock: space.s1_5,
     borderTopWidth: { default: stroke.hairline, ":first-child": 0 },
     borderTopStyle: "solid",
-    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    borderTopColor: colors.hairlineSubtle,
   },
   // list-disc pl-5 text-xs text-amber-300/90
   reasons: {
@@ -393,7 +364,7 @@ export const local = stylex.create({
     paddingLeft: space.s5,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: AMBER_300_90,
+    color: colors.warning,
   },
   // space-y-1, as a per-item rule for the same reason `divide-y` became one.
   reason: {
@@ -404,8 +375,8 @@ export const local = stylex.create({
     marginTop: space.s3,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--destructive) / 0.4)",
-    backgroundColor: "hsl(var(--destructive) / 0.1)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     padding: space.s3,
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
@@ -444,11 +415,6 @@ export const readyPill = stylex.create({
     borderStyle: "solid",
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: "0.13em",
   },
   // border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
   ready: {
@@ -458,7 +424,7 @@ export const readyPill = stylex.create({
   },
   // border-white/10 text-white/45
   notReady: {
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: colors.hairline,
     color: colors.inkMuted,
   },
   // size-1.5 rounded-sm

@@ -9,6 +9,7 @@ import { RenderSettingsSurface } from "@/app/host";
 import { SwitcherAccount } from "@/app/components/SwitcherAccount";
 import { useDashboardNav, type NavItem, type SwitcherInlineView } from "@/app/lib/dashboard-nav";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
+import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * The switcher's one screen: the product tabs — Maps, Datasets, Evaluation —
@@ -41,11 +42,11 @@ export function AppSwitcherPanel({
       {view === "render-settings" ? (
         <section {...stylex.props(styles.inlineView)} aria-label="Render Settings" data-testid="app-switcher-inline-view" data-view={view}>
           <div {...stylex.props(styles.inlineHead)}>
-            <button {...stylex.props(styles.inlineBack)} type="button" onClick={() => setView(null)}>
+            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={() => setView(null)}>
               <ArrowLeft {...stylex.props(styles.inlineBackIcon)} aria-hidden="true" />
               All apps
             </button>
-            <button {...stylex.props(styles.inlineBack)} type="button" onClick={() => setView(null)}>
+            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={() => setView(null)}>
               Done
             </button>
           </div>
@@ -68,7 +69,7 @@ export function AppSwitcherPanel({
         </nav>
       )}
 
-      <div {...stylex.props(styles.footer)} data-testid="app-switcher-footer">
+      <div {...stylex.props([hairline.all, styles.footer])} data-testid="app-switcher-footer">
         <nav aria-label="App utilities" {...stylex.props(styles.utilities)}>
           {utilities.map((item) => (
             <UtilityLink
@@ -117,7 +118,7 @@ function AppTab({
             {app.label}
           </span>
         </span>
-        <span {...stylex.props(styles.tabDescription)}>{app.description}</span>
+        <span {...stylex.props([typography.eyebrow, styles.tabDescription])}>{app.description}</span>
         {app.highlights !== undefined ? (
           <span {...stylex.props(styles.tabHighlights)}>
             {app.highlights.map((highlight) => (
@@ -132,8 +133,8 @@ function AppTab({
   );
   // The marker lets the artwork answer the card's hover and focus.
   const tabProps = stylex.props(
-    styles.tab,
-    app.disabled ? styles.tabDisabled : active ? styles.tabActive : styles.tabIdle,
+    [focus.ring, styles.tab],
+    app.disabled ? styles.tabDisabled : active ? styles.tabActive : [focus.ring, styles.tabIdle],
     stylex.defaultMarker(),
   );
 
@@ -174,7 +175,7 @@ function UtilityLink({
   onInline: (view: SwitcherInlineView) => void;
 }) {
   const Icon = item.icon;
-  const utilityProps = stylex.props(styles.utility, active ? styles.utilityActive : styles.utilityIdle);
+  const utilityProps = stylex.props([focus.ring, styles.utility], active ? styles.utilityActive : [focus.ringInset, styles.utilityIdle]);
   if (item.inlineView) {
     const view = item.inlineView;
     return (

@@ -20,7 +20,7 @@ import {
 } from "@/app/lib/scenario-intelligence-ui";
 import { getFamilyIcon } from "@/app/lib/scenario-family-icons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type ActiveFilter = { type: "family"; id: string } | { type: "tag"; id: string } | null;
 
@@ -104,7 +104,7 @@ export function InsightsTab({
     <div {...stylex.props(styles.insightsContainer)}>
       {familyGroups.length > 0 && (
         <section>
-          <h3 {...stylex.props(styles.scenarioFamiliesHeading)}>
+          <h3 {...stylex.props([typography.eyebrow, styles.scenarioFamiliesHeading])}>
             Scenario Families
           </h3>
           <div {...stylex.props(styles.scenarioFamilyList)}>
@@ -133,7 +133,7 @@ export function InsightsTab({
             <button
               type="button"
               onClick={() => setExplorerOpen((o) => !o)}
-              {...stylex.props([motionRecipe.colors, styles.candidateLocationsToggle])}
+              {...stylex.props([motionRecipe.colors, [typography.caps, styles.candidateLocationsToggle]])}
               aria-expanded={explorerOpen}
             >
               <ChevronRight
@@ -246,7 +246,7 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
       : null;
 
     return (
-      <div ref={ref} {...stylex.props(styles.scenarioFamilyCard)}>
+      <div ref={ref} {...stylex.props([hairline.all, styles.scenarioFamilyCard])}>
         <button
           type="button"
           onClick={onToggle}

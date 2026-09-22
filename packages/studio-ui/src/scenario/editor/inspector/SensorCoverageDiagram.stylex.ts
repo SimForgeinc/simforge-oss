@@ -10,12 +10,12 @@ export const styles = stylex.create({
   // fill-muted/40 stroke-foreground/25
   fillMuted40StrokeForeground25: {
     fill: "hsl(var(--muted) / 0.4)",
-    stroke: "hsl(var(--foreground) / 0.25)",
+    stroke: colors.inkGhost,
   },
   // fill-none stroke-foreground/40
   fillNoneStrokeForeground40: {
     fill: "none",
-    stroke: "hsl(var(--foreground) / 0.4)",
+    stroke: colors.inkMuted,
   },
   // cursor-pointer fill-transparent
   pointer: {
@@ -33,11 +33,11 @@ export const styles = stylex.create({
   },
   // fill-foreground/70
   markerEnabled: {
-    fill: "hsl(var(--foreground) / 0.7)",
+    fill: colors.inkSecondary,
   },
   // fill-muted-foreground/40
   markerDisabled: {
-    fill: "hsl(var(--muted-foreground) / 0.4)",
+    fill: colors.inkFaint,
   },
   // fill-[url(#sensor-wedge-fade)] stroke-current
   wedge: {
@@ -54,7 +54,7 @@ export const styles = stylex.create({
   },
   // text-emerald-300
   wedgeLidar: {
-    color: "rgb(110 231 183 / 1)",
+    color: colors.positive,
   },
   // text-orange-300
   wedgeOther: {

@@ -3,7 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./table.stylex";
-import { motionRecipe } from "../../stylex/recipes.stylex";
+import { motionRecipe, typography } from "../../stylex/recipes.stylex";
 
 type TableStyle = stylex.StyleXStyles;
 type TableProps = React.HTMLAttributes<HTMLTableElement> & { xstyle?: TableStyle };
@@ -40,7 +40,7 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, SectionProps>(
       ref={ref}
       {...props}
       {...mergeStyleProps(
-        stylex.props(styles.header, xstyle),
+        stylex.props(null, xstyle),
         withCompat(TABLE_HEADER_COMPAT, className),
         style,
       )}
@@ -55,7 +55,7 @@ const TableBody = React.forwardRef<HTMLTableSectionElement, SectionProps>(
       ref={ref}
       {...props}
       {...mergeStyleProps(
-        stylex.props(styles.body, xstyle),
+        stylex.props(null, xstyle),
         withCompat(TABLE_BODY_COMPAT, className),
         style,
       )}
@@ -96,7 +96,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, HeadProps>(
       ref={ref}
       {...props}
       {...mergeStyleProps(
-        stylex.props(styles.head, xstyle),
+        stylex.props([typography.caps, styles.head], xstyle),
         withCompat(TABLE_CHECKBOX_COMPAT, className),
         style,
       )}

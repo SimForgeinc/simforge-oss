@@ -15,7 +15,7 @@ export const styles = stylex.create({
     maxWidth: "92vw",
     flexDirection: "column",
     borderLeftWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     backgroundColor: "rgb(13 13 13 / 1)",
     color: colors.ink,
     boxShadow: shadows.elevation2xl,
@@ -27,23 +27,19 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     borderBottomWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingLeft: space.s4,
     paddingRight: space.s4,
   },
   // text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]
   capsBold: {
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.accent,
   },
   // text-xs text-white/50
   xs: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: colors.textSubtle,
+    color: colors.inkMuted,
   },
   // ml-auto grid size-8 place-items-center text-white/60 hover:bg-white/10 hover:text-white
   gridCenteredPushRight: {
@@ -53,7 +49,7 @@ export const styles = stylex.create({
     height: "2rem",
     placeItems: "center",
     color: {
-      default: "rgb(255 255 255 / 0.6)",
+      default: colors.inkSecondary,
       ":hover": colors.ink,
     },
     backgroundColor: {

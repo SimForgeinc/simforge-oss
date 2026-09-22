@@ -5,7 +5,7 @@ import { styles } from "./MapStatisticsSection.stylex";
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
 import { MapStatsDisplay } from "./MapStatsDisplay";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapStatisticsSection component. */
 type MapStatisticsSectionProps = {
@@ -32,7 +32,7 @@ export function MapStatisticsSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props([motionRecipe.colors, styles.statisticsToggle])}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.statisticsToggle]])}
           aria-expanded={open}
         >
           <ChevronRight

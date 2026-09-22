@@ -53,7 +53,7 @@ export function AppSwitcherOverlay({
             Choose a SimForge app or configure local features.
           </DialogPrimitive.Description>
           <DialogPrimitive.Close
-            {...stylex.props([focus.ringAccent, motionRecipe.colors, styles.close])}
+            {...stylex.props([focus.ring, motionRecipe.colors, styles.close])}
             aria-label="Close app switcher"
           >
             <X {...stylex.props(styles.closeIcon)} aria-hidden="true" />

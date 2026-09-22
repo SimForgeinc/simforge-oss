@@ -143,7 +143,7 @@ export const styles = stylex.create({
     width: "2.5rem",
     height: "2.5rem",
     placeItems: "center",
-    color: { default: "rgb(255 255 255 / 0.4)", ":hover": colors.ink },
+    color: { default: colors.inkMuted, ":hover": colors.ink },
     backgroundColor: { default: null, ":hover": colors.fill },
   },
   // size-5
@@ -193,22 +193,17 @@ export const styles = stylex.create({
     borderStyle: "solid",
     textAlign: "left",
     transitionProperty: { default: "border-color, background-color, box-shadow", [layout.reducedMotion]: "none" },
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
     transitionTimingFunction: motion.easeStandard,
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
   },
   tabIdle: {
-    borderColor: { default: colors.hairline, ":hover": "rgb(255 255 255 / 0.18)" },
+    borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
     backgroundColor: { default: colors.fillFaint, ":hover": colors.fillSubtle },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   /** The app you are in: an accent rule across the top and a warmer plate. */
   tabActive: {
-    borderColor: "rgb(232 224 68 / 0.28)",
-    backgroundColor: "rgb(232 224 68 / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     boxShadow: {
       default: `inset 0 2px 0 ${colors.accent}`,
       ":focus-visible": `inset 0 2px 0 ${colors.accent}, ${FOCUS_RING}`,
@@ -217,7 +212,7 @@ export const styles = stylex.create({
   tabDisabled: {
     cursor: "not-allowed",
     borderColor: colors.hairlineSubtle,
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    backgroundColor: colors.scrimLight,
     opacity: 0.6,
   },
 
@@ -255,7 +250,7 @@ export const styles = stylex.create({
     height: { default: "4.5rem", [layout.bpLg]: "8.5rem" },
     minHeight: 0,
     transitionProperty: { default: "opacity, filter, transform", [layout.reducedMotion]: "none" },
-    transitionDuration: "300ms",
+    transitionDuration: motion.durSlow,
     transitionTimingFunction: motion.easeStandard,
   },
   /** Card hover and keyboard focus both wake the artwork inside it. */
@@ -295,16 +290,9 @@ export const styles = stylex.create({
     gap: space.s1_5,
     paddingBlock: space.s1_5,
     paddingInline: space.s3,
-    fontSize: text.sizeXs,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: { default: "rgb(255 255 255 / 0.6)", ":hover": colors.ink },
+    color: { default: colors.inkSecondary, ":hover": colors.ink },
     backgroundColor: colors.fillSubtle,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
     cursor: "pointer",
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   inlineBackIcon: { width: "0.875rem", height: "0.875rem" },
 
@@ -330,18 +318,12 @@ export const styles = stylex.create({
     fontSize: text.sizeLg,
     lineHeight: text.lineBase,
     fontWeight: text.weightSemibold,
-    letterSpacing: "-0.03em",
+    letterSpacing: text.trackingTight,
   },
   tabTitleActive: { color: colors.accent },
   tabTitleIdle: { color: colors.ink },
   tabDescription: {
-    fontFamily: text.fontMeta,
-    fontSize: "10px",
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
-    color: colors.textSubtle,
+    color: colors.inkMuted,
   },
   /** The three capability phrases, one per line. */
   tabHighlights: {
@@ -369,11 +351,8 @@ export const styles = stylex.create({
     flexDirection: { default: "column", [XL]: "row" },
     alignItems: "stretch",
     minWidth: 0,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.hairline,
     backgroundColor: "rgb(14 14 16 / 0.72)",
-    backdropFilter: "blur(14px)",
+    backdropFilter: motion.blurGlass,
   },
   /** The utilities: text tabs, scrolling sideways rather than wrapping. */
   utilities: {
@@ -395,22 +374,18 @@ export const styles = stylex.create({
     gap: space.s2,
     height: BAR_HEIGHT,
     paddingInline: space.s3_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontWeight: text.weightMedium,
     whiteSpace: "nowrap",
     cursor: "pointer",
     transitionProperty: `${COLOR_TRANSITION}, box-shadow`,
     transitionDuration: motion.durStandard,
     transitionTimingFunction: motion.easeStandard,
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "-2px" },
   },
   /** The current utility: accent text over an accent underline. */
   utilityActive: {
     color: colors.accent,
-    backgroundColor: "rgb(232 224 68 / 0.06)",
+    backgroundColor: colors.accentWash,
     boxShadow: {
       default: `inset 0 -2px 0 ${colors.accent}`,
       ":focus-visible": FOCUS_RING_INSET,
@@ -418,8 +393,7 @@ export const styles = stylex.create({
   },
   utilityIdle: {
     backgroundColor: { default: null, ":hover": colors.fillSubtle },
-    color: { default: "rgb(255 255 255 / 0.55)", ":hover": colors.ink },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
+    color: { default: colors.inkMuted, ":hover": colors.ink },
   },
   utilityIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },
 

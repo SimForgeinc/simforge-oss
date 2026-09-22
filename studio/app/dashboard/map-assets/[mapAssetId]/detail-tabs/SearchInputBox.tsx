@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { getMapSearchSuggestions } from "@/app/lib/maps/search/map-search";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchInputBoxProps {
   draftQuery: string;
@@ -46,7 +46,7 @@ export function SearchInputBox({
   return (
     <div {...stylex.props(styles.searchContainer)}>
       <Search {...stylex.props(styles.searchIcon)} />
-      <Input
+      <Input size="lg" variant="plate"
         ref={inputRef}
         type="text"
         placeholder="Search for scenario locations on this map…"
@@ -122,7 +122,7 @@ export function SearchInputBox({
       {showSuggestions && suggestions.length > 0 ? (
         <div
           id="map-search-suggestions"
-          {...stylex.props(styles.suggestionsList)}
+          {...stylex.props([hairline.all, styles.suggestionsList])}
           role="listbox"
         >
           {suggestions.map((suggestion, index) => (

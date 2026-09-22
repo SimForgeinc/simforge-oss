@@ -72,7 +72,6 @@ export function EditorModeBanner({
               size="sm"
               disabled={state.customRoutePointCount < 2}
               onClick={() => controller?.finishCustomRouteAuthoring()}
-              xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
             >
               <Check className={stylex.props(styles.size35).className} /> Finish
             </Button>
@@ -82,7 +81,6 @@ export function EditorModeBanner({
               size="sm"
               disabled={state.customRouteSelectedPointIndex === null}
               onClick={() => controller?.deleteSelectedCustomRoutePoint()}
-              xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
             >
               <Trash2 className={stylex.props(styles.size35).className} /> Delete point
             </Button>
@@ -91,7 +89,6 @@ export function EditorModeBanner({
             variant="ghost"
             size="sm"
             onClick={() => controller?.cancel()}
-            xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
           >
             <X className={stylex.props(styles.size35).className} /> Close
           </Button>

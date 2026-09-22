@@ -22,7 +22,7 @@ import { startInteractiveTutorial } from "./interactive-tutorial-events";
 import type { EditorExperience } from "../simple-timed-routes";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorTutorialGuide.stylex";
-import { focus, motionRecipe, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, motionRecipe, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const GUIDE_SECTIONS = [
   { href: "#tutorial-controls", label: "Controls" },
@@ -104,7 +104,7 @@ export function EditorTutorialGuide({
         aria-label="Tutorial"
         xstyle={styles.borderedGlassyGap2}
         onClick={() => setChoiceOpen(true)}
-        size="sm"
+        size="md"
         type="button"
         variant="outline"
       >
@@ -129,7 +129,7 @@ export function EditorTutorialGuide({
               >
                 <div {...stylex.props(styles.flexStartGap3)}>
                   <div {...stylex.props(styles.fillNarrowable)}>
-                    <p {...stylex.props(styles.capsMonoBold)}>
+                    <p {...stylex.props([typography.eyebrow, styles.capsMonoBold])}>
                       {experience} mode
                     </p>
                     <h2 {...stylex.props(styles.lgSemibold)} id="tutorial-format-title">
@@ -141,7 +141,7 @@ export function EditorTutorialGuide({
                   </div>
                   <button
                     aria-label="Close tutorial options"
-                    {...stylex.props([focus.ringAccent, styles.gridCenteredTight])}
+                    {...stylex.props([focus.ring, styles.gridCenteredTight])}
                     onClick={() => setChoiceOpen(false)}
                     type="button"
                   >
@@ -152,7 +152,7 @@ export function EditorTutorialGuide({
                 <div {...stylex.props(styles.gridGap3)}>
                   <button
                     aria-label="Start guided tutorial"
-                    {...stylex.props([focus.ringAccent, motionRecipe.colors, styles.borderedPad4LeftText])}
+                    {...stylex.props([focus.ring, motionRecipe.colors, styles.borderedPad4LeftText])}
                     onClick={() => {
                       setChoiceOpen(false);
                       startInteractiveTutorial(experience);
@@ -168,7 +168,7 @@ export function EditorTutorialGuide({
                   </button>
                   <button
                     aria-label="Open written guide"
-                    {...stylex.props([focus.ringAccent, motionRecipe.colors, styles.borderedPad4LeftText2])}
+                    {...stylex.props([focus.ring, motionRecipe.colors, styles.borderedPad4LeftText2])}
                     onClick={() => {
                       setChoiceOpen(false);
                       setGuideMode(experience);
@@ -232,7 +232,7 @@ export function EditorTutorialGuide({
                   {(["simple", "advanced"] as const).map((mode) => (
                     <button
                       aria-pressed={guideMode === mode}
-                      {...stylex.props(styles.modeToggle, guideMode === mode ? styles.modeToggleActive : styles.modeToggleIdle)}
+                      {...stylex.props([typography.eyebrow, styles.modeToggle], guideMode === mode ? styles.modeToggleActive : styles.modeToggleIdle)}
                       key={mode}
                       onClick={() => setGuideMode(mode)}
                       type="button"
@@ -249,7 +249,7 @@ export function EditorTutorialGuide({
                     setOpen(false);
                     startInteractiveTutorial(guideMode);
                   }}
-                  size="sm"
+                  size="iconMd"
                   title={guideMode === experience
                     ? `Start the ${guideMode} walkthrough in this scenario`
                     : `Switch the editor to ${guideMode} mode in Settings before starting`}
@@ -263,7 +263,7 @@ export function EditorTutorialGuide({
                   xstyle={styles.tightPushRight}
                   onClick={() => setOpen(false)}
                   ref={closeButtonRef}
-                  size="icon"
+                  size="iconMd"
                   type="button"
                   variant="ghost"
                 >
@@ -446,7 +446,7 @@ function SectionHeading({
 }) {
   return (
     <div>
-      <p {...stylex.props(styles.capsAccentBold)}>{eyebrow}</p>
+      <p {...stylex.props([typography.eyebrow, styles.capsAccentBold])}>{eyebrow}</p>
       <h2 {...stylex.props(styles.xlSemibold)} id={id}>{title}</h2>
       <p {...stylex.props(styles.smMuted)}>{children}</p>
     </div>

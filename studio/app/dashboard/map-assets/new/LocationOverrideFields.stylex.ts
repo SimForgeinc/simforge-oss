@@ -16,12 +16,7 @@ export const styles = stylex.create({
   locationFieldLabel: {
     marginBottom: space.s1,
     display: "block",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
-  },
-  locationFieldInput: {
-    height: "2rem",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
 });

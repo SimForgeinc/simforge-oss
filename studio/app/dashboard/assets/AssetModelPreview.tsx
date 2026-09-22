@@ -21,6 +21,7 @@ import {
 import type { Material, Object3D } from "three";
 import type { GalleryCatalogEntryDto } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { preview } from "./asset-surfaces.stylex";
+import { hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function disposeMaterial(material: Material) {
   for (const value of Object.values(material)) {
@@ -144,7 +145,7 @@ export default function AssetModelPreview({ catalogId }: { catalogId: string }) 
   }, [catalogId]);
 
   return (
-    <div {...stylex.props(preview.root)}
+    <div {...stylex.props([hairline.all, preview.root])}
       aria-label="Interactive model preview"
     >
       <div ref={hostRef} {...stylex.props(preview.host)} />

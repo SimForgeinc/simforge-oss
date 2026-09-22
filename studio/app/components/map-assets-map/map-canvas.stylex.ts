@@ -26,7 +26,6 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { colors, layers, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-const FG = "#fafafa";
 const BORDER = "#262626";
 const MUTED = "#a3a3a3";
 const FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -44,7 +43,6 @@ const CARD_FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 const CONTROL_TRANSITION = "background 0.15s, color 0.15s";
 
 /** The 3D chunk's pending spinner. */
-const spin = stylex.keyframes({ to: { transform: "rotate(360deg)" } });
 
 /** An actor hover card rises 2 px as it fades in, under its own centring. */
 const hoverInfoFadeIn = stylex.keyframes({
@@ -124,7 +122,7 @@ export const styles = stylex.create({
   viewModeButton: {
     padding: "0.3rem 0.85rem",
     fontSize: text.sizeXs,
-    letterSpacing: "0.02em",
+    letterSpacing: text.trackingWide,
     borderStyle: "none",
     whiteSpace: "nowrap",
     display: "flex",
@@ -145,8 +143,8 @@ export const styles = stylex.create({
     transition: CONTROL_TRANSITION,
   },
   /** The selected segment inverts, and stops offering to be clicked. */
-  segmentActive: { fontWeight: text.weightSemibold, cursor: "default", backgroundColor: FG, color: colors.accentText },
-  segmentInactive: { fontWeight: text.weightNormal, cursor: "pointer", backgroundColor: `${colors.accentText}f2`, color: FG },
+  segmentActive: { fontWeight: text.weightSemibold, cursor: "default", backgroundColor: colors.ink, color: colors.accentText },
+  segmentInactive: { fontWeight: text.weightNormal, cursor: "pointer", backgroundColor: `${colors.accentText}f2`, color: colors.ink },
 
   /** Follow-camera toggle: a square icon button divided off the segments. */
   followButton: {
@@ -169,23 +167,9 @@ export const styles = stylex.create({
   icon13: { width: 13, height: 13 },
 
   /** Measure mode inverts the button the same way a selected segment does. */
-  measureActive: { backgroundColor: FG, color: colors.accentText },
-  measureInactive: { backgroundColor: `${colors.accentText}f2`, color: FG },
+  measureActive: { backgroundColor: colors.ink, color: colors.accentText },
+  measureInactive: { backgroundColor: `${colors.accentText}f2`, color: colors.ink },
 
-  spinner: {
-    width: 8,
-    height: 8,
-    borderWidth: "1.5px",
-    borderStyle: "solid",
-    borderTopColor: "transparent",
-    borderRightColor: colors.accentText,
-    borderBottomColor: colors.accentText,
-    borderLeftColor: colors.accentText,
-    animationName: spin,
-    animationDuration: "700ms",
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
-  },
 
   // ── Canvas-level status chrome ─────────────────────────────────────────
   /** "← Show all maps", centred at the top of a single-asset view. */
@@ -197,7 +181,7 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     padding: "0.3rem 0.85rem",
     backgroundColor: `${colors.accentText}f2`,
-    color: FG,
+    color: colors.ink,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: BORDER,
@@ -265,7 +249,7 @@ export const styles = stylex.create({
     fontFamily: FONT,
     padding: "0.35rem 0.6rem",
     backgroundColor: `${colors.accentText}f2`,
-    color: FG,
+    color: colors.ink,
     fontSize: "0.8125rem",
     boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
     borderWidth: stroke.hairline,
@@ -281,7 +265,7 @@ export const styles = stylex.create({
     fontFamily: FONT,
     padding: "0.4rem 0.65rem",
     backgroundColor: `${colors.accentText}f2`,
-    color: FG,
+    color: colors.ink,
     fontSize: text.sizeXs,
     boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
     borderWidth: stroke.hairline,
@@ -312,7 +296,7 @@ export const styles = stylex.create({
     maxWidth: 300,
     padding: "0.75rem 1rem",
     backgroundColor: `${colors.accentText}fa`,
-    color: FG,
+    color: colors.ink,
     fontSize: "0.8125rem",
     boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
     borderWidth: stroke.hairline,
@@ -327,11 +311,11 @@ export const styles = stylex.create({
     width: "100%",
     textAlign: "left",
     padding: "0.5rem 0.6rem",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: colors.fillSubtle,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: BORDER,
-    color: FG,
+    color: colors.ink,
     fontSize: "0.8125rem",
     fontFamily: FONT,
     cursor: "pointer",
@@ -381,13 +365,13 @@ export const styles = stylex.create({
     left: "50%",
     top: "100%",
     whiteSpace: "nowrap",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontFamily: "'Open Sans', sans-serif",
     fontWeight: text.weightSemibold,
     color: colors.ink,
     textShadow: "-1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 1px 1px 0 #0f172a",
     pointerEvents: "none",
-    marginTop: "2px",
+    marginTop: space.s0_5,
   },
 
   // ── Measure tool overlay ──────────────────────────────────────────────
@@ -399,7 +383,7 @@ export const styles = stylex.create({
     gap: "0.4rem",
     padding: "0.25rem 0.6rem",
     backgroundColor: `${colors.accentText}f2`,
-    color: FG,
+    color: colors.ink,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: BORDER,
@@ -446,22 +430,19 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     width: "220px",
     transform: "translateX(-50%)",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.9)",
+    backgroundColor: colors.scrimHeavy,
     paddingInline: space.s2_5,
     paddingBlock: space.s2,
     boxShadow: shadows.elevationLg,
     backdropFilter: motion.blurMd,
   },
-  candidateName: { fontSize: "12px", fontWeight: text.weightSemibold, lineHeight: text.lineTight, color: colors.ink },
-  candidateMeta: { fontSize: "10px", color: "rgba(255,255,255,0.55)" },
+  candidateName: { fontSize: text.sizeXs, fontWeight: text.weightSemibold, lineHeight: text.lineTight, color: colors.ink },
+  candidateMeta: { fontSize: text.sizeMicro, color: colors.inkMuted },
   /** Only the first counts line is pushed off the name. */
   candidateMetaSpaced: { marginTop: space.s0_5 },
   candidateSplit: {
     marginTop: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineSnug,
     color: "#F0B429",
   },
@@ -469,11 +450,11 @@ export const styles = stylex.create({
     marginTop: space.s1_5,
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: colors.hairline,
     paddingTop: space.s1_5,
   },
-  candidateAction: { fontSize: "10px", fontWeight: text.weightSemibold, color: colors.accent },
-  candidateId: { fontSize: "9px", color: "rgba(255,255,255,0.3)" },
+  candidateAction: { fontSize: text.sizeMicro, fontWeight: text.weightSemibold, color: colors.accent },
+  candidateId: { fontSize: text.sizeTag, color: colors.inkFaint },
 
   // ── Junction signal glyphs ────────────────────────────────────────────
   /** 1 px hook the floating signal card measures itself against. */
@@ -491,7 +472,7 @@ export const styles = stylex.create({
     opacity: 0.95,
     borderWidth: stroke.thick,
     borderStyle: "solid",
-    borderColor: "rgba(255,255,255,0.92)",
+    borderColor: colors.hairlineStrong,
   },
   junctionUncontrolled: {
     opacity: 0.4,
@@ -517,11 +498,7 @@ export const styles = stylex.create({
     backgroundColor: colors.scrimHeavy,
     paddingInline: space.s1,
     paddingBlock: "1px",
-    fontSize: "8px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    color: "rgba(255,255,255,0.8)",
+    color: colors.inkSecondary,
   },
 
   // ── Runtime actors ────────────────────────────────────────────────────
@@ -574,10 +551,10 @@ export const styles = stylex.create({
   actorCardPlate: {
     overflow: "hidden",
     padding: "8px 10px 7px",
-    backgroundColor: "rgba(10, 10, 10, 0.94)",
+    backgroundColor: colors.scrimHeavy,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgba(232, 224, 68, 0.62)",
+    borderColor: colors.accentLine,
     boxShadow: "0 10px 28px rgba(0, 0, 0, 0.5)",
     backdropFilter: motion.blurMd,
     WebkitBackdropFilter: motion.blurMd,
@@ -601,7 +578,7 @@ export const styles = stylex.create({
   },
   actorCardKey: { color: colors.ink },
   actorCardKeyAccent: { color: colors.accent },
-  actorCardSeparator: { color: "rgba(255,255,255,0.22)" },
+  actorCardSeparator: { color: colors.inkGhost },
   /** The card's tail, a rotated square tucked under its plate. */
   actorCardTail: {
     position: "absolute",
@@ -613,10 +590,10 @@ export const styles = stylex.create({
     backgroundColor: "rgba(10, 10, 10, 0.96)",
     borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderRightColor: "rgba(232, 224, 68, 0.78)",
+    borderRightColor: colors.accentLine,
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderBottomColor: "rgba(232, 224, 68, 0.78)",
+    borderBottomColor: colors.accentLine,
   },
   /** Hold-to-move ring, drawn from 12 o'clock over the marker. */
   holdRing: {

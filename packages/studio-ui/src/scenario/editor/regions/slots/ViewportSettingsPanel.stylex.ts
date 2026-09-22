@@ -21,7 +21,7 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     gap: space.s2,
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1_5,
@@ -29,11 +29,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro uppercase tracking-meta-wider text-muted-foreground
   capsMetaMicro: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.mutedForeground,
   },
   // flex items-center gap-0.5
@@ -41,11 +36,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s0_5,
-  },
-  // size-6
-  size6: {
-    width: "1.5rem",
-    height: "1.5rem",
   },
   // size-3
   size3: {
@@ -84,7 +74,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: 0,
     overflow: "hidden",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.bg,
     padding: 0,
     paddingRight: 0,
@@ -96,12 +86,7 @@ export const styles = stylex.create({
   // mb-1.5 font-meta text-micro uppercase tracking-meta-wider text-muted-foreground/70
   capsMetaMicro2: {
     marginBottom: space.s1_5,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
   },
   // flex w-full items-center justify-between gap-2 py-1 text-left text-meta text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   flexCenterBetween2: {
@@ -144,7 +129,7 @@ export const styles = stylex.create({
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     fontVariantNumeric: "tabular-nums",
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
   },
   // mt-1 h-1 w-full cursor-pointer appearance-none bg-muted accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   widePointer: {
@@ -162,7 +147,7 @@ export const styles = stylex.create({
   glassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
@@ -173,7 +158,7 @@ export const styles = stylex.create({
   glassy: {
     height: "2rem",
     width: "2rem",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.9)",
     boxShadow: shadows.elevationXl,
     backdropFilter: motion.blurMd,
@@ -195,7 +180,7 @@ export const styles = stylex.create({
     width: "300px",
     flexDirection: "column",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.95)",
     boxShadow: shadows.elevationXl,
     backdropFilter: motion.blurMd,
@@ -205,29 +190,19 @@ export const styles = stylex.create({
     minHeight: "1.75rem",
     borderWidth: stroke.hairline,
     borderColor: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.text,
   },
   // min-h-7 border px-1.5 font-meta text-[9px] font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border bg-surface-raised text-muted-foreground hover:text-foreground
   capsMetaMuted: {
     minHeight: "1.75rem",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.surfaceRaised,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
@@ -238,27 +213,15 @@ export const styles = stylex.create({
     height: "1.75rem",
     borderWidth: stroke.hairline,
     borderColor: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.15)",
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
+    backgroundColor: colors.accentWash,
     color: colors.text,
   },
   // h-7 border font-meta text-micro font-bold uppercase tracking-meta transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-border bg-surface-raised text-muted-foreground hover:text-foreground
   capsMetaMicro4: {
     height: "1.75rem",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.surfaceRaised,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
@@ -268,7 +231,7 @@ export const styles = stylex.create({
   ruleB: {
     marginBottom: space.s3,
     borderBottomWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.6)",
+    borderColor: colors.hairline,
     paddingBottom: space.s3,
   },
   // pb-3
@@ -292,7 +255,7 @@ export const styles = stylex.create({
     width: "1.75rem",
     flexShrink: "0",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.surfaceRaised,
   },
   // absolute top-0.5 size-2 transition-all left-[calc(100%-0.625rem)] bg-primary

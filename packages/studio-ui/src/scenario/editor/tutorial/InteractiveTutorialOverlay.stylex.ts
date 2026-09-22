@@ -19,7 +19,7 @@ export const styles = stylex.create({
   absInset0: {
     position: "absolute",
     inset: 0,
-    backgroundColor: "rgb(0 0 0 / 0.2)",
+    backgroundColor: colors.scrimLight,
   },
   // absolute border-2 border-[#E8E044] shadow-[0_0_0_4px_rgba(232,224,68,0.16),0_0_24px_rgba(232,224,68,0.3)]
   abs: {
@@ -34,7 +34,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "min(360px, calc(100vw - 24px))",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.55)",
+    borderColor: colors.accentLine,
     backgroundColor: "rgb(17 18 15 / 0.95)",
     padding: space.s4,
     color: colors.ink,
@@ -62,11 +62,6 @@ export const styles = stylex.create({
   },
   // font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#E8E044]
   capsMonoBold: {
-    fontFamily: text.fontMono,
-    fontSize: "9px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.accent,
   },
   // mt-1.5 text-base font-semibold
@@ -84,7 +79,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     color: {
-      default: "rgb(255 255 255 / 0.55)",
+      default: colors.inkMuted,
       ":hover": colors.ink,
     },
     backgroundColor: {
@@ -102,7 +97,7 @@ export const styles = stylex.create({
     marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: text.lineSm,
-    color: "rgb(255 255 255 / 0.6)",
+    color: colors.inkSecondary,
   },
   // mt-4 flex items-center gap-2 border border-[#E8E044]/30 bg-[#E8E044]/[0.08] px-3 py-2.5
   flexCenterBordered: {
@@ -112,7 +107,7 @@ export const styles = stylex.create({
     gap: space.s2,
     borderWidth: stroke.hairline,
     borderColor: colors.accentLineSubtle,
-    backgroundColor: "rgb(232 224 68 / 0.08)",
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2_5,
@@ -149,14 +144,13 @@ export const styles = stylex.create({
   // mt-4 h-8 w-full
   wide: {
     marginTop: space.s4,
-    height: "2rem",
     width: "100%",
   },
   // mt-3 text-[10px] leading-4 text-white/40
   mt3TextLeading4: {
     marginTop: space.s3,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     lineHeight: text.lineXs,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
 });

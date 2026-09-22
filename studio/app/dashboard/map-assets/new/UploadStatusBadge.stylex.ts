@@ -1,12 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   hashingStatus: {
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   loadingIcon: {
@@ -17,14 +17,14 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
-    color: "#60a5fa",
+    fontSize: text.sizeMicro,
+    color: colors.info,
   },
   successStatus: {
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.positive,
   },
   statusIcon: {
@@ -35,7 +35,7 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.danger,
   },
 });

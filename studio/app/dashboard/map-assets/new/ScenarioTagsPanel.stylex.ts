@@ -24,10 +24,10 @@ export const styles = stylex.create({
   },
   tagCountFilled: {
     backgroundColor: "rgba(66, 32, 6, 0.6)",
-    color: "#fde047",
+    color: colors.warning,
   },
   tagCountEmpty: {
-    backgroundColor: "hsl(var(--muted) / 0.6)",
+    backgroundColor: colors.fillSubtle,
     color: colors.mutedForeground,
   },
   loadingStatus: {
@@ -56,31 +56,31 @@ export const styles = stylex.create({
   tagChipAuto: {
     borderColor: "rgba(29, 78, 216, 0.6)",
     backgroundColor: "rgba(23, 37, 84, 0.4)",
-    color: "#93c5fd",
+    color: colors.info,
   },
   tagChipManual: {
     borderColor: "rgba(161, 98, 7, 0.6)",
     backgroundColor: "rgba(66, 32, 6, 0.4)",
-    color: "#fde047",
+    color: colors.warning,
   },
   autoBadge: {
     backgroundColor: "rgba(30, 64, 175, 0.5)",
     paddingInline: space.s1,
     paddingBlock: "1px",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
     lineHeight: 1,
-    color: "#93c5fd",
+    color: colors.info,
   },
   tagRemove: {
     marginLeft: space.s0_5,
   },
   tagRemoveAuto: {
-    color: { default: "rgba(96, 165, 250, 0.7)", ":hover": "#bfdbfe" },
+    color: { default: colors.info, ":hover": "#bfdbfe" },
   },
   tagRemoveManual: {
-    color: { default: "rgba(250, 204, 21, 0.7)", ":hover": "#fef08a" },
+    color: { default: colors.warning, ":hover": "#fef08a" },
   },
   removeIcon: {
     width: "0.625rem",
@@ -101,9 +101,6 @@ export const styles = stylex.create({
     top: "2rem",
     zIndex: layers.float,
     width: "20rem",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevationLg,
   },
@@ -131,7 +128,7 @@ export const styles = stylex.create({
     textAlign: "left",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   tagOptionLabel: {
     flexShrink: 0,
@@ -175,18 +172,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.text,
-    /*
-     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-     * `outline: none`: the focus ring above is a box-shadow, which
-     * forced-colours mode discards, and this transparent outline is what
-     * remains visible there.
-     */
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
-    "::placeholder": { color: "hsl(var(--muted-foreground) / 0.5)" },
+    "::placeholder": { color: colors.inkFaint },
   },
   stackY1_5: { marginTop: { default: space.s1_5, ":first-child": 0 } },
   csvErrorMessage: {

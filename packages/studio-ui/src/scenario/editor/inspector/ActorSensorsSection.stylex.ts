@@ -11,26 +11,23 @@ export const styles = stylex.create({
   },
   // text-[9px] uppercase tracking-[0.12em] text-white/40
   caps: {
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // font-mono text-[9px] text-white/45
   mono: {
     fontFamily: text.fontMono,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     color: colors.inkMuted,
   },
   // text-[9px] leading-3 text-white/35
   textLeading3TextWhite35: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "0.75rem",
     color: colors.inkFaint,
   },
   // text-[9px] leading-3 text-white/45
   textLeading3TextWhite45: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "0.75rem",
     color: colors.inkMuted,
   },
@@ -38,7 +35,7 @@ export const styles = stylex.create({
   block: {
     marginTop: space.s0_5,
     display: "block",
-    color: "rgb(255 255 255 / 0.3)",
+    color: colors.inkFaint,
   },
   // flex items-center gap-1.5
   flexCenterGap15: {
@@ -50,14 +47,14 @@ export const styles = stylex.create({
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.inkSecondary,
   },
   // ml-1 text-[8px] text-white/30
   ml1TextTextWhite30: {
     marginLeft: space.s1,
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.3)",
+    fontSize: text.sizeNano,
+    color: colors.inkFaint,
   },
   // scale-75
   scale75: {
@@ -80,22 +77,22 @@ export const styles = stylex.create({
     gap: space.s1,
     borderWidth: stroke.hairline,
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.035)",
-      ":hover": "rgb(232 224 68 / 0.08)",
+      default: colors.fillSubtle,
+      ":hover": colors.accentWash,
     },
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightSemibold,
     color: {
       default: colors.inkSecondary,
       ":hover": colors.ink,
     },
     borderColor: {
-      default: "rgb(255 255 255 / 0.12)",
-      ":hover": "rgb(232 224 68 / 0.45)",
+      default: colors.hairlineStrong,
+      ":hover": colors.accentLineSubtle,
     },
   },
   // size-3
@@ -111,16 +108,16 @@ export const styles = stylex.create({
     justifyContent: "center",
     gap: space.s1,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.35)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: {
       default: colors.accentWash,
-      ":hover": "rgb(232 224 68 / 0.2)",
+      ":hover": colors.accentWash,
     },
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightSemibold,
     color: colors.accent,
   },

@@ -3,7 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SearchExamplesPanel.stylex";
 
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchExamplesPanelProps {
   /** Submit a query — usually the page's `onSubmitSearch`. Available-tier
@@ -23,11 +23,11 @@ export function SearchExamplesPanel({ onRunExample }: SearchExamplesPanelProps) 
       {SEARCH_EXAMPLE_GROUPS.map((group) => (
         <section key={group.id} {...stylex.props(styles.exampleGroup)}>
           <header {...stylex.props(styles.groupHeader)}>
-            <h3 {...stylex.props(styles.groupTitle)}>
+            <h3 {...stylex.props([typography.caps, styles.groupTitle])}>
               {group.title}
             </h3>
             {group.tier === "coming_soon" ? (
-              <span {...stylex.props(styles.comingSoonBadge)}>
+              <span {...stylex.props([typography.tag, styles.comingSoonBadge])}>
                 Coming soon
               </span>
             ) : null}

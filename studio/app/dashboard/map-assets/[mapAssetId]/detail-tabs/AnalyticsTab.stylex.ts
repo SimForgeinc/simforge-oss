@@ -27,7 +27,7 @@ export const styles = stylex.create({
     width: "3rem",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "hsl(var(--muted) / 0.5)",
+    backgroundColor: colors.fillSubtle,
     marginBottom: space.s3,
   },
   emptyStateIcon: {

@@ -14,7 +14,7 @@ import { VideosSection } from "@/app/dashboard/map-assets/map-detail-sections/Vi
 import { FLYBY_PREVIEW_ARTIFACT_TYPE, flybyPreviewKeyForOriginalKey } from "@/app/lib/maps/flyby-preview";
 import { buildScenarioFamilyGroups } from "@/app/lib/scenario-intelligence-ui";
 import { getFamilyIcon } from "@/app/lib/scenario-family-icons";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Extract the bare S3 object key from an `s3://bucket/key` URI, or null. */
 function s3KeyFromUri(uri: string): string | null {
@@ -34,7 +34,7 @@ interface QuickStatCardProps {
 
 function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
   const card = (
-    <div {...stylex.props([motionRecipe.colors, styles.quickStatCard])}>
+    <div {...stylex.props([motionRecipe.colors, [hairline.all, styles.quickStatCard]])}>
       <div {...stylex.props(styles.quickStatLabelRow)}>
         {icon}
         <span {...stylex.props(styles.quickStatLabel)}>{label}</span>
@@ -277,7 +277,7 @@ export function OverviewTab({
       {/* Quick stats — same card for both 2D and 3D views */}
       <section>
         <div {...stylex.props(styles.sectionHeader)}>
-          <h3 {...stylex.props(styles.sectionTitle)}>
+          <h3 {...stylex.props([typography.eyebrow, styles.sectionTitle])}>
             Quick Stats
           </h3>
           <button
@@ -359,7 +359,7 @@ export function OverviewTab({
       {(tags.length > 0 || candidateLocations.length > 0 || candidateLocationsLoading) && (
         <section>
           <div {...stylex.props(styles.sectionHeader)}>
-            <h3 {...stylex.props(styles.sectionTitle)}>
+            <h3 {...stylex.props([typography.eyebrow, styles.sectionTitle])}>
               Scenario Insights
             </h3>
             <button
@@ -409,7 +409,7 @@ export function OverviewTab({
                       <button
                         type="button"
                         onClick={() => onSwitchToInsightsTab(group.family.id)}
-                        {...stylex.props([motionRecipe.colors, styles.familyCard])}
+                        {...stylex.props([motionRecipe.colors, [hairline.all, styles.familyCard]])}
                       >
                         <div {...stylex.props(styles.familyCardHeader)}>
                           <Icon {...stylex.props(styles.familyIcon)} />

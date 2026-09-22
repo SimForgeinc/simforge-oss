@@ -44,7 +44,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   clearSelectionIcon: {
     width: "0.875rem",
@@ -62,11 +62,11 @@ export const styles = stylex.create({
   },
   elementCardSelected: {
     borderColor: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.1)",
+    backgroundColor: colors.accentWash,
   },
   elementCardIdle: {
-    borderColor: colors.border,
-    backgroundColor: { default: "hsl(var(--muted) / 0.2)", ":hover": "hsl(var(--muted) / 0.4)" },
+    borderColor: colors.hairline,
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fillSubtle },
   },
   featureToggleButton: {
     display: "flex",
@@ -94,7 +94,7 @@ export const styles = stylex.create({
   expandedDetails: {
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingInline: space.s2_5,
     paddingBlock: space.s2,
   },
@@ -106,7 +106,7 @@ export const styles = stylex.create({
     gap: space.s2,
   },
   geometryLabel: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   detailValue: {
@@ -117,19 +117,16 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   copiedIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#22c55e",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.75rem",
@@ -142,10 +139,6 @@ export const styles = stylex.create({
     marginBottom: space.s2,
   },
   streetFactsHeading: {
-    fontSize: "11px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   detailRow: {
@@ -167,7 +160,7 @@ export const styles = stylex.create({
   sectionDivider: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "hsl(var(--border) / 0.5)",
+    borderColor: colors.hairline,
     paddingTop: space.s1,
   },
   identifierSection: {
@@ -178,16 +171,12 @@ export const styles = stylex.create({
   },
   identifierValue: {
     fontFamily: text.fontMono,
-    color: "hsl(var(--foreground) / 0.8)",
-    fontSize: "10px",
+    color: colors.inkSecondary,
+    fontSize: text.sizeMicro,
     wordBreak: "break-all",
   },
   propertiesHeading: {
     marginBottom: space.s1_5,
-    fontSize: "11px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
 });

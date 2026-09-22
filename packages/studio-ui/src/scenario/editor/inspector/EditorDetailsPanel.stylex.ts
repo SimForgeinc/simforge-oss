@@ -26,7 +26,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderWidth: stroke.hairline,
     borderRightWidth: "0px",
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundImage: "linear-gradient(155deg, rgba(24, 24, 22, 0.98), rgba(9, 9, 9, 0.98))",
     color: colors.ink,
     boxShadow: "-12px 20px 60px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(232, 224, 68, 0.1)",
@@ -38,7 +38,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     overflow: "hidden",
     borderBottomWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     backgroundImage: "radial-gradient(circle at 75% 15%, rgba(232, 224, 68, 0.14), transparent 42%), linear-gradient(145deg, #191a18, #0d0e0d)",
   },
   // absolute right-2.5 top-2.5 grid size-6 place-items-center rounded-md text-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
@@ -85,7 +85,7 @@ export const styles = stylex.create({
     overflowY: "auto",
     overflowX: "hidden",
     padding: space.s3,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     scrollbarWidth: "thin",
   },
   // absolute inset-0 z-50 grid place-items-center bg-black/70 px-5 text-center backdrop-blur-md
@@ -95,7 +95,7 @@ export const styles = stylex.create({
     zIndex: "50",
     display: "grid",
     placeItems: "center",
-    backgroundColor: "rgb(0 0 0 / 0.7)",
+    backgroundColor: colors.scrimHeavy,
     paddingLeft: space.s5,
     paddingRight: space.s5,
     textAlign: "center",
@@ -123,8 +123,8 @@ export const styles = stylex.create({
   },
   // text-[10px] text-white/55
   textTextWhite55: {
-    fontSize: "10px",
-    color: "rgb(255 255 255 / 0.55)",
+    fontSize: text.sizeMicro,
+    color: colors.inkMuted,
   },
 
   // grid place-items-center bg-black/15

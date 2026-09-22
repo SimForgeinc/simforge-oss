@@ -23,7 +23,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
     boxShadow: shadows.elevation2xl,
   },
@@ -33,7 +33,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s3,
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s5,
     paddingTop: space.s3,
@@ -46,10 +46,6 @@ export const styles = stylex.create({
   },
   // truncate text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // truncate text-sm font-semibold text-card-foreground
@@ -77,10 +73,6 @@ export const styles = stylex.create({
     width: "100%",
     height: "100%",
     placeItems: "center",
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // size-full object-contain

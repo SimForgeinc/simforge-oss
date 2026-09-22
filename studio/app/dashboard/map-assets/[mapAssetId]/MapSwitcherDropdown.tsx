@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface MapSwitcherDropdownProps {
   currentAsset: MapAsset;
@@ -57,7 +57,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          {...stylex.props([motionRecipe.colors, styles.dropdownTrigger])}
+          {...stylex.props([motionRecipe.colors, [hairline.all, styles.dropdownTrigger]])}
         >
           <span {...stylex.props([textLayout.truncate, styles.currentMapName])}>{currentAsset.name}</span>
           <ChevronDown {...stylex.props(styles.dropdownChevron)} />
@@ -68,7 +68,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
         <div {...stylex.props(styles.searchSection)}>
           <div {...stylex.props(styles.searchFieldWrapper)}>
             <Search {...stylex.props(styles.searchIcon)} />
-            <Input
+            <Input size="md" variant="plate"
               ref={inputRef}
               type="search"
               placeholder="Search maps..."

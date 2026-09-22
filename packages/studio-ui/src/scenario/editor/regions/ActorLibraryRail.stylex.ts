@@ -50,7 +50,7 @@ export const styles = stylex.create({
       default: panelIn,
       [layout.reducedMotion]: "none",
     },
-    animationDuration: "240ms",
+    animationDuration: motion.durSlow,
     animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
     willChange: "transform, opacity",
@@ -61,7 +61,7 @@ export const styles = stylex.create({
       default: chipIn,
       [layout.reducedMotion]: "none",
     },
-    animationDuration: "200ms",
+    animationDuration: motion.durBase,
     animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
   },
@@ -71,7 +71,7 @@ export const styles = stylex.create({
       default: tooltipIn,
       [layout.reducedMotion]: "none",
     },
-    animationDuration: "130ms",
+    animationDuration: motion.durFast,
     animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
   },
@@ -95,7 +95,7 @@ export const styles = stylex.create({
       default: "transform",
       [layout.reducedMotion]: "none",
     },
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
     transitionTimingFunction: motion.easeExpressive,
   },
 
@@ -122,7 +122,6 @@ export const styles = stylex.create({
    * focus, which is also the only time it means anything.
    */
   panelResize: {
-    outline: { default: null, ":focus-visible": "none" },
     "::after": {
       content: '""',
       position: "absolute",
@@ -133,7 +132,7 @@ export const styles = stylex.create({
       transform: "translateY(-50%)",
       borderRadius: "2px",
       backgroundColor: {
-        default: "rgba(232, 224, 68, 0)",
+        default: colors.accentWash,
         ":hover": "rgba(232, 224, 68, 0.72)",
         ":focus-visible": "rgba(232, 224, 68, 0.72)",
       },

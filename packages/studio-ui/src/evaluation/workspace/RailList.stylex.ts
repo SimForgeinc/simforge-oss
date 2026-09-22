@@ -28,11 +28,6 @@ export const styles = stylex.create({
   },
   title: {
     margin: 0,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
-    letterSpacing: text.trackingMeta,
-    textTransform: "uppercase",
     color: colors.mutedForeground,
   },
   count: {
@@ -62,11 +57,6 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     backgroundColor: colors.bg,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    letterSpacing: text.trackingMetaWide,
-    textTransform: "uppercase",
     color: colors.mutedForeground,
   },
   groupTitle: {
@@ -100,7 +90,7 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   rowSelected: {
-    backgroundColor: colors.glassRaised,
+    backgroundColor: colors.fill,
     borderLeftColor: colors.accent,
   },
   rowBody: {

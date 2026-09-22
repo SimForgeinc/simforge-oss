@@ -21,7 +21,7 @@ export const styles = stylex.create({
   ruleT: {
     width: "0.75rem",
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-3
   size3: {
@@ -44,7 +44,7 @@ export const styles = stylex.create({
     paddingRight: space.s6,
     paddingTop: space.s3_5,
     paddingBottom: space.s3_5,
-    backgroundColor: colors.glassRaised,
+    backgroundColor: colors.fill,
     borderColor: colors.hairlineStrong,
   },
   // min-w-0 text-micro text-muted-foreground
@@ -70,17 +70,12 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-3.5
   size35: {
@@ -119,11 +114,6 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
   // render-step-center flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-5
   flexColFill: {
@@ -147,14 +137,9 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // motionStyles.editorMotion + inline-flex h-9 items-center gap-1.5 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90
   inlineFlexCenterCaps4: {
@@ -164,15 +149,10 @@ export const styles = stylex.create({
     gap: space.s1_5,
     backgroundColor: {
       default: colors.primary,
-      ":hover": "hsl(var(--primary) / 0.9)",
+      ":hover": colors.accent,
     },
     paddingLeft: space.s5,
     paddingRight: space.s5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
   },
   // size-4 shrink-0 text-primary
@@ -203,14 +183,14 @@ export const styles = stylex.create({
   // border-primary bg-primary/10
   borderPrimaryBgPrimary10: {
     borderColor: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.1)",
+    backgroundColor: colors.accentWash,
   },
   // render-glass hover:border-primary/40
   renderGlassHoverBorderPrimary40: {
     backgroundColor: colors.fillSubtle,
     borderColor: {
-      default: "rgb(255 255 255 / 10%)",
-      ":hover": "hsl(var(--primary) / 0.4)",
+      default: colors.hairline,
+      ":hover": colors.accentLineSubtle,
     },
   },
   // cursor-not-allowed opacity-50
@@ -227,13 +207,13 @@ export const styles = stylex.create({
   // text-foreground/80 hover:text-primary
   stepDone: {
     color: {
-      default: "hsl(var(--foreground) / 0.8)",
+      default: colors.inkSecondary,
       ":hover": colors.primary,
     },
   },
   // cursor-default text-muted-foreground/50
   stepTodo: {
     cursor: "default",
-    color: "hsl(var(--muted-foreground) / 0.5)",
+    color: colors.inkFaint,
   },
 });

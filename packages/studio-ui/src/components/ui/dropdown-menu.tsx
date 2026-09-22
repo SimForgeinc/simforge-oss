@@ -7,7 +7,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./dropdown-menu.stylex";
-import { motionRecipe } from "../../stylex/recipes.stylex";
+import { hairline, motionRecipe } from "../../stylex/recipes.stylex";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
@@ -56,7 +56,7 @@ const DropdownMenuSubContent = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent> & { xstyle?: DropdownStyle }
 >(({ className, xstyle, ...props }, ref) => (
-  <DropdownMenuPrimitive.SubContent ref={ref} {...compose([styles.subContent], className ? `${SUBCONTENT_ANIMATION_CLASS} ${className}` : SUBCONTENT_ANIMATION_CLASS, xstyle)} {...props} />
+  <DropdownMenuPrimitive.SubContent ref={ref} {...compose([[hairline.all, styles.subContent]], className ? `${SUBCONTENT_ANIMATION_CLASS} ${className}` : SUBCONTENT_ANIMATION_CLASS, xstyle)} {...props} />
 ));
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
@@ -65,7 +65,7 @@ const DropdownMenuContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & { xstyle?: DropdownStyle }
 >(({ className, sideOffset = 4, xstyle, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.Content ref={ref} sideOffset={sideOffset} {...compose([styles.content], className ? `${CONTENT_ANIMATION_CLASS} ${className}` : CONTENT_ANIMATION_CLASS, xstyle)} {...props} />
+    <DropdownMenuPrimitive.Content ref={ref} sideOffset={sideOffset} {...compose([[hairline.all, styles.content]], className ? `${CONTENT_ANIMATION_CLASS} ${className}` : CONTENT_ANIMATION_CLASS, xstyle)} {...props} />
   </DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;

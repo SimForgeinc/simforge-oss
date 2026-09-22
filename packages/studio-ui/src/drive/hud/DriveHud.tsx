@@ -63,7 +63,7 @@ const styles = stylex.create({
     inset: 0,
     backgroundColor: driveColors.impact,
     transitionProperty: "opacity",
-    transitionDuration: "100ms",
+    transitionDuration: motion.durInstant,
     transitionTimingFunction: motion.easeStandard,
   },
 

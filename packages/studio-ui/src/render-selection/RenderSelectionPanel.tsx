@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { RENDERING_PREFERENCE_CHOICES, type RenderingPreference } from "../components/rendering-preference";
 import { styles } from "./RenderSelectionPanel.stylex";
-import { textLayout } from "../stylex/recipes.stylex";
+import { hairline, textLayout } from "../stylex/recipes.stylex";
 
 /** A device preference, not a benchmark or a render-job quality setting. */
 export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descriptionId, footer }: {
@@ -32,14 +32,14 @@ export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descri
               aria-label={`Use ${choice.label}`}
               aria-pressed={choice.id === currentQuality}
               title={choice.description}
-              {...stylex.props(styles.choice, choice.id === currentQuality && styles.choiceCurrent)}
+              {...stylex.props([hairline.all, hairline.strong, styles.choice], choice.id === currentQuality && styles.choiceCurrent)}
             >
               <span {...stylex.props(styles.choiceLabel)}>{choice.label}</span>
               <span {...stylex.props(styles.choiceCopy)}>{choice.description}</span>
               <span {...stylex.props(styles.choiceTag)}>{choice.id === currentQuality ? "Current" : "Select"}</span>
             </button>
           ))}
-          {footer != null ? <div {...stylex.props(styles.cache)}>{footer}</div> : null}
+          {footer != null ? <div {...stylex.props([hairline.all, hairline.strong, styles.cache])}>{footer}</div> : null}
         </div>
       </div>
     </div>

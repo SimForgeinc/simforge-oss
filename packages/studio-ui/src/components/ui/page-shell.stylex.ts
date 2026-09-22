@@ -26,7 +26,7 @@ export const styles = stylex.create({
     marginTop: space.s1,
     fontSize: text.sizeSm,
     lineHeight: text.lineNormal,
-    color: colors.textSubtle,
+    color: colors.inkMuted,
   },
   /**
    * The one scroller. `overscrollBehavior: contain` keeps a flicked pane from

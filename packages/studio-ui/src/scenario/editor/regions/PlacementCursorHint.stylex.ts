@@ -26,15 +26,15 @@ export const styles = stylex.create({
   },
   // border-amber-300/80 bg-amber-400/25 text-amber-50 shadow-[0_10px_36px_rgba(251,191,36,.22)]
   hintWarning: {
-    borderColor: "rgb(252 211 77 / 0.8)",
-    backgroundColor: "rgb(251 191 36 / 0.25)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     color: "rgb(255 251 235 / 1)",
     boxShadow: "0 10px 36px rgba(251,191,36,.22)",
   },
   // border-white/10 bg-black/70 text-white shadow-[0_10px_32px_rgba(0,0,0,.22)]
   hintNeutral: {
     borderColor: colors.fillStrong,
-    backgroundColor: "rgb(0 0 0 / 0.7)",
+    backgroundColor: colors.scrimHeavy,
     color: colors.ink,
     boxShadow: "0 10px 32px rgba(0,0,0,.22)",
   },
@@ -55,7 +55,7 @@ export const styles = stylex.create({
   // block text-[11px] font-medium leading-tight
   headline: {
     display: "block",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontWeight: text.weightMedium,
     lineHeight: text.lineTight,
   },
@@ -67,15 +67,15 @@ export const styles = stylex.create({
   detail: {
     display: "block",
     maxWidth: "280px",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: text.lineSnug,
   },
   // text-amber-100/85
   detailWarning: {
-    color: "rgb(254 243 199 / 0.85)",
+    color: colors.warning,
   },
   // text-white/65
   detailNeutral: {
-    color: "rgb(255 255 255 / 0.65)",
+    color: colors.inkSecondary,
   },
 });

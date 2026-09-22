@@ -142,6 +142,7 @@ import {
   routePointMayBeTooFast,
   shouldShowRoutePointWarning,
 } from "./route-authoring-warnings";
+import { hairline } from "../../stylex/recipes.stylex";
 
 export function stopAndResetTimelinePlayback(input: {
   controller: { pause: () => void; seek: (time: number) => void } | null;
@@ -1037,7 +1038,7 @@ export function ScenarioEditorSurface({
             <div {...stylex.props(styles.divFlex)}>
               {clipboardNotice ? (
                 <p
-                  {...stylex.props(styles.clipboardNotice)}
+                  {...stylex.props([hairline.all, styles.clipboardNotice])}
                   data-testid="clipboard-notice"
                   role="status"
                 >

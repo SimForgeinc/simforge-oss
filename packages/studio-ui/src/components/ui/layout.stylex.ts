@@ -10,7 +10,7 @@ export const toolbar = stylex.create({
     gap: space.s2,
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.hairline,
     backgroundColor: colors.bg,
     paddingInline: { default: space.s5, [layout.bpSm]: space.s6 },
     paddingBlock: space.s2,
@@ -23,7 +23,7 @@ export const pageHeader = stylex.create({
 });
 
 export const separator = stylex.create({
-  base: { flexShrink: 0, backgroundColor: colors.border },
+  base: { flexShrink: 0, backgroundColor: colors.hairline },
   horizontal: { height: "1px", width: "100%" },
   vertical: { height: "100%", width: "1px" },
 });

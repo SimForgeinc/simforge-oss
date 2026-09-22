@@ -249,7 +249,13 @@ export function collectReferences(models, repoRoot) {
         const isAccess = (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) && parent.expression === node;
         const isDecl = ts.isVariableDeclaration(parent) && parent.name === node;
         const isImport = ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent);
-        if (!isAccess && !isDecl && !isImport) refs.get(local.get(node.text)).escapes = true;
+        // The identifier is only a name here, not a use of the binding.
+        const isName =
+          (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+          ((ts.isPropertyAssignment(parent) || ts.isPropertySignature(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.name === node) ||
+          ts.isJsxAttribute(parent) ||
+          (ts.isQualifiedName(parent) && parent.right === node);
+        if (!isAccess && !isDecl && !isImport && !isName) refs.get(local.get(node.text)).escapes = true;
         if (ts.isExportSpecifier(parent)) refs.get(local.get(node.text)).escapes = true;
       }
       ts.forEachChild(node, visit);

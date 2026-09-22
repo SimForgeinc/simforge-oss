@@ -23,7 +23,7 @@ import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderWorkspace.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -364,7 +364,7 @@ export function RenderWorkspace({
       <div {...stylex.props(styles.flexCenterTight)}>
         <div {...stylex.props(styles.fillNarrowable)}>
           <h2 {...stylex.props([textLayout.truncate, styles.smInkSemibold])}>Renders</h2>
-          <p {...stylex.props([textLayout.truncate, styles.capsMicroMuted])}>
+          <p {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.capsMicroMuted]])}>
             {documentTitle ?? "This scenario"} · {summary}
           </p>
         </div>
@@ -448,7 +448,7 @@ export function RenderWorkspace({
                   <button
                     aria-pressed={filter === tag}
                     className={stylex.props(
-                      filter === tag ? [focus.ring, styles.filterTabActive] : [focus.ring, styles.filterTab],
+                      filter === tag ? [focus.ring, [typography.eyebrow, styles.filterTabActive]] : [focus.ring, [typography.eyebrow, styles.filterTab]],
                       motionStyles.editorMotion,
                     ).className}
                     key={tag}

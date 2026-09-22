@@ -27,7 +27,7 @@ export const styles = stylex.create({
     transform: `scale(${hoverScale.value})`,
     filter: `brightness(${hoverBrightness.value})`,
     transitionProperty: "transform, filter",
-    transitionDuration: "300ms",
+    transitionDuration: motion.durSlow,
   },
   overlay: {
     pointerEvents: "none",
@@ -47,11 +47,7 @@ export const styles = stylex.create({
   },
   labelWrap: { minWidth: 0 },
   eyebrow: {
-    fontSize: "10px",
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "rgb(255 255 255 / 55%)",
+    color: colors.inkMuted,
   },
   label: {
     fontSize: text.sizeXs, lineHeight: text.lineXs,
@@ -91,7 +87,7 @@ export const styles = stylex.create({
     height: "100%",
     backgroundColor: colors.primary,
     transitionProperty: "width",
-    transitionDuration: "75ms",
+    transitionDuration: motion.durInstant,
   },
   thumb: {
     [thumbScale.value]: "0",
@@ -117,10 +113,6 @@ export const styles = stylex.create({
     backgroundColor: "rgb(9 9 11)",
     paddingInline: space.s6,
     textAlign: "center",
-    fontFamily: text.fontMono,
-    fontSize: "10px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
     color: colors.inkFaint,
   },
 });

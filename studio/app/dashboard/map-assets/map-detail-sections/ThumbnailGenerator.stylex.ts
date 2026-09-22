@@ -33,14 +33,14 @@ export const styles = stylex.create({
     height: "0.75rem",
   },
   progressStatus: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   errorMessage: {
     display: "flex",
     alignItems: "center",
     gap: space.s1,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.danger,
   },
 });

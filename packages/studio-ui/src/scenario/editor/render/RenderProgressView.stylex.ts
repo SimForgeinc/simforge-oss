@@ -21,7 +21,7 @@ export const styles = stylex.create({
     paddingRight: space.s6,
     paddingTop: space.s3,
     paddingBottom: space.s3,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // motionStyles.editorMotion + grid size-8 shrink-0 place-items-center border render-hairline render-glass text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   gridCenteredTight: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
       ":hover": colors.text,
     },
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-4
   size4: {
@@ -50,13 +50,7 @@ export const styles = stylex.create({
   },
   // font-mono text-micro font-bold uppercase tracking-meta text-primary/90
   capsMonoMicro: {
-    fontFamily: text.fontMono,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    color: "hsl(var(--primary) / 0.9)",
+    color: colors.accent,
   },
   // truncate text-base font-extrabold leading-tight tracking-tight text-foreground
   inkTruncateBase: {
@@ -84,15 +78,10 @@ export const styles = stylex.create({
     gap: space.s1_5,
     backgroundColor: {
       default: colors.primary,
-      ":hover": "hsl(var(--primary) / 0.9)",
+      ":hover": colors.accent,
     },
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
   },
   // size-3.5
@@ -121,7 +110,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.danger,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mb-1
   mb1: {
@@ -163,7 +152,7 @@ export const styles = stylex.create({
   size3TextMutedForeground60: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   // min-w-0 flex-1 font-medium
   fillMediumNarrowable: {
@@ -194,8 +183,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.4)",
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -212,7 +201,7 @@ export const styles = stylex.create({
     alignItems: "flex-start",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
@@ -253,11 +242,6 @@ export const styles = stylex.create({
   // mb-1 text-micro font-bold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
     marginBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // ml-2 font-normal normal-case tracking-normal
@@ -292,7 +276,7 @@ export const styles = stylex.create({
     paddingBottom: space.s1,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0 truncate font-medium text-foreground
   inkMediumTruncate: {
@@ -318,7 +302,7 @@ export const styles = stylex.create({
     borderBottomWidth: stroke.hairline,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // shrink-0 uppercase tracking-meta text-muted-foreground
   tightCapsMuted: {
@@ -354,12 +338,12 @@ export const styles = stylex.create({
   },
   // border-primary/60 text-foreground
   stageActive: {
-    borderColor: "hsl(var(--primary) / 0.6)",
+    borderColor: colors.accentLine,
     color: colors.text,
   },
   // border-border text-muted-foreground
   stageTodo: {
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     color: colors.mutedForeground,
   },
 

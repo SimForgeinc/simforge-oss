@@ -7,7 +7,7 @@ export const styles = stylex.create({
     marginLeft: space.s4,
     borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.3)",
+    borderColor: colors.accentLineSubtle,
   },
   // flex min-h-0 min-w-0 flex-1 flex-col
   divFlex: {
@@ -21,7 +21,7 @@ export const styles = stylex.create({
   div2: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingInline: space.s3,
     paddingBlock: space.s3,
   },
@@ -29,7 +29,7 @@ export const styles = stylex.create({
   thisIsASharedOrReadOnlyDatas: {
     borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.6)",
+    borderColor: colors.accentLine,
     paddingLeft: space.s3,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
@@ -45,7 +45,7 @@ export const styles = stylex.create({
   divSm: {
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingInline: space.s3,
     paddingBlock: space.s4,
     fontSize: text.sizeSm,
@@ -62,7 +62,7 @@ export const styles = stylex.create({
   div4: {
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     padding: space.s3,
   },
   // min-w-0
@@ -79,11 +79,6 @@ export const styles = stylex.create({
   // mt-1 font-meta text-micro uppercase tracking-meta-widest text-white/70
   divMetaMicroUppercase: {
     marginTop: space.s1,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWidest,
     color: colors.inkSecondary,
   },
   // size-4
@@ -95,7 +90,7 @@ export const styles = stylex.create({
   div6: {
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     display: "flex",
     flexDirection: "column",
     gap: "0",
@@ -125,11 +120,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWidest,
     color: colors.mutedForeground,
   },
   // size-3.5 text-primary
@@ -152,7 +142,7 @@ export const styles = stylex.create({
     width: "100%",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.4)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: colors.popover,
     padding: space.s1_5,
     boxShadow: shadows.elevationLg,
@@ -173,11 +163,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   divMetaMicroUppercase2: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWidest,
     color: colors.mutedForeground,
   },
   // text-meta leading-4 text-muted-foreground
@@ -196,7 +181,7 @@ export const styles = stylex.create({
   divXs: {
     borderWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingInline: space.s2,
     paddingBlock: space.s3,
     fontSize: text.sizeXs,
@@ -210,7 +195,7 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--primary) / 0.5)",
+    borderColor: colors.accentLine,
     backgroundColor: colors.bg,
     paddingInline: space.s1_5,
     fontSize: text.sizeXs,
@@ -248,9 +233,6 @@ export const styles = stylex.create({
     top: "1.75rem",
     zIndex: layers.overlay,
     width: "8rem",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.popover,
     padding: space.s1,
     color: "hsl(var(--popover-foreground))",
@@ -290,7 +272,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.danger,
-    backgroundColor: { default: null, ":hover": "hsl(var(--destructive) / 0.1)" },
+    backgroundColor: { default: null, ":hover": colors.criticalWash },
   },
   // size-3
   deleteTrash2: {
@@ -299,11 +281,6 @@ export const styles = stylex.create({
   },
   // font-meta text-micro uppercase tracking-meta text-muted-foreground
   showing: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // flex flex-wrap gap-1

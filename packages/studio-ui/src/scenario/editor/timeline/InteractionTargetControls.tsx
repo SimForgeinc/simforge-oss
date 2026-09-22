@@ -551,7 +551,7 @@ function numberTarget(
   return (
     <label {...stylex.props(styles.blockMicro)}>
       {label}
-      <Input
+      <Input size="md" variant="plate"
         xstyle={styles.xsWhite}
         data-testid={`interaction-target-${selector}-${interactionId}`}
         max={max}
@@ -578,7 +578,7 @@ function pinnedCoordinate(interactionId: string, label: string, selector: string
   return (
     <label {...stylex.props(styles.blockMicro2)}>
       {label}
-      <Input
+      <Input size="md" variant="plate"
         xstyle={styles.xs2}
         data-testid={`interaction-target-${selector}-${interactionId}`}
         readOnly
@@ -594,7 +594,7 @@ function IdField({ label, value, onChange }: { label: string; value: string; onC
   return (
     <label {...stylex.props(styles.blockMicro)}>
       {label}
-      <Input xstyle={styles.xsWhite} value={value} onChange={(event) => onChange(event.currentTarget.value)} />
+      <Input size="md" variant="plate" xstyle={styles.xsWhite} value={value} onChange={(event) => onChange(event.currentTarget.value)} />
     </label>
   );
 }
@@ -603,7 +603,7 @@ function TextListField({ label, value, onChange }: { label: string; value: reado
   return (
     <label {...stylex.props(styles.blockMicro)}>
       {label}
-      <Input xstyle={styles.xsWhite} value={value.join(", ")} onChange={(event) => onChange(event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} />
+      <Input size="md" variant="plate" xstyle={styles.xsWhite} value={value.join(", ")} onChange={(event) => onChange(event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} />
     </label>
   );
 }
@@ -620,7 +620,7 @@ function SetValueControl({ interaction, onChange }: { interaction: Extract<Inter
   return (
     <label {...stylex.props(styles.blockMicro)}>
       Target value
-      <Input xstyle={styles.xsWhite} data-testid={selector} max={declaration?.range?.[1]} min={declaration?.range?.[0]} step={declaration?.valueType === "number" ? 0.1 : undefined} type={declaration?.valueType === "number" ? "number" : "text"} value={String(interaction.target.value)} onChange={(event) => {
+      <Input size="md" variant="plate" xstyle={styles.xsWhite} data-testid={selector} max={declaration?.range?.[1]} min={declaration?.range?.[0]} step={declaration?.valueType === "number" ? 0.1 : undefined} type={declaration?.valueType === "number" ? "number" : "text"} value={String(interaction.target.value)} onChange={(event) => {
         if (declaration?.valueType === "number") {
           const next = Number(event.currentTarget.value);
           if (Number.isFinite(next)) onChange(next);

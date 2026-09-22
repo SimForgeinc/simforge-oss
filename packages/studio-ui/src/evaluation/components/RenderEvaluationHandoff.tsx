@@ -37,7 +37,7 @@ import type {
   RenderHandoffProgress,
   RenderHandoffSource,
 } from "../render-handoff";
-import { motionRecipe, textLayout } from "../../stylex/recipes.stylex";
+import { motionRecipe, textLayout, typography } from "../../stylex/recipes.stylex";
 
 export type RenderEvaluationHandoffProps = {
   source: RenderHandoffSource;
@@ -198,7 +198,7 @@ export function RenderEvaluationHandoff({
 
       {provenance ? (
         <section {...stylex.props(styles.handoffProvenance)} data-testid="handoff-provenance">
-          <h3 {...stylex.props(styles.chainOfCustody)}>
+          <h3 {...stylex.props([typography.caps, styles.chainOfCustody])}>
             Chain of custody
           </h3>
           <ol {...stylex.props(styles.olXs)}>

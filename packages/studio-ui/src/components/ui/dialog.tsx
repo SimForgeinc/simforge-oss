@@ -40,12 +40,14 @@ export interface DialogContentProps
   size?: DialogSize;
   /** Render the close button in the corner. On by default. */
   showClose?: boolean;
+  /** The close button's accessible name. */
+  closeLabel?: string;
   /** Where the dialog sits and how tall it may grow; not its look. */
   xstyle?: PlacementStyle;
 }
 
 export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
-  ({ size = "md", showClose = true, xstyle, children, ...props }, ref) => (
+  ({ size = "md", showClose = true, closeLabel = "Close", xstyle, children, ...props }, ref) => (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay {...stylex.props(surface.scrim, motionRecipe.fadeIn, styles.overlay)} />
       <DialogPrimitive.Content
@@ -56,7 +58,7 @@ export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrim
         {children}
         {showClose ? (
           <DialogPrimitive.Close asChild>
-            <IconButton label="Close" size="sm" xstyle={styles.close}>
+            <IconButton label={closeLabel} size="sm" xstyle={styles.close}>
               <X />
             </IconButton>
           </DialogPrimitive.Close>

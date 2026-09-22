@@ -5,7 +5,7 @@ import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./recording-panel-fields.stylex";
-import { focus } from "../../../stylex/recipes.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Reusable leaf controls and read-outs for render configuration surfaces.
@@ -33,7 +33,7 @@ export function EnvironmentSummary({ content }: { content: ScenarioTemplateV2 | 
     <section {...stylex.props(styles.ruleT)} aria-labelledby="recording-environment-heading">
       <div {...stylex.props(styles.flexCenterGap2)}>
         <CloudSun aria-hidden="true" className={stylex.props(styles.muted).className} />
-        <h3 {...stylex.props(styles.capsMicroMuted)} id="recording-environment-heading">
+        <h3 {...stylex.props([typography.eyebrow, styles.capsMicroMuted])} id="recording-environment-heading">
           Environment included
         </h3>
       </div>

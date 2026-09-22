@@ -7,7 +7,7 @@ import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
 import type { SelectedGeoJSONFeaturePayload } from "@/app/lib/maps/frontend/feature-inspection-types";
 import { useStreetFactsByFeatureId } from "@/app/lib/maps/frontend/use-street-facts-index";
 import { JsonTreeView } from "@/app/components/JsonTreeView";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapElementInspector component. */
 export type MapElementInspectorProps = {
@@ -124,7 +124,7 @@ export function MapElementInspector({
                         }).catch(() => {});
                       }}
                       title="Copy feature as GeoJSON"
-                      {...stylex.props([motionRecipe.colors, styles.copyGeoJsonButton])}
+                      {...stylex.props([motionRecipe.colors, [hairline.all, styles.copyGeoJsonButton]])}
                     >
                       {copiedFeatureId === f.id ? (
                         <Check {...stylex.props(styles.copiedIcon)} />
@@ -143,7 +143,7 @@ export function MapElementInspector({
                     if (!street) return null;
                     return (
                       <div {...stylex.props(styles.streetFactsSection)} data-testid="street-facts">
-                        <h3 {...stylex.props(styles.streetFactsHeading)}>
+                        <h3 {...stylex.props([typography.eyebrow, styles.streetFactsHeading])}>
                           Street facts
                         </h3>
                         <div {...stylex.props(styles.detailRow)}>
@@ -206,7 +206,7 @@ export function MapElementInspector({
                             <div {...stylex.props(styles.sectionDivider)} />
                           </div>
                         )}
-                        <h3 {...stylex.props(styles.propertiesHeading)}>
+                        <h3 {...stylex.props([typography.eyebrow, styles.propertiesHeading])}>
                           Properties
                         </h3>
                         <JsonTreeView

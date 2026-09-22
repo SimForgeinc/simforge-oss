@@ -9,7 +9,7 @@ import type {
   MapStats,
 } from "@simforge-oss/studio-shared";
 import { Route, Gauge, PersonStanding, Bike, SquareParking, GitFork, ArrowUpDown, ChevronRight, ChevronsUpDown, Database } from "lucide-react";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function fmt(n: number | undefined): string {
   if (n == null) return "—";
@@ -177,7 +177,7 @@ export function MapStatsDisplay({
                   {rn.speed_limits_mph.map((s) => (
                     <span
                       key={s}
-                      {...stylex.props(styles.speedLimitValue)}
+                      {...stylex.props([hairline.all, styles.speedLimitValue])}
                     >
                       {s}
                     </span>

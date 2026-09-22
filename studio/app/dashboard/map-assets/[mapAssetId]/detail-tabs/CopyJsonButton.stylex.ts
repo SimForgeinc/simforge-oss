@@ -9,14 +9,14 @@ export const styles = stylex.create({
     justifyContent: "center",
     padding: space.s1,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.4)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
     opacity: { default: null, ":disabled": 0.4 },
     pointerEvents: { default: null, ":disabled": "none" },
   },
   copiedCheckIcon: {
     width: "0.875rem",
     height: "0.875rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.875rem",

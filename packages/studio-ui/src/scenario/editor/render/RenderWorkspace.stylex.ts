@@ -17,7 +17,7 @@ export const styles = stylex.create({
       default: tileEnter,
       [layout.reducedMotion]: "none",
     },
-    animationDuration: "280ms",
+    animationDuration: motion.durSlow,
     animationTimingFunction: motion.easeSnappy,
     animationFillMode: "both",
     animationDelay: "calc(min(var(--render-tile-index, 0), 11) * 28ms)",
@@ -31,7 +31,7 @@ export const styles = stylex.create({
     borderLeftWidth: stroke.hairline,
     backdropFilter: "blur(40px) saturate(1.5)",
     backgroundImage: "linear-gradient(180deg, rgb(9 11 16 / 46%) 0%, rgb(9 11 16 / 62%) 100%)",
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex shrink-0 items-center gap-2 border-b render-hairline px-4 py-2.5
   flexCenterTight: {
@@ -44,7 +44,7 @@ export const styles = stylex.create({
     paddingRight: space.s4,
     paddingTop: space.s2_5,
     paddingBottom: space.s2_5,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -60,10 +60,6 @@ export const styles = stylex.create({
   },
   // truncate text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // size-3.5
@@ -88,7 +84,7 @@ export const styles = stylex.create({
     paddingRight: space.s4,
     paddingTop: space.s2_5,
     paddingBottom: space.s2_5,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-1
   flexCenterGap1: {
@@ -116,8 +112,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.4)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
     paddingTop: space.s1_5,
@@ -166,7 +162,7 @@ export const styles = stylex.create({
     fontSize: text.size2xl,
     lineHeight: text.lineXl,
     letterSpacing: text.trackingTight,
-    color: "hsl(var(--foreground) / 0.2)",
+    color: colors.inkGhost,
   },
   // text-xs text-muted-foreground
   xsMuted: {
@@ -204,12 +200,8 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primary,
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    backgroundColor: colors.accentWash,
   },
   // px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   filterTab: {
@@ -217,10 +209,6 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s1,
     paddingBottom: space.s1,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,

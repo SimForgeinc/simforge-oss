@@ -5,7 +5,7 @@ export const styles = stylex.create({
   // border border-destructive/40 p-3 text-xs text-destructive
   xsDangerBordered: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     padding: space.s3,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
@@ -19,7 +19,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-h-56
   minH56: {
@@ -27,10 +27,6 @@ export const styles = stylex.create({
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // mt-1 text-sm font-semibold
@@ -47,14 +43,6 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
-  // text-xs font-semibold uppercase tracking-meta
-  capsXsSemibold: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-  },
   /*
    * `render-divide divide-y` and `space-y-*` are both `> * + *` rules, and
    * StyleX only ever addresses the element a style is applied to. Both move
@@ -66,7 +54,7 @@ export const styles = stylex.create({
     marginTop: space.s2,
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // grid grid-cols-[1fr_auto] gap-3 px-3 py-2 text-xs
   gridXsGap3: {
@@ -98,7 +86,7 @@ export const styles = stylex.create({
   // (was the metrics list's render-divide divide-y)
   rowDivided: {
     borderTopWidth: stroke.hairline,
-    borderTopColor: "rgb(255 255 255 / 10%)",
+    borderTopColor: colors.hairline,
   },
   // (was the list's space-y-1)
   rowStackedXs: {
@@ -117,7 +105,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-2
   flexCenterGap2: {
@@ -141,7 +129,7 @@ export const styles = stylex.create({
   // border border-destructive/40 p-3
   borderedPad3: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     padding: space.s3,
   },
   // text-xs font-semibold
@@ -169,7 +157,7 @@ export const styles = stylex.create({
     paddingBottom: space.s3,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0
   narrowable: {
@@ -187,13 +175,13 @@ export const styles = stylex.create({
   },
   // border-primary/40 bg-primary/5
   verdictAccepted: {
-    borderColor: "hsl(var(--primary) / 0.4)",
-    backgroundColor: "hsl(var(--primary) / 0.05)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
   },
   // border-destructive/40 bg-destructive/5
   verdictRejected: {
-    borderColor: "hsl(var(--destructive) / 0.4)",
-    backgroundColor: "hsl(var(--destructive) / 0.05)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
   },
   // font-mono
   metricValue: {

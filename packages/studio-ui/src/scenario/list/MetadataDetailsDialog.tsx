@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { control } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "./CopyableErrorMessage";
-import { focus } from "../../stylex/recipes.stylex";
+import { focus, hairline, typography } from "../../stylex/recipes.stylex";
 
 /**
  * The name + description editor, shared by datasets and documents.
@@ -71,7 +71,7 @@ export function MetadataDetailsDialog({
         }}
       />
       <div
-        {...stylex.props(styles.dialog)}
+        {...stylex.props([hairline.all, styles.dialog])}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -82,7 +82,7 @@ export function MetadataDetailsDialog({
         <p {...stylex.props(styles.pXs)}>{intro}</p>
         <label
           htmlFor={nameId}
-          {...stylex.props(styles.labelMetaMicroUppercase)}
+          {...stylex.props([typography.eyebrow, styles.labelMetaMicroUppercase])}
         >
           {nameLabel}
         </label>
@@ -107,7 +107,7 @@ export function MetadataDetailsDialog({
         />
         <label
           htmlFor={descriptionId}
-          {...stylex.props(styles.labelMetaMicroUppercase2)}
+          {...stylex.props([typography.eyebrow, styles.labelMetaMicroUppercase2])}
         >
           {descriptionLabel}
         </label>

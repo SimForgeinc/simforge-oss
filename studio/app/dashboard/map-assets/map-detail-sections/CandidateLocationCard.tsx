@@ -11,7 +11,7 @@ import {
   buildTooltipDetail,
   type ScenarioFamily,
 } from "@/app/lib/scenario-intelligence-ui";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const MAX_VISIBLE_TAGS = 3;
 
@@ -57,7 +57,7 @@ export function CandidateLocationCard({
               ? styles.confidenceHigh
               : candidate.confidence >= 0.75
                 ? styles.confidenceMedium
-                : styles.confidenceLow,
+                : [hairline.all, styles.confidenceLow],
           )}
         >
           {Math.round(candidate.confidence * 100)}%
@@ -73,14 +73,14 @@ export function CandidateLocationCard({
       {(family || visibleTags.length > 0) && (
         <div {...stylex.props(styles.candidateTagsRow)}>
           {family && (
-            <span {...stylex.props(styles.familyChip)}>
+            <span {...stylex.props([hairline.all, styles.familyChip])}>
               {family.name}
             </span>
           )}
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              {...stylex.props(styles.tagChip)}
+              {...stylex.props([hairline.all, styles.tagChip])}
             >
               {humanizeTag(tag)}
             </span>

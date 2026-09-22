@@ -4,14 +4,9 @@ import { colors, layers, layout, motion, shadows, space, stroke, text } from "..
 export const styles = stylex.create({
   // h-8 gap-2 rounded-none border border-border bg-card/90 px-3 shadow-sm backdrop-blur
   borderedGlassyGap2: {
-    height: "2rem",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    boxShadow: shadows.elevationSm,
     backdropFilter: motion.blurMd,
   },
   // size-4
@@ -26,7 +21,7 @@ export const styles = stylex.create({
     zIndex: "145",
     display: "grid",
     placeItems: "center",
-    backgroundColor: "rgb(0 0 0 / 0.6)",
+    backgroundColor: colors.scrim,
     padding: space.s4,
     backdropFilter: motion.blurSm,
   },
@@ -35,7 +30,7 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "36rem",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(17 17 17 / 0.95)",
     padding: space.s5,
     color: colors.ink,
@@ -54,11 +49,6 @@ export const styles = stylex.create({
   },
   // font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#E8E044]
   capsMonoBold: {
-    fontFamily: text.fontMono,
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.accent,
   },
   // mt-1 text-lg font-semibold
@@ -73,7 +63,7 @@ export const styles = stylex.create({
     marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: text.lineSm,
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   // grid size-8 shrink-0 place-items-center text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   gridCenteredTight: {
@@ -83,7 +73,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     color: {
-      default: colors.textSubtle,
+      default: colors.inkMuted,
       ":hover": colors.ink,
     },
   },
@@ -100,10 +90,10 @@ export const styles = stylex.create({
   // group border border-[#E8E044]/55 bg-[#E8E044]/[0.07] p-4 text-left transition-colors hover:bg-[#E8E044]/[0.13] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   borderedPad4LeftText: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.55)",
+    borderColor: colors.accentLine,
     backgroundColor: {
-      default: "rgb(232 224 68 / 0.07)",
-      ":hover": "rgb(232 224 68 / 0.13)",
+      default: colors.accentWash,
+      ":hover": colors.accentWash,
     },
     padding: space.s4,
     textAlign: "left",
@@ -128,15 +118,15 @@ export const styles = stylex.create({
     display: "block",
     fontSize: text.sizeXs,
     lineHeight: text.lineSm,
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   // group border border-white/15 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   borderedPad4LeftText2: {
     borderWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.15)",
+    borderColor: colors.hairlineStrong,
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.03)",
-      ":hover": colors.glassRaised,
+      default: colors.fillFaint,
+      ":hover": colors.fill,
     },
     padding: space.s4,
     textAlign: "left",
@@ -169,7 +159,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     overflow: "hidden",
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.8)",
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.95)",
     color: colors.text,
     boxShadow: shadows.elevation2xl,
@@ -182,7 +172,7 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s4,
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: {
       default: space.s5,
@@ -253,7 +243,7 @@ export const styles = stylex.create({
     },
     flexShrink: "0",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.6)",
     padding: space.s0_5,
   },
@@ -262,14 +252,6 @@ export const styles = stylex.create({
     marginLeft: {
       default: "auto",
       [layout.bpLg]: space.s2,
-    },
-    width: {
-      default: "2rem",
-      [layout.bpSm]: "auto",
-    },
-    height: {
-      default: "2rem",
-      [layout.bpSm]: "2rem",
     },
     flexShrink: "0",
     gap: space.s2,
@@ -300,8 +282,6 @@ export const styles = stylex.create({
       default: "auto",
       [layout.bpMd]: space.s2,
     },
-    width: "2rem",
-    height: "2rem",
     flexShrink: "0",
   },
   // min-h-0 flex-1 overflow-y-auto scroll-smooth
@@ -356,8 +336,8 @@ export const styles = stylex.create({
   // border border-primary/30 bg-primary/[0.06] p-4
   borderedPad4: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.3)",
-    backgroundColor: "hsl(var(--primary) / 0.06)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     padding: space.s4,
   },
   // flex min-h-9 flex-wrap items-center gap-1.5
@@ -397,7 +377,7 @@ export const styles = stylex.create({
     display: "flex",
     gap: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.6)",
     padding: space.s4,
   },
@@ -439,7 +419,7 @@ export const styles = stylex.create({
   // border border-border bg-card/50 p-5 md:p-6
   borderedPad5: {
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.5)",
     padding: {
       default: space.s5,
@@ -472,10 +452,6 @@ export const styles = stylex.create({
   },
   // text-[10px] font-bold uppercase tracking-[0.16em] text-primary
   capsAccentBold: {
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.primary,
   },
   // mt-1 text-xl font-semibold tracking-tight md:text-2xl
@@ -506,7 +482,7 @@ export const styles = stylex.create({
     minWidth: "2.25rem",
     placeItems: "center",
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.5)",
+    borderColor: colors.accentLine,
     backgroundColor: colors.bg,
     paddingLeft: space.s2,
     paddingRight: space.s2,
@@ -522,7 +498,7 @@ export const styles = stylex.create({
   // border border-border bg-card/60 p-5
   borderedPad52: {
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.6)",
     padding: space.s5,
   },
@@ -536,7 +512,7 @@ export const styles = stylex.create({
   // font-mono text-[10px] font-semibold tracking-[0.16em]
   monoSemibold: {
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
     letterSpacing: text.trackingMetaWide,
   },
@@ -573,7 +549,7 @@ export const styles = stylex.create({
   // border border-border bg-background/60 p-4
   borderedPad42: {
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.6)",
     padding: space.s4,
   },
@@ -600,7 +576,7 @@ export const styles = stylex.create({
   // rounded-xl border border-primary/25 bg-card/70 p-5
   borderedPad53: {
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--primary) / 0.25)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: "hsl(var(--card) / 0.7)",
     padding: space.s5,
   },
@@ -625,10 +601,6 @@ export const styles = stylex.create({
     paddingRight: space.s2_5,
     paddingTop: space.s1_5,
     paddingBottom: space.s1_5,
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
   },
   // bg-[#E8E044] text-black
   modeToggleActive: {

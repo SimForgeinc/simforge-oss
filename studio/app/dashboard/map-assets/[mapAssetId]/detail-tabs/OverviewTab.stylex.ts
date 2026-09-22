@@ -5,9 +5,6 @@ export const styles = stylex.create({
   quickStatCard: {
     padding: space.s3,
     backgroundColor: { default: "hsl(var(--secondary) / 0.5)", ":hover": "hsl(var(--secondary) / 0.7)" },
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
   },
   quickStatLabelRow: {
     display: "flex",
@@ -53,7 +50,7 @@ export const styles = stylex.create({
   },
   assetLocation: {
     marginTop: space.s0_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   descriptionBlock: {
@@ -72,8 +69,8 @@ export const styles = stylex.create({
   },
   descriptionToggle: {
     marginTop: space.s0_5,
-    fontSize: "10px",
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
+    fontSize: text.sizeMicro,
+    color: { default: colors.inkFaint, ":hover": colors.mutedForeground },
   },
   sectionHeader: {
     display: "flex",
@@ -82,18 +79,14 @@ export const styles = stylex.create({
     marginBottom: space.s2,
   },
   sectionTitle: {
-    fontSize: "10px",
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   viewAllButton: {
     display: "flex",
     alignItems: "center",
     gap: space.s0_5,
-    fontSize: "10px",
-    color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
+    fontSize: text.sizeMicro,
+    color: { default: colors.primary, ":hover": colors.accent },
   },
   viewAllChevron: {
     width: "0.75rem",
@@ -118,10 +111,10 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1,
-    backgroundColor: "hsl(var(--muted) / 0.5)",
+    backgroundColor: colors.fillSubtle,
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   loadingIcon: {
@@ -131,10 +124,10 @@ export const styles = stylex.create({
   familyCount: {
     display: "inline-flex",
     alignItems: "center",
-    backgroundColor: "hsl(var(--muted) / 0.5)",
+    backgroundColor: colors.fillSubtle,
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   confidenceCount: {
@@ -143,7 +136,7 @@ export const styles = stylex.create({
     backgroundColor: "rgba(2, 44, 34, 0.4)",
     paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.positive,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
@@ -156,10 +149,7 @@ export const styles = stylex.create({
   },
   familyCard: {
     minWidth: 0,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: { default: "hsl(var(--muted) / 0.2)", ":hover": "hsl(var(--muted) / 0.4)" },
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fillSubtle },
     paddingInline: space.s3,
     paddingBlock: space.s2_5,
     textAlign: "left",
@@ -183,8 +173,8 @@ export const styles = stylex.create({
   },
   familySummary: {
     marginTop: space.s0_5,
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    fontSize: text.sizeMicro,
+    color: colors.inkFaint,
   },
   familyTooltip: {
     display: "flex",
@@ -205,8 +195,8 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s0_5,
-    fontSize: "10px",
-    color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
+    fontSize: text.sizeMicro,
+    color: { default: colors.primary, ":hover": colors.accent },
   },
   chevronBare: {
     width: "0.75rem",

@@ -17,14 +17,6 @@ export const styles = stylex.create({
     position: "absolute",
     inset: 0,
     zIndex: layers.raised,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
   },
   // absolute inset-0 render-glass
   absInset0: {
@@ -35,8 +27,8 @@ export const styles = stylex.create({
     // below) rather than composed as its own rule: a separate rule would need a
     // `default: null`, which unsets whichever resting colour came before it.
     borderColor: {
-      default: "rgb(255 255 255 / 10%)",
-      ":hover": "hsl(var(--primary) / 0.6)",
+      default: colors.hairline,
+      ":hover": colors.accentLine,
     },
   },
   // size-full object-cover
@@ -56,7 +48,7 @@ export const styles = stylex.create({
   size6TextMutedForeground50: {
     width: "1.5rem",
     height: "1.5rem",
-    color: "hsl(var(--muted-foreground) / 0.5)",
+    color: colors.inkFaint,
   },
   // pointer-events-none absolute left-2 top-2 z-20 flex flex-wrap items-center gap-1
   absFlexCenter: {
@@ -76,10 +68,6 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.secondaryForeground,
     backgroundColor: colors.fillStronger,
   },
@@ -89,37 +77,25 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
     backgroundColor: colors.fillStrong,
   },
   // bg-primary/15 px-1.5 py-0.5 text-micro uppercase tracking-meta text-primary
   capsMicroAccent: {
-    backgroundColor: "hsl(var(--primary) / 0.15)",
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.primary,
   },
   // bg-amber-500/20 px-1.5 py-0.5 text-micro uppercase tracking-meta text-amber-300
   capsMicro2: {
-    backgroundColor: "rgb(245 158 11 / 0.2)",
+    backgroundColor: colors.warningWash,
     paddingLeft: space.s1_5,
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.warning,
   },
   // motionStyles.editorMotion + absolute right-2 top-2 z-20 inline-flex size-7 items-center justify-center render-overlay-control opacity-0 backdrop-blur hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 disabled:opacity-40
@@ -142,7 +118,7 @@ export const styles = stylex.create({
     backdropFilter: motion.blurMd,
     backgroundColor: colors.scrim,
     color: {
-      default: "rgb(255 255 255 / 80%)",
+      default: colors.inkSecondary,
       ":hover": colors.text,
     },
   },
@@ -171,7 +147,7 @@ export const styles = stylex.create({
     backdropFilter: motion.blurMd,
     backgroundColor: colors.scrim,
     color: {
-      default: "rgb(255 255 255 / 80%)",
+      default: colors.inkSecondary,
       ":hover": colors.text,
     },
   },
@@ -208,10 +184,6 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // text-micro font-semibold text-foreground
@@ -247,8 +219,8 @@ export const styles = stylex.create({
     // below) rather than composed as its own rule: a separate rule would need a
     // `default: null`, which unsets whichever resting colour came before it.
     borderColor: {
-      default: "rgb(255 255 255 / 10%)",
-      ":hover": "hsl(var(--primary) / 0.6)",
+      default: colors.hairline,
+      ":hover": colors.accentLine,
     },
     boxShadow: {
       default: null,
@@ -262,8 +234,8 @@ export const styles = stylex.create({
   // border-destructive/60 hover:border-primary/60
   borderDestructive60: {
     borderColor: {
-      default: "hsl(var(--destructive) / 0.6)",
-      ":hover": "hsl(var(--primary) / 0.6)",
+      default: colors.critical,
+      ":hover": colors.accentLine,
     },
   },
 });

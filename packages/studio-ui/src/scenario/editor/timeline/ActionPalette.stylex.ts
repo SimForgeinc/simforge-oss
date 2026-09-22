@@ -11,7 +11,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     overflowY: "auto",
     borderRightWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     backgroundColor: "rgb(13 13 13 / 1)",
     padding: space.s3,
     color: colors.ink,
@@ -19,11 +19,6 @@ export const styles = stylex.create({
   // block text-micro font-semibold uppercase tracking-meta-wide text-white/45
   blockCapsMicro: {
     display: "block",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.inkMuted,
   },
   // mt-2 flex gap-2
@@ -34,13 +29,7 @@ export const styles = stylex.create({
   },
   // h-8 w-20 border-white/15 bg-white/5 text-xs text-white
   xsWhite: {
-    height: "2rem",
     width: "5rem",
-    borderColor: "rgb(255 255 255 / 0.15)",
-    backgroundColor: "rgb(255 255 255 / 0.05)",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
   },
   // self-center text-xs text-white/45
   xsSelfCenter: {
@@ -60,22 +49,11 @@ export const styles = stylex.create({
   blockCapsMicro2: {
     marginTop: space.s2,
     display: "block",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.inkMuted,
   },
   // mt-1 h-8 border-white/15 bg-white/5 text-xs text-white
   xsWhite2: {
     marginTop: space.s1,
-    height: "2rem",
-    borderColor: "rgb(255 255 255 / 0.15)",
-    backgroundColor: "rgb(255 255 255 / 0.05)",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
   },
   // mt-3
   mt3: {
@@ -86,7 +64,7 @@ export const styles = stylex.create({
     marginTop: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: text.lineXs,
-    color: "rgb(253 230 138 / 1)",
+    color: colors.warning,
   },
   // mt-2 max-h-36 overflow-y-auto
   scrollY: {
@@ -98,7 +76,7 @@ export const styles = stylex.create({
   xs: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // motionStyles.editorMotion + mr-1 mt-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-meta text-white/70 hover:border-[#E8E044]/60 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d0d0d]
   metaBordered: {
@@ -106,11 +84,11 @@ export const styles = stylex.create({
     marginTop: space.s1,
     borderWidth: stroke.hairline,
     borderColor: {
-      default: "rgb(255 255 255 / 0.1)",
+      default: colors.hairline,
       ":hover": colors.accentLine,
     },
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.05)",
+      default: colors.fillSubtle,
       ":hover": colors.accentWash,
     },
     paddingLeft: space.s2,
@@ -122,18 +100,6 @@ export const styles = stylex.create({
     color: {
       default: colors.inkSecondary,
       ":hover": colors.accent,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 1px #0d0d0d, 0 0 0 3px rgb(232 224 68 / 1)",
     },
   },
 });

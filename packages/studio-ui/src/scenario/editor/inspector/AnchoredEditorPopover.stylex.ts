@@ -11,7 +11,7 @@ export const styles = stylex.create({
     gap: space.s3,
     overflow: "hidden",
     borderBottomWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     backgroundImage: "linear-gradient(180deg, #171717 0%, #111111 100%)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
@@ -25,11 +25,6 @@ export const styles = stylex.create({
   },
   // text-[10px] font-bold uppercase leading-none tracking-[0.18em] text-[#E8E044]
   capsBoldLeadNone: {
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    lineHeight: "1",
-    letterSpacing: text.trackingMetaWider,
     color: colors.accent,
   },
   // mt-1 truncate text-sm font-semibold leading-none text-white
@@ -49,7 +44,7 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: {
-      default: colors.textSubtle,
+      default: colors.inkMuted,
       ":hover": colors.ink,
     },
     backgroundColor: {
@@ -86,7 +81,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     overflow: "visible",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.8)",
+    borderColor: colors.accentLine,
     backgroundImage: "linear-gradient(155deg,#111111 0%,#090909 58%,#0d0d0d 100%)",
     color: colors.ink,
     boxShadow: "0 28px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(232,224,68,0.12)",

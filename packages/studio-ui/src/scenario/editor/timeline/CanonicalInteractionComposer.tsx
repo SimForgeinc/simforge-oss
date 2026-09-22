@@ -24,7 +24,7 @@ import { competingMotionRefusal } from "../competing-motion";
 import { uniqueTimelineInteractionId } from "./v1-timeline-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./CanonicalInteractionComposer.stylex";
-import { focus } from "../../../stylex/recipes.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 type TriggerKind = Trigger["kind"];
@@ -262,10 +262,10 @@ export function CanonicalInteractionComposer({
       {...stylex.props(styles.gridBorderedGap2)}
       data-testid={`${testIdPrefix}-composer`}
     >
-      <legend {...stylex.props(styles.capsSemibold)}>
+      <legend {...stylex.props([typography.tag, styles.capsSemibold])}>
         All interactions
       </legend>
-      <label {...stylex.props(styles.gridCapsSemibold)}>
+      <label {...stylex.props([typography.tag, styles.gridCapsSemibold])}>
         Target
         <select
           aria-label="Canonical interaction target"
@@ -281,7 +281,7 @@ export function CanonicalInteractionComposer({
           ))}
         </select>
       </label>
-      <label {...stylex.props(styles.gridCapsSemibold)}>
+      <label {...stylex.props([typography.tag, styles.gridCapsSemibold])}>
         Starts
         <select
           aria-label="Canonical interaction trigger"
@@ -296,7 +296,7 @@ export function CanonicalInteractionComposer({
         </select>
       </label>
       {needsDynamics ? (
-        <label {...stylex.props(styles.gridCapsSemibold)}>
+        <label {...stylex.props([typography.tag, styles.gridCapsSemibold])}>
           Transition
           <select
             aria-label="Canonical interaction dynamics"
@@ -314,7 +314,7 @@ export function CanonicalInteractionComposer({
         </label>
       ) : null}
       <button
-        {...stylex.props([focus.ringAccent, styles.semiboldBordered])}
+        {...stylex.props([focus.ring, styles.semiboldBordered])}
         data-testid={`${testIdPrefix}-add`}
         aria-describedby={unavailableReason ? availabilityId : undefined}
         disabled={Boolean(unavailableReason)}

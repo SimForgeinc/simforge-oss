@@ -13,7 +13,7 @@ export const styles = stylex.create({
     position: "fixed",
     inset: "0",
     zIndex: layers.overlay,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: colors.scrimHeavy,
     backdropFilter: motion.blurSm,
   },
   dialogContent: {

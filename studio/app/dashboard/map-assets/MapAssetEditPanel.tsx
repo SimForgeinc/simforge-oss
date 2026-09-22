@@ -23,11 +23,11 @@ import {
   type MediaEntry,
 } from "./MapAssetEditPanelUtils";
 import { sha256Blob } from "@simforge-oss/engine/hash";
-import { a11y, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { a11y, focus, hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 {...stylex.props(styles.sectionHeading)}>
+    <h3 {...stylex.props([typography.caps, styles.sectionHeading])}>
       {children}
     </h3>
   );
@@ -474,7 +474,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
       <div {...stylex.props(styles.header)}>
         <Button
           variant="ghost"
-          size="icon"
+          size="iconXs"
           xstyle={styles.backButton}
           onClick={onBack}
           aria-label="Back to details"
@@ -535,7 +535,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             Identifier used by the CARLA simulator for this map.
           </p>
           <label htmlFor="carla-map-name" {...stylex.props(a11y.srOnly)}>CARLA map name</label>
-          <Input
+          <Input size="sm" variant="plate"
             id="carla-map-name"
             value={carlaMapName}
             onChange={(e) => setCarlaMapName(e.target.value)}
@@ -560,7 +560,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               <p {...stylex.props(styles.emptyImageryMessage, styles.stackY2)}>No image services configured.</p>
             ) : (
               imageryTilesets.map((row, index) => (
-                <div key={index} {...stylex.props(styles.imageryRow, styles.stackY2)}>
+                <div key={index} {...stylex.props([hairline.all, styles.imageryRow], styles.stackY2)}>
                   <div {...stylex.props(styles.imageryRowHeader)}>
                     <span {...stylex.props(styles.imageryRowLabel)}>
                       Image service {index + 1}
@@ -582,7 +582,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                       >
                         Tileset ID
                       </label>
-                      <Input
+                      <Input size="sm" variant="plate"
                         id={`imagery-tileset-id-${index}`}
                         value={row.tileset_id}
                         onChange={(e) => updateImageryRow(index, "tileset_id", e.target.value)}
@@ -597,7 +597,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                       >
                         Layer ID
                       </label>
-                      <Input
+                      <Input size="sm" variant="plate"
                         id={`imagery-layer-id-${index}`}
                         value={row.layer_id}
                         onChange={(e) => updateImageryRow(index, "layer_id", e.target.value)}
@@ -628,7 +628,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           <div {...stylex.props(styles.offsetFields)}>
             <div>
               <label {...stylex.props(styles.fieldLabel)}>X offset (m)</label>
-              <Input
+              <Input size="sm" variant="plate"
                 value={editorOffsetX}
                 onChange={(e) => setEditorOffsetX(e.target.value)}
                 inputMode="decimal"
@@ -638,7 +638,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             </div>
             <div>
               <label {...stylex.props(styles.fieldLabel)}>Y offset (m)</label>
-              <Input
+              <Input size="sm" variant="plate"
                 value={editorOffsetY}
                 onChange={(e) => setEditorOffsetY(e.target.value)}
                 inputMode="decimal"
@@ -697,7 +697,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               + Add tag
             </Button>
             {tagDropdownOpen && (
-              <div {...stylex.props(styles.tagDropdown)}>
+              <div {...stylex.props([hairline.all, styles.tagDropdown])}>
                 <div {...stylex.props(styles.tagSearchWrapper)}>
                   <Input
                     value={tagSearch}
@@ -762,7 +762,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                   placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
                   spellCheck={false}
                   rows={3}
-                  {...stylex.props(styles.csvTextarea, styles.stackY1_5)}
+                  {...stylex.props([focus.ring, styles.csvTextarea], styles.stackY1_5)}
                 />
                 {csvErrors.length > 0 && (
                   <p {...stylex.props(styles.validationMessage, styles.stackY1_5)}>
@@ -792,7 +792,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           {existingVideos.length > 0 && (
             <ul {...stylex.props(styles.artifactListOrUploadProgress)}>
               {existingVideos.map((v) => (
-                <li key={v.uri} {...stylex.props(styles.existingArtifactRow)}>
+                <li key={v.uri} {...stylex.props([hairline.all, styles.existingArtifactRow])}>
                   <Film {...stylex.props(styles.artifactIcon)} />
                   <span {...stylex.props([textLayout.truncate, styles.existingArtifactName])}>
                     {v.label ? (
@@ -836,10 +836,10 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           {videoEntries.length > 0 && (
             <div {...stylex.props(styles.pendingUploads)}>
               {videoEntries.map((entry) => (
-                <div key={entry.id} {...stylex.props(styles.pendingUploadRow)}>
+                <div key={entry.id} {...stylex.props([hairline.all, styles.pendingUploadRow])}>
                   <Film {...stylex.props(styles.artifactIcon)} />
                   <span {...stylex.props([textLayout.truncate, styles.pendingFilename])}>{entry.file.name}</span>
-                  <Input
+                  <Input size="xs" variant="plate"
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setVideoEntries)}
                     placeholder="Label"
@@ -865,7 +865,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           {existingImages.length > 0 && (
             <ul {...stylex.props(styles.artifactListOrUploadProgress)}>
               {existingImages.map((img) => (
-                <li key={img.uri} {...stylex.props(styles.existingArtifactRow)}>
+                <li key={img.uri} {...stylex.props([hairline.all, styles.existingArtifactRow])}>
                   <ImageIcon {...stylex.props(styles.artifactIcon)} aria-hidden />
                   <span {...stylex.props([textLayout.truncate, styles.existingArtifactName])}>
                     {img.label ? (
@@ -909,10 +909,10 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           {imageEntries.length > 0 && (
             <div {...stylex.props(styles.pendingUploads)}>
               {imageEntries.map((entry) => (
-                <div key={entry.id} {...stylex.props(styles.pendingUploadRow)}>
+                <div key={entry.id} {...stylex.props([hairline.all, styles.pendingUploadRow])}>
                   <ImageIcon {...stylex.props(styles.artifactIcon)} aria-hidden />
                   <span {...stylex.props([textLayout.truncate, styles.pendingFilename])}>{entry.file.name}</span>
-                  <Input
+                  <Input size="xs" variant="plate"
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setImageEntries)}
                     placeholder="Label"
@@ -966,7 +966,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           )}
 
           {threeDFiles.length > 0 && (
-            <div {...stylex.props(styles.selectedFolderRow)}>
+            <div {...stylex.props([hairline.all, styles.selectedFolderRow])}>
               <FolderUp {...stylex.props(styles.folderIcon)} />
               <span {...stylex.props(styles.selectedFolderSummary)}>
                 <span {...stylex.props(styles.artifactLabel)}>{threeDFiles.length}</span> files from{" "}

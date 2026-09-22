@@ -7,7 +7,7 @@ export const styles = stylex.create({
     marginTop: space.s3,
     borderTopWidth: stroke.hairline,
     paddingTop: space.s3,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // flex items-center gap-2
   flexCenterGap2: {
@@ -23,11 +23,6 @@ export const styles = stylex.create({
   },
   // text-micro font-bold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4
@@ -83,7 +78,7 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // h-9 w-full render-glass border px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   xsBorderedWide: {
@@ -95,6 +90,6 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
 });

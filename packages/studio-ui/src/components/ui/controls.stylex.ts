@@ -1,12 +1,14 @@
+/**
+ * Button and Badge styles, on the shared recipes and the control scale.
+ *
+ * Variants are looks, sizes are geometry; a caller picks both through props
+ * and never restyles a button through `xstyle` (see the style guide).
+ * `default` is the solid accent: the shadcn "primary" was already the brand
+ * yellow, so the two names give the same button.
+ */
 import * as stylex from "@stylexjs/stylex";
 import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
-const TRANSITION = "color, background-color, border-color, text-decoration-color, fill, stroke";
-const RING_OFFSET = "var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)";
-const RING = "var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)";
-const SHADOW = "var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)";
-
-// Preserve the ring/shadow variables consumed by appearance-frozen Tailwind callers.
 export const button = stylex.create({
   base: {
     display: "inline-flex",
@@ -14,19 +16,13 @@ export const button = stylex.create({
     justifyContent: "center",
     gap: space.s2,
     whiteSpace: "nowrap",
-    fontSize: text.sizeSm,
-    lineHeight: text.lineSm,
+    fontFamily: text.fontBody,
     fontWeight: text.weightMedium,
-    "--tw-ring-offset-color": colors.bg,
-    "--tw-ring-offset-width": { default: null, ":focus-visible": "2px" },
-    "--tw-ring-color": { default: null, ":focus-visible": colors.ring },
-    "--tw-ring-offset-shadow": { default: null, ":focus-visible": RING_OFFSET },
-    "--tw-ring-shadow": { default: null, ":focus-visible": RING },
-    boxShadow: { default: null, ":focus-visible": SHADOW },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
+    lineHeight: text.lineXs,
+    borderWidth: stroke.hairline,
+    borderStyle: "solid",
+    borderColor: "transparent",
+    cursor: "pointer",
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
   },
@@ -34,74 +30,67 @@ export const button = stylex.create({
 
 export const buttonVariants = stylex.create({
   default: {
-    backgroundColor: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.85)" },
-    color: colors.primaryForeground,
+    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
+    color: colors.accentText,
   },
-  destructive: {
-    backgroundColor: { default: colors.danger, ":hover": "hsl(var(--destructive) / 0.9)" },
-    color: colors.dangerText,
-  },
-  outline: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.input,
-    backgroundColor: { default: colors.bg, ":hover": colors.hoverWash },
-    color: { default: null, ":hover": colors.hoverWashText },
-  },
-  secondary: {
-    backgroundColor: { default: colors.secondary, ":hover": "hsl(var(--secondary) / 0.7)" },
-    color: colors.secondaryForeground,
-  },
-  ghost: {
-    backgroundColor: { default: null, ":hover": colors.hoverWash },
-    color: { default: null, ":hover": colors.hoverWashText },
-  },
-  link: {
-    color: colors.primary,
-    textUnderlineOffset: "4px",
-    textDecorationLine: { default: null, ":hover": "underline" },
-  },
-  /** The one primary action on a surface: solid accent. */
   accent: {
     backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
     color: colors.accentText,
   },
+  destructive: {
+    backgroundColor: colors.criticalWash,
+    borderColor: { default: "transparent", ":hover": colors.critical },
+    color: colors.critical,
+  },
   /** A standalone secondary control: a faint plate with a hairline edge. */
-  plate: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: { default: colors.hairlineStrong, ":hover": colors.hairlineStrong },
+  outline: {
     backgroundColor: { default: colors.fillFaint, ":hover": colors.fill },
+    borderColor: { default: colors.hairlineStrong, ":hover": colors.hairlineStrong },
     color: colors.ink,
   },
-  /** A secondary action that belongs to the current item: accent ink on a wash. */
-  accentOutline: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.accentLineSubtle,
-    backgroundColor: { default: colors.accentWash, ":hover": colors.accentWash },
-    color: colors.accent,
+  plate: {
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fill },
+    borderColor: { default: colors.hairlineStrong, ":hover": colors.hairlineStrong },
+    color: colors.ink,
   },
-  /** Quiet: no plate until hovered, muted ink that brightens. */
+  secondary: {
+    backgroundColor: { default: colors.fillStrong, ":hover": colors.fillStronger },
+    color: colors.ink,
+  },
+  /** No plate until hovered; secondary ink that brightens. */
+  ghost: {
+    backgroundColor: { default: "transparent", ":hover": colors.fill },
+    color: { default: colors.inkSecondary, ":hover": colors.ink },
+  },
   quiet: {
     backgroundColor: { default: "transparent", ":hover": colors.fill },
     color: { default: colors.inkMuted, ":hover": colors.ink },
   },
+  /** A secondary action that belongs to the current item: accent ink on a wash. */
+  accentOutline: {
+    backgroundColor: colors.accentWash,
+    borderColor: colors.accentLineSubtle,
+    color: colors.accent,
+  },
+  link: {
+    color: colors.accent,
+    textUnderlineOffset: "4px",
+    textDecorationLine: { default: null, ":hover": "underline" },
+  },
 });
 
+/** The control scale: one height per step, shared with Input, IconButton and Chip. */
 export const buttonSizes = stylex.create({
-  default: { height: "2.5rem", paddingInline: space.s4, paddingBlock: space.s2 },
-  sm: { height: "2.25rem", paddingInline: space.s3, },
-  lg: { height: "2.75rem", paddingInline: space.s6, },
-  icon: { height: "2.5rem", width: "2.5rem" },
-  // The control scale (recipes `control`): one height per step, shared with
-  // Input, IconButton and Chip so a row of mixed controls lines up.
   xs: { height: "1.5rem", paddingInline: space.s2, fontSize: text.sizeMicro, gap: space.s1 },
-  md: { height: "2rem", paddingInline: space.s3, fontSize: text.sizeXs, gap: space.s1_5 },
+  sm: { height: "1.75rem", paddingInline: space.s2_5, fontSize: text.sizeXs, gap: space.s1_5 },
+  md: { height: "2rem", paddingInline: space.s3, fontSize: text.sizeXs },
+  default: { height: "2rem", paddingInline: space.s3, fontSize: text.sizeXs },
+  lg: { height: "2.5rem", paddingInline: space.s4, fontSize: text.sizeSm },
   xl: { height: "3rem", paddingInline: space.s6, fontSize: text.sizeSm },
-  iconXs: { height: "1.5rem", width: "1.5rem" },
-  iconSm: { height: "1.75rem", width: "1.75rem" },
-  iconMd: { height: "2rem", width: "2rem" },
+  iconXs: { height: "1.5rem", width: "1.5rem", paddingInline: 0 },
+  iconSm: { height: "1.75rem", width: "1.75rem", paddingInline: 0 },
+  iconMd: { height: "2rem", width: "2rem", paddingInline: 0 },
+  icon: { height: "2.5rem", width: "2.5rem", paddingInline: 0 },
 });
 
 export const badge = stylex.create({
@@ -110,38 +99,14 @@ export const badge = stylex.create({
     alignItems: "center",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    paddingInline: space.s2_5,
+    paddingInline: space.s2,
     paddingBlock: space.s0_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightMedium,
-    "--tw-ring-offset-width": { default: null, ":focus": "2px" },
-    "--tw-ring-color": { default: null, ":focus": colors.ring },
-    "--tw-ring-offset-shadow": { default: null, ":focus": RING_OFFSET },
-    "--tw-ring-shadow": { default: null, ":focus": RING },
-    boxShadow: { default: null, ":focus": SHADOW },
-    outlineStyle: { default: null, ":focus": "solid" },
-    outlineWidth: { default: null, ":focus": stroke.thick },
-    outlineColor: { default: null, ":focus": "transparent" },
-    outlineOffset: { default: null, ":focus": "2px" },
   },
 });
 
 export const badgeVariants = stylex.create({
-  default: {
-    borderColor: "transparent",
-    backgroundColor: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
-    color: colors.primaryForeground,
-  },
-  secondary: {
-    borderColor: "transparent",
-    backgroundColor: { default: colors.secondary, ":hover": "hsl(var(--secondary) / 0.8)" },
-    color: colors.secondaryForeground,
-  },
-  destructive: {
-    borderColor: "transparent",
-    backgroundColor: { default: colors.danger, ":hover": "hsl(var(--destructive) / 0.8)" },
-    color: colors.dangerText,
-  },
-  outline: { color: colors.text },
+  default: { borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash, color: colors.accent },
+  secondary: { borderColor: colors.hairline, backgroundColor: colors.fillSubtle, color: colors.inkSecondary },
+  destructive: { borderColor: "transparent", backgroundColor: colors.criticalWash, color: colors.critical },
+  outline: { borderColor: colors.hairlineStrong, backgroundColor: "transparent", color: colors.inkSecondary },
 });

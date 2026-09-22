@@ -14,7 +14,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import type { ThreeDStats as ThreeDStatsResponse } from "@/app/lib/3d-manifest-stats";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 // ---------------------------------------------------------------------------
 // Formatters
@@ -159,7 +159,7 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
 
         {/* Per-LOD summary table */}
         <div {...stylex.props(styles.lodSummary)}>
-          <p {...stylex.props(styles.lodSummaryTitle)}>
+          <p {...stylex.props([typography.eyebrow, styles.lodSummaryTitle])}>
             Per-LOD Summary
           </p>
           <div {...stylex.props(styles.lodSummaryRows)}>

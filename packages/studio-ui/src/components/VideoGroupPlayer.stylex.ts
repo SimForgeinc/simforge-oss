@@ -21,8 +21,8 @@ export const styles = stylex.create({
     gap: space.s3,
     borderBottomStyle: "solid",
     borderBottomWidth: stroke.hairline,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    borderBottomColor: colors.hairline,
+    backgroundColor: colors.scrimHeavy,
     paddingInline: space.s4,
     paddingBlock: space.s2,
   },
@@ -37,14 +37,14 @@ export const styles = stylex.create({
     height: "2rem",
     backgroundColor: {
       default: colors.fillStrong,
-      ":hover": "rgba(255, 255, 255, 0.2)",
+      ":hover": colors.fillStronger,
     },
   },
   restartControl: {
     width: "1.75rem",
     height: "1.75rem",
     color: {
-      default: "rgba(255, 255, 255, 0.5)",
+      default: colors.inkMuted,
       ":hover": colors.ink,
     },
     backgroundColor: {
@@ -69,14 +69,14 @@ export const styles = stylex.create({
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: colors.inkSecondary,
   },
   durationTime: {
     width: "2.5rem",
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: colors.inkSecondary,
   },
   scrubArea: {
     [scrub.trackHeight]: "3px",
@@ -109,7 +109,7 @@ export const styles = stylex.create({
     height: "100%",
     backgroundColor: colors.primary,
     transitionProperty: "width",
-    transitionDuration: "75ms",
+    transitionDuration: motion.durInstant,
   },
   scrubThumb: {
     position: "absolute",

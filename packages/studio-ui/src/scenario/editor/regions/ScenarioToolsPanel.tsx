@@ -8,6 +8,7 @@ import { VariantEditor } from "../authoring/VariantEditor";
 import { AuthoringDiagnostics } from "./AuthoringDiagnostics";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioToolsPanel.stylex";
+import { typography } from "../../../stylex/recipes.stylex";
 
 /** Document-global authoring controls, hidden until explicitly requested. */
 export function ScenarioToolsPanel({
@@ -25,7 +26,7 @@ export function ScenarioToolsPanel({
     >
       <header {...stylex.props(styles.flexCenterTight)}>
         <div>
-          <p {...stylex.props(styles.capsBold)}>Scenario tools</p>
+          <p {...stylex.props([typography.eyebrow, styles.capsBold])}>Scenario tools</p>
           <p {...stylex.props(styles.xs)}>Global document configuration</p>
         </div>
         <button {...stylex.props(styles.gridCenteredPushRight)} aria-label="Close scenario tools" onClick={onClose} type="button">

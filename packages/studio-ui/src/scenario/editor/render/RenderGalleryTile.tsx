@@ -17,7 +17,7 @@ import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderGalleryTile.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * One render in the gallery — manifest #137, reshaped onto v2's control plane.
@@ -102,7 +102,7 @@ export function RenderGalleryTile({
       <button
         type="button"
         aria-label={galleryItemAccessibleName(item)}
-        {...stylex.props(styles.absInset0Raised)}
+        {...stylex.props([focus.ring, styles.absInset0Raised])}
         onClick={onOpen}
         onFocus={play}
         onBlur={reset}
@@ -143,20 +143,20 @@ export function RenderGalleryTile({
       </div>
 
       <div {...stylex.props(styles.absFlexCenter)}>
-        <span {...stylex.props(styles.capsMicro)}>
+        <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
           {label}
         </span>
         <RenderStateChip state={item.jobState} />
         {item.attemptCount > 1 ? (
           <span
-            {...stylex.props(styles.capsMicroMuted)}
+            {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}
             title={`Attempt ${item.attemptCount}`}
           >
             ×{item.attemptCount}
           </span>
         ) : null}
         {postprocess && item.modelFamily ? (
-          <span {...stylex.props(styles.capsMicroAccent)}>
+          <span {...stylex.props([typography.eyebrow, styles.capsMicroAccent])}>
             {item.modelFamily}
           </span>
         ) : null}
@@ -165,7 +165,7 @@ export function RenderGalleryTile({
           // banner because it is a property of one render, and two renders of the same scenario can
           // disagree about it.
           <span
-            {...stylex.props(styles.capsMicro2)}
+            {...stylex.props([typography.eyebrow, styles.capsMicro2])}
             data-testid="scenario-render-outdated-pill"
             title="The scenario changed after this render. Its saved configuration can be restored."
           >
@@ -208,7 +208,7 @@ export function RenderGalleryTile({
           <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>
             {formatTimestamp(item.createdAt)}
           </span>
-          <span {...stylex.props(styles.tightCapsMicro)}>
+          <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
             {item.artifactCount} {item.artifactCount === 1 ? "file" : "files"}
           </span>
         </div>

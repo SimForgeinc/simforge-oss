@@ -8,7 +8,7 @@ import type { EditorDocument } from "@simforge-oss/editor";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorCameras.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -28,7 +28,7 @@ export function ActorCameras({
 }) {
   return (
     <div {...stylex.props(styles.tightInkRuleL)}>
-      <h2 {...stylex.props(styles.flexCenterCaps)}>
+      <h2 {...stylex.props([typography.eyebrow, styles.flexCenterCaps])}>
         <Gauge aria-hidden="true" className={stylex.props(styles.mr2Size3).className} />
         Actor sensors
       </h2>

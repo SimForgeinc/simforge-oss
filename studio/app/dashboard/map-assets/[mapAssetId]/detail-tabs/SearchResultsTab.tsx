@@ -41,7 +41,7 @@ import type { MapSearchResult, SearchFilterChip, SearchObjectFamily } from "@/ap
 import { SearchExamplesPanel } from "./SearchExamplesPanel";
 import { CopyJsonButton } from "./CopyJsonButton";
 import { SearchInputBox } from "./SearchInputBox";
-import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchResultsTabProps {
   draftQuery: string;
@@ -573,11 +573,11 @@ export function SearchResultsTab({
 
         <div {...stylex.props(styles.resultsContent)}>
           {loading ? (
-            <p {...stylex.props(styles.loadingStatus)}>
+            <p {...stylex.props([typography.caps, styles.loadingStatus])}>
               <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} aria-hidden="true" /> Loading map data…
             </p>
           ) : (
-            <div {...stylex.props(styles.resultsHeaderActions)}>
+            <div {...stylex.props([typography.caps, styles.resultsHeaderActions])}>
               <span>Results ({results.length})</span>
               <CopyJsonButton
                 payload={{ query, chips, freeText: freeText ?? [], results }}
@@ -759,8 +759,7 @@ export function SearchResultsTab({
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
-                            size="icon"
-                            xstyle={styles.resultActionButton}
+                            size="iconSm"
                             onClick={(event) => {
                               event.stopPropagation();
                               onZoomToResult(result.id);
@@ -778,8 +777,7 @@ export function SearchResultsTab({
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
-                            size="icon"
-                            xstyle={styles.resultActionButton}
+                            size="iconSm"
                             onClick={(event) => {
                               event.stopPropagation();
                               onUseInScenario(result.id);

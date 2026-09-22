@@ -28,7 +28,7 @@ import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderTheater.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The detail sections beside the player.
@@ -271,7 +271,7 @@ export function RenderTheater({
                   <span {...stylex.props([textLayout.truncate, styles.xsInkMedium])} title={artifactDisplayName(hero)}>
                     {artifactDisplayName(hero)}
                   </span>
-                  <span {...stylex.props(styles.tightCapsMicro)}>
+                  <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
                     {hero.mediaType}
                   </span>
                 </figcaption>
@@ -314,7 +314,7 @@ export function RenderTheater({
                       >
                         <track kind="captions" />
                       </video>
-                      <span {...stylex.props([textLayout.truncate, styles.blockCapsMicro])}>
+                      <span {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.blockCapsMicro]])}>
                         {artifactDisplayName(artifact)}
                       </span>
                     </button>
@@ -451,7 +451,7 @@ export function RenderTheater({
 function ConfigRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <>
-      <dt {...stylex.props(styles.capsMicroMuted)}>{label}</dt>
+      <dt {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>{label}</dt>
       <dd {...stylex.props(mono ? styles.monoMicroInk : styles.inkNarrowableBreakAll)}>
         {value}
       </dd>

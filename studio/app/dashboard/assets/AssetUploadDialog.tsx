@@ -1,6 +1,6 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
+import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@simforge-oss/studio-ui/components/ui/dialog";
 import { Boxes, FileUp, Map as MapIcon, Upload, X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { useEffect, useId, useRef, useState, useMemo} from "react";
@@ -22,6 +22,7 @@ import type { GalleryModelFacing } from "@/app/lib/asset-gallery/model-import";
 import type { PublishedMapSummary } from "@/app/lib/map-ingest/contracts";
 import { dialog } from "./asset-dialogs.stylex";
 import { MapUploadPanel, type MapUploadPhase } from "./MapUploadPanel";
+import { a11y, focus, hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Which kind of asset the dialog is publishing. */
 export type AssetUploadKind = "model" | "map";
@@ -401,25 +402,21 @@ export function AssetUploadDialog({
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!busy) onOpenChange(nextOpen); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay {...stylex.props(dialog.overlay)} />
-        <Dialog.Content {...stylex.props(dialog.content)}>
-          <Dialog.Title {...stylex.props(dialog.title)}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!busy) onOpenChange(nextOpen); }}>
+        <DialogContent size="lg" showClose={!busy} closeLabel="Close upload dialog">
+          <DialogHeader>
+          <DialogTitle>
             {kind === "model" ? "Upload 3D asset" : "Upload map"}
-          </Dialog.Title>
-          <Dialog.Description {...stylex.props(dialog.description)}>
+          </DialogTitle>
+          <DialogDescription>
             {kind === "model"
               ? "Models are converted to GLB and thumbnailed entirely in your browser."
               : "The road network and layer geometry are read in your browser. Publishing generates the manifest, semantics and derived artifacts on the server."}
-          </Dialog.Description>
-          <Dialog.Close asChild>
-            <button type="button" aria-label="Close upload dialog" disabled={busy} {...stylex.props(dialog.close)}>
-              <X {...stylex.props(dialog.iconSm)} />
-            </button>
-          </Dialog.Close>
+          </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
 
-          <div {...stylex.props(dialog.tabGroup)} role="group" aria-label="Asset kind">
+          <div {...stylex.props([hairline.all, dialog.tabGroup])} role="group" aria-label="Asset kind">
             <button
               type="button"
               aria-pressed={kind === "model"}
@@ -446,7 +443,7 @@ export function AssetUploadDialog({
                 ref={inputRef}
                 type="file"
                 multiple
-                {...stylex.props(dialog.srOnly)}
+                {...stylex.props(a11y.srOnly)}
                 accept=".glb,.gltf,.fbx,.obj,.mtl,.stl,.dae,.ply,.usdz,image/*"
                 onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))}
               />
@@ -458,7 +455,7 @@ export function AssetUploadDialog({
                   event.preventDefault();
                   chooseFiles(Array.from(event.dataTransfer.files));
                 }}
-                {...stylex.props(dialog.drop, dialog.dropFocusRing)}
+                {...stylex.props(dialog.drop, focus.ring)}
               >
                 <FileUp {...stylex.props(dialog.iconAccent)} />
                 <span {...stylex.props(dialog.uploadDropLabel)}>Drop a model and its texture files here</span>
@@ -469,7 +466,7 @@ export function AssetUploadDialog({
                 <div {...stylex.props(dialog.uploadPreviewGrid)}>
                   <div>
                     {/* eslint-disable-next-line @next/next/no-img-element -- client-generated blob: URL for the pre-upload preview */}
-                    <img src={thumbnailUrl} alt="Generated model thumbnail" {...stylex.props(dialog.uploadImage)} />
+                    <img src={thumbnailUrl} alt="Generated model thumbnail" {...stylex.props([hairline.all, dialog.uploadImage])} />
                     <p {...stylex.props(dialog.uploadMeta)}>
                       {model.dims.l.toFixed(2)} × {model.dims.w.toFixed(2)} × {model.dims.h.toFixed(2)} m · {model.triangleCount.toLocaleString()} triangles
                     </p>
@@ -519,7 +516,7 @@ export function AssetUploadDialog({
                       </div>
                     </div>
                     <div {...stylex.props(dialog.uploadRow)}>
-                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess} xstyle={dialog.uploadTransparent}>
+                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess}>
                         {processing ? "Reprocessing…" : "Apply correction"}
                       </Button>
                       {/* A file states no unit, but an author knows what the thing is:
@@ -527,10 +524,9 @@ export function AssetUploadDialog({
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="accentOutline"
                         disabled={processing || autoSize === null}
                         onClick={() => autoSize && applyAutoSize(autoSize.scale)}
-                        xstyle={dialog.autoSize}
                         title={
                           autoSize
                             ? `Scale so it is ${autoSize.metres} m ${autoSize.axisLabel}, like ${autoSize.example}`
@@ -571,7 +567,7 @@ export function AssetUploadDialog({
                     {MOTION_OPTIONS.map((option) => (
                       <button
                         aria-checked={archetype === option.value}
-                        {...stylex.props(dialog.motionOption, archetype === option.value ? dialog.motionOptionActive : null)}
+                        {...stylex.props([hairline.all, hairline.strong, dialog.motionOption], archetype === option.value ? dialog.motionOptionActive : null)}
                         data-testid={`asset-motion-${option.value}`}
                         key={option.value}
                         onClick={() => selectArchetype(option.value)}
@@ -619,10 +615,10 @@ export function AssetUploadDialog({
 
             <div {...stylex.props(dialog.uploadActions)}>
               {kind === "map" && mapPhase === "published" ? (
-                <Dialog.Close asChild><Button type="button">Done</Button></Dialog.Close>
+                <DialogClose asChild><Button type="button">Done</Button></DialogClose>
               ) : (
                 <>
-                  <Dialog.Close asChild><Button type="button" variant="ghost" disabled={busy}>Cancel</Button></Dialog.Close>
+                  <DialogClose asChild><Button type="button" variant="ghost" disabled={busy}>Cancel</Button></DialogClose>
                   {kind === "model" ? (
                     <Button type="submit" form={formId} disabled={!model || !actorClass || processing || uploading}><Upload />{uploading ? "Uploading…" : "Publish asset"}</Button>
                   ) : (
@@ -635,8 +631,8 @@ export function AssetUploadDialog({
               )}
             </div>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogBody>
+        </DialogContent>
+    </Dialog>
   );
 }

@@ -22,12 +22,6 @@ export const styles = stylex.create({
     height: "2rem",
     backgroundColor: colors.fillStrong,
     color: colors.text,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: 1,
-    fontWeight: text.weightBold,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
   },
   glyphIcon: {
     position: "absolute",
@@ -50,10 +44,6 @@ export const styles = stylex.create({
     backgroundColor: colors.signalGreen,
   },
   promoted: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    letterSpacing: text.trackingMetaNarrow,
-    textTransform: "uppercase",
     color: colors.accent,
   },
 });

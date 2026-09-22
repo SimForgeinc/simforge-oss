@@ -9,16 +9,11 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
     gap: space.s3,
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderColor: colors.hairline,
     paddingTop: space.s3,
   },
   // text-meta font-semibold uppercase tracking-wider text-muted-foreground
   capsMetaMuted: {
-    fontSize: text.sizeMeta,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   // text-muted-foreground
@@ -42,14 +37,14 @@ export const styles = stylex.create({
   // block text-[10px] font-medium
   blockMedium: {
     display: "block",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightMedium,
   },
   // mt-0.5 block text-[9px] leading-3.5 opacity-70
   block: {
     marginTop: space.s0_5,
     display: "block",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: text.lineMicro,
     opacity: "0.7",
   },
@@ -78,7 +73,6 @@ export const styles = stylex.create({
   // mt-1 h-8
   mt1H8: {
     marginTop: space.s1,
-    height: "2rem",
   },
 
   // rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
@@ -95,7 +89,7 @@ export const styles = stylex.create({
   },
   // border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]
   styleOptionActive: {
-    borderColor: "rgb(232 224 68 / 0.7)",
+    borderColor: colors.accentLine,
     backgroundColor: colors.accentWash,
     color: colors.accent,
   },
@@ -103,15 +97,15 @@ export const styles = stylex.create({
   styleOptionIdle: {
     borderColor: {
       default: colors.fillStrong,
-      ":hover": "rgb(255 255 255 / 0.25)",
+      ":hover": colors.hairlineStrong,
     },
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.025)",
+      default: colors.fillFaint,
       ":hover": colors.fill,
     },
     color: {
-      default: "rgb(255 255 255 / 0.6)",
-      ":hover": "rgb(255 255 255 / 0.9)",
+      default: colors.inkSecondary,
+      ":hover": colors.ink,
     },
   },
 });

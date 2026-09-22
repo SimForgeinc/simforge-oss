@@ -8,16 +8,11 @@ const slideInFromRight2 = stylex.keyframes({
 export const styles = stylex.create({
   sectionHeading: {
     marginBottom: space.s2,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   editPanel: {
     animationName: slideInFromRight2,
-    animationDuration: "200ms",
+    animationDuration: motion.durBase,
     animationTimingFunction: motion.easeDecelerate,
     position: "absolute",
     right: "0",
@@ -29,7 +24,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     borderLeftWidth: stroke.hairline,
     borderLeftStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevationXl,
   },
@@ -40,13 +35,11 @@ export const styles = stylex.create({
     gap: space.s2,
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingInline: space.s3,
     paddingBlock: space.s2_5,
   },
   backButton: {
-    height: "1.5rem",
-    width: "1.5rem",
     flexShrink: 0,
   },
   backIcon: {
@@ -77,7 +70,7 @@ export const styles = stylex.create({
   },
   sectionDescription: {
     marginBottom: space.s2,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   locationFields: {
@@ -88,7 +81,7 @@ export const styles = stylex.create({
   fieldLabel: {
     marginBottom: space.s0_5,
     display: "block",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: colors.mutedForeground,
   },
   compactControl: {
@@ -97,21 +90,15 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
   },
   textInput: {
-    height: "1.75rem",
     fontFamily: text.fontMono,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
   emptyImageryMessage: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontStyle: "italic",
     color: colors.mutedForeground,
   },
   stackY2: { marginTop: { default: space.s2, ":first-child": 0 } },
   imageryRow: {
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     padding: space.s2,
   },
   imageryRowHeader: {
@@ -121,12 +108,12 @@ export const styles = stylex.create({
     justifyContent: "space-between",
   },
   imageryRowLabel: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontWeight: text.weightMedium,
     color: colors.mutedForeground,
   },
   removeImageryButton: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     color: { default: colors.mutedForeground, ":hover": colors.danger },
   },
   imageryFields: {
@@ -135,7 +122,7 @@ export const styles = stylex.create({
     gap: space.s1_5,
   },
   addImageryButton: {
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     fontWeight: text.weightMedium,
     color: colors.primary,
     textDecorationLine: { default: null, ":hover": "underline" },
@@ -150,9 +137,9 @@ export const styles = stylex.create({
     backgroundColor: "rgba(66, 32, 6, 0.6)",
     paddingInline: space.s1_5,
     paddingBlock: "1px",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
-    color: "#fde047",
+    color: colors.warning,
   },
   selectedTags: {
     marginBottom: space.s2,
@@ -173,10 +160,10 @@ export const styles = stylex.create({
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "#facc15",
+    color: colors.warning,
   },
   removeTagButton: {
-    color: { default: "rgba(250, 204, 21, 0.6)", ":hover": "#facc15" },
+    color: { default: colors.warning, ":hover": colors.warning },
   },
   removeTagIcon: {
     width: "0.625rem",
@@ -192,9 +179,6 @@ export const styles = stylex.create({
     top: "2rem",
     zIndex: layers.float,
     width: "18rem",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     boxShadow: shadows.elevationLg,
   },
@@ -222,7 +206,7 @@ export const styles = stylex.create({
     textAlign: "left",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   tagOptionName: {
     flexShrink: 0,
@@ -266,18 +250,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.text,
-    /*
-     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-     * `outline: none`: the focus ring above is a box-shadow, which
-     * forced-colours mode discards, and this transparent outline is what
-     * remains visible there.
-     */
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": "0 0 0 1px hsl(var(--ring))" },
-    "::placeholder": { color: "hsl(var(--muted-foreground) / 0.5)" },
+    "::placeholder": { color: colors.inkFaint },
   },
   stackY1_5: { marginTop: { default: space.s1_5, ":first-child": 0 } },
   validationMessage: {
@@ -298,9 +271,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1,
   },
@@ -323,7 +293,7 @@ export const styles = stylex.create({
   },
   removeArtifactButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.danger },
+    color: { default: colors.inkFaint, ":hover": colors.danger },
   },
   removeArtifactIcon: {
     width: "0.75rem",
@@ -347,9 +317,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s1_5,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
   },
@@ -360,16 +327,13 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
   },
   pendingLabelInput: {
-    height: "1.5rem",
     width: "5rem",
     flexShrink: 0,
     paddingInline: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
   clearPendingButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.text },
+    color: { default: colors.inkFaint, ":hover": colors.text },
   },
   available3dRow: {
     marginBottom: space.s2,
@@ -378,8 +342,8 @@ export const styles = stylex.create({
     gap: space.s2,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgba(16, 185, 129, 0.3)",
-    backgroundColor: "rgba(16, 185, 129, 0.05)",
+    borderColor: colors.positive,
+    backgroundColor: colors.positiveWash,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
   },
@@ -387,7 +351,7 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: 0,
-    color: "#10b981",
+    color: colors.positive,
   },
   available3dStatus: {
     flex: "1 1 0%",
@@ -399,7 +363,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.danger },
+    color: { default: colors.inkFaint, ":hover": colors.danger },
   },
   deleted3dRow: {
     marginBottom: space.s2,
@@ -408,8 +372,8 @@ export const styles = stylex.create({
     gap: space.s2,
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "rgba(245, 158, 11, 0.3)",
-    backgroundColor: "rgba(245, 158, 11, 0.05)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
   },
@@ -417,22 +381,19 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: 0,
-    color: "#f59e0b",
+    color: colors.warning,
   },
   deleted3dStatus: {
     flex: "1 1 0%",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    color: "#fbbf24",
+    color: colors.warning,
   },
   selectedFolderRow: {
     marginBottom: space.s2,
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
   },
@@ -463,10 +424,10 @@ export const styles = stylex.create({
     backgroundColor: colors.primary,
     transitionProperty: "all",
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "200ms",
+    transitionDuration: motion.durBase,
   },
   progressCaption: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   stickyFooter: {
@@ -476,7 +437,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s3,
   },
   footerActions: {

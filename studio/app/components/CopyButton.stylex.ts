@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const COLOR_TRANSITION =
   "color, background-color, border-color, text-decoration-color, fill, stroke";
@@ -19,12 +19,12 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
-      default: colors.border,
-      ":hover": "hsl(var(--foreground) / 0.4)",
+      default: colors.hairline,
+      ":hover": colors.hairlineStrong,
     },
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
   },
   compactIcon: {
     width: "0.75rem",
@@ -35,6 +35,6 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   copiedIcon: {
-    color: "#4ade80",
+    color: colors.positive,
   },
 });

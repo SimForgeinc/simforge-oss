@@ -18,21 +18,12 @@ export const styles = stylex.create({
     gap: space.s2,
   },
   groupTitle: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWider,
     color: colors.mutedForeground,
   },
   comingSoonBadge: {
     backgroundColor: "hsl(var(--secondary) / 0.4)",
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
-    fontSize: "9px",
-    fontWeight: text.weightMedium,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   exampleChipList: {
@@ -49,15 +40,15 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
   },
   examplePillAvailable: {
-    borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },
-    backgroundColor: { default: "hsl(var(--secondary) / 0.3)", ":hover": "hsl(var(--primary) / 0.1)" },
+    borderColor: { default: colors.hairline, ":hover": colors.accentLineSubtle },
+    backgroundColor: { default: "hsl(var(--secondary) / 0.3)", ":hover": colors.accentWash },
     color: colors.text,
   },
   examplePillUnavailable: {
     cursor: "not-allowed",
     borderStyle: "dashed",
-    borderColor: "hsl(var(--border) / 0.6)",
+    borderColor: colors.hairline,
     backgroundColor: "transparent",
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
   },
 });

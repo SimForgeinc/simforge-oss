@@ -19,7 +19,7 @@ import {
   ScenarioReviewQueuePageSchema,
   type ScenarioReviewQueueItem,
 } from "../../lib/scenario/review-contracts";
-import { motionRecipe, textLayout } from "../../stylex/recipes.stylex";
+import { hairline, motionRecipe, textLayout } from "../../stylex/recipes.stylex";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 
@@ -277,7 +277,7 @@ export function ScenarioReviewQueue() {
                     tabIndex={0}
                     aria-current={isActive ? "true" : undefined}
                     onFocus={() => setActiveId(item.documentId)}
-                    {...stylex.props(styles.reviewCard, isActive && styles.activeCard, ratingErrorId === item.documentId && styles.failedCard)}
+                    {...stylex.props([hairline.all, styles.reviewCard], isActive && styles.activeCard, ratingErrorId === item.documentId && styles.failedCard)}
                   >
                     <VideoPreviewTile
                       label={item.title}

@@ -14,6 +14,7 @@ import type { EditorExperience } from "../simple-timed-routes";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./TutorialOverlay.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -132,7 +133,7 @@ export function TutorialOverlay({
       >
         <div {...stylex.props(styles.flexStartGap2)}>
           <div {...stylex.props(styles.fillNarrowable)}>
-            <p {...stylex.props(styles.capsMicroAccent)}>
+            <p {...stylex.props([typography.eyebrow, styles.capsMicroAccent])}>
               {mode} mode · Step {index + 1} of {steps.length}
             </p>
             <h2
@@ -145,7 +146,7 @@ export function TutorialOverlay({
           <button
             type="button"
             aria-label="Skip the walkthrough"
-            className={stylex.props(styles.inlineFlexCenterMid, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.inlineFlexCenterMid], motionStyles.editorMotion).className}
             onClick={finish}
           >
             <X aria-hidden="true" className={stylex.props(styles.size4).className} />
@@ -154,9 +155,8 @@ export function TutorialOverlay({
         <p {...stylex.props(styles.xsMuted)}>{step.body}</p>
         <div {...stylex.props(styles.flexCenterGap2)}>
           <Button
-            xstyle={styles.h8}
             disabled={index === 0}
-            size="sm"
+            size="md"
             variant="outline"
             onClick={() => setIndex((current) => Math.max(current - 1, 0))}
           >
@@ -165,7 +165,7 @@ export function TutorialOverlay({
           <Button
             autoFocus
             xstyle={styles.pushRight}
-            size="sm"
+            size="md"
             onClick={() =>
               last ? finish() : setIndex((current) => current + 1)
             }

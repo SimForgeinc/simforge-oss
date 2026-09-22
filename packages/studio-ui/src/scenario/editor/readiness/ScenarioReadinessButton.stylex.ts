@@ -10,8 +10,8 @@ export const styles = stylex.create({
   // font-mono text-[9px] text-amber-100/70
   mono: {
     fontFamily: text.fontMono,
-    fontSize: "9px",
-    color: "rgb(254 243 199 / 0.7)",
+    fontSize: text.sizeTag,
+    color: colors.warning,
   },
   // flex w-[min(420px,calc(100vw-1rem))] flex-col gap-0 overflow-hidden border-border bg-background p-0 sm:max-w-[420px]
   flexColClip: {
@@ -20,7 +20,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     gap: 0,
     overflow: "hidden",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.bg,
     padding: 0,
     maxWidth: {
@@ -31,7 +31,7 @@ export const styles = stylex.create({
   // border-b border-border px-5 py-5 pr-12
   ruleB: {
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s5,
     paddingRight: space.s12,
     paddingTop: space.s5,
@@ -49,7 +49,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     overflowX: "auto",
     borderBottomWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingLeft: space.s4,
     paddingRight: space.s4,
     paddingTop: space.s3,
@@ -61,7 +61,7 @@ export const styles = stylex.create({
     height: "auto",
     minWidth: "360px",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    backgroundColor: "hsl(var(--muted) / 0.6)",
+    backgroundColor: colors.fillSubtle,
     padding: space.s1,
   },
   // gap-1.5 rounded-none px-2 py-2 text-[11px]
@@ -71,13 +71,13 @@ export const styles = stylex.create({
     paddingRight: space.s2,
     paddingTop: space.s2,
     paddingBottom: space.s2,
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: "inherit",
   },
   // font-mono text-[9px] text-muted-foreground
   monoMuted: {
     fontFamily: text.fontMono,
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     color: colors.mutedForeground,
   },
   // min-h-0 flex-1 overflow-y-auto p-4
@@ -94,7 +94,7 @@ export const styles = stylex.create({
   // border border-border bg-card/45
   bordered: {
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.45)",
   },
   // flex items-center justify-between gap-3 border-b border-border/70 px-3 py-2.5
@@ -104,7 +104,7 @@ export const styles = stylex.create({
     justifyContent: "space-between",
     gap: space.s3,
     borderBottomWidth: stroke.hairline,
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2_5,
@@ -125,7 +125,7 @@ export const styles = stylex.create({
   },
   // text-[10px] text-muted-foreground
   muted: {
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   // px-3 py-3 text-xs text-muted-foreground
@@ -160,7 +160,7 @@ export const styles = stylex.create({
   mutedBreakWordsRelaxed: {
     marginTop: space.s1,
     overflowWrap: "break-word",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
@@ -168,24 +168,20 @@ export const styles = stylex.create({
   mt2BorderL2Border70: {
     marginTop: space.s2,
     borderLeftWidth: stroke.thick,
-    borderColor: "rgb(232 224 68 / 0.7)",
+    borderColor: colors.accentLine,
     paddingLeft: space.s2_5,
   },
   // text-[9px] font-semibold uppercase tracking-[0.16em] text-[#E8E044]
   capsSemibold: {
-    fontSize: "9px",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.accent,
   },
   // mt-1 break-words text-[11px] leading-relaxed text-foreground/85
   breakWordsRelaxed: {
     marginTop: space.s1,
     overflowWrap: "break-word",
-    fontSize: "11px",
+    fontSize: text.sizeMeta,
     lineHeight: text.lineRelaxed,
-    color: "hsl(var(--foreground) / 0.85)",
+    color: colors.ink,
   },
   // block w-full px-3 py-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
   blockWide: {
@@ -197,7 +193,7 @@ export const styles = stylex.create({
     paddingBottom: space.s3,
     backgroundColor: {
       default: null,
-      ":hover": "hsl(var(--muted) / 0.5)",
+      ":hover": colors.fillSubtle,
     },
   },
   // px-3 py-3
@@ -208,34 +204,34 @@ export const styles = stylex.create({
     paddingBottom: space.s3,
   },
   // h-8 gap-2 rounded-none border bg-card/90 px-3 shadow-sm backdrop-blur border-emerald-400/35 text-emerald-300 hover:bg-emerald-500/10
-  borderedGlassyGap2: {
+  triggerReady: {
     height: "2rem",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(52 211 153 / 0.35)",
+    borderColor: colors.positive,
     backgroundColor: {
       default: "hsl(var(--card) / 0.9)",
-      ":hover": "rgb(16 185 129 / 0.1)",
+      ":hover": colors.positiveWash,
     },
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    color: "rgb(110 231 183 / 1)",
+    color: colors.positive,
     boxShadow: shadows.elevationSm,
     backdropFilter: motion.blurMd,
   },
   // h-8 gap-2 rounded-none border bg-card/90 px-3 shadow-sm backdrop-blur border-amber-400/45 text-amber-200 hover:bg-amber-500/10
-  borderedGlassyGap22: {
+  triggerWarning: {
     height: "2rem",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(251 191 36 / 0.45)",
+    borderColor: colors.warning,
     backgroundColor: {
       default: "hsl(var(--card) / 0.9)",
-      ":hover": "rgb(245 158 11 / 0.1)",
+      ":hover": colors.warningWash,
     },
     paddingLeft: space.s3,
     paddingRight: space.s3,
-    color: "rgb(253 230 138 / 1)",
+    color: colors.warning,
     boxShadow: shadows.elevationSm,
     backdropFilter: motion.blurMd,
   },
@@ -265,6 +261,6 @@ export const styles = stylex.create({
       default: stroke.hairline,
       ":first-child": "0",
     },
-    borderTopColor: "hsl(var(--border) / 0.7)",
+    borderTopColor: colors.hairline,
   },
 });

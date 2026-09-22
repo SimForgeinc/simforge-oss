@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, motion, text } from "../../stylex/tokens.stylex";
 
 /**
  * The diagnostics live in a dropdown under the loading plate's telemetry, not
@@ -16,17 +16,14 @@ export const styles = stylex.create({
     paddingInline: 10,
     fontSize: 11,
     fontWeight: text.weightSemibold,
-    letterSpacing: "0.08em",
+    letterSpacing: text.trackingMetaNarrow,
     textTransform: "uppercase",
     cursor: "pointer",
-    color: "rgb(255 255 255 / 55%)",
+    color: colors.inkMuted,
     backgroundColor: "rgb(0 0 0 / 15%)",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.hairline,
-    ":hover": { color: colors.ink, borderColor: "rgb(255 255 255 / 20%)" },
+    ":hover": { color: colors.ink, borderColor: colors.hairlineStrong },
   },
-  toggleOpen: { color: colors.ink, borderColor: "rgb(255 255 255 / 20%)" },
+  toggleOpen: { color: colors.ink, borderColor: colors.hairlineStrong },
   chevron: { width: 12, height: 12, transitionProperty: "transform", transitionDuration: motion.durFast },
   chevronOpen: { transform: "rotate(180deg)" },
   content: {

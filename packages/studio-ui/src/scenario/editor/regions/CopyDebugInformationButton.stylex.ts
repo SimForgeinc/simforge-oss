@@ -18,7 +18,7 @@ export const styles = stylex.create({
     height: "2rem",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.9)",
     paddingLeft: space.s3,
     paddingRight: space.s3,

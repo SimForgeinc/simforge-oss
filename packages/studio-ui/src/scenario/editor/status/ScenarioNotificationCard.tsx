@@ -19,7 +19,7 @@ import { useCopyToClipboard } from "../../list/CopyableErrorMessage";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioNotificationCard.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { motionRecipe } from "../../../stylex/recipes.stylex";
+import { focus, motionRecipe, typography } from "../../../stylex/recipes.stylex";
 
 const SEVERITY_ICON = {
   error: CircleAlert,
@@ -66,7 +66,7 @@ export function ScenarioNotificationCard({
         />
         <div {...stylex.props(styles.fillNarrowable)}>
           <div {...stylex.props(styles.flexCenterGap15)}>
-            <span {...stylex.props(styles.capsMicroBold)}>
+            <span {...stylex.props([typography.eyebrow, styles.capsMicroBold])}>
               {source}
             </span>
             {count > 1 ? (
@@ -110,7 +110,7 @@ export function ScenarioNotificationCard({
               ? `${message} copied to clipboard`
               : `Copy ${message} to clipboard`
           }
-          className={stylex.props(styles.iconButton, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.iconButton], motionStyles.editorMotion).className}
           title={copied ? "Copied" : "Copy to clipboard"}
           onClick={() =>
             copy(
@@ -129,7 +129,7 @@ export function ScenarioNotificationCard({
         <button
           type="button"
           aria-label={`Dismiss ${message}`}
-          className={stylex.props(styles.iconButton, styles.iconButtonEdge, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.iconButton], styles.iconButtonEdge, motionStyles.editorMotion).className}
           onClick={() => onDismiss(keys)}
         >
           <X className={stylex.props(styles.size35).className} aria-hidden="true" />

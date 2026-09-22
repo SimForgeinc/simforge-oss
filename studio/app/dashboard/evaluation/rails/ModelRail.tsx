@@ -10,6 +10,7 @@ import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import type { ModelVersionRecord } from "@/app/lib/models/contracts";
 import { StatusBadge } from "../shared";
 import { styles } from "./rails.stylex";
+import { typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export function ModelRail({
   versions,
@@ -39,7 +40,7 @@ export function ModelRail({
           </>
         ),
         trailing: version.promotedRunId ? (
-          <span {...stylex.props(styles.promoted)}>promoted</span>
+          <span {...stylex.props([typography.eyebrow, styles.promoted])}>promoted</span>
         ) : undefined,
       })),
     },

@@ -7,7 +7,7 @@ export const styles = stylex.create({
     height: "100%",
     overflowY: "auto",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
     padding: space.s5,
     boxShadow: shadows.elevation2xl,
@@ -19,10 +19,6 @@ export const styles = stylex.create({
   },
   // text-xs uppercase tracking-meta text-muted-foreground
   capsXsMuted: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // mt-1 font-semibold
@@ -71,7 +67,7 @@ export const styles = stylex.create({
     marginBottom: space.s2,
     display: "flex",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     padding: space.s2,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
@@ -111,16 +107,11 @@ export const styles = stylex.create({
   ruleT: {
     marginTop: space.s5,
     borderTopWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     paddingTop: space.s4,
   },
   // text-xs font-semibold uppercase tracking-meta text-muted-foreground
   capsXsMuted2: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // mt-3 (the space-y-2 moved onto the rows)
@@ -157,6 +148,6 @@ export const styles = stylex.create({
   narrowableBreakAll: {
     minWidth: "0px",
     wordBreak: "break-all",
-    color: "hsl(var(--foreground) / 0.9)",
+    color: colors.ink,
   },
 });

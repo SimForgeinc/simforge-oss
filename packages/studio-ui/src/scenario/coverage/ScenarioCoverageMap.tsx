@@ -33,6 +33,7 @@ import {
 import { useStudioHost } from "../../host";
 import type { ScenarioMapGroup } from "../list/document-map-groups";
 import { styles } from "./ScenarioCoverageMap.stylex";
+import { hairline, typography } from "../../stylex/recipes.stylex";
 
 /**
  * Coverage ink, on the basemap's own ramp: `ramp.label` is the rung that reads
@@ -283,7 +284,7 @@ export function ScenarioCoverageMap({
                 onMouseLeave={() => setHoveredMapVersionId(null)}
               >
                 <span {...stylex.props(styles.labelName)}>{group.displayLabel}</span>
-                <span {...stylex.props(styles.labelCount)}>
+                <span {...stylex.props([typography.eyebrow, styles.labelCount])}>
                   {group.documents.length} {group.documents.length === 1 ? "scenario" : "scenarios"}
                 </span>
                 {selected && (onCreateScenario || onDriveHere) ? (
@@ -323,11 +324,11 @@ export function ScenarioCoverageMap({
         })}
       </MapCanvas>
 
-      {!coverage && <div {...stylex.props(styles.status)}>Locating maps…</div>}
+      {!coverage && <div {...stylex.props([hairline.all, styles.status])}>Locating maps…</div>}
 
       {(loadError || unplaced.length > 0) && (
-        <div {...stylex.props(styles.legend)}>
-          <span {...stylex.props(styles.legendTitle)}>Not on the map</span>
+        <div {...stylex.props([hairline.all, styles.legend])}>
+          <span {...stylex.props([typography.eyebrow, styles.legendTitle])}>Not on the map</span>
           {loadError && <span {...stylex.props(styles.legendRow)}>{loadError}</span>}
           {unplaced.map(({ group, reason }) => (
             <span key={group.groupKey} {...stylex.props(styles.legendRow)}>

@@ -23,7 +23,7 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
-    color: "rgb(242 242 242 / 1)",
+    color: colors.ink,
   },
   // shrink-0 border border-editor-line bg-editor-panel2 px-1.5 py-0.5 font-meta text-micro uppercase tracking-meta text-editor-muted
   tightCapsMeta: {
@@ -35,20 +35,10 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
   },
   // truncate font-meta text-micro uppercase tracking-meta text-editor-muted
   capsMetaMicro: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
   },
   // hidden shrink-0 items-center gap-2 font-meta text-micro uppercase tracking-meta text-editor-muted sm:flex
@@ -60,11 +50,6 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     gap: space.s2,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
   },
   // flex shrink-0 items-center gap-1.5
@@ -92,7 +77,7 @@ export const styles = stylex.create({
       default: space.s3,
       [layout.bpSm]: space.s4,
     },
-    color: "rgb(242 242 242 / 1)",
+    color: colors.ink,
     backdropFilter: motion.blurGlass,
   },
   // size-1.5 rounded-full
@@ -104,16 +89,11 @@ export const styles = stylex.create({
   capsMetaMicro2: {
     borderWidth: stroke.hairline,
     borderColor: colors.hairline,
-    backgroundColor: "rgb(10 10 10 / 0.9)",
+    backgroundColor: colors.scrimHeavy,
     paddingLeft: space.s3,
     paddingRight: space.s3,
     paddingTop: space.s2,
     paddingBottom: space.s2,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: "rgb(154 154 154 / 1)",
     boxShadow: shadows.elevationXl,
     backdropFilter: motion.blurGlass,

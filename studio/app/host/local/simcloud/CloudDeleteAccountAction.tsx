@@ -8,6 +8,7 @@ import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { plate } from "@/app/components/AppStage.stylex";
 import { form } from "../cloud/cloud-account.stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { focus, hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Deleting the SimCloud account, from the account pane it belongs to.
@@ -51,7 +52,7 @@ export function CloudDeleteAccountAction() {
 
   if (!armed) {
     return (
-      <section {...stylex.props(plate.root)} data-testid="simcloud-delete-account">
+      <section {...stylex.props([hairline.all, plate.root])} data-testid="simcloud-delete-account">
         <h2 {...stylex.props(plate.title)}>
           <TriangleAlert {...stylex.props(plate.icon)} aria-hidden="true" /> Delete this account
         </h2>
@@ -66,7 +67,7 @@ export function CloudDeleteAccountAction() {
             onClick={() => setArmed(true)}
             type="button"
             variant="outline"
-            xstyle={plate.button}
+            xstyle={[focus.ring, plate.button]}
           >
             <Trash2 {...stylex.props(plate.icon)} aria-hidden="true" />
             Delete account…
@@ -79,7 +80,7 @@ export function CloudDeleteAccountAction() {
   const ready = password.length > 0 && typed === CONFIRMATION_WORD && !cloud.loading;
 
   return (
-    <section {...stylex.props(plate.root)} data-testid="simcloud-delete-account">
+    <section {...stylex.props([hairline.all, plate.root])} data-testid="simcloud-delete-account">
       <h2 {...stylex.props(plate.title)}>
         <TriangleAlert {...stylex.props(plate.icon)} aria-hidden="true" /> Delete your SimCloud account?
       </h2>
@@ -102,7 +103,7 @@ export function CloudDeleteAccountAction() {
         </p>
         <div {...stylex.props(form.field)}>
           <label {...stylex.props(form.label)} htmlFor={passwordId}>Your password</label>
-          <Input
+          <Input variant="plate"
             id={passwordId}
             autoComplete="current-password"
             data-testid="simcloud-delete-password"
@@ -115,7 +116,7 @@ export function CloudDeleteAccountAction() {
         </div>
         <div {...stylex.props(form.field)}>
           <label {...stylex.props(form.label)} htmlFor={confirmId}>Type {CONFIRMATION_WORD} to confirm</label>
-          <Input
+          <Input variant="plate"
             id={confirmId}
             autoComplete="off"
             data-testid="simcloud-delete-confirmation"
@@ -130,7 +131,7 @@ export function CloudDeleteAccountAction() {
           <p {...stylex.props(form.error)} data-testid="simcloud-delete-error" role="alert">{cloud.error}</p>
         ) : null}
         <div {...stylex.props(form.row)}>
-          <Button data-testid="simcloud-delete-submit" disabled={!ready} type="submit" xstyle={plate.button}>
+          <Button data-testid="simcloud-delete-submit" disabled={!ready} type="submit" xstyle={[focus.ring, plate.button]}>
             {cloud.loading
               ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" />
               : <Trash2 {...stylex.props(plate.icon)} aria-hidden="true" />}
@@ -142,7 +143,7 @@ export function CloudDeleteAccountAction() {
             onClick={disarm}
             type="button"
             variant="outline"
-            xstyle={plate.button}
+            xstyle={[focus.ring, plate.button]}
           >
             Keep my account
           </Button>

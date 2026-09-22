@@ -56,7 +56,7 @@ export const styles = stylex.create({
     width: "100%",
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-3
   mt3: {
@@ -68,14 +68,6 @@ export const styles = stylex.create({
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: space.s3,
-  },
-  // text-xs font-semibold uppercase tracking-meta
-  capsXsSemibold: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
   // font-mono text-micro text-muted-foreground
   monoMicroMuted2: {
@@ -106,7 +98,7 @@ export const styles = stylex.create({
       default: colors.fillSubtle,
       ":hover": colors.fillStronger,
     },
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-4
   mt4: {
@@ -127,7 +119,7 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     padding: space.s2,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // aspect-video w-full bg-black
   wideVideo: {
@@ -155,13 +147,13 @@ export const styles = stylex.create({
     paddingBottom: space.s3,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // mt-3 border border-destructive/40 p-3 text-xs text-destructive
   xsDangerBordered: {
     marginTop: space.s3,
     borderWidth: stroke.hairline,
-    borderColor: "hsl(var(--destructive) / 0.4)",
+    borderColor: colors.critical,
     padding: space.s3,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
@@ -208,7 +200,7 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     backgroundColor: colors.fillSubtle,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0 flex-1 truncate
   fillTruncateNarrowable: {
@@ -226,7 +218,7 @@ export const styles = stylex.create({
       default: colors.fillSubtle,
       ":hover": colors.fillStronger,
     },
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // size-3.5
   size35: {
@@ -246,12 +238,8 @@ export const styles = stylex.create({
     paddingRight: space.s1_5,
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0
   narrowable: {
@@ -266,8 +254,8 @@ export const styles = stylex.create({
   // Applied off the same boolean that drives `aria-pressed`, which is what the
   // attribute selector was reading anyway.
   cameraChipSelected: {
-    borderColor: "hsl(var(--foreground) / 0.4)",
-    backgroundColor: "hsl(var(--foreground) / 0.1)",
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.fillStrong,
     color: colors.text,
   },
   // truncate font-mono text-micro

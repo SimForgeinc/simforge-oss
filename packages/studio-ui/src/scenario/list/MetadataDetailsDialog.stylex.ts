@@ -17,7 +17,7 @@ export const styles = stylex.create({
   closeButton: {
     position: "absolute",
     inset: "0",
-    backgroundColor: "rgb(0 0 0 / 0.7)",
+    backgroundColor: colors.scrimHeavy,
     backdropFilter: motion.blurSm,
   },
   // relative z-10 w-full max-w-lg border border-border bg-background p-5 shadow-2xl
@@ -26,9 +26,6 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     width: "100%",
     maxWidth: "32rem",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     backgroundColor: colors.bg,
     padding: space.s5,
     boxShadow: shadows.elevation2xl,
@@ -51,22 +48,12 @@ export const styles = stylex.create({
   labelMetaMicroUppercase: {
     marginTop: space.s4,
     display: "block",
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.mutedForeground,
   },
   // mt-4 block font-meta text-micro uppercase tracking-meta-wide text-muted-foreground
   labelMetaMicroUppercase2: {
     marginTop: space.s4,
     display: "block",
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.mutedForeground,
   },
   // mt-1.5 min-h-28 w-full resize-y border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50

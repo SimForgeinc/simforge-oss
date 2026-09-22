@@ -10,7 +10,7 @@ import {
 import { prepareReferenceImage } from "./asset-generation-images";
 import type { PreparedReferenceImage } from "./asset-generation-images";
 import { picker } from "./asset-surfaces.stylex";
-import { a11y, focus, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { a11y, focus, hairline, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export function AssetGenerateImagePicker({
   images,
@@ -96,7 +96,7 @@ export function AssetGenerateImagePicker({
           event.preventDefault();
           void chooseFiles(Array.from(event.dataTransfer.files));
         }}
-        {...stylex.props([focus.ringAccent, picker.drop])}
+        {...stylex.props([focus.ring, picker.drop])}
       >
         <ImagePlus {...stylex.props(picker.addIcon)} aria-hidden="true" />
         <span {...stylex.props(picker.label)}>{preparing ? "Preparing photos…" : "Add reference photos"}</span>
@@ -105,9 +105,9 @@ export function AssetGenerateImagePicker({
       {images.length > 0 ? (
         <div {...stylex.props(picker.images)} aria-label="Reference photo order">
           {images.map((image, index) => (
-            <div key={image.id} {...stylex.props(picker.image)}>
+            <div key={image.id} {...stylex.props([hairline.all, picker.image])}>
               <img src={image.previewUrl} alt={`Reference ${index + 1}: ${image.name}`} {...stylex.props(picker.imagePreview)} />
-              {index === 0 ? <span {...stylex.props(picker.front)}>Front view</span> : null}
+              {index === 0 ? <span {...stylex.props([typography.eyebrow, picker.front])}>Front view</span> : null}
               <button type="button" aria-label={`Remove ${image.name}`} onClick={() => {
                 URL.revokeObjectURL(image.previewUrl);
                 onChange(images.filter((candidate) => candidate.id !== image.id));

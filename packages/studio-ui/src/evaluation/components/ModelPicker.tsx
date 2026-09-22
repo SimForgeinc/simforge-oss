@@ -24,7 +24,7 @@ import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } fro
 import type { ComputeJobKind } from "@simforge-oss/evaluation/client";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 import { SelectMenu } from "../../components/ui/select-menu";
-import { textLayout } from "../../stylex/recipes.stylex";
+import { hairline, textLayout } from "../../stylex/recipes.stylex";
 
 export type ModelSelection = {
   family: ModelFamilyId;
@@ -127,7 +127,7 @@ export function ModelPicker({
                   target: cloudOnly || candidate.remoteOnly ? "runpod" : selection.target,
                 })
               }
-              {...stylex.props(s.buttonCard, active && s.buttonCardActive, disabled && s.buttonCardDisabled)}
+              {...stylex.props([hairline.all, s.buttonCard], active && s.buttonCardActive, disabled && s.buttonCardDisabled)}
             >
               <span {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>{candidate.displayName}</span>
               <span {...stylex.props(s.textXs, s.textMuted)}>
@@ -210,7 +210,7 @@ export function ModelPicker({
           return (
             <label
               key={offer.target}
-              {...stylex.props(s.targetCard, active && s.targetCardActive, !offer.available && s.targetCardUnavailable)}
+              {...stylex.props([hairline.all, s.targetCard], active && s.targetCardActive, !offer.available && s.targetCardUnavailable)}
             >
               <input
                 type="radio"

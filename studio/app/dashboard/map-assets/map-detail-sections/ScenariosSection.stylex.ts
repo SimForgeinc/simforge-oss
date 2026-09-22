@@ -12,11 +12,6 @@ export const styles = stylex.create({
     flex: "1 1 0%",
     alignItems: "center",
     gap: space.s1_5,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
   },
   chevron: {
@@ -35,9 +30,9 @@ export const styles = stylex.create({
     justifyContent: "center",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.3)" },
+    borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
   },
   editorIcon: {
     width: "0.75rem",
@@ -64,9 +59,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: space.s2,
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.border,
     padding: space.s2,
   },
   scenarioDetails: {

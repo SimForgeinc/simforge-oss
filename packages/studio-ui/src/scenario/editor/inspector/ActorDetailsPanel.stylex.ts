@@ -17,7 +17,7 @@ export const styles = stylex.create({
   ruleT: {
     minWidth: 0,
     borderTopWidth: stroke.hairline,
-    borderColor: "rgb(255 255 255 / 0.07)",
+    borderColor: colors.hairline,
     backgroundColor: "rgb(0 0 0 / 0.15)",
     paddingLeft: space.s3,
     paddingRight: space.s3,
@@ -45,8 +45,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.45)",
-    backgroundColor: "rgb(232 224 68 / 0.08)",
+    borderColor: colors.accentLineSubtle,
+    backgroundColor: colors.accentWash,
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
     paddingTop: space.s2,
@@ -60,7 +60,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     placeItems: "center",
     borderWidth: stroke.hairline,
-    borderColor: "rgb(232 224 68 / 0.25)",
+    borderColor: colors.accentLineSubtle,
     backgroundColor: colors.accentWash,
     color: colors.accent,
   },
@@ -76,16 +76,16 @@ export const styles = stylex.create({
   // block text-[10px] font-semibold text-white
   blockWhiteSemibold: {
     display: "block",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
     color: colors.ink,
   },
   // block text-[8px] leading-3 text-white/40
   block: {
     display: "block",
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     lineHeight: "0.75rem",
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // block
   block2: {
@@ -93,24 +93,15 @@ export const styles = stylex.create({
   },
   // text-[9px] uppercase tracking-[0.12em] text-white/40
   caps: {
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // mt-1 h-8 border-white/10 bg-white/[0.04] text-xs text-white
   xsWhite: {
     marginTop: space.s1,
-    height: "2rem",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: colors.fillSubtle,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
   },
   // text-[9px] leading-3 text-white/35
   textLeading3TextWhite35: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "0.75rem",
     color: colors.inkFaint,
   },
@@ -121,13 +112,7 @@ export const styles = stylex.create({
   },
   // h-8 border-white/10 bg-white/[0.04] pr-8 text-xs text-white
   xsWhite2: {
-    height: "2rem",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: colors.fillSubtle,
     paddingRight: space.s8,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
   },
   // pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/35
   absInert: {
@@ -136,7 +121,7 @@ export const styles = stylex.create({
     right: space.s2,
     top: "50%",
     transform: "translate(0, -50%)",
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     color: colors.inkFaint,
   },
   // flex items-baseline justify-between gap-2
@@ -149,13 +134,13 @@ export const styles = stylex.create({
   // font-mono text-[10px] tabular-nums text-[#E8E044]
   monoNums: {
     fontFamily: text.fontMono,
-    fontSize: "10px",
+    fontSize: text.sizeMicro,
     fontVariantNumeric: "tabular-nums",
     color: colors.accent,
   },
   // text-[8px] text-white/35
   textTextWhite35: {
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     color: colors.inkFaint,
   },
   // mt-2 flex items-center gap-2
@@ -167,9 +152,9 @@ export const styles = stylex.create({
   },
   // text-[8px] tabular-nums text-white/30
   nums: {
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     fontVariantNumeric: "tabular-nums",
-    color: "rgb(255 255 255 / 0.3)",
+    color: colors.inkFaint,
   },
   // h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-[#E8E044] [&::-moz-range-progress]:h-1.5 [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-[#E8E044] [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-neutral-950 [&::-moz-range-thumb]:bg-[#E8E044] [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-neutral-950 [&::-webkit-slider-thumb]:bg-[#E8E044] [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full
   fillRoundNarrowable: {
@@ -220,14 +205,14 @@ export const styles = stylex.create({
   },
   // truncate text-[9px] font-medium
   mediumTruncate: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     fontWeight: text.weightMedium,
   },
   // mt-1.5 block text-[9px] leading-3.5 text-white/35
   block3: {
     marginTop: space.s1_5,
     display: "block",
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: text.lineMicro,
     color: colors.inkFaint,
   },
@@ -263,12 +248,12 @@ export const styles = stylex.create({
     borderColor: colors.accent,
     boxShadow: {
       default: "0 0 0 1px rgb(232 224 68 / 1)",
-      ":focus-visible": shadows.ringAccent,
+      ":focus-visible": shadows.ring,
     },
   },
   // border-white/20
   paintSwatchIdle: {
-    borderColor: "rgb(255 255 255 / 0.2)",
+    borderColor: colors.hairlineStrong,
   },
   // flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 py-1 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   // The `group` marker is gone with the artwork's `group-hover:opacity-90`:
@@ -290,7 +275,7 @@ export const styles = stylex.create({
   },
   // border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]
   profileOptionActive: {
-    borderColor: "rgb(232 224 68 / 0.7)",
+    borderColor: colors.accentLine,
     backgroundColor: colors.accentWash,
     color: colors.accent,
   },
@@ -300,15 +285,15 @@ export const styles = stylex.create({
   profileOptionIdle: {
     borderColor: {
       default: colors.fillStrong,
-      ":hover": "rgb(255 255 255 / 0.25)",
+      ":hover": colors.hairlineStrong,
     },
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.025)",
+      default: colors.fillFaint,
       ":hover": colors.fill,
     },
     color: {
-      default: "rgb(255 255 255 / 0.55)",
-      ":hover": "rgb(255 255 255 / 0.85)",
+      default: colors.inkMuted,
+      ":hover": colors.ink,
     },
     [profileArtVars.opacity]: "0.55",
     ":hover": {

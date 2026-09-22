@@ -36,9 +36,5 @@ export const styles = stylex.create({
   },
   content: {
     marginTop: space.s4,
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineColor: { default: null, ":focus-visible": colors.ring },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
   },
 });

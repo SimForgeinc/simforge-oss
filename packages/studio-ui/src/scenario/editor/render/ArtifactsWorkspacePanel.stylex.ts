@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex min-h-0 flex-1 flex-col
@@ -20,7 +20,7 @@ export const styles = stylex.create({
     paddingRight: space.s4,
     paddingBottom: space.s3,
     paddingTop: space.s1,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderColor: colors.hairline,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -45,10 +45,7 @@ export const styles = stylex.create({
   },
   // h-9 pl-8 text-xs
   xs: {
-    height: "2.25rem",
     paddingLeft: space.s8,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
   },
   // min-h-0 flex-1 overflow-y-auto px-4 py-3
   fillScrollYShrinkable: {
@@ -63,14 +60,6 @@ export const styles = stylex.create({
   // min-h-64
   minH64: {
     minHeight: "16rem",
-  },
-
-  // text-micro uppercase tracking-meta
-  fieldMetaLabel: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 
   // w-40

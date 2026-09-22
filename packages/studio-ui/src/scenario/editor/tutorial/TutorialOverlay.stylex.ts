@@ -21,7 +21,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "min(22rem, calc(100vw - 2rem))",
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.popover,
     padding: space.s4,
     color: "hsl(var(--popover-foreground))",
@@ -40,11 +40,6 @@ export const styles = stylex.create({
   },
   // text-micro font-bold uppercase tracking-meta-wider text-primary
   capsMicroAccent: {
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.primary,
   },
   // mt-1 text-sm font-semibold
@@ -67,18 +62,6 @@ export const styles = stylex.create({
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--popover)), 0 0 0 3px hsl(var(--ring))",
     },
     backgroundColor: {
       default: null,
@@ -104,14 +87,9 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
   },
-  // h-8
-  h8: {
-    height: "2rem",
-  },
   // ml-auto h-8
   pushRight: {
     marginLeft: "auto",
-    height: "2rem",
   },
   // mt-2 text-micro text-muted-foreground
   microMuted: {

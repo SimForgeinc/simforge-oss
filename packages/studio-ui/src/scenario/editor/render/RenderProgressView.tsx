@@ -22,7 +22,7 @@ import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderProgressView.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { focus, textLayout } from "../../../stylex/recipes.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /** Faster than the gallery's 5s: this view exists to be watched, so it should keep up. */
 const DETAIL_POLL_MS = 2000;
@@ -132,7 +132,7 @@ export function RenderProgressView({
           <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
         </button>
         <div {...stylex.props(styles.fillNarrowable)}>
-          <p {...stylex.props(styles.capsMonoMicro)}>
+          <p {...stylex.props([typography.eyebrow, styles.capsMonoMicro])}>
             {detail ? renderJobLabel(detail) : "Render"}
           </p>
           <h2 {...stylex.props([textLayout.truncate, styles.inkTruncateBase])}>
@@ -143,7 +143,7 @@ export function RenderProgressView({
         {detail ? <RenderStateChip state={detail.jobState} label={progress?.label} /> : <CloudActivityIndicator />}
         {playable ? (
           <button
-            className={stylex.props([focus.ring, styles.inlineFlexCenterTight], motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, [typography.eyebrow, styles.inlineFlexCenterTight]], motionStyles.editorMotion).className}
             data-testid="render-progress-watch"
             onClick={() => onWatch(jobId)}
             type="button"
@@ -266,7 +266,7 @@ export function RenderProgressView({
             </dl>
 
             <div>
-              <h3 {...stylex.props(styles.capsMicroMuted)}>
+              <h3 {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>
                 Artifacts
                 <span {...stylex.props(styles.normalCase)}>
                   {detail.artifacts.length === 0

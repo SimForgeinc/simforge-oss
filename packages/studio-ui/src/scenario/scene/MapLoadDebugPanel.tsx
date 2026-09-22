@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { styles } from "./MapLoadDebugPanel.stylex";
 import { writeToClipboard } from "../list/CopyableErrorMessage";
+import { hairline } from "../../stylex/recipes.stylex";
 
 const STORAGE_KEY = "simforge.map-load-debug.expanded";
 
@@ -125,7 +126,7 @@ export function MapLoadDebugPanel({ source }: { source: MapLoadDebugSource }) {
   };
   const json = JSON.stringify(payload, null, 2);
   return <aside {...stylex.props(styles.panel)} aria-label="Map loading diagnostics" aria-live="off" data-testid="map-load-debug">
-    <button {...stylex.props(styles.toggle, expanded && styles.toggleOpen)} type="button" aria-expanded={expanded} aria-controls={contentId} aria-haspopup="true" onClick={() => {
+    <button {...stylex.props([hairline.all, styles.toggle], expanded && styles.toggleOpen)} type="button" aria-expanded={expanded} aria-controls={contentId} aria-haspopup="true" onClick={() => {
       const next = !expanded;
       setExpanded(next);
       try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { /* The panel still works without persistence. */ }

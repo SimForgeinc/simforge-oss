@@ -6,7 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./switch.stylex";
-import { motionRecipe } from "../../stylex/recipes.stylex";
+import { focus, motionRecipe } from "../../stylex/recipes.stylex";
 
 type SwitchStyle = stylex.StyleXStyles;
 
@@ -14,7 +14,7 @@ const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & { xstyle?: SwitchStyle }
 >(({ className, xstyle, ...props }, ref) => (
-  <SwitchPrimitives.Root ref={ref} {...mergeStyleProps(stylex.props([motionRecipe.colors, styles.root], xstyle), className)} {...props}>
+  <SwitchPrimitives.Root ref={ref} {...mergeStyleProps(stylex.props([motionRecipe.colors, [focus.ring, styles.root]], xstyle), className)} {...props}>
     <SwitchPrimitives.Thumb {...stylex.props([motionRecipe.transform, styles.thumb])} />
   </SwitchPrimitives.Root>
 ));

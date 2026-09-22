@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /**
@@ -18,9 +18,9 @@ export const styles = stylex.create({
    * bridges at full opacity; the tinted form is written out because a StyleX
    * variable has no channel left to apply the utility's alpha to.
    */
-  item: { marginTop: space.s2, backgroundColor: "hsl(var(--muted) / 0.3)", padding: space.s2 },
+  item: { marginTop: space.s2, backgroundColor: colors.fillFaint, padding: space.s2 },
   /** mt-2 border border-border bg-muted/20 p-2 */
-  itemBorder: { marginTop: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: "hsl(var(--muted) / 0.2)", padding: space.s2 },
+  itemBorder: { marginTop: space.s2, backgroundColor: colors.fillFaint, padding: space.s2 },
   /** mt-1 h-8 font-mono text-micro */
   monoInput: { marginTop: space.s1, height: "2rem", fontFamily: text.fontMono, fontSize: text.sizeMicro, lineHeight: text.lineMicro },
   stack: { marginTop: space.s2, display: "flex", flexDirection: "column", gap: space.s2 },
@@ -46,7 +46,7 @@ export const styles = stylex.create({
     marginLeft: "auto",
     color: {
       default: colors.primary,
-      ":hover": "hsl(var(--primary) / 0.8)",
+      ":hover": colors.accent,
     },
     opacity: {
       default: null,

@@ -94,6 +94,6 @@ export const styles = stylex.create({
     borderTopWidth: stroke.hairline,
     borderBottomWidth: stroke.hairline,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: colors.hairline,
   },
 });

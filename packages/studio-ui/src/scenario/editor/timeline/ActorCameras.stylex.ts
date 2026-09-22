@@ -11,7 +11,7 @@ export const styles = stylex.create({
     flexShrink: "0",
     overflowY: "auto",
     borderLeftWidth: stroke.hairline,
-    borderColor: colors.border,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
     padding: space.s3,
     color: colors.text,
@@ -20,11 +20,6 @@ export const styles = stylex.create({
   flexCenterCaps: {
     display: "flex",
     alignItems: "center",
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWide,
     color: colors.mutedForeground,
   },
   // mr-2 size-3
@@ -44,7 +39,6 @@ export const styles = stylex.create({
   // ml-auto h-7 text-primary hover:text-primary
   accentPushRight: {
     marginLeft: "auto",
-    height: "1.75rem",
     color: {
       default: colors.primary,
       ":hover": colors.primary,
@@ -57,8 +51,8 @@ export const styles = stylex.create({
     alignItems: "center",
     gap: space.s2,
     borderWidth: stroke.hairline,
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.3)",
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillFaint,
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s1_5,

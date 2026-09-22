@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { XStyle } from "@simforge-oss/studio-ui/components/stylex";
 import { segmented } from "./AssetGallerySegmented.stylex";
-import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { focus, hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * The page's two either/or switches — Models vs Maps, and All vs Mine.
@@ -35,7 +35,7 @@ export function AssetGallerySegmented<Value extends string>({
     <div
       role="group"
       aria-label={label}
-      {...stylex.props(segmented.group, xstyle)}
+      {...stylex.props([hairline.all, segmented.group], xstyle)}
     >
       {options.map((option) => {
         const Icon = option.icon;
@@ -47,8 +47,8 @@ export function AssetGallerySegmented<Value extends string>({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             {...stylex.props(
-              [motionRecipe.colors, segmented.option],
-              active ? segmented.optionActive : segmented.optionIdle,
+              [motionRecipe.colors, [focus.ring, segmented.option]],
+              active ? segmented.optionActive : [focus.ring, segmented.optionIdle],
             )}
           >
             {Icon ? <Icon aria-hidden="true" {...stylex.props(segmented.icon)} /> : null}
