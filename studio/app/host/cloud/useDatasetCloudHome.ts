@@ -14,6 +14,6 @@ export const useDatasetCloudHome: DatasetHomeHook = () => {
     state: "managed",
     workspaceId: identity.workspaceId,
     organizationId: identity.organizationId,
-    workspaceName: identity.displayName ?? result.capabilities.host.label,
+    workspaceName: identity.workspaceName ?? identity.workspaceId,
   };
 };

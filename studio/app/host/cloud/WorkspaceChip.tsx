@@ -31,9 +31,9 @@ const styles = stylex.create({
  * The tenant you are acting in, and the way to become a different one.
  *
  * Quick switch is a menu of every workspace the account belongs to; choosing
- * one activates it on the server and reloads at Apps, because every server
- * component on the page was rendered for the previous workspace. Details is
- * the workspace page itself — members, billing, usage, general.
+ * one activates it on the server and reloads the current route, because every
+ * server component on the page was rendered for the previous workspace.
+ * Details is the workspace page itself — members, billing, usage, general.
  */
 export function WorkspaceChip({ identity, onNavigate }: { identity: StudioHostIdentity; onNavigate?: () => void }) {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[] | null>(null);
@@ -62,8 +62,9 @@ export function WorkspaceChip({ identity, onNavigate }: { identity: StudioHostId
       setSwitching(null);
       return;
     }
-    onNavigate?.();
-    window.location.assign("/dashboard/apps");
+    // Reload only after the activation response has applied its session cookie.
+    // Do not redirect: the user may have entered another app while it settled.
+    window.location.reload();
   }
 
   const summary = switching
