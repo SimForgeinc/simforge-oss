@@ -37,6 +37,10 @@ import { normalizeAuthoringGraph } from "@simforge-oss/editor";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "./previewPolicy";
 
+/** A failed preview save is retried this many times (2 s, 4 s, 6 s) before the error stays on screen. */
+const PREVIEW_SAVE_RETRIES = 3;
+const PREVIEW_SAVE_RETRY_MS = 2_000;
+
 export type ScenarioRevisionEvidence = ScenarioRevisionEvidenceDto;
 
 export type ScenarioEvidenceRequest = {
@@ -59,6 +63,8 @@ export type ScenarioSharedPlayback = {
    * simulation preview a permanent 404 with nothing to explain it.
    */
   readonly savedSimulationError?: string | null;
+  /** Honest state of the current draft's browser simulation artifact. */
+  readonly savedSimulationStatus?: "saving" | "saved" | null;
   readonly inspecting: boolean;
   readonly setInspecting: (inspecting: boolean) => void;
   /** Status published by the one workspace-owned SUMO runtime. */
@@ -165,6 +171,10 @@ export function useScenarioSession({
   const [inspecting, setInspectingState] = useState(false);
   const [recordingCamera, setRecordingCamera] = useState<ScenarioRecordingCamera | null>(null);
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
+  const [savedSimulationStatus, setSavedSimulationStatus] = useState<"saving" | "saved" | null>(null);
+  const previewRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publishPreviewRef = useRef<((nextBundle: PlaybackBundle) => void) | null>(null);
+  const wasPlayingRef = useRef(false);
   const [evidenceRequest, setEvidenceRequest] = useState<ScenarioEvidenceRequest | null>(null);
   const [savedSimulationError, setSavedSimulationError] = useState<string | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
@@ -289,30 +299,48 @@ export function useScenarioSession({
     // Persist a trace only as the preview of content the server holds at that
     // exact version, once per (content, version). A trace of unsaved edits is
     // never uploaded under the last saved version; the autosave that lands
-    // later re-enters this effect and publishes the same in-memory trace.
-    const publishPreview = (nextBundle: PlaybackBundle) => {
+    // later re-enters this effect (and the play transition below) and publishes
+    // the same in-memory trace.
+    const publishPreview = (nextBundle: PlaybackBundle, attempt = 0) => {
       const persisted = persistedDocumentIdentityRef.current;
       if (persisted?.id !== document.id || persisted.contentIdentity !== sourceContentIdentity) return;
       const key = `${sourceContentIdentity}:${persisted.draftVersion}`;
       if (previewSaveRef.current?.key === key) return;
+      if (previewRetryTimeoutRef.current !== null) {
+        clearTimeout(previewRetryTimeoutRef.current);
+        previewRetryTimeoutRef.current = null;
+      }
       previewSaveRef.current?.abort.abort();
       const abort = new AbortController();
       previewSaveRef.current = { key, abort };
+      setSavedSimulationStatus("saving");
+      setSavedSimulationError(null);
       const target = { id: persisted.id, draftVersion: persisted.draftVersion };
       void previewRuntime()
         .then((runtime) => encodeSimulationPreview(nextBundle, target.draftVersion, runtime))
         .then(({ bytes, sha256 }) => studioHost.projects.saveSimulationPreview(target, bytes, sha256, abort.signal))
-        .then(() => { if (previewSaveRef.current?.key === key) setSavedSimulationError(null); })
+        .then(() => {
+          if (previewSaveRef.current?.key !== key) return;
+          setSavedSimulationStatus("saved");
+          setSavedSimulationError(null);
+        })
         .catch((reason: unknown) => {
           if (previewSaveRef.current?.key !== key) return;
-          // Clearing the key lets the next pass retry; reporting the reason is
-          // what stops a failed save from presenting as a document whose saved
-          // simulation is simply missing forever.
           previewSaveRef.current = null;
           if ((reason as { name?: string } | null)?.name === "AbortError") return;
+          setSavedSimulationStatus(null);
           setSavedSimulationError(reason instanceof Error ? reason.message : String(reason));
+          // A transient presign/upload failure must not leave the render tab
+          // claiming that this draft was never played: retry the same exact
+          // bundle a bounded number of times, then leave the error on screen.
+          if (attempt >= PREVIEW_SAVE_RETRIES) return;
+          previewRetryTimeoutRef.current = setTimeout(() => {
+            previewRetryTimeoutRef.current = null;
+            publishPreview(nextBundle, attempt + 1);
+          }, PREVIEW_SAVE_RETRY_MS * (attempt + 1));
         });
     };
+    publishPreviewRef.current = publishPreview;
     // The exact trace for this content is already on screen: a mode change,
     // a title edit or an autosave echo must not drop it, re-parse it or rebuild
     // the playback controller and its per-actor presentation tables.
@@ -385,6 +413,8 @@ export function useScenarioSession({
       if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
       bundleContentIdentityRef.current.set(saved, sourceContentIdentity);
       previewSaveRef.current = { key: `${sourceContentIdentity}:${document.draftVersion}`, abort: new AbortController() };
+      setSavedSimulationStatus("saved");
+      setSavedSimulationError(null);
       setBundle(saved);
       setMessage(null);
     }).catch((reason) => {
@@ -396,7 +426,12 @@ export function useScenarioSession({
     return () => abort.abort();
   }, [bundle, document, documentId, maps, studioHost]);
 
-  useEffect(() => () => { previewSaveRef.current?.abort.abort(); workerRef.current?.dispose(); }, []);
+  useEffect(() => () => {
+    clearTimeout(previewRetryTimeoutRef.current ?? undefined);
+    previewRetryTimeoutRef.current = null;
+    previewSaveRef.current?.abort.abort();
+    workerRef.current?.dispose();
+  }, []);
 
   useEffect(() => {
     if (!bundle) setSumoStatus(DISABLED_SUMO_STATUS);
@@ -477,6 +512,13 @@ export function useScenarioSession({
   });
   const presentationActive = inspecting || recordingCamera !== null;
   useEffect(() => {
+    const playing = runtimePlayback.state?.playing === true;
+    if (playing && !wasPlayingRef.current && bundle) {
+      publishPreviewRef.current?.(bundle);
+    }
+    wasPlayingRef.current = playing;
+  }, [bundle, runtimePlayback.state?.playing]);
+  useEffect(() => {
     const controller = runtimePlayback.controller;
     if (!controller) return;
     applyScenarioPresentationVisibility(
@@ -509,6 +551,10 @@ export function useScenarioSession({
     // A completed trace belongs to exactly one content identity. A content
     // change drops it so the previous revision's trace is never shown beside
     // new authoring state; a title edit or the autosave echo keeps it.
+    if (document && contentIdentity !== contentHash(document.content)) {
+      setSavedSimulationStatus(null);
+      setSavedSimulationError(null);
+    }
     setBundle((current) => (
       current && bundleContentIdentityRef.current.get(current) === contentIdentity ? current : null
     ));
@@ -652,8 +698,9 @@ export function useScenarioSession({
       state: runtimePlayback.state,
       error: runtimePlayback.error,
       preparationMessage: message,
-      savedSimulationError,
       inspecting,
+      savedSimulationError,
+      savedSimulationStatus,
       setInspecting,
       sumoStatus,
       setSumoStatus,

@@ -925,6 +925,9 @@ export function ScenarioEditorSurface({
       <SimulationIssueNotifications
         issues={simulationIssues.filter((issue) => issue.severity === "error")}
       />
+      <SimulationSaveStatusNotification
+        status={sharedPlayback?.savedSimulationStatus ?? null}
+      />
       <EditorSceneEnvironmentBridge
         active={active && environmentSceneReady}
         document={editorDocument}
@@ -1246,6 +1249,25 @@ function routeGroundPoint(
     groundY = sampled;
   }
   return { x: point.x, z: point.z };
+}
+
+function SimulationSaveStatusNotification({
+  status,
+}: {
+  status: "saving" | "saved" | null;
+}) {
+  useScenarioNotification("scenario-simulation-save-status", status
+    ? {
+        severity: status === "saving" ? "progress" : "success",
+        source: "simulation",
+        message: status === "saving"
+          ? "Saving simulation…"
+          : "Simulation saved for this version",
+        detail: null,
+        ttlMs: status === "saved" ? 3_000 : null,
+      }
+    : null);
+  return null;
 }
 
 function SimulationIssueNotifications({
