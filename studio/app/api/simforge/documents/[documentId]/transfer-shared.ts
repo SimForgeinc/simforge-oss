@@ -522,7 +522,7 @@ export async function transferOptions(
 }
 
 export type PreparedTransfer =
-  | { kind: "ready"; content: ScenarioTemplateV2; receipt: CrossMapVariationTransferReceiptInput }
+  | { kind: "ready"; title: string; content: ScenarioTemplateV2; receipt: CrossMapVariationTransferReceiptInput }
   | { kind: "refused"; message: string };
 
 export async function prepareTransfer(
@@ -546,10 +546,19 @@ export async function prepareTransfer(
   }
   const { candidate } = found;
 
-  const content = pinnedContent(ready.template, target, candidate.siteId, found.targetTopologyDigest);
+  // The editor writes the document title from the template's name, so the two
+  // are set together: otherwise opening the variation renames it back to its source.
+  const title = (input.title ?? `${source.title} Variation`).slice(0, 200);
+  const pinned = pinnedContent(ready.template, target, candidate.siteId, found.targetTopologyDigest);
+  const content = parseTemplate({
+    ...pinned,
+    meta: { ...pinned.meta, name: title },
+    ...(input.signalPlanDecision === "remove" ? { mapSignalPlans: [] } : {}),
+  });
   return {
     kind: "ready",
-    content: input.signalPlanDecision === "remove" ? parseTemplate({ ...content, mapSignalPlans: [] }) : content,
+    title,
+    content,
     receipt: {
       patternId: `portable:${ready.patternSha256.slice(0, 55)}`,
       patternSha256: ready.patternSha256,
