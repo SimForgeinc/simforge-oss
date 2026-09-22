@@ -219,7 +219,10 @@ mod seed_pinning_tests {
     use crate::template::parse_template;
 
     fn ltap() -> serde_json::Value {
-        serde_json::from_str(include_str!("../../../../examples/ltap-opposing.template.json")).unwrap()
+        serde_json::from_str(include_str!(
+            "../../../../examples/ltap-opposing.template.json"
+        ))
+        .unwrap()
     }
 
     fn draw(value: &serde_json::Value) -> ParamDraw {
@@ -232,7 +235,12 @@ mod seed_pinning_tests {
         let value = ltap();
         let template = parse_template(&value).unwrap();
         assert!(template.simulation.is_none());
-        let expected = cell_seed(template.template_id(), &params_version(&template), "site-a", 0);
+        let expected = cell_seed(
+            template.template_id(),
+            &params_version(&template),
+            "site-a",
+            0,
+        );
         assert_eq!(draw(&value).param_seed, expected);
     }
 

@@ -4366,6 +4366,22 @@ mod tests {
     }
 
     #[test]
+    fn dt_other_than_20ms_is_rejected() {
+        for dt in [0.05, 0.01, 0.2, 0.020001] {
+            let mut value = minimal();
+            value["dt"] = serde_json::json!(dt);
+            let error = parse_scenario_input_value(&value).expect_err("only 0.02 is accepted");
+            assert!(format!("{error:?}").contains("dt"), "{error:?}");
+        }
+        let mut value = minimal();
+        value["dt"] = serde_json::json!(0.02);
+        assert_eq!(
+            parse_scenario_input_value(&value).unwrap().dt,
+            SIMULATION_DT_S
+        );
+    }
+
+    #[test]
     fn defaults_materialise_like_zod() {
         let doc = parse_scenario_input_value(&minimal()).unwrap();
         assert_eq!(doc.clip_seconds, 20.0);
