@@ -880,6 +880,50 @@ export async function updateScenarioDocument(
     const content = withDescription(input.content ?? current.content, input.description);
     const schemaVersion = input.schemaVersion ?? current.schemaVersion;
     const mapVersionId = "mapVersionId" in input ? input.mapVersionId ?? null : current.mapVersionId;
+    const nextContentSha256 = canonicalContentSha256(content);
+    const simulationInputsUnchanged =
+      nextContentSha256 === current.contentSha256
+      && schemaVersion === current.schemaVersion
+      && mapVersionId === current.mapVersionId;
+    if (simulationInputsUnchanged) {
+      // Metadata/title autosaves must not invalidate deterministic simulation
+      // evidence. A draft version identifies execution inputs, not a no-op
+      // editor write; bumping it here made every saved preview look stale.
+      await tx.execute(
+        `UPDATE simforge.drafts
+         SET authoring_quality_id = :authoring_quality_id, updated_by_user_id = :user_id,
+             updated_at = NOW()
+         WHERE workspace_id = :workspace_id AND document_id = :document_id
+           AND draft_version = :expected_version`,
+        {
+          authoring_quality_id: input.authoringQualityId ?? current.authoringQualityId,
+          user_id: context.userId,
+          workspace_id: context.workspaceId,
+          document_id: documentId,
+          expected_version: input.expectedVersion,
+        },
+      );
+      await tx.execute(
+        `UPDATE simforge.documents
+         SET title = :title, schema_version = :schema_version, map_version_id = :map_version_id,
+             updated_by_user_id = :user_id, updated_at = NOW()
+         WHERE workspace_id = :workspace_id AND id = :document_id AND deleted_at IS NULL`,
+        {
+          title: input.title ?? current.title,
+          schema_version: schemaVersion,
+          map_version_id: mapVersionId,
+          user_id: context.userId,
+          workspace_id: context.workspaceId,
+          document_id: documentId,
+        },
+      );
+      const unchanged = await tx.queryOne<DocumentRow>(
+        `${DOCUMENT_SELECT} WHERE d.workspace_id = :workspace_id AND d.id = :document_id`,
+        { workspace_id: context.workspaceId, document_id: documentId },
+      );
+      if (!unchanged) return { kind: "not_found" as const };
+      return { kind: "updated" as const, document: documentDto(unchanged) };
+    }
     const draftRows = await tx.queryRows<{ document_id: string }>(
       `UPDATE simforge.drafts
        SET draft_version = draft_version + 1,
