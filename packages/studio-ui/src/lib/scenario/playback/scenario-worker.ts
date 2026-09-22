@@ -35,7 +35,7 @@ import {
 } from '@simforge-oss/engine';
 import { loadEngine } from '@simforge-oss/engine/browser';
 import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
-import { registerExternalCatalogEntry, type ExternalCatalogEntry } from '@simforge-oss/asset-catalog';
+import { CARLA_OBJECT_CATALOG, registerExternalCatalogEntry, type ExternalCatalogEntry } from '@simforge-oss/asset-catalog';
 import { ambientRobustnessGate, evaluateAmbientRobustness } from '@simforge-oss/playback/traffic';
 import type { OpenScenarioSnapshot, OpenScenarioSourceMapping } from '@simforge-oss/openscenario';
 import {
@@ -219,9 +219,9 @@ const scope = self as unknown as DedicatedWorkerGlobalScope;
 
 scope.onmessage = (event: MessageEvent<ScenarioWorkerMessage>): void => {
   const request = event.data;
-  // The worker holds its own module instance of the prop catalog, so gallery
-  // entries registered on the main thread are invisible here. Without this the
-  // materializer reports the id as unknown and substitutes a default model.
+  // The generated catalog is bundled into the worker so headless compilation
+  // does not depend on the browser having fetched /api/carla-objects first.
+  for (const entry of CARLA_OBJECT_CATALOG ?? []) registerExternalCatalogEntry(entry);
   for (const entry of request.externalCatalog ?? []) registerExternalCatalogEntry(entry);
   if (request.kind === 'cancel') {
     liveGeneration += 1;
