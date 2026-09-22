@@ -1,7 +1,7 @@
 import { discardResponseBody } from "@/app/lib/cloud/drain";
 import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { localObjectPath, readLocalObjectMetadata } from "@/app/lib/s3/s3-object";
-import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
+import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
 import { bundledMap, bundledMemberUrl } from "./bundled-maps";
 import { cloudPublicRequest, cloudRequest, cloudSessionScope, primeCloudSession } from "./connection";
 import {
@@ -167,10 +167,13 @@ export async function authorizeLocalMapAssetUrl(
   if (ref.kind === "sumo-runtime") {
     const key = `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/${ref.fileName}`;
     try {
-      const metadata = await readLocalObjectMetadata(LOCAL_ARTIFACT_BUCKET, key);
+      const metadata = await readLocalObjectMetadata(SUMO_RUNTIME_BUCKET, key);
       return { scope: "public", sha256: metadata.checksumSha256Hex, sizeBytes: metadata.sizeBytes };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      // A local file store reports ENOENT; an object store reports NotFound/404.
+      // Either way the runtime is not installed: 404, never a 502.
+      const missing = error as NodeJS.ErrnoException & { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (missing.code === "ENOENT" || missing.name === "NotFound" || missing.name === "NoSuchKey" || missing.$metadata?.httpStatusCode === 404) {
         throw new MapAccessError("NotFound", "sumo_runtime_asset_not_found");
       }
       throw error;
@@ -300,7 +303,7 @@ export async function resolveMapAssetSource(
 ): Promise<{ url: string; headers?: Record<string, string> } | { path: string }> {
   const ref = parseLocalMapAssetUrl(url);
   if (ref.kind === "sumo-runtime") {
-    return { path: localObjectPath(LOCAL_ARTIFACT_BUCKET, `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/${ref.fileName}`) };
+    return { path: localObjectPath(SUMO_RUNTIME_BUCKET, `uniscenario/sumo-runtime/${SUMO_RUNTIME_VERSION}/${ref.fileName}`) };
   }
   await primeCloudSession();
   const { map, member } = await resolveAuthorizedMapMember(ref);
