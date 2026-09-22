@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { control } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "./CopyableErrorMessage";
+import { focus } from "../../stylex/recipes.stylex";
 
 /**
  * The name + description editor, shared by datasets and documents.
@@ -121,7 +122,7 @@ export function MetadataDetailsDialog({
             }
           }}
           placeholder={descriptionPlaceholder}
-          {...stylex.props(styles.textareaSm)}
+          {...stylex.props([focus.ring, styles.textareaSm])}
           disabled={busy}
         />
         {error ? <CopyableErrorMessage message={error} {...stylex.props(styles.copyableerrormessageXs)} /> : null}

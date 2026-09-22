@@ -15,6 +15,7 @@ import {
 } from "./render-view-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderArtifactList.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * Artifact rows with previews and downloads — manifest #148.
@@ -147,7 +148,7 @@ function ArtifactRow({
       />
       <div {...stylex.props(styles.fillNarrowable)}>
         <p {...stylex.props(styles.xsInkMedium)} title={displayName}>{displayName}</p>
-        <p {...stylex.props(styles.microMutedTruncate)} title={`${metadata} · ${artifact.sha256}`}>
+        <p {...stylex.props([textLayout.truncate, styles.microMutedTruncate])} title={`${metadata} · ${artifact.sha256}`}>
           {metadata}
           {" · "}
           <span title={artifact.sha256}>{shortDigest(artifact.sha256)}</span>

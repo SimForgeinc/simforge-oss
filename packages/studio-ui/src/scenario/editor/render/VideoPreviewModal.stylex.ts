@@ -1,18 +1,18 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur
   fixedFlexCenter: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: "50",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "hsl(var(--background) / 0.9)",
-    padding: space.xl,
-    backdropFilter: "blur(8px)",
+    padding: space.s4,
+    backdropFilter: motion.blurMd,
   },
   // flex h-[85vh] w-full max-w-[1200px] flex-col overflow-hidden border border-border bg-card shadow-2xl
   flexColBordered: {
@@ -22,22 +22,22 @@ export const styles = stylex.create({
     maxWidth: "1200px",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
   },
   // flex items-center gap-3 border-b border-border px-5 py-3
   flexCenterRuleB: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
-    borderBottomWidth: "1px",
+    gap: space.s3,
+    borderBottomWidth: stroke.hairline,
     borderColor: colors.border,
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -46,22 +46,16 @@ export const styles = stylex.create({
   },
   // truncate text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   // truncate text-sm font-semibold text-card-foreground
   smSemiboldTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: "hsl(var(--card-foreground))",
   },
@@ -84,7 +78,7 @@ export const styles = stylex.create({
     height: "100%",
     placeItems: "center",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,

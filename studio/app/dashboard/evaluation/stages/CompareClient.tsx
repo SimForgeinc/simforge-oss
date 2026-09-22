@@ -34,6 +34,7 @@ import type {
 } from "@/app/lib/evaluation/contracts";
 import { formatScore, useJsonFetch } from "../shared";
 import { styles as residual } from "../route-residuals.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Metric ids the page shows, with the label a person reads. */
 const METRIC_LABELS: Record<string, string> = {
@@ -176,7 +177,7 @@ function ColumnCard({
               .map(([term, value]) => (
                 <div key={term} {...stylex.props(styles.divFlex)}>
                   <dt {...stylex.props(styles.dt)}>{term}</dt>
-                  <dd {...stylex.props(styles.ddTruncateMono)} title={value}>
+                  <dd {...stylex.props([textLayout.truncate, styles.ddTruncateMono])} title={value}>
                     {value}
                   </dd>
                 </div>

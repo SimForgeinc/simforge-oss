@@ -5,6 +5,7 @@ import { Copy, Check } from "lucide-react";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./CopyButton.stylex";
+import { focus, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 export function CopyButton({
   text,
   title = "Copy to clipboard",
@@ -30,7 +31,7 @@ export function CopyButton({
         type="button"
         onClick={copy}
         title={title}
-        {...mergeStyleProps(stylex.props(styles.button, styles.compact), className)}
+        {...mergeStyleProps(stylex.props([focus.ring, motionRecipe.colors, styles.button], styles.compact), className)}
       >
         {copied ? (
           <Check {...stylex.props(styles.compactIcon, styles.copiedIcon)} />
@@ -47,7 +48,7 @@ export function CopyButton({
       type="button"
       onClick={copy}
       title={title}
-      {...mergeStyleProps(stylex.props(styles.button), className)}
+      {...mergeStyleProps(stylex.props([focus.ring, motionRecipe.colors, styles.button]), className)}
     >
       {copied ? (
         <Check {...stylex.props(styles.iconOnlyIcon, styles.copiedIcon)} />

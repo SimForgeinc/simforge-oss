@@ -19,6 +19,7 @@ import { useCopyToClipboard } from "../../list/CopyableErrorMessage";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioNotificationCard.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { motionRecipe } from "../../../stylex/recipes.stylex";
 
 const SEVERITY_ICON = {
   error: CircleAlert,
@@ -61,7 +62,7 @@ export function ScenarioNotificationCard({
       <div {...stylex.props(styles.flexStartGap2)}>
         <Icon
           aria-hidden="true"
-          className={stylex.props(styles.icon, severity === "progress" && styles.iconSpinning).className}
+          className={stylex.props(styles.icon, severity === "progress" && [motionRecipe.spin, styles.iconSpinning]).className}
         />
         <div {...stylex.props(styles.fillNarrowable)}>
           <div {...stylex.props(styles.flexCenterGap15)}>

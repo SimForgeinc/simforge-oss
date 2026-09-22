@@ -29,6 +29,7 @@ import {
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import { toast } from "sonner";
 import { MapSwitcherDropdown } from "./MapSwitcherDropdown";
+import { a11y, focus, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export type ViewMode = "2d" | "3d";
 
@@ -76,7 +77,7 @@ export function MapDetailHeader({
         <div {...stylex.props(styles.headerNavigationGroup)}>
           <Link
             href="/dashboard/map-assets"
-            {...stylex.props(styles.backToMapsLink)}
+            {...stylex.props([focus.ring, motionRecipe.colors, styles.backToMapsLink])}
           >
             <ArrowLeft {...stylex.props(styles.sharedActionIcon)} />
             <span {...stylex.props(styles.backToMapsLabel)}>Back to Maps</span>
@@ -107,10 +108,10 @@ export function MapDetailHeader({
             <Button
               variant="ghost"
               size="icon"
-              xstyle={styles.actionsMenuTrigger}
+              xstyle={[motionRecipe.colors, styles.actionsMenuTrigger]}
             >
               <MoreHorizontal size={22} strokeWidth={1.75} />
-              <span {...stylex.props(styles.actionsMenuLabel)}>Actions</span>
+              <span {...stylex.props(a11y.srOnly)}>Actions</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" xstyle={styles.actionsMenuContent}>
@@ -126,7 +127,7 @@ export function MapDetailHeader({
                     disabled={populateBusy}
                   >
                     <RefreshCw
-                      {...stylex.props(styles.headerActionIcon, populateBusy && styles.spinning)}
+                      {...stylex.props(styles.headerActionIcon, populateBusy && motionRecipe.spin)}
                     />
                     Re-extract Metadata
                   </DropdownMenuItem>
@@ -142,7 +143,7 @@ export function MapDetailHeader({
                     disabled={refreshSearchIndexBusy}
                   >
                     <RefreshCw
-                      {...stylex.props(styles.headerActionIcon, refreshSearchIndexBusy && styles.spinning)}
+                      {...stylex.props(styles.headerActionIcon, refreshSearchIndexBusy && motionRecipe.spin)}
                     />
                     Refresh Search Index
                   </DropdownMenuItem>
@@ -156,7 +157,7 @@ export function MapDetailHeader({
                 disabled={thumbnailBusy}
               >
                 <Camera
-                  {...stylex.props(styles.headerActionIcon, thumbnailBusy && styles.pulsing)}
+                  {...stylex.props(styles.headerActionIcon, thumbnailBusy && motionRecipe.pulse)}
                 />
                 Generate Thumbnail
               </DropdownMenuItem>

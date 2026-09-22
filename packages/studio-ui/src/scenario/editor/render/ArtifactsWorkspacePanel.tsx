@@ -13,6 +13,7 @@ import { VideoPreviewModal } from "./VideoPreviewModal";
 import { artifactDisplayName } from "./render-view-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ArtifactsWorkspacePanel.stylex";
+import { a11y } from "../../../stylex/recipes.stylex";
 
 /**
  * The artifacts workspace — manifest #146. Every artifact in the workspace reachable from a visible
@@ -115,7 +116,7 @@ export function ArtifactsWorkspacePanel() {
     <div {...stylex.props(styles.flexColFill)} data-testid="scenario-artifacts-workspace">
       <div {...stylex.props(styles.flexEndTight)}>
         <label {...stylex.props(styles.fillNarrowable)}>
-          <span {...stylex.props(styles.srOnly)}>Search artifacts</span>
+          <span {...stylex.props(a11y.srOnly)}>Search artifacts</span>
           <span {...stylex.props(styles.relBlock)}>
             <Search
               aria-hidden="true"

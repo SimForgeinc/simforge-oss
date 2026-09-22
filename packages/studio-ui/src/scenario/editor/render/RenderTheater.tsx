@@ -28,6 +28,7 @@ import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderTheater.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * The detail sections beside the player.
@@ -173,7 +174,7 @@ export function RenderTheater({
         <div {...stylex.props(styles.flexCenterGap3)}>
           <button
             aria-label="Back to the render gallery"
-            className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.gridCenteredTight], motionStyles.editorMotion).className}
             data-testid="scenario-render-theater-back"
             onClick={onBack}
             type="button"
@@ -181,7 +182,7 @@ export function RenderTheater({
             <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
           <div {...stylex.props(styles.fillNarrowable)}>
-            <h2 {...stylex.props(styles.smInkSemibold)}>
+            <h2 {...stylex.props([textLayout.truncate, styles.smInkSemibold])}>
               {detail ? renderJobLabel(detail) : "Render"} ·{" "}
               {formatTimestamp(detail?.createdAt ?? null)}
             </h2>
@@ -199,7 +200,7 @@ export function RenderTheater({
           {cancellable ? (
             <button
               aria-label="Cancel this render"
-              className={stylex.props(styles.inlineFlexCenterTight, motionStyles.editorMotion).className}
+              className={stylex.props([focus.ring, styles.inlineFlexCenterTight], motionStyles.editorMotion).className}
               disabled={actionBusy}
               onClick={() => void cancel()}
               type="button"
@@ -214,7 +215,7 @@ export function RenderTheater({
           ) : (
             <button
               aria-label="Hide this render from the gallery"
-              className={stylex.props(styles.inlineFlexCenterTight2, motionStyles.editorMotion).className}
+              className={stylex.props([focus.ring, styles.inlineFlexCenterTight2], motionStyles.editorMotion).className}
               disabled={actionBusy}
               onClick={() => void hide()}
               type="button"
@@ -267,7 +268,7 @@ export function RenderTheater({
                   <track kind="captions" />
                 </video>
                 <figcaption {...stylex.props(styles.flexBetweenBaseline)}>
-                  <span {...stylex.props(styles.xsInkMedium)} title={artifactDisplayName(hero)}>
+                  <span {...stylex.props([textLayout.truncate, styles.xsInkMedium])} title={artifactDisplayName(hero)}>
                     {artifactDisplayName(hero)}
                   </span>
                   <span {...stylex.props(styles.tightCapsMicro)}>
@@ -296,7 +297,7 @@ export function RenderTheater({
                   return (
                     <button
                       aria-selected={active}
-                      className={stylex.props(active ? styles.relTightBordered : styles.relTightBordered2, motionStyles.editorMotion).className}
+                      className={stylex.props(active ? [focus.ring, styles.relTightBordered] : [focus.ring, styles.relTightBordered2], motionStyles.editorMotion).className}
                       key={artifact.id}
                       onClick={() => setHeroArtifactId(artifact.id)}
                       role="tab"
@@ -313,7 +314,7 @@ export function RenderTheater({
                       >
                         <track kind="captions" />
                       </video>
-                      <span {...stylex.props(styles.blockCapsMicro)}>
+                      <span {...stylex.props([textLayout.truncate, styles.blockCapsMicro])}>
                         {artifactDisplayName(artifact)}
                       </span>
                     </button>
@@ -336,7 +337,7 @@ export function RenderTheater({
                     aria-controls="scenario-render-rail-panel"
                     aria-selected={active}
                     id={`scenario-render-rail-tab-${id}`}
-                    className={stylex.props(active ? styles.xsInkMedium2 : styles.xsMutedMedium, motionStyles.editorMotion).className}
+                    className={stylex.props(active ? [focus.ring, styles.xsInkMedium2] : [focus.ring, styles.xsMutedMedium], motionStyles.editorMotion).className}
                     key={id}
                     onClick={() => setTab(id)}
                     role="tab"

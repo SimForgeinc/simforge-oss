@@ -7,6 +7,7 @@ import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
 import type { SelectedGeoJSONFeaturePayload } from "@/app/lib/maps/frontend/feature-inspection-types";
 import { useStreetFactsByFeatureId } from "@/app/lib/maps/frontend/use-street-facts-index";
 import { JsonTreeView } from "@/app/components/JsonTreeView";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapElementInspector component. */
 export type MapElementInspectorProps = {
@@ -69,7 +70,7 @@ export function MapElementInspector({
             type="button"
             onClick={onClearSelection}
             title="Clear selection"
-            {...stylex.props(styles.clearSelectionButton)}
+            {...stylex.props([motionRecipe.colors, styles.clearSelectionButton])}
           >
             <X {...stylex.props(styles.clearSelectionIcon)} />
           </button>
@@ -82,7 +83,7 @@ export function MapElementInspector({
           return (
             <div
               key={f.id}
-              {...stylex.props(styles.elementCard, isSelected ? styles.elementCardSelected : styles.elementCardIdle)}
+              {...stylex.props([motionRecipe.colors, styles.elementCard], isSelected ? styles.elementCardSelected : styles.elementCardIdle)}
             >
               <button
                 type="button"
@@ -97,9 +98,9 @@ export function MapElementInspector({
                 {...stylex.props(styles.featureToggleButton)}
               >
                 <ChevronRight
-                  {...stylex.props(styles.chevronLg, isExpanded && styles.rotate90)}
+                  {...stylex.props([motionRecipe.transform, styles.chevronLg], isExpanded && styles.rotate90)}
                 />
-                <span {...stylex.props(styles.featureSummary)} data-testid="selected-feature-summary">
+                <span {...stylex.props([textLayout.truncate, styles.featureSummary])} data-testid="selected-feature-summary">
                   {f.summary}
                 </span>
               </button>
@@ -123,7 +124,7 @@ export function MapElementInspector({
                         }).catch(() => {});
                       }}
                       title="Copy feature as GeoJSON"
-                      {...stylex.props(styles.copyGeoJsonButton)}
+                      {...stylex.props([motionRecipe.colors, styles.copyGeoJsonButton])}
                     >
                       {copiedFeatureId === f.id ? (
                         <Check {...stylex.props(styles.copiedIcon)} />

@@ -20,6 +20,7 @@ import type { ExecutionTarget } from "../presentation";
 import { RefusalNotice } from "./RefusalNotice";
 import type { UploadedArtifact, UploadProgress } from "../upload";
 import { uploadEvaluationInput } from "../upload";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 export type PreparedInput = {
   /** Empty for a local run: nothing is uploaded, so no artifact exists. */
@@ -217,7 +218,7 @@ export function InputPicker({
               <li key={`${file.name}-${index}`} {...stylex.props(s.flexGap3, s.dividedRow, s.px3py2, s.textSm)}>
                 <FileVideo aria-hidden="true" {...stylex.props(s.icon, s.textMuted)} />
                 <span {...stylex.props(s.w14, s.shrink0, s.textXs, s.uppercaseWide, s.textMuted)}>Input {index + 1}</span>
-                <span {...stylex.props(s.min0, s.flex1, s.truncate)}>{file.name}</span>
+                <span {...stylex.props(s.min0, s.flex1, textLayout.truncate)}>{file.name}</span>
                 <span {...stylex.props(s.shrink0, s.tabular, s.textMuted)}>{formatBytes(file.size)}</span>
               </li>
             ))}
@@ -232,7 +233,7 @@ export function InputPicker({
           <div {...stylex.props(s.flexBetween4, s.textXs, s.textMuted)}>
             <span {...stylex.props(s.inlineGap2, s.min0)}>
               <Loader2 aria-hidden="true" {...stylex.props(s.iconSm, s.spinner)} />
-              <span {...stylex.props(s.truncate)}>
+              <span {...stylex.props(textLayout.truncate)}>
                 {progress.phase === "hashing"
                   ? "Checksumming"
                   : progress.phase === "reserving"

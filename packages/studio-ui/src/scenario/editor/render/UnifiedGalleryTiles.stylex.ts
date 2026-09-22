@@ -1,11 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // absolute inset-0 z-10 focus-visible:outline-none
   absInset0Raised: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.raised,
     outline: {
       default: null,
@@ -19,8 +19,8 @@ export const styles = stylex.create({
   // absolute inset-0 render-glass
   absInset0: {
     position: "absolute",
-    inset: space.none,
-    backgroundColor: colors.glass,
+    inset: 0,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // size-full object-cover
@@ -46,48 +46,48 @@ export const styles = stylex.create({
   absFlexCenter: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.md,
-    top: space.md,
+    left: space.s2,
+    top: space.s2,
     zIndex: "20",
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // render-chip-strong px-1.5 py-0.5 text-micro uppercase tracking-meta text-secondary-foreground
   capsMicro: {
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.secondaryForeground,
-    backgroundColor: colors.chipStrong,
+    backgroundColor: colors.fillStronger,
   },
   // pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1 render-scrim px-2.5 pb-2 pt-6
   absFlexCol: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: "20",
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
-    paddingBottom: space.md,
-    paddingTop: space.xxl,
+    gap: space.s1,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
+    paddingBottom: space.s2,
+    paddingTop: space.s6,
     backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 75%) 0%, rgb(0 0 0 / 35%) 50%, transparent 100%)",
   },
   // render-chip h-1
   renderChipH1: {
     height: "0.25rem",
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   // h-full bg-primary
   tall: {
@@ -99,22 +99,19 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // shrink-0 text-micro uppercase tracking-meta text-muted-foreground
   tightCapsMicro: {
     flexShrink: "0",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -126,73 +123,61 @@ export const styles = stylex.create({
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: "2",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.danger,
   },
   // absolute inset-0 grid place-items-center render-glass
   absGridCentered: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     display: "grid",
     placeItems: "center",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1.5 render-scrim px-2.5 pb-2 pt-6
   absFlexCol2: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: "20",
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
-    paddingBottom: space.md,
-    paddingTop: space.xxl,
+    gap: space.s1_5,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
+    paddingBottom: space.s2,
+    paddingTop: space.s6,
     backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 75%) 0%, rgb(0 0 0 / 35%) 50%, transparent 100%)",
   },
   // flex items-center gap-1.5
   flexCenterGap15: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // motionStyles.editorMotion + inline-flex items-center gap-1 render-glass render-glass-hover border px-2 py-1 text-micro uppercase tracking-meta text-foreground backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   inlineFlexCenterCaps: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    gap: space.s1,
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.text,
-    backdropFilter: "blur(8px)",
+    backdropFilter: motion.blurMd,
     backgroundColor: {
-      default: colors.glass,
-      ":hover": colors.chipStrong,
+      default: colors.fillSubtle,
+      ":hover": colors.fillStronger,
     },
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px hsl(var(--ring))",
-    },
   },
   // size-3
   size3: {
@@ -201,12 +186,12 @@ export const styles = stylex.create({
   },
   // px-1.5 py-0.5 text-micro uppercase tracking-meta
   capsMicro2: {
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
   },
@@ -245,9 +230,9 @@ export const styles = stylex.create({
     width: "100%",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 10%)",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
   },
   // motionStyles.editorMotion + group relative flex aspect-video w-full flex-col render-glass render-surface-motion overflow-hidden border text-left focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background
   relFlexCol4: {
@@ -257,9 +242,9 @@ export const styles = stylex.create({
     width: "100%",
     flexDirection: "column",
     overflow: "hidden",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     textAlign: "left",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
     boxShadow: {
       default: null,

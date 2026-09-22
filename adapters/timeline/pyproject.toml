@@ -1,0 +1,39 @@
+[project]
+name = "simforge-oss-timeline"
+version = "0.1.0"
+description = "SimForge render timeline for Python renderers: the shared pose(timeline, actorId, t) sampler (Rust, PyO3) that makes every renderer replay the one authoritative trace identically."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "SimForge" }]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+# The extension crate sits beside the native workspace (excluded from it,
+# own lockfile). There is no pure-Python sampler: an install without the
+# extension is an install failure.
+manifest-path = "../../native/crates/simforge-timeline-python/Cargo.toml"
+module-name = "simforge_oss_timeline._native"
+python-source = "."
+python-packages = ["simforge_oss_timeline"]
+features = ["extension-module"]
+strip = true
+include = [
+    { path = "simforge_oss_timeline/py.typed", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_timeline/_native.pyi", format = ["sdist", "wheel"] },
+    { path = "tests/**/*", format = "sdist" },
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

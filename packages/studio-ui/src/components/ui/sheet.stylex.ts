@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, radii, text } from "../../stylex/tokens.stylex";
+import { colors, layers, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const fadeIn = stylex.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
 const fadeOut = stylex.keyframes({ from: { opacity: 1 }, to: { opacity: 0 } });
@@ -31,26 +31,26 @@ export const styles = stylex.create({
     animationDuration: { default: motion.durBase, "[data-state=closed]": motion.durInstant },
     ...stateMotion,
   },
-  top: { insetInline: 0, top: 0, borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: colors.border, animationName: { default: null, "[data-state=open]": slideTopIn, "[data-state=closed]": slideTopOut } },
-  bottom: { insetInline: 0, bottom: 0, borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: colors.border, animationName: { default: null, "[data-state=open]": slideBottomIn, "[data-state=closed]": slideBottomOut } },
-  left: { insetBlock: 0, left: 0, width: "75%", height: "100%", borderRightWidth: 1, borderRightStyle: "solid", borderRightColor: colors.border, animationName: { default: null, "[data-state=open]": slideLeftIn, "[data-state=closed]": slideLeftOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
-  right: { insetBlock: 0, right: 0, width: "75%", height: "100%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: colors.border, animationName: { default: null, "[data-state=open]": slideRightIn, "[data-state=closed]": slideRightOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
+  top: { insetInline: 0, top: 0, borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: colors.border, animationName: { default: null, "[data-state=open]": slideTopIn, "[data-state=closed]": slideTopOut } },
+  bottom: { insetInline: 0, bottom: 0, borderTopWidth: stroke.hairline, borderTopStyle: "solid", borderTopColor: colors.border, animationName: { default: null, "[data-state=open]": slideBottomIn, "[data-state=closed]": slideBottomOut } },
+  left: { insetBlock: 0, left: 0, width: "75%", height: "100%", borderRightWidth: stroke.hairline, borderRightStyle: "solid", borderRightColor: colors.border, animationName: { default: null, "[data-state=open]": slideLeftIn, "[data-state=closed]": slideLeftOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
+  right: { insetBlock: 0, right: 0, width: "75%", height: "100%", borderLeftWidth: stroke.hairline, borderLeftStyle: "solid", borderLeftColor: colors.border, animationName: { default: null, "[data-state=open]": slideRightIn, "[data-state=closed]": slideRightOut }, "@media (min-width: 640px)": { maxWidth: "24rem" } },
   close: {
-    position: "absolute", top: "1rem", right: "1rem", borderRadius: radii.sm, opacity: 0.7,
+    position: "absolute", top: "1rem", right: "1rem", opacity: 0.7,
     transitionProperty: "opacity", transitionDuration: motion.durBase,
     ":hover": { opacity: 1 },
     // `focus:outline-none` is Tailwind's transparent 2px outline, not `outline: none`,
     // so forced-colours mode still has an outline to repaint.
     ":focus": {
-      outlineWidth: "2px", outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px",
+      outlineWidth: stroke.thick, outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px",
       boxShadow: `0 0 0 2px ${colors.ring}, 0 0 0 4px ${colors.bg}`,
     },
     ":disabled": { pointerEvents: "none" }, "[data-state=open]": { backgroundColor: colors.secondary },
   },
   closeIcon: { width: "1rem", height: "1rem" },
-  header: { display: "flex", flexDirection: "column", gap: "0.5rem", textAlign: { default: "center", "@media (min-width: 640px)": "left" } },
-  footer: { display: "flex", flexDirection: "column-reverse", gap: "0.5rem", "@media (min-width: 640px)": { flexDirection: "row", justifyContent: "flex-end" } },
-  title: { fontSize: text.sizeLg, lineHeight: "1.75rem", fontWeight: text.weightSemibold, color: colors.text },
-  description: { fontSize: text.sizeSm, lineHeight: "1.25rem", color: colors.mutedForeground },
+  header: { display: "flex", flexDirection: "column", gap: space.s2, textAlign: { default: "center", [layout.bpSm]: "left" } },
+  footer: { display: "flex", flexDirection: "column-reverse", gap: space.s2, "@media (min-width: 640px)": { flexDirection: "row", justifyContent: "flex-end" } },
+  title: { fontSize: text.sizeLg, lineHeight: text.lineLg, fontWeight: text.weightSemibold, color: colors.text },
+  description: { fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.mutedForeground },
   srOnly: { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0 },
 });
