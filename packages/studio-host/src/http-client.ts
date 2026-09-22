@@ -60,6 +60,10 @@ const MAP_READ_KEY = "maps";
 const MAP_FOOTPRINT_READ_KEY = "map-footprints";
 const CAPABILITIES_READ_KEY = "capabilities";
 const MAP_SHARE_MS = 5 * 60_000;
+/** Per request the host waits this long on a simulation someone else holds (its route caps at 25 s). */
+const SIMULATION_WAIT_MS = 20_000;
+/** About five minutes of waiting on a queued simulation before a revision commit gives up. */
+const SIMULATION_WAIT_ATTEMPTS = 15;
 
 const { datasets, documents, maps, jobs: jobEndpoints, runtime: runtimeEndpoints } = STUDIO_HOST_PROTOCOL;
 
@@ -173,31 +177,6 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
   }
 
 
-  /**
-   * Resolve a reserved upload target. Local-object reservations are signed
-   * root-relative (`studio/app/lib/s3/local-object-auth.ts`), because the host
-   * the browser reached is the host that serves the object store and no
-   * absolute authority the server could invent would match every way of
-   * reaching it.
-   * A browser resolves that against the page; a non-browser caller has to be
-   * given the base it is already talking to, exactly like `call()`.
-   */
-  function uploadTarget(uploadUrl: string): string {
-    return uploadUrl.startsWith("/") ? `${baseUrl}${uploadUrl}` : uploadUrl;
-  }
-
-  async function uploadReserved(reservation: UploadReservationDto, bytes: Uint8Array, label: string, signal?: AbortSignal) {
-    if (!reservation.uploadRequired) return;
-    if (!reservation.uploadUrl) throw new Error(`${label} reservation has no upload URL`);
-    const uploaded = await fetchImpl(uploadTarget(reservation.uploadUrl), {
-      method: "PUT",
-      headers: reservation.headers,
-      body: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
-      signal,
-    });
-    if (!uploaded.ok) throw new Error(`${label} upload failed (${uploaded.status})`);
-  }
-
   const projects: StudioProjectService = {
     async listDatasets(signal) {
       const body = await shared.read(DATASET_READ_KEY, 0, () => call(datasets.list, {}), signal);
@@ -292,10 +271,10 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     async listRevisions(documentId, signal) {
       return (await call(documents.listRevisions, { params: { documentId }, signal })).revisions;
     },
-    createRevision(document, evidence, opts = {}) {
+    createRevision(document, opts = {}) {
       return call(documents.createRevision, {
         params: { documentId: document.id },
-        body: { expectedVersion: document.draftVersion, idempotencyKey: opts.idempotencyKey ?? randomUuid(), ...evidence },
+        body: { expectedVersion: document.draftVersion, idempotencyKey: opts.idempotencyKey ?? randomUuid() },
         signal: opts.signal,
       });
     },
@@ -312,49 +291,52 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
           revision: existing,
         };
       }
-      if (!input.evidence) {
-        throw new Error(
-          "Preparing a new revision requires explicit traffic evidence for this saved draft; opening render history and ordinary playback never create it.",
-        );
-      }
       const retrySuffix = existing ? `:retry:${existing.export.id}` : "";
-      return call(documents.createRevision, {
-        params: { documentId: input.documentId },
-        body: {
-          expectedVersion: expectedDraftVersion,
-          idempotencyKey: `ensure-revision:${input.documentId}:${expectedDraftVersion}${retrySuffix}`,
-          ...input.evidence,
-        },
-        signal: input.signal,
-      });
+      const draft = { id: input.documentId, draftVersion: expectedDraftVersion };
+      // The host simulates the draft (inline, or on a CPU runner when it is
+      // queued); nothing is uploaded. Wait for it, then freeze the revision.
+      for (let attempt = 0; attempt < SIMULATION_WAIT_ATTEMPTS; attempt += 1) {
+        const status = await projects.resolveSimulation(draft, { waitMs: SIMULATION_WAIT_MS, signal: input.signal });
+        input.onSimulation?.(status);
+        if (status.state === "failed") {
+          throw new StudioHostRequestError(status.failureCode, 422, status.message ?? `The scenario could not be simulated (${status.failureCode}).`);
+        }
+        if (status.state !== "succeeded") continue;
+        try {
+          return await call(documents.createRevision, {
+            params: { documentId: input.documentId },
+            body: {
+              expectedVersion: expectedDraftVersion,
+              idempotencyKey: `ensure-revision:${input.documentId}:${expectedDraftVersion}${retrySuffix}`,
+            },
+            signal: input.signal,
+          });
+        } catch (error) {
+          if (!(error instanceof StudioHostRequestError) || error.code !== "simulation_pending") throw error;
+        }
+      }
+      throw new StudioHostRequestError("simulation_timeout", 504, "The scenario's simulation did not finish in time; try again.");
     },
 
-    getSimulationPreview(documentId, signal) {
-      return call(documents.getSimulationPreview, { params: { documentId }, signal });
-    },
-    async saveSimulationPreview(document, bytes, sha256, signal) {
-      const params = { documentId: document.id };
-      const identity = { expectedVersion: document.draftVersion, sha256, sizeBytes: bytes.byteLength };
-      const reservation = await call(documents.reserveSimulationPreview, { params, body: identity, signal });
-      await uploadReserved(reservation, bytes, "Saved simulation", signal);
-      await call(documents.completeSimulationPreview, { params, body: { ...identity, artifactId: reservation.artifactId }, signal });
-    },
-    async uploadMaterializedTraffic(document, upload, sourceInputDigest, signal) {
-      const params = { documentId: document.id };
-      const identity = {
-        sha256: upload.sha256,
-        sizeBytes: upload.sizeBytes,
-        sourceInputDigest,
-        mapAssetId: upload.mapAssetId,
-        mapVersionId: upload.mapVersionId,
-      };
-      const reservation = await call(documents.reserveMaterializedTraffic, {
-        params,
-        body: { expectedVersion: document.draftVersion, ...identity },
-        signal,
+    resolveSimulation(document, opts = {}) {
+      return call(documents.resolveSimulation, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, ...(opts.waitMs === undefined ? {} : { waitMs: opts.waitMs }) },
+        signal: opts.signal,
       });
-      await uploadReserved(reservation, upload.bytes, "Materialized traffic", signal);
-      return call(documents.completeMaterializedTraffic, { params, body: { artifactId: reservation.artifactId, ...identity }, signal });
+    },
+    getSimulation(simKey, signal) {
+      return call(documents.getSimulation, { params: { simKey }, signal });
+    },
+    verifySimulation(simKey, verification, signal) {
+      return call(documents.verifySimulation, { params: { simKey }, body: verification, signal });
+    },
+    resolveRevisionSimulation(revisionId, opts = {}) {
+      return call(documents.resolveRevisionSimulation, {
+        params: { revisionId },
+        body: opts.waitMs === undefined ? {} : { waitMs: opts.waitMs },
+        signal: opts.signal,
+      });
     },
   };
 

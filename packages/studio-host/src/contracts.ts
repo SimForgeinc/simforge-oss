@@ -199,6 +199,59 @@ export type ScenarioSimulationPreviewDto = {
   createdAt: string;
 };
 
+/** How a scenario's traffic is produced for its authoritative simulation. */
+export type ScenarioSimulationTrafficProvider = "off" | "native" | "sumo";
+
+/**
+ * One authoritative, content-addressed simulation result. `simKey` is
+ * H(resolvedInputDigest, mapClosureDigest, engineSemVer, solverVer,
+ * traceSchema); `traceSha256` is the engine's canonical trace digest. The
+ * trace bytes are immutable and keyed by digest, so any consumer (editor
+ * cache, Evaluation, renders) can hold them under `traceSha256`.
+ */
+export type ScenarioSimulationResultDto = {
+  simKey: string;
+  traceSha256: string;
+  /** Trace of the authored actors alone; equals `traceSha256` unless external traffic (SUMO) was merged. */
+  authoredTraceSha256: string;
+  engineSemVer: string;
+  solverVer: string;
+  traceSchema: string;
+  resolvedInputDigest: string;
+  mapClosureDigest: string;
+  mapVersionId: string;
+  trafficProvider: ScenarioSimulationTrafficProvider;
+  trace: { mediaType: string; sizeBytes: number; gzipSha256: string; downloadUrl: string };
+  /**
+   * The resolution record (the exact input the trace was simulated from, its
+   * materialization manifest and ambient provenance): what a replayer builds
+   * the playback instance from. Content-addressed by `sha256` (gzip bytes).
+   */
+  resolution: { sizeBytes: number; sha256: string; downloadUrl: string };
+  /** Render timeline (scene-state + baked heights) once derived; null until then. */
+  timelineSha256: string | null;
+  producer: string;
+  createdAt: string;
+};
+
+/**
+ * Where the authoritative simulation for a document version (or revision)
+ * stands. `resimulated` marks a revision whose result was produced after it
+ * was committed, under the current engine semantics.
+ */
+export type ScenarioSimulationStatusDto =
+  | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto; resimulated?: boolean }
+  | { state: "queued" | "running"; requestKey: string }
+  | { state: "failed"; requestKey: string; failureCode: string; message: string | null };
+
+/** The editor's comparison of its local preview against the authoritative trace. */
+export type ScenarioSimulationVerificationDto = {
+  documentId?: string | null;
+  localTraceSha256: string;
+  /** Which local runtime produced the preview (engine version, ABI, user agent). */
+  localRuntime?: Record<string, string | number | boolean>;
+};
+
 export type ScenarioAmbientProvenanceDto =
   | {
       mode: "disabled";
@@ -422,6 +475,12 @@ export type ScenarioRenderJobDto = {
   workerAttestation: Record<string, unknown> | null;
   failureCode: string | null;
   failureDetail: unknown;
+  /**
+   * The authoritative simulation this render replays: the trace (and render
+   * timeline, once derived) every renderer samples. Absent on jobs submitted
+   * before worker-authoritative simulation.
+   */
+  simulation?: { simKey: string; traceSha256: string; timelineSha256: string | null } | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -27,6 +27,7 @@ import {
   type AmbientTrafficProvenance,
   type LaneGraph,
   type SimScenarioInput,
+  type SimTrace,
 } from '@simforge-oss/engine';
 import { engine, runtimeIdentity } from '@simforge-oss/engine/node';
 import { exportOpenScenarioXml14, type AsamExportResult, type AsamExportWarning } from '@simforge-oss/openscenario';
@@ -169,6 +170,50 @@ export interface ExecutionPackageRequest {
   readonly xsdPath: string;
   readonly validateXml?: OpenScenarioXmlValidator | undefined;
   readonly projections?: Readonly<Record<string, ExecutionProjection>> | undefined;
+  /**
+   * The revision's authoritative simulation. When present the package is a
+   * derived view of it: the resolved input comes from its resolution record
+   * and the XOSC trajectories from its trace. Nothing is resolved,
+   * materialized or simulated again, so no traffic engine runs here.
+   */
+  readonly simulation?: AuthoritativeSimulationInput | undefined;
+}
+
+/** The authoritative simulation an execution package is derived from. */
+export interface AuthoritativeSimulationInput {
+  readonly simKey: string;
+  readonly traceSha256: string;
+  readonly trace: SimTrace;
+  /** The `simforge.sim-resolution/v1` record the simulation stored beside its trace. */
+  readonly resolution: {
+    readonly resolvedInputDigest: string;
+    readonly resolvedInput: SimScenarioInput;
+    readonly ambientTraffic: AmbientTrafficProvenance;
+    readonly siteId: string;
+    readonly materialization: unknown;
+    readonly axisUntilClamps: readonly AxisUntilClamp[];
+  };
+}
+
+/** Rebuild the resolution from a stored record, verifying it names exactly the traced input. */
+export function resolutionFromSimulation(canonicalContent: unknown, simulation: AuthoritativeSimulationInput): ResolvedExecutionInput {
+  const { resolution, trace } = simulation;
+  const digest = executionSourceInputDigest(resolution.resolvedInput);
+  if (digest !== resolution.resolvedInputDigest || trace.header.inputHash !== digest) {
+    throw new Error(`simulation_resolution_mismatch: record ${resolution.resolvedInputDigest}, input ${digest}, trace ${trace.header.inputHash}`);
+  }
+  return {
+    template: parseTemplate(canonicalContent),
+    axisUntilClamps: resolution.axisUntilClamps,
+    concrete: {
+      input: resolution.resolvedInput,
+      siteId: resolution.siteId,
+      materialization: resolution.materialization,
+      ambientTraffic: resolution.ambientTraffic,
+    },
+    resolvedInput: resolution.resolvedInput,
+    executedInput: resolution.resolvedInput,
+  };
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -315,6 +360,7 @@ async function exportExecutionDocument(
     worldElevation: buildXodrElevationResolver(request.xodr, request.map.topology, preferredRoadsByActor),
     roadFile: `${request.map.mapId}.xodr`,
     executionMode: 'trajectory-replay',
+    ...(request.simulation ? { replayTrace: request.simulation.trace } : {}),
     trustedAmbientActorIds: resolved.concrete.ambientTraffic.actors.map((actor) => actor.id),
     author: template.meta.author ?? 'SimForge',
     description: template.meta.description || template.meta.name,
@@ -354,7 +400,9 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
   const runtimeMapName = request.runtimeMapName.trim();
   if (!runtimeMapName) throw new Error('runtime_map_identity_missing');
   const { ambient } = request;
-  const resolved = resolveExecutionInput(request.canonicalContent, request.map, ambient.mode, request.catalogEntries);
+  const resolved = request.simulation
+    ? resolutionFromSimulation(request.canonicalContent, request.simulation)
+    : resolveExecutionInput(request.canonicalContent, request.map, ambient.mode, request.catalogEntries);
   const canonicalBytes = new TextEncoder().encode(serializeTemplate(resolved.template));
   if (sha256(canonicalBytes) !== request.expectedContentSha256) throw new Error('revision_content_digest_mismatch');
   if (sha256(canonicalJsonBytes(ambient.ambientConfig)) !== ambient.configSha256) {
@@ -435,6 +483,7 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
     materialization: resolved.concrete.materialization,
     axisUntilClamps: resolved.axisUntilClamps,
     projections,
+    simulation: request.simulation ? { simKey: request.simulation.simKey, traceSha256: request.simulation.traceSha256 } : null,
   };
   const preliminary = [
     xosc,
@@ -466,6 +515,8 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
       overlapActorIds,
     },
     projections,
+    // The trace every renderer replays; the XOSC above is derived from it.
+    ...(request.simulation ? { simKey: request.simulation.simKey, traceSha256: request.simulation.traceSha256 } : {}),
     files: preliminary.map((item) => ({ kind: item.kind, mediaType: item.mediaType, sha256: item.sha256, sizeBytes: item.bytes.byteLength })),
   };
   const manifestArtifact = artifact('execution-manifest', 'application/json', canonicalJsonBytes(manifest));

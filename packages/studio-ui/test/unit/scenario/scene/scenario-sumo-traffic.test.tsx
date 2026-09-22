@@ -71,9 +71,6 @@ function session(provider: "sumo" | "native", sumoNetworkSha256: string | null) 
       sumoStatus: { phase: "disabled", actorCount: 0 }, setSumoStatus, overlays: null,
     },
     capture: { viewer: null, actorRenderer: null, loadedMapVersionId: "usmap_1" },
-    evidenceRequest: null,
-    completeRevisionEvidence: vi.fn(),
-    failRevisionEvidence: vi.fn(),
   } as unknown as ScenarioSession;
   return { value, setSumoStatus };
 }

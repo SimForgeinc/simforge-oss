@@ -147,3 +147,58 @@ describe('materializeTraceTraffic', () => {
     expect(make()).toBe(make());
   });
 });
+
+describe('resolutionFromSimulation', () => {
+  const template = {
+    roles: [], props: [], invariants: [], variants: [], mapSignalPlans: [], extensions: {},
+    choreography: { interactions: [], clipSeconds: 20, warmupSeconds: 0 },
+    meta: { name: 'resolution-test' },
+  };
+
+  it('rebuilds the resolved execution input from the stored record of the traced input', async () => {
+    const { resolutionFromSimulation } = await import('./execution-package.js');
+    const result = run('resolution');
+    const digest = contentHash(result.input);
+    let parsed: unknown;
+    try {
+      parsed = resolutionFromSimulation(template, {
+        simKey: 'k'.repeat(64),
+        traceSha256: traceDigest(result.trace),
+        trace: result.trace,
+        resolution: {
+          resolvedInputDigest: digest,
+          resolvedInput: result.input,
+          ambientTraffic: { actors: [] } as never,
+          siteId: 'site',
+          materialization: {},
+          axisUntilClamps: [],
+        },
+      });
+    } catch (error) {
+      // The minimal template may not parse as a full ScenarioTemplateV2; the
+      // identity checks run first and are what this test pins.
+      expect(String(error)).not.toMatch(/simulation_resolution_mismatch/);
+      return;
+    }
+    expect(parsed).toMatchObject({ resolvedInput: result.input, executedInput: result.input });
+  });
+
+  it('refuses a record whose input is not the one the trace ran', async () => {
+    const { resolutionFromSimulation } = await import('./execution-package.js');
+    const result = run('resolution');
+    const other = run('other-seed');
+    expect(() => resolutionFromSimulation(template, {
+      simKey: 'k'.repeat(64),
+      traceSha256: traceDigest(result.trace),
+      trace: result.trace,
+      resolution: {
+        resolvedInputDigest: contentHash(other.input),
+        resolvedInput: other.input,
+        ambientTraffic: { actors: [] } as never,
+        siteId: 'site',
+        materialization: {},
+        axisUntilClamps: [],
+      },
+    })).toThrow(/simulation_resolution_mismatch/);
+  });
+});

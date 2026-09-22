@@ -118,6 +118,12 @@ export interface PlaybackBundle {
     readonly rejectedRoadOverlap: number;
     readonly classes: Readonly<Record<string, number>>;
   };
+  /**
+   * Engine digest of the complete clip trace this bundle carries, when known:
+   * the local run's `traceSha256` (compared with the authoritative result's) or
+   * the authoritative result's own, for a bundle built from it.
+   */
+  readonly traceSha256?: string;
   /** Immutable export evidence produced from the same input, graph and trace. */
   /** Product/local export evidence is carried through without coupling playback to an adapter UI. */
   readonly openScenario?: OpenScenarioSnapshot;

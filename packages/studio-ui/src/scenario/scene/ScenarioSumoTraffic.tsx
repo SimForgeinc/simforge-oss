@@ -8,10 +8,8 @@ import {
   ambientSignalCycleSettingsFromExtensions,
   ambientTrafficProfileFromExtensions,
   ambientTrafficProviderFromExtensions,
-  BrowserMaterializedTrafficCapture,
   sumoOwnsPhysicalSignalStates,
 } from "@simforge-oss/playback/traffic";
-import type { MaterializedTrafficArtifactEnvelope } from "@simforge-oss/engine";
 import type { PlaybackBundle } from "@simforge-oss/playback";
 import { applyRestingHeading, createRestingHeading } from "@simforge-oss/playback";
 import { useSumoTraffic } from "../../lib/scenario/ambient/useSumoTraffic";
@@ -27,14 +25,11 @@ import type { ScenarioSession } from "./useScenarioSession";
  * The editor's browser SUMO host.
  *
  * Runs ambient SUMO traffic for the open scenario while it is edited, paused or
- * played, publishes its status to the session (the traffic panels read it),
- * lets SUMO drive the physical signal heads, and records the materialized
- * traffic a revision needs as evidence when the session asks for it.
- *
- * It used to live inside the idle list scene; removing that scene
- * (studio-ui: lazy 3D world) removed the only SUMO host, which left the
- * editor at "SUMO disabled" and every SUMO revision-evidence request pending
- * forever. It renders nothing.
+ * played, publishes its status to the session (the traffic panels read it)
+ * and lets SUMO drive the physical signal heads. It is display-only: a
+ * revision's SUMO traffic is produced on a worker at a fixed step and baked
+ * into the authoritative trace, never recorded from this browser run.
+ * It renders nothing.
  */
 export function ScenarioSumoTraffic({ session }: { session: ScenarioSession }) {
   const { map, document, bundle } = session;
@@ -57,9 +52,6 @@ export function ScenarioSumoTraffic({ session }: { session: ScenarioSession }) {
       actorRenderer={session.capture?.actorRenderer ?? null}
       sampleHeight={sampleHeight}
       playback={session.playback}
-      evidenceRequest={session.evidenceRequest}
-      onEvidenceComplete={session.completeRevisionEvidence}
-      onEvidenceFailure={session.failRevisionEvidence}
     />
   );
 }
@@ -71,9 +63,6 @@ export function SumoPreviewTraffic({
   actorRenderer,
   sampleHeight,
   playback,
-  evidenceRequest,
-  onEvidenceComplete,
-  onEvidenceFailure,
   onFallback,
 }: {
   map: MapEntry;
@@ -82,9 +71,6 @@ export function SumoPreviewTraffic({
   actorRenderer: ActorRenderer | null;
   sampleHeight: ((x: number, z: number) => number | null) | null;
   playback: ScenarioSession["playback"];
-  evidenceRequest: ScenarioSession["evidenceRequest"];
-  onEvidenceComplete: (requestKey: string, artifact: MaterializedTrafficArtifactEnvelope) => void;
-  onEvidenceFailure: (requestKey: string, reason: unknown) => void;
   onFallback?: (reason: string) => void;
 }) {
   const playbackState = usePlaybackControllerState(playback.controller);
@@ -94,16 +80,6 @@ export function SumoPreviewTraffic({
   const hasAuthoredMapSignals = (document.content.mapSignalPlans?.length ?? 0) > 0;
   const acceleratedSignalCycles = ambientSignalCycleSettingsFromExtensions(extensions).acceleratedSignalCycles;
   const allSignalsGreen = allSumoSignalsGreenFromExtensions(extensions);
-  const materializedTrafficCapture = useMemo(() => evidenceRequest && provider === "sumo"
-    ? new BrowserMaterializedTrafficCapture({
-        sourceInputDigest: bundle.instance.manifest.inputHash,
-        mapAssetId: map.sourceMapId,
-        mapVersionId: map.mapVersionId,
-        provider: { id: "sumo", version: "1.27.1", seed: String(profile.seed) },
-        fixedStepSeconds: bundle.trace.header.dt,
-        durationSeconds: bundle.endTime - bundle.startTime,
-      })
-    : undefined, [bundle, evidenceRequest, map.mapVersionId, map.sourceMapId, profile.seed, provider]);
   const metadata = useMemo(() => new Map(bundle.actors.map((actor) => [actor.id, actor])), [bundle]);
   const restingHeading = useMemo(() => createRestingHeading(bundle), [bundle]);
   const externalActors = (playback.controller?.currentActors ?? []).map((sampled) => {
@@ -195,15 +171,10 @@ export function SumoPreviewTraffic({
     focus,
     demandFocuses,
     onFallback: (reason) => {
-      if (evidenceRequest) onEvidenceFailure(evidenceRequest.key, reason);
       onFallback?.(reason);
     },
     acceleratedSignalCycles,
     allSignalsGreen,
-    materializedTrafficCapture,
-    onMaterializedTrafficComplete: evidenceRequest
-      ? (artifact) => onEvidenceComplete(evidenceRequest.key, artifact)
-      : undefined,
   });
   const resumeWhenSumoIsReady = useRef(false);
   useEffect(() => {
@@ -244,23 +215,5 @@ export function SumoPreviewTraffic({
     setSumoStatus(status);
   }, [setSumoStatus, status]);
   useEffect(() => () => setSumoStatus({ phase: "disabled", actorCount: 0 }), [setSumoStatus]);
-  const startedEvidenceKey = useRef<string | null>(null);
-  useEffect(() => {
-    if (!evidenceRequest || provider !== "sumo") {
-      startedEvidenceKey.current = null;
-      return;
-    }
-    if (!map.sumoNetworkSha256) {
-      onEvidenceFailure(evidenceRequest.key, new Error("This map has no immutable SUMO network for revision evidence."));
-      return;
-    }
-    if (!playback.controller || (status.phase !== "ready" && status.phase !== "running")) return;
-    if (startedEvidenceKey.current === evidenceRequest.key) return;
-    startedEvidenceKey.current = evidenceRequest.key;
-    playback.controller.pause();
-    playback.controller.seek(bundle.startTime);
-    playback.setInspecting(true);
-    playback.controller.play();
-  }, [bundle.startTime, evidenceRequest, map.sumoNetworkSha256, onEvidenceFailure, playback, provider, status.phase]);
   return null;
 }
