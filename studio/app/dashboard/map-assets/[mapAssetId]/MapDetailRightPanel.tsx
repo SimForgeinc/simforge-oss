@@ -14,6 +14,7 @@ import { InsightsTab } from "./detail-tabs/InsightsTab";
 import type { MapDetailData } from "@/app/lib/maps/frontend/use-map-asset-detail-data";
 import type { useMapAssetOperations } from "./useMapAssetOperations";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type DetailTab = "overview" | "layers" | "analytics" | "insights";
 
@@ -78,7 +79,7 @@ export function MapDetailRightPanel({
     return (
       <button
         onClick={() => setPanelOpen(true)}
-        {...stylex.props(styles.openPanelButton)}
+        {...stylex.props([motionRecipe.colors, styles.openPanelButton])}
       >
         <div {...stylex.props(styles.openPanelButtonContent)}>
           <PanelRightOpen {...stylex.props(styles.openPanelIcon)} />
@@ -135,7 +136,7 @@ export function MapDetailRightPanel({
                   xstyle={styles.tabTrigger}
                 >
                   <Icon {...stylex.props(styles.tabIcon)} />
-                  <span {...stylex.props(styles.tabLabel)}>{label}</span>
+                  <span {...stylex.props(textLayout.truncate)}>{label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>

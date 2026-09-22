@@ -9,7 +9,7 @@ export const styles = stylex.create({
   },
   // size-4
   tryAgainRotateCcw: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
 });

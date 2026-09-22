@@ -1,24 +1,18 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../../../stylex/tokens.stylex";
+import { colors, layers, space } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  errorCover: { position: "absolute", inset: 0, zIndex: 60 },
-  // size-5
-  size5: {
-    width: "1.25rem",
-    height: "1.25rem",
-  },
+  errorCover: { position: "absolute", inset: 0, zIndex: layers.editorChrome },
   // mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]
   round: {
-    marginTop: space.xxl,
+    marginTop: space.s6,
     height: "2.5rem",
-    borderRadius: "0",
     backgroundColor: {
       default: colors.accent,
       ":hover": colors.accentHover,
     },
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
     color: "rgb(0 0 0 / 1)",
   },
 });

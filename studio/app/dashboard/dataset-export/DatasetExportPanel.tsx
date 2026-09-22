@@ -20,6 +20,7 @@ import {
   type DatasetExportRecipeId,
 } from "@/app/lib/studio-shared/dataset-export-recipes";
 import type { ExportFormat } from "@/app/lib/studio-shared/dataset";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type ExportJob = {
   id: string;
@@ -399,11 +400,11 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
         </div>
         <div {...stylex.props(styles.actions)}>
           <button type="button" onClick={refreshExports} aria-busy={refreshing} disabled={refreshing || state === "loading"} {...stylex.props(styles.button)}>
-            <RefreshCw {...stylex.props(styles.iconSmall, (refreshing || state === "loading") && styles.iconSpin)} /> Refresh
+            <RefreshCw {...stylex.props(styles.iconSmall, (refreshing || state === "loading") && motionRecipe.spin)} /> Refresh
           </button>
           {latestJob ? (
             <button type="button" onClick={() => void handleDownload(latestJob)} disabled={!latestReady || downloadingId === latestJob.id} {...stylex.props(styles.button, styles.primaryButton)}>
-              {downloadingId === latestJob.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />}
+              {downloadingId === latestJob.id ? <LoaderCircle {...stylex.props(styles.iconSmall, motionRecipe.spin)} /> : <Download {...stylex.props(styles.iconSmall)} />}
               Download latest
             </button>
           ) : null}
@@ -428,7 +429,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
           </div>
           <div {...stylex.props(styles.queueRow)}>
             <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props(styles.button, styles.queueButton)}>
-              {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, styles.iconSpin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
+              {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, motionRecipe.spin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
               Queue export
             </button>
             <div {...stylex.props(styles.subtleMono)}>{selected.label} · {selected.format.replaceAll("_", " ")}</div>
@@ -454,7 +455,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
                   <li key={job.id} {...stylex.props(styles.job)}>
                     <div {...stylex.props(styles.jobTop)}>
                       <div {...stylex.props(styles.minWidth)}>
-                        <div {...stylex.props(styles.truncate)}>{recipeLabel(job.recipe, job.format)}</div>
+                        <div {...stylex.props([textLayout.truncate, styles.truncate])}>{recipeLabel(job.recipe, job.format)}</div>
                         <div {...stylex.props(styles.jobMeta)}>{shortId(job.id, 12)} · {formatJobTime(job.createdAt)}</div>
                       </div>
                       <span {...stylex.props(styles.statusSmall, exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
@@ -463,7 +464,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
                     <div {...stylex.props(styles.jobBottom)}>
                       <span {...stylex.props(styles.snapshotMono)}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
                       <button type="button" onClick={() => void handleDownload(job)} disabled={!downloadable || downloadingId === job.id} {...stylex.props(styles.downloadButton)}>
-                        {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
+                        {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, motionRecipe.spin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
                       </button>
                     </div>
                   </li>

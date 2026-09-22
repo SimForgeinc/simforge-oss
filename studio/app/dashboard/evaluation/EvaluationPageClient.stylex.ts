@@ -6,7 +6,7 @@ export const styles = stylex.create({
   organization: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   organizationLabel: {
     fontFamily: text.fontMeta,
@@ -14,18 +14,10 @@ export const styles = stylex.create({
     lineHeight: text.lineMicro,
     letterSpacing: text.trackingMetaWide,
     textTransform: "uppercase",
-    color: colors.textMuted,
-  },
-  /** The error overlay's message column, beside its retry. */
-  overlayMessage: {
-    minWidth: 0,
-    flex: "1 1 0%",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineNormal,
-    color: colors.text,
+    color: colors.mutedForeground,
   },
   stagePad: {
-    paddingInline: space.xxl,
-    paddingBlock: space.xxl,
+    paddingInline: space.s6,
+    paddingBlock: space.s6,
   },
 });

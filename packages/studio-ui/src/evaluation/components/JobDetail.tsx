@@ -29,6 +29,7 @@ import { FrameOverlay } from "./FrameOverlay";
 import { JobStatusBadge } from "./JobHistory";
 import { RefusalNotice } from "./RefusalNotice";
 import { TrajectoryPlot } from "./TrajectoryPlot";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 const RECORDED_HUMAN_REFERENCE_KINDS = ["dataset", "recorded-replay"];
 
@@ -552,7 +553,7 @@ export function JobDetail({
               ? Object.entries(provenanceModel).map(([field, value]) => (
                   <div key={field}>
                     <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>{field}</dt>
-                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
+                    <dd {...stylex.props(s.min0, textLayout.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
@@ -562,7 +563,7 @@ export function JobDetail({
               ? Object.entries(provenanceInput).map(([field, value]) => (
                   <div key={`input-${field}`}>
                     <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>input.{field}</dt>
-                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
+                    <dd {...stylex.props(s.min0, textLayout.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
@@ -572,7 +573,7 @@ export function JobDetail({
               ? Object.entries(provenanceRuntime).map(([field, value]) => (
                   <div key={`runtime-${field}`}>
                     <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>runtime.{field}</dt>
-                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
+                    <dd {...stylex.props(s.min0, textLayout.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
@@ -628,7 +629,7 @@ export function JobDetail({
             {job.result.artifacts.map((artifact) => (
               <li key={artifact.artifactId} {...stylex.props(s.artifactItem)}>
                 <span {...stylex.props(s.artifactRole)}>{artifact.role}</span>
-                <span {...stylex.props(s.artifactHash)}>
+                <span {...stylex.props([textLayout.truncate, s.artifactHash])}>
                   {artifact.sha256.slice(0, 16)}
                 </span>
                 <span {...stylex.props(s.artifactSize)}>

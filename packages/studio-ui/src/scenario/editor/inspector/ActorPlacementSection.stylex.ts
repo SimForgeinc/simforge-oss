@@ -6,7 +6,7 @@ export const styles = stylex.create({
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-muted-foreground
   muted: {
@@ -15,7 +15,7 @@ export const styles = stylex.create({
   // flex gap-2
   flexGap2: {
     display: "flex",
-    gap: space.md,
+    gap: space.s2,
   },
   // flex-1
   fill: {
@@ -30,6 +30,6 @@ export const styles = stylex.create({
   stackLg: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
   },
 });

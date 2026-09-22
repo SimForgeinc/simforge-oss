@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { DRIVE_CAMERA_KINDS, type DriveCameraKind } from "./cameras";
 import { DriveButton, DrivePill, driveChrome } from "./chrome";
 import { driveColors, driveRadius, driveText } from "./drive.stylex";
+import { layout, motion, space, stroke, text } from "../stylex/tokens.stylex";
 
 const CAMERA_LABELS: Readonly<Record<DriveCameraKind, string>> = {
   chase: "Trailing",
@@ -37,21 +38,21 @@ const styles = stylex.create({
   card: {
     width: "100%",
     maxWidth: "48rem",
-    padding: "1.75rem",
+    padding: space.s7,
   },
   header: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: "1rem",
+    gap: space.s4,
   },
   title: {
     margin: 0,
     fontFamily: driveText.fontDisplay,
-    fontSize: "1.5rem",
-    lineHeight: "2rem",
-    fontWeight: 600,
-    letterSpacing: "-0.025em",
+    fontSize: text.size2xl,
+    lineHeight: text.lineXl,
+    fontWeight: text.weightSemibold,
+    letterSpacing: text.trackingTight,
   },
   /** Which device is driving. Reads as an instrument line, not a sentence. */
   device: {
@@ -63,18 +64,18 @@ const styles = stylex.create({
   deviceLive: { color: driveColors.accent },
 
   body: {
-    marginTop: "1.5rem",
+    marginTop: space.s6,
     display: "grid",
-    gap: "1.5rem",
+    gap: space.s6,
     gridTemplateColumns: {
       default: null,
-      "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
+      [layout.bpSm]: "repeat(2, minmax(0, 1fr))",
     },
   },
   settings: {
     display: "flex",
     flexDirection: "column",
-    gap: "1.25rem",
+    gap: space.s5,
   },
   group: {
     margin: 0,
@@ -83,20 +84,20 @@ const styles = stylex.create({
     minInlineSize: 0,
   },
   groupLabel: {
-    marginBottom: "0.5rem",
+    marginBottom: space.s2,
     padding: 0,
     display: "block",
   },
   chips: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "0.375rem",
+    gap: space.s1_5,
   },
 
   audioRow: {
     display: "flex",
     alignItems: "center",
-    gap: "0.75rem",
+    gap: space.s3,
   },
   /** The mute button: a round icon control, so it is its own shape. */
   mute: {
@@ -105,22 +106,21 @@ const styles = stylex.create({
     height: "2.25rem",
     flexShrink: 0,
     placeItems: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
       default: driveColors.line,
       ":hover": driveColors.lineHoverStrong,
     },
-    borderRadius: driveRadius.pill,
     backgroundColor: "transparent",
     padding: 0,
     color: driveColors.textBody,
     cursor: "pointer",
     transitionProperty: "color, border-color",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: "none", ":focus-visible": "solid" },
-    outlineWidth: "2px",
+    outlineWidth: stroke.thick,
     outlineColor: driveColors.accent,
     outlineOffset: "2px",
   },
@@ -147,9 +147,9 @@ const styles = stylex.create({
   checkboxRow: {
     display: "flex",
     alignItems: "center",
-    gap: "0.5rem",
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
+    gap: space.s2,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
     color: driveColors.textControl,
     cursor: "pointer",
   },
@@ -166,13 +166,13 @@ const styles = stylex.create({
 
   keys: {
     margin: 0,
-    marginTop: "0.5rem",
+    marginTop: space.s2,
     display: "grid",
     gridTemplateColumns: "auto 1fr",
-    columnGap: "0.75rem",
-    rowGap: "0.25rem",
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
+    columnGap: space.s3,
+    rowGap: space.s1,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
   },
   keyPair: { display: "contents" },
   keyCap: {
@@ -185,11 +185,11 @@ const styles = stylex.create({
   },
 
   actions: {
-    marginTop: "1.75rem",
+    marginTop: space.s7,
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: "0.5rem",
+    gap: space.s2,
   },
   /** The way out sits apart from the ways back in. */
   exit: { marginLeft: "auto" },

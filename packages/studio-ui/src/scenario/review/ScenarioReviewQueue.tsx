@@ -19,6 +19,7 @@ import {
   ScenarioReviewQueuePageSchema,
   type ScenarioReviewQueueItem,
 } from "../../lib/scenario/review-contracts";
+import { motionRecipe, textLayout } from "../../stylex/recipes.stylex";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 
@@ -213,7 +214,7 @@ export function ScenarioReviewQueue() {
               disabled={loading}
               onClick={() => void loadInitial()}
             >
-              <RefreshCw {...stylex.props(loading && styles.refreshing)} />
+              <RefreshCw {...stylex.props(loading && motionRecipe.spin)} />
               Refresh
             </Button>
           </>
@@ -292,7 +293,7 @@ export function ScenarioReviewQueue() {
                     />
 
                     <div {...stylex.props(styles.div3)}>
-                      <h3 {...stylex.props(styles.h3TruncateSmSemibold)}>{item.title}</h3>
+                      <h3 {...stylex.props([textLayout.truncate, styles.h3TruncateSmSemibold])}>{item.title}</h3>
                       <p {...stylex.props(styles.pXs)}>
                         {item.mapLabel ?? "No map"} · {formatDate(item.createdAt)}
                       </p>

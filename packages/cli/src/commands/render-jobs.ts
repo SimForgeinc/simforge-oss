@@ -19,7 +19,15 @@ import { CliError, EXIT } from '../errors.js';
 import { emit, emitLines, pad } from '../output.js';
 import { downloadTo, extensionFor, hostCall, hostSession, pollUntil, requireSubcommand, type HostSession } from './local.js';
 
-export const RENDER_JOB_COMMANDS = ['list', 'status', 'wait', 'cancel', 'download'] as const;
+import { RENDER_TIMELINE_COMMANDS, RENDER_TIMELINE_HELP, renderTimelineCommand } from './render-timeline.js';
+
+/**
+ * Verbs `main.ts` routes to {@link renderJobsCommand}. The render-timeline
+ * verbs (`timeline`, `sample`, `parity`) ride this list so they dispatch
+ * without touching `main.ts`; `renderJobsCommand` hands them straight on.
+ */
+const JOB_VERBS = ['list', 'status', 'wait', 'cancel', 'download'] as const;
+export const RENDER_JOB_COMMANDS = [...JOB_VERBS, ...RENDER_TIMELINE_COMMANDS] as const;
 
 const TERMINAL: Record<ScenarioRenderJobDto['status'], true | undefined> = { succeeded: true, failed: true, cancelled: true, queued: undefined, leased: undefined, running: undefined };
 
@@ -86,6 +94,7 @@ export const RENDER_GROUP_HELP = {
       ],
     },
     { name: 'hash', summary: 'canonical SHA-256 identity of a render intent', usage: ['simforge render hash <render-intent.json>'] },
+    ...RENDER_TIMELINE_HELP,
   ],
   output: {
     default: 'JSON on stdout (--json states it explicitly)',
@@ -303,7 +312,8 @@ function jobModeFlag(value: string | undefined): ScenarioRenderJobMode | undefin
 }
 
 export async function renderJobsCommand(argv: readonly string[]): Promise<number> {
-  const sub = requireSubcommand('render', argv[0], RENDER_JOB_COMMANDS);
+  if ((RENDER_TIMELINE_COMMANDS as readonly string[]).includes(argv[0] ?? '')) return renderTimelineCommand(argv);
+  const sub = requireSubcommand('render', argv[0], JOB_VERBS);
   const extra = { list: ['scenario', 'revision', 'job-mode', 'limit'], wait: ['timeout'], download: ['out'] }[sub as string] ?? [];
   const args = parseArgs(argv.slice(1), { booleans: ['pretty', 'json'], values: ['data-root', ...extra] });
   const id = args.positionals[0];

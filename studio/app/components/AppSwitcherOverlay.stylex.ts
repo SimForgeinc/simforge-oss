@@ -13,20 +13,14 @@ import * as stylex from "@stylexjs/stylex";
 import {
   colors,
   layers,
-  text,
-  space,
   layout,
+  motion,
+  space,
+  stroke,
+  text,
 } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-/** The breakpoints this overlay responds to. */
-const SM = "@media (min-width: 640px)";
-const LG = "@media (min-width: 1024px)";
 /** Wide enough for utilities and account segments to share one bar line. */
 const XL = "@media (min-width: 1200px)";
-const REDUCED = "@media (prefers-reduced-motion: reduce)";
-
-/** Tailwind's default transition curve and its `transition-colors` set. */
-const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 const COLOR_TRANSITION =
   "color, background-color, border-color, text-decoration-color, fill, stroke";
 
@@ -37,9 +31,6 @@ const COLOR_TRANSITION =
  */
 const FOCUS_RING = `0 0 0 2px ${colors.accent}`;
 const FOCUS_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
-
-/** The hairline every card edge and bar divider is drawn with. */
-const HAIRLINE = "rgb(255 255 255 / 0.08)";
 /** The bar's one height: every utility and segment is exactly this tall. */
 const BAR_HEIGHT = "3.25rem";
 
@@ -83,11 +74,11 @@ export const styles = stylex.create({
     inset: 0,
     zIndex: layers.appSwitcher,
     overflow: "hidden",
-    animationDuration: "150ms",
+    animationDuration: motion.durStandard,
     animationName: {
       default: null,
-      "[data-state=open]": { default: enter, [REDUCED]: "none" },
-      "[data-state=closed]": { default: exit, [REDUCED]: "none" },
+      "[data-state=open]": { default: enter, [layout.reducedMotion]: "none" },
+      "[data-state=closed]": { default: exit, [layout.reducedMotion]: "none" },
     },
   },
 
@@ -108,20 +99,20 @@ export const styles = stylex.create({
     inset: 0,
     zIndex: layers.appSwitcherTop,
     overflow: "hidden",
-    color: "#fff",
-    outlineWidth: "2px",
+    color: colors.ink,
+    outlineWidth: stroke.thick,
     outlineStyle: "solid",
     outlineColor: "transparent",
     outlineOffset: "2px",
     animationDuration: {
       default: null,
-      "[data-state=open]": "180ms",
-      "[data-state=closed]": "120ms",
+      "[data-state=open]": motion.durBase,
+      "[data-state=closed]": motion.durFast,
     },
     animationTimingFunction: {
       default: null,
-      "[data-state=open]": "ease-out",
-      "[data-state=closed]": "ease-in",
+      "[data-state=open]": motion.easeOut,
+      "[data-state=closed]": motion.easeIn,
     },
     animationFillMode: {
       default: null,
@@ -130,22 +121,9 @@ export const styles = stylex.create({
     },
     animationName: {
       default: null,
-      "[data-state=open]": { default: centerFadeIn, [REDUCED]: "none" },
-      "[data-state=closed]": { default: centerFadeOut, [REDUCED]: "none" },
+      "[data-state=open]": { default: centerFadeIn, [layout.reducedMotion]: "none" },
+      "[data-state=closed]": { default: centerFadeOut, [layout.reducedMotion]: "none" },
     },
-  },
-
-  /** `sr-only`: the dialog's accessible name and description. */
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
   },
 
   /**
@@ -158,23 +136,15 @@ export const styles = stylex.create({
    */
   close: {
     position: "fixed",
-    right: { default: "1.25rem", [SM]: "2rem" },
-    top: { default: "1.25rem", [SM]: "2rem" },
-    zIndex: 20,
+    right: { default: "1.25rem", [layout.bpSm]: "2rem" },
+    top: { default: "1.25rem", [layout.bpSm]: "2rem" },
+    zIndex: layers.float,
     display: "grid",
     width: "2.5rem",
     height: "2.5rem",
     placeItems: "center",
-    color: { default: "rgb(255 255 255 / 0.4)", ":hover": "#fff" },
-    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.06)" },
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: EASE,
-    outlineWidth: { default: null, ":focus-visible": "2px" },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
+    color: { default: "rgb(255 255 255 / 0.4)", ":hover": colors.ink },
+    backgroundColor: { default: null, ":hover": colors.fill },
   },
   // size-5
   closeIcon: { width: "1.25rem", height: "1.25rem" },
@@ -189,22 +159,22 @@ export const styles = stylex.create({
     marginInline: "auto",
     display: "grid",
     alignContent: "safe center",
-    gap: "1rem",
+    gap: space.s4,
     minHeight: "100%",
     height: "100%",
     overflow: "hidden",
     width: "100%",
     maxWidth: "1080px",
-    paddingInline: { default: layout.gutterNarrow, [SM]: layout.gutter },
-    paddingBlock: space.xxl,
+    paddingInline: { default: layout.gutterNarrow, [layout.bpSm]: layout.gutter },
+    paddingBlock: space.s6,
   },
 
   /** The three app cards: stacked on narrow viewports, one row of equal cards from LG. */
   tabs: {
     display: "grid",
-    gap: "0.75rem",
-    gridTemplateColumns: { default: "minmax(0, 1fr)", [LG]: "repeat(3, minmax(0, 1fr))" },
-    gridAutoRows: { default: null, [LG]: "1fr" },
+    gap: space.s3,
+    gridTemplateColumns: { default: "minmax(0, 1fr)", [layout.bpLg]: "repeat(3, minmax(0, 1fr))" },
+    gridAutoRows: { default: null, [layout.bpLg]: "1fr" },
   },
 
   /**
@@ -215,24 +185,24 @@ export const styles = stylex.create({
   tab: {
     position: "relative",
     display: "grid",
-    gridTemplateColumns: { default: "7rem minmax(0, 1fr)", [LG]: "minmax(0, 1fr)" },
-    gridTemplateRows: { default: null, [LG]: "auto 1fr" },
+    gridTemplateColumns: { default: "7rem minmax(0, 1fr)", [layout.bpLg]: "minmax(0, 1fr)" },
+    gridTemplateRows: { default: null, [layout.bpLg]: "auto 1fr" },
     minWidth: 0,
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     textAlign: "left",
-    transitionProperty: { default: "border-color, background-color, box-shadow", [REDUCED]: "none" },
+    transitionProperty: { default: "border-color, background-color, box-shadow", [layout.reducedMotion]: "none" },
     transitionDuration: "200ms",
-    transitionTimingFunction: EASE,
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    transitionTimingFunction: motion.easeStandard,
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },
   tabIdle: {
-    borderColor: { default: HAIRLINE, ":hover": "rgb(255 255 255 / 0.18)" },
-    backgroundColor: { default: "rgb(255 255 255 / 0.02)", ":hover": "rgb(255 255 255 / 0.04)" },
+    borderColor: { default: colors.hairline, ":hover": "rgb(255 255 255 / 0.18)" },
+    backgroundColor: { default: colors.fillFaint, ":hover": colors.fillSubtle },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   /** The app you are in: an accent rule across the top and a warmer plate. */
@@ -246,7 +216,7 @@ export const styles = stylex.create({
   },
   tabDisabled: {
     cursor: "not-allowed",
-    borderColor: "rgb(255 255 255 / 0.05)",
+    borderColor: colors.hairlineSubtle,
     backgroundColor: "rgb(0 0 0 / 0.2)",
     opacity: 0.6,
   },
@@ -260,15 +230,15 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: { default: "auto", [LG]: "11rem" },
-    minHeight: { default: "7rem", [LG]: null },
-    paddingBlock: { default: "0.75rem", [LG]: "1.25rem" },
-    paddingInline: "0.75rem",
-    borderColor: HAIRLINE,
+    height: { default: "auto", [layout.bpLg]: "11rem" },
+    minHeight: { default: "7rem", [layout.bpLg]: null },
+    paddingBlock: { default: space.s3, [layout.bpLg]: space.s5 },
+    paddingInline: space.s3,
+    borderColor: colors.hairline,
     borderStyle: "solid",
     borderWidth: 0,
-    borderBottomWidth: { default: 0, [LG]: 1 },
-    borderInlineEndWidth: { default: 1, [LG]: 0 },
+    borderBottomWidth: { default: 0, [layout.bpLg]: stroke.hairline },
+    borderInlineEndWidth: { default: stroke.hairline, [layout.bpLg]: 0 },
     backgroundImage:
       "radial-gradient(60% 55% at 50% 62%, rgb(255 255 255 / 0.06), transparent 70%)",
   },
@@ -282,11 +252,11 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-    height: { default: "4.5rem", [LG]: "8.5rem" },
+    height: { default: "4.5rem", [layout.bpLg]: "8.5rem" },
     minHeight: 0,
-    transitionProperty: { default: "opacity, filter, transform", [REDUCED]: "none" },
+    transitionProperty: { default: "opacity, filter, transform", [layout.reducedMotion]: "none" },
     transitionDuration: "300ms",
-    transitionTimingFunction: EASE,
+    transitionTimingFunction: motion.easeStandard,
   },
   /** Card hover and keyboard focus both wake the artwork inside it. */
   artIdle: {
@@ -317,20 +287,20 @@ export const styles = stylex.create({
   },
 
   /** Inline views (Render Settings) replace the tabs inside the same column. */
-  inlineView: { display: "grid", gap: space.xl, minWidth: 0, minHeight: 0, overflow: "hidden" },
-  inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.lg },
+  inlineView: { display: "grid", gap: space.s4, minWidth: 0, minHeight: 0, overflow: "hidden" },
+  inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.s3 },
   inlineBack: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "0.375rem",
-    paddingBlock: "0.375rem",
-    paddingInline: "0.75rem",
-    fontSize: "0.75rem",
+    gap: space.s1_5,
+    paddingBlock: space.s1_5,
+    paddingInline: space.s3,
+    fontSize: text.sizeXs,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
-    color: { default: "rgb(255 255 255 / 0.6)", ":hover": "#fff" },
-    backgroundColor: "rgb(255 255 255 / 0.04)",
-    borderWidth: 1,
+    color: { default: "rgb(255 255 255 / 0.6)", ":hover": colors.ink },
+    backgroundColor: colors.fillSubtle,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     cursor: "pointer",
@@ -342,33 +312,33 @@ export const styles = stylex.create({
   tabBody: {
     display: "grid",
     alignContent: "start",
-    gap: "0.375rem",
+    gap: space.s1_5,
     minWidth: 0,
-    paddingInline: { default: "1rem", [LG]: "1.25rem" },
-    paddingBlock: { default: "0.875rem", [LG]: "1rem 1.25rem" },
+    paddingInline: { default: space.s4, [layout.bpLg]: space.s5 },
+    paddingBlock: { default: space.s3_5, [layout.bpLg]: "1rem 1.25rem" },
   },
-  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 },
+  tabHead: { display: "flex", alignItems: "center", gap: space.s2, minWidth: 0 },
   tabIcon: {
     width: "1rem",
     height: "1rem",
     flexShrink: 0,
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   tabIconActive: { color: colors.accent },
   tabTitle: {
     fontFamily: text.fontDisplay,
-    fontSize: "1.125rem",
-    lineHeight: "1.5rem",
-    fontWeight: 600,
+    fontSize: text.sizeLg,
+    lineHeight: text.lineBase,
+    fontWeight: text.weightSemibold,
     letterSpacing: "-0.03em",
   },
   tabTitleActive: { color: colors.accent },
-  tabTitleIdle: { color: "#fff" },
+  tabTitleIdle: { color: colors.ink },
   tabDescription: {
     fontFamily: text.fontMeta,
     fontSize: "10px",
-    lineHeight: "0.875rem",
-    fontWeight: 700,
+    lineHeight: text.lineMicro,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
     color: colors.textSubtle,
@@ -376,17 +346,17 @@ export const styles = stylex.create({
   /** The three capability phrases, one per line. */
   tabHighlights: {
     display: "grid",
-    gap: "0.125rem",
-    marginTop: "0.375rem",
-    paddingTop: "0.625rem",
-    borderTopWidth: 1,
+    gap: space.s0_5,
+    marginTop: space.s1_5,
+    paddingTop: space.s2_5,
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderTopColor: "rgb(255 255 255 / 0.05)",
+    borderTopColor: colors.hairlineSubtle,
   },
   tabHighlight: {
-    fontSize: "0.75rem",
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
 
   /**
@@ -399,9 +369,9 @@ export const styles = stylex.create({
     flexDirection: { default: "column", [XL]: "row" },
     alignItems: "stretch",
     minWidth: 0,
-    borderWidth: 1,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: HAIRLINE,
+    borderColor: colors.hairline,
     backgroundColor: "rgb(14 14 16 / 0.72)",
     backdropFilter: "blur(14px)",
   },
@@ -413,26 +383,26 @@ export const styles = stylex.create({
     overflowX: "auto",
     scrollbarWidth: "none",
     // On a phone the row scrolls; the fade says there is more to the right.
-    maskImage: { default: "linear-gradient(to right, #000 calc(100% - 2.5rem), transparent)", [SM]: null },
-    borderBottomWidth: { default: 1, [XL]: 0 },
+    maskImage: { default: "linear-gradient(to right, #000 calc(100% - 2.5rem), transparent)", [layout.bpSm]: null },
+    borderBottomWidth: { default: stroke.hairline, [XL]: 0 },
     borderBottomStyle: "solid",
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.hairline,
   },
   utility: {
     display: "flex",
     flexShrink: 0,
     alignItems: "center",
-    gap: "0.5rem",
+    gap: space.s2,
     height: BAR_HEIGHT,
-    paddingInline: "0.875rem",
+    paddingInline: space.s3_5,
     fontSize: "11px",
-    fontWeight: 500,
+    fontWeight: text.weightMedium,
     whiteSpace: "nowrap",
     cursor: "pointer",
     transitionProperty: `${COLOR_TRANSITION}, box-shadow`,
-    transitionDuration: "150ms",
-    transitionTimingFunction: EASE,
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "-2px" },
@@ -447,8 +417,8 @@ export const styles = stylex.create({
     },
   },
   utilityIdle: {
-    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.04)" },
-    color: { default: "rgb(255 255 255 / 0.55)", ":hover": "#fff" },
+    backgroundColor: { default: null, ":hover": colors.fillSubtle },
+    color: { default: "rgb(255 255 255 / 0.55)", ":hover": colors.ink },
     boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
   },
   utilityIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },

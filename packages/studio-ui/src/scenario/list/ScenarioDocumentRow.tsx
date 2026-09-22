@@ -47,6 +47,7 @@ import { ScenarioRating } from "./ScenarioRating";
 import { useScenarioOpenScenarioExport } from "./useScenarioOpenScenarioExport";
 import { useStudioHost } from "../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 export const SCENARIO_TAG_DRAG_MIME = "application/x-simforge-scenario-tag-id";
 
@@ -662,12 +663,12 @@ export function ScenarioDocumentRow({
         {advancedMode && (lastEditorName || editedLabel) ? (
           <div {...stylex.props(styles.divFlexMetaMicro)}>
             {lastEditorName ? (
-              <div {...stylex.props(styles.divTruncate)} data-scenario-last-edited-by="">
+              <div {...stylex.props(textLayout.truncate)} data-scenario-last-edited-by="">
                 {`Last edited by: ${lastEditorName}`}
               </div>
             ) : null}
             {editedLabel ? (
-              <div {...stylex.props(styles.divTruncate2)} data-scenario-edited-at="">
+              <div {...stylex.props(textLayout.truncate)} data-scenario-edited-at="">
                 {`Edited: ${editedLabel}`}
               </div>
             ) : null}

@@ -17,13 +17,13 @@ export const styles = stylex.create({
   inlineFlexCenterCaps: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    gap: space.s1,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightMedium,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -32,7 +32,7 @@ export const styles = stylex.create({
   clip: {
     height: "0.25rem",
     overflow: "hidden",
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
 
   // bg-primary/20 text-primary

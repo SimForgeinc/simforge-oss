@@ -7,6 +7,7 @@ import type { EditorDocument } from "@simforge-oss/editor";
 import { InteractionTargetModeControls } from "./InteractionTargetControls";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionSemanticsControls.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 export const MAX_AUTHORED_TARGET_SPEED_KPH = 130;
 type NumericSemantic = "targetSpeedKph" | "laneDelta" | "durationS";
@@ -198,7 +199,7 @@ export function InteractionSemanticsControls({
             return (
               <button
                 aria-checked={active}
-                {...stylex.props(styles.styleOption, active ? styles.styleOptionActive : styles.styleOptionIdle)}
+                {...stylex.props([focus.ringAccent, styles.styleOption], active ? styles.styleOptionActive : styles.styleOptionIdle)}
                 key={preset.id}
                 onClick={() => applyStyle(preset.id)}
                 role="radio"

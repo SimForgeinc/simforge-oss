@@ -11,6 +11,7 @@ import {
   buildTooltipDetail,
   type ScenarioFamily,
 } from "@/app/lib/scenario-intelligence-ui";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const MAX_VISIBLE_TAGS = 3;
 
@@ -44,7 +45,7 @@ export function CandidateLocationCard({
     <button
       type="button"
       onClick={() => onSelect(selected ? null : candidate.id)}
-      {...stylex.props(styles.candidateCard, selected ? styles.candidateCardSelected : styles.candidateCardIdle)}
+      {...stylex.props([motionRecipe.colors, styles.candidateCard], selected ? styles.candidateCardSelected : styles.candidateCardIdle)}
     >
       {/* Row 1: Label + confidence */}
       <div {...stylex.props(styles.candidateHeader)}>
@@ -65,7 +66,7 @@ export function CandidateLocationCard({
 
       {/* Row 2: One-line explanation */}
       {explanation && (
-        <p {...stylex.props(styles.candidateExplanation)}>{explanation}</p>
+        <p {...stylex.props([textLayout.truncate, styles.candidateExplanation])}>{explanation}</p>
       )}
 
       {/* Row 3: Family chip + tag chips */}

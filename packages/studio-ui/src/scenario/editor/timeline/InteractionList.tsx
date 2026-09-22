@@ -16,6 +16,7 @@ import { triggerLabel } from "./trigger-defaults";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionList.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * The semantic timeline: one row per authored interaction, expandable into its
@@ -100,12 +101,12 @@ export function InteractionList({
                   aria-controls={panelId}
                   aria-expanded={expanded}
                   data-testid={`interaction-expand-${interaction.id}`}
-                  className={stylex.props(styles.flexCenterFill, motionStyles.editorMotion).className}
+                  className={stylex.props([focus.ringInset, styles.flexCenterFill], motionStyles.editorMotion).className}
                 >
-                  <span {...stylex.props(styles.truncate)}>
+                  <span {...stylex.props([textLayout.truncate, styles.truncate])}>
                     {interaction.actor}
                   </span>
-                  <span {...stylex.props(styles.mediumTruncate)}>{name}</span>
+                  <span {...stylex.props([textLayout.truncate, styles.mediumTruncate])}>{name}</span>
                   <span {...stylex.props(styles.monoPushRight)}>
                     {triggerLabel(interaction.trigger)}
                   </span>
@@ -113,7 +114,7 @@ export function InteractionList({
                 <button
                   type="button"
                   aria-label={`Delete action ${name}`}
-                  className={stylex.props(styles.editorMotionMr2TextWhite30, motionStyles.editorMotion).className}
+                  className={stylex.props([focus.ringAccent, styles.editorMotionMr2TextWhite30], motionStyles.editorMotion).className}
                   onClick={() => document.removeInteraction(interaction.id)}
                 >
                   <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />

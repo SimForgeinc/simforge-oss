@@ -3,6 +3,7 @@
 import { Clock3, MapPin, Pause, Route, X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SimpleRouteTutorialPanel.stylex";
+import { focus, motionRecipe } from "../../../stylex/recipes.stylex";
 
 export function SimpleRouteTutorialPanel({
   onClose,
@@ -37,7 +38,7 @@ export function SimpleRouteTutorialPanel({
           </div>
           <button
             aria-label="Close route tutorial"
-            {...stylex.props(styles.flexCenterMid2)}
+            {...stylex.props([focus.ringAccent, motionRecipe.colors, styles.flexCenterMid2])}
             onClick={onClose}
             type="button"
           >
@@ -77,7 +78,7 @@ export function SimpleRouteTutorialPanel({
           </p>
           <button
             autoFocus
-            {...stylex.props(styles.tightCapsXs)}
+            {...stylex.props([motionRecipe.colors, styles.tightCapsXs])}
             onClick={onStart}
             type="button"
           >

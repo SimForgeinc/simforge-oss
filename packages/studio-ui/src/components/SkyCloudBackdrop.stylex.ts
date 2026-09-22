@@ -7,6 +7,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
+import { layout, motion } from "../stylex/tokens.stylex";
 
 /**
  * The plate's slow parallax. Two long `translate3d` + `scale` stops played
@@ -48,10 +49,10 @@ export const cloudPlate = stylex.create({
     opacity: 0.95,
     animationName: {
       default: drift,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     animationDuration: "16s",
-    animationTimingFunction: "ease-in-out",
+    animationTimingFunction: motion.easeInOut,
     animationIterationCount: "infinite",
     animationDirection: "alternate",
     willChange: "transform",

@@ -18,6 +18,7 @@ import {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./timeline-dock.stylex";
 import type { EditorExperience } from "./simple-timed-routes";
+import { motionRecipe } from "../../stylex/recipes.stylex";
 
 // `editor-trigger-builders.test.ts` imports these from this module path; keep the
 // re-export when moving them again.
@@ -333,7 +334,7 @@ export function ScenarioTimelineDock({
         role="separator"
         tabIndex={0}
       >
-        <span {...stylex.props(styles.marker)} />
+        <span {...stylex.props([motionRecipe.colors, styles.marker])} />
       </div>
       <V1TimelineRail
         document={document}
@@ -368,7 +369,7 @@ export function ScenarioTimelineDock({
         role="separator"
         tabIndex={0}
       >
-        <span {...stylex.props(styles.marker)} />
+        <span {...stylex.props([motionRecipe.colors, styles.marker])} />
       </div>
     </div>
   );

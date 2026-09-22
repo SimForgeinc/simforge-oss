@@ -25,6 +25,7 @@ import {
 } from "../../components/ui/tooltip";
 import { menu } from "../scenario-controls.stylex";
 import { datasetMonogram } from "../../lib/monogram";
+import { a11y } from "../../stylex/recipes.stylex";
 
 /** Datasets the workspace owns can be edited; shared and system-managed ones are read-only (§6.5). */
 export function isDatasetEditable(dataset: ScenarioDatasetDto): boolean {
@@ -313,7 +314,7 @@ export function DatasetStrip({
                 <Button asChild size="icon" variant="ghost" xstyle={styles.connectButton}>
                   <Link href={SIMCLOUD_HREF} data-testid="scenario-dataset-cloud-connect">
                     <Cloud {...stylex.props(styles.footerIcon)} aria-hidden="true" />
-                    <span {...stylex.props(styles.srOnly)}>Sign in to SimCloud</span>
+                    <span {...stylex.props(a11y.srOnly)}>Sign in to SimCloud</span>
                   </Link>
                 </Button>
               </TooltipTrigger>
@@ -362,7 +363,7 @@ export function DatasetStrip({
                 <Button asChild size="icon" variant="ghost" xstyle={styles.overflowButton}>
                   <Link href={SIMCLOUD_HREF} data-testid="scenario-dataset-cloud-overflow">
                     <span aria-hidden="true">+{hidden}</span>
-                    <span {...stylex.props(styles.srOnly)}>
+                    <span {...stylex.props(a11y.srOnly)}>
                       {hidden} more datasets in {cloudHome.organizationName}
                     </span>
                   </Link>

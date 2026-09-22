@@ -22,6 +22,7 @@ import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderProgressView.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout } from "../../../stylex/recipes.stylex";
 
 /** Faster than the gallery's 5s: this view exists to be watched, so it should keep up. */
 const DETAIL_POLL_MS = 2000;
@@ -123,7 +124,7 @@ export function RenderProgressView({
       <header {...stylex.props(styles.flexCenterTight)}>
         <button
           aria-label="Back to the render gallery"
-          className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.gridCenteredTight], motionStyles.editorMotion).className}
           data-testid="render-progress-back"
           onClick={onBack}
           type="button"
@@ -134,7 +135,7 @@ export function RenderProgressView({
           <p {...stylex.props(styles.capsMonoMicro)}>
             {detail ? renderJobLabel(detail) : "Render"}
           </p>
-          <h2 {...stylex.props(styles.inkTruncateBase)}>
+          <h2 {...stylex.props([textLayout.truncate, styles.inkTruncateBase])}>
             {progress?.label ?? "Reading status…"}
             <span {...stylex.props(styles.monoXsMuted)}>{sinceStart}</span>
           </h2>
@@ -142,7 +143,7 @@ export function RenderProgressView({
         {detail ? <RenderStateChip state={detail.jobState} label={progress?.label} /> : <CloudActivityIndicator />}
         {playable ? (
           <button
-            className={stylex.props(styles.inlineFlexCenterTight, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.inlineFlexCenterTight], motionStyles.editorMotion).className}
             data-testid="render-progress-watch"
             onClick={() => onWatch(jobId)}
             type="button"
@@ -286,7 +287,7 @@ export function RenderProgressView({
                       {...stylex.props(styles.flexBetweenBaseline)}
                       key={artifact.id}
                     >
-                      <span {...stylex.props(styles.inkMediumTruncate)} title={artifactDisplayName(artifact)}>
+                      <span {...stylex.props([textLayout.truncate, styles.inkMediumTruncate])} title={artifactDisplayName(artifact)}>
                         {artifactDisplayName(artifact)}
                       </span>
                       <span {...stylex.props(styles.tightMonoMicro)}>
@@ -313,7 +314,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div {...stylex.props(styles.flexBetweenBaseline2)}>
       <dt {...stylex.props(styles.tightCapsMuted)}>{label}</dt>
-      <dd {...stylex.props(styles.monoInkTruncate)}>{value}</dd>
+      <dd {...stylex.props([textLayout.truncate, styles.monoInkTruncate])}>{value}</dd>
     </div>
   );
 }

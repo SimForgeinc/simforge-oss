@@ -12,6 +12,7 @@ import { Square, X } from "lucide-react";
 
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorDetailsPanel.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 const EditorConfigurationBlockedContext = createContext(false);
 
@@ -114,7 +115,7 @@ export function EditorDetailsPanel({
         {headerFooter}
         <button
           aria-label={closeLabel}
-          {...stylex.props(styles.absGridCentered)}
+          {...stylex.props([focus.ringAccent, styles.absGridCentered])}
           data-testid={closeTestId}
           onClick={onClose}
           type="button"
