@@ -9,6 +9,7 @@ import {
   hasCacheReceipt,
   installMapAssetFetchGateway,
   prepareMapAssetCache,
+  resetMapAssetCacheForTests,
   writeCacheReceipt,
 } from "../../../src/lib/maps/frontend/map-asset-cache";
 import { sha256BytesAsync } from "@simforge-oss/engine/hash";
@@ -24,6 +25,7 @@ function fakeCacheStorage() {
         put: vi.fn(async (request: Request, response: Response) => {
           store.set(request.url, response.clone());
         }),
+        delete: vi.fn(async (request: Request) => store.delete(request.url)),
       };
     }),
     delete: vi.fn(async (name: string) => stores.delete(name)),
@@ -36,6 +38,7 @@ describe("unified map asset cache", () => {
     vi.stubGlobal("caches", storage);
     Object.defineProperty(window, "caches", { configurable: true, value: storage });
     localStorage.clear();
+    resetMapAssetCacheForTests();
   });
 
   afterEach(() => {
@@ -114,7 +117,7 @@ describe("unified map asset cache", () => {
   it("clears the single consolidated cache and receipt index", async () => {
     await writeCacheReceipt(cacheReceiptKey("release-a", "medium"), 1, 1);
     await clearMapAssetCache();
-    expect(caches.delete).toHaveBeenCalledWith("simforge-map-assets-v4");
+    expect(caches.delete).toHaveBeenCalledWith("simforge-map-assets-v5");
     expect(await hasCacheReceipt(cacheReceiptKey("release-a", "medium"))).toBe(false);
   });
 
@@ -155,7 +158,7 @@ describe("unified map asset cache", () => {
 
     expect(response.ok).toBe(true);
     expect([...new Uint8Array(await response.arrayBuffer())]).toEqual([...bytes]);
-    expect(warn.mock.calls[0]?.[0]).toContain("QuotaExceededError");
+    expect(warn.mock.calls[0]?.[0]).toMatch(/browser storage is full/);
   });
 
   it("still rejects content that fails its digest when the cache write fails", async () => {
@@ -191,9 +194,9 @@ describe("unified map asset cache", () => {
       direct,
       expect.objectContaining({ credentials: "omit" }),
     );
-    expect(localStorage.getItem("simforge-map-assets-index-v4")).toBeNull();
+    expect(localStorage.getItem("simforge-map-asset-urls-v5")).toBeNull();
     flushMapAssetCacheIndex();
-    expect(localStorage.getItem("simforge-map-assets-index-v4")).not.toBeNull();
+    expect(localStorage.getItem("simforge-map-asset-urls-v5")).not.toBeNull();
     expect(await hasCachedMapAsset(canonical, sha)).toBe(true);
   });
 

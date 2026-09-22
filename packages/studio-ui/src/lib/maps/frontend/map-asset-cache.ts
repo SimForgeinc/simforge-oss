@@ -5,8 +5,13 @@ import {
   type DesktopMapCacheBridge,
   type DesktopMapCacheStatus,
 } from "@simforge-oss/studio-host";
-import { sha256BytesAsync } from "@simforge-oss/engine/hash";
 import { randomUuid } from "@simforge-oss/engine/uuid";
+import { availableStorageBytes as estimateAvailableStorageBytes } from "./bounded-asset-cache";
+import {
+  MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES,
+  MapAssetGateway,
+  type MapAssetDownloadUrlResolver,
+} from "./map-asset-gateway";
 
 /**
  * Persistent cache for immutable map bytes.
@@ -17,14 +22,25 @@ import { randomUuid } from "@simforge-oss/engine/uuid";
  *   management use the preload bridge to the host's verified store. Normal
  *   reads use the stable asset route, which serves that same store and allows
  *   the GUI's HTTP cache to revalidate without transferring the bytes again.
- * - `browser` — ordinary web mode. Bytes live in Cache Storage under their
- *   content hash with a small localStorage index for URL aliases and receipts.
+ * - `browser` — ordinary web mode, local or hosted. Bytes live in Cache
+ *   Storage under their content hash, inside an explicit byte budget with
+ *   least-recently-used eviction ({@link MapAssetGateway}). The installed fetch
+ *   gateway answers every immutable map URL from the cache first and only then
+ *   transfers it — from a signed delivery URL when one is issued, streamed to
+ *   the caller while its copy is verified and stored behind it.
  */
 
-const CACHE_NAME = "simforge-map-assets-v4";
-const INDEX_KEY = "simforge-map-assets-index-v4";
+const CACHE_NAME = "simforge-map-assets-v5";
+const INDEX_KEY = "simforge-map-assets-index-v5";
+const ALIAS_KEY = "simforge-map-asset-urls-v5";
 const CONTENT_PREFIX = "/api/simforge/map-cache/sha256/";
-const SHA256 = /^[a-f0-9]{64}$/;
+/** The v4 layout kept one unbounded bucket and a combined index. */
+const LEGACY_CACHE_NAMES = ["simforge-map-assets-v4"] as const;
+const LEGACY_INDEX_KEYS = ["simforge-map-assets-index-v4"] as const;
+/** An explicit library install may use this share of the origin's quota. */
+const BULK_INSTALL_QUOTA_SHARE = 0.8;
+
+export { MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES };
 
 export type MapAssetCacheBackend = "browser" | "filesystem";
 
@@ -35,7 +51,22 @@ export type MapAssetCacheStatus =
       persistent: boolean;
       /** Browser storage used across all origin data; null when unknown. */
       usedBytes: number | null;
+      /**
+       * Room left for map bytes: the smaller of the budget headroom and the
+       * origin's free quota. Null when the browser will not say.
+       */
       availableBytes: number | null;
+      /** Map bytes held in the cache right now. */
+      mapBytes: number;
+      /** Ceiling on map bytes; least recently used entries go past it. */
+      budgetBytes: number;
+      entryCount: number;
+      /**
+       * Why this browser cannot cache map bytes at all, or null when it can.
+       * Cache Storage and the storage estimate exist only in a secure context
+       * (HTTPS or localhost); a plain-HTTP LAN or tailnet address has neither.
+       */
+      unavailable: string | null;
     }
   | DesktopMapCacheStatus;
 
@@ -45,7 +76,7 @@ export type MapAssetEnsureOptions = {
   networkUrl?: string;
   sizeBytes?: number;
   signal?: AbortSignal;
-  /** Browser backend: batch index writes until `flushMapAssetCacheIndex`. */
+  /** Kept for callers; the browser backend always batches its index writes. */
   deferIndexWrite?: boolean;
 };
 
@@ -54,170 +85,111 @@ export type MapAssetEnsureResult = {
   sizeBytes: number | null;
 };
 
-type CacheIndex = {
-  urls: Record<string, string>;
-  content: Record<string, { bytes: number }>;
-  receipts: Record<string, { completedAt: number; assets: number; bytes: number }>;
-};
-
-const EMPTY_INDEX: CacheIndex = { urls: {}, content: {}, receipts: {} };
-const inFlight = new Map<string, Promise<Response>>();
-const backgroundWarmups = new Map<string, Promise<void>>();
-let pendingBulkIndex: CacheIndex | null = null;
+let gateway: MapAssetGateway | null = null;
 let nativeFetch: typeof fetch | null = null;
 let gatewayInstalled = false;
+let downloadUrlResolver: MapAssetDownloadUrlResolver | null = null;
 let requestSequence = 0;
+
 /**
- * Set after the browser refuses a cache write for lack of quota.
- *
- * The cache is an optimization: everything in it also lives on the local host,
- * one loopback request away. A `QuotaExceededError` from `cache.put` used to
- * reject the fetch that had already delivered the bytes, so a full browser
- * profile turned a good map into `[road-layer] downloading/decoding road lod0
- * failed` — a decode failure reported for intact bytes.
+ * Why the browser backend cannot cache on this page, or null when it can.
+ * Maps still load without it; every visit just transfers them again.
  */
-let cacheWritesUnavailable: string | null = null;
+export function browserMapCacheUnavailableReason(): string | null {
+  if (typeof window === "undefined") return null;
+  if (window.isSecureContext === false) {
+    return "this page isn't served over HTTPS, so the browser turns off the storage map caching needs. "
+      + "Open Studio from an https:// (or localhost) address to cache maps.";
+  }
+  if (!("caches" in window) || !window.caches) {
+    return "this browser does not offer Cache Storage (a private window or a disabled setting).";
+  }
+  return null;
+}
+
+let unavailableLogged = false;
 
 export function mapAssetCacheBackend(): MapAssetCacheBackend {
   return desktopMapCacheBridge() ? "filesystem" : "browser";
 }
 
-function readIndex(): CacheIndex {
-  if (pendingBulkIndex) return pendingBulkIndex;
-  try {
-    const parsed = JSON.parse(localStorage.getItem(INDEX_KEY) ?? "null") as Partial<CacheIndex> | null;
-    return {
-      urls: parsed?.urls && typeof parsed.urls === "object" ? parsed.urls : {},
-      content: parsed?.content && typeof parsed.content === "object" ? parsed.content : {},
-      receipts: parsed?.receipts && typeof parsed.receipts === "object" ? parsed.receipts : {},
-    };
-  } catch {
-    return structuredClone(EMPTY_INDEX);
-  }
-}
-
-function persistIndex(index: CacheIndex) {
-  localStorage.setItem(INDEX_KEY, JSON.stringify(index));
-}
-
-function writeIndex(index: CacheIndex, defer = false) {
-  if (defer) {
-    pendingBulkIndex = index;
-    return;
-  }
-  persistIndex(index);
+/** The network, captured before interception; resolved per call so tests can stub it. */
+function networkFetch(input: RequestInfo | URL, init?: RequestInit) {
+  return (nativeFetch ?? window.fetch)(input, init);
 }
 
 /**
- * Browser backend only: hold the index in memory across a burst of lookups
- * and stores so a plan over thousands of members does not parse and rewrite
- * the whole localStorage record per member. `flushMapAssetCacheIndex` ends
- * the batch; the filesystem backend persists every write itself.
+ * Delegates to whatever `caches` is at call time rather than holding one
+ * `CacheStorage` for the page's lifetime.
  */
-export function beginMapAssetCacheIndexBatch() {
-  if (pendingBulkIndex || desktopMapCacheBridge()) return;
-  pendingBulkIndex = readIndex();
+const liveCacheStorage = {
+  open: (name: string) => caches.open(name),
+  delete: (name: string) => caches.delete(name),
+  has: (name: string) => caches.has(name),
+  keys: () => caches.keys(),
+  match: (request: RequestInfo | URL, options?: MultiCacheQueryOptions) => caches.match(request, options),
+} as CacheStorage;
+
+function browserCache(): MapAssetGateway | null {
+  if (typeof window === "undefined" || desktopMapCacheBridge() || browserMapCacheUnavailableReason() !== null) return null;
+  if (!gateway) {
+    gateway = new MapAssetGateway({
+      cacheName: CACHE_NAME,
+      indexKey: INDEX_KEY,
+      aliasKey: ALIAS_KEY,
+      legacyCacheNames: LEGACY_CACHE_NAMES,
+      budgetBytes: MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES,
+      contentPrefix: CONTENT_PREFIX,
+      origin: window.location.origin,
+      caches: liveCacheStorage,
+      storage: window.localStorage,
+      fetch: networkFetch as typeof fetch,
+      storageManager: typeof navigator === "undefined" ? undefined : navigator.storage,
+    });
+    gateway.setDownloadUrlResolver(downloadUrlResolver);
+  }
+  return gateway;
 }
 
-export function flushMapAssetCacheIndex() {
-  if (!pendingBulkIndex) return;
-  persistIndex(pendingBulkIndex);
-  pendingBulkIndex = null;
+/**
+ * Where a cache miss transfers from. The hosted app issues signed object-store
+ * URLs in batches; without a resolver a miss goes through the first-party
+ * route, which authorizes and redirects.
+ */
+export function setMapAssetDownloadUrlResolver(resolver: MapAssetDownloadUrlResolver | null): void {
+  downloadUrlResolver = resolver;
+  gateway?.setDownloadUrlResolver(resolver);
 }
 
-/** Record a URL → content binding; writes only when the index actually changes. */
-function remember(
-  index: CacheIndex,
-  canonicalUrl: string,
-  sha256: string,
-  bytes: number | null,
-  defer: boolean,
-) {
-  const known = index.content[sha256];
-  if (index.urls[canonicalUrl] === sha256 && known) return;
-  index.urls[canonicalUrl] = sha256;
-  // The storing fetch records the true length first; later hits never
-  // overwrite it with a header-derived guess.
-  if (!known) index.content[sha256] = { bytes: bytes ?? 0 };
-  writeIndex(index, defer);
+/** Pre-register signed delivery URLs for canonical asset URLs about to be fetched. */
+export function registerMapAssetDownloadUrls(urls: ReadonlyMap<string, string>): void {
+  browserCache()?.registerDownloadUrls(urls);
 }
 
-function declaredLength(response: Response) {
-  const size = Number(response.headers.get("content-length"));
-  return Number.isSafeInteger(size) && size > 0 ? size : null;
+/**
+ * Synchronous best guess that `url` is resident in the browser cache. Always
+ * false on the filesystem backend, whose host route serves the disk store.
+ */
+export function isMapAssetLikelyCached(url: string): boolean {
+  return browserCache()?.isLikelyCached(url) ?? false;
 }
 
 function absoluteUrl(url: string) {
   return new URL(url, window.location.origin).href;
 }
 
-function contentRequest(sha256: string) {
-  return new Request(`${window.location.origin}${CONTENT_PREFIX}${sha256}`);
-}
-
-function networkFetch(input: RequestInfo | URL, init?: RequestInit) {
-  return (nativeFetch ?? window.fetch)(input, init);
-}
-
-function responseFromBytes(body: ArrayBuffer, source: Response) {
-  return new Response(body, {
-    status: source.status,
-    statusText: source.statusText,
-    headers: source.headers,
-  });
-}
-
-function requestedRange(init: RequestInit) {
-  return new Headers(init.headers).get("range");
-}
-
-function withoutRange(init: RequestInit): RequestInit {
-  const headers = new Headers(init.headers);
-  headers.delete("range");
-  return { ...init, headers, signal: undefined, credentials: "same-origin" };
-}
-
-function rangeResponse(bytes: ArrayBuffer, range: string, source: Response) {
-  const match = /^bytes=(\d+)-(\d*)$/.exec(range);
-  if (!match) return null;
-  const start = Number(match[1]);
-  const requestedEnd = match[2] ? Number(match[2]) : bytes.byteLength - 1;
-  const end = Math.min(bytes.byteLength - 1, requestedEnd);
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start) return null;
-  const body = bytes.slice(start, end + 1);
-  const headers = new Headers(source.headers);
-  headers.set("content-length", String(body.byteLength));
-  headers.set("content-range", `bytes ${start}-${end}/${bytes.byteLength}`);
-  headers.set("accept-ranges", "bytes");
-  return new Response(body, { status: 206, headers });
-}
-
 /**
- * Same-origin URLs whose bytes are immutable for the lifetime of the URL, and
- * therefore safe to cache by URL alone. Anything else is only cacheable when
- * the caller supplies the expected content digest.
- *
- * Scenario browser-assets and the SUMO runtime are content-versioned paths.
- * Digital-twin `3d-asset` paths are rebuilt in place, so only fetches carrying
- * the explicit `?v=<manifest-hash>` token (appended by the city-viewer, see
- * `CityViewerCore.start`) qualify: rebuild → new manifest bytes → new token →
- * every asset URL misses and refetches. Token-less 3d-asset fetches (the
- * manifest itself, `optional=1` probes, mutable twin-eval artifacts) always
- * pass through to the network.
+ * Same-origin URLs whose bytes are immutable for the lifetime of the URL.
+ * Mirrors the gateway's rule; anything else needs a content digest.
  */
-function isImmutableMapUrl(url: URL) {
+function isCacheableMapUrl(url: URL, expectedSha256?: string) {
   if (url.origin !== window.location.origin) return false;
+  if (expectedSha256) return /^[a-f0-9]{64}$/.test(expectedSha256);
   if (/^\/api\/simforge\/maps\/[^/]+\/browser-assets\//.test(url.pathname)
     || url.pathname.startsWith("/api/simforge/sumo-runtime/")) {
     return true;
   }
-  return /^\/api\/map-assets\/[^/]+\/3d-asset\//.test(url.pathname)
-    && url.searchParams.has("v");
-}
-
-function isCacheableMapUrl(url: URL, expectedSha256?: string) {
-  if (expectedSha256) return url.origin === window.location.origin && SHA256.test(expectedSha256);
-  return isImmutableMapUrl(url);
+  return /^\/api\/map-assets\/[^/]+\/3d-asset\//.test(url.pathname) && url.searchParams.has("v");
 }
 
 function nextRequestId() {
@@ -250,23 +222,20 @@ async function desktopEnsure(
   }
 }
 
+/** Kept for bulk callers; the browser backend already debounces its bookkeeping. */
+export function beginMapAssetCacheIndexBatch() {}
+
+/** Write the browser cache bookkeeping out now (page hide, end of a bulk plan, tests). */
+export function flushMapAssetCacheIndex() {
+  gateway?.flushIndex();
+}
 
 export async function hasCachedMapAsset(url: string, expectedSha256?: string) {
   const bridge = desktopMapCacheBridge();
   if (bridge) {
     return bridge.has({ url: absoluteUrl(url), sha256: expectedSha256 });
   }
-  if (!("caches" in window)) return false;
-  const index = readIndex();
-  const canonicalUrl = absoluteUrl(url);
-  const sha256 = expectedSha256 ?? index.urls[canonicalUrl];
-  if (!sha256 || !SHA256.test(sha256)) return false;
-  const cached = await (await caches.open(CACHE_NAME)).match(contentRequest(sha256));
-  if (!cached) return false;
-  // A hit by content identity also teaches the index this path, so an alias of
-  // an already-cached member answers by URL alone later (offline runtime).
-  remember(index, canonicalUrl, sha256, declaredLength(cached), Boolean(pendingBulkIndex));
-  return true;
+  return await browserCache()?.hasAsset(url, expectedSha256) ?? false;
 }
 
 /**
@@ -274,7 +243,7 @@ export async function hasCachedMapAsset(url: string, expectedSha256?: string) {
  *
  * Bulk preparation runs this for tens of gigabytes; on the filesystem backend
  * the renderer only sees the ensure receipt, so a 30 GB library never passes
- * through JS heap or IPC. The browser backend must still stream the body once
+ * through JS heap or IPC. The browser backend must still read the body once
  * to hash and store it.
  */
 export async function ensureMapAsset(
@@ -290,24 +259,13 @@ export async function ensureMapAsset(
     const ensured = await desktopEnsure(bridge, canonicalUrl, options);
     return { cacheHit: ensured.cacheHit, sizeBytes: ensured.sizeBytes };
   }
-  if (await hasCachedMapAsset(canonicalUrl, options.sha256)) {
-    const index = readIndex();
-    const sha256 = options.sha256 ?? index.urls[canonicalUrl];
-    return { cacheHit: true, sizeBytes: sha256 ? index.content[sha256]?.bytes ?? null : null };
-  }
-  const response = await fetchMapAsset(
-    canonicalUrl,
-    { credentials: "same-origin", signal: options.signal },
-    options.sha256,
-    options.networkUrl,
-    options.deferIndexWrite,
-  );
-  // The clone `fetchMapAsset` hands back is one branch of a tee; per the
-  // Streams spec its cancel() settles only once the sibling branch is done,
-  // so it is released without being awaited.
+  const active = browserCache();
+  if (active) return active.ensureAsset(canonicalUrl, options);
+  const response = await fetchMapAsset(canonicalUrl, { credentials: "same-origin", signal: options.signal }, options.sha256, options.networkUrl);
   response.body?.cancel().catch(() => undefined);
   if (!response.ok) throw new Error(`${response.status} ${canonicalUrl}`);
-  return { cacheHit: false, sizeBytes: declaredLength(response) ?? options.sizeBytes ?? null };
+  const declared = Number(response.headers.get("content-length"));
+  return { cacheHit: false, sizeBytes: Number.isSafeInteger(declared) && declared > 0 ? declared : options.sizeBytes ?? null };
 }
 
 /** Fetch, verify and persist one immutable map asset under its content hash. */
@@ -316,133 +274,82 @@ export async function fetchMapAsset(
   init: RequestInit = {},
   expectedSha256?: string,
   networkUrl?: string,
-  deferIndexWrite = false,
+  _deferIndexWrite = false,
 ): Promise<Response> {
   if (init.method && init.method !== "GET") return networkFetch(url, init);
-  // The host route already authorizes, verifies and materializes each member.
-  // An ensure IPC plus no-store capability fetch duplicated that work and
-  // forced every remote desktop load to transfer the complete map again.
-  if (desktopMapCacheBridge() || !("caches" in window)) {
-    const response = await networkFetch(url, init);
-    if (response.ok && expectedSha256 && response.headers.get("x-content-sha256") !== expectedSha256) {
-      void response.body?.cancel().catch(() => undefined);
-      throw new Error(`Asset integrity check failed for ${url}`);
-    }
-    return response;
-  }
-  const canonicalUrl = absoluteUrl(url);
-  const index = readIndex();
-  const knownSha = expectedSha256 ?? index.urls[canonicalUrl];
-  const cache = await caches.open(CACHE_NAME);
-  if (knownSha && SHA256.test(knownSha)) {
-    const cached = await cache.match(contentRequest(knownSha));
-    if (cached) {
-      // Content-addressed: the bytes were verified against this digest when
-      // stored, so a warm hit streams without a second full read and rehash.
-      remember(index, canonicalUrl, knownSha, declaredLength(cached), deferIndexWrite);
-      const range = requestedRange(init);
-      if (!range) return cached;
-      const bytes = await cached.arrayBuffer();
-      return rangeResponse(bytes, range, cached) ?? responseFromBytes(bytes, cached);
+  const active = browserCache();
+  if (active) return active.fetchAsset(url, init, { sha256: expectedSha256, networkUrl });
+  // The host route already authorizes, verifies and materializes each member
+  // (desktop), or there is no Cache Storage (an insecure origin, private
+  // mode). Without a cache, a hosted page still transfers straight from the
+  // object store rather than paying one authorizing redirect per member.
+  if (!desktopMapCacheBridge() && !expectedSha256 && downloadUrlResolver && isCacheableMapUrl(new URL(absoluteUrl(url)))) {
+    const canonical = absoluteUrl(url);
+    const signed = (await downloadUrlResolver([canonical]).catch(() => new Map<string, string>())).get(canonical);
+    if (signed) {
+      const direct = await networkFetch(signed, { ...init, credentials: "omit" }).catch(() => null);
+      if (direct?.ok) return direct;
+      void direct?.body?.cancel().catch(() => undefined);
     }
   }
-
-  const inFlightKey = knownSha && SHA256.test(knownSha) ? knownSha : canonicalUrl;
-  const existing = inFlight.get(inFlightKey);
-  if (existing) {
-    const response = (await existing).clone();
-    if (response.ok && knownSha && SHA256.test(knownSha)) {
-      remember(readIndex(), canonicalUrl, knownSha, declaredLength(response), deferIndexWrite);
-    }
-    return response;
+  // The server's digest header is the one check available without buffering
+  // the body.
+  const response = await networkFetch(url, init);
+  if (response.ok && expectedSha256 && response.headers.get("x-content-sha256") !== expectedSha256) {
+    void response.body?.cancel().catch(() => undefined);
+    throw new Error(`Asset integrity check failed for ${url}`);
   }
-  const persist = async (response: Response) => {
-    const bytes = await response.arrayBuffer();
-    const actualSha = await sha256BytesAsync(bytes);
-    if (expectedSha256 && actualSha !== expectedSha256) {
-      throw new Error(`Asset integrity check failed for ${canonicalUrl}`);
-    }
-    // One Response is built from the bytes; its clone shares the body for the
-    // cache write instead of copying the buffer a second time.
-    const stored = responseFromBytes(bytes, response);
-    // The integrity check above is the contract; the cache write is only an
-    // optimization, so a browser that refuses it (quota, eviction race,
-    // private mode) must not fail the asset whose bytes are already here.
-    try {
-      await cache.put(contentRequest(actualSha), stored.clone());
-      remember(readIndex(), canonicalUrl, actualSha, bytes.byteLength, deferIndexWrite);
-    } catch (error) {
-      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      if (cacheWritesUnavailable !== reason) {
-        cacheWritesUnavailable = reason;
-        console.warn(
-          `[map-asset-cache] keeping map assets out of browser storage for this session (${reason}). `
-          + "Loads continue from the local host; clear site data or raise the quota to cache them again.",
-        );
-      }
-    }
-    return stored;
-  };
-  const pending = (async () => {
-    const transferUrl = networkUrl ?? url;
-    const response = await networkFetch(transferUrl, {
-      ...init,
-      credentials: networkUrl ? "omit" : "same-origin",
-    });
-    if (!response.ok) return response;
-    if (response.status === 206) {
-      if (!backgroundWarmups.has(inFlightKey)) {
-        const warmup = (async () => {
-          const full = await networkFetch(transferUrl, {
-            ...withoutRange(init),
-            credentials: networkUrl ? "omit" : "same-origin",
-          });
-          if (full.ok && full.status === 200) await persist(full);
-        })()
-          .catch(() => undefined)
-          .finally(() => backgroundWarmups.delete(inFlightKey));
-        backgroundWarmups.set(inFlightKey, warmup);
-      }
-      return response;
-    }
-    // Persist only full 200 bodies — an `ok` 204 (e.g. an `optional=1`
-    // existence probe against an absent object) must not become a cached
-    // empty asset that keeps answering after the object appears.
-    if (response.status !== 200) return response;
-    return persist(response);
-  })().finally(() => inFlight.delete(inFlightKey));
-  inFlight.set(inFlightKey, pending);
-  return (await pending).clone();
-}
-
-function isMapAssetRequest(input: RequestInfo | URL, init?: RequestInit) {
-  const method = init?.method ?? (input instanceof Request ? input.method : "GET");
-  if (method !== "GET") return false;
-  const raw = input instanceof Request ? input.url : String(input);
-  return isImmutableMapUrl(new URL(raw, window.location.origin));
+  return response;
 }
 
 /** Install once before a viewer mounts so third-party loaders share this cache. */
 export function installMapAssetFetchGateway() {
   if (gatewayInstalled || typeof window === "undefined") return;
   nativeFetch = window.fetch.bind(window);
+  gatewayInstalled = true;
+  const active = browserCache();
+  const unavailable = desktopMapCacheBridge() ? null : browserMapCacheUnavailableReason();
+  if (unavailable && !unavailableLogged) {
+    unavailableLogged = true;
+    console.warn(`[map-asset-cache] Browser caching unavailable: ${unavailable} Maps load from the network on every visit.`);
+  }
+  if (active) {
+    active.installFetchGateway(window);
+    window.addEventListener("pagehide", flushMapAssetCacheIndex);
+    // Reclaim the unbounded v4 bucket and its index; nothing reads them now.
+    void active.purgeLegacyCaches();
+    try {
+      for (const key of LEGACY_INDEX_KEYS) window.localStorage.removeItem(key);
+    } catch {
+      // Storage unavailable: nothing to reclaim.
+    }
+    return;
+  }
+  // Filesystem backend: the host route is the cache, so fetches pass through.
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    if (!isMapAssetRequest(input, init)) return nativeFetch!(input, init);
-    const url = input instanceof Request ? input.url : String(input);
+    const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+    const raw = input instanceof Request ? input.url : String(input);
+    if (method !== "GET" || !isCacheableMapUrl(new URL(raw, window.location.origin))) return nativeFetch!(input, init);
     const requestInit = input instanceof Request
       ? { method: input.method, headers: input.headers, signal: input.signal, ...init }
       : init;
-    return fetchMapAsset(url, requestInit);
+    return fetchMapAsset(raw, requestInit);
   }) as typeof fetch;
-  gatewayInstalled = true;
 }
 
 /**
- * Request eviction-safe storage before a bulk download. Browser backend only;
- * disk storage is durable by construction.
+ * Explicit bulk install (local library preparation): ask for eviction-safe
+ * storage and let the budget grow to the room the origin actually has, so the
+ * install does not evict its own earlier members. Browser backend only; disk
+ * storage is durable by construction.
  */
 export async function prepareMapAssetCache() {
   if (desktopMapCacheBridge()) return true;
+  const active = browserCache();
+  const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
+  if (active && estimate?.quota) {
+    active.setBudgetBytes(Math.max(active.budgetBytes, Math.floor(estimate.quota * BULK_INSTALL_QUOTA_SHARE)));
+  }
   if (navigator.storage?.persist) {
     const alreadyPersistent = await navigator.storage.persisted?.().catch(() => false) ?? false;
     return alreadyPersistent || await navigator.storage.persist().catch(() => false);
@@ -457,23 +364,42 @@ export async function clearMapAssetCache() {
     await bridge.clear();
     return;
   }
-  pendingBulkIndex = null;
+  const active = browserCache();
+  if (active) {
+    await active.clear();
+    await active.purgeLegacyCaches();
+    return;
+  }
   await caches.delete(CACHE_NAME).catch(() => false);
-  localStorage.removeItem(INDEX_KEY);
 }
 
 /** Location, usage and free space of whichever backend holds map bytes. */
 export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
   const bridge = desktopMapCacheBridge();
   if (bridge) return bridge.status();
-  const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
-  const persistent = await navigator.storage?.persisted?.().catch(() => false) ?? false;
+  const active = browserCache();
+  const status = await active?.status();
+  const originFree = status?.quotaBytes != null
+    ? Math.max(0, status.quotaBytes - (status.originUsageBytes ?? 0))
+    : null;
+  const budgetBytes = status?.budgetBytes ?? MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES;
+  const mapBytes = status?.usedBytes ?? 0;
+  const headroom = Math.max(0, budgetBytes - mapBytes);
   return {
     backend: "browser",
-    persistent,
-    usedBytes: estimate?.usage ?? null,
-    availableBytes: estimate?.quota ? Math.max(0, estimate.quota - (estimate.usage ?? 0)) : null,
+    persistent: status?.persistent ?? false,
+    usedBytes: status?.originUsageBytes ?? null,
+    availableBytes: originFree === null ? headroom : Math.min(originFree, headroom),
+    mapBytes,
+    budgetBytes,
+    entryCount: status?.entryCount ?? 0,
+    unavailable: active ? null : browserMapCacheUnavailableReason() ?? "Cache Storage is unavailable in this browser.",
   };
+}
+
+/** Subscribe to browser cache usage changes; a no-op on the filesystem backend. */
+export function onMapAssetCacheChange(listener: () => void): () => void {
+  return browserCache()?.onChange(listener) ?? (() => undefined);
 }
 
 /**
@@ -495,9 +421,7 @@ export async function chooseMapAssetCacheDirectory(
  * disk free space through `mapAssetCacheStatus` instead.
  */
 export async function availableStorageBytes() {
-  const estimate = await navigator.storage?.estimate?.();
-  if (!estimate?.quota) return null;
-  return Math.max(0, estimate.quota - (estimate.usage ?? 0));
+  return estimateAvailableStorageBytes(typeof navigator === "undefined" ? undefined : navigator.storage);
 }
 
 export function cacheReceiptKey(releaseKey: string, profile: string) {
@@ -509,19 +433,25 @@ export function mapCacheReceiptKey(mapVersionId: string, closureSha256: string) 
 }
 
 export async function writeCacheReceipt(key: string, assets: number, bytes: number) {
-  const receipt = { completedAt: Date.now(), assets, bytes };
   const bridge = desktopMapCacheBridge();
   if (bridge) {
-    await bridge.writeReceipt(key, receipt);
+    await bridge.writeReceipt(key, { completedAt: Date.now(), assets, bytes });
     return;
   }
-  const index = readIndex();
-  index.receipts[key] = receipt;
-  writeIndex(index, Boolean(pendingBulkIndex));
+  browserCache()?.writeReceipt(key, assets, bytes);
 }
 
 export async function hasCacheReceipt(key: string) {
   const bridge = desktopMapCacheBridge();
   if (bridge) return Boolean(await bridge.receipt(key));
-  return Boolean(readIndex().receipts[key]);
+  return browserCache()?.hasReceipt(key) ?? false;
+}
+
+/** Test seam: forget the page's gateway so the next call builds a fresh one. */
+export function resetMapAssetCacheForTests() {
+  gateway = null;
+  nativeFetch = null;
+  gatewayInstalled = false;
+  downloadUrlResolver = null;
+  unavailableLogged = false;
 }

@@ -9,6 +9,7 @@ import {
   chooseMapAssetCacheDirectory,
   clearMapAssetCache,
   mapAssetCacheStatus,
+  onMapAssetCacheChange,
   type MapAssetCacheStatus,
 } from "../lib/maps/frontend/map-asset-cache";
 import { Button } from "./ui/button";
@@ -75,6 +76,23 @@ export function MapAssetCacheStorage({
     void refresh();
   }, [refreshKey, refresh]);
 
+  // Follow downloads live on the browser backend; the readout is otherwise
+  // stale the moment a map finishes loading in another part of the page.
+  useEffect(() => {
+    let scheduled: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = onMapAssetCacheChange(() => {
+      if (scheduled !== null) return;
+      scheduled = setTimeout(() => {
+        scheduled = null;
+        void refresh();
+      }, 500);
+    });
+    return () => {
+      unsubscribe();
+      if (scheduled !== null) clearTimeout(scheduled);
+    };
+  }, [refresh]);
+
   const chooseDirectory = async (move: boolean) => {
     setBusy(move ? "moving" : "choosing");
     try {
@@ -103,12 +121,15 @@ export function MapAssetCacheStorage({
 
   const filesystem = status?.backend === "filesystem";
   const unavailable = status?.backend === "filesystem" ? status.unavailable : null;
+  const browserUnavailable = status?.backend === "browser" ? status.unavailable : null;
   const downloading = status?.backend === "filesystem" && status.activeDownloads > 0;
   const location = !status
     ? "Reading…"
     : status.backend === "filesystem"
       ? status.directory
-      : status.persistent
+      : status.unavailable
+        ? "Not cached on this page"
+        : status.persistent
         ? "This browser's persistent storage"
         : "This browser's storage (may be evicted)";
 
@@ -132,7 +153,24 @@ export function MapAssetCacheStorage({
           >
             {location}
           </p>
+          {browserUnavailable ? (
+            <p
+              {...stylex.props(styles.unavailable)}
+              role="status"
+              data-testid="map-asset-cache-unavailable"
+            >
+              Browser caching unavailable: {browserUnavailable}
+            </p>
+          ) : null}
           <dl {...stylex.props(styles.stats, compact && styles.compactStats)}>
+            {status?.backend === "browser" && !browserUnavailable ? (
+              <div>
+                <dt {...stylex.props(styles.statLabel)}>Maps cached </dt>
+                <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-map-bytes">
+                  {formatCacheBytes(status.mapBytes)} of {formatCacheBytes(status.budgetBytes)}
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt {...stylex.props(styles.statLabel)}>{filesystem ? "Used " : "Site usage "}</dt>
               <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-used">
@@ -186,7 +224,7 @@ export function MapAssetCacheStorage({
               </Button>
             </>
           ) : null}
-          {allowClear ? (
+          {allowClear && !browserUnavailable ? (
             <Button
               xstyle={styles.control}
               disabled={busy !== null || !status || unavailable !== null}
@@ -213,7 +251,9 @@ export function MapAssetCacheStorage({
         >
           <p>
             Delete every cached map asset
-            {status?.usedBytes ? ` (${formatCacheBytes(status.usedBytes)})` : ""}
+            {status?.backend === "browser"
+              ? status.mapBytes ? ` (${formatCacheBytes(status.mapBytes)})` : ""
+              : status?.usedBytes ? ` (${formatCacheBytes(status.usedBytes)})` : ""}
             {filesystem ? " from disk" : " from this browser"}? Maps will be downloaded again when needed.
           </p>
           <div {...stylex.props(styles.confirmActions)}>
