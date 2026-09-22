@@ -56,6 +56,8 @@ export const styles = stylex.create({
     minHeight: "0",
   },
   leftSidebar: {
+    display: "flex",
+    height: "100%",
     pointerEvents: "auto",
     position: "absolute",
     top: space.none,
@@ -84,6 +86,7 @@ export const styles = stylex.create({
     backgroundColor: "transparent",
   },
   canvas: {
+    display: "flex",
     pointerEvents: "auto",
     position: "absolute",
     inset: space.none,

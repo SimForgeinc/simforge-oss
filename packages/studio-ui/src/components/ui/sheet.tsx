@@ -28,13 +28,14 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
   side?: SheetSide;
+  showCloseButton?: boolean;
   xstyle?: SheetStyle;
 }
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, xstyle, ...props }, ref) => (
+>(({ side = "right", showCloseButton = true, className, children, xstyle, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
@@ -43,10 +44,10 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <SheetPrimitive.Close {...mergeStyleProps(stylex.props(styles.close))}>
+      {showCloseButton ? <SheetPrimitive.Close {...mergeStyleProps(stylex.props(styles.close))}>
         <X aria-hidden="true" {...stylex.props(styles.closeIcon)} />
         <span {...stylex.props(styles.srOnly)}>Close</span>
-      </SheetPrimitive.Close>
+      </SheetPrimitive.Close> : null}
     </SheetPrimitive.Content>
   </SheetPortal>
 ));

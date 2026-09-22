@@ -824,59 +824,7 @@ export const styles = stylex.create({
     height: "0.625rem",
     flexShrink: "0",
   },
-  // absolute -right-1.5 top-0 z-20 h-full w-3 cursor-col-resize touch-none rounded-r-sm bg-transparent before:absolute before:inset-y-1 before:left-1/2 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-white/60 before:opacity-0 before:transition-opacity hover:before:bg-[#E8E044] hover:before:opacity-100 focus-visible:outline-none focus-visible:before:bg-[#E8E044] focus-visible:before:opacity-100 group-hover/clip:before:opacity-100 disabled:cursor-not-allowed disabled:before:bg-white/25
-  absTallRaised2: {
-    position: "absolute",
-    right: "-0.375rem",
-    top: space.none,
-    zIndex: "20",
-    height: "100%",
-    width: "0.75rem",
-    cursor: {
-      default: "col-resize",
-      ":disabled": "not-allowed",
-    },
-    touchAction: "none",
-    borderTopRightRadius: "0",
-    borderBottomRightRadius: "0",
-    backgroundColor: "transparent",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    "::before": {
-      content: "''",
-      position: "absolute",
-      top: space.xs,
-      bottom: space.xs,
-      left: "50%",
-      width: "0.125rem",
-      transform: "translate(-50%, 0)",
-      borderRadius: "0",
-      // hover:before:bg-[#E8E044] focus-visible:before:bg-[#E8E044] disabled:before:bg-white/25
-      backgroundColor: {
-        default: "rgb(255 255 255 / 0.6)",
-        ":hover": colors.accent,
-        ":focus-visible": colors.accent,
-        ":disabled": "rgb(255 255 255 / 0.25)",
-      },
-      // hover:before:opacity-100 focus-visible:before:opacity-100, and
-      // `group-hover/clip:before:opacity-100` as the resting value, published by
-      // the clip as `hovered.clipHandleOpacity` — see the left handle above.
-      opacity: {
-        default: hovered.clipHandleOpacity,
-        ":hover": "1",
-        ":focus-visible": "1",
-      },
-      transitionProperty: "opacity",
-      transitionTimingFunction: motion.easeStandard,
-      transitionDuration: "150ms",
-    },
-  },
+  resizeEnd: { left: "auto", right: "-0.375rem" },
   // fixed z-[90] overflow-y-auto rounded-2xl border border-white/15 bg-[linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))] p-3 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72),0_0_0_1px_rgba(232,224,68,0.12)] backdrop-blur-2xl
   fixedWhiteBordered: {
     position: "fixed",

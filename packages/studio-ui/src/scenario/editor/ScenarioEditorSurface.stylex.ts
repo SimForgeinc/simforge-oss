@@ -2,6 +2,8 @@ import * as stylex from "@stylexjs/stylex";
 import { colors, text, space, layers } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
+  editorShell: { height: "100%", minHeight: 0, color: colors.text, pointerEvents: "auto", backgroundColor: colors.bg },
+  externalShell: { pointerEvents: "none", backgroundColor: "transparent" },
   // grid h-32 place-items-center text-xs text-muted-foreground
   gridCenteredXs: {
     display: "grid",

@@ -835,7 +835,7 @@ export function V1TimelineRail({
                 ? `Name column fits its contents, ${identityWidth} pixels`
                 : `Name column ${identityWidth} pixels`
             }
-            {...mergeStyleProps(stylex.props(styles.timelineSplitResizeHandle), "group")}
+            {...mergeStyleProps(stylex.props(styles.timelineSplitResizeHandle, styles.abs))}
             data-testid="timeline-split-resize-handle"
             data-timeline-seek-ignore="true"
             // Two press/release pairs — a human double click — are caught in
@@ -861,7 +861,7 @@ export function V1TimelineRail({
             style={{ left: `var(${IDENTITY_WIDTH_VAR})` }}
             tabIndex={0}
           >
-            <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/25 transition-colors group-hover:bg-[#E8E044]/80 group-focus-visible:bg-[#E8E044]" />
+            <span {...stylex.props(styles.absInert)} />
           </div>
           <header
             {...stylex.props(styles.timelineTopbar)}
@@ -904,7 +904,7 @@ export function V1TimelineRail({
               aria-valuemin={windowRange.startMs / 1000}
               aria-valuenow={displayedTime}
               aria-valuetext={`${displayedTime.toFixed(1)} seconds`}
-              {...mergeStyleProps(stylex.props(styles.timelinePlayheadDragHandleButton), "group")}
+              {...mergeStyleProps(stylex.props(styles.timelinePlayheadDragHandleButton, styles.absLivePad0))}
               data-testid="timeline-playhead-drag-handle"
               data-timeline-seek-ignore="true"
               onKeyDown={(event) => {
@@ -920,7 +920,7 @@ export function V1TimelineRail({
               role="slider"
               type="button"
             >
-              <span className="absolute left-1/2 top-0 size-3 -translate-x-1/2 rounded-full bg-[#E8E044] shadow-[0_0_10px_rgba(232,224,68,0.55)] transition-transform group-hover:scale-125" />
+              <span {...stylex.props(styles.absRound)} />
             </button>
           </div>
 
@@ -1112,9 +1112,7 @@ function SignalRailLane({
           return (
             <button
               aria-label={`${indicationLabel(band.indication)}, ${band.startS.toFixed(1)} to ${band.endS.toFixed(1)} seconds, ${authored ? "authored" : selectable ? "map timing; click to take control" : "map timing"}`}
-              className={`absolute inset-y-0 flex min-w-px items-center justify-center overflow-hidden border disabled:pointer-events-none ${
-                authored ? `${classes.fill} ${classes.border}` : `${classes.ghost} border-dashed border-white/20`
-              } ${selectable ? "cursor-pointer" : "cursor-default"}`}
+              {...stylex.props(styles.signalBand, authored ? classes.fill : classes.ghost, authored ? classes.border : styles.signalBandBaseline, selectable ? styles.signalBandSelectable : styles.signalBandInert)}
               data-source={band.source}
               data-testid={`timeline-signal-band-${laneId}-${band.startS}`}
               disabled={!selectable}
@@ -1266,9 +1264,7 @@ function ActorRailLane({
       style={{ gridTemplateColumns: IDENTITY_GRID_COLUMNS, gridTemplateRows: rowTemplate }}
     >
       <div
-        className={`relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 ${
-          selected ? "bg-[#E8E044]/10 text-[#E8E044]" : "bg-black/20 text-white/75"
-        }`}
+        {...stylex.props(styles.identityColumn, selected ? styles.identityColumnSelected : styles.identityColumnIdle)}
         data-testid={`timeline-actor-identity-${role.id}`}
         style={{ gridColumn: 1, gridRow: `1 / span ${rowCount}` }}
       >
@@ -1407,7 +1403,7 @@ function ReasoningTraceLane({
           return (
             <button
               aria-label={`Edit reasoning trace from ${segment.startS.toFixed(1)} to ${segment.endS.toFixed(1)} seconds`}
-              className={`absolute inset-y-1 overflow-hidden rounded-md border px-2 text-left text-[8px] ${selectedId === segment.id ? 'border-white bg-[#E8E044] text-black ring-1 ring-white' : 'border-[#E8E044]/70 bg-[#E8E044]/25 text-[#E8E044]'}`}
+              {...stylex.props(styles.reasoningClip, selectedId === segment.id ? styles.reasoningClipSelected : styles.reasoningClipIdle)}
               data-timeline-seek-ignore="true"
               data-testid={`reasoning-trace-clip-${segment.id}`}
               key={segment.id}
@@ -1599,17 +1595,7 @@ function InteractionBand({
           />
         ) : null}
         <div
-          className={`group/clip absolute inset-y-1 flex min-w-4 overflow-visible rounded-[3px] border ${
-            routeNeedsSetup
-              ? "animate-pulse border-red-300 bg-red-500/45 text-red-50 shadow-[0_0_12px_rgba(248,113,113,0.45)] motion-reduce:animate-none"
-              : cue?.conflict === "conflict"
-              ? "border-red-300 bg-red-400/25 text-red-50 shadow-[0_0_8px_rgba(252,165,165,0.2)]"
-              : cue?.conflict === "possible"
-                ? "border-amber-300/80 bg-amber-300/20 text-amber-50"
-                : resolved.armed || !editable
-              ? "border-dashed border-[#E8E044]/60 bg-[#E8E044]/15"
-              : "border-[#E8E044]/80 bg-[#E8E044]/65 text-black"
-          } ${selected ? "z-10 ring-1 ring-white" : ""}`}
+          {...stylex.props(styles.clip, routeNeedsSetup ? styles.clipNeedsSetup : cue?.conflict === "conflict" ? styles.clipConflict : cue?.conflict === "possible" ? styles.clipPossible : resolved.armed || !editable ? styles.clipArmed : styles.clipAuthored, selected && styles.clipSelected)}
           data-conflict={cue?.conflict ?? "none"}
           data-editable={editable && !timingLocked ? "true" : "false"}
           data-locked={timingLocked ? "true" : "false"}
@@ -1639,7 +1625,7 @@ function InteractionBand({
           {!timingLocked ? (
             <button
               aria-label={`Resize start of ${label}`}
-              className="absolute -left-1.5 top-0 z-20 h-full w-3 cursor-col-resize touch-none rounded-l-sm bg-transparent before:absolute before:inset-y-1 before:left-1/2 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-white/60 before:opacity-0 before:transition-opacity hover:before:bg-[#E8E044] hover:before:opacity-100 focus-visible:outline-none focus-visible:before:bg-[#E8E044] focus-visible:before:opacity-100 group-hover/clip:before:opacity-100 disabled:cursor-not-allowed disabled:before:bg-white/25"
+              {...stylex.props(styles.absTallRaised)}
               data-testid={`timeline-resize-start-${interaction.id}`}
               data-timeline-seek-ignore="true"
               disabled={!editable}
@@ -1697,7 +1683,7 @@ function InteractionBand({
           {!timingLocked && !endsWithScenario ? (
             <button
               aria-label={`Resize end of ${label}`}
-              className="absolute -right-1.5 top-0 z-20 h-full w-3 cursor-col-resize touch-none rounded-r-sm bg-transparent before:absolute before:inset-y-1 before:left-1/2 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-white/60 before:opacity-0 before:transition-opacity hover:before:bg-[#E8E044] hover:before:opacity-100 focus-visible:outline-none focus-visible:before:bg-[#E8E044] focus-visible:before:opacity-100 group-hover/clip:before:opacity-100 disabled:cursor-not-allowed disabled:before:bg-white/25"
+              {...stylex.props(styles.absTallRaised, styles.resizeEnd)}
               data-testid={`timeline-resize-end-${interaction.id}`}
               data-timeline-seek-ignore="true"
               disabled={!editable}

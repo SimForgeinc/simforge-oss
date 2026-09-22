@@ -313,11 +313,8 @@ export function ViewportSettingsPanel({
     <Sheet onOpenChange={setOpen} open={open}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
-        // `[&>button:last-child]:hidden` hides the close button `SheetContent`
-        // renders for itself (sheet.tsx). It is a residual because it selects a
-        // child this element does not render, so the declaration has nowhere
-        // else to go: StyleX only styles the element it is applied to.
-        xstyle={styles.flexColClip} className="[&>button:last-child]:hidden"
+        xstyle={styles.flexColClip}
+        showCloseButton={false}
         data-testid="viewport-settings-drawer"
         side="right"
       >
