@@ -18,13 +18,13 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: 0,
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     borderBottomStyle: "solid",
     borderBottomWidth: "1px",
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
     backgroundColor: "rgba(0, 0, 0, 0.8)",
-    paddingInline: space.xl,
-    paddingBlock: space.md,
+    paddingInline: space.s4,
+    paddingBlock: space.s2,
   },
   control: {
     display: "flex",
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     width: "2rem",
     height: "2rem",
     backgroundColor: {
-      default: colors.chip,
+      default: colors.fillStrong,
       ":hover": "rgba(255, 255, 255, 0.2)",
     },
   },
@@ -53,7 +53,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: "transparent",
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   playIcon: {
@@ -61,7 +61,7 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   playIconOffset: {
-    marginLeft: space.xxs,
+    marginLeft: space.s0_5,
   },
   restartIcon: {
     width: "0.75rem",
@@ -72,14 +72,14 @@ export const styles = stylex.create({
     textAlign: "right",
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: text.lineMeta,
+    lineHeight: text.lineXs,
     color: "rgba(255, 255, 255, 0.6)",
   },
   durationTime: {
     width: "2.5rem",
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
-    lineHeight: text.lineMeta,
+    lineHeight: text.lineXs,
     color: "rgba(255, 255, 255, 0.6)",
   },
   scrubArea: {
@@ -104,7 +104,7 @@ export const styles = stylex.create({
     height: scrub.trackHeight,
     width: "100%",
     borderRadius: radii.full,
-    backgroundColor: colors.chipStrong,
+    backgroundColor: colors.fillStronger,
     transitionProperty: "all",
     transitionDuration: "150ms",
     transitionTimingFunction: motion.easeStandard,

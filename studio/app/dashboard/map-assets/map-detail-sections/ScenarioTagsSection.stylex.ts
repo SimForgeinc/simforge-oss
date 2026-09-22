@@ -5,13 +5,13 @@ export const styles = stylex.create({
   tagsHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   toggleButton: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -52,8 +52,8 @@ export const styles = stylex.create({
   tagsList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    marginTop: space.md,
+    gap: space.s1_5,
+    marginTop: space.s2,
   },
   tagItem: {
     borderWidth: "1px",
@@ -61,7 +61,7 @@ export const styles = stylex.create({
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.3)",
     paddingInline: "0.625rem",
-    paddingBlock: space.md,
+    paddingBlock: space.s2,
   },
   tagLabel: {
     fontSize: text.sizeXs,
@@ -70,7 +70,7 @@ export const styles = stylex.create({
     color: colors.text,
   },
   tagDefinition: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: "11px",
     lineHeight: 1.375,
     color: colors.mutedForeground,

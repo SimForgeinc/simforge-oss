@@ -14,9 +14,9 @@ export const styles = stylex.create({
     minWidth: space.datasetStripWidth,
     borderRightWidth: "1px",
     borderRightStyle: "solid",
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.22)",
-    paddingBlock: space.md,
+    paddingBlock: space.s2,
   },
   /** The icon column. Scrolls when the workspace has more datasets than fit, without a visible bar. */
   list: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     position: "relative",
     display: "flex",
     justifyContent: "center",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   /**
    * The left pill: Slack's selection indicator. Height carries the state — a dot on hover, a bar on
@@ -73,8 +73,8 @@ export const styles = stylex.create({
     letterSpacing: "0.04em",
     textTransform: "uppercase",
     // Monochrome: brightness is the only per-state signal, so hover lifts the tile and the monogram.
-    backgroundColor: { default: colors.glassRaised, ":hover": colors.chip, ":focus-visible": colors.chip },
-    color: { default: colors.textMuted, ":hover": colors.text, ":focus-visible": colors.text },
+    backgroundColor: { default: colors.glassRaised, ":hover": colors.fillStrong, ":focus-visible": colors.fillStrong },
+    color: { default: colors.mutedForeground, ":hover": colors.text, ":focus-visible": colors.text },
     transform: { default: "scale(1)", ":hover": "scale(1.06)", ":active": "scale(0.97)" },
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -83,7 +83,7 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   iconActive: {
-    backgroundColor: colors.glassHover,
+    backgroundColor: colors.fillStronger,
     color: colors.text,
     boxShadow: "0 0 0 1px rgb(255 255 255 / 0.55)",
   },
@@ -96,7 +96,7 @@ export const styles = stylex.create({
     inset: 0,
     display: "grid",
     placeItems: "center",
-    backgroundColor: colors.overlayScrim,
+    backgroundColor: colors.scrim,
   },
   /**
    * The menu caret in the icon's corner. Opacity-revealed rather than mounted on hover so it stays in
@@ -128,20 +128,20 @@ export const styles = stylex.create({
     height: "1px",
     width: "1.75rem",
     marginInline: "auto",
-    marginBlock: space.sm,
-    backgroundColor: colors.lineStrong,
+    marginBlock: space.s1_5,
+    backgroundColor: colors.hairlineStrong,
   },
   /** The `+` and review-queue affordances under the list, kept off the scrolling column. */
   footer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
-    paddingTop: space.md,
+    gap: space.s1,
+    paddingTop: space.s2,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    borderColor: colors.line,
-    marginTop: space.md,
+    borderColor: colors.hairline,
+    marginTop: space.s2,
   },
   footerButton: {
     width: ICON_SIZE,
@@ -158,12 +158,12 @@ export const styles = stylex.create({
     backgroundColor: { default: "transparent", ":hover": colors.glassRaised },
     color: { default: colors.textSubtle, ":hover": colors.text },
   },
-  footerIcon: { width: space.xl, height: space.xl },
+  footerIcon: { width: space.s4, height: space.s4 },
   skeleton: {
     width: ICON_SIZE,
     height: ICON_SIZE,
     marginInline: "auto",
-    marginBlock: space.xs,
+    marginBlock: space.s1,
     backgroundColor: colors.glassRaised,
   },
   /**
@@ -180,10 +180,10 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xxs,
-    paddingInline: space.xxs,
-    paddingTop: { default: space.lg, ":first-child": space.none },
-    paddingBottom: space.xxs,
+    gap: space.s0_5,
+    paddingInline: space.s0_5,
+    paddingTop: { default: space.s3, ":first-child": 0 },
+    paddingBottom: space.s0_5,
   },
   sectionLabel: {
     display: "-webkit-box",
@@ -214,7 +214,7 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: "0.02em",
     overflowWrap: "anywhere",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   /**
    * A cloud dataset's tile. It states presence, so it drops the pointer affordances the local tile
@@ -222,19 +222,19 @@ export const styles = stylex.create({
    */
   iconStatic: {
     cursor: "default",
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised, ":focus-visible": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.textMuted, ":focus-visible": colors.textMuted },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised, ":focus-visible": colors.glassRaised },
+    color: { default: colors.textSubtle, ":hover": colors.mutedForeground, ":focus-visible": colors.mutedForeground },
     transform: { default: "none", ":hover": "none", ":active": "none" },
   },
   /** The signed-out cloud section's way in. Dashed, so it reads as an opening rather than a tile. */
   connectButton: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised },
     color: { default: colors.textSubtle, ":hover": colors.text },
     borderWidth: "1px",
     borderStyle: "dashed",
-    borderColor: { default: colors.lineStrong, ":hover": colors.accent },
+    borderColor: { default: colors.hairlineStrong, ":hover": colors.accent },
     transitionProperty: TRANSITION_PROPERTY,
     transitionDuration: motion.durFast,
     transitionTimingFunction: motion.easeStandard,
@@ -243,7 +243,7 @@ export const styles = stylex.create({
   overflowButton: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised },
     color: { default: colors.textSubtle, ":hover": colors.text },
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
@@ -255,7 +255,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "1px",
     height: "1px",
-    padding: space.none,
+    padding: 0,
     margin: "-1px",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",

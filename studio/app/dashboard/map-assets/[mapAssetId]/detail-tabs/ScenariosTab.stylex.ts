@@ -5,19 +5,19 @@ export const styles = stylex.create({
   scenariosContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
   },
   newScenarioSection: {
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    padding: space.lg,
+    padding: space.s3,
   },
   newScenarioRow: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: space.lg,
+    gap: space.s3,
   },
   scenarioContentStack: {
     minWidth: 0,
@@ -29,7 +29,7 @@ export const styles = stylex.create({
     color: colors.text,
   },
   newScenarioDescription: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: "11px",
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: colors.border,
     paddingInline: "0.625rem",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
     fontSize: "11px",
     fontWeight: 500,
     color: colors.text,
@@ -59,7 +59,7 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   emptyTemplatesMessage: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -67,18 +67,18 @@ export const styles = stylex.create({
   templateScenariosList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    marginTop: space.md,
+    gap: space.s1_5,
+    marginTop: space.s2,
   },
   templateScenarioItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
   },
   templateScenarioName: {
     overflow: "hidden",

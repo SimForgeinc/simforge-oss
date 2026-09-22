@@ -28,7 +28,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderWidth: "1px",
     borderStyle: "solid",
-    borderColor: colors.glassHover,
+    borderColor: colors.fillStronger,
     backgroundColor: colors.bg,
     boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
     /*

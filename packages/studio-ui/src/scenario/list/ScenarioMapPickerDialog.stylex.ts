@@ -38,13 +38,13 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.xl,
+    gap: space.s4,
     borderBottomWidth: "1px",
     borderBottomStyle: "solid",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    paddingInline: space.xxl,
-    paddingBlock: space.xl,
+    paddingInline: space.s6,
+    paddingBlock: space.s4,
   },
   // min-w-0
   div: {
@@ -62,7 +62,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 text-xs text-muted-foreground
   pXs: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -72,7 +72,7 @@ export const styles = stylex.create({
     display: "flex",
     minWidth: 0,
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   // relative w-[min(360px,40vw)]
   divRelative: {
@@ -83,10 +83,10 @@ export const styles = stylex.create({
   searchAbsoluteIcon: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.lg,
+    left: space.s3,
     top: "50%",
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
     transform: "translateY(-50%)",
     color: colors.mutedForeground,
   },
@@ -100,8 +100,8 @@ export const styles = stylex.create({
     minHeight: 0,
     flex: "1 1 0%",
     overflowY: "auto",
-    paddingInline: space.xxl,
-    paddingBlock: space.xxl,
+    paddingInline: space.s6,
+    paddingBlock: space.s6,
   },
   // flex h-full items-center justify-center text-sm text-muted-foreground
   divFlexSm: {
@@ -118,7 +118,7 @@ export const styles = stylex.create({
     marginInline: "auto",
     display: "grid",
     maxWidth: "80rem",
-    gap: space.xl,
+    gap: space.s4,
     gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))", "@media (min-width: 1024px)": "repeat(3, minmax(0, 1fr))", "@media (min-width: 1280px)": "repeat(4, minmax(0, 1fr))" },
   },
   // relative aspect-[4/3] w-full overflow-hidden bg-muted/30
@@ -144,14 +144,14 @@ export const styles = stylex.create({
   // absolute right-3 top-3 flex items-center gap-1.5 bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground
   divAbsoluteFlexXs: {
     position: "absolute",
-    right: space.lg,
-    top: space.lg,
+    right: space.s3,
+    top: space.s3,
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     backgroundColor: colors.primary,
-    paddingInline: space.lg,
-    paddingBlock: space.xs,
+    paddingInline: space.s3,
+    paddingBlock: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: text.weightSemibold,
@@ -168,19 +168,19 @@ export const styles = stylex.create({
     left: "0",
     right: "0",
     bottom: "0",
-    padding: space.xl,
+    padding: space.s4,
   },
   // mb-1 flex items-center gap-1.5
   divFlex3: {
-    marginBottom: space.xs,
+    marginBottom: space.s1,
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // size-3 shrink-0 text-white/70
   mappinIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
     color: "rgb(255 255 255 / 0.7)",
   },
@@ -206,7 +206,7 @@ export const styles = stylex.create({
   },
   // px-4 py-3
   div4: {
-    paddingInline: space.xl,
-    paddingBlock: space.lg,
+    paddingInline: space.s4,
+    paddingBlock: space.s3,
   },
 });

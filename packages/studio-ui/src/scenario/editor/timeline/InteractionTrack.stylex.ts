@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../../../stylex/tokens.stylex";
+import { colors } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // relative h-2.5 overflow-hidden bg-black/30
@@ -12,12 +12,12 @@ export const styles = stylex.create({
   // absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/10
   abs: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
+    left: 0,
+    right: 0,
     top: "50%",
     height: "1px",
     transform: "translate(0, -50%)",
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
 
   // absolute inset-y-0.5 min-w-px rounded-[2px] shadow-[0_0_12px_rgba(232,224,68,0.14)]

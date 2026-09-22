@@ -18,7 +18,7 @@ export const form = stylex.create({
   root: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     width: "100%",
     maxWidth: "26rem",
   },
@@ -36,7 +36,7 @@ export const form = stylex.create({
   field: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   label: {
     fontFamily: text.fontMeta,
@@ -48,7 +48,7 @@ export const form = stylex.create({
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
     color: colors.text,
   },
   // A six-digit code: monospaced, spaced, and only as wide as it needs to be.
@@ -62,18 +62,18 @@ export const form = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   between: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   submit: {
     height: "2.5rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
     backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
     color: colors.accentText,
@@ -81,9 +81,9 @@ export const form = stylex.create({
   },
   secondary: {
     height: "2.5rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
-    borderColor: colors.lineStrong,
+    borderColor: colors.hairlineStrong,
     backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
     color: colors.text,
   },
@@ -102,7 +102,7 @@ export const form = stylex.create({
   divider: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontFamily: text.fontMeta,
     fontSize: "9px",
     fontWeight: 700,
@@ -113,12 +113,12 @@ export const form = stylex.create({
   dividerLine: {
     flex: 1,
     height: "1px",
-    backgroundColor: colors.line,
+    backgroundColor: colors.hairline,
   },
   providers: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   error: {
     fontSize: text.sizeSm,
@@ -152,19 +152,19 @@ export const banner = stylex.create({
   root: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
     marginTop: "0.75rem",
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: AMBER_400_30,
     borderRadius: radii.xl,
     backgroundColor: AMBER_400_10,
-    padding: space.xl,
+    padding: space.s4,
   },
   title: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: 600,

@@ -27,7 +27,7 @@ export const styles = stylex.create({
   },
   // mt-1 font-semibold
   semibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontWeight: text.weightSemibold,
   },
   // motionStyles.editorMotion + -mr-1 -mt-1 ml-auto inline-flex size-7 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card
@@ -68,7 +68,7 @@ export const styles = stylex.create({
   },
   // mt-4 h-1.5 overflow-hidden bg-muted
   clip: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     height: "0.375rem",
     overflow: "hidden",
     backgroundColor: colors.muted,
@@ -80,11 +80,11 @@ export const styles = stylex.create({
   },
   // mb-2 flex border border-border p-2 text-xs
   flexXsBordered: {
-    marginBottom: space.md,
+    marginBottom: space.s2,
     display: "flex",
     borderWidth: "1px",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
@@ -116,14 +116,14 @@ export const styles = stylex.create({
   },
   // ml-2 text-muted-foreground
   muted: {
-    marginLeft: space.md,
+    marginLeft: space.s2,
     color: colors.mutedForeground,
   },
   // ml-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground
   xsMutedPad0: {
-    marginLeft: space.md,
+    marginLeft: space.s2,
     height: "auto",
-    padding: space.none,
+    padding: 0,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: {
@@ -136,7 +136,7 @@ export const styles = stylex.create({
     marginTop: "1.25rem",
     borderTopWidth: "1px",
     borderColor: colors.border,
-    paddingTop: space.xl,
+    paddingTop: space.s4,
   },
   // text-xs font-semibold uppercase tracking-meta text-muted-foreground
   capsXsMuted2: {
@@ -149,7 +149,7 @@ export const styles = stylex.create({
   },
   // mt-3 (the space-y-2 moved onto the rows)
   mt3: {
-    marginTop: space.lg,
+    marginTop: space.s3,
   },
   /*
    * `space-y-2` was a `> * + *` rule, which StyleX cannot express from the
@@ -160,14 +160,14 @@ export const styles = stylex.create({
    */
   stackedMd: {
     marginTop: {
-      default: space.md,
-      ":first-child": space.none,
+      default: space.s2,
+      ":first-child": 0,
     },
   },
   // flex gap-4 text-xs
   flexXsGap4: {
     display: "flex",
-    gap: space.xl,
+    gap: space.s4,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },

@@ -56,7 +56,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xl,
+    gap: space.s4,
     backgroundColor: "hsl(var(--background) / 0.5)",
   },
   noAssetIcon: {
@@ -74,7 +74,7 @@ export const styles = stylex.create({
     color: colors.text,
   },
   noAssetDescription: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     maxWidth: "20rem",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -87,7 +87,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.lg,
+    gap: space.s3,
     backgroundColor: "hsl(var(--background) / 0.5)",
   },
   viewerErrorIcon: {

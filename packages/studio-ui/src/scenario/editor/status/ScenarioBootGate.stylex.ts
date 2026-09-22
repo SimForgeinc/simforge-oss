@@ -10,7 +10,7 @@ export const styles = stylex.create({
   },
   // mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]
   round: {
-    marginTop: space.xxl,
+    marginTop: space.s6,
     height: "2.5rem",
     borderRadius: "0",
     backgroundColor: {

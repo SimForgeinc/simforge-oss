@@ -10,13 +10,13 @@ export const styles = stylex.create({
   sectionHeaderRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   sectionToggleButton: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -57,8 +57,8 @@ export const styles = stylex.create({
   metadataContent: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
-    marginTop: space.md,
+    gap: space.s3,
+    marginTop: space.s2,
   },
   emptyMetadataNotice: {
     fontSize: text.sizeXs,
@@ -69,7 +69,7 @@ export const styles = stylex.create({
     color: "hsl(var(--foreground) / 0.8)",
   },
   metadataSubsectionHeading: {
-    marginBottom: space.xs,
+    marginBottom: space.s1,
     fontSize: "11px",
     fontWeight: 600,
     textTransform: "uppercase",
@@ -84,8 +84,8 @@ export const styles = stylex.create({
   metadataDefinitionList: {
     display: "grid",
     gridTemplateColumns: "auto 1fr",
-    columnGap: space.md,
-    rowGap: space.xxs,
+    columnGap: space.s2,
+    rowGap: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -118,13 +118,13 @@ export const styles = stylex.create({
     color: "hsl(var(--muted-foreground) / 0.6)",
   },
   populateMetadataContainer: {
-    paddingTop: space.xs,
+    paddingTop: space.s1,
   },
   populateMetadataButton: {
     width: "100%",
   },
   populateMetadataSpinner: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
     animationName: spin,
@@ -133,7 +133,7 @@ export const styles = stylex.create({
     animationIterationCount: "infinite",
   },
   populateMetadataError: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.danger,

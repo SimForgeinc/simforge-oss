@@ -8,17 +8,17 @@ export const styles = stylex.create({
     minHeight: "52px",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     overflow: "hidden",
     borderTopLeftRadius: "10px",
     borderTopRightRadius: "10px",
     borderBottomWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundImage: "linear-gradient(180deg, #171717 0%, #111111 100%)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
   },
   // mt-1 truncate text-sm font-semibold leading-none text-white
   smWhiteSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -63,7 +63,7 @@ export const styles = stylex.create({
     transitionDuration: "150ms",
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-3.5
@@ -79,7 +79,7 @@ export const styles = stylex.create({
     borderBottomRightRadius: "11px",
     borderBottomLeftRadius: "11px",
     backgroundColor: "rgb(13 13 13 / 1)",
-    padding: space.xl,
+    padding: space.s4,
     scrollbarWidth: "thin",
   },
 

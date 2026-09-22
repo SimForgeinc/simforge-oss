@@ -6,16 +6,16 @@ export const styles = stylex.create({
   flexColRuleT: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     borderTopWidth: "1px",
-    paddingTop: space.xl,
+    paddingTop: space.s4,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // flex items-center gap-2
   flexCenterGap2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
@@ -31,7 +31,7 @@ export const styles = stylex.create({
     marginLeft: "auto",
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // size-3.5
   size35: {
@@ -48,7 +48,7 @@ export const styles = stylex.create({
   flexColGap1: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted2: {
@@ -66,7 +66,7 @@ export const styles = stylex.create({
   // render-glass border
   borderedDivided: {
     borderWidth: "1px",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // (was the list's render-divide divide-y)
@@ -78,11 +78,11 @@ export const styles = stylex.create({
   flexColGap12: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
   },
   // min-w-0 flex-1 truncate text-xs text-foreground
   fillXsInk: {
@@ -106,10 +106,10 @@ export const styles = stylex.create({
   flexColBordered: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     padding: "0.625rem",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // min-h-16 text-xs

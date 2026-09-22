@@ -6,8 +6,8 @@ export const styles = stylex.create({
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.sm,
-    paddingBottom: space.sm,
+    gap: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   chevronMutedShrink: {
     width: "0.75rem",
@@ -35,15 +35,15 @@ export const styles = stylex.create({
   sectionContent: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xxs,
+    gap: space.s0_5,
     marginLeft: "18px",
   },
   statRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
-    paddingBlock: space.xxs,
+    gap: space.s2,
+    paddingBlock: space.s0_5,
   },
   statLabel: {
     fontSize: text.sizeXs,
@@ -60,8 +60,8 @@ export const styles = stylex.create({
   statsContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
-    paddingTop: space.xs,
+    gap: space.s3,
+    paddingTop: space.s1,
   },
   expandControls: {
     display: "flex",
@@ -71,7 +71,7 @@ export const styles = stylex.create({
   expandAllButton: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -85,7 +85,7 @@ export const styles = stylex.create({
   speedLimitList: {
     display: "flex",
     flexWrap: "wrap",
-    gap: space.xs,
+    gap: space.s1,
     justifyContent: "flex-end",
   },
   speedLimitValue: {
@@ -94,17 +94,17 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
     fontWeight: 500,
   },
   crosswalkSourceDetail: {
-    marginLeft: space.xs,
+    marginLeft: space.s1,
     color: colors.mutedForeground,
   },
   signalDetailRow: {
-    marginLeft: space.md,
+    marginLeft: space.s2,
   },
   signalDetailText: {
     fontSize: "10px",
@@ -114,7 +114,7 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: "rgba(34, 197, 94, 0.1)",
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
     fontWeight: 500,
@@ -124,14 +124,14 @@ export const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: colors.muted,
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
     fontWeight: 500,
     color: colors.mutedForeground,
   },
   providerAttribution: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: "10px",
     lineHeight: 1.375,
     color: "hsl(var(--muted-foreground) / 0.8)",

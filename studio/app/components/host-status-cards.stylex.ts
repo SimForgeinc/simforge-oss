@@ -72,7 +72,7 @@ export const card = stylex.create({
   header: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
   },
   // grid size-10 shrink-0 place-items-center text-[#E8E044]
   icon: {
@@ -108,11 +108,11 @@ export const card = stylex.create({
   titleRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // ml-2 font-mono text-xs font-normal text-white/40
   titleVersion: {
-    marginLeft: space.md,
+    marginLeft: space.s2,
     fontFamily: text.fontMono,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -155,7 +155,7 @@ export const card = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
 });
 
@@ -164,7 +164,7 @@ export const action = stylex.create({
   // h-10 gap-2 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5
   outline: {
     height: "2.5rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
     borderColor: "rgba(255, 255, 255, 0.15)",
     backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
@@ -173,7 +173,7 @@ export const action = stylex.create({
   // h-10 gap-2 rounded-full bg-[#E8E044] text-black hover:bg-[#f1ea55]
   accent: {
     height: "2.5rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
     backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
     color: "#000000",
@@ -181,7 +181,7 @@ export const action = stylex.create({
   // Accent connect action with the caller's disabled opacity.
   accentConnect: {
     height: "2.5rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
     backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
     color: "#000000",
@@ -190,7 +190,7 @@ export const action = stylex.create({
   // h-9 gap-2 rounded-full bg-amber-300 text-black hover:bg-amber-200
   amber: {
     height: "2.25rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: radii.full,
     backgroundColor: { default: "#fcd34d", ":hover": "#fde68a" },
     color: "#000000",
@@ -255,13 +255,13 @@ export const cloud = stylex.create({
     display: "flex",
     width: "100%",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: AMBER_400_30,
     borderRadius: radii.xl,
     backgroundColor: AMBER_400_10,
-    padding: space.xl,
+    padding: space.s4,
   },
   // text-sm font-semibold
   confirmTitle: {
@@ -278,7 +278,7 @@ export const cloud = stylex.create({
   // flex gap-2
   confirmActions: {
     display: "flex",
-    gap: space.md,
+    gap: space.s2,
   },
 });
 
@@ -381,7 +381,7 @@ export const local = stylex.create({
   row: {
     display: "flex",
     minWidth: 0,
-    gap: space.lg,
+    gap: space.s3,
     paddingBlock: "0.375rem",
     borderTopWidth: { default: 1, ":first-child": 0 },
     borderTopStyle: "solid",
@@ -407,7 +407,7 @@ export const local = stylex.create({
     minWidth: 0,
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgba(255, 255, 255, 0.75)",
@@ -436,7 +436,7 @@ export const local = stylex.create({
   },
   // space-y-1, as a per-item rule for the same reason `divide-y` became one.
   reason: {
-    marginTop: { default: space.xs, ":first-child": 0 },
+    marginTop: { default: space.s1, ":first-child": 0 },
   },
   // mt-3 border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive
   error: {
@@ -455,7 +455,7 @@ export const local = stylex.create({
     marginTop: "0.75rem",
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: "rgba(255, 255, 255, 0.45)",
@@ -478,11 +478,11 @@ export const readyPill = stylex.create({
   base: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: 1,
     borderStyle: "solid",
     borderRadius: radii.full,
-    paddingInline: space.md,
+    paddingInline: space.s2,
     paddingBlock: "0.125rem",
     fontFamily: text.fontMeta,
     fontSize: "8px",

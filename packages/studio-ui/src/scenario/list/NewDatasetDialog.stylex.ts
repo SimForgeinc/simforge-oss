@@ -11,7 +11,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    paddingInline: space.xl,
+    paddingInline: space.s4,
   },
   // absolute inset-0 bg-black/70 backdrop-blur-sm
   closeNewDatasetDialogButton: {
@@ -42,7 +42,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-xs text-muted-foreground
   pXs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -61,7 +61,7 @@ export const styles = stylex.create({
   },
   // mt-3 text-xs
   copyableerrormessageXs: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
@@ -70,6 +70,6 @@ export const styles = stylex.create({
     marginTop: "1.25rem",
     display: "flex",
     justifyContent: "flex-end",
-    gap: space.md,
+    gap: space.s2,
   },
 });

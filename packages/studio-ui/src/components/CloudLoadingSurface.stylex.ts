@@ -10,14 +10,14 @@ const shimmer = stylex.keyframes({ "0%": { transform: "translateX(-100%)" }, "10
  * proportions at the same size, and the plate never exceeds the viewport.
  */
 export const styles = stylex.create({
-  root: { isolation: "isolate", overflow: "hidden", minWidth: 0, minHeight: 0, backgroundColor: colors.panelSolid, color: colors.textOnPlate },
+  root: { isolation: "isolate", overflow: "hidden", minWidth: 0, minHeight: 0, backgroundColor: colors.panelSolid, color: colors.ink },
   screen: { position: "fixed", inset: 0, zIndex: layers.loading, minHeight: "100dvh" },
   pane: { position: "relative", height: "100%", minHeight: 0, minWidth: 0, width: "100%" },
   embedded: { position: "absolute", inset: 0 },
   /** Anchors the diagnostics dropdown under the telemetry plate. */
   diagnostics: { position: "relative", marginTop: "0.75rem" },
   wrap: { position: "relative", zIndex: 10, display: "grid", minHeight: "100%", placeItems: "center", paddingInline: "1.25rem", paddingBlock: "2.5rem" },
-  paneWrap: { padding: space.xl },
+  paneWrap: { padding: space.s4 },
   paneContent: { width: "100%", maxWidth: "540px" },
   fullContent: { width: "min(540px, calc(100vw - 2rem))", paddingInline: "1.75rem", paddingBlock: "1.75rem", "@media (min-width: 640px)": { paddingInline: "2.5rem", paddingBlock: "2.25rem" } },
   row: { display: "flex", alignItems: "flex-start", gap: "1.25rem" },
@@ -29,7 +29,7 @@ export const styles = stylex.create({
   titleFull: { fontSize: "1.5625rem", lineHeight: "2rem", marginTop: "0.5rem" },
   detail: { marginTop: "0.625rem", fontSize: "1.0625rem", lineHeight: "1.5rem", color: "rgb(255 255 255 / 55%)" },
   progressWrap: { marginTop: "1.875rem" },
-  progressTrack: { height: "0.5rem", overflow: "hidden", borderRadius: radii.none, backgroundColor: colors.chip },
+  progressTrack: { height: "0.5rem", overflow: "hidden", borderRadius: radii.none, backgroundColor: colors.fillStrong },
   progressFill: { height: "100%", backgroundColor: colors.accent, transitionProperty: "width", transitionDuration: "300ms", transitionTimingFunction: "ease-out" },
   shimmer: { height: "100%", width: { default: "33.333%", "@media (prefers-reduced-motion: reduce)": "100%" }, backgroundColor: colors.accent, animationName: { default: shimmer, "@media (prefers-reduced-motion: reduce)": "none" }, animationDuration: "1.5s", animationTimingFunction: "ease-in-out", animationIterationCount: "infinite" },
   progressMeta: { marginTop: "0.625rem", display: "flex", justifyContent: "flex-end", fontFamily: text.fontMono, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "rgb(255 255 255 / 35%)" },

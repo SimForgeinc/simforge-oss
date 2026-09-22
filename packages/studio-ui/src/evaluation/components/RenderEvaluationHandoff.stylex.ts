@@ -4,12 +4,12 @@ import { colors, space, text } from "../../stylex/tokens.stylex";
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
-  root: { display: "flex", flexDirection: "column", gap: space.xl, minWidth: 0 },
+  root: { display: "flex", flexDirection: "column", gap: space.s4, minWidth: 0 },
   // space-y-1
   header: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // text-sm font-semibold text-foreground
   evaluateThisRender: {
@@ -27,8 +27,8 @@ export const styles = stylex.create({
   // grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2
   dlGridXs: {
     display: "grid",
-    columnGap: space.xxxl,
-    rowGap: space.md,
+    columnGap: space.s8,
+    rowGap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
@@ -45,7 +45,7 @@ export const styles = stylex.create({
   },
   // mt-1 font-mono text-foreground
   ddMono: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontFamily: text.fontMono,
     color: colors.text,
   },
@@ -61,7 +61,7 @@ export const styles = stylex.create({
   },
   // mt-1 truncate font-mono text-foreground
   ddTruncateMono: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -79,12 +79,12 @@ export const styles = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   // size-4 animate-spin
   loader2Icon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
     animationName: spin,
     animationDuration: "1s",
     animationTimingFunction: "linear",
@@ -92,8 +92,8 @@ export const styles = stylex.create({
   },
   // size-4
   arrowrightIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
   // text-xs text-muted-foreground
   handoffProgress: {
@@ -106,10 +106,10 @@ export const styles = stylex.create({
     borderColor: colors.border,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-xs font-semibold uppercase tracking-wide text-muted-foreground
   chainOfCustody: {
@@ -126,13 +126,13 @@ export const styles = stylex.create({
     lineHeight: "1rem",
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex min-w-0 gap-3
   liFlex: {
     display: "flex",
     minWidth: 0,
-    gap: space.lg,
+    gap: space.s3,
   },
   // w-32 shrink-0 uppercase tracking-wide text-muted-foreground
   spanUppercase: {

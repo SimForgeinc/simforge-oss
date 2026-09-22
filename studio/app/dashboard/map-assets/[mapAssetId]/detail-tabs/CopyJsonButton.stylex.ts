@@ -7,7 +7,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    padding: space.xs,
+    padding: space.s1,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: motion.easeStandard,

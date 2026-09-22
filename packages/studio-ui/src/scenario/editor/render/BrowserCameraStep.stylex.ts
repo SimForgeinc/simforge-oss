@@ -4,12 +4,12 @@ import { colors, text, space } from "../../../stylex/tokens.stylex";
 export const styles = stylex.create({
   // mb-3 flex shrink-0 items-start justify-between gap-4
   flexBetweenStart: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     display: "flex",
     flexShrink: "0",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: space.xl,
+    gap: space.s4,
   },
   // min-w-0
   narrowable: {
@@ -25,7 +25,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 text-micro text-muted-foreground
   microMuted: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.mutedForeground,
@@ -43,10 +43,10 @@ export const styles = stylex.create({
   xsMutedBordered: {
     borderWidth: "1px",
     borderStyle: "dashed",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -72,10 +72,10 @@ export const styles = stylex.create({
   },
   // px-3 py-1.5 text-micro font-bold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -86,10 +86,10 @@ export const styles = stylex.create({
   // w-16 px-1 py-1 text-center
   centerText: {
     width: "4rem",
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     textAlign: "center",
   },
   // border-b render-hairline last:border-b-0
@@ -102,9 +102,9 @@ export const styles = stylex.create({
   },
   // px-3 pt-2 text-micro font-bold uppercase tracking-meta text-muted-foreground
   capsMicroMuted2: {
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -115,10 +115,10 @@ export const styles = stylex.create({
   // min-w-0 px-3 py-1
   narrowable2: {
     minWidth: "0px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
   },
   // motionStyles.editorMotion + flex w-full min-w-0 items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   flexCenterWide: {
@@ -126,7 +126,7 @@ export const styles = stylex.create({
     width: "100%",
     minWidth: "0px",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     textAlign: "left",
     outline: {
       default: null,
@@ -164,10 +164,10 @@ export const styles = stylex.create({
   tightCapsMicro2: {
     flexShrink: "0",
     backgroundColor: colors.primary,
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,
@@ -177,10 +177,10 @@ export const styles = stylex.create({
   },
   // px-1 py-1 text-center text-micro text-muted-foreground/40
   microCenterText: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     textAlign: "center",
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
@@ -191,7 +191,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "1px",
     height: "1px",
-    padding: space.none,
+    padding: 0,
     margin: "-1px",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
@@ -200,10 +200,10 @@ export const styles = stylex.create({
   },
   // px-1 py-1 text-center
   centerText2: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     textAlign: "center",
   },
   // size-3 accent-primary
@@ -214,7 +214,7 @@ export const styles = stylex.create({
   },
   // mt-1.5 text-micro text-muted-foreground
   microMuted2: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.mutedForeground,
@@ -226,10 +226,10 @@ export const styles = stylex.create({
   // motionStyles.editorMotion + w-full px-1 py-0.5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   capsMicroBold: {
     width: "100%",
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightBold,

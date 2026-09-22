@@ -196,7 +196,7 @@ export const styles = stylex.create({
     width: "100%",
     maxWidth: "1080px",
     paddingInline: { default: layout.gutterNarrow, [SM]: layout.gutter },
-    paddingBlock: space.xxl,
+    paddingBlock: space.s6,
   },
 
   /** The three app cards: stacked on narrow viewports, one row of equal cards from LG. */
@@ -317,8 +317,8 @@ export const styles = stylex.create({
   },
 
   /** Inline views (Render Settings) replace the tabs inside the same column. */
-  inlineView: { display: "grid", gap: space.xl, minWidth: 0, minHeight: 0, overflow: "hidden" },
-  inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.lg },
+  inlineView: { display: "grid", gap: space.s4, minWidth: 0, minHeight: 0, overflow: "hidden" },
+  inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.s3 },
   inlineBack: {
     display: "inline-flex",
     alignItems: "center",

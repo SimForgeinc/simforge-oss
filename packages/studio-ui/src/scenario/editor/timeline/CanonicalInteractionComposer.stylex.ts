@@ -5,17 +5,17 @@ export const styles = stylex.create({
   // grid gap-2 rounded-xl border border-[#E8E044]/20 bg-[#E8E044]/[0.04] p-2
   gridBorderedGap2: {
     display: "grid",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: "rgb(232 224 68 / 0.2)",
     backgroundColor: "rgb(232 224 68 / 0.04)",
-    padding: space.md,
+    padding: space.s2,
   },
   // px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#E8E044]
   capsSemibold: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -25,7 +25,7 @@ export const styles = stylex.create({
   // grid gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/45
   gridCapsSemibold: {
     display: "grid",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -39,8 +39,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(0 0 0 / 0.4)",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "10px",
     fontWeight: text.weightNormal,
     textTransform: "none",
@@ -57,8 +57,8 @@ export const styles = stylex.create({
       default: "rgb(232 224 68 / 0.1)",
       ":hover": "rgb(232 224 68 / 0.2)",
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     color: colors.accent,

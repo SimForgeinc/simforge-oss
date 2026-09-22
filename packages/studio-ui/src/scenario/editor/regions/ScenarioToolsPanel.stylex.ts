@@ -6,8 +6,8 @@ export const styles = stylex.create({
   fixedFlexCol: {
     pointerEvents: "auto",
     position: "fixed",
-    bottom: space.none,
-    right: space.none,
+    bottom: 0,
+    right: 0,
     top: "3.5rem",
     zIndex: "82",
     display: "flex",
@@ -28,8 +28,8 @@ export const styles = stylex.create({
     alignItems: "center",
     borderBottomWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
   },
   // text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]
   capsBold: {
@@ -58,7 +58,7 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-4
@@ -71,7 +71,7 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    padding: space.xl,
+    padding: space.s4,
   },
   /*
    * The old `space-y-5`. `space-y` is a `> * + *` rule with no StyleX

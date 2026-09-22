@@ -19,8 +19,8 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.lg,
-    padding: space.xxl,
+    gap: space.s3,
+    padding: space.s6,
     textAlign: "center",
   },
   // max-w-md text-sm text-destructive
@@ -34,7 +34,7 @@ export const styles = stylex.create({
   divFlex2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // size-3.5
   tryAgainRefreshCw: {

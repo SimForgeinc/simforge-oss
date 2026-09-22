@@ -30,7 +30,7 @@ export const styles = stylex.create({
   absFlexMid: {
     position: "absolute",
     left: "50%",
-    top: space.none,
+    top: 0,
     zIndex: "40",
     display: "flex",
     height: "0.75rem",
@@ -40,7 +40,7 @@ export const styles = stylex.create({
     touchAction: "none",
     alignItems: "flex-start",
     justifyContent: "center",
-    paddingTop: space.xs,
+    paddingTop: space.s1,
   },
   // h-1 w-10 rounded-full bg-white/35 transition-colors hover:bg-[#E8E044]/70
   round: {
@@ -59,8 +59,8 @@ export const styles = stylex.create({
   // The `group` marker is gone: the hairline below reads `hovered` instead.
   abs: {
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     zIndex: "40",
     marginLeft: "-0.375rem",
     width: "0.75rem",
@@ -78,8 +78,8 @@ export const styles = stylex.create({
   absInert: {
     pointerEvents: "none",
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     left: "50%",
     width: "1px",
     transform: "translate(-50%, 0)",
@@ -120,9 +120,9 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xxs,
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    gap: space.s0_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
   },
   // whitespace-nowrap text-center text-[8px] font-bold uppercase tracking-[0.12em] text-[#E8E044]
   capsBoldNowrap: {
@@ -143,7 +143,7 @@ export const styles = stylex.create({
   },
   // mb-0 h-full border-b-0 bg-black/20
   tall: {
-    marginBottom: space.none,
+    marginBottom: 0,
     height: "100%",
     borderBottomWidth: "0px",
     backgroundColor: "rgb(0 0 0 / 0.2)",
@@ -152,8 +152,8 @@ export const styles = stylex.create({
   absInertRaised: {
     pointerEvents: "none",
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     zIndex: "20",
     width: "1px",
     backgroundColor: colors.accent,
@@ -164,14 +164,14 @@ export const styles = stylex.create({
   absLivePad0: {
     pointerEvents: "auto",
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     left: "-0.5rem",
     width: "1rem",
     cursor: "ew-resize",
     touchAction: "none",
     backgroundColor: "transparent",
-    padding: space.none,
+    padding: 0,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -193,7 +193,7 @@ export const styles = stylex.create({
   absRound: {
     position: "absolute",
     left: "50%",
-    top: space.none,
+    top: 0,
     width: "0.75rem",
     height: "0.75rem",
     transform: `translate(-50%, 0) scale(${hovered.playheadScale})`,
@@ -216,7 +216,7 @@ export const styles = stylex.create({
   // absolute inset-0 overflow-y-auto
   absScrollYInset0: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     overflowY: "auto",
   },
   // min-h-full pb-12
@@ -226,19 +226,19 @@ export const styles = stylex.create({
   },
   // m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35
   gridCenteredXs: {
-    margin: space.lg,
+    margin: space.s3,
     display: "grid",
     height: "6rem",
     placeItems: "center",
     borderWidth: "1px",
     borderStyle: "dashed",
     borderColor: "rgb(255 255 255 / 0.15)",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-black/20
   gridRuleB: {
@@ -270,9 +270,9 @@ export const styles = stylex.create({
   flexCenterGap15: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    gap: space.s1_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     textAlign: "left",
     fontSize: "9px",
     color: colors.accent,
@@ -307,9 +307,9 @@ export const styles = stylex.create({
   flexCenterGap152: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    gap: space.s1_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "9px",
     color: "rgb(232 224 68 / 0.8)",
   },
@@ -322,7 +322,7 @@ export const styles = stylex.create({
     borderLeftWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     color: {
-      default: colors.textFaint,
+      default: colors.inkFaint,
       ":hover": "rgb(252 165 165 / 1)",
     },
     outline: {
@@ -350,8 +350,8 @@ export const styles = stylex.create({
   // relative my-2 cursor-pointer overflow-hidden bg-white/[0.025]
   relClipPointer: {
     position: "relative",
-    marginTop: space.md,
-    marginBottom: space.md,
+    marginTop: space.s2,
+    marginBottom: space.s2,
     cursor: "pointer",
     overflow: "hidden",
     backgroundColor: "rgb(255 255 255 / 0.025)",
@@ -380,15 +380,15 @@ export const styles = stylex.create({
     display: "flex",
     width: "max-content",
     alignItems: "flex-start",
-    gap: space.sm,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    gap: space.s1_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
   },
   // mt-0.5 size-3 shrink-0
   tight2: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: "0",
@@ -403,7 +403,7 @@ export const styles = stylex.create({
   flexCenterGap153: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderRadius: "0",
     textAlign: "left",
     cursor: {
@@ -440,9 +440,9 @@ export const styles = stylex.create({
       ":focus-visible": "transparent",
       ":hover": "transparent",
     },
-    padding: space.none,
+    padding: 0,
     color: {
-      default: colors.textFaint,
+      default: colors.inkFaint,
       ":focus-visible": "rgb(252 165 165 / 1)",
       ":hover": "rgb(252 165 165 / 1)",
     },
@@ -468,8 +468,8 @@ export const styles = stylex.create({
     display: "flex",
     cursor: "pointer",
     alignItems: "center",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "9px",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaTight,
@@ -484,7 +484,7 @@ export const styles = stylex.create({
   // absolute inset-0 grid place-items-center text-[8px] text-white/20
   absGridCentered: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     display: "grid",
     placeItems: "center",
     fontSize: "8px",
@@ -514,9 +514,9 @@ export const styles = stylex.create({
     display: "flex",
     width: "max-content",
     alignItems: "center",
-    gap: space.sm,
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    gap: space.s1_5,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
   },
   // whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.08em]
   capsSemiboldNowrap: {
@@ -538,7 +538,7 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     textAlign: "center",
   },
   // size-8 text-[#E8E044]
@@ -562,7 +562,7 @@ export const styles = stylex.create({
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 text-[8px] uppercase tracking-[0.1em] text-white/45
   capsNarrowable: {
@@ -574,7 +574,7 @@ export const styles = stylex.create({
   },
   // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
   whiteBorderedWide: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     width: "100%",
     minWidth: "0px",
@@ -584,9 +584,9 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.1)",
       ":focus": "rgb(232 224 68 / 0.6)",
     },
-    backgroundColor: colors.glass,
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    backgroundColor: colors.fillSubtle,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "10px",
     textTransform: "none",
     color: "rgb(255 255 255 / 1)",
@@ -603,7 +603,7 @@ export const styles = stylex.create({
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   whiteBorderedWide2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     minHeight: "6rem",
     width: "100%",
     resize: "vertical",
@@ -613,8 +613,8 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.1)",
       ":focus": "rgb(232 224 68 / 0.6)",
     },
-    backgroundColor: colors.glass,
-    padding: space.md,
+    backgroundColor: colors.fillSubtle,
+    padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
     lineHeight: "1.625",
@@ -626,18 +626,18 @@ export const styles = stylex.create({
   gridRuleTCols1: {
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.sm,
+    gap: space.s1_5,
     borderTopWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // h-8 rounded-md bg-[#E8E044] px-3 text-[10px] font-semibold text-black disabled:opacity-40
   semibold: {
     height: "2rem",
     borderRadius: "0",
     backgroundColor: colors.accent,
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     color: "rgb(0 0 0 / 1)",
@@ -652,7 +652,7 @@ export const styles = stylex.create({
     height: "2rem",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: "rgb(252 165 165 / 0.2)",
@@ -677,8 +677,8 @@ export const styles = stylex.create({
   // absolute inset-x-0 top-1/2 h-px bg-white/[0.06]
   abs2: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
+    left: 0,
+    right: 0,
     top: "50%",
     height: "1px",
     backgroundColor: "rgb(255 255 255 / 0.06)",
@@ -687,8 +687,8 @@ export const styles = stylex.create({
   absInert2: {
     pointerEvents: "none",
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     zIndex: "5",
     width: "1px",
     transform: "translate(-50%, 0)",
@@ -698,7 +698,7 @@ export const styles = stylex.create({
       content: "''",
       position: "absolute",
       left: "50%",
-      top: space.none,
+      top: 0,
       width: "0.25rem",
       height: "0.25rem",
       transform: "translate(-50%, 0)",
@@ -710,7 +710,7 @@ export const styles = stylex.create({
   absTallRaised: {
     position: "absolute",
     left: "-0.375rem",
-    top: space.none,
+    top: 0,
     zIndex: "20",
     height: "100%",
     width: "0.75rem",
@@ -733,8 +733,8 @@ export const styles = stylex.create({
     "::before": {
       content: "''",
       position: "absolute",
-      top: space.xs,
-      bottom: space.xs,
+      top: space.s1,
+      bottom: space.s1,
       left: "50%",
       width: "0.125rem",
       transform: "translate(-50%, 0)",
@@ -767,10 +767,10 @@ export const styles = stylex.create({
     minWidth: "0px",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     overflow: "hidden",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: "8px",
     fontWeight: text.weightMedium,
     pointerEvents: {
@@ -789,12 +789,12 @@ export const styles = stylex.create({
     height: "0.75rem",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.xxs,
+    gap: space.s0_5,
     borderRadius: "0",
     borderWidth: "1px",
     backgroundColor: "rgb(0 0 0 / 0.15)",
-    paddingLeft: space.xxs,
-    paddingRight: space.xxs,
+    paddingLeft: space.s0_5,
+    paddingRight: space.s0_5,
     fontSize: "6px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -834,24 +834,24 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(150deg, rgba(30, 30, 27, 0.98), rgba(10, 10, 10, 0.98))",
-    padding: space.lg,
+    padding: space.s3,
     color: "rgb(255 255 255 / 1)",
     boxShadow: "0 24px 80px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(232, 224, 68, 0.12)",
     backdropFilter: "blur(40px)",
   },
   // mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5
   flexStartRuleB: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
     borderBottomWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     paddingBottom: "0.625rem",
   },
   // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
   gridCenteredTight2: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     display: "grid",
     width: "1.75rem",
     height: "1.75rem",
@@ -883,7 +883,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 truncate text-xs text-white/60
   xsTruncate: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -906,13 +906,13 @@ export const styles = stylex.create({
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // grid gap-2 sm:grid-cols-2
   gridGap2: {
     display: "grid",
-    gap: space.md,
+    gap: space.s2,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
@@ -922,7 +922,7 @@ export const styles = stylex.create({
   flexCenterGap155: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // size-3.5 shrink-0
   tight4: {
@@ -943,13 +943,13 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.035)",
-    padding: space.md,
+    padding: space.s2,
   },
   // mb-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40
   capsSemibold2: {
-    marginBottom: space.sm,
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
+    marginBottom: space.s1_5,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -960,7 +960,7 @@ export const styles = stylex.create({
   gridCols2Gap1: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.xs,
+    gap: space.s1,
   },
   // min-h-8 rounded-lg border border-transparent bg-black/20 px-2 py-1.5 text-left text-[10px] leading-tight text-white/70 hover:border-[#E8E044]/35 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   borderedLeftText: {
@@ -975,10 +975,10 @@ export const styles = stylex.create({
       default: "rgb(0 0 0 / 0.2)",
       ":hover": "rgb(232 224 68 / 0.1)",
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     textAlign: "left",
     fontSize: "10px",
     lineHeight: "1.25",
@@ -1001,7 +1001,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 size-4 shrink-0 text-[#E8E044]
   tight5: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "1rem",
     height: "1rem",
     flexShrink: "0",
@@ -1026,8 +1026,8 @@ export const styles = stylex.create({
   // absolute inset-y-0 flex min-w-px items-center justify-center overflow-hidden border disabled:pointer-events-none
   signalBand: {
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     display: "flex",
     minWidth: "1px",
     alignItems: "center",
@@ -1062,7 +1062,7 @@ export const styles = stylex.create({
     alignItems: "flex-start",
     overflow: "hidden",
     borderRightWidth: "1px",
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
   },
   // bg-[#E8E044]/10 text-[#E8E044]
   identityColumnSelected: {
@@ -1077,13 +1077,13 @@ export const styles = stylex.create({
   // absolute inset-y-1 overflow-hidden rounded-md border px-2 text-left text-[8px]
   reasoningClip: {
     position: "absolute",
-    top: space.xs,
-    bottom: space.xs,
+    top: space.s1,
+    bottom: space.s1,
     overflow: "hidden",
     borderRadius: "0",
     borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     textAlign: "left",
     fontSize: "8px",
   },
@@ -1103,14 +1103,14 @@ export const styles = stylex.create({
   // h-24 px-4 py-3 — this panel's preview frame.
   preview: {
     height: "6rem",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // mt-0.5 h-3.5 w-6 shrink-0 text-[#E8E044]
   catalogIcon: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     height: "0.875rem",
     width: "1.5rem",
     flexShrink: "0",
@@ -1131,8 +1131,8 @@ export const styles = stylex.create({
     "--v1-clip-ring": "0 0 #0000",
     "--v1-clip-shadow": "0 0 #0000",
     position: "absolute",
-    top: space.xs,
-    bottom: space.xs,
+    top: space.s1,
+    bottom: space.s1,
     display: "flex",
     minWidth: "1rem",
     overflow: "visible",
@@ -1205,18 +1205,18 @@ export const styles = stylex.create({
     top: "0",
     zIndex: 40,
     display: "flex",
-    height: space.lg,
+    height: space.s3,
     width: "6rem",
     transform: "translateX(-50%)",
     cursor: "ns-resize",
     touchAction: "none",
     alignItems: "flex-start",
     justifyContent: "center",
-    paddingTop: space.xs,
+    paddingTop: space.s1,
   },
   // h-1 w-10 rounded-full bg-white/35 transition-colors hover:bg-[#E8E044]/70
   span: {
-    height: space.xs,
+    height: space.s1,
     width: "2.5rem",
     backgroundColor: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(232 224 68 / 0.7)" },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -1229,8 +1229,8 @@ export const styles = stylex.create({
     top: "0",
     bottom: "0",
     zIndex: 40,
-    marginLeft: `calc(-1 * ${space.sm})`,
-    width: space.lg,
+    marginLeft: `calc(-1 * ${space.s1_5})`,
+    width: space.s3,
     cursor: "col-resize",
     touchAction: "none",
   },
@@ -1266,8 +1266,8 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xxs,
-    paddingInline: space.md,
+    gap: space.s0_5,
+    paddingInline: space.s2,
   },
   // whitespace-nowrap text-center text-[8px] font-bold uppercase tracking-[0.12em] text-[#E8E044]
   timeline: {
@@ -1308,10 +1308,10 @@ export const styles = stylex.create({
   timelinePlayheadDragHandleButton: {
     pointerEvents: "auto",
     position: "absolute",
-    left: `calc(-1 * ${space.md})`,
+    left: `calc(-1 * ${space.s2})`,
     top: "0",
     bottom: "0",
-    width: space.xl,
+    width: space.s4,
     cursor: "ew-resize",
     touchAction: "none",
     backgroundColor: "transparent",
@@ -1342,14 +1342,14 @@ export const styles = stylex.create({
   },
   // m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35
   pGridXs: {
-    margin: space.lg,
+    margin: space.s3,
     display: "grid",
     height: "6rem",
     placeItems: "center",
     borderWidth: "1px",
     borderStyle: "dashed",
     borderColor: "rgb(255 255 255 / 0.15)",
-    paddingInline: space.xl,
+    paddingInline: space.s4,
     textAlign: "center",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -1390,8 +1390,8 @@ export const styles = stylex.create({
     transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingInline: space.md,
+    gap: space.s1_5,
+    paddingInline: space.s2,
     textAlign: "left",
     fontSize: "9px",
     color: colors.accent,
@@ -1402,8 +1402,8 @@ export const styles = stylex.create({
   },
   // size-3 shrink-0
   trafficconeIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // whitespace-nowrap
@@ -1414,15 +1414,15 @@ export const styles = stylex.create({
   divFlex5: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    paddingInline: space.md,
+    gap: space.s1_5,
+    paddingInline: space.s2,
     fontSize: "9px",
     color: "rgb(232 224 68 / 0.8)",
   },
   // size-3 shrink-0
   trafficconeIcon2: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // whitespace-nowrap
@@ -1435,7 +1435,7 @@ export const styles = stylex.create({
     transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
     display: "grid",
-    width: space.xxl,
+    width: space.s6,
     flexShrink: 0,
     placeItems: "center",
     borderLeftWidth: "1px",
@@ -1449,13 +1449,13 @@ export const styles = stylex.create({
   },
   // size-3
   trash2Icon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // relative my-2 cursor-pointer overflow-hidden bg-white/[0.025]
   divRelative: {
     position: "relative",
-    marginBlock: space.md,
+    marginBlock: space.s2,
     cursor: "pointer",
     overflow: "hidden",
     backgroundColor: "rgb(255 255 255 / 0.025)",
@@ -1486,15 +1486,15 @@ export const styles = stylex.create({
     display: "flex",
     width: "max-content",
     alignItems: "flex-start",
-    gap: space.sm,
-    paddingInline: space.md,
-    paddingBlock: space.md,
+    gap: space.s1_5,
+    paddingInline: space.s2,
+    paddingBlock: space.s2,
   },
   // mt-0.5 size-3 shrink-0
   globe2Icon: {
-    marginTop: space.xxs,
-    width: space.lg,
-    height: space.lg,
+    marginTop: space.s0_5,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // whitespace-nowrap text-[9px] font-medium
@@ -1515,15 +1515,15 @@ export const styles = stylex.create({
     display: "flex",
     width: "max-content",
     alignItems: "flex-start",
-    gap: space.sm,
-    paddingInline: space.md,
-    paddingBlock: space.md,
+    gap: space.s1_5,
+    paddingInline: space.s2,
+    paddingBlock: space.s2,
   },
   // flex items-center gap-1.5 rounded-sm text-left enabled:cursor-pointer enabled:hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E8E044]
   focusActorButton: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     textAlign: "left",
     cursor: { default: null, ":enabled": "pointer" },
     color: { default: null, ":enabled:hover": "rgb(255 255 255 / 1)" },
@@ -1540,8 +1540,8 @@ export const styles = stylex.create({
   // inline-flex size-4 shrink-0 items-center justify-center bg-transparent p-0 text-white/35 transition-colors hover:bg-transparent hover:text-red-300 focus-visible:bg-transparent focus-visible:text-red-300 focus-visible:outline-none
   timelineDeleteButton: {
     display: "inline-flex",
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -1564,7 +1564,7 @@ export const styles = stylex.create({
     display: "flex",
     cursor: "pointer",
     alignItems: "center",
-    paddingInline: space.md,
+    paddingInline: space.s2,
     fontSize: "9px",
     textTransform: "uppercase",
     letterSpacing: "0.12em",
@@ -1611,13 +1611,13 @@ export const styles = stylex.create({
     display: "flex",
     width: "max-content",
     alignItems: "center",
-    gap: space.sm,
-    paddingInline: space.md,
+    gap: space.s1_5,
+    paddingInline: space.s2,
   },
   // size-3 shrink-0
   braincircuitIcon: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.08em]
@@ -1655,13 +1655,13 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     textAlign: "center",
   },
   // size-8 text-[#E8E044]
   braincircuitIcon2: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space.s8,
+    height: space.s8,
     color: colors.accent,
   },
   // text-[10px] font-semibold text-white
@@ -1679,7 +1679,7 @@ export const styles = stylex.create({
   divGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 text-[8px] uppercase tracking-[0.1em] text-white/45
   labelUppercase: {
@@ -1691,15 +1691,15 @@ export const styles = stylex.create({
   },
   // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
   input: {
-    marginTop: space.xs,
-    height: space.xxxl,
+    marginTop: space.s1,
+    height: space.s8,
     width: "100%",
     minWidth: 0,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
     backgroundColor: "rgb(255 255 255 / 0.04)",
-    paddingInline: space.md,
+    paddingInline: space.s2,
     fontSize: "10px",
     textTransform: "none",
     color: "rgb(255 255 255 / 1)",
@@ -1716,7 +1716,7 @@ export const styles = stylex.create({
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   textarea: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     minHeight: "6rem",
     width: "100%",
     resize: "vertical",
@@ -1724,7 +1724,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
     backgroundColor: "rgb(255 255 255 / 0.04)",
-    padding: space.md,
+    padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
     lineHeight: "1.625",
@@ -1742,7 +1742,7 @@ export const styles = stylex.create({
   },
   // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
   textarea2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     minHeight: "6rem",
     width: "100%",
     resize: "vertical",
@@ -1750,7 +1750,7 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
     backgroundColor: "rgb(255 255 255 / 0.04)",
-    padding: space.md,
+    padding: space.s2,
     fontSize: "10px",
     textTransform: "none",
     lineHeight: "1.625",
@@ -1762,17 +1762,17 @@ export const styles = stylex.create({
   divGrid2: {
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.sm,
+    gap: space.s1_5,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // h-8 rounded-md bg-[#E8E044] px-3 text-[10px] font-semibold text-black disabled:opacity-40
   saveTraceButton: {
-    height: space.xxxl,
+    height: space.s8,
     backgroundColor: colors.accent,
-    paddingInline: space.lg,
+    paddingInline: space.s3,
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     color: "rgb(0 0 0 / 1)",
@@ -1781,10 +1781,10 @@ export const styles = stylex.create({
   // flex h-8 items-center justify-center gap-1.5 rounded-md border border-red-300/20 text-[9px] text-red-200 hover:bg-red-300/10
   buttonFlex: {
     display: "flex",
-    height: space.xxxl,
+    height: space.s8,
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: "rgb(252 165 165 / 0.2)",
@@ -1794,8 +1794,8 @@ export const styles = stylex.create({
   },
   // size-3
   deleteTraceTrash2: {
-    width: space.lg,
-    height: space.lg,
+    width: space.s3,
+    height: space.s3,
   },
   // relative cursor-pointer overflow-hidden bg-black/15
   interactionRow: {
@@ -1828,7 +1828,7 @@ export const styles = stylex.create({
     transform: "translateX(-50%)",
     backgroundColor: "rgb(252 211 77 / 0.8)",
     boxShadow: "0 0 6px rgba(252,211,77,0.45)",
-    "::before": { content: "", position: "absolute", left: "50%", top: "0", width: space.xs, height: space.xs, transform: "translateX(-50%)", backgroundColor: "rgb(254 240 138 / 1)" },
+    "::before": { content: "", position: "absolute", left: "50%", top: "0", width: space.s1, height: space.s1, transform: "translateX(-50%)", backgroundColor: "rgb(254 240 138 / 1)" },
   },
   // flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden px-2 text-[8px] font-medium disabled:pointer-events-none
   interactionExpandButton: {
@@ -1837,9 +1837,9 @@ export const styles = stylex.create({
     minWidth: 0,
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     overflow: "hidden",
-    paddingInline: space.md,
+    paddingInline: space.s2,
     fontSize: "8px",
     fontWeight: text.weightMedium,
     pointerEvents: { default: null, ":disabled": "none" },
@@ -1847,15 +1847,15 @@ export const styles = stylex.create({
   // inline-flex h-3 shrink-0 items-center gap-0.5 rounded-sm border border-current/20 bg-black/15 px-0.5 text-[6px] font-semibold uppercase tracking-[0.04em]
   timelineCause: {
     display: "inline-flex",
-    height: space.lg,
+    height: space.s3,
     flexShrink: 0,
     alignItems: "center",
-    gap: space.xxs,
+    gap: space.s0_5,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: "color-mix(in srgb, currentColor 20%, transparent)",
     backgroundColor: "rgb(0 0 0 / 0.15)",
-    paddingInline: space.xxs,
+    paddingInline: space.s0_5,
     fontSize: "6px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -1863,13 +1863,13 @@ export const styles = stylex.create({
   },
   // size-1.5
   clock3Icon: {
-    width: space.sm,
-    height: space.sm,
+    width: space.s1_5,
+    height: space.s1_5,
   },
   // size-1.5
   zapIcon: {
-    width: space.sm,
-    height: space.sm,
+    width: space.s1_5,
+    height: space.s1_5,
   },
   // size-2.5 shrink-0
   lockIcon: {
@@ -1899,17 +1899,17 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundImage: "linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))",
-    padding: space.lg,
+    padding: space.s3,
     color: "rgb(255 255 255 / 1)",
     boxShadow: "0 24px 80px rgba(0,0,0,0.72),0 0 0 1px rgba(232,224,68,0.12)",
     backdropFilter: "blur(40px)",
   },
   // mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5
   headerFlex: {
-    marginBottom: space.lg,
+    marginBottom: space.s3,
     display: "flex",
     alignItems: "flex-start",
-    gap: space.lg,
+    gap: space.s3,
     borderBottomWidth: "1px",
     borderBottomStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
@@ -1917,7 +1917,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
   spanGridIcon: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     display: "grid",
     width: "1.75rem",
     height: "1.75rem",
@@ -1931,8 +1931,8 @@ export const styles = stylex.create({
   },
   // size-4
   plusIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
   // min-w-0 flex-1
   div2: {
@@ -1949,7 +1949,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 truncate text-xs text-white/60
   pTruncateXs: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -1971,14 +1971,14 @@ export const styles = stylex.create({
   // grid gap-2 sm:grid-cols-2
   divGrid3: {
     display: "grid",
-    gap: space.md,
+    gap: space.s2,
     gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
   },
   // flex items-center gap-1.5
   spanFlex: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // size-3.5 shrink-0
   routeiconIcon: {
@@ -2002,12 +2002,12 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.035)",
-    padding: space.md,
+    padding: space.s2,
   },
   // mb-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40
   h3SemiboldUppercase: {
-    marginBottom: space.sm,
-    paddingInline: space.xs,
+    marginBottom: space.s1_5,
+    paddingInline: space.s1,
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     textTransform: "uppercase",
@@ -2018,17 +2018,17 @@ export const styles = stylex.create({
   divGrid4: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.xs,
+    gap: space.s1,
   },
   // min-h-8 rounded-lg border border-transparent bg-black/20 px-2 py-1.5 text-left text-[10px] leading-tight text-white/70 hover:border-[#E8E044]/35 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   menuitemButton: {
-    minHeight: space.xxxl,
+    minHeight: space.s8,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: { default: "transparent", ":hover": "rgb(232 224 68 / 0.35)" },
     backgroundColor: { default: "rgb(0 0 0 / 0.2)", ":hover": "rgb(232 224 68 / 0.1)" },
-    paddingInline: space.md,
-    paddingBlock: space.sm,
+    paddingInline: space.s2,
+    paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: "10px",
     lineHeight: text.lineTight,
@@ -2039,31 +2039,31 @@ export const styles = stylex.create({
   },
   // mt-0.5 size-4 shrink-0 text-[#E8E044]
   timelineActorIcon: {
-    marginTop: space.xxs,
-    width: space.xl,
-    height: space.xl,
+    marginTop: space.s0_5,
+    width: space.s4,
+    height: space.s4,
     flexShrink: 0,
     color: colors.accent,
   },
   // mt-0.5 size-3 shrink-0
   timelineActorIconPersonStanding: {
-    marginTop: space.xxs,
-    width: space.lg,
-    height: space.lg,
+    marginTop: space.s0_5,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // mt-0.5 size-3 shrink-0
   timelineActorIconBox: {
-    marginTop: space.xxs,
-    width: space.lg,
-    height: space.lg,
+    marginTop: space.s0_5,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
   // mt-0.5 size-3 shrink-0
   timelineActorIconCarFront: {
-    marginTop: space.xxs,
-    width: space.lg,
-    height: space.lg,
+    marginTop: space.s0_5,
+    width: space.s3,
+    height: space.s3,
     flexShrink: 0,
   },
 });

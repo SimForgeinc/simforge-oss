@@ -24,7 +24,7 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.15)",
       ":focus": "rgb(255 255 255 / 0.3)",
     },
-    backgroundColor: colors.overlayMat,
+    backgroundColor: colors.scrimLight,
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
     fontSize: "11px",
@@ -32,22 +32,22 @@ export const styles = stylex.create({
     outline: "2px solid transparent",
     outlineOffset: "2px",
     "::-moz-placeholder": {
-      color: colors.textFaint,
+      color: colors.inkFaint,
     },
     "::placeholder": {
-      color: colors.textFaint,
+      color: colors.inkFaint,
     },
   },
   // flex gap-1
   flexGap1: {
     display: "flex",
-    gap: space.xs,
+    gap: space.s1,
   },
   // grid grid-cols-2 gap-2
   gridCols2Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // aspect-square w-full bg-black/20 object-contain
   wideSquareContain: {
@@ -59,10 +59,10 @@ export const styles = stylex.create({
   // min-w-0 px-2 py-1.5
   narrowable: {
     minWidth: "0px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   // block truncate text-[10px] font-semibold text-white/85
   blockSemiboldTruncate: {
@@ -85,14 +85,14 @@ export const styles = stylex.create({
   },
   // mt-1.5
   mt15: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
   },
   // absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-[#f08a43]
   absPulsing: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: "0.125rem",
     animationName: pulse,
     animationDuration: "2s",
@@ -121,8 +121,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: "10px",
     color: "rgb(255 255 255 / 0.65)",
     opacity: {
@@ -132,8 +132,8 @@ export const styles = stylex.create({
   },
   // py-2 text-center text-[9px] text-white/40
   centerText2: {
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     textAlign: "center",
     fontSize: "9px",
     color: "rgb(255 255 255 / 0.4)",
@@ -148,8 +148,8 @@ export const styles = stylex.create({
    */
   stackedLg: {
     marginTop: {
-      default: space.lg,
-      ":first-child": space.none,
+      default: space.s3,
+      ":first-child": 0,
     },
   },
 
@@ -159,8 +159,8 @@ export const styles = stylex.create({
     borderWidth: "1px",
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: "9px",
   },
   // border-[#d56d27] bg-[#5a3521] text-[#ffd2b2]
@@ -171,8 +171,8 @@ export const styles = stylex.create({
   },
   // border-white/10 bg-white/[0.04] text-white/55
   ownershipChipIdle: {
-    borderColor: colors.chip,
-    backgroundColor: colors.glass,
+    borderColor: colors.fillStrong,
+    backgroundColor: colors.fillSubtle,
     color: "rgb(255 255 255 / 0.55)",
   },
   // relative overflow-hidden rounded-md border bg-white/[0.04]
@@ -183,7 +183,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderRadius: "0",
     borderWidth: "1px",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
   },
   // border-[#f08a43] bg-[#4a3020]
   tileActive: {
@@ -192,7 +192,7 @@ export const styles = stylex.create({
   },
   // border-white/10
   tileIdle: {
-    borderColor: colors.chip,
+    borderColor: colors.fillStrong,
   },
   // cursor-grab outline-none
   tileGrip: {
@@ -208,8 +208,8 @@ export const styles = stylex.create({
   // absolute right-1 top-1 grid size-6 place-items-center rounded bg-black/55 text-sm
   favoriteToggle: {
     position: "absolute",
-    right: space.xs,
-    top: space.xs,
+    right: space.s1,
+    top: space.s1,
     display: "grid",
     width: "1.5rem",
     height: "1.5rem",

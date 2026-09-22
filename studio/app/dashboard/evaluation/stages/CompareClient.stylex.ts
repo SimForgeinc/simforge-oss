@@ -13,7 +13,7 @@ export const styles = stylex.create({
   dlGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-xs text-muted-foreground
   episodes: {
@@ -45,7 +45,7 @@ export const styles = stylex.create({
   buttonFlexXs: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: { default: colors.mutedForeground, ":hover": colors.text },
@@ -54,10 +54,10 @@ export const styles = stylex.create({
   dlGrid2: {
     display: "grid",
     gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
-    gap: space.xs,
+    gap: space.s1,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    paddingTop: space.md,
+    paddingTop: space.s2,
     fontSize: "11px",
   },
   // flex items-baseline justify-between gap-2
@@ -65,7 +65,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-muted-foreground
   dt: {
@@ -80,7 +80,7 @@ export const styles = stylex.create({
   },
   // pt-1
   div: {
-    paddingTop: space.xs,
+    paddingTop: space.s1,
   },
   // hover:underline
   openColumnRunLink: {
@@ -90,17 +90,17 @@ export const styles = stylex.create({
   div2: {
     borderBottomWidth: { default: "1px", ":last-child": 0 },
     borderBottomStyle: "solid",
-    paddingBlock: space.lg,
+    paddingBlock: space.s3,
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // flex flex-wrap items-baseline gap-2
   divFlex2: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "baseline",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-sm font-medium
   spanSmMedium: {
@@ -118,7 +118,7 @@ export const styles = stylex.create({
   // grid gap-2 sm:grid-cols-3
   divGrid: {
     display: "grid",
-    gap: space.md,
+    gap: space.s2,
     gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(3, minmax(0, 1fr))" },
   },
   // text-sm
@@ -138,7 +138,7 @@ export const styles = stylex.create({
   },
   // ml-1 text-[10px] text-muted-foreground
   span: {
-    marginLeft: space.xs,
+    marginLeft: space.s1,
     fontSize: "10px",
     color: colors.mutedForeground,
   },
@@ -163,7 +163,7 @@ export const styles = stylex.create({
   tablecell: {
     display: "flex",
     flexDirection: "row",
-    gap: space.xs,
+    gap: space.s1,
   },
   // font-mono text-[10px] text-muted-foreground
   spanMono: {

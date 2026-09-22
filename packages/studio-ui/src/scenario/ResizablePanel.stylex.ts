@@ -22,7 +22,7 @@ export const styles = stylex.create({
     bottom: "0",
     top: "0",
     zIndex: layers.raised,
-    width: space.sm,
+    width: space.s1_5,
     cursor: "col-resize",
     touchAction: "none",
     backgroundColor: { default: "transparent", ":hover": "hsl(var(--primary) / 0.4)", ":focus-visible": "hsl(var(--primary) / 0.6)" },

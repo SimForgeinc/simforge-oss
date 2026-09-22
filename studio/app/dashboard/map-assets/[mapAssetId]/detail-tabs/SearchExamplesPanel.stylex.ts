@@ -5,17 +5,17 @@ export const styles = stylex.create({
   searchExamplesPanel: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   exampleGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   groupHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   groupTitle: {
     fontSize: text.sizeXs,
@@ -27,8 +27,8 @@ export const styles = stylex.create({
   },
   comingSoonBadge: {
     backgroundColor: "hsl(var(--secondary) / 0.4)",
-    paddingInline: space.sm,
-    paddingBlock: space.xxs,
+    paddingInline: space.s1_5,
+    paddingBlock: space.s0_5,
     fontSize: "9px",
     fontWeight: 500,
     textTransform: "uppercase",
@@ -38,13 +38,13 @@ export const styles = stylex.create({
   exampleChipList: {
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   examplePill: {
     borderWidth: "1px",
     borderStyle: "solid",
     paddingInline: "0.625rem",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",

@@ -5,13 +5,13 @@ export const styles = stylex.create({
   // fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur
   fixedFlexCenter: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: "50",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "hsl(var(--background) / 0.9)",
-    padding: space.xl,
+    padding: space.s4,
     backdropFilter: "blur(8px)",
   },
   // flex h-[85vh] w-full max-w-[1200px] flex-col overflow-hidden border border-border bg-card shadow-2xl
@@ -31,13 +31,13 @@ export const styles = stylex.create({
   flexCenterRuleB: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     borderBottomWidth: "1px",
     borderColor: colors.border,
     paddingLeft: "1.25rem",
     paddingRight: "1.25rem",
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // min-w-0 flex-1
   fillNarrowable: {

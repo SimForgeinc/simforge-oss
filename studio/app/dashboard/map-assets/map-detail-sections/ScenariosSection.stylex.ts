@@ -5,13 +5,13 @@ export const styles = stylex.create({
   sectionHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   scenarioToggle: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     fontWeight: 600,
@@ -57,7 +57,7 @@ export const styles = stylex.create({
     lineHeight: "1rem",
   },
   emptyState: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -65,18 +65,18 @@ export const styles = stylex.create({
   scenarioList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    marginTop: space.md,
+    gap: space.s1_5,
+    marginTop: space.s2,
   },
   scenarioItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
   },
   scenarioDetails: {
     minWidth: 0,

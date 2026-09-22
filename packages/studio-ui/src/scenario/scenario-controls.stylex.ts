@@ -136,7 +136,7 @@ export const list = stylex.create({
     flexBasis: "0%",
     paddingInline: "0.5rem",
     fontSize: text.sizeMeta,
-    lineHeight: text.lineMeta,
+    lineHeight: text.lineXs,
   },
   /** `h-7 border-primary/60 px-2 text-micro uppercase tracking-meta text-primary` */
   tagSubmit: {

@@ -61,7 +61,7 @@ export const styles = stylex.create({
     borderBottomStyle: "solid",
     borderColor: colors.border,
     paddingLeft: "1.25rem",
-    paddingRight: space.md,
+    paddingRight: space.s2,
   },
   title: {
     overflow: "hidden",

@@ -3,10 +3,10 @@ import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/toke
 
 export const styles = stylex.create({
   sliderRow: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   sliderLabel: {
     width: "3.5rem",
@@ -46,13 +46,13 @@ export const styles = stylex.create({
   uploadButton: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: "hsl(var(--muted) / 0.2)", ":hover": "hsl(var(--muted) / 0.4)" },
-    paddingInline: space.md,
-    paddingBlock: space.xs,
+    paddingInline: space.s2,
+    paddingBlock: space.s1,
     fontSize: "11px",
     fontWeight: 500,
     color: "hsl(var(--foreground) / 0.9)",
@@ -68,16 +68,16 @@ export const styles = stylex.create({
     display: "none",
   },
   errorMessage: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     alignItems: "flex-start",
-    gap: space.sm,
+    gap: space.s1_5,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: "hsl(var(--destructive) / 0.4)",
     backgroundColor: "hsl(var(--destructive) / 0.1)",
     paddingInline: "0.625rem",
-    paddingBlock: space.sm,
+    paddingBlock: space.s1_5,
     fontSize: "11px",
     color: colors.danger,
   },
@@ -90,8 +90,8 @@ export const styles = stylex.create({
   layerList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    marginTop: space.md,
+    gap: space.s1_5,
+    marginTop: space.s2,
   },
   layerItem: {
     borderWidth: "1px",
@@ -99,12 +99,12 @@ export const styles = stylex.create({
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
     paddingInline: "0.625rem",
-    paddingBlock: space.sm,
+    paddingBlock: space.s1_5,
   },
   layerControls: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   colorButton: {
     position: "relative",
@@ -155,10 +155,10 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   colorPalette: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     flexWrap: "wrap",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   colorSwatch: {
     width: "1rem",

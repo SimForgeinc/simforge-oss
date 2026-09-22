@@ -18,11 +18,11 @@ export const styles = stylex.create({
     display: "flex",
     width: "min(420px, calc(100vw - 1rem))",
     flexDirection: "column",
-    gap: space.none,
+    gap: 0,
     overflow: "hidden",
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    padding: space.none,
+    padding: 0,
     maxWidth: {
       default: null,
       "@media (min-width: 640px)": "420px",
@@ -50,10 +50,10 @@ export const styles = stylex.create({
     overflowX: "auto",
     borderBottomWidth: "1px",
     borderColor: colors.border,
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // grid h-auto min-w-[360px] grid-cols-3 rounded-none bg-muted/60 p-1
   gridCols3Pad1: {
@@ -63,16 +63,16 @@ export const styles = stylex.create({
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     borderRadius: "0",
     backgroundColor: "hsl(var(--muted) / 0.6)",
-    padding: space.xs,
+    padding: space.s1,
   },
   // gap-1.5 rounded-none px-2 py-2 text-[11px]
   gap15: {
-    gap: space.sm,
+    gap: space.s1_5,
     borderRadius: "0",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: "11px",
     lineHeight: "inherit",
   },
@@ -87,11 +87,11 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    padding: space.xl,
+    padding: space.s4,
   },
   // m-0
   m0: {
-    margin: space.none,
+    margin: 0,
   },
   // border border-border bg-card/45
   bordered: {
@@ -104,11 +104,11 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.lg,
+    gap: space.s3,
     borderBottomWidth: "1px",
     borderColor: "hsl(var(--border) / 0.7)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     paddingTop: "0.625rem",
     paddingBottom: "0.625rem",
   },
@@ -132,10 +132,10 @@ export const styles = stylex.create({
   },
   // px-3 py-3 text-xs text-muted-foreground
   xsMuted: {
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -160,7 +160,7 @@ export const styles = stylex.create({
   },
   // mt-1 break-words text-[11px] leading-relaxed text-muted-foreground
   mutedBreakWordsRelaxed: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     overflowWrap: "break-word",
     fontSize: "11px",
     lineHeight: "1.625",
@@ -168,7 +168,7 @@ export const styles = stylex.create({
   },
   // mt-2 border-l-2 border-[#E8E044]/70 pl-2.5
   mt2BorderL2Border70: {
-    marginTop: space.md,
+    marginTop: space.s2,
     borderLeftWidth: "2px",
     borderColor: "rgb(232 224 68 / 0.7)",
     paddingLeft: "0.625rem",
@@ -183,7 +183,7 @@ export const styles = stylex.create({
   },
   // mt-1 break-words text-[11px] leading-relaxed text-foreground/85
   breakWordsRelaxed: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     overflowWrap: "break-word",
     fontSize: "11px",
     lineHeight: "1.625",
@@ -193,10 +193,10 @@ export const styles = stylex.create({
   blockWide: {
     display: "block",
     width: "100%",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",
@@ -216,15 +216,15 @@ export const styles = stylex.create({
   },
   // px-3 py-3
   px3Py3: {
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // h-8 gap-2 rounded-none border bg-card/90 px-3 shadow-sm backdrop-blur border-emerald-400/35 text-emerald-300 hover:bg-emerald-500/10
   borderedGlassyGap2: {
     height: "2rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: "rgb(52 211 153 / 0.35)",
@@ -232,8 +232,8 @@ export const styles = stylex.create({
       default: "hsl(var(--card) / 0.9)",
       ":hover": "rgb(16 185 129 / 0.1)",
     },
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     color: "rgb(110 231 183 / 1)",
     boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
     backdropFilter: "blur(8px)",
@@ -241,7 +241,7 @@ export const styles = stylex.create({
   // h-8 gap-2 rounded-none border bg-card/90 px-3 shadow-sm backdrop-blur border-amber-400/45 text-amber-200 hover:bg-amber-500/10
   borderedGlassyGap22: {
     height: "2rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: "rgb(251 191 36 / 0.45)",
@@ -249,15 +249,15 @@ export const styles = stylex.create({
       default: "hsl(var(--card) / 0.9)",
       ":hover": "rgb(245 158 11 / 0.1)",
     },
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     color: "rgb(253 230 138 / 1)",
     boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
     backdropFilter: "blur(8px)",
   },
   // mt-0.5 size-3.5 shrink-0 text-destructive
   tightDanger: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: "0",
@@ -265,7 +265,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 size-3.5 shrink-0 text-amber-300
   tight: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: "0",

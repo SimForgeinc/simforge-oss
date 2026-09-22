@@ -30,7 +30,7 @@ export const styles = stylex.create({
     position: "absolute",
     width: "1px",
     height: "1px",
-    padding: space.none,
+    padding: 0,
     margin: "-1px",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
@@ -40,7 +40,7 @@ export const styles = stylex.create({
   // relative mb-1 h-5 select-none border-b border-white/10 bg-black/20
   relRuleB: {
     position: "relative",
-    marginBottom: space.xs,
+    marginBottom: space.s1,
     height: "1.25rem",
     WebkitUserSelect: "none",
     MozUserSelect: "none",
@@ -53,8 +53,8 @@ export const styles = stylex.create({
   // absolute inset-y-0 w-px
   tick: {
     position: "absolute",
-    top: space.none,
-    bottom: space.none,
+    top: 0,
+    bottom: 0,
     width: "1px",
   },
   // bg-[#E8E044]/60
@@ -63,7 +63,7 @@ export const styles = stylex.create({
   },
   // bg-white/10
   tickMinor: {
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   // absolute top-1/2 -translate-y-1/2 font-mono text-[0.5625rem] leading-none
   tickLabel: {

@@ -7,7 +7,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -25,8 +25,8 @@ export const styles = stylex.create({
   },
   // mt-1 h-1 w-full bg-muted
   progressbar: {
-    marginTop: space.xs,
-    height: space.xs,
+    marginTop: space.s1,
+    height: space.s1,
     width: "100%",
     backgroundColor: colors.muted,
   },
@@ -58,7 +58,7 @@ export const styles = stylex.create({
   div2: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
   contributors: {
@@ -71,24 +71,24 @@ export const styles = stylex.create({
   },
   // mt-1 text-xs text-muted-foreground
   noNamedContributorsYet: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
   },
   // mt-1 space-y-1
   ul: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // flex items-baseline justify-between gap-2 text-xs
   liFlexXs: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },

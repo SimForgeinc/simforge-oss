@@ -6,7 +6,7 @@ export const styles = stylex.create({
   fixedInertInset0: {
     pointerEvents: "none",
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.editorOverlay,
   },
   // tutorial-spotlight-ring absolute border-2 border-primary
@@ -23,7 +23,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: colors.popover,
-    padding: space.xl,
+    padding: space.s4,
     color: "hsl(var(--popover-foreground))",
     boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
   },
@@ -31,7 +31,7 @@ export const styles = stylex.create({
   flexStartGap2: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -49,7 +49,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-sm font-semibold
   smSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     fontWeight: text.weightSemibold,
@@ -92,17 +92,17 @@ export const styles = stylex.create({
   },
   // mt-2 text-xs leading-5 text-muted-foreground
   xsMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
     color: colors.mutedForeground,
   },
   // mt-4 flex items-center gap-2
   flexCenterGap2: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8
   h8: {
@@ -115,7 +115,7 @@ export const styles = stylex.create({
   },
   // mt-2 text-micro text-muted-foreground
   microMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.mutedForeground,

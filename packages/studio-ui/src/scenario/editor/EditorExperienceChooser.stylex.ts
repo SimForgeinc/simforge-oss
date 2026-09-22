@@ -6,12 +6,12 @@ export const styles = stylex.create({
   absGridCentered: {
     pointerEvents: "auto",
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.editorOverlay,
     display: "grid",
     placeItems: "center",
     backgroundColor: "rgb(0 0 0 / 0.65)",
-    padding: space.xxl,
+    padding: space.s6,
     backdropFilter: "blur(4px)",
   },
   // w-full max-w-xl rounded-2xl border border-white/15 bg-[#111317] p-6 shadow-2xl
@@ -22,7 +22,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(17 19 23 / 1)",
-    padding: space.xxl,
+    padding: space.s6,
     boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
   },
   // text-xl font-semibold text-white
@@ -34,7 +34,7 @@ export const styles = stylex.create({
   },
   // mt-2 text-sm text-white/55
   sm: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
     color: "rgb(255 255 255 / 0.55)",
@@ -43,7 +43,7 @@ export const styles = stylex.create({
   gridGap3: {
     marginTop: "1.25rem",
     display: "grid",
-    gap: space.lg,
+    gap: space.s3,
     gridTemplateColumns: {
       default: null,
       "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
@@ -58,7 +58,7 @@ export const styles = stylex.create({
       default: "rgb(232 224 68 / 0.08)",
       ":hover": "rgb(232 224 68 / 0.12)",
     },
-    padding: space.xl,
+    padding: space.s4,
     textAlign: "left",
   },
   // size-6 text-[#E8E044]
@@ -69,7 +69,7 @@ export const styles = stylex.create({
   },
   // mt-3 block text-sm text-white
   blockSmWhite: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     display: "block",
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
@@ -77,7 +77,7 @@ export const styles = stylex.create({
   },
   // mt-1 block text-xs leading-5 text-white/55
   blockXs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "block",
     fontSize: text.sizeXs,
     lineHeight: "1.25rem",
@@ -92,7 +92,7 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.03)",
       ":hover": "rgb(255 255 255 / 0.06)",
     },
-    padding: space.xl,
+    padding: space.s4,
     textAlign: "left",
   },
   // size-6 text-white/70

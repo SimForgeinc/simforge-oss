@@ -5,19 +5,19 @@ export const styles = stylex.create({
   // fixed inset-0 z-[90] grid place-items-center p-4 sm:p-6
   fixedGridCentered: {
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.editorTop,
     display: "grid",
     placeItems: "center",
     padding: {
-      default: space.xl,
-      "@media (min-width: 640px)": space.xxl,
+      default: space.s4,
+      "@media (min-width: 640px)": space.s6,
     },
   },
   // absolute inset-0 cursor-default bg-background/60 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   absInset0: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     cursor: "default",
     backgroundColor: "hsl(var(--background) / 0.6)",
     backdropFilter: "blur(12px)",
@@ -54,20 +54,20 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: space.xl,
+    gap: space.s4,
     borderBottomWidth: "1px",
     borderColor: colors.border,
-    paddingLeft: space.xxl,
-    paddingRight: space.xxl,
-    paddingTop: space.xl,
-    paddingBottom: space.xl,
+    paddingLeft: space.s6,
+    paddingRight: space.s6,
+    paddingTop: space.s4,
+    paddingBottom: space.s4,
   },
   // absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/15 to-transparent
   abs: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    top: space.none,
+    left: 0,
+    right: 0,
+    top: 0,
     height: "1px",
     backgroundImage: "linear-gradient(to right, hsl(var(--primary) / 0.7), hsl(var(--primary) / 0.15), transparent)",
   },
@@ -87,7 +87,7 @@ export const styles = stylex.create({
   },
   // mt-1 text-lg font-extrabold leading-tight tracking-tight text-foreground
   lgInkExtrabold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeLg,
     lineHeight: "1.25",
     fontWeight: "800",
@@ -96,7 +96,7 @@ export const styles = stylex.create({
   },
   // mt-0.5 text-xs text-muted-foreground
   xsMuted: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -140,7 +140,7 @@ export const styles = stylex.create({
     display: "grid",
     minHeight: "0px",
     flex: "1 1 0%",
-    gap: space.none,
+    gap: 0,
     overflow: "hidden",
     gridTemplateColumns: {
       default: null,
@@ -171,7 +171,7 @@ export const styles = stylex.create({
       "@media (min-width: 768px)": "0px",
     },
     borderColor: colors.border,
-    padding: space.xl,
+    padding: space.s4,
     scrollbarWidth: "thin",
     borderRightWidth: {
       default: null,
@@ -229,7 +229,7 @@ export const styles = stylex.create({
   gridCols3Gap15: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // text-micro text-destructive
   microDanger: {
@@ -249,7 +249,7 @@ export const styles = stylex.create({
     minHeight: "0px",
     flexDirection: "column",
     overflowY: "auto",
-    padding: space.xl,
+    padding: space.s4,
     scrollbarWidth: "thin",
   },
   // grid h-[240px] shrink-0 place-items-center border border-border bg-muted/20 p-2
@@ -261,7 +261,7 @@ export const styles = stylex.create({
     borderWidth: "1px",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.2)",
-    padding: space.md,
+    padding: space.s2,
   },
   // max-w-[24ch] text-center text-xs text-muted-foreground
   xsMutedCenterText: {
@@ -273,7 +273,7 @@ export const styles = stylex.create({
   },
   // mt-4 text-xs text-muted-foreground
   xsMuted3: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
     color: colors.mutedForeground,
@@ -283,16 +283,16 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     borderWidth: "1px",
     borderColor: {
       default: colors.border,
       ":hover": "hsl(var(--primary) / 0.5)",
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     fontWeight: text.weightSemibold,
@@ -400,10 +400,10 @@ export const styles = stylex.create({
   },
   // mt-4 (was mt-4 space-y-4)
   mt4StackXl: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   // block
   block: {
@@ -411,23 +411,23 @@ export const styles = stylex.create({
   },
   // mt-1 h-8 text-xs
   xs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     height: "2rem",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
   // mt-1 grid grid-cols-2 gap-2
   gridCols2Gap2: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // border-t border-border pt-3
   ruleT: {
     borderTopWidth: "1px",
     borderColor: colors.border,
-    paddingTop: space.lg,
+    paddingTop: space.s3,
   },
   // motionStyles.editorMotion + font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   capsMonoMicro3: {
@@ -456,10 +456,10 @@ export const styles = stylex.create({
   },
   // mt-2 (was mt-2 space-y-2)
   mt2StackMd: {
-    marginTop: space.md,
+    marginTop: space.s2,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-micro text-muted-foreground
   microMuted: {
@@ -471,14 +471,14 @@ export const styles = stylex.create({
   gridCols3Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // flex items-baseline justify-between gap-2
   flexBetweenBaseline: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // font-mono text-micro text-muted-foreground
   monoMicroMuted: {
@@ -489,17 +489,17 @@ export const styles = stylex.create({
   },
   // mt-1 flex flex-wrap gap-1
   flexWrapGap1: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "flex",
     flexWrap: "wrap",
-    gap: space.xs,
+    gap: space.s1,
   },
   // sr-only
   srOnly: {
     position: "absolute",
     width: "1px",
     height: "1px",
-    padding: space.none,
+    padding: 0,
     margin: "-1px",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
@@ -522,7 +522,7 @@ export const styles = stylex.create({
   absMonoMicro: {
     pointerEvents: "none",
     position: "absolute",
-    right: space.md,
+    right: space.s2,
     top: "50%",
     transform: "translate(0, -50%)",
     fontFamily: text.fontMono,
@@ -535,14 +535,14 @@ export const styles = stylex.create({
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: "1px",
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.1)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     textAlign: "left",
     outline: {
       default: null,
@@ -562,16 +562,16 @@ export const styles = stylex.create({
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: "1px",
     borderColor: {
       default: colors.border,
       ":hover": "hsl(var(--primary) / 0.5)",
     },
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     textAlign: "left",
     outline: {
       default: null,
@@ -594,36 +594,36 @@ export const styles = stylex.create({
   flexCenterBordered3: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.1)",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   // flex items-center gap-2 border px-2 py-1.5 border-border
   flexCenterBordered4: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     borderWidth: "1px",
     borderColor: colors.border,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   // motionStyles.editorMotion + border px-2 py-1 text-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-primary bg-primary/15 text-primary
   microAccentBordered: {
     borderWidth: "1px",
     borderColor: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.15)",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.primary,
@@ -647,10 +647,10 @@ export const styles = stylex.create({
       default: colors.border,
       ":hover": "hsl(var(--primary) / 0.4)",
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: {
@@ -674,10 +674,10 @@ export const styles = stylex.create({
   stackSm: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // (was the scrolling column's space-y-4, moved onto the sections)
   stackedXl: {
-    marginTop: space.xl,
+    marginTop: space.s4,
   },
 });

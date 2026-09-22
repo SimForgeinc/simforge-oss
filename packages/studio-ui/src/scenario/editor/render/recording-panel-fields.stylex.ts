@@ -4,16 +4,16 @@ import { colors, text, space } from "../../../stylex/tokens.stylex";
 export const styles = stylex.create({
   // mt-3 border-t render-hairline pt-3
   ruleT: {
-    marginTop: space.lg,
+    marginTop: space.s3,
     borderTopWidth: "1px",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
     borderColor: "rgb(255 255 255 / 10%)",
   },
   // flex items-center gap-2
   flexCenterGap2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // size-3.5 text-muted-foreground
   muted: {
@@ -32,21 +32,21 @@ export const styles = stylex.create({
   },
   // mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4
   gridXsCols2: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, minmax(0, 1fr))",
       "@media (min-width: 640px)": "repeat(4, minmax(0, 1fr))",
     },
     MozColumnGap: "0.75rem",
-    columnGap: space.lg,
-    rowGap: space.xs,
+    columnGap: space.s3,
+    rowGap: space.s1,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
   },
   // mt-1.5 text-micro text-muted-foreground
   microMuted: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     color: colors.mutedForeground,
@@ -71,18 +71,18 @@ export const styles = stylex.create({
   },
   // (was the label's space-y-1)
   stackedXs: {
-    marginTop: space.xs,
+    marginTop: space.s1,
   },
   // h-9 w-full render-glass border px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   smBorderedWide: {
     height: "2.25rem",
     width: "100%",
     borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: text.sizeSm,
     lineHeight: "1.25rem",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
     outline: {
       default: null,
@@ -102,11 +102,11 @@ export const styles = stylex.create({
     height: "2.25rem",
     width: "100%",
     borderWidth: "1px",
-    paddingLeft: space.md,
-    paddingRight: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
     fontSize: text.sizeXs,
     lineHeight: "1rem",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
     outline: {
       default: null,

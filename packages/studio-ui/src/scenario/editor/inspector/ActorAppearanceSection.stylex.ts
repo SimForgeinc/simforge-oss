@@ -44,23 +44,23 @@ export const styles = stylex.create({
   },
   // mt-1 flex flex-wrap gap-1
   flexWrapGap1: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     display: "flex",
     flexWrap: "wrap",
-    gap: space.xs,
+    gap: space.s1,
   },
   // flex items-center justify-between gap-3 border border-border px-2 py-2 text-foreground
   flexCenterBetween: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.lg,
+    gap: space.s3,
     borderWidth: "1px",
     borderColor: colors.border,
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     color: colors.text,
   },
   // block font-medium
@@ -79,21 +79,21 @@ export const styles = stylex.create({
   gridCols3Gap2: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   // (was the parent's space-y-3)
   stackLg: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
   },
   // (was the parent's space-y-2, on a stack that keeps block layout)
   stackedMd: {
-    marginTop: space.md,
+    marginTop: space.s2,
   },
   // (was the parent's space-y-1.5, on a stack that keeps block layout)
   stackedSm: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
   },
   /*
    * The paint swatch. `focus-visible:ring-2 focus-visible:ring-ring

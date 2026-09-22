@@ -27,7 +27,7 @@ export function AppTopBar() {
   const title = (header?.title || routePageTitle)?.replace(/^SIMFORGE\s*[-—:]\s*/i, "").trim();
   useEffect(() => {
     setHasMounted(true);
-    const query = window.matchMedia(layout.workspaceBreakpoint.replace("@media ", ""));
+    const query = window.matchMedia(layout.bpLg.replace("@media ", ""));
     const update = () => { setWide(query.matches); setOverflowOpen(false); };
     update();
     query.addEventListener("change", update);

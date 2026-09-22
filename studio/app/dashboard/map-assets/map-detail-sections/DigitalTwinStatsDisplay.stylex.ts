@@ -6,8 +6,8 @@ export const styles = stylex.create({
     display: "flex",
     width: "100%",
     alignItems: "center",
-    gap: space.sm,
-    paddingBottom: space.sm,
+    gap: space.s1_5,
+    paddingBottom: space.s1_5,
   },
   chevronMutedShrink: {
     width: "0.75rem",
@@ -35,15 +35,15 @@ export const styles = stylex.create({
   sectionContent: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xxs,
+    gap: space.s0_5,
     marginLeft: "18px",
   },
   statRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
-    paddingBlock: space.xxs,
+    gap: space.s2,
+    paddingBlock: space.s0_5,
   },
   statLabel: {
     fontSize: text.sizeXs,
@@ -60,8 +60,8 @@ export const styles = stylex.create({
   statsContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
-    paddingTop: space.xs,
+    gap: space.s3,
+    paddingTop: space.s1,
   },
   expansionControls: {
     display: "flex",
@@ -71,7 +71,7 @@ export const styles = stylex.create({
   expandCollapseButton: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     fontSize: "10px",
     color: { default: colors.mutedForeground, ":hover": colors.text },
     transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
@@ -83,8 +83,8 @@ export const styles = stylex.create({
     height: "0.75rem",
   },
   lodSummary: {
-    marginTop: space.md,
-    marginBottom: space.xs,
+    marginTop: space.s2,
+    marginBottom: space.s1,
   },
   lodSummaryTitle: {
     fontSize: "10px",
@@ -92,24 +92,24 @@ export const styles = stylex.create({
     color: "hsl(var(--muted-foreground) / 0.7)",
     textTransform: "uppercase",
     letterSpacing: "0.025em",
-    marginBottom: space.sm,
+    marginBottom: space.s1_5,
   },
   lodSummaryRows: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xxs,
+    gap: space.s0_5,
   },
   readinessSignals: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
-    paddingBlock: space.xs,
+    gap: space.s2,
+    paddingBlock: space.s1,
   },
   limitationsList: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    paddingBlock: space.xs,
+    gap: space.s1_5,
+    paddingBlock: space.s1,
   },
   limitationItem: {
     fontSize: text.sizeXs,
@@ -134,13 +134,13 @@ export const styles = stylex.create({
   readinessSignalHeader: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    marginBottom: space.xxs,
+    gap: space.s1_5,
+    marginBottom: space.s0_5,
   },
   strengthBadge: {
     display: "inline-flex",
     alignItems: "center",
-    paddingInline: space.sm,
+    paddingInline: space.s1_5,
     paddingBlock: "1px",
     fontSize: "10px",
     fontWeight: 500,
@@ -156,6 +156,6 @@ export const styles = stylex.create({
     fontSize: "11px",
     color: colors.mutedForeground,
     lineHeight: 1.625,
-    marginLeft: space.xxs,
+    marginLeft: space.s0_5,
   },
 });

@@ -15,7 +15,7 @@ export const styles = stylex.create({
   // absolute inset-0 z-10 focus-visible:outline-none
   absInset0Raised: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.raised,
     outline: {
       default: null,
@@ -29,8 +29,8 @@ export const styles = stylex.create({
   // absolute inset-0 render-glass
   absInset0: {
     position: "absolute",
-    inset: space.none,
-    backgroundColor: colors.glass,
+    inset: 0,
+    backgroundColor: colors.fillSubtle,
     // `hover:border-primary/60` is folded in here (and into the failed variant
     // below) rather than composed as its own rule: a separate rule would need a
     // `default: null`, which unsets whichever resting colour came before it.
@@ -62,47 +62,47 @@ export const styles = stylex.create({
   absFlexCenter: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.md,
-    top: space.md,
+    left: space.s2,
+    top: space.s2,
     zIndex: "20",
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // render-chip-strong px-1.5 py-0.5 text-micro uppercase tracking-meta text-secondary-foreground
   capsMicro: {
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.secondaryForeground,
-    backgroundColor: colors.chipStrong,
+    backgroundColor: colors.fillStronger,
   },
   // render-chip px-1.5 py-0.5 text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   // bg-primary/15 px-1.5 py-0.5 text-micro uppercase tracking-meta text-primary
   capsMicroAccent: {
     backgroundColor: "hsl(var(--primary) / 0.15)",
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     textTransform: "uppercase",
@@ -112,10 +112,10 @@ export const styles = stylex.create({
   // bg-amber-500/20 px-1.5 py-0.5 text-micro uppercase tracking-meta text-amber-300
   capsMicro2: {
     backgroundColor: "rgb(245 158 11 / 0.2)",
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xxs,
-    paddingBottom: space.xxs,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s0_5,
+    paddingBottom: space.s0_5,
     fontSize: text.sizeMicro,
     lineHeight: "0.875rem",
     textTransform: "uppercase",
@@ -125,8 +125,8 @@ export const styles = stylex.create({
   // motionStyles.editorMotion + absolute right-2 top-2 z-20 inline-flex size-7 items-center justify-center render-overlay-control opacity-0 backdrop-blur hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 disabled:opacity-40
   absInlineFlexCenter: {
     position: "absolute",
-    right: space.md,
-    top: space.md,
+    right: space.s2,
+    top: space.s2,
     zIndex: "20",
     display: "inline-flex",
     width: "1.75rem",
@@ -140,7 +140,7 @@ export const styles = stylex.create({
       ":focus-visible": "1",
     },
     backdropFilter: "blur(8px)",
-    backgroundColor: colors.overlayScrim,
+    backgroundColor: colors.scrim,
     color: {
       default: "rgb(255 255 255 / 80%)",
       ":hover": colors.text,
@@ -167,7 +167,7 @@ export const styles = stylex.create({
   absInlineFlexCenter2: {
     position: "absolute",
     right: "2.75rem",
-    top: space.md,
+    top: space.s2,
     zIndex: "20",
     display: "inline-flex",
     width: "1.75rem",
@@ -181,7 +181,7 @@ export const styles = stylex.create({
       ":focus-visible": "1",
     },
     backdropFilter: "blur(8px)",
-    backgroundColor: colors.overlayScrim,
+    backgroundColor: colors.scrim,
     color: {
       default: "rgb(255 255 255 / 80%)",
       ":hover": colors.text,
@@ -203,17 +203,17 @@ export const styles = stylex.create({
   absFlexCol: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: "20",
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
     paddingLeft: "0.625rem",
     paddingRight: "0.625rem",
-    paddingBottom: space.md,
-    paddingTop: space.xxl,
+    paddingBottom: space.s2,
+    paddingTop: space.s6,
     backgroundImage: "linear-gradient(to top, rgb(0 0 0 / 75%) 0%, rgb(0 0 0 / 35%) 50%, transparent 100%)",
   },
   // flex items-baseline justify-between gap-2
@@ -221,7 +221,7 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
@@ -269,7 +269,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     borderWidth: "1px",
     textAlign: "left",
-    backgroundColor: colors.glass,
+    backgroundColor: colors.fillSubtle,
     // `hover:border-primary/60` is folded in here (and into the failed variant
     // below) rather than composed as its own rule: a separate rule would need a
     // `default: null`, which unsets whichever resting colour came before it.

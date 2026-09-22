@@ -23,8 +23,8 @@ export const styles = stylex.create({
   },
   // size-2 border border-border
   spanIcon: {
-    width: space.md,
-    height: space.md,
+    width: space.s2,
+    height: space.s2,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: colors.border,

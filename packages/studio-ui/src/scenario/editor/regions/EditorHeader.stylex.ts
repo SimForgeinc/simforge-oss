@@ -7,12 +7,12 @@ export const styles = stylex.create({
     display: "flex",
     minWidth: "0px",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8 gap-1.5 rounded-none border border-border/70 bg-background/70 shadow-sm
   borderedGap15: {
     height: "2rem",
-    gap: space.sm,
+    gap: space.s1_5,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: "hsl(var(--border) / 0.7)",
@@ -28,12 +28,12 @@ export const styles = stylex.create({
   flexCenterGap2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // h-8 gap-2 rounded-none border border-[#E8E044]/45 bg-card/90 px-3 text-[#E8E044] shadow-sm backdrop-blur hover:border-[#E8E044] hover:bg-[#E8E044] hover:text-black disabled:border-border disabled:text-muted-foreground
   borderedGlassyGap2: {
     height: "2rem",
-    gap: space.md,
+    gap: space.s2,
     borderRadius: "0",
     borderWidth: "1px",
     borderColor: {
@@ -45,8 +45,8 @@ export const styles = stylex.create({
       default: "hsl(var(--card) / 0.9)",
       ":hover": colors.accent,
     },
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
     color: {
       default: colors.accent,
       ":disabled": colors.mutedForeground,

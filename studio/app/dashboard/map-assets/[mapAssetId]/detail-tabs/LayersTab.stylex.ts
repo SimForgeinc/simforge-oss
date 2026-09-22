@@ -12,6 +12,6 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.2)",
     backgroundColor: "hsl(var(--primary) / 0.05)",
-    padding: space.lg,
+    padding: space.s3,
   },
 });

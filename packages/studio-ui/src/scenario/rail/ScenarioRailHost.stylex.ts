@@ -16,6 +16,6 @@ export const styles = stylex.create({
     borderRightWidth: "1px",
     borderRightStyle: "solid",
     borderColor: colors.border,
-    padding: space.md,
+    padding: space.s2,
   },
 });
