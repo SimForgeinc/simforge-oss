@@ -124,6 +124,38 @@
       }
     },
     {
+      "id": "rfs-template-ltap",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "template-compile",
+        "pinned-site",
+        "legacy-seed-from-name"
+      ],
+      "source": {
+        "kind": "template",
+        "path": "examples/ltap-opposing.template.json",
+        "siteId": "3dd7bb59d80de7ee",
+        "drawIndex": 0
+      }
+    },
+    {
+      "id": "rfs-template-ltap-pinned-seed",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "template-compile",
+        "pinned-site",
+        "pinned-simulation-seed"
+      ],
+      "source": {
+        "kind": "template",
+        "path": "fixtures/golden-traces/templates/ltap-opposing.pinned.template.json",
+        "siteId": "3dd7bb59d80de7ee",
+        "drawIndex": 0
+      }
+    },
+    {
       "id": "stopspin-richmond-field-station-ambient-1",
       "tier": "local",
       "map": "richmond-field-station",

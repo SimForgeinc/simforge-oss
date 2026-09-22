@@ -20,7 +20,7 @@ const haveAddon = existsSync(ADDON_DIR) && readdirSync(ADDON_DIR).some((file) =>
 describe('golden-trace corpus', () => {
   it('covers the behaviours the engine must keep byte-stable', () => {
     const covered = new Set(readCorpus().cases.filter((c) => c.tier === 'ci').flatMap((c) => c.covers));
-    for (const behaviour of ['stop', 'u-turn', 'walker', 'ambient-heavy', 'static-map-colliders', 'eased-stop-at-route-end']) {
+    for (const behaviour of ['stop', 'u-turn', 'walker', 'ambient-heavy', 'static-map-colliders', 'eased-stop-at-route-end', 'template-compile', 'pinned-simulation-seed']) {
       expect(covered, behaviour).toContain(behaviour);
     }
   });

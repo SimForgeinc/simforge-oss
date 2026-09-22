@@ -48,7 +48,8 @@ The corpus lives in `fixtures/golden-traces/`:
 - `corpus.json` defines the cases.
 - `manifest.json` records, per case, `mapClosureDigest`, `inputHash`,
   `traceSha256`, tick count and actor count, under one `engineSemVer`.
-- `inputs/` holds the authored inputs and the resolved ambient inputs.
+- `inputs/` holds the authored inputs and the resolved ambient and template
+  inputs; `templates/` holds template fixtures.
 - `maps/richmond-field-station/` holds the committed simulation closure of the
   one public map: topology, derived index, locations, xodr, signals, and the
   published static colliders with their manifests.
@@ -60,7 +61,10 @@ The cases come in two tiers:
   - stop-and-go;
   - three walkers crossing in front of a car;
   - a car driven into a building (static map colliders, collision response);
-  - heavy ambient traffic with two seeds, and city ambient traffic.
+  - heavy ambient traffic with two seeds, and city ambient traffic;
+  - a v2 template (`ltap-opposing`) compiled natively at a pinned site, once
+    with the legacy name-derived seed and once with a pinned
+    `simulation.seed` (catalog resolution, seeding, materialization).
 - **`local`** is the 9-run stop-spin corpus: Richmond, Yale Street and
   El Camino Road × `ambient-1..3`, 60 s, heavy. It runs on installed maps
   (`SIMFORGE_GOLDEN_MAPS_ROOT`, else the map cache's `dev-assets` or
