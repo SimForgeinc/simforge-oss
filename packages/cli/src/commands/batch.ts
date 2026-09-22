@@ -115,7 +115,8 @@ export async function batch(options: BatchOptions): Promise<number> {
           trivialTtcS: options.trivialTtcS,
           ...(ambient === undefined ? {} : { ambient }),
           ...(ambientSettleSeconds > 0 ? { ambientSettleSeconds } : {}),
-          expectedSeed: cellSeed(tid, pv, site.siteId, draw),
+          // The native compiler seeds from the pinned `simulation.seed`, else the template id.
+          expectedSeed: cellSeed(template.simulation?.seed ?? tid, pv, site.siteId, draw),
         });
       }
     }

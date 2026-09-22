@@ -1,0 +1,77 @@
+{
+  "actors": [
+    {
+      "behavior": {
+        "cruiseSpeedMps": 6,
+        "route": {
+          "kind": "lanePath",
+          "lanes": [
+            "51:0:-1",
+            "104:0:-1",
+            "70:0:1"
+          ]
+        },
+        "rules": {
+          "aggression": 0.5,
+          "collisionAvoidance": true,
+          "obeySignals": true,
+          "speedFactor": 1,
+          "yieldToPedestrians": true,
+          "yieldToVehicles": true
+        }
+      },
+      "dims": {
+        "h": 3.3,
+        "l": 8.5,
+        "w": 2.5
+      },
+      "id": "truck",
+      "initial": {
+        "laneRef": {
+          "rsl": "51:0:-1",
+          "s": 110,
+          "tFrac": 0
+        },
+        "pose": {
+          "headingRad": 1.1787410057742722,
+          "x": -23.378500012243766,
+          "z": -280.40048777204225
+        },
+        "speedMps": 6
+      },
+      "kind": "truck",
+      "presentAtStart": true,
+      "static": false,
+      "tags": [
+        "class:truck"
+      ]
+    }
+  ],
+  "clipSeconds": 34,
+  "dt": 0.02,
+  "interactions": [],
+  "mapId": "richmond-field-station",
+  "occluders": [],
+  "occlusionPairs": [],
+  "operationalConditions": {
+    "effects": {
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1,
+      "visibilityRangeM": 10000
+    },
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "weather": "clear"
+  },
+  "physics": {
+    "mode": "dynamic-v1"
+  },
+  "props": [],
+  "roadControls": [],
+  "schemaVersion": 1,
+  "seed": "golden:rfs-uturn-truck",
+  "signalPrograms": [],
+  "surfacePatches": [],
+  "warmupSeconds": 0
+}

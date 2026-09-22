@@ -50,7 +50,7 @@ export const styles = stylex.create({
   },
   // text-sky-300
   wedgeCamera: {
-    color: "rgb(125 211 252 / 1)",
+    color: colors.info,
   },
   // text-emerald-300
   wedgeLidar: {

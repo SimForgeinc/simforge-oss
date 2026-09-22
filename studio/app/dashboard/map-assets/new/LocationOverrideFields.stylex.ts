@@ -3,18 +3,18 @@ import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.style
 
 export const styles = stylex.create({
   locationOverrideHint: {
-    marginBottom: space.md,
+    marginBottom: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   locationFieldsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: space.md,
+    gap: space.s2,
   },
   locationFieldLabel: {
-    marginBottom: space.xs,
+    marginBottom: space.s1,
     display: "block",
     fontSize: "11px",
     color: colors.mutedForeground,
@@ -22,6 +22,6 @@ export const styles = stylex.create({
   locationFieldInput: {
     height: "2rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
   },
 });

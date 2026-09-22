@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // size-3.5
@@ -11,9 +11,6 @@ export const styles = stylex.create({
   spanTruncate: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // text-micro text-muted-foreground
   spanMicro: {
@@ -23,9 +20,9 @@ export const styles = stylex.create({
   },
   // size-2 border border-border
   spanIcon: {
-    width: space.md,
-    height: space.md,
-    borderWidth: "1px",
+    width: space.s2,
+    height: space.s2,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
   },
@@ -33,9 +30,6 @@ export const styles = stylex.create({
   spanTruncate2: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // text-micro text-muted-foreground
   spanMicro2: {

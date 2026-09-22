@@ -1,15 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
-const pulse = stylex.keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.5 },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   viewerLoadingContainer: {
@@ -26,7 +16,7 @@ export const styles = stylex.create({
     width: "4rem",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
     backgroundColor: "hsl(var(--muted) / 0.5)",
@@ -34,19 +24,11 @@ export const styles = stylex.create({
   loadingPlaceholderIcon: {
     width: "2rem",
     height: "2rem",
-    animationName: pulse,
-    animationDuration: "2s",
-    animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
-    animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
   loadingSpinner: {
     width: "1.5rem",
     height: "1.5rem",
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
     color: colors.mutedForeground,
   },
   noAssetStateContainer: {
@@ -56,7 +38,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xl,
+    gap: space.s4,
     backgroundColor: "hsl(var(--background) / 0.5)",
   },
   noAssetIcon: {
@@ -69,15 +51,15 @@ export const styles = stylex.create({
   },
   noAssetTitle: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   noAssetDescription: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     maxWidth: "20rem",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   viewerErrorContainer: {
@@ -87,7 +69,7 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.lg,
+    gap: space.s3,
     backgroundColor: "hsl(var(--background) / 0.5)",
   },
   viewerErrorIcon: {
@@ -99,7 +81,7 @@ export const styles = stylex.create({
     maxWidth: "28rem",
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   viewerHostContainer: {

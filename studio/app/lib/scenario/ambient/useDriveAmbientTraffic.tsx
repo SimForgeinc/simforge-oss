@@ -15,7 +15,7 @@ import {
   AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
   allSumoSignalsGreenFromExtensions,
   ambientSignalCycleSettingsFromExtensions,
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForEditor,
   ambientTrafficProviderFromExtensions,
   type AmbientTrafficProviderId,
   type SumoTrafficStatus,
@@ -76,7 +76,7 @@ export function useDriveAmbientTraffic({
   const runtimeMap = useMemo(() => playbackMapEntry(map), [map]);
   const extensions = document?.data.extensions;
   const provider = ambientTrafficProviderFromExtensions(extensions);
-  const profile = ambientTrafficProfileFromExtensions(extensions);
+  const profile = ambientTrafficProfileForEditor(document?.data);
   const acceleratedSignalCycles = ambientSignalCycleSettingsFromExtensions(
     extensions,
   ).acceleratedSignalCycles;

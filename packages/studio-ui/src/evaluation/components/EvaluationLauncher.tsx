@@ -27,6 +27,7 @@ import {
 } from "@simforge-oss/evaluation/client";
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { formatCentsRange, submissionIdempotencyKey } from "../presentation";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 const VIDEO_MODEL_FAMILIES = ["alpamayo-1.5", "alpamayo-2-super"] as const satisfies readonly ModelFamilyId[];
 const CAMERA_OPTIONS = [
@@ -301,7 +302,7 @@ export function EvaluationLauncher({
               return (
                 <div key={`${file.name}-${inputIndex}`} {...stylex.props(s.cameraGrid)}>
                   <div {...stylex.props(s.min0)}>
-                    <p {...stylex.props(s.truncate, s.textSm, s.fontMedium, s.textFg)}>{file.name}</p>
+                    <p {...stylex.props(textLayout.truncate, s.textSm, s.fontMedium, s.textFg)}>{file.name}</p>
                     <label {...stylex.props(s.mt2, s.flexGap2, s.textXs, s.textMuted)}>
                       <input
                         type="radio"

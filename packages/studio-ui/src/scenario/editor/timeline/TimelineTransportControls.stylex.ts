@@ -23,17 +23,16 @@ export const styles = stylex.create({
   whitePad0: {
     width: "1.5rem",
     height: "1.5rem",
-    borderRadius: "0",
     borderWidth: "0px",
     backgroundColor: {
       default: "transparent",
       ":hover": "transparent",
     },
-    padding: space.none,
+    padding: 0,
     color: {
-      default: "rgb(255 255 255 / 1)",
+      default: colors.ink,
       ":enabled:hover": colors.accent,
-      ":disabled": "rgb(255 255 255 / 0.25)",
+      ":disabled": colors.inkGhost,
     },
     boxShadow: "none",
   },
@@ -41,7 +40,7 @@ export const styles = stylex.create({
   flexCenterWhite: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
-    color: "rgb(255 255 255 / 1)",
+    gap: space.s1,
+    color: colors.ink,
   },
 });

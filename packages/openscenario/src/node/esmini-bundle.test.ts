@@ -40,7 +40,7 @@ const input = parseSimScenarioInput({
   mapId: 'fixture-map',
   clipSeconds: 2,
   warmupSeconds: 0,
-  dt: 0.1,
+  dt: 0.02,
   actors: [{
     id: 'car',
     kind: 'car',

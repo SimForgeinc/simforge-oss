@@ -398,7 +398,8 @@ export function normalizePhysicsProfileId(value: unknown): PhysicsProfileId {
 
 export const ScenarioEditorSimulationConfigSchema = z.object({
   duration_seconds: z.number().min(1).max(60).default(SIMULATION_DEFAULTS.durationSeconds),
-  fixed_delta_seconds: z.number().min(0.01).max(0.2).default(SIMULATION_DEFAULTS.fixedDeltaSeconds),
+  // The only simulation step SimForge executes (20 ms): other values are rejected, not run.
+  fixed_delta_seconds: z.literal(SIMULATION_DEFAULTS.fixedDeltaSeconds).default(SIMULATION_DEFAULTS.fixedDeltaSeconds),
   physics_profile_id: PhysicsProfileIdSchema.default(
     SIMULATION_DEFAULTS.physicsProfileId,
   ),

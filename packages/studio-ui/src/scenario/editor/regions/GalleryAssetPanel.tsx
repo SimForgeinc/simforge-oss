@@ -9,6 +9,7 @@ import type { GalleryAssetSummary } from "../../../lib/asset-gallery/contracts";
 import { resolveGalleryCatalogIds } from "../../../lib/asset-gallery/editor-bridge";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./GalleryAssetPanel.stylex";
+import { motionRecipe, textLayout } from "../../../stylex/recipes.stylex";
 
 const PAGE_SIZE = 24;
 const CATALOG_DRAG_TYPE = "application/x-simforge-catalog-id";
@@ -213,10 +214,10 @@ export function GalleryAssetPanel({
                     src={asset.thumbnailUrl}
                   />
                   <div {...stylex.props(styles.narrowable)}>
-                    <strong {...stylex.props(styles.blockSemiboldTruncate)}>
+                    <strong {...stylex.props([textLayout.truncate, styles.blockSemiboldTruncate])}>
                       {asset.title}
                     </strong>
-                    <span {...stylex.props(styles.blockTruncate)}>
+                    <span {...stylex.props([textLayout.truncate, styles.blockTruncate])}>
                       v{asset.version} · {asset.dims.l.toFixed(1)} × {asset.dims.w.toFixed(1)} m
                     </span>
                     <div {...stylex.props(styles.mt15)}>
@@ -234,7 +235,7 @@ export function GalleryAssetPanel({
                   {favorites.has(asset.catalogId) ? "★" : "☆"}
                 </button>
                 {armingId === asset.catalogId ? (
-                  <span {...stylex.props(styles.absPulsing)} />
+                  <span {...stylex.props([motionRecipe.pulse, styles.absPulsing])} />
                 ) : null}
               </div>
             );

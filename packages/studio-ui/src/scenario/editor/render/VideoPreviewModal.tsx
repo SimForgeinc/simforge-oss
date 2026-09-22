@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./VideoPreviewModal.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 /**
  * Full-pane playback for one artifact — manifest #148.
@@ -56,11 +57,11 @@ export function VideoPreviewModal({
         <header {...stylex.props(styles.flexCenterRuleB)}>
           <div {...stylex.props(styles.fillNarrowable)}>
             {eyebrow ? (
-              <p {...stylex.props(styles.capsMicroMuted)}>
+              <p {...stylex.props([textLayout.truncate, styles.capsMicroMuted])}>
                 {eyebrow}
               </p>
             ) : null}
-            <h2 {...stylex.props(styles.smSemiboldTruncate)} title={title}>{title}</h2>
+            <h2 {...stylex.props([textLayout.truncate, styles.smSemiboldTruncate])} title={title}>{title}</h2>
           </div>
           <Button aria-label="Close preview" onClick={onClose} size="icon" variant="ghost">
             <X aria-hidden="true" className={stylex.props(styles.size4).className} />

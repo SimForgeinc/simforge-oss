@@ -20,6 +20,7 @@ import {
 } from "@/app/lib/scenario-intelligence-ui";
 import { getFamilyIcon } from "@/app/lib/scenario-family-icons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type ActiveFilter = { type: "family"; id: string } | { type: "tag"; id: string } | null;
 
@@ -132,16 +133,16 @@ export function InsightsTab({
             <button
               type="button"
               onClick={() => setExplorerOpen((o) => !o)}
-              {...stylex.props(styles.candidateLocationsToggle)}
+              {...stylex.props([motionRecipe.colors, styles.candidateLocationsToggle])}
               aria-expanded={explorerOpen}
             >
               <ChevronRight
-                {...stylex.props(styles.chevron, explorerOpen && styles.rotate90)}
+                {...stylex.props([motionRecipe.transform, styles.chevron], explorerOpen && styles.rotate90)}
               />
               Candidate Locations
               {candidateLocationsLoading ? (
                 <span {...stylex.props(styles.loadingIndicator)}>
-                  <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingSpinner])} aria-hidden="true" />
                   <span>Loading…</span>
                 </span>
               ) : candidateLocations.length > 0 ? (
@@ -154,7 +155,7 @@ export function InsightsTab({
               <button
                 type="button"
                 onClick={() => setActiveFilter(null)}
-                {...stylex.props(styles.activeFilterButton)}
+                {...stylex.props([motionRecipe.colors, styles.activeFilterButton])}
               >
                 {activeFilter.type === "family"
                   ? familyGroups.find((g) => g.family.id === activeFilter.id)?.family.name ?? activeFilter.id
@@ -176,7 +177,7 @@ export function InsightsTab({
                       onClick={() =>
                         setActiveFilter(isActive ? null : { type: "family", id: group.family.id })
                       }
-                      {...stylex.props(styles.insightChip, isActive ? styles.insightChipActive : styles.insightChipIdle)}
+                      {...stylex.props([motionRecipe.colors, styles.insightChip], isActive ? styles.insightChipActive : styles.insightChipIdle)}
                     >
                       {group.family.name}
                       {!candidateLocationsLoading && (
@@ -192,7 +193,7 @@ export function InsightsTab({
 
               {candidateLocationsLoading ? (
                 <p {...stylex.props(styles.candidateLoadingMessage)}>
-                  <Loader2 {...stylex.props(styles.candidateLoadingSpinner)} /> Loading…
+                  <Loader2 {...stylex.props([motionRecipe.spin, styles.candidateLoadingSpinner])} /> Loading…
                 </p>
               ) : filteredCandidates.length === 0 ? (
                 <p {...stylex.props(styles.candidateEmptyMessage)}>
@@ -249,16 +250,16 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
         <button
           type="button"
           onClick={onToggle}
-          {...stylex.props(styles.scenarioFamilyToggle)}
+          {...stylex.props([motionRecipe.colors, styles.scenarioFamilyToggle])}
         >
           <ChevronRight
-            {...stylex.props(styles.chevronMutedShrink, expanded && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevronMutedShrink], expanded && styles.rotate90)}
           />
           <Icon {...stylex.props(styles.scenarioFamilyIcon)} />
           <span {...stylex.props(styles.scenarioFamilyName)}>{group.family.name}</span>
           {loading ? (
             <span {...stylex.props(styles.loadingIndicator)}>
-              <Loader2 {...stylex.props(styles.loadingSpinner)} aria-hidden="true" />
+              <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingSpinner])} aria-hidden="true" />
               <span>Loading…</span>
             </span>
           ) : (

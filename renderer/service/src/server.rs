@@ -213,6 +213,9 @@ pub struct ServiceState {
     scene: Vec<SceneState>,
     /// Index of the most recently applied scene frame.
     current_tick: Option<u32>,
+    /// Body extents each scene actor was spawned with (scene-yup `[x, y, z]`),
+    /// so observations can recover the ground-contact origin.
+    actor_extents: HashMap<String, [f32; 3]>,
     episode: Option<crate::episode::Episode>,
     /// Pass payloads from the last render (V2 `encode_jpeg` source).
     cache: HashMap<String, CachedPass>,
@@ -277,6 +280,7 @@ impl ServiceState {
             legend,
             scene: Vec::new(),
             current_tick: None,
+            actor_extents: HashMap::new(),
             episode: None,
             cache: HashMap::new(),
             rig: Vec::new(),
@@ -544,6 +548,10 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                         size_bytes,
                         meta_bytes,
                     },
+                    capabilities: crate::proto::NATIVE_SERVICE_CAPABILITIES
+                        .iter()
+                        .map(|c| (*c).to_owned())
+                        .collect(),
                 },
             }
         }
@@ -566,6 +574,29 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             state.episode=None;
             state.current_tick = None;
             WireResponse { i, body: ResponseBody::LoadSceneState { ok: true, ticks, map_id } }
+        }
+        RequestBody::ObserveActors => {
+            let mut actors = Vec::new();
+            let mut ids: Vec<String> = state.actor_extents.keys().cloned().collect();
+            ids.sort();
+            for id in ids {
+                let Some((centre, rotation)) = state.app.actor_world_pose(&id) else {
+                    continue;
+                };
+                let half = state.actor_extents[&id][1] * 0.5;
+                let origin = centre - rotation * Vec3::new(0.0, half, 0.0);
+                let model = state.app.actor_model_world_pose(&id);
+                actors.push(crate::proto::ObservedActorPose {
+                    id,
+                    position: origin.to_array(),
+                    rotation: rotation.to_array(),
+                    body_centre: centre.to_array(),
+                    model_position: model.map(|(p, _)| p.to_array()),
+                    model_rotation: model.map(|(_, r)| r.to_array()),
+                    visible: true,
+                });
+            }
+            WireResponse { i, body: ResponseBody::ObserveActors { ok: true, tick: state.current_tick, actors } }
         }
         RequestBody::ResetCameras => {
             state.episode=None;
@@ -728,7 +759,10 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
         .ok_or_else(|| format!("tick_index {index} out of range (loaded {} ticks)", state.scene.len()))?;
     for actor in &frame.actors {
         match actor.kind.as_str() {
-            "despawn" => state.app.remove_actor(&actor.id),
+            "despawn" => {
+                state.app.remove_actor(&actor.id);
+                state.actor_extents.remove(&actor.id);
+            }
             "spawn" | "update" => {
                 let class = actor.actor_class.clone().unwrap_or_else(|| "prop".into());
                 let color = actor_color(actor, &class)?;
@@ -745,11 +779,13 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                 // are placed verbatim with their full rotation and never get
                 // a GLB or a ground fallback.
                 let model = if body_centred { None } else { resolve_actor_model(state, actor) };
+                // The full attitude is applied: render-timeline frames carry
+                // road + body pitch/roll; xosc-lowered frames are yaw-only
+                // quaternions, so they render exactly as before.
                 let [qx, qy, qz, qw] = actor.transform.rotation;
-                let mut rotation = Quat::from_xyzw(qx, qy, qz, qw).normalize();
+                let rotation = Quat::from_xyzw(qx, qy, qz, qw).normalize();
                 let mut position = actor.transform.position;
                 if !body_centred {
-                    rotation = Quat::from_rotation_y(quat_yaw(&actor.transform.rotation));
                     position[1] = actor_base_y(
                         position[1],
                         frame.ground_y,
@@ -757,9 +793,13 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                     );
                 }
                 // Source vehicle positions are ground origins; cuboids are
-                // centre-origin. Asset calibration never touches this body pose.
+                // centre-origin, lifted along the body's own up axis.
+                // Asset calibration never touches this body pose.
                 let mut body_position=position;
-                if !body_centred {body_position[1]+=dims[1]*0.5;}
+                if !body_centred {
+                    body_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,dims[1]*0.5,0.0)).to_array();
+                }
+                state.actor_extents.insert(actor.id.clone(), dims);
                 state.app.upsert_actor(
                     &actor.id,
                     &class,
@@ -820,9 +860,8 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                             .set_actor_animation_time(&actor.id, animation_time_s);
                     }
                     if state.app.actor_has_model(&actor.id) {
-                        let mut asset_position=position;
-                        asset_position[1]+=model.ground_offset_m;
-                        let asset_rotation=Quat::from_rotation_y(model.yaw_offset_rad)*rotation;
+                        let asset_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,model.ground_offset_m,0.0)).to_array();
+                        let asset_rotation=rotation*Quat::from_rotation_y(model.yaw_offset_rad);
                         state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
                             .map_err(|error|format!("catalog pose: {error:#}"))?;
                     }
@@ -931,14 +970,16 @@ fn resolve_sensor_mount(
                 attach.actor_id
             )
         })?;
-    let yaw = quat_yaw(&actor.transform.rotation);
     let position = actor.transform.position;
     let actor_y = actor_base_y(
         position[1],
         frame.ground_y,
         state.app.ground_at(position[0], position[2]),
     );
-    let actor_rotation = Quat::from_rotation_y(yaw);
+    // Sensors ride the body rigidly, pitch and roll included (yaw-only for
+    // xosc-lowered frames, whose rotations carry no attitude).
+    let [qx, qy, qz, qw] = actor.transform.rotation;
+    let actor_rotation = Quat::from_xyzw(qx, qy, qz, qw).normalize();
     // Wire mount: forward/right/up. Canonical sensor: forward/up/right.
     let local_offset = Vec3::new(
         attach.offset_m[0],

@@ -17,6 +17,7 @@ import {
 } from "../../../../lib/hifi-preview/contracts";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./HifiPreviewSlot.stylex";
+import { motionRecipe } from "../../../../stylex/recipes.stylex";
 
 /** Catalog physics families mapped to the scene-state actor classes. */
 const SCENE_ACTOR_CLASS: Record<CatalogActorClass, CreateHifiPreviewInput["scene"]["actors"][number]["actorClass"]> = {
@@ -234,7 +235,7 @@ export function HifiPreviewSlot({
           variant="outline"
         >
           {preview.phase === "pending" ? (
-            <Loader2 aria-hidden="true" className={stylex.props(styles.spinner).className} />
+            <Loader2 aria-hidden="true" className={stylex.props([motionRecipe.spin, styles.spinner]).className} />
           ) : (
             <Sparkles aria-hidden="true" className={stylex.props(styles.size4).className} />
           )}
@@ -247,7 +248,7 @@ export function HifiPreviewSlot({
           {...stylex.props(styles.flexCenterXs)}
           data-testid="hifi-preview-progress"
         >
-          <Loader2 aria-hidden="true" className={stylex.props(styles.spinner2).className} />
+          <Loader2 aria-hidden="true" className={stylex.props([motionRecipe.spin, styles.spinner2]).className} />
           <span>
             Rendering one {profile} frame with the native renderer… the map prewarm can take a minute on
             first use. The editor stays fully interactive.

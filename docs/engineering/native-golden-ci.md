@@ -106,6 +106,8 @@ re-record.
 | 5 | no golden exists for this GPU fingerprint — record first |
 | 1 | environment/usage error (missing binary/corpus) |
 | 6 | GPU busy — co-tenant load makes timings/hash evidence unreliable (`GOLDEN_GPU_WAIT` seconds to wait for a quiet window); CI sets it to 300 |
+| 7 | vacuous ID pass — an ID pass encodes fewer than `idPass.minInstances` distinct ids or covers less than `idPass.minCoverage` of the frame (checked on record and verify) |
+| 8 | observed actor transforms fail parity with the render timeline (`parity` scenes; Bevy profile 1e-3 m / 0.05°) |
 
 Record runs the scene twice and refuses to write a golden unless the two runs
 agree byte-for-byte (the determinism evidence itself). Record/verify only run
@@ -129,11 +131,15 @@ applies both gates. Frame-time uses the renderer-reported steady-state
    level, frame parity, warmup, or codegen-units in controlled probes.
    Encoded here: record requires two agreeing runs (exit 4 otherwise); gates
    run only on a quiet GPU (exit 6). Escalated to WSB2/WSB4 (lit-path owners).
-3. **id0 is currently vacuous.** Tracked spike source hardcodes
+3. **id0 was vacuous (fixed 2026-09-22: now gated).** Tracked spike source hardcodes
    `id_clones_done: true` at init — no ID clones are built, `.id.png` is solid
    background, no legend is written. The id0 hash stays gated (it will catch
    any accidental change) but carries no semantic evidence until WSB2
-   re-enables clone building.
+   re-enables clone building. Since 2026-09-22 every scene's ID passes are
+   decoded (`lib/png.mjs`) and must encode real instances (`idPass`
+   thresholds, exit 7), so a hash of a blank pass can no longer be recorded
+   or pass verify. `yale-frame0`'s retired spike golden fails this gate by
+   construction until it is re-recorded with `native-render-job`.
 4. **Perf baselines are load-sensitive.** The recorded baseline (19.45 ms avg)
    was taken under co-tenant load; quiet-GPU steady state is ~4–5 ms (FINDINGS:
    4.33 ms). Re-record during a quiet window before trusting the +10% budget;
@@ -180,3 +186,35 @@ the workflow queues indefinitely; run `qualification/golden-harness/ci-local.sh`
 locally (identical steps; log committed under
 `qualification/golden-harness/evidence/`).
 Registration steps are documented at the top of the workflow file.
+
+## Render-timeline scenes (2026-09-22)
+
+Actor scenes replay the render contract (`docs/engineering/render-timeline.md`):
+a committed `simforge.scene-state.v1` document sampled from a render
+timeline (`fixtures/<scene>.scene-state.json.gz`, from
+`simforge render scene-state --fps 24`) is played by `scen-play
+--authored-height`, so every body sits at the timeline's baked XODR height
+with its road + body attitude. Three gates per run:
+
+1. pass hashes (`frame60.rgb`, `frame60.id`), two-run byte stability on record;
+2. the ID pass encodes the map's and actors' instances (`idPass`, exit 7);
+3. `observed-frames.jsonl` matches the timeline sampler within the Bevy
+   parity profile (`parity`, exit 8; `simforge render parity`, or
+   `GOLDEN_PARITY_CMD`).
+
+| Scene | Map | Actors | GPU fingerprint recorded |
+|---|---|---|---|
+| `richmond-06-timeline` | richmond-field-station | 4 (car, motorcycle, bus, wrong-way sedan) | `0c79cc9fe7b267f4` (RTX 3080, driver 595.91.07) |
+| `yale-05-timeline` | yale-street | 4 (truck, car, cyclist, pedestrian) | `0c79cc9fe7b267f4` |
+
+Corpus roots: `SIMFORGE_CORPUS_RICHMOND` / `SIMFORGE_CORPUS_YALE` →
+`${SIMFORGE_MAPS_CACHE_ROOT:-~/.local/share/simforge/maps}/.corpus/<map>`.
+Recorded parity (both runs): richmond max 7.8e-6 m / 1.3e-5° heading,
+yale max 6.2e-5 m / 6.3e-6° heading (f32 world coordinates at ~1.8 km).
+
+Known limitation: a static `native-render-job` scene over the richmond master
+(`richmond-frame0`, not committed) is **not** byte-stable in `id0` on the
+3080: 6 of 306,176 pixels swap between two instance ids across runs. That
+is a depth tie between coplanar meshes resolved by nondeterministic draw
+order; RGB and depth are stable. It needs deterministic draw ordering for
+the ID pass before a static richmond golden can be recorded.

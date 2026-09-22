@@ -144,7 +144,10 @@ export function useEditorRuntime({
 
   useEffect(() => {
     if (!editorDocument) return;
-    return editorDocument.subscribe(() => onDocumentChange(editorDocument));
+    // Authored changes only: opening a record schedules the local autosave, and
+    // its completion notifies subscribers with no edit behind it. Reporting that
+    // as a change wrote a merely opened document back to the server.
+    return editorDocument.subscribeEdits(() => onDocumentChange(editorDocument));
   }, [editorDocument, onDocumentChange]);
 
   // Deliberately depends on `map` alone, NOT on `runtimeReady`: the point is to

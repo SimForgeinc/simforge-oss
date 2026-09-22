@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, text } from "../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   list: {
@@ -7,9 +7,8 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     height: "2.25rem",
-    borderRadius: radii.lg,
     backgroundColor: colors.muted,
-    padding: "0.25rem",
+    padding: space.s1,
     color: colors.mutedForeground,
   },
   trigger: {
@@ -17,29 +16,28 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     whiteSpace: "nowrap",
-    borderRadius: radii.md,
-    paddingInline: "0.75rem",
-    paddingBlock: "0.25rem",
+    paddingInline: space.s3,
+    paddingBlock: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 500,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightMedium,
     transitionProperty: "all",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    transitionDuration: motion.durStandard,
+    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": colors.ring },
     outlineOffset: { default: null, ":focus-visible": "2px" },
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
     backgroundColor: { default: null, "[data-state=active]": colors.bg },
     color: { default: null, "[data-state=active]": colors.text },
-    boxShadow: { default: null, "[data-state=active]": "0 1px 2px 0 rgb(0 0 0 / 0.05)" },
+    boxShadow: { default: null, "[data-state=active]": shadows.elevationSm },
   },
   content: {
-    marginTop: "1rem",
+    marginTop: space.s4,
     outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": colors.ring },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },

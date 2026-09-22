@@ -58,6 +58,23 @@ export interface NativeBundleResponse extends NativeServiceResponse {
   readonly frames: readonly NativeFrameRecord[];
 }
 
+/** One actor as the service drew it (scene-yup world frame). */
+export interface NativeObservedActor {
+  readonly id: string;
+  /** Ground-contact origin of the drawn body. */
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number, number];
+  readonly bodyCentre: readonly [number, number, number];
+  readonly modelPosition?: readonly [number, number, number];
+  readonly modelRotation?: readonly [number, number, number, number];
+  readonly visible: boolean;
+}
+
+export interface NativeActorObservation {
+  readonly tick: number | null;
+  readonly actors: readonly NativeObservedActor[];
+}
+
 /** An RPC outlived its deadline; the connection it was on is gone. */
 export class NativeServiceTimeoutError extends Error {
   override readonly name = 'TimeoutError';
@@ -87,6 +104,8 @@ export class NativeServiceClient {
   #buffer = Buffer.alloc(0);
   #sequence = 0;
   #shmPath = '';
+  /** Additive ops the service advertised in `hello.capabilities`. */
+  #capabilities = new Set<string>();
   /** Set once the connection is unusable; every later `rpc` rejects with it. */
   #failure: Error | undefined;
 
@@ -132,6 +151,8 @@ export class NativeServiceClient {
       throw new Error(`native render service protocol ${String(hello.protocol)}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
     }
     client.#shmPath = hello.shm.path;
+    const capabilities = (hello as { capabilities?: unknown }).capabilities;
+    client.#capabilities = new Set(Array.isArray(capabilities) ? capabilities.filter((c): c is string => typeof c === 'string') : []);
     return client;
   }
 
@@ -177,6 +198,23 @@ export class NativeServiceClient {
     }
     if (!value.ok) throw new Error(value.error ?? `native service ${value.op} failed`);
     return value;
+  }
+
+  /** Whether the service advertised an additive op in `hello.capabilities`. */
+  supports(op: string): boolean {
+    return this.#capabilities.has(op);
+  }
+
+  /**
+   * What the service drew for every scene actor on the last applied tick
+   * (`observe_actors`). `null` — without sending anything — from a service
+   * that does not advertise the op: older builds drop the connection on an
+   * op they cannot decode, so the op is gated on the handshake, never probed.
+   */
+  async observeActors(): Promise<NativeActorObservation | null> {
+    if (!this.supports('observe_actors')) return null;
+    const value = await this.rpc({ op: 'observe_actors' });
+    return { tick: (value.tick as number | null | undefined) ?? null, actors: (value.actors as NativeObservedActor[] | undefined) ?? [] };
   }
 
   async readFrame(frame: NativeFrameRecord): Promise<Buffer> {

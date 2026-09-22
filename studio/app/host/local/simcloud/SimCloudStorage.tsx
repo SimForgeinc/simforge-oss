@@ -21,6 +21,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { plate } from "@/app/components/AppStage.stylex";
 import { studioHost } from "@/app/lib/host";
 import { studioCloud, cloudErrorMessage, useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Datasets and artifacts in a SimCloud organization next to the ones on this
@@ -442,7 +443,7 @@ function ListPlate<T>({
         </div>
         <span {...stylex.props(plate.eyebrow)}>{items.length}</span>
       </div>
-      <p {...stylex.props(plate.copy, plate.truncate)}>{subtitle}</p>
+      <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{subtitle}</p>
       </div>
       {items.length === 0 ? (
         <p {...stylex.props(plate.empty)}>{empty}</p>
@@ -467,8 +468,8 @@ function Row({
   return (
     <li {...stylex.props(plate.item)}>
       <div {...stylex.props(styles.rowBody)}>
-        <p {...stylex.props(plate.title, plate.truncate, styles.rowTitle)}>{title}</p>
-        <p {...stylex.props(plate.copy, plate.truncate)}>{detail}</p>
+        <p {...stylex.props(plate.title, [textLayout.truncate, plate.truncate], styles.rowTitle)}>{title}</p>
+        <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{detail}</p>
         {badge === null ? null : <span {...stylex.props(plate.pill)}>{badge}</span>}
       </div>
       {action}

@@ -26,6 +26,10 @@ const NativeRunLineageSchema = z.strictObject({
   executionPackageControlSha256: Sha256Schema,
   sourceXoscSha256: Sha256Schema,
   loweringSha256: Sha256Schema,
+  /** What the scene states were lowered from; absent on pre-timeline evidence. */
+  sceneSource: z.enum(['render-timeline', 'openscenario-legacy']).optional(),
+  /** `timelineSha256` of the `render.timeline` input (render-timeline source). */
+  timelineSha256: Sha256Schema.optional(),
   /** Digest of the pinned actor appearance closure the run rendered with. */
   actorAssetsSha256: Sha256Schema,
   /** Rendered ticks: the union of every RGB source's frame timestamps. */
@@ -93,6 +97,17 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
     binary: IdentifierSchema,
   }),
   /** One identity per rendered tick, in tick order, as the service answered. */
+  /** Observed-transform parity against the timeline sampler (render-timeline runs). */
+  parity: z.strictObject({
+    schema: z.literal('simforge.render-parity/v1'),
+    pass: z.boolean(),
+    comparedPoses: z.number().int().nonnegative(),
+    maxPositionErrorM: z.number().nonnegative(),
+    maxHeadingErrorDeg: z.number().nonnegative(),
+    maxPitchErrorDeg: z.number().nonnegative().nullable(),
+    maxRollErrorDeg: z.number().nonnegative().nullable(),
+    presenceMismatches: z.number().int().nonnegative(),
+  }).optional(),
   frames: z.array(z.strictObject({
     simTick: z.number().int().nonnegative(),
     sceneRevision: z.number().int().nonnegative(),
