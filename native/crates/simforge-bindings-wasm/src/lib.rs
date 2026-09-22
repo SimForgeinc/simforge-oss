@@ -1736,6 +1736,27 @@ impl WasmRenderTimeline {
         self.inner.to_json().map_err(timeline_err)
     }
 
+    /// `canonicalJson(timeline)`: the bytes whose sha256 is `sha256`.
+    #[wasm_bindgen(js_name = toCanonicalJson)]
+    pub fn to_canonical_json(&self) -> Result<String, JsValue> {
+        self.inner.to_canonical_json().map_err(timeline_err)
+    }
+
+    #[wasm_bindgen(getter, js_name = heightFieldDigest)]
+    pub fn height_field_digest(&self) -> String {
+        self.inner.identity.height_field_digest.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = catalogDigest)]
+    pub fn catalog_digest(&self) -> Option<String> {
+        self.inner.identity.catalog_digest.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = samplerVersion)]
+    pub fn sampler_version(&self) -> String {
+        self.inner.identity.sampler_version.clone()
+    }
+
     /// `timelineSha256`.
     #[wasm_bindgen(getter)]
     pub fn sha256(&self) -> Result<String, JsValue> {
@@ -1792,6 +1813,60 @@ impl WasmRenderTimeline {
         Ok(Float64Array::from(&out[..]))
     }
 
+    /// Scene-yup (Bevy / scene-state.v1) projection of every actor at each of
+    /// `times`: `times.length × actorIds.length × 12` floats
+    /// `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed]` with
+    /// `position = [x, z, -y]`, the quaternion from `sampler::scene_yup`
+    /// (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
+    #[wasm_bindgen(js_name = sceneFramesArray)]
+    pub fn scene_frames_array(
+        &self,
+        times: &[f64],
+        yaw_only: bool,
+    ) -> Result<Float64Array, JsValue> {
+        let mut out = Vec::with_capacity(times.len() * self.inner.actors.len() * 12);
+        for t in times {
+            for (_, p) in timeline_sampler::poses(&self.inner, *t).map_err(timeline_err)? {
+                let (pos, q) = timeline_sampler::scene_yup(&p, yaw_only);
+                out.extend_from_slice(&[
+                    if p.present { 1.0 } else { 0.0 },
+                    pos[0],
+                    pos[1],
+                    pos[2],
+                    q[0],
+                    q[1],
+                    q[2],
+                    q[3],
+                    p.velocity[0],
+                    p.velocity[2],
+                    -p.velocity[1],
+                    p.speed_mps,
+                ]);
+            }
+        }
+        Ok(Float64Array::from(&out[..]))
+    }
+
+    /// Static actor descriptions (`id, kind, catalogId, actorClass, dims,
+    /// color, static, origin, lifecycle`) as JSON, in `actorIds` order.
+    #[wasm_bindgen(js_name = actorsJson)]
+    pub fn actors_json(&self) -> Result<String, JsValue> {
+        let actors: Vec<render_timeline::TimelineActorDesc<'_>> = self
+            .inner
+            .actors
+            .iter()
+            .map(render_timeline::TimelineActorDesc::of)
+            .collect();
+        serde_json_string(&actors)
+    }
+
+    /// Identity, time origin, environment and height source as JSON (the
+    /// document without per-tick channels).
+    #[wasm_bindgen(js_name = headerJson)]
+    pub fn header_json(&self) -> Result<String, JsValue> {
+        serde_json_string(&render_timeline::TimelineHeader::of(&self.inner))
+    }
+
     /// `pose(actorId, t)` as JSON (camelCase contract field names).
     #[wasm_bindgen(js_name = poseJson)]
     pub fn pose_json(&self, actor_id: &str, t: f64) -> Result<String, JsValue> {
@@ -1804,6 +1879,27 @@ impl WasmRenderTimeline {
     pub fn signals_at_json(&self, t: f64) -> Result<String, JsValue> {
         let s = timeline_sampler::signals_at(&self.inner, t).map_err(timeline_err)?;
         serde_json_string(&s)
+    }
+
+    /// Grade observed per-frame transforms (JSONL) against the sampler.
+    /// `profile` is `"bevy"`, `"carla"` or a profile JSON object; returns the
+    /// `simforge.render-parity/v1` report as JSON.
+    #[wasm_bindgen(js_name = compareObservedJson)]
+    pub fn compare_observed_json(
+        &self,
+        observed_jsonl: &str,
+        profile: &str,
+    ) -> Result<String, JsValue> {
+        let profile = match render_timeline::parity::ParityProfile::named(profile) {
+            Some(p) => p,
+            None => {
+                render_timeline::parity::ParityProfile::from_json(profile).map_err(timeline_err)?
+            }
+        };
+        let report =
+            render_timeline::parity::compare_observed_jsonl(&self.inner, observed_jsonl, &profile)
+                .map_err(timeline_err)?;
+        serde_json_string(&report)
     }
 
     /// Resolved light states at `t`, as JSON.
