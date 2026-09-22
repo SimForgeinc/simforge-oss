@@ -10,6 +10,8 @@ import {
   type CityViewer,
 } from '@simforge-oss/viewer';
 
+import { SnapshotClock, bracketSnapshots, lerp, lerpAngle, type SnapshotClockOptions } from './snapshot-clock';
+
 export interface TruthViewerBridgeOptions {
   layer?: string;
   groundLift?: boolean;
@@ -22,16 +24,26 @@ export interface TruthViewerBridgeOptions {
   authoredCatalogId?: (actorId: string) => string | null;
   /** Where an appearance failure is reported; rendering stops until the next `reset`. */
   onError?: (error: Error) => void;
+  /** Wall clock in milliseconds; `performance.now` unless a test drives time itself. */
+  now?: () => number;
+  /** Tuning for the render clock; see {@link SnapshotClock}. */
+  clock?: SnapshotClockOptions;
 }
 
 export interface TruthViewerBridge {
   readonly actors: ActorRenderer;
-  /** Newer frames only (by tick); older ones are dropped. Use `reset` when the world legitimately restarts. */
+  /**
+   * Buffer a frame. Newer frames only (by tick); older ones are dropped. Use
+   * `reset` when the world legitimately restarts. Nothing is drawn here —
+   * frames arrive whenever the world's channel delivers them, and drawing on
+   * arrival is what made the car stutter — except the very first frame, so
+   * the world's actors appear the moment it has any.
+   */
   apply(frame: TruthFrame): void;
   /**
-   * The world was rebuilt at t = 0: forget the tick watermark and the
-   * interpolation pair so the new generation's first frame (tick 0) renders
-   * immediately instead of being dropped as stale.
+   * The world was rebuilt at t = 0: forget the tick watermark, the buffered
+   * frames and the render clock so the new generation's first frame (tick 0)
+   * renders immediately instead of being dropped as stale.
    */
   reset(): void;
   rendered(actorId: string): ActorRenderState | null;
@@ -58,9 +70,15 @@ export function createTruthViewerBridge(
   const adapter = new ThreeRendererAdapter(viewer);
   const sampleGround = indexedWorldHeightSampler(viewer);
   const previousFrameHook = viewer.onFrame;
-  let earlier: TruthFrame | null = null;
+  const now = opts.now ?? (() => performance.now());
+  const clock = new SnapshotClock(opts.clock);
+  /**
+   * Frames not yet drawn past, oldest first. The world posts every fixed step,
+   * so this holds the few steps between the render clock and the newest.
+   */
+  const buffered: TruthFrame[] = [];
   let latest: TruthFrame | null = null;
-  let elapsedSinceLatest = 0;
+  let drawnOnce = false;
   let followId: string | null = null;
   let followMode: 'chase' | 'dash' = 'chase';
   let disposed = false;
@@ -83,10 +101,10 @@ export function createTruthViewerBridge(
   viewer.scene.add(adapter.actors.group);
 
   let failed: Error | null = null;
-  const render = (dt: number): void => {
+  const render = (): void => {
     if (disposed || !latest || failed) return;
     try {
-      renderLatest(dt);
+      renderAt(clock.advance(now() / 1000) ?? latest.timeSec);
     } catch (error) {
       // An authored asset the catalog does not know is a document error, not
       // something to paper over with a generic body. Stop rendering frames and
@@ -97,24 +115,32 @@ export function createTruthViewerBridge(
     }
   };
 
-  const renderLatest = (dt: number): void => {
-    if (!latest) return;
-    elapsedSinceLatest += Math.max(0, dt);
-    const duration = earlier ? latest.timeSec - earlier.timeSec : 0;
-    const alpha = duration > 0 ? Math.min(1, elapsedSinceLatest / duration) : 1;
-    const priorActors = earlier ? sceneActors(earlier) : new Map();
-    const metadata = new Map(latest.actors.map((actor) => [actor.id, actor]));
+  /**
+   * Draw the world as it was at sim time `timeS`, blended between the two
+   * buffered steps either side of it. Positions blend linearly and headings
+   * along the shorter arc; an actor present only in the later step is drawn
+   * where that step has it.
+   */
+  const renderAt = (timeS: number): void => {
+    const bracket = bracketSnapshots(buffered, (frame) => frame.timeSec, timeS);
+    if (!bracket) return;
+    const { from, to, alpha } = bracket;
+    // Steps before `from` can never be drawn again: the clock only moves forward.
+    const drawnPast = buffered.indexOf(from);
+    if (drawnPast > 0) buffered.splice(0, drawnPast);
+    const priorActors = from === to ? null : sceneActors(from);
+    const metadata = new Map(to.actors.map((actor) => [actor.id, actor]));
     const groundReady = shouldGroundLift && viewer.getGroundIndex() !== null;
     const actors: ActorRenderState[] = [];
 
-    for (const current of latest.scene.actors) {
+    for (const current of to.scene.actors) {
       if (current.kind === 'despawn') continue;
       const meta = metadata.get(current.id);
       if (!meta) continue;
-      const prior = priorActors.get(current.id);
-      const x = prior ? interpolate(prior.position[0], current.position[0], alpha) : current.position[0];
-      const z = prior ? interpolate(prior.position[2], current.position[2], alpha) : current.position[2];
-      const headingRad = prior ? interpolateAngle(prior.yawRad, current.yawRad, alpha) : current.yawRad;
+      const prior = priorActors?.get(current.id);
+      const x = prior ? lerp(prior.position[0], current.position[0], alpha) : current.position[0];
+      const z = prior ? lerp(prior.position[2], current.position[2], alpha) : current.position[2];
+      const headingRad = prior ? lerpAngle(prior.yawRad, current.yawRad, alpha) : current.yawRad;
       const y = groundReady ? sampleGround(x, z) ?? current.position[1] : current.position[1];
       const look = appearanceOf(current.id, meta.class);
       actors.push({
@@ -135,18 +161,21 @@ export function createTruthViewerBridge(
     adapter.applyActorFrame({
       contractVersion: adapter.contractVersion,
       layer,
-      tick: latest.tick,
-      timeS: latest.timeSec,
+      tick: to.tick,
+      timeS,
       actors,
     });
+    drawnOnce = true;
     lastRendered = new Map(actors.map((actor) => [actor.id, actor]));
     clearStandIn();
     if (followId) applyFollow();
   };
 
+  // Actors are only ever moved here, once per displayed frame, so the car and
+  // the camera that follows it are always written from the same moment.
   const frameHook = (dt: number): void => {
     previousFrameHook?.(dt);
-    render(dt);
+    render();
   };
   viewer.onFrame = frameHook;
 
@@ -173,10 +202,13 @@ export function createTruthViewerBridge(
     apply(frame) {
       if (disposed) return;
       if (latest && frame.tick <= latest.tick) return;
-      earlier = latest;
       latest = frame;
-      elapsedSinceLatest = 0;
-      render(0);
+      buffered.push(frame);
+      // A world that stops being drawn (suspended viewer) must not grow this
+      // without bound; a second of steps is far more than the clock ever lags.
+      if (buffered.length > MAX_BUFFERED_FRAMES) buffered.splice(0, buffered.length - MAX_BUFFERED_FRAMES);
+      clock.observe(frame.timeSec, now() / 1000);
+      if (!drawnOnce) render();
     },
     rendered(actorId) {
       return lastRendered.get(actorId) ?? null;
@@ -200,11 +232,12 @@ export function createTruthViewerBridge(
     },
     reset() {
       if (disposed) return;
-      earlier = null;
       latest = null;
+      buffered.length = 0;
+      clock.reset();
+      drawnOnce = false;
       failed = null;
       appearance.clear();
-      elapsedSinceLatest = 0;
       lastRendered.clear();
       adapter.actors.clearLayer(layer);
     },
@@ -224,24 +257,28 @@ export function createTruthViewerBridge(
       clearStandIn();
       adapter.actors.clearLayer(layer);
       adapter.actors.dispose();
-      earlier = null;
       latest = null;
+      buffered.length = 0;
       lastRendered.clear();
     },
   };
 }
 
-function sceneActors(frame: TruthFrame): Map<string, TruthFrame['scene']['actors'][number]> {
-  return new Map(frame.scene.actors.filter((actor) => actor.kind !== 'despawn').map((actor) => [actor.id, actor]));
-}
+/** Steps kept for interpolation: about two seconds of a 20 ms world. */
+const MAX_BUFFERED_FRAMES = 128;
 
-function interpolate(from: number, to: number, alpha: number): number {
-  return from + (to - from) * alpha;
-}
 
-function interpolateAngle(from: number, to: number, alpha: number): number {
-  const delta = Math.atan2(Math.sin(to - from), Math.cos(to - from));
-  return from + delta * alpha;
+type SceneActor = TruthFrame['scene']['actors'][number];
+/** A frame is blended from for several displayed frames; index its actors once. */
+const sceneActorIndex = new WeakMap<TruthFrame, Map<string, SceneActor>>();
+
+function sceneActors(frame: TruthFrame): Map<string, SceneActor> {
+  let index = sceneActorIndex.get(frame);
+  if (!index) {
+    index = new Map(frame.scene.actors.filter((actor) => actor.kind !== 'despawn').map((actor) => [actor.id, actor]));
+    sceneActorIndex.set(frame, index);
+  }
+  return index;
 }
 
 function catalogIdFor(actorClass: TruthFrame['actors'][number]['class']): string {
