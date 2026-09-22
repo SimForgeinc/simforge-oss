@@ -70,6 +70,14 @@ export type ScenarioDocumentDto = {
   mapSourceMapId?: string | null;
   /** OpenDRIVE digest of the bound version, used to refuse unsafe forward resolution. */
   mapXodrSha256?: string | null;
+  /**
+   * Browser closure digest of the pinned map version, captured when the draft
+   * was pinned. A revision commit refuses the draft if the version's closure
+   * has changed since (`scenario_map_pin_mismatch`).
+   */
+  mapClosureSha256?: string | null;
+  /** Asset catalog version pinned with the map version. */
+  assetCatalogVersionId?: string | null;
   datasetId: string;
   authoringQualityId: ScenarioAuthoringQuality;
   createdAt: string;

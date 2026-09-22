@@ -28,7 +28,7 @@ function input(): SimScenarioInput {
     mapId: 'test-map',
     clipSeconds: 1,
     warmupSeconds: 0,
-    dt: 0.2,
+    dt: 0.02,
     seed: 'playback-test',
     metricSubject: 'ego',
     actors: [
@@ -66,7 +66,7 @@ function trace(documentInput = input()): SimTrace {
       seed: 'playback-test',
       mapId: 'test-map',
       engineGraphDigest: 'graph-digest',
-      dt: 0.2,
+      dt: 0.02,
       clipSeconds: 1,
       warmupSeconds: 0,
       frame: 'xodr-local',

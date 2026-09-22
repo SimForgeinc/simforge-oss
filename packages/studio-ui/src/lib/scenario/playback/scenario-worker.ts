@@ -21,6 +21,7 @@ import {
   contentHash,
   pruneDanglingAfterInteractions,
   parseSimScenarioInput,
+  SIMULATION_DT_S,
   type AmbientTrafficProfile,
   type AmbientTrafficProvenance,
   type AmbientTrafficResult,
@@ -488,7 +489,7 @@ function createEmptyAmbientInput(mapId: string): SimScenarioInput {
     mapId,
     clipSeconds: 20,
     warmupSeconds: 0,
-    dt: 0.05,
+    dt: SIMULATION_DT_S,
     seed: `ambient-world:${mapId}`,
     actors: [{
       id: 'ambient-world-seed',

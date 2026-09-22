@@ -22,7 +22,7 @@ import {
 import {
   engineSemantics,
   gzipTrace,
-  mapClosureDigest,
+  mapClosureIdentityDigest,
   materializeTraceTraffic,
   simKey,
   TRACE_SCHEMA,
@@ -82,12 +82,12 @@ describe('simKey', () => {
   });
 });
 
-describe('mapClosureDigest', () => {
+describe('mapClosureIdentityDigest', () => {
   it('covers the browser closure and the collider artifact', () => {
-    const a = mapClosureDigest({ browserClosureSha256: '1'.repeat(64), colliderDigest: `sha256-${'2'.repeat(64)}` });
+    const a = mapClosureIdentityDigest({ browserClosureSha256: '1'.repeat(64), colliderDigest: `sha256-${'2'.repeat(64)}` });
     expect(a).toMatch(/^[a-f0-9]{64}$/);
-    expect(mapClosureDigest({ browserClosureSha256: '1'.repeat(64), colliderDigest: `sha256-${'3'.repeat(64)}` })).not.toBe(a);
-    expect(mapClosureDigest({ browserClosureSha256: '4'.repeat(64), colliderDigest: `sha256-${'2'.repeat(64)}` })).not.toBe(a);
+    expect(mapClosureIdentityDigest({ browserClosureSha256: '1'.repeat(64), colliderDigest: `sha256-${'3'.repeat(64)}` })).not.toBe(a);
+    expect(mapClosureIdentityDigest({ browserClosureSha256: '4'.repeat(64), colliderDigest: `sha256-${'2'.repeat(64)}` })).not.toBe(a);
   });
 });
 

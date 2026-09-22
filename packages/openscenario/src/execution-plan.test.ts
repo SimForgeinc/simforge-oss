@@ -23,7 +23,7 @@ function fixture() {
     mapId: 'replay-map',
     clipSeconds: 1,
     warmupSeconds: 0,
-    dt: 0.1,
+    dt: 0.02,
     physics: { mode: 'dynamic-v1' },
     metricSubject: 'ego/authored-id',
     operationalConditions: {
@@ -77,7 +77,7 @@ describe('extractOpenScenarioExecutionPlan', () => {
     expect(plan).toMatchObject({
       sourceSha256: SOURCE_SHA256,
       mapId: 'replay-map',
-      dt: 0.1,
+      dt: 0.02,
       warmupSeconds: 0,
       clipSeconds: 1,
       stopTimeS: 1,
@@ -97,7 +97,7 @@ describe('extractOpenScenarioExecutionPlan', () => {
   it('rejects unsupported profile elements, actions, triggers, markers, and trajectory mutations', () => {
     const xosc = exportedFixture();
     expectCode(xosc.replace('value="xml-1.4-trajectory-replay"', 'value="xml-1.4-actions"'), 'unknown_profile');
-    expectCode(xosc.replace('<Vertex time="0.1">', '<Vertex time="0.15">'), 'invalid_actor_timeline');
+    expectCode(xosc.replace('<Vertex time="0.1">', '<Vertex time="0.11">'), 'invalid_actor_timeline');
     expectCode(xosc.replace(/\s*<PrivateAction>\s*<RoutingAction>[\s\S]*?<\/RoutingAction>\s*<\/PrivateAction>/, ''), 'missing_trajectory');
     expectCode(xosc.replace('<DeleteEntityAction/>', '<AddEntityAction/>'), 'unsupported_action');
     expectCode(xosc.replace('conditionEdge="none"', 'conditionEdge="rising"'), 'unsupported_trigger');

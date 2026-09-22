@@ -94,10 +94,14 @@ export interface StudioProjectService {
   /**
    * Patch metadata. `expectedVersion` makes a rename safe without a lock: if the
    * draft moved underneath, the route 409s with a `ScenarioVersionConflict`.
+   *
+   * `mapVersionId` is the explicit re-pin: it moves the draft to another
+   * immutable map version (pinning that version's closure digest and asset
+   * catalog). It is the ONLY way a document's map version changes.
    */
   updateDocument(
     documentId: string,
-    input: { expectedVersion: number; title?: string; description?: string },
+    input: { expectedVersion: number; title?: string; description?: string; mapVersionId?: string },
   ): Promise<ScenarioDocumentDto>;
   duplicateDocument(documentId: string, input?: { title?: string; datasetId?: string }): Promise<ScenarioDocumentDto>;
   transferDocument(documentId: string, input: TransferDocumentRequest): Promise<ScenarioDocumentDto>;

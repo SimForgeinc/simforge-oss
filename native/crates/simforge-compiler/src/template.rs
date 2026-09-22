@@ -3638,12 +3638,32 @@ pub struct ReasoningTraceSegment {
 
 /* -------------------------------------------------------------- document */
 
+/// The only simulation step SimForge executes (20 ms). Mirrors the document's
+/// `simulation.dtS` literal and the core input validation.
+pub const SIMULATION_DT_S: f64 = 0.02;
+
+/// Explicit simulation identity pinned in the document (`simulation`).
+///
+/// With a pinned `seed`, the per-cell seed no longer depends on the template
+/// id (`anchor.id`, else `meta.name`), so renaming a scenario never changes its
+/// simulation. Documents written before pinning have no block and keep the
+/// legacy derivation; their one-time pin writes the template id they resolved
+/// to, so pinning changes no simulation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SimulationBlock {
+    pub seed: String,
+    pub dt_s: f64,
+}
+
 /// A validated v2 template (all defaults materialised, expressions parsed).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ScenarioTemplate {
     pub scenario_version: u32,
     pub meta: TemplateMeta,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub simulation: Option<SimulationBlock>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_map: Option<MapRef>,
     #[serde(default)]
@@ -3694,6 +3714,15 @@ impl ScenarioTemplate {
     /// The stable identity of a template, used in the replay key.
     pub fn template_id(&self) -> &str {
         self.anchor.id.as_deref().unwrap_or(&self.meta.name)
+    }
+
+    /// The seed identity the per-cell seed is derived from: the pinned
+    /// `simulation.seed`, else (pre-pinning documents) the template id.
+    pub fn seed_identity(&self) -> &str {
+        self.simulation
+            .as_ref()
+            .map(|s| s.seed.as_str())
+            .unwrap_or_else(|| self.template_id())
     }
 
     /// True when every role can be re-placed on another map.
@@ -3955,6 +3984,24 @@ pub fn structural_issues(doc: &ScenarioTemplate) -> Vec<TemplateIssue> {
             path: "choreography.warmupSeconds".to_owned(),
             message: "warmupSeconds must be within [0, 30]".to_owned(),
         });
+    }
+    if let Some(simulation) = &doc.simulation {
+        let seed_chars = simulation.seed.chars().count();
+        if seed_chars == 0 || seed_chars > 200 {
+            issues.push(TemplateIssue {
+                path: "simulation.seed".to_owned(),
+                message: "simulation.seed must be 1 to 200 characters".to_owned(),
+            });
+        }
+        if simulation.dt_s != SIMULATION_DT_S {
+            issues.push(TemplateIssue {
+                path: "simulation.dtS".to_owned(),
+                message: format!(
+                    "simulation.dtS must be {SIMULATION_DT_S} (the only step SimForge executes), got {}",
+                    simulation.dt_s
+                ),
+            });
+        }
     }
     if let (Some(created), Some(modified)) = (
         parse_timestamp(&doc.meta.created_at),

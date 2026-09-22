@@ -107,7 +107,7 @@ export function xoscToJobSpec(xml: string, options: XoscToJobSpecOptions): XoscJ
   const spec: XoscJobSpec = {
     type,
     map_name: options.mapName,
-    fixed_delta_seconds: options.fixedDeltaSeconds ?? 0.05,
+    fixed_delta_seconds: options.fixedDeltaSeconds ?? 0.02,
     // simulate forces no-render; render enables it.
     no_rendering_mode: type === "simulate",
     render_enabled: type === "render",

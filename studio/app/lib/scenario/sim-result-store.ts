@@ -34,6 +34,7 @@ import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 import { evaluateTrace, type EvaluateFilters, type TraceEvaluation } from "@simforge-oss/engine/node";
 import { simforgeEnv } from "@/lib/simforge-env";
 
+import { simContentHash } from "@simforge-oss/scenario";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { createLocalArtifactProducer } from "./jobs/local-artifact-producer-store";
 import {
@@ -116,7 +117,9 @@ async function requestIdentity(subject: SimulationSubject): Promise<RequestIdent
   const build = engineBuildProvenance();
   const requestKey = canonicalJsonSha256({
     contract: REQUEST_CONTRACT,
-    contentSha256: subject.contentSha256,
+    // Simulation-relevant content only (WS-A `simContentHash`): a rename, a
+    // description edit or a save timestamp resolves to the same request.
+    simContentSha256: simContentHash(subject.canonicalContent),
     mapVersionId: map.mapVersionId,
     browserClosureSha256: map.browserClosureSha256,
     catalogSha256,
