@@ -59,7 +59,7 @@ export async function downloadInputs(
   let lastReport = 0;
   let progressTail = Promise.resolve();
   const report = (completed: number) => {
-    if (completed !== transfers.length && completed !== 0 && Date.now() - lastReport < 1000) return progressTail;
+    if (completed !== transfers.length && completed !== 0 && Date.now() - lastReport < 1000) return;
     lastReport = Date.now();
     const snapshot = { completed, total: transfers.length, downloadedBytes, totalBytes };
     progressTail = progressTail.then(() => options.progress?.(snapshot));
