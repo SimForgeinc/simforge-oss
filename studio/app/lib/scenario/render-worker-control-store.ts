@@ -230,6 +230,8 @@ type WorkerRow = {
   base_image_platform_digest: string | null;
   gpu_memory_mib: number;
   hardware_profile: string;
+  /** `batch-v1` when the worker signs lease inputs lazily (label `inputUrls`). */
+  input_urls?: string | null;
 };
 
 function parseObject(value: string | Record<string, unknown>) {
@@ -341,6 +343,8 @@ type Claimed = {
   intentSha256: string;
   executionPackageControlSha256: string;
   inputs: ClaimedInput[];
+  /** The worker signs stored inputs on demand (cache misses only): send no per-input URL. */
+  lazyInputUrls: boolean;
 };
 
 type StoredInput = {
@@ -447,7 +451,8 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                 metadata->>'baseImageDigest' AS base_image_digest,
                 (metadata->>'gpuMemoryMiB')::integer AS gpu_memory_mib,
                 metadata->>'baseImagePlatformDigest' AS base_image_platform_digest,
-                capabilities::text AS capabilities
+                capabilities::text AS capabilities,
+                metadata->'labels'->>'inputUrls' AS input_urls
            FROM simforge.worker_nodes
           WHERE registration_id = :registration_id AND id = :worker_node_id AND environment = :environment
             AND registration_state = 'active'
@@ -677,6 +682,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         intentSha256: row.intent_sha256,
         executionPackageControlSha256: row.execution_package_control_sha256,
         inputs,
+        lazyInputUrls: worker.input_urls === "batch-v1",
       };
     }).catch((error: unknown): null => {
       // One job that cannot be leased (an incomplete map closure, a digest
@@ -715,12 +721,16 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
     intent: claimed.intent,
     intentSha256: claimed.intentSha256,
     executionPackageControlSha256: claimed.executionPackageControlSha256,
+    // A `batch-v1` worker gets identities only for stored inputs and signs
+    // just its cache misses (`input-urls`): a large native map would
+    // otherwise put thousands of signed URLs, each with a refresh block
+    // repeating the worker's bearer token, into one ~12 MB claim.
     inputs: await Promise.all(claimed.inputs.map(async (input) => ({
       inputId: input.inputId,
       ...(input.relativePath === undefined ? {} : { relativePath: input.relativePath }),
       sha256: input.sha256,
       sizeBytes: Number(input.sizeBytes),
-      download: {
+      ...(claimed.lazyInputUrls && !("url" in input) ? {} : { download: {
         url: "url" in input ? input.url : await getPresignedGetUrl(input.key, input.bucket, LEASE_SECONDS),
         headers: {},
         ...("url" in input ? {} : {
@@ -735,7 +745,7 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
             },
           } } : {}),
         }),
-      },
+      } }),
     }))),
   };
 }
@@ -841,6 +851,62 @@ export async function refreshRenderInputV2(input: {
   if (!object) return null;
   const url = await getPresignedGetUrl(object.storage_key, object.storage_bucket, LEASE_SECONDS);
   return { url, headers: {}, expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString() };
+}
+
+/**
+ * Batch download URLs for a live lease's inputs (`render-jobs/{jobId}/input-urls`).
+ * Each id is authorized exactly like a single-input refresh: it must be a
+ * package input or an asset the leased intent declares, and the object is
+ * found by the declared digest and size. Unknown ids are omitted.
+ */
+export async function signRenderInputsV2(input: {
+  jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; inputIds: readonly string[];
+}) {
+  const lease = await activeLease(input.leaseId, input.fenceToken, input.workerNodeId, input.jobId);
+  if (!lease || lease.cancel_requested_at) return null;
+  const intent = parseRenderIntent(lease.render_intent);
+  const declared = new Map(intent.assets.map((asset) => [asset.assetId, asset]));
+  const expiresAt = new Date(Date.now() + LEASE_SECONDS * 1000).toISOString();
+  const downloads: Record<string, { url: string; headers: Record<string, string>; expiresAt?: string }> = {};
+  const byDigest = new Map<string, string[]>();
+  for (const inputId of new Set(input.inputIds)) {
+    if (inputId === NATIVE_ACTOR_ASSETS_INPUT_ID) {
+      downloads[inputId] = { url: nativeActorAssetsInput().downloadUrl, headers: {} };
+      continue;
+    }
+    const asset = declared.get(inputId);
+    if (asset) {
+      const key = `${asset.sha256}:${asset.sizeBytes}`;
+      byDigest.set(key, [...(byDigest.get(key) ?? []), inputId]);
+      continue;
+    }
+    // Package inputs (scenario, and CARLA's map/catalog/package) resolve through the single-input path.
+    const single = await refreshRenderInputV2({ ...input, inputId });
+    if (single) downloads[inputId] = single;
+  }
+  if (byDigest.size > 0) {
+    const digests = [...new Set([...byDigest.keys()].map((key) => key.split(":")[0]!))];
+    const rows = await queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
+      `SELECT sha256, byte_length, storage_bucket, storage_key FROM simforge.native_map_asset_blobs
+        WHERE sha256 = ANY(string_to_array(:digests, ',')) AND verification_state = 'verified'
+       UNION ALL
+       SELECT sha256, byte_length, storage_bucket, storage_key FROM simforge.artifacts
+        WHERE sha256 = ANY(string_to_array(:digests, ','))`,
+      { digests: digests.join(",") },
+    );
+    const objects = new Map<string, { storage_bucket: string; storage_key: string }>();
+    for (const row of rows) {
+      const key = `${row.sha256}:${Number(row.byte_length)}`;
+      if (!objects.has(key)) objects.set(key, row);
+    }
+    await Promise.all([...byDigest].map(async ([key, inputIds]) => {
+      const object = objects.get(key);
+      if (!object) return;
+      const url = await getPresignedGetUrl(object.storage_key, object.storage_bucket, LEASE_SECONDS);
+      for (const inputId of inputIds) downloads[inputId] = { url, headers: {}, expiresAt };
+    }));
+  }
+  return { schema: CONTROL_SCHEMA, type: "lease.input-urls" as const, downloads };
 }
 
 export async function heartbeatRenderLeaseV2(input: {
