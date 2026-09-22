@@ -72,8 +72,9 @@ export const styles = stylex.create({
     fontWeight: text.weightBold,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
-    color: "rgb(255 255 255 / 0.92)",
-    opacity: { default: 0.72, ":hover": 1, ":focus-visible": 1 },
+    // Monochrome: brightness is the only per-state signal, so hover lifts the tile and the monogram.
+    backgroundColor: { default: colors.glassRaised, ":hover": colors.chip, ":focus-visible": colors.chip },
+    color: { default: colors.textMuted, ":hover": colors.text, ":focus-visible": colors.text },
     transform: { default: "scale(1)", ":hover": "scale(1.06)", ":active": "scale(0.97)" },
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -82,13 +83,14 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   iconActive: {
-    opacity: 1,
+    backgroundColor: colors.glassHover,
+    color: colors.text,
     boxShadow: "0 0 0 1px rgb(255 255 255 / 0.55)",
   },
   iconBusy: {
     cursor: "progress",
   },
-  /** Dims the monogram under the spinner without losing the dataset's colour. */
+  /** Dims the monogram under the spinner. */
   busyOverlay: {
     position: "absolute",
     inset: 0,
@@ -220,7 +222,8 @@ export const styles = stylex.create({
    */
   iconStatic: {
     cursor: "default",
-    opacity: { default: 0.62, ":hover": 0.78, ":focus-visible": 0.78 },
+    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised, ":focus-visible": colors.glassRaised },
+    color: { default: colors.textSubtle, ":hover": colors.textMuted, ":focus-visible": colors.textMuted },
     transform: { default: "none", ":hover": "none", ":active": "none" },
   },
   /** The signed-out cloud section's way in. Dashed, so it reads as an opening rather than a tile. */

@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from "../../components/ui/tooltip";
 import { menu } from "../scenario-controls.stylex";
-import { datasetHue, datasetMonogram } from "../../lib/monogram";
+import { datasetMonogram } from "../../lib/monogram";
 
 /** Datasets the workspace owns can be edited; shared and system-managed ones are read-only (§6.5). */
 export function isDatasetEditable(dataset: ScenarioDatasetDto): boolean {
@@ -67,9 +67,10 @@ const CLOUD_TILE_LIMIT = 24;
  * section links to. So a cloud tile states its name, its size and its organization, and does not
  * pretend the local scenario column can open it.
  *
- * Apart from the labels the strip still owns no text: a monogram on a per-dataset hue is what the eye
+ * Apart from the labels the strip still owns no text: a monogram on a neutral tile is what the eye
  * learns to find, and the name is one hover (or focus) away in the tooltip and always present as the
- * tile's accessible name.
+ * tile's accessible name. Tiles are monochrome — state is carried by brightness, the pill and the
+ * active ring, never by a per-dataset colour competing with the scene beside the rail.
  */
 export function DatasetStrip({
   datasets,
@@ -128,7 +129,6 @@ export function DatasetStrip({
     const hovered = dataset.id === hoveredDatasetId;
     const menuOpen = dataset.id === menuDatasetId;
     const editable = isDatasetEditable(dataset);
-    const hue = datasetHue(dataset.id);
     const count = dataset.documentCount;
     return (
       <li
@@ -167,7 +167,6 @@ export function DatasetStrip({
                     }
                   : undefined
               }
-              style={{ backgroundColor: active ? `hsl(${hue} 52% 42%)` : `hsl(${hue} 40% 30%)` }}
               {...stylex.props(
                 styles.icon,
                 active ? styles.iconActive : null,
@@ -236,7 +235,6 @@ export function DatasetStrip({
    * open, and moving it between homes is not a thing this strip does.
    */
   const renderCloudIcon = (dataset: ScenarioDatasetDto, organizationName: string) => {
-    const hue = datasetHue(dataset.id);
     const reveal = dataset.id === hoveredDatasetId;
     return (
       <li
@@ -266,7 +264,6 @@ export function DatasetStrip({
               onBlur={() =>
                 setHoveredDatasetId((current) => (current === dataset.id ? null : current))
               }
-              style={{ backgroundColor: `hsl(${hue} 30% 26%)` }}
               {...stylex.props(styles.icon, styles.iconStatic)}
               data-testid="scenario-cloud-dataset-icon"
             >
