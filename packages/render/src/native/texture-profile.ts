@@ -22,6 +22,84 @@ type Master = {
 };
 type Variant = { schemaVersion: number; id: string; sourceManifestSha256: string; images: Record<string, { file: string; outputSha256: string; width: number; height: number; codec: string }> };
 
+/** What the texture planner may read from a map closure: member digests and small JSON members. */
+export interface NativeTextureMemberSource {
+  /** The member's sha256, or undefined when the closure has no such member. */
+  sha256(uri: string): string | undefined;
+  readText(uri: string): Promise<string>;
+}
+
+export interface NativeTexturePlan {
+  /** Every member the tier renders from besides `master.gltf` (manifests, variant index, images, buffers). */
+  readonly members: ReadonlySet<string>;
+  /** Final image uri per referenced image index (variant replacements applied). */
+  readonly images: ReadonlyMap<number, string>;
+  readonly variantDigest: string;
+  readonly variant: boolean;
+}
+
+/**
+ * Selects exactly the closure members a texture tier renders from. Pure
+ * over the master and the (small) manifest members, so a worker can decide
+ * which members to fetch before downloading any texture: `uastc-full` never
+ * needs the 512 px variants, and `bc7-512` never needs the full-size images.
+ */
+export async function planNativeTextureMembers(
+  document: Master,
+  renderTextures: NativeRenderTextures,
+  source: NativeTextureMemberSource,
+): Promise<NativeTexturePlan> {
+  const members = new Set<string>();
+  const requireMember = (uri: string) => {
+    assertSafeNativeMapMemberPath(uri);
+    const sha256 = source.sha256(uri);
+    if (!sha256) throw new Error(`native_texture_member_missing: ${uri}`);
+    members.add(uri);
+    return sha256;
+  };
+  let variant: Variant | undefined;
+  let variantDigest = '';
+  if (renderTextures === 'bc7-512') {
+    const manifestSha256 = requireMember('3d/manifest.json');
+    requireMember('3d/variants/manifest.json');
+    const manifest = JSON.parse(await source.readText('3d/variants/manifest.json')) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
+    if (manifest.sourceManifestSha256 !== manifestSha256) throw new Error('native_ml_manifest_binding_mismatch');
+    const entry = manifest.variants?.['textures-512-bc7'];
+    if (!entry || entry.sourceManifestSha256 !== manifestSha256) throw new Error('native_ml_texture_variant_unavailable');
+    const indexUri = `3d/variants/${entry.file}`;
+    const indexSha256 = requireMember(indexUri);
+    if (indexSha256 !== entry.outputSha256) throw new Error('native_ml_texture_index_digest_mismatch');
+    variant = JSON.parse(await source.readText(indexUri)) as Variant;
+    if (variant.schemaVersion !== 1 || variant.id !== 'textures-512-bc7' || variant.sourceManifestSha256 !== manifestSha256) throw new Error('native_ml_texture_index_invalid');
+    variantDigest = indexSha256;
+  }
+  const imageIndices = new Set<number>();
+  for (const texture of document.textures ?? []) {
+    const index = texture.extensions?.KHR_texture_basisu?.source ?? texture.source;
+    if (index !== undefined) imageIndices.add(index);
+  }
+  const images = new Map<number, string>();
+  for (const index of imageIndices) {
+    const image = document.images?.[index];
+    if (!image?.uri || image.uri.startsWith('data:')) throw new Error(`native_texture_external_image_required: ${index}`);
+    let uri = image.uri;
+    if (variant) {
+      const replacement = variant.images[`../${image.uri}`];
+      if (!replacement || replacement.width > 512 || replacement.height > 512 || !['bc7', 'rgba'].includes(replacement.codec)) throw new Error(`native_ml_texture_missing_or_invalid: ${image.uri}`);
+      uri = `3d/${replacement.file}`;
+      const sha256 = requireMember(uri);
+      if (sha256 !== replacement.outputSha256) throw new Error(`native_ml_texture_digest_mismatch: ${uri}`);
+    }
+    requireMember(uri);
+    images.set(index, uri);
+  }
+  for (const buffer of document.buffers ?? []) {
+    if (!buffer.uri || buffer.uri.startsWith('data:')) throw new Error('native_external_geometry_required');
+    requireMember(buffer.uri);
+  }
+  return { members, images, variantDigest, variant: variant !== undefined };
+}
+
 export async function stageNativeTextureProfile(input: {
   closure: NativeMapClosure<RenderInputFile>;
   renderTextures: NativeRenderTextures;
@@ -36,60 +114,32 @@ export async function stageNativeTextureProfile(input: {
   const capacitySource = input.budgetBytes === undefined ? 'assumed' as const : 'explicit' as const;
   const masterInput = input.closure.members.get('master.gltf')!;
   const document = JSON.parse(await fs.readFile(masterInput.path, 'utf8')) as Master;
-  const selected = new Map<string, RenderInputFile>();
-  const requireMember = (uri: string) => {
-    assertSafeNativeMapMemberPath(uri);
-    const member = input.closure.members.get(uri);
-    if (!member) throw new Error(`native_texture_member_missing: ${uri}`);
-    selected.set(uri, member);
-    return member;
-  };
-  let variant: Variant | undefined;
-  let variantDigest = '';
-  if (input.renderTextures === 'bc7-512') {
-    const manifestInput = requireMember('3d/manifest.json');
-    const envelopeInput = requireMember('3d/variants/manifest.json');
-    const manifest = JSON.parse(await fs.readFile(envelopeInput.path, 'utf8')) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
-    if (manifest.sourceManifestSha256 !== manifestInput.sha256) throw new Error('native_ml_manifest_binding_mismatch');
-    const entry = manifest.variants?.['textures-512-bc7'];
-    if (!entry || entry.sourceManifestSha256 !== manifestInput.sha256) throw new Error('native_ml_texture_variant_unavailable');
-    const index = requireMember(`3d/variants/${entry.file}`);
-    if (index.sha256 !== entry.outputSha256) throw new Error('native_ml_texture_index_digest_mismatch');
-    variant = JSON.parse(await fs.readFile(index.path, 'utf8')) as Variant;
-    if (variant.schemaVersion !== 1 || variant.id !== 'textures-512-bc7' || variant.sourceManifestSha256 !== manifestInput.sha256) throw new Error('native_ml_texture_index_invalid');
-    variantDigest = index.sha256;
-  }
-  const imageIndices = new Set<number>();
-  for (const texture of document.textures ?? []) {
-    const index = texture.extensions?.KHR_texture_basisu?.source ?? texture.source;
-    if (index !== undefined) imageIndices.add(index);
-  }
+  const plan = await planNativeTextureMembers(document, input.renderTextures, {
+    sha256: (uri) => input.closure.members.get(uri)?.sha256,
+    readText: (uri) => fs.readFile(input.closure.members.get(uri)!.path, 'utf8'),
+  });
+  const selected = new Map<string, RenderInputFile>([...plan.members].map((uri) => [uri, input.closure.members.get(uri)!]));
+  const variantDigest = plan.variantDigest;
   let textureBytes = 0;
   const seenImages = new Set<string>();
-  for (const index of imageIndices) {
-    const image = document.images?.[index];
-    if (!image?.uri || image.uri.startsWith('data:')) throw new Error(`native_texture_external_image_required: ${index}`);
-    if (variant) {
-      const replacement = variant.images[`../${image.uri}`];
-      if (!replacement || replacement.width > 512 || replacement.height > 512 || !['bc7', 'rgba'].includes(replacement.codec)) throw new Error(`native_ml_texture_missing_or_invalid: ${image.uri}`);
-      const uri = `3d/${replacement.file}`;
-      const member = requireMember(uri);
-      if (member.sha256 !== replacement.outputSha256) throw new Error(`native_ml_texture_digest_mismatch: ${uri}`);
+  for (const [index, uri] of plan.images) {
+    const image = document.images![index]!;
+    if (plan.variant) {
       image.uri = uri;
       image.mimeType = 'image/ktx2';
     }
-    const member = requireMember(image.uri);
-    if (seenImages.has(image.uri)) continue;
-    seenImages.add(image.uri);
+    const member = selected.get(uri)!;
+    if (seenImages.has(uri)) continue;
+    seenImages.add(uri);
     const file = await fs.open(member.path, 'r');
     try {
       const header = Buffer.alloc(80);
       await file.read(header, 0, 80, 0);
-      if (!header.subarray(0, 12).equals(Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]))) throw new Error(`native_texture_ktx2_required: ${image.uri}`);
+      if (!header.subarray(0, 12).equals(Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]))) throw new Error(`native_texture_ktx2_required: ${uri}`);
       const format = header.readUInt32LE(12);
-      if (variant && ![145, 146, 37, 43].includes(format)) throw new Error(`native_ml_texture_format_invalid: ${format}`);
+      if (plan.variant && ![145, 146, 37, 43].includes(format)) throw new Error(`native_ml_texture_format_invalid: ${format}`);
       let width = header.readUInt32LE(20), height = header.readUInt32LE(24);
-      if (variant && Math.max(width, height) > 512) throw new Error(`native_ml_texture_dimensions_invalid: ${width}x${height}`);
+      if (plan.variant && Math.max(width, height) > 512) throw new Error(`native_ml_texture_dimensions_invalid: ${width}x${height}`);
       const levels = header.readUInt32LE(40);
       if (!width || !height || !levels || levels > 32) throw new Error('native_texture_header_invalid');
       for (let level = 0; level < levels; level++) {
@@ -99,11 +149,7 @@ export async function stageNativeTextureProfile(input: {
     } finally { await file.close(); }
   }
   let geometryBytes = 0;
-  for (const buffer of document.buffers ?? []) {
-    if (!buffer.uri || buffer.uri.startsWith('data:')) throw new Error('native_external_geometry_required');
-    requireMember(buffer.uri);
-    geometryBytes += buffer.byteLength;
-  }
+  for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
   // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
   // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
   // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
@@ -111,7 +157,11 @@ export async function stageNativeTextureProfile(input: {
   if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
   const budgetBytes = input.budgetBytes ?? estimatedBytes;
   const identity = createHash('sha256').update(JSON.stringify([masterInput.sha256, input.renderTextures, variantDigest, [...selected].map(([uri, member]) => [uri, member.sha256])])).digest('hex');
-  const cacheRoot = input.cacheDirectory ?? process.env.SIMFORGE_NATIVE_CACHE_DIR ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache'), 'simforge', 'native-textures');
+  // Default beside the worker's blob cache (SIMFORGE_CACHE_DIR) so the staged
+  // tree is hard links on the same filesystem: no copy, and it survives restarts.
+  const cacheRoot = input.cacheDirectory ?? process.env.SIMFORGE_NATIVE_CACHE_DIR
+    ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-textures') : undefined)
+    ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache'), 'simforge', 'native-textures');
   const directory = path.join(cacheRoot, identity);
   await fs.mkdir(directory, { recursive: true });
   for (const [uri, member] of selected) {
@@ -121,6 +171,9 @@ export async function stageNativeTextureProfile(input: {
     catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'EEXIST') {
+        // Already staged as a link to this very blob: nothing to prove again.
+        const [staged, source] = await Promise.all([fs.stat(target), fs.stat(member.path)]);
+        if (staged.ino === source.ino && staged.dev === source.dev) continue;
         const digest = await hashFile(target);
         if (digest.sha256 !== member.sha256 || digest.sizeBytes !== member.sizeBytes) throw new Error(`native_texture_cache_digest_mismatch: ${uri}`);
       } else if (code === 'EXDEV' || code === 'EPERM') {

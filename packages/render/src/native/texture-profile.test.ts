@@ -73,3 +73,41 @@ it.each(['hardlink', 'cross-filesystem'])('reuses the %s cache across simultaneo
   expect(JSON.parse(await fs.readFile(results[0]!.masterPath,'utf8')).buffers[0].uri).toBe('geometry.bin');
   expect(await fs.readFile(path.join(path.dirname(results[0]!.masterPath),'geometry.bin'))).toEqual(Buffer.alloc(16));
 });
+
+it('selects exactly one tier before any texture is downloaded, and stages from only those members', async () => {
+  const value = await fixture();
+  const inputs = [...value.closure.members.values()];
+  const byId = new Map(inputs.map((input) => [input.inputId, input]));
+  const reads: string[] = [];
+  const context = (renderTextures: 'uastc-full' | 'bc7-512') => ({
+    intent: { renderTextures } as never,
+    inputs: inputs.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, relativePath, sha256, sizeBytes })),
+    read: async (inputId: string) => { reads.push(byId.get(inputId)!.relativePath!); return fs.readFile(byId.get(inputId)!.path); },
+    signal: new AbortController().signal,
+  });
+  const { selectNativeRenderInputs } = await import('./engine.js');
+  vi.spyOn(await import('@simforge-oss/scenario'), 'parseRenderIntent').mockImplementation((intent) => intent as never);
+  const paths = async (tier: 'uastc-full' | 'bc7-512') => [...await selectNativeRenderInputs(context(tier))].map((id) => byId.get(id)!.relativePath).sort();
+  expect(await paths('uastc-full')).toEqual(['geometry.bin', 'images/full.ktx2', 'master.gltf']);
+  expect(reads).toEqual(['master.gltf']);
+  expect(await paths('bc7-512')).toEqual(['3d/manifest.json', '3d/variants/bc7.json', '3d/variants/manifest.json', '3d/variants/objects/bc7.ktx2', 'geometry.bin', 'master.gltf']);
+  expect(reads).not.toContain('images/full.ktx2');
+
+  // Staging succeeds from the selected members alone.
+  const selected = new Set(await selectNativeRenderInputs(context('uastc-full')));
+  const staged = await stageNativeTextureProfile({
+    ...value,
+    closure: collectNativeMapMembers(inputs.filter((input) => selected.has(input.inputId))),
+    renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 16 * 1024 ** 3,
+  });
+  expect(staged.textureBytes).toBe(1024 ** 2);
+});
+
+it('does not re-hash a staged member that is already a link to the verified blob', async () => {
+  const value = await fixture();
+  await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
+  const hash = await import('../hash.js');
+  const spy = vi.spyOn(hash, 'hashFile');
+  await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
+  expect(spy).not.toHaveBeenCalled();
+});
