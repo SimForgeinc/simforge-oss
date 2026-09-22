@@ -18,6 +18,7 @@ import {
   nativeRunExpectations,
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
+import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   isScenarioParityEvidenceAccepted,
@@ -569,6 +570,25 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
              ) input_rows`,
           { package_id: row.execution_package_id },
         );
+      // The authoritative render timeline, when the revision's simulation has
+      // one: canonical JSON bytes whose sha256 is the intent's timelineSha256.
+      // Both engines prefer it; jobs without it fall back to the xosc.
+      const timelineAsset = intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID);
+      if (timelineAsset) {
+        const timeline = (await renderTimelineObject(
+          (sql, params) => tx.queryRows(sql, params), row.id,
+        ));
+        if (!timeline || timeline.sha256 !== timelineAsset.sha256 || timeline.sizeBytes !== timelineAsset.sizeBytes) {
+          throw new Error("render_timeline_unavailable");
+        }
+        inputs.push({
+          inputId: RENDER_TIMELINE_INPUT_ID,
+          sha256: timeline.sha256,
+          sizeBytes: timeline.sizeBytes,
+          bucket: timeline.bucket,
+          key: timeline.key,
+        });
+      }
       if (worker.renderer_engine === "native") {
         const nativeMembers = await tx.queryRows<{
           relative_path: string;
@@ -767,6 +787,25 @@ async function activeLease(
   return { ...lease, render_intent: renderIntent } satisfies ActiveLease;
 }
 
+/** The stored render timeline of a job's authoritative simulation result. */
+async function renderTimelineObject(
+  query: <T>(sql: string, params: SqlParams) => Promise<T[]>,
+  jobId: string,
+): Promise<{ sha256: string; sizeBytes: number; bucket: string; key: string } | null> {
+  const rows = await query<{
+    storage_bucket: string; timeline_storage_key: string | null; timeline_sha256: string | null; timeline_byte_length: number | string | null;
+  }>(
+    `SELECT s.storage_bucket, s.timeline_storage_key, s.timeline_sha256, s.timeline_byte_length
+       FROM simforge.sim_results s
+       JOIN simforge.render_jobs j ON j.workspace_id = s.workspace_id AND j.sim_key = s.sim_key
+      WHERE j.id = :job_id`,
+    { job_id: jobId },
+  );
+  const row = rows[0];
+  if (!row?.timeline_storage_key || !row.timeline_sha256 || row.timeline_byte_length === null) return null;
+  return { sha256: row.timeline_sha256, sizeBytes: Number(row.timeline_byte_length), bucket: row.storage_bucket, key: row.timeline_storage_key };
+}
+
 /** Re-authorize each refresh against the live lease and immutable input digest; no URL/session state is stored. */
 export async function refreshRenderInputV2(input: {
   jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; inputId: string;
@@ -777,6 +816,12 @@ export async function refreshRenderInputV2(input: {
   const declared = intent.assets.find((asset) => asset.assetId === input.inputId);
   const scenarioInput = input.inputId === "scenario.xosc";
   if (!declared && !scenarioInput) return null;
+  if (declared && input.inputId === RENDER_TIMELINE_INPUT_ID) {
+    const timeline = await renderTimelineObject(queryRows, lease.job_id);
+    if (!timeline || timeline.sha256 !== declared.sha256 || timeline.sizeBytes !== declared.sizeBytes) return null;
+    const url = await getPresignedGetUrl(timeline.key, timeline.bucket, LEASE_SECONDS);
+    return { url, headers: {}, expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString() };
+  }
   const rows = scenarioInput
     ? await queryRows<{ storage_bucket: string; storage_key: string }>(
       `SELECT a.storage_bucket, a.storage_key FROM simforge.execution_packages ep
