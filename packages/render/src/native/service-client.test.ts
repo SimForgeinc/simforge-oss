@@ -18,8 +18,12 @@ interface FakeService {
   stop(): Promise<void>;
 }
 
-/** A service double speaking the framed msgpack wire: `answer` decides per op; `undefined` means never reply. */
-async function fakeService(answer: (request: Request) => Record<string, unknown> | undefined): Promise<FakeService> {
+/**
+ * A service double speaking the framed msgpack wire: `answer` decides per op;
+ * `undefined` means never reply, `'close'` drops the connection (what an
+ * older service does with an op it cannot decode).
+ */
+async function fakeService(answer: (request: Request) => Record<string, unknown> | 'close' | undefined): Promise<FakeService> {
   const directory = await fs.mkdtemp(path.join(tmpdir(), 'sf-client-test-'));
   const endpoint = path.join(directory, 'rpc.sock');
   const server = net.createServer((socket) => {
@@ -32,6 +36,10 @@ async function fakeService(answer: (request: Request) => Record<string, unknown>
         const request = decode(buffer.subarray(4, 4 + length)) as Request;
         buffer = buffer.subarray(4 + length);
         const reply = answer(request);
+        if (reply === 'close') {
+          socket.destroy();
+          return;
+        }
         if (!reply) continue;
         const payload = Buffer.from(encode({ i: request.i, op: request.op, ok: true, ...reply }));
         const header = Buffer.allocUnsafe(4);
@@ -113,5 +121,36 @@ describe('NativeServiceClient', () => {
     await service.stop();
     service = undefined;
     await rejection;
+  });
+
+  it('never sends observe_actors to a service that does not advertise it', async () => {
+    const seen: string[] = [];
+    // An older service: no capabilities, and it drops the connection on the unknown op.
+    service = await fakeService((request) => {
+      seen.push(request.op);
+      if (request.op === 'hello') return hello;
+      if (request.op === 'observe_actors') return 'close';
+      return { rendered: true };
+    });
+    const client = await NativeServiceClient.connect(service.endpoint);
+    expect(client.supports('observe_actors')).toBe(false);
+    await expect(client.observeActors()).resolves.toBeNull();
+    // The connection is intact: the render carries on without observation.
+    await expect(client.rpc({ op: 'render' })).resolves.toMatchObject({ rendered: true });
+    expect(seen).toEqual(['hello', 'render']);
+    await client.close();
+  });
+
+  it('observes actors on a service that advertises the op', async () => {
+    const actor = { id: 'a', position: [1, 2, 3], rotation: [0, 0, 0, 1], bodyCentre: [1, 2.75, 3], visible: true };
+    service = await fakeService((request) => {
+      if (request.op === 'hello') return { ...hello, capabilities: ['observe_actors'] };
+      if (request.op === 'observe_actors') return { tick: 4, actors: [actor] };
+      return {};
+    });
+    const client = await NativeServiceClient.connect(service.endpoint);
+    expect(client.supports('observe_actors')).toBe(true);
+    await expect(client.observeActors()).resolves.toEqual({ tick: 4, actors: [actor] });
+    await client.close();
   });
 });
