@@ -82,6 +82,8 @@ export const ScenarioDocumentSchema = object<ScenarioDocumentDto>({
   mapVersionId: nullable(string()),
   mapSourceMapId: optional(nullable(string())),
   mapXodrSha256: optional(nullable(string())),
+  mapClosureSha256: optional(nullable(string())),
+  assetCatalogVersionId: optional(nullable(string())),
   datasetId: string(),
   authoringQualityId: oneOf(SCENARIO_AUTHORING_QUALITY_IDS),
   createdAt: string(),
@@ -277,6 +279,8 @@ export type UpdateDocumentRequest = {
   description?: string;
   content?: ScenarioTemplateV2;
   authoringQualityId?: ScenarioAuthoringQuality;
+  /** Explicit re-pin to another immutable map version (see `resolveScenarioMap`). */
+  mapVersionId?: string;
 };
 
 export type DuplicateDocumentRequest = { title?: string; datasetId?: string };

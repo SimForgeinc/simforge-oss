@@ -18,6 +18,7 @@
 /* ------------------------------------------------------------- the contract */
 export {
   simScenarioInputSchema,
+  SIMULATION_DT_S,
   parseSimScenarioInput,
   safeParseSimScenarioInput,
   normalizeSimScenarioInput,
@@ -241,11 +242,17 @@ export type { Obb, Vec2 } from './core/math.js';
 export {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
+  ambientProfileMissingDefault,
+  AmbientTrafficProfileError,
+  offAmbientTrafficProfile,
+  validateAmbientTrafficProfileExtension,
   ambientTrafficProfileSchema,
   defaultAmbientTrafficProfile,
   resolveAmbientTrafficProfile,
 } from './ambient/profile.js';
 export type {
+  AmbientProfileMissingDefault,
   AmbientActorProvenance,
   AmbientCandidate,
   AmbientCandidatePool,
@@ -351,4 +358,4 @@ export type {
 
 /* ------------------------------------------------------ host-neutral façade */
 export { EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
-export type { LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';
+export type { EngineBuildInfo, EngineVersionInfo, LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';

@@ -17,6 +17,7 @@ import { gunzipSync } from 'node:zlib';
 import type { StaticMapCollider, TopologyIndex } from '@simforge-oss/engine';
 import { engine } from '@simforge-oss/engine/node';
 import type { DerivedTopology, LocationCatalog } from '@simforge-oss/maps';
+import { buildSimulationMapClosure, type MapClosureFiles } from '@simforge-oss/playback';
 
 import { CliError } from './errors.js';
 import { MapBundle, type InstalledMapBundle } from './types.js';
@@ -141,12 +142,65 @@ export interface MapBundleSources {
  * Build a bundle from decoded sources without an installed directory. The
  * signal catalog, map speed limits and derived index are derived natively,
  * exactly as `loadMap` does for an installed map.
+ *
+ * NOT for simulation unless `staticColliders` carries the map's verified
+ * colliders: use `createSimulationMapBundle`, which verifies them the way the
+ * editor does.
  */
 export function createMapBundle(sources: MapBundleSources): MapBundle {
   const { topology, derived, locations, ...rest } = sources;
   const topologyBytes = topology instanceof Uint8Array ? topology : new TextEncoder().encode(JSON.stringify(topology));
   const native = engine().module.MapBundle.fromSources(JSON.stringify({ ...rest, derived, locations }), topologyBytes);
   return new MapBundle(native, { ...(derived ? { derived } : {}), ...(locations ? { catalog: locations } : {}) });
+}
+
+/**
+ * Read the simulation closure of an installed map directory (the published
+ * bundle layout: `map.xodr`, `signals.geojson.gz`, `topology-index.json.gz`,
+ * `derived/*`, `3d/manifest.json`, `3d/variants/manifest.json` and the
+ * collider artifact it names). `.gz` siblings are accepted for the text files,
+ * which is how the golden-trace fixtures are stored.
+ */
+export async function readInstalledMapClosureFiles(dir: string, mapId = path.basename(dir)): Promise<MapClosureFiles> {
+  const plain = async (relative: string): Promise<Uint8Array> => {
+    for (const candidate of [relative, `${relative}.gz`]) {
+      const file = path.join(dir, candidate);
+      if (!existsSync(file)) continue;
+      const bytes = await readFile(file);
+      return new Uint8Array(bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes);
+    }
+    throw new CliError('map_not_present', `map "${mapId}" is missing ${relative}`, { path: dir });
+  };
+  const derivativeManifest = await plain(path.join('3d', 'variants', 'manifest.json'));
+  const variant = (JSON.parse(new TextDecoder().decode(derivativeManifest)) as { variants?: Record<string, { file?: unknown }> })
+    .variants?.['static-colliders'];
+  if (typeof variant?.file !== 'string') {
+    throw new CliError('map_not_present', `map "${mapId}" has no published static-collider derivative`, { path: dir });
+  }
+  const [topology, derivedTopology, locations, xodr, signals, sourceManifest, artifact] = await Promise.all([
+    plain(ARTIFACTS.topology.replace(/\.gz$/, '')),
+    plain(ARTIFACTS.derived.replace(/\.gz$/, '')),
+    plain(ARTIFACTS.locations.replace(/\.gz$/, '')),
+    plain('map.xodr'),
+    plain('signals.geojson'),
+    plain(path.join('3d', 'manifest.json')),
+    plain(path.join('3d', 'variants', variant.file)),
+  ]);
+  return { mapId, topology, derivedTopology, locations, xodr, signals, colliders: { sourceManifest, derivativeManifest, artifact } };
+}
+
+/**
+ * The map a SIMULATION runs on, built from its files through the same
+ * constructor as the editor (`buildSimulationMapClosure`): verified static
+ * colliders included, fail-closed without them. `createMapBundle` stays for
+ * non-simulating callers (control plans, matching); a host that simulates
+ * must use this, or its traces diverge from the editor's the moment an actor
+ * touches map structure. `bundle.closureDigest` is the map part of the
+ * simulation key.
+ */
+export async function createSimulationMapBundle(files: MapClosureFiles): Promise<MapBundle> {
+  const graph = await buildSimulationMapClosure<DerivedTopology, LocationCatalog>(engine().module, files);
+  return new MapBundle(graph.bundle, { derived: graph.derived, catalog: graph.locations });
 }
 
 /** Resolve `--map` / `--maps` / `--all-maps` into an ordered map id list. */

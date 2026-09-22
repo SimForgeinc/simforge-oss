@@ -206,6 +206,22 @@ function selectedSensorHosts(input: SubmitScenarioRenderIntent, lineage: Immutab
   })).sort((left, right) => left.sourceId.localeCompare(right.sourceId));
 }
 
+/**
+ * The render seed. A document with a pinned `simulation.seed` derives it from
+ * that seed alone, so a rename or a save (which change `content_sha256` through
+ * `meta.modifiedAt`) no longer changes it. A revision frozen before pinning
+ * keeps its legacy seed, the first 32 bits of its content digest, so its
+ * renders stay reproducible.
+ */
+export function renderSeed(content: Record<string, unknown>, scenarioSha256: string): number {
+  const simulation = content["simulation"];
+  const pinned = simulation && typeof simulation === "object" ? (simulation as { seed?: unknown }).seed : undefined;
+  const digest = typeof pinned === "string" && pinned.length > 0
+    ? sha256(`simforge.render-seed/v1|${pinned}`)
+    : scenarioSha256;
+  return Number.parseInt(digest.slice(0, 8), 16);
+}
+
 function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
@@ -287,7 +303,7 @@ function buildIntent(
       },
       ...nativeAssets,
     ],
-    seed: Number.parseInt(lineage.scenario_sha256.slice(0, 8), 16),
+    seed: renderSeed(content, lineage.scenario_sha256),
   });
 }
 

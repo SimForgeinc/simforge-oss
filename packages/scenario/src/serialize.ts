@@ -38,11 +38,25 @@ import { FLOAT_DECIMALS, roundFloat } from './canonical-number.js';
 export { FLOAT_DECIMALS, roundFloat };
 
 /**
- * Recursively sort object keys and round numbers.
+ * Quantize a document onto the storage grid: round every number to
+ * {@link FLOAT_DECIMALS} and sort object keys.
+ *
+ * This is the `.scenario.json` STORAGE format, not an identity rule. Content
+ * identities (`simContentHash`, input and trace digests, render-intent hashes)
+ * are `sha256(canonicalJson(value))` from `./canonical-json.ts`, the one rule
+ * TypeScript and Rust share, which never rounds. The file text below keeps its
+ * historical bytes (`JSON.stringify` of this quantized object) because
+ * `drafts.content_sha256` and every revision's `content_sha256` are digests of
+ * that text and are re-verified against stored rows.
  *
  * `undefined` properties are dropped (matching `JSON.stringify`), so an
  * optional field explicitly set to `undefined` never reaches the file.
  */
+export function quantizeDocument(value: unknown): unknown {
+  return canonicalize(value);
+}
+
+/** Former name of {@link quantizeDocument}; the same storage-grid quantizer. */
 export function canonicalize(value: unknown): unknown {
   if (typeof value === 'number') return roundFloat(value);
   if (value === null || typeof value !== 'object') return value;

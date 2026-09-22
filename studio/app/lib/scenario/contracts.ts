@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AMBIENT_TRAFFIC_EXTENSION_KEY, validateAmbientTrafficProfileExtension } from "@simforge-oss/engine";
 import { ScenarioTemplateV2Schema, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import {
   DISABLED_AMBIENT_PROVENANCE,
@@ -111,7 +112,19 @@ const CanonicalScenarioContentSchema = z
   .custom<ScenarioTemplateV2>((value) => ScenarioTemplateV2Schema.safeParse(value).success, {
     message: "Invalid Scenario v2 document.",
   })
-  .transform((value) => ScenarioTemplateV2Schema.parse(value));
+  .transform((value) => ScenarioTemplateV2Schema.parse(value))
+  // A malformed ambient profile is a validation error at the write boundary,
+  // never a silent fallback to City traffic at simulation time.
+  .superRefine((value, ctx) => {
+    const ambient = validateAmbientTrafficProfileExtension(value.extensions);
+    if (ambient.kind === "invalid") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["extensions", AMBIENT_TRAFFIC_EXTENSION_KEY],
+        message: `Invalid ambient traffic profile: ${ambient.issues.join("; ")}`,
+      });
+    }
+  });
 
 /**
  * A document's description lives at `content.meta.description` and nowhere else.

@@ -162,6 +162,25 @@ export class SimulationHandle {
   }
 }
 
+export interface EngineVersionInfo {
+  /** Engine semantics version: the compatibility identity of every trace. */
+  readonly engineSemVer: string;
+  /** Former name of `engineSemVer`; always the same value. */
+  readonly engineVersion: string;
+  readonly abiVersion: number;
+}
+
+/** Build provenance (`engineBuild()`); never part of a key. */
+export interface EngineBuildInfo {
+  readonly engineSemVer: string;
+  readonly abiVersion: number;
+  readonly sourceRevision: string;
+  readonly rustc: string;
+  readonly profile: string;
+  readonly target: string;
+  readonly buildDigest: string;
+}
+
 export interface RunSimulationOptions extends RunOptions {
   readonly graph: LaneGraph;
 }
@@ -169,9 +188,27 @@ export interface RunSimulationOptions extends RunOptions {
 export class EngineRuntime {
   constructor(readonly module: NativeModule) {}
 
-  /** Engine semantic version and binding ABI version reported by the loaded module. */
-  version(): { readonly engineVersion: string; readonly abiVersion: number } {
-    return { engineVersion: this.module.engineVersion(), abiVersion: this.module.abiVersion() };
+  /**
+   * Engine semantics version and binding ABI version reported by the loaded
+   * module. `engineSemVer` is what caches and simulation keys use; it is
+   * bumped by hand whenever a trace byte can change (CI enforces it with the
+   * golden-trace corpus). `engineVersion` is its former name.
+   */
+  version(): EngineVersionInfo {
+    const engineSemVer = this.module.engineSemVer?.() ?? this.module.engineVersion();
+    return { engineSemVer, engineVersion: engineSemVer, abiVersion: this.module.abiVersion() };
+  }
+
+  /**
+   * Build provenance of the loaded module: source revision, toolchain,
+   * profile, target and a digest over them. Provenance ONLY; never key a
+   * cache or a compatibility decision on it (use `version().engineSemVer`).
+   */
+  build(): EngineBuildInfo {
+    const raw = this.module.engineBuild?.();
+    if (raw) return JSON.parse(raw) as EngineBuildInfo;
+    const { engineSemVer, abiVersion } = this.version();
+    return { engineSemVer, abiVersion, sourceRevision: 'unknown', rustc: 'unknown', profile: 'unknown', target: 'unknown', buildDigest: 'unknown' };
   }
 
   /** Decode a topology index (object or plain/gzip bytes) into a native lane graph. */

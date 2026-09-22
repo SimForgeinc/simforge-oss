@@ -1,8 +1,9 @@
 import { cacheLife, cacheTag } from "next/cache";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
-import { resolveScenarioMap } from "@simforge-oss/studio-host";
-import { queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
+import { parseTemplate, withPinnedSimulation, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
+import { requireScenarioMapPin, verifyScenarioMapPin, type ScenarioMapPin } from "./map-pin";
+import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import {
   type ScenarioAmbientProvenance,
@@ -35,6 +36,8 @@ type DocumentRow = {
   map_version_id: string | null;
   map_source_map_id: string | null;
   map_xodr_sha256: string | null;
+  map_closure_sha256: string | null;
+  asset_catalog_version_id: string | null;
   dataset_id: string;
   authoring_quality_id: ScenarioDocumentDto["authoringQualityId"];
   created_at: string;
@@ -64,6 +67,7 @@ const DOCUMENT_SELECT = `
     dr.content_sha256,
     dr.canonical_content::text AS canonical_content, dr.map_version_id,
     mv.source_map_asset_id AS map_source_map_id, mv.xodr_sha256 AS map_xodr_sha256,
+    dr.map_closure_sha256, dr.asset_catalog_version_id,
     d.dataset_id, dr.authoring_quality_id,
     d.created_at::text AS created_at, d.updated_at::text AS updated_at,
     d.latest_revision_id
@@ -84,6 +88,8 @@ function documentDto(row: DocumentRow): ScenarioDocumentDto {
     mapVersionId: row.map_version_id,
     mapSourceMapId: row.map_source_map_id,
     mapXodrSha256: row.map_xodr_sha256,
+    mapClosureSha256: row.map_closure_sha256,
+    assetCatalogVersionId: row.asset_catalog_version_id,
     datasetId: row.dataset_id,
     authoringQualityId: row.authoring_quality_id,
     createdAt: row.created_at,
@@ -355,7 +361,7 @@ export async function duplicateScenarioDocument(
 
     const copyId = scenarioId("uscn");
     const derivation = input.derivation ?? "copy";
-    const content = input.content ?? source.content;
+    const content = withStoredSimulation(input.content ?? source.content, source.content);
     const title = (input.title ?? `${source.title} Copy`).slice(0, 200);
     await tx.execute(
       `INSERT INTO simforge.documents (
@@ -387,10 +393,12 @@ export async function duplicateScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content,
-         content_sha256, map_version_id, authoring_quality_id, updated_by_user_id
+         content_sha256, map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb),
-         :content_sha256, :map_version_id, :authoring_quality_id, :user_id
+         :content_sha256, :map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: copyId,
@@ -398,7 +406,10 @@ export async function duplicateScenarioDocument(
         schema_version: source.schemaVersion,
         content,
         content_sha256: canonicalContentSha256(content),
+        // A copy inherits the source's pin verbatim: same version, closure and catalog.
         map_version_id: source.mapVersionId,
+        map_closure_sha256: source.mapClosureSha256 ?? null,
+        asset_catalog_version_id: source.assetCatalogVersionId ?? null,
         authoring_quality_id: source.authoringQualityId,
         user_id: context.userId,
       },
@@ -624,6 +635,8 @@ export async function createCrossMapScenarioDocument(
       { target_map_version_id: input.targetMapVersionId },
     );
     if (!targetMap) return { kind: "not_found" as const };
+    const targetPin = await requireScenarioMapPin(tx, input.targetMapVersionId);
+    const childContent = withStoredSimulation(input.content);
 
     const childId = scenarioId("uscn");
     const receiptId = scenarioId("uvtr");
@@ -654,18 +667,22 @@ export async function createCrossMapScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content, content_sha256,
-         map_version_id, authoring_quality_id, updated_by_user_id
+         map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb), :content_sha256,
-         :target_map_version_id, :authoring_quality_id, :user_id
+         :target_map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: childId,
         workspace_id: context.workspaceId,
         schema_version: source.schemaVersion,
-        content: input.content,
-        content_sha256: canonicalContentSha256(input.content),
+        content: childContent,
+        content_sha256: canonicalContentSha256(childContent),
         target_map_version_id: input.targetMapVersionId,
+        map_closure_sha256: targetPin.mapClosureSha256,
+        asset_catalog_version_id: targetPin.assetCatalogVersionId,
         authoring_quality_id: source.authoringQualityId,
         user_id: context.userId,
       },
@@ -794,6 +811,25 @@ function withDescription(content: ScenarioTemplateV2, description: string | unde
   return { ...content, meta: { ...content.meta, description } };
 }
 
+/**
+ * The content a write stores. Every stored draft carries its pinned
+ * `simulation` block: a client that sends content without one (an older
+ * bundle, the CLI) keeps the block the draft already has, so a save never
+ * re-derives the seed from a renamed title.
+ */
+function withStoredSimulation(content: ScenarioTemplateV2, current?: ScenarioTemplateV2): ScenarioTemplateV2 {
+  if (content.simulation) return content;
+  if (current?.simulation) return { ...content, simulation: current.simulation };
+  return withPinnedSimulation(content);
+}
+
+async function mapPinFor(
+  tx: Transaction,
+  mapVersionId: string | null | undefined,
+): Promise<ScenarioMapPin | null> {
+  return mapVersionId ? requireScenarioMapPin(tx, mapVersionId) : null;
+}
+
 export async function createScenarioDocument(
   context: AppContext,
   input: {
@@ -807,9 +843,10 @@ export async function createScenarioDocument(
   },
 ) {
   const documentId = scenarioId("uscn");
-  const content = withDescription(input.content, input.description);
+  const content = withStoredSimulation(withDescription(input.content, input.description));
   const digest = canonicalContentSha256(content);
   return withTransaction(async (tx) => {
+    const pin = await mapPinFor(tx, input.mapVersionId);
     await tx.execute(
       `INSERT INTO simforge.documents (
          id, workspace_id, title, schema_version, map_version_id, dataset_id,
@@ -831,10 +868,12 @@ export async function createScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content,
-         content_sha256, map_version_id, authoring_quality_id, updated_by_user_id
+         content_sha256, map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb),
-         :content_sha256, :map_version_id, :authoring_quality_id, :user_id
+         :content_sha256, :map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: documentId,
@@ -843,6 +882,8 @@ export async function createScenarioDocument(
         content,
         content_sha256: digest,
         map_version_id: input.mapVersionId ?? null,
+        map_closure_sha256: pin?.mapClosureSha256 ?? null,
+        asset_catalog_version_id: pin?.assetCatalogVersionId ?? null,
         authoring_quality_id: input.authoringQualityId,
         user_id: context.userId,
       },
@@ -883,14 +924,27 @@ export async function updateScenarioDocument(
       return { kind: "conflict" as const, current };
     }
 
-    const content = withDescription(input.content ?? current.content, input.description);
+    const content = withStoredSimulation(
+      withDescription(input.content ?? current.content, input.description),
+      current.content,
+    );
     const schemaVersion = input.schemaVersion ?? current.schemaVersion;
     const mapVersionId = "mapVersionId" in input ? input.mapVersionId ?? null : current.mapVersionId;
+    // Naming a map version is the explicit re-pin: it moves the document to
+    // that version (or re-adopts the same one) and captures the version's
+    // closure digest and asset catalog as they are now. An ordinary save names
+    // none and keeps the existing pin untouched.
+    const repinned = "mapVersionId" in input && input.mapVersionId !== undefined;
+    const pin = repinned
+      ? await mapPinFor(tx, mapVersionId)
+      : { mapClosureSha256: current.mapClosureSha256 ?? null, assetCatalogVersionId: current.assetCatalogVersionId ?? null };
     const nextContentSha256 = canonicalContentSha256(content);
     const simulationInputsUnchanged =
       nextContentSha256 === current.contentSha256
       && schemaVersion === current.schemaVersion
-      && mapVersionId === current.mapVersionId;
+      && mapVersionId === current.mapVersionId
+      && (pin?.mapClosureSha256 ?? null) === (current.mapClosureSha256 ?? null)
+      && (pin?.assetCatalogVersionId ?? null) === (current.assetCatalogVersionId ?? null);
     if (simulationInputsUnchanged) {
       // Metadata/title autosaves must not invalidate deterministic simulation
       // evidence. A draft version identifies execution inputs, not a no-op
@@ -937,6 +991,8 @@ export async function updateScenarioDocument(
            canonical_content = CAST(:content AS jsonb),
            content_sha256 = :content_sha256,
            map_version_id = :map_version_id,
+           map_closure_sha256 = :map_closure_sha256,
+           asset_catalog_version_id = :asset_catalog_version_id,
            authoring_quality_id = :authoring_quality_id,
            updated_by_user_id = :user_id,
            updated_at = NOW()
@@ -948,6 +1004,8 @@ export async function updateScenarioDocument(
         content,
         content_sha256: canonicalContentSha256(content),
         map_version_id: mapVersionId,
+        map_closure_sha256: pin?.mapClosureSha256 ?? null,
+        asset_catalog_version_id: pin?.assetCatalogVersionId ?? null,
         authoring_quality_id: input.authoringQualityId ?? current.authoringQualityId,
         user_id: context.userId,
         workspace_id: context.workspaceId,
@@ -1067,11 +1125,19 @@ export async function createScenarioRevision(
   documentId: string,
   input: { expectedVersion: number; idempotencyKey?: string },
 ) {
-  const installedMaps = await listScenarioMapDescriptors(context);
   const snapshot = await getScenarioDocument(context, documentId);
   if (!snapshot) return { kind: "not_found" as const };
   if (snapshot.draftVersion !== input.expectedVersion) return { kind: "conflict" as const, current: snapshot };
-  const mapVersionId = resolveScenarioMap(snapshot, installedMaps).mapVersionId;
+  // The draft's PINNED map version, exactly as the editor simulates it; the
+  // transaction below re-verifies the pin under the row lock.
+  if (!snapshot.mapVersionId) {
+    throw new ScenarioMapResolutionError(
+      "scenario_map_absent",
+      "This scenario is not pinned to a map version; open it in the editor and choose a map before committing.",
+      null,
+    );
+  }
+  const mapVersionId = snapshot.mapVersionId;
   const evidence = await authoritativeRevisionEvidence(context, {
     content: snapshot.content,
     contentSha256: snapshot.contentSha256,
@@ -1084,10 +1150,16 @@ export async function createScenarioRevision(
   const ambientInput = evidence.ambient;
   const traffic = evidence.traffic;
   return withTransaction(async (tx) => {
+    // Lock the document and its draft for the whole commit: the draft read, the
+    // idempotency/draft-version checks and the revision-number allocation below
+    // happen under this lock, so two concurrent commits serialize instead of
+    // both computing the same MAX+1 (the unique key would then fail one of them
+    // with a 500).
     const draft = await tx.queryOne<DocumentRow>(
       `${DOCUMENT_SELECT}
        WHERE d.workspace_id = :workspace_id AND d.id = :document_id AND d.deleted_at IS NULL
-       LIMIT 1`,
+       LIMIT 1
+       FOR UPDATE OF d, dr`,
       { workspace_id: context.workspaceId, document_id: documentId },
     );
     if (!draft) return { kind: "not_found" as const };
@@ -1095,12 +1167,14 @@ export async function createScenarioRevision(
     if (current.draftVersion !== input.expectedVersion) {
       return { kind: "conflict" as const, current };
     }
-    // A revision freezes today's compatible publication; historical revisions
-    // remain immutable. A draft's version records the geometry it was authored on.
-    current.mapVersionId = resolveScenarioMap(current, installedMaps).mapVersionId;
+    // A revision freezes the draft's PINNED map version, exactly as the editor
+    // simulated it. It never re-resolves to a newer publication; a pinned
+    // version that is retired or was republished with different content is an
+    // explicit error, and moving to another version is an explicit re-pin.
+    const mapPin = await verifyScenarioMapPin(tx, current);
     // The simulation was resolved from a read outside this transaction; the
     // draft under the row lock must still be exactly what was simulated.
-    if (current.contentSha256 !== snapshot.contentSha256 || current.mapVersionId !== mapVersionId) {
+    if (current.contentSha256 !== snapshot.contentSha256 || mapPin.mapVersionId !== mapVersionId) {
       return { kind: "conflict" as const, current };
     }
     if (input.idempotencyKey) {
@@ -1183,6 +1257,7 @@ export async function createScenarioRevision(
       `INSERT INTO simforge.revisions (
          id, workspace_id, document_id, revision_number, source_draft_version,
          schema_version, canonical_content, content_sha256, map_version_id,
+         map_closure_sha256, asset_catalog_version_id,
          compiler_version, openscenario_profile, idempotency_key, created_by_user_id,
          ambient_mode, ambient_runtime_version, ambient_sumo_version, ambient_network_sha256,
          ambient_seed, ambient_config, ambient_config_sha256, ambient_result_sha256,
@@ -1191,6 +1266,7 @@ export async function createScenarioRevision(
        ) VALUES (
          :id, :workspace_id, :document_id, :revision_number, :source_draft_version,
          :schema_version, CAST(:content AS jsonb), :content_sha256, :map_version_id,
+         :map_closure_sha256, :asset_catalog_version_id,
          :compiler_version, :openscenario_profile, :idempotency_key, :user_id,
          :ambient_mode, :ambient_runtime_version, :ambient_sumo_version, :ambient_network_sha256,
          :ambient_seed, CAST(:ambient_config AS jsonb), :ambient_config_sha256, :ambient_result_sha256,
@@ -1206,7 +1282,9 @@ export async function createScenarioRevision(
         schema_version: current.schemaVersion,
         content: current.content,
         content_sha256: canonicalContentSha256(current.content),
-        map_version_id: current.mapVersionId,
+        map_version_id: mapPin.mapVersionId,
+        map_closure_sha256: mapPin.mapClosureSha256,
+        asset_catalog_version_id: mapPin.assetCatalogVersionId,
         compiler_version: compilerVersion,
         openscenario_profile: OPENSCENARIO_NATIVE_PROFILE,
         idempotency_key: input.idempotencyKey ?? null,

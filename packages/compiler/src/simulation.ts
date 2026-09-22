@@ -25,7 +25,7 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 
 import {
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
   canonicalJson,
   contentHash,
   createDisabledMaterializedTrafficArtifact,
@@ -65,15 +65,13 @@ function sha256Hex(bytes: string | Uint8Array): string {
 }
 
 /**
- * Engine semantics identity. WS-A introduces `engineSemVer` (`ENGINE_SEM_VER`),
- * a manually bumped semantics version enforced by golden traces; until the
- * runtime reports it, the engine's own version string is that version.
- * `solverVer` is kept as a separate key field but equals `engineSemVer` until
- * the solver versions independently.
+ * Engine semantics identity: `ENGINE_SEM_VER`, the manually bumped semantics
+ * version enforced by the golden-trace corpus. `solverVer` is kept as a
+ * separate key field but equals `engineSemVer` until the solver versions
+ * independently.
  */
 export function engineSemantics(): { readonly engineSemVer: string; readonly solverVer: string } {
-  const version = engine().version() as { engineVersion: string; engineSemVer?: string };
-  const engineSemVer = version.engineSemVer ?? version.engineVersion;
+  const { engineSemVer } = engine().version();
   return { engineSemVer, solverVer: engineSemVer };
 }
 
@@ -95,8 +93,13 @@ export interface MapClosureIdentity {
   readonly colliderDigest: string;
 }
 
-/** `mapClosureDigest`: everything about the map a trace depends on (graph + controls + colliders). */
-export function mapClosureDigest(identity: MapClosureIdentity): string {
+/**
+ * Provenance digest of the published members a closure was loaded from. The
+ * key uses the loaded bundle's own `closureDigest` (`simforge.map-closure/v1`
+ * over the consumed content: topology with speed limits, filtered colliders,
+ * collider status, signal catalog), which N-API and WASM compute identically.
+ */
+export function mapClosureIdentityDigest(identity: MapClosureIdentity): string {
   return contentHash({
     contract: MAP_CLOSURE_CONTRACT,
     browserClosureSha256: identity.browserClosureSha256,
@@ -194,6 +197,7 @@ export async function loadSimulationMapClosure(options: {
   if (!topology) throw new Error('simulation_closure_topology_missing');
   const bundle = new MapBundle(graph.bundle, { derived: graph.derived as never, catalog: graph.locations as never });
   const identity = { browserClosureSha256: options.browserClosureSha256, colliderDigest: graph.collision.diagnostics.digest };
+  if (!graph.closureDigest) throw new Error('simulation_closure_digest_missing');
   return {
     mapVersionId: options.mapVersionId,
     mapAssetId: options.mapAssetId,
@@ -201,7 +205,7 @@ export async function loadSimulationMapClosure(options: {
     xodr: graph.xodr,
     topology,
     identity,
-    mapClosureDigest: mapClosureDigest(identity),
+    mapClosureDigest: graph.closureDigest,
   };
 }
 
@@ -300,7 +304,7 @@ export function simulateAuthoritative(request: {
   readonly trafficStep?: ExternalTrafficStep;
 }): AuthoritativeSimulation {
   const started = performance.now();
-  const content = request.canonicalContent as { extensions?: Record<string, unknown>; mapSignalPlans?: unknown[] };
+  const content = request.canonicalContent as { extensions?: Record<string, unknown>; mapSignalPlans?: unknown[]; simulation?: unknown };
   const provider = executionTrafficProvider(content);
   const resolved = resolveExecutionInput(
     request.canonicalContent,
@@ -339,7 +343,9 @@ export function simulateAuthoritative(request: {
     ? null
     : materializeTraceTraffic({
         provider,
-        profile: ambientTrafficProfileFromExtensions(content.extensions),
+        // The same resolution the compiler's concrete input applies (a pinned
+        // document without a profile runs with ambient traffic off).
+        profile: ambientTrafficProfileForDocument(content),
         sourceInputDigest: resolvedInputDigest,
         map: { assetId: request.closure.mapAssetId, versionId: request.closure.mapVersionId },
         trace,

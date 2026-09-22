@@ -50,6 +50,7 @@
     "test:connections": "node --test desktop/__tests__/connections.test.mjs && tsx --test app/lib/host/__tests__/pairing.test.ts",
     "test:worker-presence": "tsx --test app/lib/scenario/__tests__/cpu-worker-presence.test.ts",
     "test:sim-results": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/sim-result-store.test.ts",
+    "test:pinning": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/document-pinning.test.ts app/lib/scenario/__tests__/pg/revision-race.pg.test.ts",
     "test:host-modules": "tsx --test app/host/__tests__/host-modules.test.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "test:eval-compare": "tsx --test app/lib/evaluation/__tests__/model-comparison.test.ts",
