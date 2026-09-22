@@ -790,6 +790,26 @@ fn actor_classes_for(
     out
 }
 
+/// One measured CARLA object (`carla.*`), the same set the editor serves from
+/// `/api/carla-objects`. Generated; resolved after built-ins and imports so an
+/// import that carries the same entry agrees with it rather than conflicting.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CarlaCatalogEntry {
+    pub id: &'static str,
+    pub class: &'static str,
+    pub actor_class: Option<&'static str>,
+    pub dims: CatalogDims,
+}
+
+#[path = "carla_catalog.generated.rs"]
+mod carla_catalog;
+pub use carla_catalog::CARLA_OBJECT_CATALOG;
+
+/// The measured CARLA object with this id, if any.
+pub fn carla_entry(catalog_id: &str) -> Option<&'static CarlaCatalogEntry> {
+    CARLA_OBJECT_CATALOG.iter().find(|e| e.id == catalog_id)
+}
+
 /// Resolved metadata for one actor model, built-in or imported.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedActorEntry {
@@ -860,7 +880,16 @@ impl ActorCatalog {
                 dims: entry.dims,
             });
         }
-        let entry = self.external.get(catalog_id)?;
+        let Some(entry) = self.external.get(catalog_id) else {
+            // Documents name CARLA objects the editor placed; every host resolves
+            // them to the same measured footprint without passing the catalog in.
+            let carla = carla_entry(catalog_id)?;
+            return Some(ResolvedActorEntry {
+                id: carla.id.to_owned(),
+                actor_classes: actor_classes_for(carla.class, carla.actor_class, &[]),
+                dims: carla.dims,
+            });
+        };
         let compatible: Vec<&str> = entry
             .compatible_actor_classes
             .iter()
@@ -897,5 +926,51 @@ impl ActorCatalog {
     /// The model's own footprint, in the scenario-model dims convention.
     pub fn actor_dims(&self, catalog_id: &str) -> Option<CatalogDims> {
         self.resolve(catalog_id).map(|e| e.dims)
+    }
+}
+
+#[cfg(test)]
+mod carla_catalog_tests {
+    use super::*;
+
+    #[test]
+    fn carla_objects_are_unique_positive_and_never_shadow_the_builtin_catalog() {
+        let mut seen = std::collections::BTreeSet::new();
+        assert!(CARLA_OBJECT_CATALOG.len() >= 100, "the generated table is populated");
+        for entry in CARLA_OBJECT_CATALOG {
+            assert!(entry.id.starts_with("carla."), "{}", entry.id);
+            assert!(seen.insert(entry.id), "duplicate {}", entry.id);
+            assert!(resolve_builtin_id(entry.id).is_none(), "{} shadows a built-in", entry.id);
+            assert!(entry.dims.l > 0.0 && entry.dims.w > 0.0 && entry.dims.h > 0.0, "{}", entry.id);
+        }
+    }
+
+    #[test]
+    fn documents_naming_carla_objects_resolve_without_a_passed_in_catalog() {
+        let catalog = ActorCatalog::builtin();
+        for (id, class, l) in [
+            ("carla.vehicle_ue4_bmw_grantourer", ActorClass::Car, 4.611),
+            ("carla.advertisement", ActorClass::StaticObject, 1.549),
+            ("carla.vehicle_diamondback_century", ActorClass::Bicycle, 0.0),
+        ] {
+            assert_eq!(catalog.actor_mismatch(class, id), None, "{id}");
+            let dims = catalog.actor_dims(id).unwrap();
+            if l > 0.0 {
+                assert_eq!(dims.l, l, "{id}");
+            }
+        }
+        // An import carrying the same entry agrees with it; unknown ids still refuse.
+        let carla = carla_entry("carla.advertisement").unwrap();
+        let imported = ActorCatalog::with_external(&[ExternalCatalogEntry {
+            id: carla.id.into(),
+            class: carla.class.into(),
+            actor_class: carla.actor_class.map(Into::into),
+            compatible_actor_classes: vec![],
+            description: String::new(),
+            dims: carla.dims,
+        }])
+        .unwrap();
+        assert_eq!(imported.actor_dims("carla.advertisement"), Some(carla.dims));
+        assert!(catalog.actor_mismatch(ActorClass::Car, "carla.vehicle_that_never_existed").is_some());
     }
 }
