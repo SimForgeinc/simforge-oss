@@ -21,7 +21,7 @@ import {
   MapChooser,
 } from "./states/EditorStatePanels";
 import { defaultAuthoringQuality } from "./authoring-quality";
-import { RENDERING_PREFERENCE_CHANGE_EVENT } from "../../components/rendering-preference";
+import { isOtherTabRenderingPreferenceChange, RENDERING_PREFERENCE_CHANGE_EVENT } from "../../components/rendering-preference";
 import {
   notifyScenario,
   useScenarioWorkspaceStatus,
@@ -430,9 +430,18 @@ function ScenarioEditorWorkspace({
   // The app switcher (and the rendering benchmark) write the shared
   // preference; the open document follows it the same way its own selector
   // does, so switching level mid-edit changes this viewport, not the next one.
+  // A change saved in another tab only moves this viewport: that tab already
+  // saved its own document, and writing this one from here would race any
+  // edit still pending in the other tab.
   useEffect(() => {
     const onPreference = (event: Event) => {
-      void changeQualityRef.current((event as CustomEvent<ScenarioAuthoringQuality>).detail);
+      const next = (event as CustomEvent<ScenarioAuthoringQuality>).detail;
+      if (isOtherTabRenderingPreferenceChange(event)) {
+        setQuality(next);
+        if (recordRef.current) qualityRef.current = next;
+        return;
+      }
+      void changeQualityRef.current(next);
     };
     window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);
     return () => window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);

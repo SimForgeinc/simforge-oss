@@ -57,8 +57,44 @@ const REMOVED_RENDERING_PREFERENCES: Record<string, RenderingPreference> = {
   "roads-only": "low", "ultra-low-3d": "low", minimal: "low", high: "medium",
 };
 
+function isRenderingPreference(value: unknown): value is RenderingPreference {
+  return value === "low-no-foliage" || value === "low" || value === "medium";
+}
+
+let followingOtherTabs = false;
+const otherTabChanges = new WeakSet<Event>();
+
+/**
+ * True when a change event re-announces a save made in another tab. A surface
+ * that also records the preference somewhere shared (the open scenario
+ * document) applies it without writing again: the saving tab already did.
+ */
+export function isOtherTabRenderingPreferenceChange(event: Event): boolean {
+  return otherTabChanges.has(event);
+}
+
+/**
+ * A save in another tab reaches this one only as a `storage` event, which none
+ * of the viewers listen for, so an open scene there kept its old profile until
+ * a reload. Re-announce it as the same-tab change event every viewer and
+ * `useRenderingPreference` already follow. Installed once, on the first
+ * browser read, which every viewer makes before it mounts.
+ */
+function followOtherTabs(): void {
+  if (followingOtherTabs || typeof window === "undefined") return;
+  followingOtherTabs = true;
+  window.addEventListener("storage", (event) => {
+    if (event.key !== RENDERING_PREFERENCE_STORAGE_KEY || !isRenderingPreference(event.newValue)) return;
+    try { if (event.storageArea !== window.localStorage) return; } catch { return; }
+    const change = new CustomEvent<RenderingPreference>(RENDERING_PREFERENCE_CHANGE_EVENT, { detail: event.newValue });
+    otherTabChanges.add(change);
+    window.dispatchEvent(change);
+  });
+}
+
 export function readRenderingPreference(storage?: (Pick<Storage, "getItem"> & Partial<Pick<Storage, "setItem">>) | null): RenderingPreference {
   let browserStorage = storage;
+  if (storage === undefined) followOtherTabs();
   try {
     if (browserStorage === undefined) browserStorage = typeof window === "undefined" ? null : window.localStorage;
     const stored = browserStorage?.getItem(RENDERING_PREFERENCE_STORAGE_KEY);
