@@ -319,7 +319,7 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken,
     workerNodeId: WORKER_NODE_ID, inputId: "openscenario",
   };
-  for (const inputId of ["openscenario", "map", "catalog", "execution-package"]) {
+  for (const inputId of ["openscenario", "map", "catalog", "execution-package", "usart_xodr"]) {
     const refreshed = await refreshRenderInputV2({ ...refreshRequest, inputId });
     assert.ok(refreshed && Date.parse(refreshed.expiresAt) > Date.now() + 800_000);
   }
@@ -354,6 +354,11 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.deepEqual(persisted, {
     workspace_id: LOCAL_WORKSPACE_ID, worker_node_id: WORKER_NODE_ID, lease_state: "active",
   });
+  await execute(`UPDATE simforge.render_jobs SET cancel_requested_at = NOW() WHERE id = :id`, { id: job.id });
+  assert.equal(await refreshRenderInputV2(refreshRequest), null, "canceled jobs cannot extend input access");
+  await execute(`UPDATE simforge.render_jobs SET cancel_requested_at = NULL WHERE id = :id`, { id: job.id });
+  await execute(`UPDATE simforge.worker_leases SET expires_at = NOW() - INTERVAL '1 second' WHERE id = :id`, { id: lease.lease.leaseId });
+  assert.equal(await refreshRenderInputV2(refreshRequest), null, "an expired fence cannot refresh inputs");
 });
 
 test("the profile gate still refuses hardware that does not match its name", async () => {
