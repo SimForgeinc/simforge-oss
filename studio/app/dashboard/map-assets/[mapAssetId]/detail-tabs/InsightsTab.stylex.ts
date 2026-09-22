@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   insightsContainer: {
@@ -41,17 +36,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -69,10 +58,6 @@ export const styles = stylex.create({
   loadingSpinner: {
     width: "0.625rem",
     height: "0.625rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   candidateCountBadge: {
     backgroundColor: "rgba(67, 20, 7, 0.6)",
@@ -94,9 +79,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: "hsl(var(--primary) / 0.2)",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   clearFilterIcon: {
     width: "0.625rem",
@@ -119,9 +101,6 @@ export const styles = stylex.create({
     fontSize: "10px",
     borderWidth: stroke.hairline,
     borderStyle: "solid",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   insightChipActive: {
     backgroundColor: "hsl(var(--primary) / 0.15)",
@@ -147,10 +126,6 @@ export const styles = stylex.create({
   candidateLoadingSpinner: {
     width: "0.75rem",
     height: "0.75rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   candidateEmptyMessage: {
     fontSize: text.sizeXs,
@@ -176,9 +151,6 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2_5,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.2)" },
   },
   chevronMutedShrink: {
@@ -186,9 +158,6 @@ export const styles = stylex.create({
     height: "0.75rem",
     flexShrink: 0,
     color: colors.mutedForeground,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   scenarioFamilyIcon: {
     width: "0.875rem",

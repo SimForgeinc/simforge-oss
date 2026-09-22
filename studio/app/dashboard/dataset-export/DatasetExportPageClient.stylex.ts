@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const MD = "@media (min-width: 768px)";
-const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
   shell: { display: "flex", height: "100%", minHeight: 0, minWidth: 0, overflow: "hidden", flexDirection: "column", backgroundColor: colors.bg },
@@ -9,7 +8,6 @@ export const styles = stylex.create({
   main: { height: "100%", minHeight: 0, minWidth: 0, overflowY: "auto", padding: { default: layout.gutterNarrow, [layout.bpLg]: layout.gutter } },
   selected: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "hsl(var(--border) / .6)", backgroundColor: "hsl(var(--card) / .35)", padding: space.s4 },
   iconSmall: { width: "0.75rem", height: "0.75rem" },
-  iconSpin: { animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
   sidebarHeader: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottomWidth: stroke.hairline, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border) / .7)", paddingInline: space.s4, paddingBlock: space.s3 },
   textMuted: { fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightMedium, color: colors.mutedForeground },
   count: { fontFamily: text.fontMono, fontSize: "10px", color: "hsl(var(--muted-foreground) / .7)" },
@@ -21,7 +19,7 @@ export const styles = stylex.create({
   datasetIcon: { marginTop: space.s0_5, width: "1rem", height: "1rem", flexShrink: 0, color: colors.mutedForeground },
   datasetIconActive: { color: colors.accent },
   datasetText: { minWidth: 0 },
-  datasetName: { display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightSemibold, color: colors.text },
+  datasetName: { display: "block", fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightSemibold, color: colors.text },
   datasetDescription: { display: "-webkit-box", overflow: "hidden", marginTop: space.s1, fontSize: text.sizeXs, lineHeight: text.lineSm, color: colors.mutedForeground, WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
   datasetId: { overflowWrap: "anywhere", display: "block", marginTop: space.s1, fontFamily: text.fontMono, fontSize: "10px", letterSpacing: text.trackingMetaNarrow, textTransform: "uppercase", color: "hsl(var(--muted-foreground) / .6)" },
   selectedLabel: { fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightMedium, color: colors.mutedForeground },

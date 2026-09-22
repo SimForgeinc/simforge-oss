@@ -18,6 +18,7 @@ import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import { formatScore } from "../shared";
 import { styles as residual } from "../route-residuals.stylex";
 import { styles } from "./CampaignStage.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** A mean is a fraction; anything outside 0..1 is a bad reading, not a long bar. */
 function barWidth(value: number | null | undefined): string {
@@ -84,7 +85,7 @@ export function CampaignStage({
               )}
             >
               <span {...stylex.props(styles.policy)}>
-                <span {...stylex.props(styles.policyId)}>{policy.policyId}</span>
+                <span {...stylex.props([textLayout.truncate, styles.policyId])}>{policy.policyId}</span>
                 <span {...stylex.props(styles.policyMeta)}>
                   {policy.episodes} episodes · {policy.infractionEpisodes} with infractions
                 </span>

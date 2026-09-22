@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const hovered = stylex.defineVars({
   videoScrimColor: "rgba(0, 0, 0, 0)",
@@ -18,17 +18,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -48,20 +42,6 @@ export const styles = stylex.create({
     borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.2)" },
     backgroundColor: "hsl(var(--muted) / 0.3)",
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
-    /*
-     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-     * `outline: none`: the focus ring above is a box-shadow, which
-     * forced-colours mode discards, and this transparent outline is what
-     * remains visible there.
-     */
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ring },
     [hovered.videoScrimColor]: "rgba(0, 0, 0, 0)",
     [hovered.videoLabelColor]: colors.mutedForeground,
     [hovered.playScale]: "1",
@@ -89,9 +69,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: hovered.videoScrimColor,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   previewPlayButton: {
     display: "flex",
@@ -102,9 +79,6 @@ export const styles = stylex.create({
     justifyContent: "center",
     backgroundColor: "hsl(var(--foreground) / 0.8)",
     color: colors.bg,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   previewPlayIcon: {
     width: "1.25rem",
@@ -113,9 +87,6 @@ export const styles = stylex.create({
   },
   previewVideoLabel: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     paddingInline: space.s2,
     paddingBlock: space.s1_5,
     fontSize: text.sizeXs,
@@ -135,20 +106,6 @@ export const styles = stylex.create({
     paddingBlock: space.s1_5,
     paddingLeft: space.s1_5,
     paddingRight: space.s2,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
-    /*
-     * `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
-     * `outline: none`: the focus ring above is a box-shadow, which
-     * forced-colours mode discards, and this transparent outline is what
-     * remains visible there.
-     */
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": shadows.ring },
     [hovered.videoLabelColor]: colors.mutedForeground,
     [hovered.playScale]: "1",
     ":hover": {
@@ -174,9 +131,6 @@ export const styles = stylex.create({
     justifyContent: "center",
     backgroundColor: "hsl(var(--foreground) / 0.8)",
     color: colors.bg,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   compactPlayIcon: {
     width: "0.875rem",
@@ -186,9 +140,6 @@ export const styles = stylex.create({
   compactVideoLabel: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "left",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,

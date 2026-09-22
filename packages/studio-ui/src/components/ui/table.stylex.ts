@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const TABLE_TRANSITION = "color, background-color, border-color, text-decoration-color, fill, stroke";
 
@@ -37,9 +37,6 @@ export const styles = stylex.create({
     borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
     borderBottomColor: colors.border,
-    transitionProperty: TABLE_TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     backgroundColor: {
       default: null,
       ":hover": "hsl(var(--muted) / 0.4)",

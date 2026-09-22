@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   headerRow: {
@@ -23,17 +18,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -48,9 +37,6 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.3)" },
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
@@ -58,10 +44,6 @@ export const styles = stylex.create({
   enrichLoadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   enrichSparklesIcon: {
     width: "0.75rem",
@@ -95,10 +77,6 @@ export const styles = stylex.create({
     marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   buttonSparklesIcon: {
     marginRight: space.s1_5,

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   dangerZone: {
@@ -37,9 +37,6 @@ export const styles = stylex.create({
     height: "0.875rem",
     flexShrink: 0,
     color: "hsl(var(--destructive) / 0.7)",
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   dangerChevronOpen: { transform: "rotate(180deg)" },
   dangerContent: {
@@ -73,17 +70,6 @@ export const styles = stylex.create({
     fontFamily: text.fontMono,
     fontSize: "10px",
     color: colors.text,
-  },
-  emailConfirmationLabel: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
   },
   emailConfirmationInput: {
     marginBottom: space.s2,

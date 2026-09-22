@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // mt-3 border-t render-hairline pt-3
@@ -84,18 +84,6 @@ export const styles = stylex.create({
     lineHeight: text.lineSm,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // h-9 w-full render-glass border px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   xsBorderedWide: {
@@ -108,17 +96,5 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
 });

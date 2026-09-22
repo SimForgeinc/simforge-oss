@@ -1,11 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
-
-/** `animate-pulse`. */
-const pulse = stylex.keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.5 },
-});
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // text-[9px] leading-relaxed text-white/45
@@ -18,7 +12,6 @@ export const styles = stylex.create({
   whiteBorderedWide: {
     height: "2rem",
     width: "100%",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(255 255 255 / 0.15)",
@@ -67,9 +60,6 @@ export const styles = stylex.create({
   // block truncate text-[10px] font-semibold text-white/85
   blockSemiboldTruncate: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "10px",
     fontWeight: text.weightSemibold,
     color: "rgb(255 255 255 / 0.85)",
@@ -77,9 +67,6 @@ export const styles = stylex.create({
   // block truncate text-[8px] text-white/40
   blockTruncate: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "8px",
     color: "rgb(255 255 255 / 0.4)",
   },
@@ -94,10 +81,6 @@ export const styles = stylex.create({
     right: 0,
     bottom: 0,
     height: "0.125rem",
-    animationName: pulse,
-    animationDuration: motion.durPulse,
-    animationTimingFunction: motion.easePulse,
-    animationIterationCount: "infinite",
     backgroundColor: "rgb(240 138 67 / 1)",
   },
   // py-16 text-center text-[10px] text-white/45
@@ -117,7 +100,6 @@ export const styles = stylex.create({
   // w-full rounded-md border border-white/10 bg-white/[0.05] py-2 text-[10px] text-white/65 disabled:opacity-50
   borderedWide: {
     width: "100%",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.1)",
     backgroundColor: "rgb(255 255 255 / 0.05)",
@@ -155,7 +137,6 @@ export const styles = stylex.create({
 
   // rounded-full border px-2.5 py-1 text-[9px]
   ownershipChip: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     paddingLeft: space.s2_5,
     paddingRight: space.s2_5,
@@ -181,7 +162,6 @@ export const styles = stylex.create({
   tile: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     backgroundColor: colors.fillSubtle,
   },
@@ -214,7 +194,6 @@ export const styles = stylex.create({
     width: "1.5rem",
     height: "1.5rem",
     placeItems: "center",
-    borderRadius: "0",
     backgroundColor: "rgb(0 0 0 / 0.55)",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,

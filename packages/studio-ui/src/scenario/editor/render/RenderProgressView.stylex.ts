@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // render-view-enter flex min-h-0 flex-1 flex-col overflow-hidden
@@ -37,18 +37,6 @@ export const styles = stylex.create({
     },
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-4
   size4: {
@@ -72,9 +60,6 @@ export const styles = stylex.create({
   },
   // truncate text-base font-extrabold leading-tight tracking-tight text-foreground
   inkTruncateBase: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeBase,
     lineHeight: text.lineTight,
     fontWeight: "800",
@@ -109,18 +94,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3.5
   size35: {
@@ -324,9 +297,6 @@ export const styles = stylex.create({
   // min-w-0 truncate font-medium text-foreground
   inkMediumTruncate: {
     minWidth: "0px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
     color: colors.text,
   },
@@ -360,9 +330,6 @@ export const styles = stylex.create({
   // min-w-0 truncate text-right font-mono text-foreground
   monoInkTruncate: {
     minWidth: "0px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "right",
     fontFamily: text.fontMono,
     color: colors.text,

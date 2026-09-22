@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   dropdownTrigger: {
@@ -16,15 +16,9 @@ export const styles = stylex.create({
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightMedium,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   currentMapName: {
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "left",
   },
   dropdownChevron: {
@@ -84,9 +78,6 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   switcherItemCurrent: {
     backgroundColor: "hsl(var(--primary) / 0.05)",
@@ -114,9 +105,6 @@ export const styles = stylex.create({
   switcherLabel: {
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   switcherLabelCurrent: {
     fontWeight: text.weightMedium,
@@ -124,8 +112,5 @@ export const styles = stylex.create({
   mapLocation: {
     fontSize: "10px",
     color: colors.mutedForeground,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
 });

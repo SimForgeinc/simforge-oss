@@ -43,11 +43,6 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
-  artifactFilename: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
   artifactTypeBadge: {
     flexShrink: 0,
     fontFamily: text.fontMono,

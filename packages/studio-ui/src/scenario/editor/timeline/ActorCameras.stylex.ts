@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // w-editor-inspector shrink-0 overflow-y-auto border-l border-border bg-card p-3 text-foreground xl:w-editor-inspector-xl
@@ -70,9 +70,6 @@ export const styles = stylex.create({
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // ml-2 text-micro text-muted-foreground
   microMuted: {
@@ -86,18 +83,6 @@ export const styles = stylex.create({
     color: {
       default: colors.mutedForeground,
       ":hover": colors.danger,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
     },
   },
   // size-3

@@ -25,9 +25,6 @@ export const styles = stylex.create({
   // min-w-0 truncate text-meta font-semibold text-foreground
   metaInkSemibold: {
     minWidth: "0px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
@@ -46,7 +43,6 @@ export const styles = stylex.create({
   // overflow-hidden rounded-md border border-border
   borderedClip: {
     overflow: "hidden",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: colors.border,
   },
@@ -71,18 +67,6 @@ export const styles = stylex.create({
   // text-right
   rightText: {
     textAlign: "right",
-  },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
   },
   // text-micro leading-relaxed text-muted-foreground
   microMutedRelaxed: {
@@ -138,9 +122,6 @@ export const styles = stylex.create({
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
     color: colors.text,
@@ -205,6 +186,5 @@ export const styles = stylex.create({
     width: "0.625rem",
     height: "0.625rem",
     flexShrink: 0,
-    borderRadius: "0",
   },
 });

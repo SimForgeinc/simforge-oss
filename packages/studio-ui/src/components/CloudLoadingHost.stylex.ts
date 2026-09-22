@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, motion, radii, space } from "../stylex/tokens.stylex";
+import { colors, layers, layout, motion, space } from "../stylex/tokens.stylex";
 
 /** The property list Tailwind's `transition-colors` compiles to. */
 const TRANSITION_COLORS =
@@ -7,7 +7,7 @@ const TRANSITION_COLORS =
 
 export const styles = stylex.create({
   alertIcon: { width: "1.25rem", height: "1.25rem" },
-  reload: { marginTop: space.s6, height: "2.5rem", borderRadius: radii.none, backgroundColor: colors.accent, paddingInline: space.s5, color: colors.accentText, ":hover": { backgroundColor: colors.accentHover } },
+  reload: { marginTop: space.s6, height: "2.5rem", backgroundColor: colors.accent, paddingInline: space.s5, color: colors.accentText, ":hover": { backgroundColor: colors.accentHover } },
   /** The dashboard host covers content, never its escape/navigation chrome. */
   overlay: {
     top: "3.5rem",

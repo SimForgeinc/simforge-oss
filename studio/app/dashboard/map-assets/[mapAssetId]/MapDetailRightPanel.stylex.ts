@@ -12,9 +12,6 @@ export const styles = stylex.create({
     borderLeftStyle: "solid",
     borderColor: colors.border,
     backgroundColor: { default: colors.bg, ":hover": colors.muted },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     display: "flex",
     alignItems: "center",
     paddingInline: space.s1_5,
@@ -131,11 +128,6 @@ export const styles = stylex.create({
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: 0,
-  },
-  tabLabel: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   tabContent: {
     flex: "1 1 0%",

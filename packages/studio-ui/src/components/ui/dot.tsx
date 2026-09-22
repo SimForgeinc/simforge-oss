@@ -2,7 +2,7 @@ import * as React from "react";
 import * as stylex from "@stylexjs/stylex";
 
 import { motionRecipe } from "../../stylex/recipes.stylex";
-import { colors, radii } from "../../stylex/tokens.stylex";
+import { colors } from "../../stylex/tokens.stylex";
 import { type PlacementStyle, type Tone } from "../stylex/surface";
 
 export type DotSize = "sm" | "md";
@@ -41,7 +41,7 @@ export function Dot({
 }
 
 const styles = stylex.create({
-  dot: { display: "inline-block", flexShrink: 0, borderRadius: radii.full },
+  dot: { display: "inline-block", flexShrink: 0, },
 });
 
 const sizes = stylex.create({

@@ -39,7 +39,7 @@ export const styles = stylex.create({
   telemGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(7.5rem, 1fr))", gap: "0.5rem 1rem", marginTop: space.s3, marginBottom: 0, paddingTop: space.s3, borderTopWidth: stroke.hairline, borderTopStyle: "solid", borderTopColor: colors.hairline },
   telemMetric: { display: "flex", flexDirection: "column", gap: space.s0_5, minWidth: 0 },
   telemLabel: { fontSize: "10px", textTransform: "uppercase", letterSpacing: text.trackingMetaNarrow, color: "rgb(255 255 255 / 40%)" },
-  telemValue: { margin: 0, fontSize: "13px", fontVariantNumeric: "tabular-nums", color: "rgb(255 255 255 / 85%)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  telemValue: { margin: 0, fontSize: "13px", fontVariantNumeric: "tabular-nums", color: "rgb(255 255 255 / 85%)", },
   telemText: { marginTop: space.s2, fontSize: "12px", textTransform: "uppercase", letterSpacing: text.trackingMetaNarrow, color: colors.inkMuted },
   telemWarn: { marginTop: space.s2, fontSize: "12px", textTransform: "uppercase", letterSpacing: text.trackingMetaNarrow, color: "rgb(254 243 199 / 70%)" },
   activity: { display: "inline-flex", alignItems: "center", gap: space.s2 },

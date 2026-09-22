@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   root: {
@@ -76,7 +76,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong },
-    borderRadius: radii.md,
     backgroundColor: { default: colors.fillSubtle, ":hover": colors.glassRaised },
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },

@@ -47,9 +47,6 @@ export const styles = stylex.create({
     width: "0.375rem",
     height: "0.375rem",
     backgroundColor: hovered.resizeDotColor,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   header: {
     display: "flex",
@@ -64,9 +61,6 @@ export const styles = stylex.create({
     paddingRight: space.s2,
   },
   title: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,

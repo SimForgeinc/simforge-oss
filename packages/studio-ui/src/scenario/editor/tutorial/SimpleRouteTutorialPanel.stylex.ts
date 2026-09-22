@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // fixed inset-0 z-[150] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm
@@ -81,21 +81,6 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.55)",
       ":hover": colors.ink,
     },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // size-4
   size4: {
@@ -176,9 +161,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaTight,
     color: "rgb(0 0 0 / 1)",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     outline: {
       default: null,
       ":focus-visible": "2px solid transparent",

@@ -71,9 +71,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-foreground
   divTruncateSmSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -219,17 +216,11 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.text,
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // min-w-0 flex-1 truncate text-left
   buttonTruncate: {
     minWidth: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     textAlign: "left",
   },
   // relative
@@ -244,9 +235,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3.5
   morehorizontalIcon: {
@@ -284,9 +272,6 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.text,
     backgroundColor: { default: null, ":hover": colors.hoverWash },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3
   renamePencil: {
@@ -306,9 +291,6 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.danger,
     backgroundColor: { default: null, ":hover": "hsl(var(--destructive) / 0.1)" },
-    outline: { default: null, ":focus-visible": "2px solid transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.ring}` },
   },
   // size-3
   deleteTrash2: {

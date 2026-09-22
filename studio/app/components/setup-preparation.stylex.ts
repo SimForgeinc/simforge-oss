@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
@@ -23,11 +23,11 @@ export const setup = stylex.create({
   actionButton: { borderWidth: 0, padding: 0, backgroundColor: "transparent", color: colors.inkMuted, cursor: "pointer" },
   actionPrimary: { color: colors.accent },
   mapGrid: { display: "grid", maxHeight: "10rem", gap: space.s1, marginTop: space.s3, overflowY: "auto", [SM]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } },
-  mapOption: { display: "flex", minWidth: 0, alignItems: "center", gap: space.s2, borderRadius: radii.lg, paddingInline: space.s2, paddingBlock: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, color: "rgba(255,255,255,0.65)" },
+  mapOption: { display: "flex", minWidth: 0, alignItems: "center", gap: space.s2, paddingInline: space.s2, paddingBlock: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, color: "rgba(255,255,255,0.65)" },
   checkbox: { width: "0.875rem", height: "0.875rem", accentColor: colors.accent },
   truncate: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   // mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3
-  notice: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s3, marginTop: space.s4, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", borderRadius: radii.xl, backgroundColor: "rgba(255,255,255,0.03)", paddingInline: space.s4, paddingBlock: space.s3 },
+  notice: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s3, marginTop: space.s4, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)", paddingInline: space.s4, paddingBlock: space.s3 },
   noticeIcon: { width: space.s4, height: space.s4, flexShrink: 0, color: colors.accent },
   noticeText: { minWidth: 0, flex: 1, fontSize: text.sizeXs, lineHeight: text.lineSm, color: "rgba(255,255,255,0.55)" },
   error: { marginTop: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, color: "rgba(252,211,77,0.9)" },
@@ -40,7 +40,7 @@ export const setup = stylex.create({
   panel: { pointerEvents: "auto", maxWidth: "36rem", borderTopWidth: stroke.hairline, borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,0.15)", paddingTop: space.s3 },
   panelLabel: { fontFamily: text.fontMeta, fontSize: "9px", fontWeight: text.weightBold, lineHeight: text.lineMicro, textTransform: "uppercase", letterSpacing: text.trackingMetaWide, color: "rgba(255,255,255,0.4)" },
   // mt-2 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-black/35 px-4 py-3
-  locked: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s3, marginTop: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", borderRadius: radii.xl, backgroundColor: "rgba(0,0,0,0.35)", paddingInline: space.s4, paddingBlock: space.s3 },
+  locked: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s3, marginTop: space.s2, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.35)", paddingInline: space.s4, paddingBlock: space.s3 },
   lockedIcon: { width: space.s4, height: space.s4, flexShrink: 0, color: colors.accent },
   lockedText: { minWidth: 0, flex: 1, fontSize: text.sizeXs, lineHeight: text.lineSm, color: "rgba(255,255,255,0.65)" },
   // divide-y divide-white/10: the container draws nothing, and each row after
@@ -52,18 +52,18 @@ export const setup = stylex.create({
   rowBody: { minWidth: 0, flex: 1 },
   rowTitle: { display: "flex", alignItems: "center", gap: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightSemibold, color: "rgba(255,255,255,0.85)" },
   // rounded-full border border-white/10 px-2 py-0.5 font-meta text-[8px] ...
-  pill: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", borderRadius: radii.full, paddingInline: space.s2, paddingBlock: space.s0_5, fontFamily: text.fontMeta, fontSize: "8px", fontWeight: text.weightBold, lineHeight: text.lineMicro, textTransform: "uppercase", letterSpacing: "0.13em", color: colors.inkMuted },
+  pill: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", paddingInline: space.s2, paddingBlock: space.s0_5, fontFamily: text.fontMeta, fontSize: "8px", fontWeight: text.weightBold, lineHeight: text.lineMicro, textTransform: "uppercase", letterSpacing: "0.13em", color: colors.inkMuted },
   pillReady: { borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash, color: colors.accent },
   rowDetail: { marginTop: space.s0_5, fontSize: "11px", lineHeight: text.lineXs, color: colors.inkMuted },
-  track: { height: "0.25rem", marginTop: space.s1_5, overflow: "hidden", borderRadius: radii.full, backgroundColor: colors.fillStrong },
-  fill: { height: "100%", width: "var(--map-install-progress)", borderRadius: radii.full, backgroundColor: colors.accent, transitionProperty: "width", transitionDuration: "500ms" },
+  track: { height: "0.25rem", marginTop: space.s1_5, overflow: "hidden", backgroundColor: colors.fillStrong },
+  fill: { height: "100%", width: "var(--map-install-progress)", backgroundColor: colors.accent, transitionProperty: "width", transitionDuration: "500ms" },
   alert: { width: "100%", fontSize: "11px", color: "rgba(252,211,77,0.9)" },
   spinIcon: { animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
   gate: { height: "100%", minHeight: 0 },
   gateHidden: { visibility: "hidden" },
-  compactButton: { height: "2rem", display: "inline-flex", alignItems: "center", gap: space.s1_5, borderRadius: radii.full, borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash, paddingInline: space.s3, fontSize: "11px", lineHeight: "inherit", color: colors.accent },
-  primaryButton: { height: "3rem", flex: 1, borderRadius: radii.full, backgroundColor: colors.accent, color: colors.accentText },
-  secondaryButton: { height: "3rem", borderRadius: radii.full },
+  compactButton: { height: "2rem", display: "inline-flex", alignItems: "center", gap: space.s1_5, borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash, paddingInline: space.s3, fontSize: "11px", lineHeight: "inherit", color: colors.accent },
+  primaryButton: { height: "3rem", flex: 1, backgroundColor: colors.accent, color: colors.accentText },
+  secondaryButton: { height: "3rem", },
   iconSmall: { width: "0.875rem", height: "0.875rem" },
   // `mr-1 size-3.5` on the cloud-connect button only.
   iconSmallMr1: { width: "0.875rem", height: "0.875rem", marginInlineEnd: space.s1 },

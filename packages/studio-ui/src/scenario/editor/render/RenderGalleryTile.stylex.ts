@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /**
  * Opacity the hovered tile publishes for its overlay controls.
@@ -145,18 +145,6 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 80%)",
       ":hover": colors.text,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3.5
   size35: {
@@ -186,18 +174,6 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 80%)",
       ":hover": colors.text,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1 render-scrim px-2.5 pb-2 pt-6
   absFlexCol: {
@@ -225,9 +201,6 @@ export const styles = stylex.create({
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
     lineHeight: text.lineXs,
     color: colors.text,

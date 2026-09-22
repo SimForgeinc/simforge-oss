@@ -71,9 +71,6 @@ export const styles = stylex.create({
   },
   groupTitle: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   list: {
     listStyle: "none",
@@ -115,9 +112,6 @@ export const styles = stylex.create({
   },
   rowTitle: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     fontWeight: text.weightMedium,
     color: colors.text,

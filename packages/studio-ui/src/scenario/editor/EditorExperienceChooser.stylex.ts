@@ -18,7 +18,6 @@ export const styles = stylex.create({
   borderedWidePad6: {
     width: "100%",
     maxWidth: "36rem",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(17 19 23 / 1)",
@@ -51,7 +50,6 @@ export const styles = stylex.create({
   },
   // rounded-xl border border-[#E8E044]/50 bg-[#E8E044]/8 p-4 text-left hover:bg-[#E8E044]/12
   borderedPad4LeftText: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.5)",
     backgroundColor: {
@@ -85,7 +83,6 @@ export const styles = stylex.create({
   },
   // rounded-xl border border-white/15 bg-white/[0.03] p-4 text-left hover:bg-white/[0.06]
   borderedPad4LeftText2: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: {

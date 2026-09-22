@@ -73,9 +73,6 @@ export const styles = stylex.create({
   },
   // truncate font-mono
   ddTruncateMono: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
   },
   // pt-1

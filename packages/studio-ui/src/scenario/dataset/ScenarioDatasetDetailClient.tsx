@@ -47,6 +47,7 @@ import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
 import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
 import { isDatasetEditable } from "../rail/DatasetStrip";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 /** Readiness refresh cadence while a render is in flight, matching v1. */
 const READINESS_POLL_MS = 5_000;
@@ -383,7 +384,7 @@ export function ScenarioDatasetDetailClient({
                 {...stylex.props(styles.titleButton)}
                 aria-label={`${dataset.name} dataset menu`}
               >
-                <h2 {...stylex.props(styles.title)}>{dataset.name}</h2>
+                <h2 {...stylex.props([textLayout.truncate, styles.title])}>{dataset.name}</h2>
                 <ChevronDown {...stylex.props(styles.titleChevron)} aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>

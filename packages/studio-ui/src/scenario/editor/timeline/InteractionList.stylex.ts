@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a] p-3 text-white
@@ -45,32 +45,14 @@ export const styles = stylex.create({
     paddingLeft: space.s2,
     paddingRight: space.s2,
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringInset,
-    },
   },
   // w-24 truncate text-white/40
   truncate: {
     width: "6rem",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     color: "rgb(255 255 255 / 0.4)",
   },
   // truncate font-medium
   mediumTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
   },
   // ml-auto font-mono text-white/45
@@ -85,18 +67,6 @@ export const styles = stylex.create({
     color: {
       default: "rgb(255 255 255 / 0.3)",
       ":hover": "rgb(248 113 113 / 1)",
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
     },
   },
   // size-3

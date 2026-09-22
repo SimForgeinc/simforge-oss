@@ -15,7 +15,6 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.8)",
     backgroundColor: "rgb(0 0 0 / 0.9)",
@@ -32,7 +31,6 @@ export const styles = stylex.create({
   },
   // rounded-sm border border-amber-300/60 px-1.5 py-0.5 text-amber-50 transition-colors hover:bg-amber-300/20
   bordered: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(252 211 77 / 0.6)",
     paddingLeft: space.s1_5,
@@ -40,9 +38,6 @@ export const styles = stylex.create({
     paddingTop: space.s0_5,
     paddingBottom: space.s0_5,
     color: "rgb(255 251 235 / 1)",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: {
       default: null,
       ":hover": "rgb(252 211 77 / 0.2)",

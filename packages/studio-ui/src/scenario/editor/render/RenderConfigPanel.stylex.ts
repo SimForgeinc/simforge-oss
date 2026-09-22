@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /*
  * `dark:` variants are folded to their dark value throughout this module. The
@@ -71,9 +71,6 @@ export const styles = stylex.create({
   // min-w-0 truncate text-xs font-semibold text-foreground
   xsInkSemibold: {
     minWidth: "0px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
@@ -132,18 +129,6 @@ export const styles = stylex.create({
     },
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-4
   size4: {
@@ -302,9 +287,6 @@ export const styles = stylex.create({
   // block truncate text-xs font-semibold text-foreground
   blockXsInk: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
@@ -313,9 +295,6 @@ export const styles = stylex.create({
   // block truncate text-micro uppercase tracking-meta text-muted-foreground
   blockCapsMicro: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
@@ -400,18 +379,6 @@ export const styles = stylex.create({
     color: colors.text,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // render-glass border px-2 py-1.5 capitalize text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   capsInkBordered: {
@@ -424,18 +391,6 @@ export const styles = stylex.create({
     color: colors.text,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // capitalize
   caps: {
@@ -612,9 +567,6 @@ export const styles = stylex.create({
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // shrink-0 font-mono text-micro text-muted-foreground
   tightMonoMicro: {
@@ -657,18 +609,6 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + inline-flex h-9 shrink-0 items-center justify-center gap-2 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90
   inlineFlexCenterMid2: {
@@ -690,18 +630,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + border px-3 py-2 border-primary bg-primary/10
   bordered3: {
@@ -767,18 +695,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + border px-2.5 py-1 text-micro uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring render-glass text-muted-foreground hover:text-foreground
   capsMicroMuted4: {
@@ -797,17 +713,5 @@ export const styles = stylex.create({
     },
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
 });

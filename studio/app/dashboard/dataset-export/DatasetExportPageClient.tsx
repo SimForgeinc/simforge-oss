@@ -10,6 +10,7 @@ import { RouteErrorState, PaneErrorState } from "@simforge-oss/studio-ui/compone
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import { DatasetExportPanel } from "./DatasetExportPanel";
 import { styles } from "./DatasetExportPageClient.stylex";
+import { motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type DatasetSummary = {
   id: string;
@@ -64,7 +65,7 @@ export function DatasetExportPageClient() {
 
   useRouteHeader({ title: "Dataset Export", context: "Dataset operations", actions:
     <button type="button" onClick={() => void loadDatasets()} disabled={loading} aria-busy={loading} {...stylex.props(styles.workspaceButton)}>
-      <LoaderCircle {...stylex.props(styles.iconSmall, loading && styles.iconSpin)} /> Refresh datasets
+      <LoaderCircle {...stylex.props(styles.iconSmall, loading && motionRecipe.spin)} /> Refresh datasets
     </button>
   });
   if (!loaded) return error ? <RouteErrorState title="Could not load datasets" description={error} onRetry={() => void loadDatasets()} />
@@ -93,7 +94,7 @@ export function DatasetExportPageClient() {
                     <button key={dataset.id} type="button" onClick={() => { setSelectedDatasetId(dataset.id); setActivePane("detail"); }} {...stylex.props(styles.datasetButton, active && styles.datasetActive)}>
                       <Database {...stylex.props(styles.datasetIcon, active && styles.datasetIconActive)} />
                       <span {...stylex.props(styles.datasetText)}>
-                        <span {...stylex.props(styles.datasetName)}>{dataset.name}</span>
+                        <span {...stylex.props([textLayout.truncate, styles.datasetName])}>{dataset.name}</span>
                         {dataset.description ? <span {...stylex.props(styles.datasetDescription)}>{dataset.description}</span> : <span {...stylex.props(styles.datasetId)}>{dataset.id}</span>}
                       </span>
                     </button>

@@ -46,9 +46,6 @@ export const styles = stylex.create({
   },
   // truncate text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
@@ -57,9 +54,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-card-foreground
   smSemiboldTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const COLOR_TRANSITION =
   "color, background-color, border-color, text-decoration-color, fill, stroke";
@@ -10,14 +10,6 @@ export const styles = stylex.create({
     display: "inline-flex",
     flexShrink: 0,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
     pointerEvents: { default: null, ":disabled": "none" },
     opacity: { default: null, ":disabled": 0.5 },
   },
@@ -30,7 +22,6 @@ export const styles = stylex.create({
       default: colors.border,
       ":hover": "hsl(var(--foreground) / 0.4)",
     },
-    borderRadius: radii.sm,
     paddingInline: space.s1_5,
     paddingBlock: space.s0_5,
     fontSize: "11px",

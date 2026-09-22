@@ -5,6 +5,7 @@ import { styles } from "./MapStatisticsSection.stylex";
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
 import { MapStatsDisplay } from "./MapStatsDisplay";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapStatisticsSection component. */
 type MapStatisticsSectionProps = {
@@ -31,11 +32,11 @@ export function MapStatisticsSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.statisticsToggle)}
+          {...stylex.props([motionRecipe.colors, styles.statisticsToggle])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           Map Statistics
         </button>
@@ -47,7 +48,7 @@ export function MapStatisticsSection({
             }
             aria-label="Copy map statistics as JSON"
             title="Copy map statistics as JSON"
-            {...stylex.props(styles.copyStatsButton)}
+            {...stylex.props([motionRecipe.colors, styles.copyStatsButton])}
           >
             {copiedKey === "mapStats" ? (
               <Check {...stylex.props(styles.copiedCheckIcon)} />

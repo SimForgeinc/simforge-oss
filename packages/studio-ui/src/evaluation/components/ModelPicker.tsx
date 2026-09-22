@@ -24,6 +24,7 @@ import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } fro
 import type { ComputeJobKind } from "@simforge-oss/evaluation/client";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 import { SelectMenu } from "../../components/ui/select-menu";
+import { textLayout } from "../../stylex/recipes.stylex";
 
 export type ModelSelection = {
   family: ModelFamilyId;
@@ -169,7 +170,7 @@ export function ModelPicker({
         <dl {...stylex.props(s.space1, s.textXs, s.textMuted)}>
           <div {...stylex.props(s.flexNoAlignGap2)}>
             <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Revision</dt>
-            <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>{entry.weightsRevision}</dd>
+            <dd {...stylex.props(s.min0, textLayout.truncate, s.mono, s.textFg)}>{entry.weightsRevision}</dd>
           </div>
           <div {...stylex.props(s.flexNoAlignGap2)}>
             <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Cameras</dt>

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchExamplesPanel: {
@@ -47,9 +47,6 @@ export const styles = stylex.create({
     paddingBlock: space.s1,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   examplePillAvailable: {
     borderColor: { default: colors.border, ":hover": "hsl(var(--primary) / 0.4)" },

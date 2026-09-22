@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../../lib/utils";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioEditorChrome.stylex";
+import { textLayout } from "../../../stylex/recipes.stylex";
 
 export type ScenarioEditorStatusTone =
   | "neutral"
@@ -47,7 +48,7 @@ export function ScenarioEditorChromeHeader({
       {leading ? <div {...stylex.props(styles.tight)}>{leading}</div> : null}
       <div {...stylex.props(styles.fillNarrowable)}>
         <div {...stylex.props(styles.flexCenterNarrowable)}>
-          <h1 {...stylex.props(styles.smSemiboldTruncate)}>{title}</h1>
+          <h1 {...stylex.props([textLayout.truncate, styles.smSemiboldTruncate])}>{title}</h1>
           {badge ? (
             <span {...stylex.props(styles.tightCapsMeta)}>
               {badge}
@@ -55,7 +56,7 @@ export function ScenarioEditorChromeHeader({
           ) : null}
         </div>
         {subtitle ? (
-          <p {...stylex.props(styles.capsMetaMicro)}>
+          <p {...stylex.props([textLayout.truncate, styles.capsMetaMicro])}>
             {subtitle}
           </p>
         ) : null}

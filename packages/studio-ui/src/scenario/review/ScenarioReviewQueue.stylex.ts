@@ -1,9 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, space, stroke, text } from "../../stylex/tokens.stylex";
-
-const spin = stylex.keyframes({ to: { transform: "rotate(360deg)" } });
+import { colors, layout, space, stroke, text } from "../../stylex/tokens.stylex";
 export const styles = stylex.create({
-  refreshing: { animationName: spin, animationDuration: motion.durSpin, animationTimingFunction: motion.easeLinear, animationIterationCount: "infinite" },
   reviewCard: { display: "flex", height: "100%", flexDirection: "column", gap: space.s3, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.border, backgroundColor: colors.card, padding: space.s4, outline: { default: "none", ":focus-visible": `2px solid ${colors.accent}` } },
   activeCard: { borderColor: colors.accent },
   failedCard: { borderColor: colors.danger },
@@ -72,9 +69,6 @@ export const styles = stylex.create({
     gap: space.s1,
   },
   h3TruncateSmSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,

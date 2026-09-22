@@ -6,7 +6,6 @@ export const styles = stylex.create({
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",
@@ -87,18 +86,6 @@ export const styles = stylex.create({
       default: colors.textSubtle,
       ":hover": colors.ink,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // mt-5 grid gap-3 sm:grid-cols-2
   gridGap3: {
@@ -120,21 +107,6 @@ export const styles = stylex.create({
     },
     padding: space.s4,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // size-5 text-[#E8E044]
   size5Text: {
@@ -168,21 +140,6 @@ export const styles = stylex.create({
     },
     padding: space.s4,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   // size-5 text-white/70
   size5TextWhite70: {
@@ -211,7 +168,6 @@ export const styles = stylex.create({
     maxWidth: "1180px",
     flexDirection: "column",
     overflow: "hidden",
-    borderRadius: "28px",
     borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.8)",
     backgroundColor: "hsl(var(--background) / 0.95)",
@@ -258,9 +214,6 @@ export const styles = stylex.create({
   },
   // truncate text-xs text-muted-foreground
   xsMutedTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
@@ -287,9 +240,6 @@ export const styles = stylex.create({
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: {
       default: null,
       ":hover": colors.hoverWash,
@@ -649,7 +599,6 @@ export const styles = stylex.create({
   },
   // rounded-xl border border-primary/25 bg-card/70 p-5
   borderedPad53: {
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "hsl(var(--primary) / 0.25)",
     backgroundColor: "hsl(var(--card) / 0.7)",

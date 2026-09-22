@@ -87,18 +87,6 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.55)",
       ":hover": colors.ink,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
     backgroundColor: {
       default: null,
       ":hover": colors.fillStrong,
@@ -149,7 +137,6 @@ export const styles = stylex.create({
     animationDuration: motion.durPulse,
     animationTimingFunction: motion.easePulse,
     animationIterationCount: "infinite",
-    borderRadius: "0",
     backgroundColor: colors.accent,
   },
   // text-xs font-medium text-[#E8E044]

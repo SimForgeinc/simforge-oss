@@ -17,7 +17,6 @@ export const styles = stylex.create({
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: colors.border,
     backgroundColor: "hsl(var(--card) / 0.9)",

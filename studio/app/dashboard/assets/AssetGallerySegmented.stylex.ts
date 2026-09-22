@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const SWITCH_WELL = "hsl(var(--muted) / 0.3)";
 const FOCUS_RING = `0 0 0 1px ${colors.bg}, 0 0 0 3px ${colors.ring}`;
 export const segmented = stylex.create({
@@ -10,7 +10,6 @@ export const segmented = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
-    borderRadius: radii.md,
     backgroundColor: SWITCH_WELL,
     padding: space.s0_5,
   },
@@ -18,16 +17,11 @@ export const segmented = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: space.s1_5,
-    borderRadius: radii.sm,
     paddingInline: space.s3,
     paddingBlock: space.s1_5,
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
-    transitionProperty:
-      "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineWidth: { default: null, ":focus-visible": stroke.thick },
     outlineColor: { default: null, ":focus-visible": "transparent" },

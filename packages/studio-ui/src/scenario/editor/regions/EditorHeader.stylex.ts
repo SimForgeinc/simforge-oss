@@ -13,7 +13,6 @@ export const styles = stylex.create({
   borderedGap15: {
     height: "2rem",
     gap: space.s1_5,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "hsl(var(--border) / 0.7)",
     backgroundColor: "hsl(var(--background) / 0.7)",
@@ -34,7 +33,6 @@ export const styles = stylex.create({
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: {
       default: "rgb(232 224 68 / 0.45)",

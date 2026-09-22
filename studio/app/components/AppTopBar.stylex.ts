@@ -15,7 +15,7 @@ export const styles = stylex.create({
   titleRow: { display: "flex", minWidth: 0, alignItems: "baseline", gap: space.s2, overflow: "hidden", whiteSpace: "nowrap", color: colors.ink },
   brand: { display: { default: "none", [layout.bpLg]: "inline" }, flexShrink: 0, fontSize: text.sizeXl, fontFamily: text.fontHeavy, fontWeight: text.weightBold, letterSpacing: "-0.055em" },
   separator: { display: { default: "none", [layout.bpLg]: "inline" }, color: colors.inkFaint },
-  pageTitle: { margin: 0, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: text.sizeXl, fontWeight: text.weightSemibold, lineHeight: text.lineTight, letterSpacing: text.trackingTight, fontFamily: text.fontDisplay },
+  pageTitle: { margin: 0, minWidth: 0, fontSize: text.sizeXl, fontWeight: text.weightSemibold, lineHeight: text.lineTight, letterSpacing: text.trackingTight, fontFamily: text.fontDisplay },
   context: { display: { default: "none", [layout.bpLg]: "inline" }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", color: colors.textSubtle, fontSize: text.sizeSm },
   actionGroup: { display: "flex", minWidth: 0, marginLeft: "auto", alignItems: "center", gap: space.s2 },
   actions: { display: "flex", minWidth: 0, flexWrap: "wrap", alignItems: "center", gap: space.s2 },

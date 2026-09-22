@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   candidateCard: {
@@ -9,9 +9,6 @@ export const styles = stylex.create({
     paddingInline: space.s2_5,
     paddingBlock: space.s2,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   candidateCardSelected: {
     borderColor: "rgba(251, 146, 60, 0.7)",
@@ -63,9 +60,6 @@ export const styles = stylex.create({
   },
   candidateExplanation: {
     marginTop: space.s1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "10px",
     color: "hsl(var(--muted-foreground) / 0.7)",
   },

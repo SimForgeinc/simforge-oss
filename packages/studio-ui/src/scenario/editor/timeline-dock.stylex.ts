@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { layers, motion } from "../../stylex/tokens.stylex";
+import { layers } from "../../stylex/tokens.stylex";
 
 /**
  * Highlight published by a hovered or keyboard-focused resize handle for the
@@ -59,11 +59,7 @@ export const styles = stylex.create({
     left: "50%",
     width: "1px",
     transform: "translateX(-50%)",
-    borderRadius: "9999px",
     backgroundColor: handleState.markerColor,
     boxShadow: "0 0 10px rgba(255,255,255,0.12)",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
 });

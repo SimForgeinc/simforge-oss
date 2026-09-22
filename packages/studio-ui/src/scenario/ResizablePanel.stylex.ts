@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, space } from "../stylex/tokens.stylex";
+import { colors, layers, space } from "../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   panel: { position: "relative", display: "flex", height: "100%", minHeight: 0, minWidth: 0, flexShrink: 0, flexDirection: "column" },
@@ -26,9 +26,6 @@ export const styles = stylex.create({
     cursor: "col-resize",
     touchAction: "none",
     backgroundColor: { default: "transparent", ":hover": "hsl(var(--primary) / 0.4)", ":focus-visible": "hsl(var(--primary) / 0.6)" },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
     outline: { default: null, ":focus-visible": "2px solid transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },

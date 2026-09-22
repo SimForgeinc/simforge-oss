@@ -1,10 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   quickStatCard: {
@@ -13,9 +8,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: colors.border,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   quickStatLabelRow: {
     display: "flex",
@@ -82,9 +74,6 @@ export const styles = stylex.create({
     marginTop: space.s0_5,
     fontSize: "10px",
     color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   sectionHeader: {
     display: "flex",
@@ -105,9 +94,6 @@ export const styles = stylex.create({
     gap: space.s0_5,
     fontSize: "10px",
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   viewAllChevron: {
     width: "0.75rem",
@@ -141,10 +127,6 @@ export const styles = stylex.create({
   loadingIcon: {
     width: "0.625rem",
     height: "0.625rem",
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
   },
   familyCount: {
     display: "inline-flex",
@@ -181,9 +163,6 @@ export const styles = stylex.create({
     paddingInline: space.s3,
     paddingBlock: space.s2_5,
     textAlign: "left",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   familyCardHeader: {
     display: "flex",
@@ -197,9 +176,6 @@ export const styles = stylex.create({
     flexShrink: 0,
   },
   familyName: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
@@ -231,16 +207,10 @@ export const styles = stylex.create({
     gap: space.s0_5,
     fontSize: "10px",
     color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevronBare: {
     width: "0.75rem",
     height: "0.75rem",
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",

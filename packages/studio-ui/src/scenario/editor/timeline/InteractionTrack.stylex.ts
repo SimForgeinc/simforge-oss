@@ -26,7 +26,6 @@ export const styles = stylex.create({
     top: "0.125rem",
     bottom: "0.125rem",
     minWidth: "1px",
-    borderRadius: "2px",
     boxShadow: "0 0 12px rgba(232,224,68,0.14)",
   },
   // border-y border-l border-dashed border-[#E8E044] bg-[#E8E044]/20

@@ -20,9 +20,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-editor-text
   smSemiboldTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -47,9 +44,6 @@ export const styles = stylex.create({
   },
   // truncate font-meta text-micro uppercase tracking-meta text-editor-muted
   capsMetaMicro: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -105,7 +99,6 @@ export const styles = stylex.create({
   round: {
     width: "0.375rem",
     height: "0.375rem",
-    borderRadius: "0",
   },
   // border border-editor-line bg-editor-bg/90 px-3 py-2 font-meta text-micro uppercase tracking-meta text-editor-muted shadow-xl backdrop-blur-md
   capsMetaMicro2: {

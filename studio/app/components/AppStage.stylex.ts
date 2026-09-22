@@ -51,13 +51,6 @@ export const plate = stylex.create({
     overflowY: "auto",
     overscrollBehavior: "contain",
   },
-  /** Two columns from LG, stacked below it — the switcher's tab row rule. */
-  columns: {
-    display: "grid",
-    gap: space.s3,
-    minHeight: 0,
-    gridTemplateColumns: { default: null, [layout.bpLg]: "repeat(2, minmax(0, 1fr))" },
-  },
   sidebarColumns: {
     display: "grid",
     gap: space.s3,
@@ -103,9 +96,6 @@ export const plate = stylex.create({
   },
   truncate: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
 
   /** Name/value facts: the switcher's highlight lines, given a label. */

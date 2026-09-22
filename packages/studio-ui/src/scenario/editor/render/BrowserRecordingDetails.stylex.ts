@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-h-0 flex-1 overflow-y-auto p-4
@@ -33,9 +33,6 @@ export const styles = stylex.create({
   },
   // truncate font-mono text-micro text-muted-foreground
   monoMicroMuted: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -141,9 +138,6 @@ export const styles = stylex.create({
   // mt-1.5 truncate font-mono text-micro text-muted-foreground
   monoMicroMuted3: {
     marginTop: space.s1_5,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
@@ -220,9 +214,6 @@ export const styles = stylex.create({
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
   },
   // motionStyles.editorMotion + grid size-8 place-items-center render-glass border render-glass-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   gridCenteredBordered: {
@@ -236,18 +227,6 @@ export const styles = stylex.create({
       ":hover": colors.fillStronger,
     },
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3.5
   size35: {
@@ -293,18 +272,12 @@ export const styles = stylex.create({
   },
   // truncate font-mono text-micro
   detailValueMono: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
   },
   // truncate font-medium
   detailValue: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontWeight: text.weightMedium,
   },
 });

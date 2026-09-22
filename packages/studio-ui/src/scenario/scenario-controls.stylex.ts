@@ -21,7 +21,7 @@
  * inert; carrying them over would be inventing a value, not preserving one.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, space, stroke, text } from "../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../stylex/tokens.stylex";
 /** Tailwind's `font-[Share_Tech_Mono,IBM_Plex_Mono,monospace]`. */
 const CHIP_FONT = "Share Tech Mono, IBM Plex Mono, monospace";
 
@@ -39,8 +39,6 @@ export const control = stylex.create({
   spaceAbove15: { marginTop: space.s1_5 },
   /** `mt-4` */
   spaceAbove4: { marginTop: space.s4 },
-  /** `mt-5` */
-  spaceAbove5: { marginTop: space.s5 },
 });
 
 /**
@@ -259,53 +257,6 @@ export const scene = stylex.create({
     paddingInline: space.s5,
     color: "black",
   },
-  /**
-   * `pointer-events-none absolute right-4 top-4 z-10 text-xs text-white/70`
-   */
-  idleStatus: {
-    pointerEvents: "none",
-    position: "absolute",
-    right: "1rem",
-    top: "1rem",
-    zIndex: layers.raised,
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.inkSecondary,
-  },
-  /**
-   * `h-auto min-h-10 w-full justify-start rounded-full border border-[#E8E044]
-   * bg-[#E8E044] px-4 py-2 text-left text-xs font-semibold text-neutral-950
-   * shadow-[0_0_24px_rgba(232,224,68,0.16)] hover:bg-[#F3EB4F]
-   * hover:text-black focus-visible:ring-[#E8E044] focus-visible:ring-offset-2
-   * focus-visible:ring-offset-black`
-   *
-   * The glow rides Tailwind's `--tw-shadow` slot rather than replacing
-   * `box-shadow` outright, so the focus ring `Button` composes from
-   * `--tw-ring-*` still draws on top of it exactly as it did.
-   */
-  cacheAll: {
-    height: "auto",
-    minHeight: "2.5rem",
-    width: "100%",
-    justifyContent: "flex-start",
-    borderWidth: stroke.hairline,
-    borderStyle: "solid",
-    borderColor: colors.accent,
-    backgroundColor: { default: colors.accent, ":hover": "#F3EB4F" },
-    paddingInline: space.s4,
-    paddingBlock: space.s2,
-    textAlign: "left",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    fontWeight: text.weightSemibold,
-    color: { default: colors.accentText, ":hover": "black" },
-    "--tw-shadow": "0 0 24px rgba(232, 224, 68, 0.16)",
-    boxShadow: "var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)",
-    "--tw-ring-color": { default: null, ":focus-visible": "#E8E044" },
-    "--tw-ring-offset-color": { default: null, ":focus-visible": "#000" },
-  },
-  /** `size-4 text-neutral-950` on the spinner inside that button. */
-  cacheAllSpinner: { width: "1rem", height: "1rem", color: colors.accentText },
 });
 
 /** `scenario/rail` — the in-editor scenario rail. */

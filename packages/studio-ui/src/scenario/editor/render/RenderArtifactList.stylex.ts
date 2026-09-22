@@ -75,9 +75,6 @@ export const styles = stylex.create({
   },
   // truncate text-micro text-muted-foreground
   microMutedTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     color: colors.mutedForeground,

@@ -1,12 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
-// `animate-spin`.
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
-
 export const styles = stylex.create({
   // flex items-start gap-2
   flexStartGap2: {
@@ -199,10 +193,6 @@ export const styles = stylex.create({
   // reduced-motion guard here and neither does this, so the spinner behaves
   // exactly as it did.
   iconSpinning: {
-    animationName: spin,
-    animationDuration: motion.durSpin,
-    animationTimingFunction: motion.easeLinear,
-    animationIterationCount: "infinite",
     color: colors.primary,
   },
 });

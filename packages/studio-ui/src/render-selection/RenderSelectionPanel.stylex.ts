@@ -7,7 +7,7 @@ export const styles = stylex.create({
   content: { display: "grid", gap: space.s4, minWidth: 0, minHeight: 0, color: colors.ink },
   header: { display: "grid", gap: space.s1 },
   title: { fontSize: text.sizeXl, lineHeight: text.lineTight, fontWeight: text.weightSemibold },
-  lede: { fontSize: text.sizeSm, lineHeight: text.lineNormal, color: colors.textSubtle, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" },
+  lede: { fontSize: text.sizeSm, lineHeight: text.lineNormal, color: colors.textSubtle, },
   choices: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: space.s2, minWidth: 0, [WIDE]: { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" } },
   withCache: { [WIDE]: { gridTemplateColumns: "repeat(4, minmax(0, 1fr))" } },
   choice: {

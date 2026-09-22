@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex items-baseline justify-between gap-2
@@ -50,9 +50,6 @@ export const styles = stylex.create({
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: "10px",
     color: colors.inkSecondary,
   },
@@ -81,7 +78,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s1,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     backgroundColor: {
       default: "rgb(255 255 255 / 0.035)",
@@ -96,18 +92,6 @@ export const styles = stylex.create({
     color: {
       default: colors.inkSecondary,
       ":hover": colors.ink,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
     },
     borderColor: {
       default: "rgb(255 255 255 / 0.12)",
@@ -126,7 +110,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     gap: space.s1,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(232 224 68 / 0.35)",
     backgroundColor: {
@@ -140,18 +123,6 @@ export const styles = stylex.create({
     fontSize: "9px",
     fontWeight: text.weightSemibold,
     color: colors.accent,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringAccent,
-    },
   },
   /*
    * The section's old `space-y-1.5`. `space-y` is a `> * + *` sibling rule,

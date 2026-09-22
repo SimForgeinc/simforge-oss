@@ -12,6 +12,7 @@ import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { layout } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 import { useDashboardNav } from "@/app/lib/dashboard-nav";
 import { cloudPlate, styles } from "./AppTopBar.stylex";
+import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export function AppTopBar() {
   const pathname = usePathname();
@@ -51,7 +52,7 @@ export function AppTopBar() {
           <div {...stylex.props(styles.titleRow)} data-topbar-slot="title">
             <span {...stylex.props(styles.brand)} data-topbar-slot="brand">SIMFORGE</span>
             <span aria-hidden="true" {...stylex.props(styles.separator)}>—</span>
-            {title ? <h1 {...stylex.props(styles.pageTitle)}>{title}</h1> : null}
+            {title ? <h1 {...stylex.props([textLayout.truncate, styles.pageTitle])}>{title}</h1> : null}
             {header?.context ? <span {...stylex.props(styles.context)}>{header.context}</span> : null}
           </div>
           {wide ? <div {...stylex.props(styles.actionGroup)}>{actions}</div> : null}

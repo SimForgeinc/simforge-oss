@@ -30,7 +30,6 @@ export const styles = stylex.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: colors.accent,
     backgroundColor: {
@@ -66,9 +65,6 @@ export const styles = stylex.create({
   // max-w-full truncate text-xs font-medium text-white
   xsWhiteMedium2: {
     maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,

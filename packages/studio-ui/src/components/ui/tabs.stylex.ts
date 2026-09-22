@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, radii, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   list: {
@@ -7,7 +7,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     height: "2.25rem",
-    borderRadius: radii.lg,
     backgroundColor: colors.muted,
     padding: space.s1,
     color: colors.mutedForeground,
@@ -17,7 +16,6 @@ export const styles = stylex.create({
     alignItems: "center",
     justifyContent: "center",
     whiteSpace: "nowrap",
-    borderRadius: radii.md,
     paddingInline: space.s3,
     paddingBlock: space.s1,
     fontSize: text.sizeSm,

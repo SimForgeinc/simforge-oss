@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex flex-wrap items-center gap-x-1 gap-y-1
@@ -81,18 +81,6 @@ export const styles = stylex.create({
     },
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-3.5
   size35: {
@@ -111,9 +99,6 @@ export const styles = stylex.create({
   fillXsInk: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
@@ -139,18 +124,6 @@ export const styles = stylex.create({
     fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // render-step-center flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-5
   flexColFill: {
@@ -182,18 +155,6 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
     backgroundColor: colors.fillSubtle,
     borderColor: "rgb(255 255 255 / 10%)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // motionStyles.editorMotion + inline-flex h-9 items-center gap-1.5 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90
   inlineFlexCenterCaps4: {
@@ -213,18 +174,6 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.primaryForeground,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // size-4 shrink-0 text-primary
   tightAccent: {
@@ -250,18 +199,6 @@ export const styles = stylex.create({
     borderWidth: stroke.hairline,
     padding: space.s3,
     textAlign: "left",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // border-primary bg-primary/10
   borderPrimaryBgPrimary10: {

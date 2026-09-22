@@ -61,14 +61,12 @@ export const styles = stylex.create({
     height: "auto",
     minWidth: "360px",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    borderRadius: "0",
     backgroundColor: "hsl(var(--muted) / 0.6)",
     padding: space.s1,
   },
   // gap-1.5 rounded-none px-2 py-2 text-[11px]
   gap15: {
     gap: space.s1_5,
-    borderRadius: "0",
     paddingLeft: space.s2,
     paddingRight: space.s2,
     paddingTop: space.s2,
@@ -197,18 +195,6 @@ export const styles = stylex.create({
     paddingRight: space.s3,
     paddingTop: space.s3,
     paddingBottom: space.s3,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ringInset,
-    },
     backgroundColor: {
       default: null,
       ":hover": "hsl(var(--muted) / 0.5)",
@@ -225,7 +211,6 @@ export const styles = stylex.create({
   borderedGlassyGap2: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(52 211 153 / 0.35)",
     backgroundColor: {
@@ -242,7 +227,6 @@ export const styles = stylex.create({
   borderedGlassyGap22: {
     height: "2rem",
     gap: space.s2,
-    borderRadius: "0",
     borderWidth: stroke.hairline,
     borderColor: "rgb(251 191 36 / 0.45)",
     backgroundColor: {

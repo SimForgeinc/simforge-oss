@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionHeader: {
@@ -18,17 +18,11 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingWide,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotate90: {
     transform: "rotate(90deg)",
@@ -43,9 +37,6 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: { default: colors.border, ":hover": "hsl(var(--foreground) / 0.3)" },
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
     backgroundColor: { default: null, ":hover": "hsl(var(--muted) / 0.5)" },
   },
   editorIcon: {
@@ -83,9 +74,6 @@ export const styles = stylex.create({
   },
   scenarioLink: {
     display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     fontWeight: text.weightMedium,

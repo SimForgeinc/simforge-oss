@@ -126,19 +126,6 @@ export const styles = stylex.create({
     },
   },
 
-  /** `sr-only`: the dialog's accessible name and description. */
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
-  },
-
   /**
    * fixed right-5 top-5 z-20 grid size-10 place-items-center text-white/40
    * transition-colors hover:bg-white/[0.06] hover:text-white
@@ -158,14 +145,6 @@ export const styles = stylex.create({
     placeItems: "center",
     color: { default: "rgb(255 255 255 / 0.4)", ":hover": colors.ink },
     backgroundColor: { default: null, ":hover": colors.fill },
-    transitionProperty: COLOR_TRANSITION,
-    transitionDuration: motion.durStandard,
-    transitionTimingFunction: motion.easeStandard,
-    outlineWidth: { default: null, ":focus-visible": stroke.thick },
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineColor: { default: null, ":focus-visible": "transparent" },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
   // size-5
   closeIcon: { width: "1.25rem", height: "1.25rem" },

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 /*
  * A gallery tile's entrance, staggered by index via `--render-tile-index` set
@@ -53,9 +53,6 @@ export const styles = stylex.create({
   },
   // truncate text-sm font-semibold text-foreground
   smInkSemibold: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeSm,
     lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
@@ -63,9 +60,6 @@ export const styles = stylex.create({
   },
   // truncate text-micro uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
@@ -141,9 +135,6 @@ export const styles = stylex.create({
   fillMicroMuted: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     color: colors.mutedForeground,
@@ -219,18 +210,6 @@ export const styles = stylex.create({
     letterSpacing: text.trackingMeta,
     color: colors.primary,
     backgroundColor: "hsl(var(--primary) / 0.15)",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
-    },
   },
   // px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
   filterTab: {
@@ -245,18 +224,6 @@ export const styles = stylex.create({
     color: {
       default: colors.mutedForeground,
       ":hover": colors.text,
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": shadows.ring,
     },
   },
 });

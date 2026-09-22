@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, layout, motion, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, layout, shadows, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   mapForm: {
@@ -59,9 +59,6 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   selectedFilename: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.mutedForeground,
@@ -230,17 +227,11 @@ export const styles = stylex.create({
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   chevronLg: {
     width: "0.875rem",
     height: "0.875rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: motion.durStandard,
   },
   rotateMinus90: {
     transform: "rotate(-90deg)",
