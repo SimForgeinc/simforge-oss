@@ -134,6 +134,8 @@ export type StudioHostIdentity = {
   workspaceId: string;
   organizationId: string | null;
   displayName: string | null;
+  /** Name of the active workspace, distinct from the account's display name. */
+  workspaceName?: string | null;
 };
 
 export type StudioHostPersistence =
