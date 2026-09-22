@@ -41,10 +41,6 @@
         "types": "./dist/components/CarlaCompatibilityPill.d.ts",
         "default": "./dist/components/CarlaCompatibilityPill.js"
       },
-      "./components/rendering-benchmark-target": {
-        "types": "./dist/components/rendering-benchmark-target.d.ts",
-        "default": "./dist/components/rendering-benchmark-target.js"
-      },
       "./components/CloudLoadingHost": {
         "types": "./dist/components/CloudLoadingHost.d.ts",
         "default": "./dist/components/CloudLoadingHost.js"
@@ -361,10 +357,6 @@
         "types": "./dist/scenario/editor/regions/actor-catalog.d.ts",
         "default": "./dist/scenario/editor/regions/actor-catalog.js"
       },
-      "./scenario/editor/regions/slots/RenderingBenchmark": {
-        "types": "./dist/scenario/editor/regions/slots/RenderingBenchmark.d.ts",
-        "default": "./dist/scenario/editor/regions/slots/RenderingBenchmark.js"
-      },
       "./scenario/editor/scene-time": {
         "types": "./dist/scenario/editor/scene-time.d.ts",
         "default": "./dist/scenario/editor/scene-time.js"
@@ -532,11 +524,6 @@
       "development": "./src/components/VideoPreviewTile.tsx",
       "types": "./dist/components/VideoPreviewTile.d.ts",
       "default": "./dist/components/VideoPreviewTile.js"
-    },
-    "./components/rendering-benchmark-target": {
-      "development": "./src/components/rendering-benchmark-target.tsx",
-      "types": "./dist/components/rendering-benchmark-target.d.ts",
-      "default": "./dist/components/rendering-benchmark-target.js"
     },
     "./components/rendering-preference": {
       "development": "./src/components/rendering-preference.ts",
@@ -882,11 +869,6 @@
       "development": "./src/scenario/editor/regions/actor-catalog.ts",
       "types": "./dist/scenario/editor/regions/actor-catalog.d.ts",
       "default": "./dist/scenario/editor/regions/actor-catalog.js"
-    },
-    "./scenario/editor/regions/slots/RenderingBenchmark": {
-      "development": "./src/scenario/editor/regions/slots/RenderingBenchmark.tsx",
-      "types": "./dist/scenario/editor/regions/slots/RenderingBenchmark.d.ts",
-      "default": "./dist/scenario/editor/regions/slots/RenderingBenchmark.js"
     },
     "./scenario/editor/scene-time": {
       "development": "./src/scenario/editor/scene-time.ts",

@@ -1,23 +1,22 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { SignalHigh, SignalMedium } from "lucide-react";
+import { SignalLow, SignalHigh, SignalMedium } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   saveRenderingPreference,
   useRenderingPreference,
+  RENDERING_PREFERENCE_CHOICES,
+  type RenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
-import {
-  SCENARIO_AUTHORING_QUALITY_CHOICES,
-  type ScenarioAuthoringQuality,
-} from "@simforge-oss/studio-ui/lib/scenario/contracts";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 /**
  * One icon per level, lowest to highest, so the button shows where the
  * preference sits without spending a row on labels.
  */
-const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
+const LEVEL_ICONS: Record<RenderingPreference, LucideIcon> = {
+  "low-no-foliage": SignalLow,
   low: SignalMedium,
   medium: SignalHigh,
 };
@@ -30,8 +29,8 @@ const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
  * page.
  */
 export function AppSwitcherGraphicsLevel() {
-  const preference = useRenderingPreference() ?? "medium";
-  const levels = SCENARIO_AUTHORING_QUALITY_CHOICES;
+  const preference = useRenderingPreference() ?? "low";
+  const levels = RENDERING_PREFERENCE_CHOICES;
   const at = levels.findIndex((choice) => choice.id === preference);
   const current = levels.find((choice) => choice.id === preference)!;
   const next = levels[(Math.max(at, 0) + 1) % levels.length]!;
@@ -44,7 +43,7 @@ export function AppSwitcherGraphicsLevel() {
       data-quality={current.id}
       data-testid="app-switcher-graphics-level"
       onClick={() => saveRenderingPreference(next.id)}
-      title={`Graphics level: ${current.label} — ${current.gpuMemoryGuidance}. Click for ${next.label}.`}
+      title={`Graphics level: ${current.label} — ${current.description} Click for ${next.label}.`}
       type="button"
     >
       <Icon {...stylex.props(styles.graphicsIcon)} aria-hidden="true" />

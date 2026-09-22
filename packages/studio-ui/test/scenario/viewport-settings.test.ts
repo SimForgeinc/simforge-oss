@@ -33,7 +33,7 @@ function memoryStorage() {
 }
 
 beforeEach(() => {
-  vi.stubGlobal("window", { localStorage: memoryStorage() });
+  vi.stubGlobal("window", { localStorage: memoryStorage(), dispatchEvent: vi.fn() });
 });
 
 afterEach(() => {
@@ -126,6 +126,7 @@ describe("loadViewportSettings", () => {
 
   it("survives storage that throws, as in private mode", () => {
     vi.stubGlobal("window", {
+      dispatchEvent: vi.fn(),
       localStorage: {
         getItem: () => {
           throw new Error("blocked");

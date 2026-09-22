@@ -1,12 +1,12 @@
 import type { CityViewerOptions } from "@simforge-oss/viewer";
 import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
-import { readRenderingPreference } from "../../components/rendering-preference";
-import { loadViewportSettings } from "./regions/slots/viewport-settings";
+import { readRenderingPreference, renderingPreferenceQuality, type RenderingPreference } from "../../components/rendering-preference";
+import { loadViewportSettings, viewportVegetationVisible } from "./regions/slots/viewport-settings";
 
 const MB = 1024 * 1024;
 
 export function defaultAuthoringQuality(): ScenarioAuthoringQuality {
-  return readRenderingPreference() ?? "medium";
+  return renderingPreferenceQuality(readRenderingPreference());
 }
 
 /**
@@ -79,9 +79,10 @@ export function actorFitPoints(
  * for lighting.
  */
 export function sceneViewerOptions(
-  quality: ScenarioAuthoringQuality,
+  preference: RenderingPreference,
   extra?: CityViewerOptions,
 ): CityViewerOptions {
+  const quality = renderingPreferenceQuality(preference);
   const preset = AUTHORING_QUALITY[quality];
   return {
     maxPixelRatio: preset.maxPixelRatio,
@@ -89,8 +90,8 @@ export function sceneViewerOptions(
     cinematicLighting: preset.cinematicLighting,
     byteBudget: preset.live.byteBudget,
     vegetationMaxDistance: preset.live.vegetationMaxDistance,
-    vegetation: loadViewportSettings().layers.vegetation,
     ...extra,
+    vegetation: preference !== "low-no-foliage" && viewportVegetationVisible(loadViewportSettings()),
     mapTextureTier: quality,
   };
 }

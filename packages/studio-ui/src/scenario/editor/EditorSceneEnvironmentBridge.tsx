@@ -6,9 +6,10 @@ import type { EditorDocument } from "@simforge-oss/editor";
 import { editorLightingSignature } from "@simforge-oss/scenario/contracts";
 import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
 import { AUTHORING_QUALITY } from "./authoring-quality";
+import { RENDERING_PREFERENCE_CHANGE_EVENT, renderingPreferenceQuality, type RenderingPreference } from "../../components/rendering-preference";
 import { resolvePracticalLighting } from "./practical-lighting";
 import { applyDefaultSceneEnvironment, applyEditorSceneEnvironment } from "./scene-environment";
-import { loadViewportSettings, VIEWPORT_SETTINGS_CHANGE_EVENT } from "./regions/slots/viewport-settings";
+import { loadViewportSettings, viewportVegetationVisible, VIEWPORT_SETTINGS_CHANGE_EVENT } from "./regions/slots/viewport-settings";
 import { sceneTimeSignature } from "./scene-time";
 import { editorWeatherControlSignature } from "./weather-controls";
 
@@ -29,10 +30,10 @@ const EMPTY_UNSUBSCRIBE = () => undefined;
  */
 export function applySceneFidelity(
   viewer: CityViewer,
-  quality: ScenarioAuthoringQuality,
-  live: Partial<CityViewerLiveQuality> = AUTHORING_QUALITY[quality].live,
+  quality: RenderingPreference,
+  live: Partial<CityViewerLiveQuality> = AUTHORING_QUALITY[renderingPreferenceQuality(quality)].live,
 ): void {
-  const preset = AUTHORING_QUALITY[quality];
+  const preset = AUTHORING_QUALITY[renderingPreferenceQuality(quality)];
   viewer.setLiveQuality(live);
   viewer.setRenderingSuspended(false);
   viewer.setAuthoringFidelity({
@@ -40,7 +41,7 @@ export function applySceneFidelity(
   });
   // The quality preset controls streaming fidelity; the persisted viewport
   // setting controls whether vegetation is drawn on every Studio surface.
-  viewer.setLayerVisible("vegetation", loadViewportSettings().layers.vegetation);
+  viewer.setLayerVisible("vegetation", quality !== "low-no-foliage" && viewportVegetationVisible(loadViewportSettings()));
 }
 
 /**
@@ -97,10 +98,14 @@ export function EditorSceneEnvironmentBridge({
   useEffect(() => {
     if (!viewer) return;
     const applyVegetationPreference = () => {
-      viewer.setLayerVisible("vegetation", loadViewportSettings().layers.vegetation);
+      viewer.setLayerVisible("vegetation", viewportVegetationVisible(loadViewportSettings()));
     };
     window.addEventListener(VIEWPORT_SETTINGS_CHANGE_EVENT, applyVegetationPreference);
-    return () => window.removeEventListener(VIEWPORT_SETTINGS_CHANGE_EVENT, applyVegetationPreference);
+    window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, applyVegetationPreference);
+    return () => {
+      window.removeEventListener(VIEWPORT_SETTINGS_CHANGE_EVENT, applyVegetationPreference);
+      window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, applyVegetationPreference);
+    };
   }, [viewer]);
 
 

@@ -64,7 +64,7 @@ export {
   shadowRadiusForScene,
 } from './sun-shadow';
 export type { SunShadowFit } from './sun-shadow';
-export { isCityAssetVariantManifest, selectAssetVariant } from './asset-variants';
+export { isCityAssetVariantManifest, selectAssetVariant, probeTextureCapabilities } from './asset-variants';
 export type {
   CityAssetVariant,
   CityAssetVariantFile,
