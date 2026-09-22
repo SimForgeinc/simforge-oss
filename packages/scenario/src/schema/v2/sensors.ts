@@ -62,6 +62,49 @@ export const DashCameraIntrinsicsSchema = z.strictObject({
   }
 });
 
+export const CAMERA_PROFILE_V1_SCHEMA = 'simforge.camera-profile/v1' as const;
+
+export const CameraProfileSchema = z.strictObject({
+  schemaVersion: z.literal(CAMERA_PROFILE_V1_SCHEMA).default(CAMERA_PROFILE_V1_SCHEMA),
+  profileId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,126}@[1-9][0-9]*$/).default('generic-rgb@1'),
+  fidelity: z.enum(['generic-uncalibrated', 'device-fitted']).default('generic-uncalibrated'),
+  projection: z.strictObject({
+    model: z.enum(['pinhole', 'brown-conrady', 'kannala-brandt']).default('pinhole'),
+  }).prefault({}),
+  detector: z.strictObject({
+    noise: z.enum(['none', 'ptc']).default('none'),
+  }).prefault({}),
+  acquisition: z.strictObject({
+    shutter: z.enum(['global', 'rolling']).default('global'),
+    readoutSpanS: z.number().finite().positive().optional(),
+  }).prefault({}),
+  outputStage: z.enum(['linear', 'processed']).default('linear'),
+  encoding: z.strictObject({
+    transfer: z.enum(['linear', 'srgb']).default('srgb'),
+    bitDepth: z.number().int().min(8).max(32).default(8),
+  }).prefault({}),
+}).check((ctx) => {
+  if (ctx.value.acquisition.shutter === 'rolling' && ctx.value.acquisition.readoutSpanS === undefined) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'rolling shutter requires readoutSpanS',
+      path: ['acquisition', 'readoutSpanS'],
+      input: ctx.value.acquisition.readoutSpanS,
+    });
+  }
+});
+
+export const GENERIC_CAMERA_PROFILE = Object.freeze(CameraProfileSchema.parse({}));
+
+export function cameraProfileCapabilities(profile: CameraProfile): string[] {
+  return [
+    `camera.projection.${profile.projection.model.replace('-', '_')}`,
+    `camera.shutter.${profile.acquisition.shutter}`,
+    `camera.output.${profile.outputStage}_rgb`,
+    ...(profile.detector.noise === 'ptc' ? ['camera.noise.ptc'] : []),
+  ];
+}
+
 /**
  * What the detector can and cannot do — the *authored* half of perception.
  *
@@ -115,6 +158,7 @@ export const DashCameraSensorSchema = z.strictObject({
   enabled: z.boolean().default(true),
   mount: SensorMountSchema,
   camera: DashCameraIntrinsicsSchema.prefault({}),
+  profile: CameraProfileSchema.prefault({}),
   detection: DetectionModelSchema.prefault({}),
 });
 
@@ -174,6 +218,7 @@ export type VehicleAnchor = z.infer<typeof VehicleAnchorSchema>;
 export type VehicleAnchorMount = z.infer<typeof VehicleAnchorMountSchema>;
 export type SensorRigMount = z.infer<typeof SensorRigMountSchema>;
 export type DashCameraIntrinsics = z.infer<typeof DashCameraIntrinsicsSchema>;
+export type CameraProfile = z.infer<typeof CameraProfileSchema>;
 export type DashCameraSensor = z.infer<typeof DashCameraSensorSchema>;
 export type LidarSensor = z.infer<typeof LidarSensorSchema>;
 export type RadarSensor = z.infer<typeof RadarSensorSchema>;

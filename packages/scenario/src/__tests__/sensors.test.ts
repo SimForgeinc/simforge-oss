@@ -5,6 +5,7 @@ import { parseTemplate, serializeTemplate } from '../serialize.js';
 import { TemplateDocument } from '../template-document.js';
 import {
   ActorSensorSchema,
+  CameraProfileSchema,
   dashCameras,
   firstEnabledDashCamera,
   newSensorId,
@@ -37,6 +38,18 @@ describe('actor-attached sensors', () => {
     const second = parseTemplate(JSON.parse(serializeTemplate(first)));
     expect(second.roles[0]?.actor.sensors).toEqual(first.roles[0]?.actor.sensors);
     expect(firstEnabledDashCamera(second.roles[0]!.actor)?.id).toBe('front-dash-camera');
+    expect(firstEnabledDashCamera(second.roles[0]!.actor)?.profile).toMatchObject({
+      profileId: 'generic-rgb@1',
+      fidelity: 'generic-uncalibrated',
+      acquisition: { shutter: 'global' },
+      outputStage: 'linear',
+      encoding: { transfer: 'srgb', bitDepth: 8 },
+    });
+  });
+
+  it('requires rolling-shutter profiles to declare their readout span', () => {
+    expect(() => CameraProfileSchema.parse({ acquisition: { shutter: 'rolling' } }))
+      .toThrow(/readoutSpanS/);
   });
 
   it('builds active sensors against the authored dimensions of a non-reference vehicle', () => {
