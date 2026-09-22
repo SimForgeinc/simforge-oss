@@ -69,6 +69,7 @@ import {
   type AmbientExecutionMode,
   type ResolvedExecutionInput,
 } from './execution-package.js';
+import { persistAmbientTurnVerdictsToDisk, restoreAmbientTurnVerdictsFromDisk } from './maps.js';
 import type { MaterializeOptions } from './materialize.js';
 import { MapBundle } from './types.js';
 
@@ -214,7 +215,9 @@ export async function loadSimulationMapClosure(options: {
     fetcher,
   });
   if (!topology) throw new Error('simulation_closure_topology_missing');
-  return closureFromGraph(graph, options, plainBytes(topology));
+  const closure = closureFromGraph(graph, options, plainBytes(topology));
+  await restoreAmbientTurnVerdictsFromDisk(closure.bundle);
+  return closure;
 }
 
 /** Members are served gzipped or plain; the closure keeps the plain JSON bytes whichever way they arrived. */
@@ -232,7 +235,9 @@ export async function simulationMapClosureFromFiles(
   identity: { readonly mapVersionId: string; readonly mapAssetId: string; readonly browserClosureSha256: string },
 ): Promise<SimulationMapClosure> {
   const graph = await buildSimulationMapClosure(engine().module, files);
-  return closureFromGraph(graph, identity, plainBytes(files.topology));
+  const closure = closureFromGraph(graph, identity, plainBytes(files.topology));
+  await restoreAmbientTurnVerdictsFromDisk(closure.bundle);
+  return closure;
 }
 
 function closureFromGraph(
@@ -455,6 +460,9 @@ export function simulateAuthoritative(request: {
     request.catalogEntries,
   );
   const result = engine().runSimulation(resolved.executedInput, { graph: request.closure.bundle.graph });
+  // Timing only (WS-A): the turn verdicts the ambient generator probed are
+  // persisted per closure and engine semantics; errors are swallowed.
+  if (provider === 'native') void persistAmbientTurnVerdictsToDisk(request.closure.bundle);
   const authoredTrace = result.trace;
   const resolvedInputDigest = executionSourceInputDigest(resolved.resolvedInput);
   // The stored resolution record must be exactly the input this trace was
