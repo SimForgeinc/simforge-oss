@@ -15,6 +15,7 @@ import type {
   ArrivalSolution,
   Condition as SimCondition,
   NativeModule,
+  NativeSite,
   ScenarioInput,
   SimActor,
   SimIssue,
@@ -250,6 +251,45 @@ export function compileTemplateWith(
   const siteId = site === null || typeof site === 'string' ? site : site.siteId;
   const optionsJson = Object.keys(rest).length === 0 ? null : JSON.stringify(rest);
   const compiled = guard(() => module.compileTemplate(JSON.stringify(template), bundle.native, siteId, seed ?? null, optionsJson));
+  return {
+    scenario: compiled.input,
+    input: JSON.parse(compiled.input.toJson()) as SimScenarioInput,
+    manifest: JSON.parse(compiled.manifestJson) as InstanceManifest,
+    observations: JSON.parse(compiled.observationsJson) as MaterializeResult['observations'],
+  };
+}
+
+/** One site resolved natively: the `MatchedSite` document and the handle `compileTemplateAtSiteWith` reuses. */
+export interface ResolvedSite {
+  readonly site: MatchedSite;
+  readonly native: NativeSite;
+}
+
+/**
+ * Resolve one site of `template` on `bundle` by id (`null` = top-ranked). An
+ * explicit id scores only that site's frames, so this is cheap on any map; it
+ * may return a site the ranked match rejected (check its verdict).
+ */
+export function resolveSiteWith(module: NativeModule, template: ScenarioTemplateV2, bundle: MapBundle, siteId: string | null): ResolvedSite {
+  const native = guard(() => module.findSite(JSON.stringify(template), bundle.native, siteId));
+  return { site: JSON.parse(native.toJson()) as MatchedSite, native };
+}
+
+/**
+ * Materialise at a site already resolved by `resolveSiteWith`, without running
+ * the matcher again: the same product `compileTemplateWith` gives for that
+ * site's id. The site must have been resolved for this template on this map.
+ */
+export function compileTemplateAtSiteWith(
+  module: NativeModule,
+  template: ScenarioTemplateV2,
+  bundle: MapBundle,
+  site: NativeSite,
+  options: MaterializeOptions = {},
+): CompiledTemplate {
+  const { seed, ...rest } = options;
+  const optionsJson = Object.keys(rest).length === 0 ? null : JSON.stringify(rest);
+  const compiled = guard(() => module.compileTemplateAtSite(JSON.stringify(template), bundle.native, site, seed ?? null, optionsJson));
   return {
     scenario: compiled.input,
     input: JSON.parse(compiled.input.toJson()) as SimScenarioInput,

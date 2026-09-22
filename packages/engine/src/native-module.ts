@@ -415,8 +415,10 @@ export interface NativeModule {
 
   /** `site` is a matcher site id; `null` = the top-ranked site. */
   compileTemplate(templateJson: string, bundle: NativeMapBundle, site: string | null, seed?: NativeSeed | null, optionsJson?: string | null): NativeCompileResult;
-  /** Match one site by id (`null` = top-ranked; an explicit id may name a rejected site) as a native handle. */
+  /** Match one site by id (`null` = top-ranked; an explicit id may name a rejected site) as a native handle. An explicit id scores only that site. */
   findSite(templateJson: string, bundle: NativeMapBundle, siteId: string | null): NativeSite;
+  /** `compileTemplate` at a site `findSite` already resolved, without re-running the matcher. Refuses a site matched for another template or map. */
+  compileTemplateAtSite(templateJson: string, bundle: NativeMapBundle, site: NativeSite, seed?: NativeSeed | null, optionsJson?: string | null): NativeCompileResult;
   /** The engine's own motion envelope for an actor class, as JSON. */
   motionLimitsJson(kind: string): string;
   /** `AdaptNote[]` JSON: clauses the anchor adapter drops or rewrites before matching. */

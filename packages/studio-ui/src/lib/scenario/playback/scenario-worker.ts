@@ -8,9 +8,12 @@ import {
   MapBundle,
   adaptTemplateNotesWith,
   clampDeclaredAxisHolds,
+  compileTemplateAtSiteWith,
   compileTemplateWith,
   materializationSemanticLosses,
   matchSitesWith,
+  resolveSiteWith,
+  type MatchedSite,
   withParkedCarActors,
   withStudioBodyColorTags,
   type MapBundleArtifacts,
@@ -50,6 +53,7 @@ import {
   withEditablePhysicsDefault,
   withStableHighSpeedWorldRoutes,
   type MapRuntimeIdentity,
+  type PlayableSiteSelection,
   type StaticColliderDiagnostics,
 } from '@simforge-oss/playback';
 
@@ -439,12 +443,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
   if (notes.length > 0) {
     throw new Error(`Scenario uses constructs the matcher cannot preserve: ${notes.map((note) => `${note.path}: ${note.reason}`).join(' · ')}`);
   }
-  const { report } = matchSitesWith(engine.module, template, bundle);
-  if (!report.sites.some((candidate) => candidate.degradation.intentPreserved)) {
-    throw new Error(`No intent-preserving site matches this scenario on ${request.map.sourceMapId}${report.failureSummary ? ` (${report.failureSummary})` : ''}`);
-  }
-  const selected = selectPlayableSite(report.sites, (candidate) => {
-    const candidateProduct = compileTemplateWith(engine.module, template, bundle, candidate, { drawIndex: -1 });
+  const playable = (candidateProduct: ReturnType<typeof compileTemplateWith>) => {
     const semanticLosses = materializationSemanticLosses(candidateProduct.manifest.notes);
     if (semanticLosses.length > 0) {
       throw new Error(`materialization would lose authored semantics: ${semanticLosses.map((note) => `${note.path}: ${note.reason}`).join(' · ')}`);
@@ -454,7 +453,29 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       throw new Error(`scenario is not feasible: ${errors.map((issue) => issue.reason).join(' · ')}`);
     }
     return candidateProduct;
-  });
+  };
+  const pin = template.anchor.pin;
+  let selected: PlayableSiteSelection<MatchedSite, ReturnType<typeof compileTemplateWith>>;
+  if (pin?.siteId && pin.mapId === request.map.sourceMapId) {
+    // A pinned document (a transferred variation) names its site: resolve that
+    // one site and compile at it, instead of ranking the whole map first and
+    // then re-matching it inside the compile.
+    let resolved: ReturnType<typeof resolveSiteWith>;
+    try {
+      resolved = resolveSiteWith(engine.module, template, bundle, pin.siteId);
+    } catch (error) {
+      throw new Error(`No intent-preserving site matches this scenario on ${request.map.sourceMapId} (${error instanceof Error ? error.message : String(error)})`);
+    }
+    selected = selectPlayableSite([resolved.site], () =>
+      playable(compileTemplateAtSiteWith(engine.module, template, bundle, resolved.native, { drawIndex: -1 })));
+  } else {
+    const { report } = matchSitesWith(engine.module, template, bundle);
+    if (!report.sites.some((candidate) => candidate.degradation.intentPreserved)) {
+      throw new Error(`No intent-preserving site matches this scenario on ${request.map.sourceMapId}${report.failureSummary ? ` (${report.failureSummary})` : ''}`);
+    }
+    selected = selectPlayableSite(report.sites, (candidate) =>
+      playable(compileTemplateWith(engine.module, template, bundle, candidate, { drawIndex: -1 })));
+  }
   const { site, product } = selected;
   const controlledInput = withStudioBodyColorTags(withMapControls(product.input, mapControls), template);
   const ambient = applyRequestedAmbientPopulation(engine, controlledInput, graph, request);

@@ -378,6 +378,9 @@ export declare function compileSituation(documentJson: string, bundle: MapBundle
 /** `site = null` picks the top-ranked matched site; map-bound documents skip matching. */
 export declare function compileTemplate(templateJson: string, bundle: MapBundle, site?: string | undefined | null, seed?: number | string | undefined | null, optionsJson?: string | undefined | null): CompileResult
 
+/** Compile at a site already resolved by `findSite`, without re-matching. */
+export declare function compileTemplateAtSite(templateJson: string, bundle: MapBundle, site: Site, seed?: number | string | undefined | null, optionsJson?: string | undefined | null): CompileResult
+
 export declare function contentHash(document: string): string
 
 export const DEFAULT_MAX_OBJECTS: number

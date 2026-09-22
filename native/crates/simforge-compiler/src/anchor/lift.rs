@@ -762,6 +762,90 @@ mod tests {
         assert!(!result.ok);
     }
 
+    fn parallel_roads_topology(roads: i64) -> TopologyIndex {
+        let mut lanes = serde_json::Map::new();
+        for road in 1..=roads {
+            let y = (road - 1) as f64 * 50.0;
+            let rsl = format!("{road}:0:-1");
+            lanes.insert(rsl.clone(), lane(&rsl, road, -1, y, json!([[0, y], [200, y]])));
+        }
+        serde_json::from_value(json!({
+            "schemaVersion": 1, "mapName": "lift-test", "source": { "xodrSha256": "lift-digest" },
+            "lanes": lanes, "gates": [], "junctions": {}
+        })).unwrap()
+    }
+
+    fn parallel_roads_portable() -> (ScenarioTemplate, crate::bundle::MapBundle) {
+        let bundle = crate::bundle::MapBundle::from_topology("lift-test", parallel_roads_topology(4)).unwrap();
+        let source = template(json!([scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref()))]), json!([]));
+        let lifted = lift_map_bound_template(&source, bundle.index(), &PortableLiftOptions::default());
+        assert!(lifted.ok, "{:?}", lifted.issues);
+        (lifted.template.unwrap(), bundle)
+    }
+
+    #[test]
+    fn pinned_match_scores_only_the_pinned_site_and_yields_the_identical_site() {
+        let (portable, bundle) = parallel_roads_portable();
+        let adapted = adapt_template(&portable);
+        let options = MatchOptions { roles: adapted.roles.clone(), ..Default::default() };
+        let full = crate::anchor::matcher::match_anchor_report(&adapted.anchor, bundle.index(), &options);
+        assert!(full.sites.len() >= 3, "fixture must offer several sites: {:?}", full.sites.len());
+        let wanted = full.sites.last().unwrap().clone();
+
+        let mut pinned_anchor = adapted.anchor.clone();
+        pinned_anchor.pin = Some(crate::anchor::MPin { map_id: bundle.index().map_id.clone(), site_id: wanted.site_id.clone() });
+        let pinned = crate::anchor::matcher::match_anchor_report(&pinned_anchor, bundle.index(), &options);
+        assert_eq!(pinned.sites, vec![wanted.clone()]);
+        assert_eq!(pinned.stats.frames_built, full.stats.frames_built, "frames are still built and capped as in a full match");
+        assert!(pinned.stats.sites_scored < full.stats.sites_scored, "{} vs {}", pinned.stats.sites_scored, full.stats.sites_scored);
+
+        let scoped = crate::anchor::matcher::match_anchor_report(
+            &adapted.anchor,
+            bundle.index(),
+            &MatchOptions { only_site_id: Some(wanted.site_id.clone()), ..options.clone() },
+        );
+        assert!(scoped.sites.iter().chain(&scoped.rejected).all(|site| site.site_id == wanted.site_id));
+        assert_eq!(scoped.sites, vec![wanted]);
+    }
+
+    #[test]
+    fn find_site_by_id_and_compile_at_a_resolved_site_match_the_full_path() {
+        use crate::materialize::{instantiate, instantiate_at_site, MaterializeOptions, SiteSelection};
+        let (portable, bundle) = parallel_roads_portable();
+        let full = crate::sites::match_on_map(&portable, &bundle, &crate::sites::SiteMatchOptions::default()).unwrap();
+        let wanted = full.report.sites.last().unwrap().clone();
+
+        let found = crate::sites::find_site(&portable, &bundle, SiteSelection::Id(&wanted.site_id)).unwrap();
+        assert_eq!(found, wanted);
+
+        let document = portable.to_value();
+        let options = MaterializeOptions::new();
+        let by_id = instantiate(&document, &bundle, SiteSelection::Id(&wanted.site_id), &options);
+        let at_site = instantiate_at_site(&document, &bundle, &found, &options);
+        match (by_id, at_site) {
+            (Ok(a), Ok(b)) => {
+                assert_eq!(serde_json::to_value(&a.manifest).unwrap(), serde_json::to_value(&b.manifest).unwrap());
+                assert_eq!(serde_json::to_value(&a.input).unwrap(), serde_json::to_value(&b.input).unwrap());
+            }
+            (Err(a), Err(b)) => assert_eq!(a.code, b.code),
+            (a, b) => panic!("paths disagree: by id ok={}, at site ok={}", a.is_ok(), b.is_ok()),
+        }
+
+        let mut foreign = found.clone();
+        foreign.anchor_id = "another-template".into();
+        assert_eq!(instantiate_at_site(&document, &bundle, &foreign, &options).unwrap_err().code, "site_mismatch");
+        let mut pinned = portable.to_value();
+        pinned["anchor"]["pin"] = json!({ "mapId": "lift-test", "siteId": full.report.sites[0].site_id });
+        if full.report.sites[0].site_id != found.site_id {
+            assert_eq!(instantiate_at_site(&pinned, &bundle, &found, &options).unwrap_err().code, "site_mismatch");
+        }
+
+        let unknown = crate::sites::find_site(&portable, &bundle, SiteSelection::Id("0000000000000000")).unwrap_err();
+        assert_eq!(unknown.code, "unknown_site");
+        let available = unknown.detail.as_ref().and_then(|d| d.get("available")).and_then(|v| v.as_array()).map_or(0, Vec::len);
+        assert_eq!(available, full.report.sites.len().min(10), "the refusal still names the available sites");
+    }
+
     #[test]
     fn rigid_pair_lateral_fraction_is_clamped_and_offset_keeps_the_true_distance() {
         // 12 m left of a 3.5 m lane: the raw fraction is ~3.4 lanes, outside the

@@ -483,6 +483,22 @@ fn compile_template(
     })
 }
 
+/// Compile at a site already resolved by ``find_site``, without re-matching.
+#[pyfunction]
+#[pyo3(signature = (template_json, bundle, site, *, seed = None, options_json = None))]
+fn compile_template_at_site(
+    template_json: &str,
+    bundle: &PyMapBundle,
+    site: &PySite,
+    seed: Option<&Bound<'_, PyAny>>,
+    options_json: Option<&str>,
+) -> PyResult<PyCompileResult> {
+    let seed = seed_of(seed)?;
+    Ok(PyCompileResult {
+        inner: rt::compile_template_at_site(template_json, &bundle.inner, &site.inner, seed, options_json).py()?,
+    })
+}
+
 /// Ranked ``SiteMatch`` JSON; ``options_json = {minScore?, maxSites?, exactCatalogSiteResolution?}``.
 #[pyfunction]
 #[pyo3(signature = (template_json, bundle, options_json = None))]
@@ -1647,6 +1663,7 @@ fn _native(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_template, m)?)?;
     m.add_function(wrap_pyfunction!(find_sites, m)?)?;
     m.add_function(wrap_pyfunction!(find_site, m)?)?;
+    m.add_function(wrap_pyfunction!(compile_template_at_site, m)?)?;
     m.add_function(wrap_pyfunction!(match_sites, m)?)?;
     m.add_function(wrap_pyfunction!(rehearse_situation, m)?)?;
     m.add_function(wrap_pyfunction!(solve_situation, m)?)?;
