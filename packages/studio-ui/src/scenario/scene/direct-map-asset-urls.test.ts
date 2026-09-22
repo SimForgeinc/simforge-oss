@@ -65,6 +65,35 @@ describe("direct map asset URL resolver", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it("settles a caller only once every one of its keys is known, across batches", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      const { assets } = JSON.parse(String(init?.body)) as { assets: Array<{ relativePath: string }> };
+      return response(assets.map(({ relativePath }) => ({ relativePath, url: `https://cdn/${relativePath}` }))) as Response;
+    });
+    const resolve = createDirectMapAssetUrlResolver("map-version");
+    const urls = Array.from({ length: 300 }, (_, index) => asset(`tile-${index}.bin`));
+    const result = await resolve(urls, new AbortController().signal);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result.size).toBe(300);
+    expect(result.get(asset("tile-299.bin"))).toBe("https://cdn/tile-299.bin");
+  });
+
+  it("does not re-request a key that is already in flight", async () => {
+    vi.useFakeTimers();
+    let complete!: (value: Response) => void;
+    const fetch = vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise((resolve) => { complete = resolve; }));
+    const resolve = createDirectMapAssetUrlResolver("map-version");
+    const first = resolve([asset("shared.bin")], new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(25);
+    const second = resolve([asset("shared.bin")], new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(25);
+    complete(response([{ relativePath: "shared.bin", url: "https://cdn/shared" }]) as Response);
+    expect((await first).get(asset("shared.bin"))).toBe("https://cdn/shared");
+    expect((await second).get(asset("shared.bin"))).toBe("https://cdn/shared");
+    expect(fetch).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
   it("passes through non-browser-assets URLs", async () => {
     const fetch = vi.spyOn(globalThis, "fetch");
     const resolve = createDirectMapAssetUrlResolver("map-version");
