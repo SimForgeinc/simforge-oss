@@ -194,6 +194,7 @@ export const rendertimeline_poseJson: (a: number, b: number, c: number, d: numbe
 export const rendertimeline_posesArray: (a: number, b: number) => [number, number, number];
 export const rendertimeline_samplerVersion: (a: number) => [number, number];
 export const rendertimeline_sceneFramesArray: (a: number, b: number, c: number, d: number) => [number, number, number];
+export const rendertimeline_sceneStateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const rendertimeline_sha256: (a: number) => [number, number, number, number];
 export const rendertimeline_signalsAtJson: (a: number, b: number) => [number, number, number, number];
 export const rendertimeline_tickCount: (a: number) => number;
