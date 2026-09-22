@@ -41,6 +41,7 @@ import {
   PRONTO_CHASE_CAMERA_SENSOR_ID,
   RENDER_DEFAULTS_EXTENSION_KEY,
   RENDER_SPEC_V3_SCHEMA,
+  cameraProfileCapabilities,
   parseRenderSpecV3,
   parseTemplate,
   type ActorSensor,
@@ -972,6 +973,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
         horizontalFovDeg: sensor.camera.horizontalFovDeg,
         nearM: sensor.camera.nearM,
         farM: sensor.camera.farM,
+        cameraProfile: sensor.profile,
       },
     };
   });
@@ -999,6 +1001,10 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
   const required = [
     ...new Set([
       ...sources.map((source) => `sensor.${source.modality}`),
+      ...sources.flatMap((source) =>
+        source.modality !== "lidar" && source.modality !== "radar"
+          ? cameraProfileCapabilities(source.attributes.cameraProfile)
+          : []),
       ...artifacts.map((artifact) => (artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`)),
       "environment.authored",
       "timing.fixed_step",
