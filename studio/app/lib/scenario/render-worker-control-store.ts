@@ -880,9 +880,9 @@ function identityKey(identity: RenderArtifactIdentity) {
   return `${identity.role}\0${identity.actorId ?? ""}\0${identity.sensorId ?? ""}\0${identity.modality ?? ""}`;
 }
 
-function expectedClosure(intentValue: unknown) {
+function expectedClosure(intentValue: unknown, rendererEngine: ActiveLease["renderer_engine"]) {
   const intent = parseRenderIntent(intentValue);
-  if (intent.engine === "native") {
+  if (rendererEngine === "native") {
     const expected = expectedNativeClosure(intent);
     expected.delete(identityKey({ role: "diagnostics", actorId: null, sensorId: null, modality: null }));
     return expected;
@@ -1154,7 +1154,7 @@ export async function completeRenderJobV2(input: {
 }) {
   const lease = await activeLease(input.leaseId, input.fenceToken, input.workerNodeId, input.jobId);
   if (!lease || lease.intent_sha256 !== input.intentSha256) return null;
-  const expected = expectedClosure(lease.render_intent);
+  const expected = expectedClosure(lease.render_intent, lease.renderer_engine);
   const actual = new Set(input.manifest.artifacts.filter((item) => item.identity.role !== "diagnostics").map((item) => identityKey(item.identity)));
   if (expected.size !== actual.size || [...expected].some((key) => !actual.has(key))) {
     throw new Error("render_artifact_closure_mismatch");
