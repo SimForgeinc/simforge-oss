@@ -12,7 +12,10 @@
  * `transparent`, `inherit`, `currentColor`, `100%`, ...). A value read through
  * a local `const` counts as the literal it holds; a value read from a token or
  * recipe module does not. A `@media (min-width…)` condition written as a
- * string, directly or through a local const, counts once per use.
+ * string, directly or through a local const, counts once per use when it is
+ * the only width query of its property: several on one property must stay
+ * literal (StyleX turns those into non-overlapping ranges only when it can
+ * read them), and so must a namespace-level (contextual) query.
  *
  * Dependency-free apart from `typescript`, which the repository root already
  * installs, so it runs before any package is built.
@@ -208,8 +211,14 @@ export function analyzeSource(fileName, source) {
   };
   const line = (node) => sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
 
+  const isWidthQuery = (member) => {
+    if (!ts.isPropertyAssignment(member)) return false;
+    const key = keyText(member.name);
+    return MEDIA_LITERAL.test(key.text) && (key.computed === null || key.computed.kind === "literal");
+  };
   function visitStyle(object, property, depth) {
     if (depth > 8) return;
+    const widthQueries = object.properties.filter(isWidthQuery).length;
     for (const member of object.properties) {
       if (ts.isSpreadAssignment(member)) {
         const target = member.expression;
@@ -221,7 +230,7 @@ export function analyzeSource(fileName, source) {
       }
       if (!ts.isPropertyAssignment(member)) continue;
       const key = keyText(member.name);
-      if (MEDIA_LITERAL.test(key.text) && (key.computed === null || key.computed.kind === "literal")) {
+      if (isWidthQuery(member) && property !== null && widthQueries === 1) {
         result.media += 1;
         result.literalValues.push({ line: line(member), category: "media", value: key.text });
       }

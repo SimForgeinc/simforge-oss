@@ -66,7 +66,7 @@ import it relatively; from `studio/app` import
 | `colors` | theme bridges (`bg`, `card`, `text`, `mutedForeground`, `border`), the plate (`panel*`), the ladders below, accent, status | the ladder step for the role, never an alpha |
 | `text` | faces, sizes, line heights, weights, tracking | a `type` recipe first; these for one-off layout of text |
 | `space` | `s0_5` … `s12`, the 0.25rem grid (`s3` = 0.75rem), plus shell widths | every gap, padding and margin |
-| `layout` | gutters, measures, breakpoints (`bpSm`, `bpMd`, `bpLg`, `bpXl`, `bp2xl`), `reducedMotion` | computed keys: `{ default: x, [layout.bpSm]: y }` |
+| `layout` | gutters, measures, breakpoints (`bpSm`, `bpMd`, `bpLg`, `bpXl`, `bp2xl`), `reducedMotion` | computed keys: `{ default: x, [layout.bpSm]: y }` (see Breakpoints below) |
 | `stroke` | `hairline` (1px), `thick` (2px) | border and rule widths |
 | `shadows` | focus rings, the few elevations | the `focus` recipe; elevation only for things that float |
 | `layers` | the global stacking bands | every `zIndex` |
@@ -88,6 +88,18 @@ The colour ladders, strongest step first:
 
 Names marked `@deprecated` in the token file still compile; do not add new
 uses.
+
+### Breakpoints
+
+A property that changes at **one** breakpoint uses the token:
+`{ default: "column", [layout.bpSm]: "row" }`. A property that changes at
+**several** writes the queries as literals,
+`{ default: 1, "@media (min-width: 640px)": 2, "@media (min-width: 1024px)": 3 }`:
+StyleX rewrites overlapping literal `min-width` queries into non-overlapping
+ranges at compile time, which it cannot do through a const, and without the
+ranges the wider query only wins by stylesheet order. The lint and the
+ratchet allow literals in exactly that case. Namespace-level (contextual)
+media keys are also literal; prefer nesting the query inside each property.
 
 ## Recipes
 

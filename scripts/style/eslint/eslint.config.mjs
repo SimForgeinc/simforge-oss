@@ -64,7 +64,9 @@ const banned = [
     message: "Studio is square: the global reset zeroes every radius. Use <Spinner>/<Dot> for round things.",
   },
   {
-    selector: "CallExpression[callee.property.name='create'] Property[key.type='Literal'][key.value=/^@media \\((min|max)-width/]",
+    // Only a property's single width query: several on one property stay
+    // literal so StyleX can turn them into ranges (see the style guide).
+    selector: "CallExpression[callee.property.name='create'] > ObjectExpression > Property > ObjectExpression > Property > ObjectExpression:not(:has(> Property[key.value=/^@media \\((min|max)-width/] ~ Property[key.value=/^@media \\((min|max)-width/])) > Property[key.type='Literal'][key.value=/^@media \\((min|max)-width/]",
     message: "Literal breakpoint. Use `[layout.bpSm]` (bpMd, bpLg, bpXl) from tokens.stylex.",
   },
   {
