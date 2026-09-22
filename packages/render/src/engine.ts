@@ -24,6 +24,12 @@ export interface RenderExecutionContext {
   readonly workspace: string;
   readonly signal: AbortSignal;
   readonly reportProgress: (record: RenderProgressRecord) => Promise<void>;
+  /**
+   * The device the job holds (measured by the worker after taking the GPU
+   * lock, so co-tenant renders are excluded but their idle residency is not).
+   * Engines refuse fast when a scene cannot fit instead of timing out.
+   */
+  readonly gpuMemory?: { readonly totalBytes: number; readonly freeBytes: number };
 }
 
 /** Declared input metadata an engine may inspect before any bulk download. */

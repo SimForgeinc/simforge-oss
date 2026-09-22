@@ -250,6 +250,19 @@ export const WorkerCacheStatusSchema = z.strictObject({
     diskFree: z.number().int().nonnegative().optional(),
   }),
   lastError: z.string().max(2048).optional(),
+  /** The render GPU as the driver reports it (free includes co-tenant residency). */
+  gpu: z.strictObject({ totalBytes: z.number().int().nonnegative(), freeBytes: z.number().int().nonnegative() }).optional(),
+  /**
+   * Scene memory each warm map needs per texture tier, measured from the
+   * cached KTX2 headers (textures + geometry + reserve; frame attachments
+   * are per job). Lets admission route or refuse before a lease.
+   */
+  demand: z.array(z.strictObject({
+    mapVersionId: IdSchema,
+    renderTextures: z.enum(['uastc-full', 'bc7-512']),
+    sceneBytes: z.number().int().nonnegative(),
+    textureBytes: z.number().int().nonnegative(),
+  })).max(2000).optional(),
   updatedAt: z.iso.datetime({ offset: true }),
 });
 export const WorkerCacheReportRequestSchema = z.strictObject({

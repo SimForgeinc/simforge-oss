@@ -217,6 +217,8 @@ type Candidate = {
   render_spec: unknown;
   intent_sha256: string;
   resource_request: unknown;
+  map_version_id?: string | null;
+  render_textures?: string | null;
 };
 
 type WorkerRow = {
@@ -232,6 +234,8 @@ type WorkerRow = {
   hardware_profile: string;
   /** `batch-v1` when the worker signs lease inputs lazily (label `inputUrls`). */
   input_urls?: string | null;
+  /** Per-map, per-tier scene memory this worker measured from its cache (`cacheStatus.demand`). */
+  cache_demand?: string | unknown[] | null;
 };
 
 function parseObject(value: string | Record<string, unknown>) {
@@ -312,6 +316,18 @@ function workerCanRun(worker: WorkerRow, candidate: Candidate) {
     typeof resources.estimatedGpuBytes !== "number"
     || resources.estimatedGpuBytes > (Number(worker.gpu_memory_mib) - 1024) * 1024 * 1024
   ) return false;
+  // Map textures dominate a native job's device memory. When this worker has
+  // measured the job's map at its tier, leave a job it cannot hold to a larger
+  // worker instead of leasing it into a scene-load failure.
+  if (candidate.renderer_engine === "native" && candidate.map_version_id && candidate.render_textures) {
+    const measured = (typeof worker.cache_demand === "string" ? JSON.parse(worker.cache_demand) as unknown[] : worker.cache_demand ?? [])
+      .find((entry) => {
+        const demand = entry as { mapVersionId?: unknown; renderTextures?: unknown };
+        return demand.mapVersionId === candidate.map_version_id && demand.renderTextures === candidate.render_textures;
+      }) as { sceneBytes?: unknown } | undefined;
+    if (typeof measured?.sceneBytes === "number"
+      && measured.sceneBytes + resources.estimatedGpuBytes > (Number(worker.gpu_memory_mib) - 1024) * 1024 * 1024) return false;
+  }
   const physicalSensors = new Set(sources.map((source) => `${source.actorId}\0${source.sensorId}`));
   if (physicalSensors.size > capability.data.limits.maxSimultaneousSensors) return false;
   if (physicalSensors.size === FULL_SENSOR_RIG_SOURCES
@@ -437,7 +453,9 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
   // to 32 map closures in one response, which exceeds the Data API's 1 MB cap
   // as soon as two large-map native jobs are queued.
   const candidates = await queryRows<Candidate>(
-    `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request
+    `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request,
+            render_intent->'scenarioRevision'->'map'->>'revisionId' AS map_version_id,
+            render_intent->>'renderTextures' AS render_textures
        FROM simforge.render_jobs
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
@@ -452,7 +470,8 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                 (metadata->>'gpuMemoryMiB')::integer AS gpu_memory_mib,
                 metadata->>'baseImagePlatformDigest' AS base_image_platform_digest,
                 capabilities::text AS capabilities,
-                metadata->'labels'->>'inputUrls' AS input_urls
+                metadata->'labels'->>'inputUrls' AS input_urls,
+                metadata->'cacheStatus'->'demand' AS cache_demand
            FROM simforge.worker_nodes
           WHERE registration_id = :registration_id AND id = :worker_node_id AND environment = :environment
             AND registration_state = 'active'

@@ -13,8 +13,8 @@ export {
   NATIVE_MAP_MAX_MEMBERS, NativeMapCapacityError, assertNativeMapMemberCapacity,
 } from './map-closure.js';
 export type { NativeMapClosure, NativeMapMemberInput } from './map-closure.js';
-export { planNativeTextureMembers, stageNativeTextureProfile, NativeTextureCapacityError } from './texture-profile.js';
-export type { NativeTextureMemberSource, NativeTexturePlan } from './texture-profile.js';
+export { NativeGpuMemoryError, ktx2VramBytes, measureNativeTextureDemand, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile, NativeTextureCapacityError, NATIVE_SCENE_RESERVE_BYTES } from './texture-profile.js';
+export type { NativeMapMaster, NativeTextureMemberSource, NativeTexturePlan } from './texture-profile.js';
 export type { NativeRenderTextures } from './texture-profile.js';
 export {
   DEFAULT_ACTOR_ASSETS_BASE_URL, NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_ACTOR_ASSETS_RELATIVE_PATH,

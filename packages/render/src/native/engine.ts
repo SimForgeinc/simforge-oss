@@ -33,7 +33,7 @@ import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVid
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
-import { planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
@@ -235,6 +235,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
         cacheDirectory: options.nativeCacheDirectory,
       });
+      // Fail in seconds, not after a startup timeout, when the device the job
+      // holds cannot take the scene at this tier (textures + geometry + frame
+      // attachments + reserve, the same estimate the admission check uses).
+      if (context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
+        throw new NativeGpuMemoryError(textureProfile.estimatedBytes, context.gpuMemory, intent.renderTextures);
+      }
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
       const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
@@ -334,10 +340,27 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
       });
-      const session = await startNativeRenderService({
-        binary, workspace: context.workspace, jobId: context.jobId, scenePath, signal: context.signal,
-        startupTimeoutMs: options.startupTimeoutMs, shmSizeMb: options.shmSizeMb,
-      });
+      // Scene load is the longest silent stretch of a large-map job: report
+      // it as `preparing` seconds against a budget that scales with the scene.
+      const startupTimeoutMs = options.startupTimeoutMs ?? nativeStartupTimeoutMs(textureProfile);
+      const loadStarted = performance.now();
+      const loadTicker = setInterval(() => {
+        const elapsedS = Math.min(startupTimeoutMs / 1000, (performance.now() - loadStarted) / 1000);
+        void context.reportProgress({
+          schema: 'simforge.render-progress/v1', jobId: context.jobId, attempt: context.attempt, sequence: 0,
+          timestamp: new Date().toISOString(), event: 'stage.progress', stage: 'preparing',
+          completed: Math.round(elapsedS), total: Math.round(startupTimeoutMs / 1000), unit: 'seconds',
+        }).catch(() => undefined);
+      }, 10_000);
+      let session;
+      try {
+        session = await startNativeRenderService({
+          binary, workspace: context.workspace, jobId: context.jobId, scenePath, signal: context.signal,
+          startupTimeoutMs, shmSizeMb: options.shmSizeMb,
+        });
+      } finally {
+        clearInterval(loadTicker);
+      }
       const { client } = session;
 
       const encoders = new Map<string, Encoder>();

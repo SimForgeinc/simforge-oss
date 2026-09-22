@@ -1,4 +1,5 @@
 import type { AppContext } from "@/app/lib/db/app-context";
+import { activeNativeGpuCapacities, knownNativeSceneDemand, NATIVE_GPU_HEADROOM_BYTES, NativeSceneMemoryError } from "./workers-prewarm-store";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
@@ -222,6 +223,7 @@ function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
   nativeAssets: readonly NativeAsset[],
+  fleetGpuBytes?: number,
 ): ScenarioRenderIntent {
   const content = typeof lineage.canonical_content === "string"
     ? JSON.parse(lineage.canonical_content) as Record<string, unknown>
@@ -281,7 +283,8 @@ function buildIntent(
     renderSpec: input.renderSpec,
     ...(input.engine === "native" ? {
       renderTextures: nativeRenderTextureTier(input.renderProfile, input.renderSpec.sources),
-      nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? 16 * 1024 ** 3,
+      // The fleet's real device size when known (largest active native worker), not an assumed 16 GiB.
+      nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? fleetGpuBytes ?? 16 * 1024 ** 3,
       ...(input.nativeVramBudgetBytes === undefined ? {} : { nativeVramBudgetBytes: input.nativeVramBudgetBytes }),
     } : {}),
     assets: [
@@ -352,7 +355,7 @@ export async function createRenderIntentJob(
       if (existing.revision_id !== input.revisionId
         || existing.execution_package_id !== input.executionPackageId
         || existing.renderer_engine !== input.engine
-        || (input.engine === "native" && existing.render_textures !== (input.renderProfile === "ml" ? "bc7-512" : "uastc-full"))
+        || (input.engine === "native" && existing.render_textures !== nativeRenderTextureTier(input.renderProfile, renderSpec.sources))
         || (input.engine === "native" && (existing.native_vram_budget === null ? undefined : Number(existing.native_vram_budget)) !== input.nativeVramBudgetBytes)
         || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)) {
         throw new Error("uniscenario_render_intent_idempotency_conflict");
@@ -409,7 +412,21 @@ export async function createRenderIntentJob(
     );
     if (!lineage) return null;
     let nativeAssets: NativeAsset[] = [];
+    let fleetGpuBytes: number | undefined;
     if (input.engine === "native") {
+      const fleet = await activeNativeGpuCapacities(tx);
+      fleetGpuBytes = fleet.length > 0 ? Math.max(...fleet) : undefined;
+      // Refuse at submission, with advice, when warm workers have measured
+      // this map at this tier and no native worker's GPU can hold it; the
+      // alternative was a lease, minutes of scene loading and a timeout.
+      const renderTextures = nativeRenderTextureTier(input.renderProfile, renderSpec.sources);
+      const sceneBytes = await knownNativeSceneDemand(lineage.map_revision_id, renderTextures, tx);
+      if (sceneBytes !== null) {
+        const needed = sceneBytes + resources.estimatedGpuBytes;
+        if (fleet.length > 0 && fleet.every((bytes) => needed > bytes - NATIVE_GPU_HEADROOM_BYTES)) {
+          throw new NativeSceneMemoryError(needed, Math.max(...fleet), renderTextures);
+        }
+      }
       const nativeMembers = await tx.queryRows<NativeMapMemberRow>(
         `SELECT m.relative_path, b.sha256, b.byte_length, s.object_count
            FROM simforge.map_versions mv
@@ -455,7 +472,7 @@ export async function createRenderIntentJob(
         sizeBytes: actorClosure.sizeBytes,
       });
     }
-    const intent = buildIntent(input, lineage, nativeAssets);
+    const intent = buildIntent(input, lineage, nativeAssets, fleetGpuBytes);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({
       schema: "uniscenario.render-control-lineage/v1",
