@@ -66,8 +66,6 @@ class AlbedoInspection {
   readonly fullTarget = new WebGLRenderTarget(1, 1, {
     depthBuffer: false, stencilBuffer: false, minFilter: NearestFilter, magFilter: NearestFilter,
   });
-  readonly samplePixel = new Uint8Array(4);
-  fullPixels = new Uint8Array(0);
   readonly viewport = new Vector4();
   readonly scissor = new Vector4();
   readonly clearColor = new Color();
@@ -78,8 +76,21 @@ class AlbedoInspection {
     this.scene.add(quad);
   }
 
-  maskOnly(renderer: WebGLRenderer, texture: Texture, width: number, height: number): boolean {
-    const target = renderer.getRenderTarget();
+  /**
+   * Render `texture` at `level` into `target` and start an asynchronous
+   * readback of it.
+   *
+   * The readback used to be `readRenderTargetPixels`, a synchronous
+   * `glReadPixels` that waits for every queued GPU command — including the
+   * texture uploads the paced uploader just issued — once per albedo texture.
+   * Profiled on a cold Easterbrook load that stall was the largest single
+   * main-thread cost (~1.9 s). `readRenderTargetPixelsAsync` issues the copy
+   * into a pixel-pack buffer in the same command stream (so reusing the
+   * target afterwards is safe) and resolves on a fence instead.
+   */
+  #readAsync(renderer: WebGLRenderer, texture: Texture, target: WebGLRenderTarget, level: number,
+    width: number, height: number): Promise<Uint8Array> {
+    const current = renderer.getRenderTarget();
     const cubeFace = renderer.getActiveCubeFace();
     const mipLevel = renderer.getActiveMipmapLevel();
     renderer.getViewport(this.viewport);
@@ -92,6 +103,8 @@ class AlbedoInspection {
     const shadowAutoUpdate = renderer.shadowMap.autoUpdate;
     const shadowNeedsUpdate = renderer.shadowMap.needsUpdate;
     this.material.uniforms.sourceMap!.value = texture;
+    this.material.uniforms.sourceLevel!.value = level;
+    const pixels = new Uint8Array(width * height * 4);
     try {
       renderer.xr.enabled = false;
       renderer.shadowMap.autoUpdate = false;
@@ -99,35 +112,13 @@ class AlbedoInspection {
       renderer.autoClear = true;
       renderer.setClearColor(0, 0);
       renderer.setScissorTest(false);
-      const lastLevel = texture.mipmaps.length > 0
-        ? texture.mipmaps.length - 1
-        : texture.generateMipmaps ? Math.floor(Math.log2(Math.max(width, height))) : 0;
-      this.material.uniforms.sourceLevel!.value = lastLevel;
-      renderer.setRenderTarget(this.sampleTarget);
+      if (target.width !== width || target.height !== height) target.setSize(width, height);
+      renderer.setRenderTarget(target);
       renderer.render(this.scene, this.camera);
-      this.samplePixel.fill(0);
-      renderer.readRenderTargetPixels(this.sampleTarget, 0, 0, 1, 1, this.samplePixel);
-      if (this.samplePixel[3] !== 255) throw new Error('Albedo inspection failed to render its sample');
-      if (this.samplePixel[0] !== 0) return false;
-
-      // A few nonzero texels can round down to zero in the final authored mip.
-      // It is only a conservative prefilter. NEVER classify from it alone.
-      this.fullTarget.setSize(width, height);
-      const length = width * height * 4;
-      if (this.fullPixels.length < length) this.fullPixels = new Uint8Array(length);
-      this.material.uniforms.sourceLevel!.value = 0;
-      renderer.setRenderTarget(this.fullTarget);
-      renderer.render(this.scene, this.camera);
-      this.fullPixels.fill(0, 0, length);
-      renderer.readRenderTargetPixels(this.fullTarget, 0, 0, width, height, this.fullPixels);
-      for (let offset = 0; offset < length; offset += 4) {
-        if (this.fullPixels[offset + 3] !== 255) throw new Error('Albedo inspection failed to render all base texels');
-        if (this.fullPixels[offset] !== 0) return false;
-      }
-      return true;
+      return renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height, pixels) as Promise<Uint8Array>;
     } finally {
       this.material.uniforms.sourceMap!.value = null;
-      renderer.setRenderTarget(target, cubeFace, mipLevel);
+      renderer.setRenderTarget(current, cubeFace, mipLevel);
       renderer.setViewport(this.viewport);
       renderer.setScissor(this.scissor);
       renderer.setScissorTest(scissorTest);
@@ -137,6 +128,27 @@ class AlbedoInspection {
       renderer.shadowMap.autoUpdate = shadowAutoUpdate;
       renderer.shadowMap.needsUpdate = shadowNeedsUpdate;
     }
+  }
+
+  async maskOnly(renderer: WebGLRenderer, texture: Texture, width: number, height: number,
+    disposed: () => boolean): Promise<boolean> {
+    const lastLevel = texture.mipmaps.length > 0
+      ? texture.mipmaps.length - 1
+      : texture.generateMipmaps ? Math.floor(Math.log2(Math.max(width, height))) : 0;
+    const sample = await this.#readAsync(renderer, texture, this.sampleTarget, lastLevel, 1, 1);
+    if (sample[3] !== 255) throw new Error('Albedo inspection failed to render its sample');
+    if (sample[0] !== 0) return false;
+    // A few nonzero texels can round down to zero in the final authored mip.
+    // It is only a conservative prefilter. NEVER classify from it alone. The
+    // texture may have been evicted while the sample was in flight; an
+    // unclassified texture keeps the ordinary shader, which is the safe side.
+    if (disposed()) return false;
+    const full = await this.#readAsync(renderer, texture, this.fullTarget, 0, width, height);
+    for (let offset = 0; offset < full.length; offset += 4) {
+      if (full[offset + 3] !== 255) throw new Error('Albedo inspection failed to render all base texels');
+      if (full[offset] !== 0) return false;
+    }
+    return true;
   }
 
   dispose(): void {
@@ -172,25 +184,56 @@ export function inspectAlbedoTexture(renderer: WebGLRenderer, texture: Texture):
     inspection = new AlbedoInspection();
     inspections.set(renderer, inspection);
   }
-  const maskOnly = inspection.maskOnly(renderer, texture, image.width, image.height);
-  const error = gl.getError();
-  if (error !== gl.NO_ERROR) throw new Error(`Albedo inspection failed with WebGL error ${error}`);
-  classifications.set(texture.source, maskOnly);
-  if (!maskOnly) return;
+  // Classified asynchronously: until the answer arrives the texture keeps the
+  // ordinary shader (the answer for nearly every texture). A confirmed
+  // mask-only source recompiles the materials that registered for it.
+  classifications.set(texture.source, false);
+  let disposed = false;
+  texture.addEventListener('dispose', () => { disposed = true; });
+  const { width, height } = image;
+  inspection.maskOnly(renderer, texture, width, height, () => disposed).then((maskOnly) => {
+    if (!maskOnly || disposed) return;
+    classifications.set(texture.source, true);
+    for (const listener of maskOnlyListeners.get(texture.source) ?? []) listener();
+    maskOnlyListeners.delete(texture.source);
+    warnMaskOnly(texture, width, height);
+  }, (error: unknown) => {
+    if (disposed) return;
+    console.warn('[albedo-inspection] classification failed; keeping the ordinary shader', error);
+  });
+}
+
+const maskOnlyListeners = new WeakMap<object, Set<() => void>>();
+
+/**
+ * Run `listener` if `texture` is later confirmed mask-only. Classification is
+ * asynchronous, so a material compiled before the answer must be told to
+ * recompile with the mask-only program.
+ */
+export function onAlbedoMaskOnly(texture: Texture, listener: () => void): void {
+  if (classifications.get(texture.source) === true) return;
+  let listeners = maskOnlyListeners.get(texture.source);
+  if (!listeners) {
+    listeners = new Set();
+    maskOnlyListeners.set(texture.source, listeners);
+  }
+  listeners.add(listener);
+}
+
+function warnMaskOnly(texture: Texture, width: number, height: number): void {
   const source: unknown = texture.userData.mapTexture?.url;
   const sourceUrl = typeof source === 'string' ? source : null;
   const sourceKey = sourceUrl?.match(/\/([a-f0-9]{64})\.ktx2(?:$|\?)/)?.[1] ?? sourceUrl;
-  if (!(sourceKey ? warnedSourceUrls.has(sourceKey) : warnedSources.has(texture.source))) {
-    if (sourceKey) warnedSourceUrls.add(sourceKey);
-    else warnedSources.add(texture.source);
-    console.warn('[map-content-defect] albedo-rgb-missing', {
-      texture: texture.name,
-      source: sourceUrl,
-      width: image.width,
-      height: image.height,
-      interpretation: 'baseColorFactor RGB with authored texture alpha',
-    });
-  }
+  if (sourceKey ? warnedSourceUrls.has(sourceKey) : warnedSources.has(texture.source)) return;
+  if (sourceKey) warnedSourceUrls.add(sourceKey);
+  else warnedSources.add(texture.source);
+  console.warn('[map-content-defect] albedo-rgb-missing', {
+    texture: texture.name,
+    source: sourceUrl,
+    width,
+    height,
+    interpretation: 'baseColorFactor RGB with authored texture alpha',
+  });
 }
 
 export function disposeAlbedoInspection(renderer: WebGLRenderer): void {
