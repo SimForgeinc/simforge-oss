@@ -42,8 +42,22 @@ interface ActiveJobState {
   heartbeatError?: unknown;
 }
 
+/**
+ * Deployed control planes cap `failure` at 2,000 characters; a longer message
+ * (a native service log tail) made the fenced failure itself 400, which
+ * crashed the worker and left the job leased until expiry. Keep the head and
+ * the tail, drop ANSI colour codes.
+ */
+export function boundedFailureMessage(raw: string, limit = 1800): string {
+  // eslint-disable-next-line no-control-regex
+  const message = raw.replace(/\u001b\[[0-9;]*m/g, '');
+  if (message.length <= limit) return message;
+  const head = Math.floor(limit * 0.6);
+  return `${message.slice(0, head)}\n…[${message.length - limit} chars elided]…\n${message.slice(message.length - (limit - head - 40))}`;
+}
+
 function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = boundedFailureMessage(error instanceof Error ? error.message : String(error));
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
   if (error instanceof UnsupportedRenderIntentError) return { code: error.code, message, retryable: false };
   if (/integrity mismatch|intent hash mismatch|invalid/i.test(message)) return { code: 'render.invalid_input', message, retryable: false };
@@ -403,7 +417,14 @@ async function executeClaim(
         failure,
       }, reportingSignal));
     } catch (reportError) {
-      throw new AggregateError([effectiveError, reportError], 'render failed and fenced failure reporting also failed');
+      // The lease expires and the control plane requeues the job; exiting the
+      // worker would only add a restart on top.
+      console.error(JSON.stringify({
+        event: 'job.fail_report_failed',
+        jobId: job.jobId,
+        failure,
+        error: reportError instanceof Error ? reportError.message : String(reportError),
+      }));
     }
   } finally {
     state.heartbeatController.abort(new Error('job finalized'));
