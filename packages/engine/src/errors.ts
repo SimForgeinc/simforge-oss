@@ -35,7 +35,9 @@ export type SimIssueCode =
   | 'arrival_unsolvable'
   | 'lane_change_illegal'
   | 'lateral_duration_clamped'
-  | 'lateral_tracking_failed';
+  | 'lateral_tracking_failed'
+  // physical plausibility of the executed motion
+  | 'implausible_motion';
 
 export type SimIssueSeverity = 'error' | 'warning';
 

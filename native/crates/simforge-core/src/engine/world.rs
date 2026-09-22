@@ -1386,12 +1386,65 @@ impl Simulation {
             ));
         }
         let trace = self.build_trace()?;
+        let implausible = self.implausible_motion_issues(&trace);
+        let mut issues = self.issues;
+        issues.extend(implausible);
         Ok(SimResult {
             input: self.input,
             trace,
-            issues: self.issues,
+            issues,
             arrival: self.arrival,
         })
+    }
+
+    /// The run's own trace, audited for motion no vehicle can perform with
+    /// the exact profiles it was integrated with. One warning per actor, so a
+    /// regression shows up in every consumer of `issues` (the editor's
+    /// readiness drawer, the CLI, batch ledgers) instead of as a spinning car.
+    fn implausible_motion_issues(&self, trace: &crate::trace::SimTrace) -> Vec<SimIssue> {
+        let audit = crate::trace::plausibility::audit_motion_with(trace, |id, kind| {
+            self.physics
+                .body(id)
+                .and_then(|body| self.physics.profile(body).copied())
+                .or_else(|| crate::physics::actor_physics_profile(kind).copied())
+        });
+        let mut first: BTreeMap<&str, (&crate::trace::plausibility::MotionFinding, usize)> =
+            BTreeMap::new();
+        for finding in audit.unexplained() {
+            first
+                .entry(finding.actor_id.as_str())
+                .and_modify(|(_, count)| *count += 1)
+                .or_insert((finding, 1));
+        }
+        first
+            .into_iter()
+            .map(|(actor_id, (finding, count))| {
+                let mut detail = serde_json::Map::new();
+                detail.insert("actorId".into(), actor_id.into());
+                detail.insert("check".into(), finding.code.as_str().into());
+                detail.insert("t".into(), finding.t.into());
+                detail.insert("measured".into(), finding.measured.into());
+                detail.insert("limit".into(), finding.limit.into());
+                detail.insert("ticks".into(), count.into());
+                detail.insert("ambient".into(), finding.ambient.into());
+                let path = self
+                    .input
+                    .actors
+                    .iter()
+                    .position(|a| a.id == actor_id)
+                    .map_or_else(|| "actors".to_owned(), |i| format!("actors[{i}]"));
+                SimIssue::warning(
+                    SimIssueCode::ImplausibleMotion,
+                    path,
+                    format!(
+                        "actor {actor_id} moved in a physically impossible way ({}) at t={:.2}s on {count} tick(s)",
+                        finding.code.as_str(),
+                        finding.t
+                    ),
+                )
+                .with_detail(detail)
+            })
+            .collect()
     }
 
     pub fn advance(
