@@ -30,6 +30,10 @@
       "./snow-cover": {
         "types": "./dist/scripts/snow-cover.d.mts",
         "default": "./dist/scripts/snow-cover.mjs"
+      },
+      "./sumo-network": {
+        "types": "./dist/scripts/sumo-network.d.mts",
+        "default": "./dist/scripts/sumo-network.mjs"
       }
     }
   },
@@ -62,6 +66,11 @@
       "development": "./scripts/snow-cover.mjs",
       "types": "./dist/scripts/snow-cover.d.mts",
       "default": "./dist/scripts/snow-cover.mjs"
+    },
+    "./sumo-network": {
+      "development": "./scripts/sumo-network.mjs",
+      "types": "./dist/scripts/sumo-network.d.mts",
+      "default": "./dist/scripts/sumo-network.mjs"
     }
   },
   "files": [
