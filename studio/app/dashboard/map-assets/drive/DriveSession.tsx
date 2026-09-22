@@ -15,6 +15,7 @@ import type { ManualDriveRecording, ScenarioTemplateV2 } from "@simforge-oss/sce
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
+import { useDirectMapAssetUrlResolver } from "@simforge-oss/studio-ui/scenario/scene/direct-map-asset-urls";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
@@ -120,30 +121,7 @@ export function DriveSession({
   onExit: () => void;
 }) {
   const isTake = mode === "take";
-  const resolveMapAssetUrls = useCallback(async (urls: readonly string[], signal: AbortSignal) => {
-    const assets = urls.flatMap((url) => {
-      const parsed = new URL(url, window.location.origin);
-      const match = /^\/api\/simforge\/maps\/[^/]+\/browser-assets\/(.+)$/.exec(parsed.pathname);
-      return match ? [{ mapVersionId: map.versionId, relativePath: match[1]!.split("/").map(decodeURIComponent).join("/") }] : [];
-    });
-    if (assets.length === 0) return new Map<string, string>();
-    const response = await fetch("/api/simforge/maps/cache-download-urls", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ assets }),
-      signal,
-    });
-    if (!response.ok) throw new Error(`URL resolver failed: ${response.status}`);
-    const payload = await response.json() as { assets?: Array<{ relativePath: string; url: string }> };
-    return new Map(urls.flatMap((url) => {
-      const parsed = new URL(url, window.location.origin);
-      const decodedPath = decodeURIComponent(parsed.pathname);
-      const asset = payload.assets?.find((candidate) =>
-        decodedPath.endsWith(`/browser-assets/${candidate.relativePath}`));
-      return asset ? [[url, asset.url] as const] : [];
-    }));
-  }, [map.versionId]);
+  const resolveMapAssetUrls = useDirectMapAssetUrlResolver(map.versionId);
   const graphicsTarget = useMemo(() => ({ manifestUrl: map.browserManifestUrl, label: map.label }), [map.browserManifestUrl, map.label]);
   useRegisterRenderingBenchmarkTarget(graphicsTarget);
   const [startError, setStartError] = useState<string | null>(null);
@@ -734,6 +712,30 @@ export function DriveSession({
           setStartError(errorMessage(reason));
         }}
         onMapLoaded={() => setMapLoaded(true)}
+        initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
+        onDisposed={onViewerDisposed}
+        role="application"
+        tabIndex={0}
+      />
+      <EditorSceneEnvironmentBridge
+        active={mapLoaded}
+        actorRenderer={bridge?.actors ?? null}
+        document={document}
+        quality={quality}
+        viewer={viewer}
+      />
+      <CityView
+        ariaLabel={`Driving ${vehicleLabel} on ${map.label}`}
+        {...stylex.props(driveFrame.canvas)}
+        key={quality}
+        manifestUrl={map.browserManifestUrl}
+        onError={(reason) => {
+          setMapLoaded(false);
+          setMapLoadError(reason);
+          setStartError(errorMessage(reason));
+        }}
+        onMapLoaded={() => setMapLoaded(true)}
+        onReady={onViewerReady}
         initialOptions={{ ...sceneViewerOptions(quality), resolveMapAssetUrls, resolveAssetUrls: resolveMapAssetUrls }}
         onDisposed={onViewerDisposed}
         role="application"
