@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { gunzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   FileRegistryBackend,
@@ -170,6 +171,28 @@ function emptyGlb(): Buffer {
   header.writeUInt32LE(0x4e4f534a, 16);
   return Buffer.concat([header, json]);
 }
+
+it('publishes additive compressed JSON without changing closure identities or original bytes', async () => {
+  const backend = new ConflictBackend(0);
+  Object.defineProperty(backend, 'url', { value: 's3://registry-test' });
+  const source = masterInput();
+  const definition = Buffer.from(JSON.stringify({ tiles: [{ file: 'tile.glb' }] }));
+  const hash = sha256(definition);
+  const key = `blobs/sha256/${hash.slice(0, 2)}/${hash}`;
+  const closure: MapClosure = {
+    ...source.closure,
+    members: { ...source.closure.members, 'definition.json': { sha256: hash, bytes: definition.length } },
+  };
+  const input: Parameters<typeof publishVersion>[1] = { name: 'compressed-map', version: 'v1', closure,
+    files: { ...source.files, 'definition.json': definition } };
+  await publishVersion(backend, input);
+  expect(await backend.get(key)).toEqual(definition);
+  expect(gunzipSync(await backend.get(`${key}.gz`))).toEqual(definition);
+  expect(closure.members['definition.json']?.sha256).toBe(hash);
+  const sibling = await backend.get(`${key}.gz`);
+  await publishVersion(backend, input);
+  expect(await backend.get(`${key}.gz`)).toBe(sibling);
+});
 
 describe('file registry', () => {
   it('keeps a prebuilt stage identity and rejects changed content beneath it', async () => {

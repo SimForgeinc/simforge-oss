@@ -127,6 +127,7 @@ export async function streamCachedObject(
       storedAt.bucket,
       member.sha256,
       member.byteLength,
+      member.mediaType === "application/json",
     );
     const redirect = objectRedirect(url, 302);
     redirect.headers.set("Cache-Control", browserAssetRedirectCacheControl());

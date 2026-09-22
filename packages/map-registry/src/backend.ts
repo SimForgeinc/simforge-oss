@@ -21,6 +21,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 export interface PutOptions {
   ifAbsent?: boolean;
   ifMatch?: string;
+  contentEncoding?: 'gzip';
+  contentType?: string;
+  metadata?: Record<string, string>;
 }
 
 export interface VersionedObject {
@@ -315,6 +318,9 @@ export class S3RegistryBackend implements RegistryBackend {
           Bucket: this.bucket,
           Key: this.objectKey(key),
           Body: bytes,
+          ContentEncoding: options.contentEncoding,
+          ContentType: options.contentType,
+          Metadata: options.metadata,
           ...(options.ifAbsent ? { IfNoneMatch: '*' } : {}),
           ...(options.ifMatch ? { IfMatch: options.ifMatch } : {}),
         }),

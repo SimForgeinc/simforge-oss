@@ -146,7 +146,7 @@ export interface TileStreamLayerOptions {
 }
 
 const MAX_FAILURES = 2;
-const MAX_UPLOAD_BACKLOG = 3;
+const MAX_UPLOAD_BACKLOG = 12;
 
 /**
  * Screen-space-error driven LOD streaming for one class of tiles.

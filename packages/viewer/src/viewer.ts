@@ -360,6 +360,7 @@ export class CityViewer {
 
   private manifest: CityManifest | null = null;
   private variantManifest: CityAssetVariantManifest | null = null;
+  private texturePreparation: Promise<void> = Promise.resolve();
   private staticSemantics: StaticSemantics | null = null;
   private capabilities: readonly string[] = [];
   private assetBase = '';
@@ -702,7 +703,6 @@ export class CityViewer {
     const center = this.sceneBox.getCenter(new Vector3());
     const size = this.sceneBox.getSize(new Vector3());
     this.frameCamera(initialEditorFocus(center, manifest.tiles), size);
-    await this.configureTextureTier();
 
     const sunDir = manifest.shadowLightmap?.sunDirection ?? [-0.5, -0.6, -0.6];
     const sunTravel = new Vector3(sunDir[0] ?? -0.5, sunDir[1] ?? -0.6, sunDir[2] ?? -0.6);
@@ -728,6 +728,11 @@ export class CityViewer {
       ? Promise.resolve()
       : this.loadVegetationInstances(manifest);
 
+    // The manifest is the small tile index. Fetch geometry while the larger
+    // texture definition is downloading; parsing waits for its digest-checked
+    // texture mappings so no full-resolution source images are requested.
+    this.texturePreparation = this.configureTextureTier();
+    void this.texturePreparation.catch(() => undefined);
     this.createRoadLayer(manifest);
     this.createCityLayer(manifest);
     if (this.disposed) return;
@@ -744,6 +749,8 @@ export class CityViewer {
       if (!this.disposed) this.recordStreamingError(error);
     });
     this.refreshWeatherAppearance();
+    await this.texturePreparation;
+    if (this.disposed) return;
     this.mapAdmitted = true;
     // "Loaded" has to mean "on screen". Until this waited, `loadMap` resolved
     // as soon as the layers existed, so every consumer announced a ready scene
@@ -1224,6 +1231,10 @@ export class CityViewer {
 
   /** Tier image bindings are immutable; failed texture tiers never fall back to full downloads. */
   private async parseAsset(sourceFile: string, signal: AbortSignal, sourceBytes?: number | null) {
+    const earlySource = this.options.assetVariant !== 'geometry-only'
+      ? this.fetchBuffer(resolveUrl(this.assetBase, sourceFile), signal, sourceBytes)
+      : null;
+    const [sourceBuffer] = await Promise.all([earlySource, this.texturePreparation]);
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
@@ -1237,7 +1248,9 @@ export class CityViewer {
     const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
-      const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
+      const buffer = sourceBuffer && selected.file === sourceFile
+        ? sourceBuffer
+        : await this.fetchBuffer(selectedUrl, signal, selectedBytes);
       const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(selectedUrl));
       requireRenderableGeometry(parsed.scene, sourceFile);
       this.variantLoads[selected.variant]++;
