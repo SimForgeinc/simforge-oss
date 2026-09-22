@@ -96,6 +96,23 @@ export async function loadInstalledSumoNetwork(mapId: string): Promise<SumoTraff
 }
 
 /**
+ * A concrete instance as the SUMO job executes it: the map's signal programs
+ * and stop controls added (as the compiler adds them), and any native ambient
+ * population removed — SUMO replaces it, never mixes with it.
+ */
+export function sumoExecutionInput(input: SimScenarioInput, bundle: MapBundle): SimScenarioInput {
+  const controls = bundle.controlPlan();
+  const signalIds = new Set(input.signalPrograms.map((program) => program.id));
+  const controlIds = new Set(input.roadControls.map((control) => control.id));
+  return {
+    ...input,
+    actors: input.actors.filter((actor) => !actor.tags.includes('ambient')),
+    signalPrograms: [...input.signalPrograms, ...controls.signalPrograms.filter((program) => !signalIds.has(program.id))],
+    roadControls: [...input.roadControls, ...controls.roadControls.filter((control) => !controlIds.has(control.id))],
+  };
+}
+
+/**
  * Simulate the authored actors (ambient off), run the worker SUMO step and
  * merge it: the authoritative SUMO pipeline on one host.
  */
