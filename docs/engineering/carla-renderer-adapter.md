@@ -144,23 +144,53 @@ the fail-safe label.
 
 ### Motion, collisions, and determinism
 
-Trajectory replay applies pose plus linear/angular velocity in a synchronous
-batch immediately before each tick. Physics/autopilot is disabled for replayed
-actors so CARLA cannot silently rewrite semantics. Collision sensors still
-record overlaps, but CARLA response does not alter the next authoritative pose.
-This is a renderer parity mode, not a CARLA-physics validation mode.
+CARLA is a renderer of the scenario. The default execution mode is
+`trace-replay`: kinematic replay of the canonical trace through the shared
+render-timeline sampler (`docs/engineering/render-timeline.md`).
 
-In the `native-physics` execution mode, vehicles are the only actors CARLA
-physics moves. Walkers and props are always replayed kinematically with
-physics off, grounded on the cooked mesh by a label-filtered ray, and verified
-by the pose gates (see `adapters/carla-exec/README.md`). CARLA 0.10 props ignore
-post-spawn transforms and never simulate physics, and `WalkerControl` reaches
-only about 5% of the commanded walker speed. Left to physics, props floated at
-their spawn lift and pedestrians stood still.
+- Every replayed actor (vehicle, walker or prop) spawns at its sampled pose
+  with physics off before the first tick. There is no settle phase, no nudging
+  and no cooked-mesh raycast placement.
+- Each tick, one batched `apply_batch_sync` sets every actor's transform
+  (position, heading, pitch, roll) from `pose(timeline, actorId, t)`. The same
+  batch feeds walker speed to the locomotion blend and target velocities.
+  Lights and signal states come from the timeline, and only changes are
+  written.
+- After the tick, the observed transforms of every live body (one world
+  snapshot) are compared with the sampler. The tolerances are 1 cm and 0.1°,
+  with exact lifecycle and signal closure. The gate is **blocking**: a
+  violation fails the job, `run-intent` exits non-zero, and the control plane
+  refuses any trace-replay evidence whose recorded maxima exceed the limits
+  (SimCloud migration `20260922150100`).
+- Contacts are the trace's events. Replay attaches no collision sensors, and
+  CARLA physics can never rewrite a pose.
+- Time: plan `t = 0` is the clip start after the warm-up, and the warm-up is
+  never rendered. Captures show exactly `k / fps`. Rates that divide 50 land on
+  ticks. Other rates render on the nearest tick with the timeline sampled at
+  the exact frame time (manifest `capture.policy`, per-frame `contentTimeS`).
+- Map: the world is bound by the package XODR digest, never by name. See
+  "Signals and stop lines" for signal identity.
 
-For a later control-input mode, apply throttle/brake/steer or WalkerControl and
-let CARLA physics own motion. That mode needs a different capability label and
-looser comparator profile. Never show its result as trajectory replay.
+`native-physics` survives only as the opt-in **physics validation** mode,
+selected by an intent that asks for `actor.native_controls`. It drives
+vehicles with throttle, brake and steer toward the trace. Walkers and props
+stay kinematic (CARLA 0.10 props ignore post-spawn transforms, and
+`WalkerControl` reaches about 5% of the commanded speed). Pose gates apply.
+Its readback after the tick for frame `i` is compared with frame `i + 1`,
+which is the state that tick produces. Its outputs carry `purpose:
+physics-validation` and are never presented as the scenario's render.
+
+Replay approximations (listed in every manifest under `approximations`):
+
+- no suspension dynamics; body attitude is the timeline's road and
+  acceleration pitch/roll;
+- kinematic wheels do not spin or steer;
+- walker gait is CARLA's speed-driven locomotion blend;
+- CARLA radar velocity comes from physical velocity, so each radar CSV also
+  carries the timeline Doppler (`timeline_velocity_mps`);
+- no physical contact impulses;
+- motion blur off;
+- a moving prop is respawned per pose change.
 
 Deterministic reruns require identical CARLA server/client builds, map/assets,
 fixed delta, seeds, quality settings, sensor attributes, GPU/driver, and one tick
@@ -184,19 +214,23 @@ verdict.
 ## Acceptance and evidence
 
 For every required fixture, run at least three fresh reruns and retain immutable
-receipts. The trajectory-replay gate is:
+receipts. The trace-replay gate (blocking, evaluated every tick against the
+render-timeline sampler) is:
 
-- initial pose equal at the first fixed frame;
-- planar position error <= **0.25 m** at every required sample;
-- heading error <= **2 degrees**;
-- speed error <= **0.25 m/s**;
-- event, lifecycle, collision, and signal edges within **one fixed step**;
-- identical actor lifecycle and exact actor/signal identity closure;
-- matching road/lane occupancy when both sides expose it;
-- no unexpected off-road, collision, teleport, missing sensor frame, or signal
-  read-back mismatch;
+- position error, ground-contact z included, <= **1 cm** for every present body;
+- heading, pitch and roll error <= **0.1 degrees**;
+- presence exactly as the timeline says (spawn, despawn, dropped bodies fail);
+- signal state exactly as the timeline says;
+- identical actor/signal identity closure and an exact map binding (or an
+  explicitly labelled approximate map);
+- no missing sensor frame, and every capture labelled with the clip time it
+  shows;
 - byte-identical numerical report hashes across deterministic reruns (sensor
   media digests are separately scoped to a qualified hardware image).
+
+The physics-validation mode keeps its own looser profile (2 m / 45° / 2 m/s
+ceilings with a 0.25 m / 2° / 0.25 m/s reference band). It certifies nothing
+about the scenario render.
 
 Every result states CARLA/server/client versions, engine branch (UE4/UE5), map
 and asset digests, GPU/driver, fixed step, seed, sensor configuration, bridge
@@ -222,6 +256,23 @@ factor. Qualify representative workloads on the deployment hardware and report
 median/p95 tick and sensor latency, GPU memory high-water mark, dropped frames,
 and achieved simulation-to-wall-time ratio. Use CARLA no-rendering mode only for
 control/conformance tests; camera acceptance necessarily enables rendering.
+
+### Trace-replay qualification (CARLA 0.10.0 / UE5.5, RTX 5080, 2026-09-22)
+
+The runs used the same server and image for both the rc.71 physics path and
+trace replay.
+
+| | rc.71 physics (before) | trace replay (after) |
+|---|---|---|
+| d9d7 Richmond, `run-intent`, 2 × 1280×720 @ 30 fps | vehicles up to 102 m / 105° from the sampler (p95 32 m); knocked-down pedestrian dropped; prop 13.7 cm below its timeline z; published although the verdict failed | 13,013 samples (vehicles, walker, prop) at a maximum of 4.7e-5 m / 1.0e-4°; map bound by approved cooked digest; `capture.policy` `sub-tick-sampled` |
+| synthetic Belmont (`pose-smoke`) | pose gates pass; the moving car covers 30.61 m of a planned 30.00 m | 2,107 samples at a maximum of 2.3e-5 m / 3.4e-6°; the walker covers 8.40 m of 8.40 m with its gait animating |
+
+Probes: batched teleport readback is within 4 µm. OSC pitch/roll map to CARLA
+as −pitch and +roll. Physics-off bodies report zero velocity, so CARLA radar
+Doppler reads 0 (hence the timeline Doppler column). Wheel-steer and
+target-velocity commands are ignored with physics off. Prop teleports are
+ignored with physics off. The cooked Belmont world re-serializes its XODR as
+`a345d71d…`, which is now an approved digest.
 
 ## Implementation and qualification status
 

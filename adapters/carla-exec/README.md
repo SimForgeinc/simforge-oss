@@ -74,40 +74,122 @@ substitution in `carlaVehicleFallbacks`; execution fails closed only when the
 claimed catalog has no native blueprint for that actor class. Parent readback
 verifies the resolved actor identity without imposing a model-specific host.
 
-## Actor motion, grounding and pose gates
+## Execution modes
 
-Vehicles are driven by native CARLA physics (throttle/brake/steer toward the
-authored trajectory). Walkers and props are replayed kinematically from the
-authored plan with physics off, because on CARLA 0.10 neither can be left to
-physics: props never simulate physics and ignore `set_transform` after spawn,
-and `WalkerControl` moves a walker at about 5% of the commanded speed. Walkers
-also receive the authored velocity and a matching `WalkerControl` so their
-animation follows the authored speed.
+CARLA is a renderer of the scenario. It never owns motion.
 
-Every actor is grounded on the cooked mesh: a vertical `cast_ray` around the
-OpenDRIVE lane elevation, keeping only ground-labelled surfaces (roads,
-sidewalks, terrain). The bottom of each actor's measured bounding box is placed
-on that surface, so the pivot (base for props and vehicles, capsule centre for
-walkers) is never guessed. Props spawn directly at that elevation.
+- **`trace-replay` (default).** Every replayed actor (vehicles, walkers and
+  props) is kinematic: physics is off from spawn, before the first tick. There
+  is no settle phase and no nudging. On every 50 Hz tick one batched
+  `apply_batch_sync` poses every actor from the render-timeline sampler
+  (`pose(timeline, actorId, t)`, `docs/engineering/render-timeline.md`).
+  Lights and signal states come from the timeline too. When the package ships a
+  baked render timeline, the `simforge_oss_timeline` binding supplies the
+  poses. Otherwise they come from the plan compiled from the trajectory-replay
+  `.xosc`, which follows the same sampling rules.
+- **`native-physics`** is the *physics validation* mode. CARLA vehicles are
+  driven by throttle, brake and steer toward the trace, and walkers and props
+  are replayed kinematically. Its output measures how CARLA physics diverges
+  from the trace. It is labelled `purpose: physics-validation` everywhere and
+  is never the scenario's render. A render intent opts in by asking for the
+  `actor.native_controls` capability. `diagnostic-replay` is the historical
+  name of `trace-replay`.
 
-Pose gates fail the render instead of shipping it (`SIMFORGE_CARLA_POSE_GATES`,
-`enforce` by default, `report` to record only):
+### Blocking replay parity
 
-- before t=0, an actor displaced from its placement, or hanging above or buried
-  below the ground;
-- on every tick, a kinematic actor that does not read back its commanded pose;
-- a vehicle airborne for 1 s (outside its own contacts) or below the ground;
-- an actor whose plan moves at least 0.5 m in a 1 s window but covers less than
-  25% of it, for two windows in a row.
+After every tick the worker reads back every live body from one world
+snapshot and compares it with the sampler: position within **1 cm**
+(ground-contact z included) and heading, pitch and roll within **0.1°**.
+Presence must match the timeline exactly, and so must the signal states. Any
+violation fails the render: `run-intent` exits non-zero and nothing is
+published. The report is `runtimeEvidence.replay` plus the parity evidence
+`trajectory` (`acceptanceGate: replay-sampler-parity`). The control plane
+re-checks the recorded maxima before it accepts a completion.
 
-The gate report is in the runtime evidence as `poseGates`. To qualify a CARLA
-runtime without sensors (this also works against a `-nullrhi` server), run:
+### Time, capture and labels
+
+- Plan time is clip time. `t = 0` is the clip start after the simulation
+  warm-up, and the warm-up is never rendered. The exporter's
+  `trajectoryReplay.warmupSeconds`/`clipSeconds` header fixes the origin.
+  Triggers and vertices are converted from xosc time; knockdown times are
+  already clip time.
+- Output frame `k` is scheduled at exactly `k / fps` and rendered on the
+  nearest tick. When fps divides 50 (1, 2, 5, 10, 25, 50) that tick *is*
+  `k / fps`. For the product's 20/24/30 fps, trace replay samples the timeline
+  at exactly `k / fps` on that tick, so the frame shows its scheduled instant.
+  Every sensor record carries `contentTimeS` (manifest `capture.policy`:
+  `tick-aligned` or `sub-tick-sampled`). Physics validation cannot sample off
+  tick. Its frames are labelled with the post-step time they actually show.
+- Physics substepping is set (10 ms, at most 10 substeps) and recorded in
+  `runtimeEvidence.physicsSettings`. A server that ticks itself in
+  synchronous mode fails the render (see `probe-ticks`).
+
+### Height and map binding
+
+The timeline z is authoritative: it is the ground-contact elevation, baked
+once from the XODR elevation. The cooked-mesh raycast only runs as a
+diagnostic (`runtimeEvidence.replay.groundDiagnostic`: cooked surface minus
+timeline z, per class, with the suggested per-map calibration). A calibrated
+per-map offset (`MAP_Z_CALIBRATION_M`, or `SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON`
+keyed by XODR sha256) is applied and recorded when the cooked world floats or
+sinks bodies.
+
+The world is bound by XODR digest, never by name. The package XODR selects the
+cooked world. The runtime's `to_opendrive()` must then be byte-identical to
+the package XODR or an approved cooked re-serialization of it
+(`APPROVED_COOKED_XODR_DIGESTS`, `SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`).
+Anything else fails. The exception is `SIMFORGE_CARLA_MAP_BINDING=allow-approximate`,
+which renders the job labelled `approximate map` in the manifest and the
+evidence.
+
+### What replay approximates
+
+The manifest lists these under `approximations`:
+
+- **Suspension.** There are no suspension dynamics. Body attitude is the
+  timeline's road and acceleration pitch/roll, and packages without a timeline
+  carry none (level bodies).
+- **Wheels.** Kinematic vehicles' wheels neither spin nor steer.
+- **Walker gait.** Speed is fed to CARLA's locomotion blend
+  (`ApplyWalkerControl` plus the target velocity), so gait animates while the
+  body is posed exactly. It is CARLA's gait, not a replayed skeleton.
+- **Radar Doppler.** CARLA's `velocity_mps` comes from the physical velocity of
+  the detected body. Under replay every radar CSV also carries
+  `timeline_velocity_mps`/`timeline_actor_id`, the same relative radial
+  velocity computed from the timeline.
+- **Collisions.** Contacts are the trace's events. CARLA reports no impulses in
+  replay.
+- **Motion blur.** It is off for every camera (`motion_blur_intensity 0`).
+- **Moving props.** CARLA 0.10 ignores teleports of `static.prop.*` bodies, even
+  with physics off, so a moving prop is respawned at each new pose
+  (`propRespawns`).
+- **Kerbs.** XODR elevation (height source `xodr-elevation/v1`) has no lane
+  height, so bodies on kerb-raised sidewalks sit about one kerb height into
+  the cooked sidewalk. The ground diagnostic reports it; `xodr-elevation/v2`
+  (lane height) removes it.
+- **Knockdowns.** A knocked-down pedestrian is laid on its right side
+  (roll 90°) at its trace position. It is not laid face down, because pitch
+  90° is UE's Euler singularity. It is a posture, not a ragdoll.
+
+Measured on CARLA 0.10.0 (RTX 5080, 2026-09-22). A batched `ApplyTransform`
+reads back within 4 µm. Radar Doppler of a kinematic body reads 0.
+`set_target_velocity` and `set_wheel_steer_direction` have no effect with
+physics off. On d9d7 (Richmond) the replay gate measured 13,013 samples at a
+maximum of 4.7e-5 m / 1.0e-4°. Richmond's cooked mesh differs from the timeline
+z by a median of 0 for vehicles (p95 0.39 m at kerbs and ramps), so no
+per-map calibration is applied.
+
+### Qualify a runtime
 
 ```sh
 simforge-oss-carla-exec --host 127.0.0.1 --port 2000 pose-smoke --map Belmont_Office_Park_Belmont_CA
 ```
 
-It exits 1 on a floating, buried, displaced or non-moving actor.
+This runs a sensor-free scenario (a moving and a parked vehicle, a walking and
+a standing pedestrian, three props) through trace replay, with the replay gate
+and an attitude-convention probe. It exits 1 on any parity, ground or motion
+failure. `--mode native-physics` runs the physics-validation path with its
+pose gates (`SIMFORGE_CARLA_POSE_GATES`, `enforce` by default).
 
 ## Develop and verify
 

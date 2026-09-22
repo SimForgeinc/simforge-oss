@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import ast
+import math
 import hashlib
 import gzip
 import io
@@ -321,7 +322,7 @@ def seal_lease(value, manifest: bytes = MANIFEST):
         "fixedTimestepS": 0.02,
         "jobMode": job["mode"],
         "trafficMode": package["ambient"]["ambientMode"],
-        "executionMode": job["renderSpec"].get("executionMode", "native-physics"),
+        "executionMode": job["renderSpec"].get("executionMode", "trace-replay"),
         "sensorModalities": sorted({sensor["modality"] for sensor in sensors}),
         "outputs": sorted(set(job["renderSpec"]["outputs"])),
         "resources": {
@@ -357,7 +358,7 @@ DEFAULT_LEASE_SENSORS = [{
 }]
 
 
-def lease_value(outputs=None, uploads=None, sensors=None, formats=None):
+def lease_value(outputs=None, uploads=None, sensors=None, formats=None, execution_mode="trace-replay"):
     selected_outputs = outputs or ["trace"]
     sensor_values = copy.deepcopy(sensors if sensors is not None else DEFAULT_LEASE_SENSORS)
     if uploads is None:
@@ -416,7 +417,7 @@ def lease_value(outputs=None, uploads=None, sensors=None, formats=None):
                 "fps": 25,
                 "sensors": sensor_values,
                 "outputs": selected_outputs,
-                "executionMode": "native-physics",
+                "executionMode": execution_mode,
                 "quality": "high",
                 **({"formats": formats} if formats is not None else {}),
             },
@@ -424,6 +425,20 @@ def lease_value(outputs=None, uploads=None, sensors=None, formats=None):
             "artifactUploads": uploads,
         },
     })
+
+
+def _fake_readback(backend):
+    """An ideal CARLA: replay shows exactly the applied pose, while a physics
+    tick leaves the world one step (0.02 s) after the applied frame."""
+    step = 0.02 if getattr(backend, "mode", "trace-replay") == "native-physics" else 0.0
+    return {
+        actor_id: {
+            "x": state.x + backend.offset + math.cos(math.radians(state.heading_deg)) * state.speed_mps * step,
+            "y": state.y + math.sin(math.radians(state.heading_deg)) * state.speed_mps * step,
+            "z": state.z, "headingDeg": state.heading_deg, "speedMps": state.speed_mps,
+        }
+        for actor_id, state in backend.frame.actors.items()
+    }
 
 
 class FakeBackend:
@@ -436,7 +451,7 @@ class FakeBackend:
         self.records = []
         self.executed_signals = {}
 
-    def configure_execution(self, mode): self.calls.append(("mode", mode))
+    def configure_execution(self, mode): self.mode = mode; self.calls.append(("mode", mode))
     def set_rpc_timeout(self, timeout_s): self.rpc_timeout_s = timeout_s
     def load_opendrive(self, map_name, xodr, fixed_timestep_s): self.calls.append(("load", map_name, fixed_timestep_s))
     def bind_signals(self, signal_ids, abort=None): (abort or (lambda: None))(); self.calls.append(("signals", signal_ids))
@@ -473,7 +488,7 @@ class FakeBackend:
                     "actualCarlaTimeS": self.frame.t,
                     "relativePath": f"{sensor_key}/{output_index:08d}.png",
                 })
-        return {actor_id: {"x": state.x + self.offset, "y": state.y, "z": state.z, "headingDeg": state.heading_deg, "speedMps": state.speed_mps} for actor_id, state in self.frame.actors.items()}
+        return _fake_readback(self)
     def finalize_capture(self, expected_frame_count, abort=None):
         (abort or (lambda: None))()
         self.calls.append(("finalize", expected_frame_count))
@@ -576,6 +591,7 @@ def test_carla_spawn_preserves_absolute_xosc_elevation_and_coordinate_sign():
     backend.carla = Carla
     backend.world = World()
     backend.actors = {}
+    backend.execution_mode = "native-physics"
     frame = PlanFrame(0, 0, {
         "ego": ActorFrame("spawn", 143.269, -338.977, 61.796, -5.782, 0),
     }, {})
@@ -1043,10 +1059,26 @@ def test_twenty_second_50hz_plan_schedules_exactly_600_unique_30fps_frames():
     plan = ExecutionPlan("simforge.execution-plan/v1", 0.02, {}, frames, "a" * 64)
     schedule = worker_runner._capture_schedule(plan, 30)
     assert len(schedule) == 600
-    assert list(schedule.values())[0] == (0, 0.0)
+    assert list(schedule.values())[0] == (0, 0.0, 0.0)
     assert list(schedule.values())[-1][0] == 599
     assert max(schedule) < 1000
     assert len(set(schedule)) == 600
+    # Trace replay samples the timeline at the exact frame instant, so every
+    # frame's content time is its scheduled time even off the 50 Hz ticks.
+    assert all(content == scheduled for _index, scheduled, content in schedule.values())
+    assert all(abs(scheduled - plan.frames[tick].t) <= 0.01 + 1e-12 for tick, (_i, scheduled, _c) in schedule.items())
+    assert worker_runner.capture_policy(30, "trace-replay") == "sub-tick-sampled"
+    assert worker_runner.capture_policy(25, "trace-replay") == "tick-aligned"
+
+
+def test_physics_validation_captures_are_labelled_with_the_post_step_time():
+    frames = tuple(PlanFrame(index, round(index * 0.02, 9), {}, {}) for index in range(101))
+    plan = ExecutionPlan("simforge.execution-plan/v1", 0.02, {}, frames, "a" * 64)
+    schedule = worker_runner._capture_schedule(plan, 25, execution_mode="native-physics")
+    # A physics tick applied for frame i shows the world at t_i + dt.
+    assert schedule[0] == (0, 0.0, 0.02)
+    assert schedule[2] == (1, 0.04, 0.06)
+    assert worker_runner.capture_policy(24, "native-physics") == "nearest-tick-post-step"
 
 
 def test_signed_manifest_shape_resolves_only_nested_exact_carla_bindings():
@@ -1335,7 +1367,10 @@ def test_executes_hash_closed_lease_and_uploads_trace():
         progress=lambda kind, payload: events.append((kind, payload)),
     )
     assert result["status"] == "succeeded"
-    assert result["parity"]["samples"] == 3
+    assert result["parity"]["executionMode"] == "trace-replay"
+    assert result["parity"]["purpose"] == "scenario-render"
+    assert result["parity"]["replay"]["samples"] == 3
+    assert result["parity"]["replay"]["blocking"] is True
     assert result["artifacts"][0]["artifactUrl"].endswith("reservation-1")
     assert uploaded[0][0] == "memory:upload"
     trace = json.loads(gzip.decompress(uploaded[0][1]))
@@ -1347,16 +1382,17 @@ def test_executes_hash_closed_lease_and_uploads_trace():
     assert result["attestation"]["nativeStability"] == backend.stability
     assert [event[0] for event in events] == ["assets_validated", "plan_compiled", "render_started", "artifact_uploaded"]
     assert backend.calls[-1] == ("cleanup",)
-    assert backend.calls[0] == ("mode", "native-physics")
+    assert backend.calls[0] == ("mode", "trace-replay")
     assert backend.calls.index(("signals", ())) < backend.calls.index(("environment", 0.0))
     assert backend.calls.index(("signals", ())) < backend.calls.index(("spawn", ["ego"]))
     assert backend.calls.index(("sensors", 1)) < backend.calls.index(("prepare", 0))
 
 
-def test_mode_is_explicit_and_parity_tolerance_gates_result():
+def test_historical_diagnostic_replay_is_trace_replay_and_parity_blocks_at_one_centimetre():
     value = lease_value()
     value["job"]["renderSpec"]["executionMode"] = "diagnostic-replay"
     lease = parse_lease(seal_lease(value))
+    assert lease.render_spec.execution_mode == "trace-replay"
     assets = {"memory:manifest": MANIFEST, "memory:xosc": XOSC, "memory:xodr": XODR, "memory:catalog": CATALOG, "memory:traffic": DISABLED_TRAFFIC}
     backend = FakeBackend()
     backend.offset = 0.011
@@ -1366,9 +1402,47 @@ def test_mode_is_explicit_and_parity_tolerance_gates_result():
         downloader=lambda url, _limit: assets[url],
         uploader=lambda *_args: None,
     )
-    assert backend.calls[0] == ("mode", "diagnostic-replay")
+    assert backend.calls[0] == ("mode", "trace-replay")
     assert result["status"] == "failed-parity"
-    assert result["parity"]["violation_counts"]["positionM"] == 3
+    replay = result["parity"]["replay"]
+    assert replay["violationCount"] == 3
+    assert replay["failedActorIds"] == ["ego"]
+    assert replay["maxPositionErrorM"] == pytest.approx(0.011)
+    assert result["parityEvidence"]["trajectory"]["verdict"] == "fail"
+    assert result["parityEvidence"]["trajectory"]["acceptanceGate"] == "replay-sampler-parity"
+
+    backend = FakeBackend()
+    backend.offset = 0.009
+    result = execute_lease(
+        lease, backend,
+        lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256},
+        downloader=lambda url, _limit: assets[url],
+        uploader=lambda *_args: None,
+    )
+    assert result["status"] == "succeeded"
+    assert result["parity"]["replay"]["verdict"] == "pass"
+
+
+def test_physics_validation_compares_each_tick_with_the_state_it_produces():
+    lease = parse_lease(lease_value(execution_mode="native-physics"))
+    assets = {"memory:manifest": MANIFEST, "memory:xosc": XOSC, "memory:xodr": XODR, "memory:catalog": CATALOG, "memory:traffic": DISABLED_TRAFFIC}
+    backend = FakeBackend()
+    uploaded = []
+    result = execute_lease(
+        lease, backend,
+        lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256},
+        downloader=lambda url, _limit: assets[url],
+        uploader=lambda url, body, media_type, headers: uploaded.append(artifact_bytes(body)),
+    )
+    # The ideal physics world is one step ahead of the applied frame; with the
+    # old one-tick label offset this read as a 0.1 m lag on every tick.
+    assert result["status"] == "succeeded"
+    assert result["parity"]["samples"] == 2
+    assert result["parity"]["max_error"]["positionM"] == pytest.approx(0.0, abs=1e-9)
+    assert result["parity"]["purpose"] == "physics-validation"
+    assert result["parityEvidence"]["execution"]["purpose"] == "physics-validation"
+    trace = json.loads(gzip.decompress(uploaded[0]))
+    assert [frame["t"] for frame in trace["frames"]] == [0.02, 0.04, 0.06]
 
 
 def test_interaction_2d_is_camera_free_and_emits_trace_and_manifest():
@@ -1775,7 +1849,7 @@ class _StreamingSensorBackend(FakeBackend):
                     "actualCarlaTimeS": self.frame.t,
                     "relativePath": relative,
                 })
-        return {actor_id: {"x": state.x + self.offset, "y": state.y, "z": state.z, "headingDeg": state.heading_deg, "speedMps": state.speed_mps} for actor_id, state in self.frame.actors.items()}
+        return _fake_readback(self)
 
     def finalize_capture(self, expected_frame_count, abort=None):
         (abort or (lambda: None))()
@@ -2287,7 +2361,7 @@ def test_control_digest_matches_cross_language_ecmascript_golden_vector():
 def test_runtime_requirements_must_match_the_leased_render():
     value = lease_value()
     package = value["job"]["executionPackage"]
-    package["runtimeRequirements"]["executionMode"] = "diagnostic-replay"
+    package["runtimeRequirements"]["executionMode"] = "native-physics"
     reseal_control(package)
     with pytest.raises(ContractError, match="runtimeRequirements do not match"):
         parse_lease(value)
@@ -3305,10 +3379,12 @@ class _WaypointWorld(_PlacementWorld):
 
 
 def _placement_backend(world):
+    """Spawn placement (ground projection, lift, nudges) is the physics-validation path."""
     backend = object.__new__(CarlaBackend)
     backend.carla = _placement_carla()
     backend.world = world
     backend.actors = {}
+    backend.execution_mode = "native-physics"
     return backend
 
 
@@ -3428,7 +3504,7 @@ def test_spawn_drops_execution_semantics_actors_with_a_recorded_reason():
 
 
 def test_knockdown_pose_drops_the_actor_instead_of_failing_the_render():
-    lease = parse_lease(lease_value())
+    lease = parse_lease(lease_value(execution_mode="native-physics"))
     plan = ExecutionPlan(
         "simforge.execution-plan/v1", 0.02,
         {
@@ -3452,7 +3528,7 @@ def test_knockdown_pose_drops_the_actor_instead_of_failing_the_render():
     assert drops == {"deer": "native physics cannot execute authored knockdown poses without post-spawn teleport repair"}
 
     # A knockdown-posed actor that hosts sensors cannot be dropped silently.
-    hosted = lease_value()
+    hosted = lease_value(execution_mode="native-physics")
     hosted["job"]["renderSpec"]["sensors"][0]["actorId"] = "deer"
     hosted_lease = parse_lease(seal_lease(hosted))
     with pytest.raises(ContractError, match="cannot attach to actors dropped from execution"):
@@ -3629,10 +3705,10 @@ class _PlacementFakeBackend(FakeBackend):
         return {actor_id: value for actor_id, value in result.items() if actor_id not in self.dropped}
 
 
-def _two_vehicle_lease():
+def _two_vehicle_lease(execution_mode="native-physics"):
     xosc = _two_vehicle_xosc()
     manifest = execution_manifest(xosc)
-    value = lease_value(outputs=["trace", "manifest"])
+    value = lease_value(outputs=["trace", "manifest"], execution_mode=execution_mode)
     value["job"]["executionPackage"]["xosc"].update({"sha256": digest(xosc), "sizeBytes": len(xosc)})
     return parse_lease(seal_lease(value, manifest)), xosc, manifest
 
@@ -3896,3 +3972,75 @@ def test_cooked_map_remap_freezes_unauthored_extra_heads_red_and_records_evidenc
     strict.signals, strict.signal_snapshots = {}, {}
     with pytest.raises(RuntimeError, match="extra: 444"):
         strict.bind_signals(("421",))
+
+
+def test_a_shipped_render_timeline_drives_trace_replay_through_the_shared_sampler(monkeypatch):
+    """When the package carries a baked render timeline, poses come from the
+    shared sampler binding, not from the xosc-compiled plan."""
+    class Timeline:
+        dt, warmup_s, clip_end_s = 0.02, 0.0, 0.04
+        times = [0.0, 0.02, 0.04]
+        actor_ids = ["ego"]
+        sha256 = key = trace_sha256 = "c" * 64
+        xodr_sha256 = None
+
+        @staticmethod
+        def from_json(body):
+            assert body == b"timeline-bytes"
+            return Timeline()
+
+        def props(self): return []
+        def poses(self, t): return {"ego": {"present": True, "x": 100 + t, "y": 0.0, "z": 0.0, "headingRad": 0.0, "pitchRad": 0.0, "rollRad": 0.0, "speedMps": 1.0}}
+        def signals_at(self, t): return {}
+        def light_modes_at(self, actor_id, t): return {}
+
+    compared = []
+
+    def compare_observed(timeline, jsonl, profile):
+        records = [json.loads(line) for line in jsonl.splitlines()]
+        compared.append((profile, records))
+        return {"schema": "simforge.render-parity/v1", "pass": True, "maxPositionErrorM": 0.0, "perActor": {}}
+
+    fake = type(sys)("simforge_oss_timeline")
+    fake.Timeline, fake.SAMPLER_VERSION = Timeline, "simforge.timeline-sampler/1"
+    fake.compare_observed = compare_observed
+    monkeypatch.setitem(sys.modules, "simforge_oss_timeline", fake)
+    lease = parse_lease(lease_value(outputs=["trace", "manifest"]))
+    assets = {"memory:manifest": MANIFEST, "memory:xosc": XOSC, "memory:xodr": XODR, "memory:catalog": CATALOG, "memory:traffic": DISABLED_TRAFFIC}
+    backend = FakeBackend()
+    uploaded = {}
+    result = execute_lease(
+        lease, backend,
+        lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256},
+        downloader=lambda url, _limit: assets[url],
+        uploader=lambda url, body, media_type, headers: uploaded.update({url: artifact_bytes(body)}),
+        render_timeline=b"timeline-bytes",
+    )
+    assert result["status"] == "succeeded"
+    assert backend.frame.actors["ego"].x == pytest.approx(100.04)
+    profile, records = compared[0]
+    assert profile == "carla" and [record["t"] for record in records] == [0.0, 0.02, 0.04]
+    assert records[2]["actors"][0]["id"] == "ego"
+    assert records[2]["actors"][0]["position"][0] == pytest.approx(100.04)
+    assert result["parity"]["replay"]["comparator"]["schema"] == "simforge.render-parity/v1"
+    manifest = json.loads(uploaded["memory:upload:manifest"])
+    assert manifest["timeline"]["source"] == "render-timeline"
+    assert manifest["execution"] == {
+        "mode": "trace-replay", "purpose": "scenario-render", "scenarioRender": True, "label": "Trace replay",
+    }
+
+    class ShortTimeline(Timeline):
+        times = [0.0, 0.02]
+
+        @staticmethod
+        def from_json(body): return ShortTimeline()
+
+    fake.Timeline = ShortTimeline
+    with pytest.raises(ContractError, match="ticks but the execution plan"):
+        execute_lease(
+            lease, FakeBackend(),
+            lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256},
+            downloader=lambda url, _limit: assets[url],
+            uploader=lambda *_args: None,
+            render_timeline=b"timeline-bytes",
+        )
