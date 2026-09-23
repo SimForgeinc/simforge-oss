@@ -1928,12 +1928,20 @@ pub fn instance_id_material(id: u32) -> StandardMaterial {
 pub const ID_PASS_FORMAT: TextureFormat = TextureFormat::Rgba8Unorm;
 
 /// Camera components that keep the ID pass exact (see [`instance_id_color`]).
+///
+/// `NoIndirectDrawing`: GPU-driven culling compacts visible instances with
+/// atomics, so coplanar surfaces won their depth ties in a different order
+/// on every run and single ID pixels flipped between runs (RTX 3080, Belmont).
+/// CPU-ordered draws of entity-sorted bins (vendored bevy_render) make the ID
+/// pass a function of the scene; it cost nothing measurable (93.1 vs 92.7 ms
+/// GPU per 8-camera frame).
 pub fn id_pass_camera() -> impl Bundle {
     (
         bevy::camera::Hdr,
         Msaa::Off,
         Tonemapping::None,
         bevy::core_pipeline::tonemapping::DebandDither::Disabled,
+        bevy::render::view::NoIndirectDrawing,
     )
 }
 
