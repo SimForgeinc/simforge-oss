@@ -1,7 +1,7 @@
 import "server-only";
 
 import { engineSemantics } from "@simforge-oss/compiler/node";
-import { parseTemplate } from "@simforge-oss/scenario";
+import { readScenarioDocument } from "@simforge-oss/scenario";
 import {
   type RevisionSimulationReason,
   type ScenarioEngineChangeDto,
@@ -333,7 +333,8 @@ export async function readVersionContent(context: AppContext, documentId: string
     revisionId: revision.id,
     contentSha256: revision.content_sha256,
     mapVersionId: revision.map_version_id,
-    content: parseJsonObject(revision.canonical_content as string | Record<string, unknown>),
+    // Restored into the draft, which is written at the current version only.
+    content: readScenarioDocument(parseJsonObject(revision.canonical_content as string | Record<string, unknown>)),
   };
 }
 
@@ -441,10 +442,9 @@ export async function restoreVersionToDraft(
   input: { expectedVersion: number },
 ) {
   const revision = await readVersionContent(context, documentId, revisionId);
-  const content = parseTemplate(revision.content);
   return updateScenarioDocument(context, documentId, {
     expectedVersion: input.expectedVersion,
-    content,
+    content: revision.content,
     ...(revision.mapVersionId ? { mapVersionId: revision.mapVersionId } : {}),
   });
 }

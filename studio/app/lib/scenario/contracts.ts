@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AMBIENT_TRAFFIC_EXTENSION_KEY, validateAmbientTrafficProfileExtension } from "@simforge-oss/engine";
-import { ScenarioTemplateV2Schema, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import { ScenarioTemplateV2Schema, writableScenarioSchemaVersionLabel, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import {
   DISABLED_AMBIENT_PROVENANCE,
   EMPTY_AMBIENT_CONFIG_SHA256,
@@ -136,10 +136,29 @@ const CanonicalScenarioContentSchema = z
  */
 const DocumentDescriptionSchema = z.string().trim().max(4000);
 
+/**
+ * The `schema_version` label a client may send with a write. Documents are
+ * written at the current version only, so the canonical label ("2") and its
+ * legacy long spellings ("simforge.scenario.v2", "simforge.scenario/v2") are
+ * accepted and stored as "2"; any other label is a 400, never stored verbatim.
+ */
+const WritableSchemaVersionSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .transform((label, ctx) => {
+    try {
+      return writableScenarioSchemaVersionLabel(label);
+    } catch (error) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: error instanceof Error ? error.message : String(error) });
+      return z.NEVER;
+    }
+  });
+
 export const CreateScenarioDocumentSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: DocumentDescriptionSchema.optional(),
-  schemaVersion: z.string().trim().min(1).default(SCENARIO_SCHEMA_VERSION),
+  schemaVersion: WritableSchemaVersionSchema.default(SCENARIO_SCHEMA_VERSION),
   content: CanonicalScenarioContentSchema,
   mapVersionId: z.string().trim().min(1).nullable().optional(),
   datasetId: z.string().trim().min(1),
@@ -150,7 +169,7 @@ export const UpdateScenarioDocumentSchema = z.object({
   expectedVersion: z.number().int().positive(),
   title: z.string().trim().min(1).max(200).optional(),
   description: DocumentDescriptionSchema.optional(),
-  schemaVersion: z.string().trim().min(1).optional(),
+  schemaVersion: WritableSchemaVersionSchema.optional(),
   content: CanonicalScenarioContentSchema.optional(),
   mapVersionId: z.string().trim().min(1).nullable().optional(),
   authoringQualityId: ScenarioAuthoringQualitySchema.optional(),

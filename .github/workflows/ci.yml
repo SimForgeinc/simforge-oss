@@ -40,6 +40,11 @@ jobs:
       - run: pnpm verify:naming
       - run: pnpm verify:origins
       - run: pnpm typecheck
+      - name: scenarioVersion bump rule (packages/scenario/src/upgrade/chain.ts)
+        # A non-additive document schema change or a changed absent-field
+        # meaning needs a scenarioVersion bump with TS and Rust upgraders;
+        # additive changes need the refreshed scenario-contract.lock.json.
+        run: pnpm scenario:contract:check --base "origin/${{ github.base_ref || 'main' }}"
       - run: pnpm test:release
       - name: Test the repository scripts
         # Nothing referenced scripts/__tests__ before this step: five test

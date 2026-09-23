@@ -1,4 +1,4 @@
-import { parseTemplate } from "@simforge-oss/scenario";
+import { normalizeScenarioSchemaVersionLabel, readScenarioDocument } from "@simforge-oss/scenario";
 import { z } from "zod";
 import type {
   ScenarioDatasetDto,
@@ -353,9 +353,9 @@ async function readLocalDocuments(context: AppContext, datasetId: string): Promi
     id: row.id,
     title: row.title,
     draftVersion: Number(row.draft_version),
-    schemaVersion: row.schema_version,
+    schemaVersion: normalizeScenarioSchemaVersionLabel(row.schema_version),
     contentSha256: row.content_sha256,
-    content: parseTemplate(parseJsonObject(row.canonical_content)),
+    content: readScenarioDocument(parseJsonObject(row.canonical_content)),
     mapVersionId: row.map_version_id,
     authoringQualityId: row.authoring_quality_id,
     latestRevisionId: row.latest_revision_id,
@@ -451,7 +451,8 @@ export async function importCloudDataset(
   );
   if (!response.ok) throw await cloudResponseError(response, "cloud_dataset_unavailable");
   const snapshot = (await response.json()) as CloudDatasetSnapshot;
-  for (const document of snapshot.documents) parseTemplate(document.content);
+  // A document from a newer SimForge fails here, loudly, before anything is written.
+  for (const document of snapshot.documents) readScenarioDocument(document.content);
 
   await ensureSnapshotMaps(snapshot, signal);
 

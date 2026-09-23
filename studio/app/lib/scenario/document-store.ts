@@ -1,6 +1,15 @@
 import { cacheLife, cacheTag } from "next/cache";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { parseTemplate, withPinnedSimulation, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import {
+  CURRENT_SCENARIO_VERSION,
+  SCENARIO_SCHEMA_VERSION_LABEL,
+  ScenarioFormatError,
+  normalizeScenarioSchemaVersionLabel,
+  readScenarioDocument,
+  withPinnedSimulation,
+  writableScenarioSchemaVersionLabel,
+  type ScenarioTemplateV2,
+} from "@simforge-oss/scenario";
 import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
 import { requireScenarioMapPin, verifyScenarioMapPin, type ScenarioMapPin } from "./map-pin";
 import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
@@ -82,15 +91,23 @@ const DOCUMENT_SELECT = `
   LEFT JOIN simforge.map_versions mv ON mv.id = dr.map_version_id
 `;
 
+/**
+ * A stored draft keeps the `scenarioVersion` it was written with; it is read
+ * through the upgrader chain (`readScenarioDocument`), which fails loudly on a
+ * document from a newer SimForge. `contentSha256` stays the digest of the
+ * stored bytes. The `schema_version` label is normalized (`"simforge.scenario.v2"`
+ * and `"simforge.scenario/v2"` are `"2"`); an unknown label is an error, not a
+ * pass-through.
+ */
 function documentDto(row: DocumentRow): ScenarioDocumentDto {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
     title: row.title,
     draftVersion: Number(row.draft_version),
-    schemaVersion: row.schema_version,
+    schemaVersion: normalizeScenarioSchemaVersionLabel(row.schema_version),
     contentSha256: row.content_sha256,
-    content: parseTemplate(parseJsonObject(row.canonical_content)),
+    content: readScenarioDocument(parseJsonObject(row.canonical_content)),
     mapVersionId: row.map_version_id,
     mapSourceMapId: row.map_source_map_id,
     mapXodrSha256: row.map_xodr_sha256,
@@ -114,7 +131,8 @@ function revisionDto(row: RevisionRow): ScenarioRevisionDto {
     documentId: row.document_id,
     revisionNumber: Number(row.revision_number),
     sourceDraftVersion: Number(row.source_draft_version),
-    schemaVersion: row.schema_version,
+    // Revisions are immutable (never relabelled by a migration): normalize on read.
+    schemaVersion: normalizeScenarioSchemaVersionLabel(row.schema_version),
     contentSha256: row.content_sha256,
     mapVersionId: row.map_version_id,
     openScenarioProfile: OPENSCENARIO_NATIVE_PROFILE,
@@ -385,7 +403,7 @@ export async function duplicateScenarioDocument(
         id: copyId,
         workspace_id: context.workspaceId,
         title,
-        schema_version: source.schemaVersion,
+        schema_version: SCENARIO_SCHEMA_VERSION_LABEL,
         map_version_id: source.mapVersionId,
         dataset_id: targetDatasetId,
         user_id: context.userId,
@@ -409,7 +427,7 @@ export async function duplicateScenarioDocument(
       {
         document_id: copyId,
         workspace_id: context.workspaceId,
-        schema_version: source.schemaVersion,
+        schema_version: SCENARIO_SCHEMA_VERSION_LABEL,
         content,
         content_sha256: canonicalContentSha256(content),
         // A copy inherits the source's pin verbatim: same version, closure and catalog.
@@ -661,7 +679,7 @@ export async function createCrossMapScenarioDocument(
         id: childId,
         workspace_id: context.workspaceId,
         title,
-        schema_version: source.schemaVersion,
+        schema_version: SCENARIO_SCHEMA_VERSION_LABEL,
         target_map_version_id: input.targetMapVersionId,
         dataset_id: source.datasetId,
         user_id: context.userId,
@@ -683,7 +701,7 @@ export async function createCrossMapScenarioDocument(
       {
         document_id: childId,
         workspace_id: context.workspaceId,
-        schema_version: source.schemaVersion,
+        schema_version: SCENARIO_SCHEMA_VERSION_LABEL,
         content: childContent,
         content_sha256: canonicalContentSha256(childContent),
         target_map_version_id: input.targetMapVersionId,
@@ -824,9 +842,26 @@ function withDescription(content: ScenarioTemplateV2, description: string | unde
  * re-derives the seed from a renamed title.
  */
 function withStoredSimulation(content: ScenarioTemplateV2, current?: ScenarioTemplateV2): ScenarioTemplateV2 {
+  assertCurrentScenarioVersion(content);
   if (content.simulation) return content;
   if (current?.simulation) return { ...content, simulation: current.simulation };
   return withPinnedSimulation(content);
+}
+
+/**
+ * Writers write only the current `scenarioVersion`. Content reaching a writer
+ * was parsed by the strict current schema (route contracts) or read through
+ * the upgrader chain; anything else (a raw cast) is refused here, never stored
+ * under a label that misdescribes it.
+ */
+function assertCurrentScenarioVersion(content: { readonly scenarioVersion: unknown }): void {
+  if (content.scenarioVersion !== CURRENT_SCENARIO_VERSION) {
+    throw new ScenarioFormatError(
+      `refusing to store scenarioVersion ${String(content.scenarioVersion)}: documents are written at the current version ${CURRENT_SCENARIO_VERSION} only`,
+      typeof content.scenarioVersion === "number" ? content.scenarioVersion : undefined,
+      "scenario_version_unknown",
+    );
+  }
 }
 
 async function mapPinFor(
@@ -849,6 +884,7 @@ export async function createScenarioDocument(
   },
 ) {
   const documentId = scenarioId("uscn");
+  const schemaVersion = writableScenarioSchemaVersionLabel(input.schemaVersion);
   const content = withStoredSimulation(withDescription(input.content, input.description));
   const digest = canonicalContentSha256(content);
   return withTransaction(async (tx) => {
@@ -865,7 +901,7 @@ export async function createScenarioDocument(
         id: documentId,
         workspace_id: context.workspaceId,
         title: input.title,
-        schema_version: input.schemaVersion,
+        schema_version: schemaVersion,
         map_version_id: input.mapVersionId ?? null,
         dataset_id: input.datasetId,
         user_id: context.userId,
@@ -884,7 +920,7 @@ export async function createScenarioDocument(
       {
         document_id: documentId,
         workspace_id: context.workspaceId,
-        schema_version: input.schemaVersion,
+        schema_version: schemaVersion,
         content,
         content_sha256: digest,
         map_version_id: input.mapVersionId ?? null,
@@ -934,7 +970,9 @@ export async function updateScenarioDocument(
       withDescription(input.content ?? current.content, input.description),
       current.content,
     );
-    const schemaVersion = input.schemaVersion ?? current.schemaVersion;
+    // The stored content is always current-version (read through the chain,
+    // written as parsed), so the label is too, whatever the row held before.
+    const schemaVersion = writableScenarioSchemaVersionLabel(input.schemaVersion);
     const mapVersionId = "mapVersionId" in input ? input.mapVersionId ?? null : current.mapVersionId;
     // Naming a map version is the explicit re-pin: it moves the document to
     // that version (or re-adopts the same one) and captures the version's
@@ -1340,7 +1378,7 @@ export async function createScenarioRevision(
         document_id: documentId,
         revision_number: Number(next?.next_revision ?? 1),
         source_draft_version: current.draftVersion,
-        schema_version: current.schemaVersion,
+        schema_version: SCENARIO_SCHEMA_VERSION_LABEL,
         content: current.content,
         content_sha256: canonicalContentSha256(current.content),
         map_version_id: mapPin.mapVersionId,

@@ -93,15 +93,34 @@ export class ScenarioValidationError extends Error {
   }
 }
 
+/**
+ * Why a document's format was refused.
+ *
+ * - `not_a_scenario`: not an object, or no integer `scenarioVersion`;
+ * - `scenario_version_newer`: written by a newer SimForge than this one;
+ *   this installation must be upgraded to read it;
+ * - `scenario_version_unknown`: an integer version no upgrader step starts from;
+ * - `schema_version_label_invalid`: a stored or submitted `schema_version`
+ *   label that names no known version.
+ */
+export type ScenarioFormatErrorCode =
+  | 'not_a_scenario'
+  | 'scenario_version_newer'
+  | 'scenario_version_unknown'
+  | 'schema_version_label_invalid';
+
 /** A document is not a format/version this build reads. */
 export class ScenarioFormatError extends Error {
   override readonly name = 'ScenarioFormatError';
   /** The `scenarioVersion` found in the input, when one could be read. */
   readonly version: number | undefined;
+  /** Machine-readable reason, when the thrower knows one. */
+  readonly code: ScenarioFormatErrorCode | undefined;
 
-  constructor(message: string, version?: number) {
+  constructor(message: string, version?: number, code?: ScenarioFormatErrorCode) {
     super(message);
     this.version = version;
+    this.code = code;
   }
 }
 

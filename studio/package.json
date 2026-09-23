@@ -54,7 +54,7 @@
     "test:sim-results": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/sim-result-store.test.ts",
     "test:sim-history": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/sim-history.test.ts",
     "test:worker-prewarm": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/workers-prewarm.test.ts app/lib/scenario/__tests__/native-texture-tier.test.ts app/lib/scenario/__tests__/native-admission.test.ts app/lib/scenario/__tests__/evidence-tolerant.test.ts app/lib/scenario/__tests__/render-worker-rtx3090-lease.test.ts",
-    "test:pinning": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/document-pinning.test.ts app/lib/scenario/__tests__/pg/revision-race.pg.test.ts",
+    "test:pinning": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/document-pinning.test.ts app/lib/scenario/__tests__/schema-version-label.test.ts app/lib/scenario/__tests__/pg/revision-race.pg.test.ts",
     "test:mirror-fix": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/mirrored-import-fix.test.ts",
     "test:host-modules": "tsx --test app/host/__tests__/host-modules.test.ts",
     "typecheck": "next typegen && tsc --noEmit",

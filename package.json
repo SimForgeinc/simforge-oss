@@ -55,7 +55,8 @@
     "golden-traces:update": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/golden-traces.ts update",
     "osc-conformance:verify": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/osc-conformance.ts verify",
     "osc-conformance:update-xosc": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/osc-conformance.ts update-xosc",
-    "determinism:semver": "node scripts/determinism/check-engine-semver.mjs"
+    "determinism:semver": "node scripts/determinism/check-engine-semver.mjs",
+    "scenario:contract:check": "pnpm --filter @simforge-oss/scenario exec tsx scripts/scenario-contract.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
