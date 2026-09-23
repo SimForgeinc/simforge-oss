@@ -67,10 +67,6 @@ pub struct SceneSpec {
     /// printing a white sky). Off, the incident meter alone sets exposure.
     #[serde(default = "default_true")]
     pub auto_meter: bool,
-    /// Directory for the content-addressed static sensor BVH cache (the
-    /// first lidar/radar request on a map builds it; later services load it).
-    #[serde(default)]
-    pub sensor_cache_dir: Option<String>,
     /// `free` (default; rc.73 semantics: captures depend on how many frames
     /// were drawn) or `pinned` (a capture is a function of its scene and
     /// simulation time; see `render_core::engine::CaptureClock`).
@@ -255,149 +251,6 @@ pub(crate) fn build_map_sensor_scenes(
     })
 }
 
-/// Format/algorithm tag of the sensor-scene cache key: bump with any change
-/// to how the map scenes are derived from the triangle snapshot.
-const SENSOR_SCENE_CACHE_VERSION: &str = "simforge.sensor-scenes/v1";
-/// Maps whose scenes stay cached; older entries are pruned by mtime.
-const SENSOR_SCENE_CACHE_KEEP: usize = 3;
-
-/// Content key of the map scenes: the exact triangle snapshot (bit
-/// patterns and instance ids, in snapshot order) and which instances are road.
-fn sensor_scene_cache_key(triangles: &[SensorTriangle], legend: &HashMap<u32, String>) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(SENSOR_SCENE_CACHE_VERSION.as_bytes());
-    hasher.update((triangles.len() as u64).to_le_bytes());
-    let mut chunk = Vec::with_capacity(40 * 16_384);
-    for part in triangles.chunks(16_384) {
-        chunk.clear();
-        for tri in part {
-            for c in tri.a.iter().chain(&tri.b).chain(&tri.c) {
-                chunk.extend_from_slice(&c.to_bits().to_le_bytes());
-            }
-            chunk.extend_from_slice(&tri.instance_id.to_le_bytes());
-        }
-        hasher.update(&chunk);
-    }
-    let mut roads: Vec<u32> = legend
-        .iter()
-        .filter(|(_, name)| sensors::taxonomy::SemanticClass::from_mesh_name(name) == sensors::taxonomy::SemanticClass::Road)
-        .map(|(id, _)| *id)
-        .collect();
-    roads.sort_unstable();
-    hasher.update((roads.len() as u64).to_le_bytes());
-    for id in roads {
-        hasher.update(id.to_le_bytes());
-    }
-    format!("{:x}", hasher.finalize())
-}
-
-fn read_cached_scene(path: &Path) -> std::io::Result<RaycastScene> {
-    let file = std::fs::File::open(path)?;
-    RaycastScene::read_from(&mut std::io::BufReader::with_capacity(8 << 20, file))
-}
-
-fn load_cached_sensor_scenes(dir: &Path, key: &str) -> Option<MapSensorScenes> {
-    let static_path = dir.join(format!("{key}.static.bvh"));
-    let road_path = dir.join(format!("{key}.road.bvh"));
-    if !static_path.is_file() || !road_path.is_file() {
-        return None;
-    }
-    let loaded = std::thread::scope(|scope| {
-        let road = scope.spawn(|| read_cached_scene(&road_path));
-        let static_scene = read_cached_scene(&static_path);
-        (static_scene, road.join().expect("road scene load panicked"))
-    });
-    match loaded {
-        (Ok(static_scene), Ok(road)) => {
-            // Touch for the keep-newest pruning.
-            let now = std::time::SystemTime::now();
-            for path in [&static_path, &road_path] {
-                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now));
-            }
-            Some(MapSensorScenes { static_scene, road })
-        }
-        (static_scene, road) => {
-            eprintln!(
-                "sensor-scenes: cache entry {key} unreadable ({:?} / {:?}); rebuilding",
-                static_scene.err(),
-                road.err()
-            );
-            None
-        }
-    }
-}
-
-/// Free bytes on the filesystem holding `dir` (unknown: `None`).
-fn free_bytes(dir: &Path) -> Option<u64> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::ffi::OsStrExt;
-        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
-        let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
-        if unsafe { libc::statvfs(path.as_ptr(), &mut stat) } != 0 {
-            return None;
-        }
-        Some(stat.f_bavail as u64 * stat.f_frsize as u64)
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = dir;
-        None
-    }
-}
-
-/// Keep this much of the cache filesystem free after a write.
-const SENSOR_SCENE_CACHE_HEADROOM_BYTES: u64 = 20 << 30;
-
-/// Write both scenes atomically (temp + rename), then prune old maps.
-/// Skips (returns `false`) when the write would leave the filesystem with
-/// less than [`SENSOR_SCENE_CACHE_HEADROOM_BYTES`] free.
-fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -> std::io::Result<bool> {
-    std::fs::create_dir_all(dir)?;
-    let needed = 48 + (scenes.static_scene.triangle_count() + scenes.road.triangle_count()) as u64 * 60;
-    if let Some(free) = free_bytes(dir) {
-        if free < needed + SENSOR_SCENE_CACHE_HEADROOM_BYTES {
-            eprintln!(
-                "sensor-scenes: not caching {key}: {:.1} GB needed, {:.1} GB free (keeping {} GB headroom)",
-                needed as f64 / 1e9,
-                free as f64 / 1e9,
-                SENSOR_SCENE_CACHE_HEADROOM_BYTES >> 30
-            );
-            return Ok(false);
-        }
-    }
-    for (suffix, scene) in [("road", &scenes.road), ("static", &scenes.static_scene)] {
-        let path = dir.join(format!("{key}.{suffix}.bvh"));
-        let tmp = dir.join(format!("{key}.{suffix}.bvh.{}.tmp", std::process::id()));
-        let written = (|| {
-            let mut out = std::io::BufWriter::with_capacity(8 << 20, std::fs::File::create(&tmp)?);
-            scene.write_to(&mut out)?;
-            std::io::Write::flush(&mut out)?;
-            std::fs::rename(&tmp, &path)
-        })();
-        if let Err(error) = written {
-            let _ = std::fs::remove_file(&tmp);
-            return Err(error);
-        }
-    }
-    let mut entries: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(dir)?
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| {
-            let name = entry.file_name().into_string().ok()?;
-            let key = name.strip_suffix(".static.bvh")?.to_string();
-            Some((entry.metadata().ok()?.modified().ok()?, key))
-        })
-        .collect();
-    entries.sort_by(|a, b| b.0.cmp(&a.0));
-    for (_, stale) in entries.into_iter().skip(SENSOR_SCENE_CACHE_KEEP) {
-        for suffix in ["static", "road"] {
-            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh")));
-        }
-    }
-    Ok(true)
-}
-
 struct CombinedSensorScene<'a> {
     static_scene: &'a RaycastScene,
     actor_scene: &'a RaycastScene,
@@ -450,11 +303,6 @@ pub struct ServiceState {
     /// Static map BVHs, built on first lidar/radar render or episode and
     /// reused for every later tick (see [`MapSensorScenes`]).
     sensor_scenes: Option<std::sync::Arc<MapSensorScenes>>,
-    /// Whether caching the built scenes waits for the write (the one-shot
-    /// `--build-sensor-cache` mode) or leaves it to a background thread.
-    pub sync_sensor_cache_writes: bool,
-    /// Content-addressed cache of the static map scenes (see [`SceneSpec::sensor_cache_dir`]).
-    sensor_cache_dir: Option<PathBuf>,
     /// Static legend id -> sensor class, built with the sensor scenes.
     static_sensor_classes: Option<std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>>>,
     /// Something that can queue new pipelines or materials (a camera, a
@@ -479,28 +327,12 @@ pub struct ServiceState {
     pending_export: Option<render_core::gpu_interop::ExportedStream>,
 }
 
-/// What [`ServiceState::ensure_sensor_scenes_outcome`] did.
-pub struct SensorScenesOutcome {
-    /// Content key of the map scenes (`None` without a cache directory).
-    pub key: Option<String>,
-    /// Loaded from the cache instead of built.
-    pub loaded: bool,
-    pub triangles: usize,
-}
-
 impl ServiceState {
     /// Build the map's sensor scenes if nothing has needed them yet. Logs
     /// progress: on a large map this runs for minutes inside one request.
     fn ensure_sensor_scenes(&mut self) {
-        if self.sensor_scenes.is_none() {
-            self.ensure_sensor_scenes_outcome();
-        }
-    }
-
-    /// [`Self::ensure_sensor_scenes`], reporting whether the cache served it.
-    pub fn ensure_sensor_scenes_outcome(&mut self) -> SensorScenesOutcome {
-        if let Some(scenes) = &self.sensor_scenes {
-            return SensorScenesOutcome { key: None, loaded: true, triangles: scenes.static_scene.triangle_count() };
+        if self.sensor_scenes.is_some() {
+            return;
         }
         let started = std::time::Instant::now();
         let triangles = self.app.sensor_triangles(false);
@@ -509,21 +341,6 @@ impl ServiceState {
             triangles.len()
         );
         let snapshot_s = started.elapsed().as_secs_f64();
-        let cache = self.sensor_cache_dir.clone().map(|dir| {
-            let key = sensor_scene_cache_key(&triangles, &self.legend);
-            (dir, key)
-        });
-        let triangle_count = triangles.len();
-        if let Some((dir, key)) = &cache {
-            if let Some(scenes) = load_cached_sensor_scenes(dir, key) {
-                self.sensor_scenes = Some(std::sync::Arc::new(scenes));
-                eprintln!(
-                    "sensor-scenes: loaded cached {key} in {:.1} s (triangle snapshot {snapshot_s:.1} s)",
-                    started.elapsed().as_secs_f64()
-                );
-                return SensorScenesOutcome { key: Some(key.clone()), loaded: true, triangles: triangle_count };
-            }
-        }
         // A heartbeat while the BVHs build, so a watcher of the service log
         // sees progress instead of a silent minute on a large map.
         let done = std::sync::atomic::AtomicBool::new(false);
@@ -551,28 +368,7 @@ impl ServiceState {
             started.elapsed().as_secs_f64(),
             snapshot_s
         );
-        let scenes = std::sync::Arc::new(scenes);
-        if let Some((dir, key)) = &cache {
-            // Writing a large map's trees takes a while: a render keeps
-            // rendering while it lands (temp + rename, so readers never see
-            // a partial entry); the one-shot build mode waits for it.
-            let (dir, key, shared) = (dir.clone(), key.clone(), scenes.clone());
-            let write = move || {
-                let stored = std::time::Instant::now();
-                match store_cached_sensor_scenes(&dir, &key, &shared) {
-                    Ok(true) => eprintln!("sensor-scenes: cached {key} in {:.1} s", stored.elapsed().as_secs_f64()),
-                    Ok(false) => {}
-                    Err(error) => eprintln!("sensor-scenes: could not cache {key}: {error}"),
-                }
-            };
-            if self.sync_sensor_cache_writes {
-                write();
-            } else {
-                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok();
-            }
-        }
-        self.sensor_scenes = Some(scenes);
-        SensorScenesOutcome { key: cache.map(|(_, key)| key), loaded: false, triangles: triangle_count }
+        self.sensor_scenes = Some(std::sync::Arc::new(scenes));
     }
 
     /// Classes of the frozen static legend, resolved once: the legend never
@@ -646,14 +442,8 @@ impl ServiceState {
             lidars: Vec::new(),
             radars: Vec::new(),
             sensor_scenes: None,
-            sync_sensor_cache_writes: false,
             static_sensor_classes: None,
             needs_settle: true,
-            sensor_cache_dir: spec
-                .sensor_cache_dir
-                .clone()
-                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty()))
-                .map(PathBuf::from),
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
             pedestrian_models,
@@ -2718,43 +2508,6 @@ mod tests {
         let bytes = |result: &super::SensorResult| result.payloads.iter().map(|p| (p.sensor_id.clone(), p.count, p.data.clone())).collect::<Vec<_>>();
         assert_eq!(bytes(&threaded), bytes(&serial));
         assert!(threaded.payloads.iter().any(|p| p.count > 0), "fixture must produce hits");
-    }
-
-    #[test]
-    fn cached_sensor_scenes_load_as_the_built_trees_and_prune_old_maps() {
-        let dir = std::env::temp_dir().join(format!("sensor-cache-test-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        let legend: HashMap<u32, String> = [(1, "Road_Asphalt_01".to_string()), (2, "Building".to_string())].into();
-        let mut triangles = quad(0.0, 0.0, 10.0, 0.0, 1).to_vec();
-        triangles.extend(quad(20.0, 0.0, 10.0, 5.0, 2));
-        let key = super::sensor_scene_cache_key(&triangles, &legend);
-        assert_eq!(key, super::sensor_scene_cache_key(&triangles, &legend), "key is a pure function");
-        let mut shifted = triangles.clone();
-        shifted[0].a[0] += 1.0;
-        assert_ne!(key, super::sensor_scene_cache_key(&shifted, &legend));
-        let renamed: HashMap<u32, String> = [(1, "Building_Annex".to_string()), (2, "Building".to_string())].into();
-        assert_ne!(key, super::sensor_scene_cache_key(&triangles, &renamed), "the road set is part of the key");
-
-        let built = build_map_sensor_scenes(triangles, &legend);
-        assert!(super::store_cached_sensor_scenes(&dir, &key, &built).unwrap());
-        let loaded = super::load_cached_sensor_scenes(&dir, &key).expect("cached");
-        for x in [1.0f32, 5.0, 9.0, 21.0, 29.0] {
-            let origin = Vec3::new(x, 100.0, 5.0);
-            let hit = |scene: &RaycastScene| scene.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
-            assert_eq!(hit(&loaded.static_scene), hit(&built.static_scene));
-            assert_eq!(hit(&loaded.road), hit(&built.road));
-        }
-        // Keep-newest pruning: only SENSOR_SCENE_CACHE_KEEP maps survive.
-        for n in 0..super::SENSOR_SCENE_CACHE_KEEP + 1 {
-            std::thread::sleep(std::time::Duration::from_millis(20));
-            assert!(super::store_cached_sensor_scenes(&dir, &format!("{n:064x}"), &built).unwrap());
-        }
-        let kept = std::fs::read_dir(&dir).unwrap().filter(|entry| {
-            entry.as_ref().unwrap().file_name().to_string_lossy().ends_with(".static.bvh")
-        }).count();
-        assert_eq!(kept, super::SENSOR_SCENE_CACHE_KEEP);
-        assert!(super::load_cached_sensor_scenes(&dir, &key).is_none(), "the oldest map was pruned");
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

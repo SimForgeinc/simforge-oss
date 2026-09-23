@@ -244,17 +244,6 @@ function videoEncoderPreference(options: NativeRenderEngineOptions): NativeVideo
   return requested;
 }
 
-/**
- * Where the service caches static sensor scenes (content-addressed, see
- * `renderer/service`): the worker's persistent cache directory.
- */
-function nativeSensorCacheDir(options: NativeRenderEngineOptions): string | undefined {
-  const root = process.env.SIMFORGE_NATIVE_SENSOR_CACHE_DIR
-    ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-sensor-scenes') : undefined)
-    ?? (options.nativeCacheDirectory ? path.join(path.dirname(options.nativeCacheDirectory), 'native-sensor-scenes') : undefined);
-  return root && root.length > 0 ? root : undefined;
-}
-
 /** Ticks whose raw RGBA frames are dumped for offline comparison (`SIMFORGE_NATIVE_DUMP_TICKS=0,24,95`). */
 function dumpTicks(): ReadonlySet<number> {
   const raw = process.env.SIMFORGE_NATIVE_DUMP_TICKS ?? '';
@@ -460,9 +449,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         pedestrianModels: actorAssets.directory,
         captureClock: capture.clock,
         taaSamples: capture.samplesPerFrame,
-        ...(sensorRigs.lidars.length + sensorRigs.radars.length > 0 && nativeSensorCacheDir(options)
-          ? { sensorCacheDir: nativeSensorCacheDir(options) }
-          : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.

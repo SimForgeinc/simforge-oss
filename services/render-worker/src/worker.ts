@@ -24,9 +24,7 @@ import {
   WORKER_INPUT_URLS_BATCH_V1,
   WORKER_INPUT_URLS_LABEL,
 } from '@simforge-oss/render';
-import {
-  buildNativeSensorScenes, collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, nativeSensorScenesCached, resolveBinary,
-} from '@simforge-oss/render/native';
+import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss/render/native';
 
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
@@ -34,7 +32,7 @@ import { acquireGpuJobLock, clearStaleGpuLock, type GpuJobLock } from './gpu-loc
 import { probeGpuMemory, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
-import { Prewarmer, type PrewarmMapDerivatives } from './prewarm.js';
+import { Prewarmer } from './prewarm.js';
 import { downloadInputs, uploadFile } from './transfers.js';
 import type { RenderControlTransport } from './transport.js';
 import { chownWorkspace, configuredContainerIdentity } from './workspace.js';
@@ -247,50 +245,6 @@ async function runHeartbeat(
       state.controller.abort(new Error('lease heartbeat failed', { cause: error }));
     }
   }
-}
-
-/**
- * Builds a fully cached map's static sensor scenes with the worker's native
- * service, only while no job is active: it takes the GPU lock without
- * waiting, and gives the device back (kills the build) as soon as a job is
- * claimed. A skipped build is retried on a later prewarm cycle.
- */
-function sensorSceneDerivatives(config: RenderWorkerConfig, store: BlobStore, cacheDir: string): PrewarmMapDerivatives {
-  const binary = resolveBinary((config.engine.options ?? {}) as { binary?: string });
-  return {
-    async build(set, signal) {
-      if (await nativeSensorScenesCached(cacheDir, set.closureSha256)) return 'cached';
-      if (store.mode !== 'idle' || signal.aborted) return 'skipped';
-      let lock: GpuJobLock;
-      try {
-        lock = await acquireGpuJobLock(config.gpuLockPath, `prewarm-sensor-scenes-${set.closureSha256.slice(0, 16)}`, { waitMs: 1_000 });
-      } catch {
-        return 'skipped';
-      }
-      const yieldToJob = new AbortController();
-      const watch = setInterval(() => {
-        if (store.mode !== 'idle') yieldToJob.abort(new Error('a render job claimed the GPU'));
-      }, 500);
-      try {
-        const members = new Map(set.members.map((member) => [member.relativePath, {
-          inputId: nativeMapMemberInputId(member.relativePath), relativePath: member.relativePath,
-          path: store.path(member.sha256), sha256: member.sha256, sizeBytes: member.sizeBytes,
-        }]));
-        await buildNativeSensorScenes({
-          binary, closureSha256: set.closureSha256, closure: { members }, cacheDir,
-          stagingDir: join(config.cacheDir, 'native-textures'),
-          signal: AbortSignal.any([signal, yieldToJob.signal]),
-        });
-        return 'built';
-      } catch (error) {
-        if (yieldToJob.signal.aborted || signal.aborted) return 'skipped';
-        throw error;
-      } finally {
-        clearInterval(watch);
-        await lock.release();
-      }
-    },
-  };
 }
 
 async function executeClaim(
@@ -623,14 +577,6 @@ export async function runRenderWorker(
   const markDraining = (): void => health.set('draining');
   drainSignal.addEventListener('abort', markDraining, { once: true });
 
-  // Static sensor scenes (the first-lidar BVH) are per-map work: built once
-  // per closure while the worker is idle, cached beside the blobs, and found
-  // by every later job on that map (the engine reads the same directory).
-  const sensorSceneDir = join(config.cacheDir, 'native-sensor-scenes');
-  process.env.SIMFORGE_NATIVE_SENSOR_CACHE_DIR ??= sensorSceneDir;
-  const derivatives = engine.capabilities.backend === 'native' && engine.capabilities.requiresGpu && process.env.SIMFORGE_PREWARM_SENSOR_SCENES !== '0'
-    ? sensorSceneDerivatives(config, store, sensorSceneDir)
-    : undefined;
   // Background prewarm of every published native map closure (native engines
   // only: a CARLA world ships its maps in the image). It accepts jobs throughout.
   const prewarmEnv = process.env.SIMFORGE_PREWARM?.trim();
@@ -644,7 +590,7 @@ export async function runRenderWorker(
       minFreeBytes: config.cache.minFreeBytes,
       unwantedGraceMs: config.cache.unwantedGraceMs,
       actorAssets: true,
-    }, () => registration.registrationId, undefined, derivatives)
+    }, () => registration.registrationId)
     : undefined;
   const prewarmStop = new AbortController();
   let lastGpuProbe = 0;

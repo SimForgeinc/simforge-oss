@@ -70,24 +70,14 @@ it('warms every published set once, reports readiness, and collects blobs no set
   await utimes(stalePath, new Date(Date.now() - 10 * 86_400_000), new Date(Date.now() - 10 * 86_400_000));
 
   const store = new BlobStore({ root: join(root, 'cache'), log: () => undefined });
-  // Per-map derivatives run once a set is fully cached, with every member on disk.
-  const derived: string[] = [];
-  const derivatives = {
-    async build(set: { closureSha256: string; members: readonly { sha256: string; sizeBytes: number }[] }) {
-      for (const entry of set.members) expect(await store.has(entry.sha256, entry.sizeBytes)).toBe(true);
-      derived.push(set.closureSha256);
-      return derived.filter((digest) => digest === set.closureSha256).length > 1 ? 'cached' as const : 'built' as const;
-    },
-  };
   const prewarmer = new Prewarmer(store, transport, {
     enabled: true, intervalMs: 600_000, pollMs: 120_000, budgetBytes: 1024 ** 3, minFreeBytes: 0,
     unwantedGraceMs: 86_400_000, actorAssets: false,
-  }, () => 'uswr_test', () => undefined, derivatives);
+  }, () => 'uswr_test', () => undefined);
   const manifest = { schema: RENDER_WORKER_CONTROL_V2_SCHEMA, type: 'worker.prewarm-manifest' as const, generation: sha('gen'), sets: sets.map((entry) => entry.set) };
 
   await prewarmer.cycle(manifest, AbortSignal.timeout(10_000));
   expect(requests).toBe(4); // shared geometry fetched once for both sets
-  expect(derived.sort()).toEqual([sha('a'), sha('b')].sort());
   expect(prewarmer.status()).toMatchObject({ state: 'ready', maps: { ready: 2, total: 2 }, blobs: { cached: 4, wanted: 4 } });
   const cached = (await listCachedBlobs(join(root, 'cache'))).map((entry) => entry.sha256);
   expect(cached).not.toContain(sha(stale));

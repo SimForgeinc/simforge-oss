@@ -32,8 +32,6 @@ export {
 export type {
   HostParsedEvidence, NativeEvidenceFailure, TolerantParseIssue, TolerantParseSchema, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
-export { NATIVE_SENSOR_SCENE_BUILDER, buildNativeSensorScenes, nativeSensorSceneMarkerPath, nativeSensorScenesCached } from './sensor-cache.js';
-export type { BuildNativeSensorScenesOptions, NativeSensorSceneMarker } from './sensor-cache.js';
 export { NATIVE_DEFAULT_ANTI_ALIAS, NATIVE_DEFAULT_TAA_SAMPLES, nativeCaptureSettings } from './engine.js';
 export { DEFAULT_NVENC_MAX_SESSIONS, NVENC_EQUIVALENT_CQ, VideoEncoder, assignVideoCodecs, nvencAvailable } from './video-encoder.js';
 export type { NativeVideoCodec, NativeVideoEncoderPreference } from './video-encoder.js';
