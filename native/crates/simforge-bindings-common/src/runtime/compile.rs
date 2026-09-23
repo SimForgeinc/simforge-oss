@@ -19,7 +19,9 @@ use simforge_compiler::map_signals::{
     build_map_control_plan, build_site_signal_plan, parse_map_signal_catalog,
     resolve_site_signal_program, MapSignalCatalog, SiteSignalRef,
 };
-use simforge_compiler::materialize::{instantiate, MaterializeOptions, Observation, SiteSelection};
+use simforge_compiler::materialize::{
+    instantiate, instantiate_at_site, MaterializeOptions, Observation, SiteSelection,
+};
 use simforge_compiler::signal_plan::{
     build_signal_control_index, compile_map_signal_plans, evaluate_signal_reference_phase,
     expand_map_signal_movements, select_signal_plan_reference, CompileMapSignalPlansOptions,
@@ -379,6 +381,26 @@ pub fn compile_template(
     let options = materialize_options(options_json, seed)?;
     let selection = site_id.map_or(SiteSelection::Auto, SiteSelection::Id);
     let result = instantiate(&document, map.bundle(), selection, &options)?;
+    Ok(Compiled {
+        scenario: Scenario::from_input(result.input),
+        manifest_json: serde_json::to_string(&result.manifest)?,
+        observations_json: serde_json::to_string(&result.observations)?,
+    })
+}
+
+/// Materialise template x map x an already-resolved `site` (from `find_site`),
+/// without re-running the matcher. Same result as `compile_template` with
+/// that site's id; refuses a site matched for another template or map.
+pub fn compile_template_at_site(
+    template_json: &str,
+    map: &MapAsset,
+    site: &Site,
+    seed: Option<Seed>,
+    options_json: Option<&str>,
+) -> Result<Compiled> {
+    let document: serde_json::Value = json_arg("template", template_json)?;
+    let options = materialize_options(options_json, seed)?;
+    let result = instantiate_at_site(&document, map.bundle(), site.inner(), &options)?;
     Ok(Compiled {
         scenario: Scenario::from_input(result.input),
         manifest_json: serde_json::to_string(&result.manifest)?,

@@ -213,6 +213,17 @@ def compile_template(
     """Materialise template x map x site x seed. ``site=None`` picks the top-ranked matched site;
     map-bound documents skip matching. ``options_json``: ``{drawIndex?, seed?, variant?, ambient?, ambientSettleSeconds?}``."""
 
+def compile_template_at_site(
+    template_json: str,
+    bundle: MapBundle,
+    site: Site,
+    *,
+    seed: int | float | str | None = None,
+    options_json: str | None = None,
+) -> CompileResult:
+    """Materialise at a site already resolved by ``find_site`` without re-running the matcher;
+    the same result as ``compile_template`` with that site's id. Refuses a site matched for another template or map."""
+
 def match_sites(template_json: str, bundle: MapBundle, options_json: str | None = None) -> str:
     """Ranked ``SiteMatch`` JSON ``{mapId, report: MatchReport, notes}``; ``options_json``: ``{minScore?, maxSites?, exactCatalogSiteResolution?}``."""
 

@@ -642,6 +642,28 @@ pub fn compile_template(
     })
 }
 
+/// Compile at a site already resolved by `findSite`, without re-matching.
+#[napi]
+pub fn compile_template_at_site(
+    template_json: String,
+    bundle: &JsMapBundle,
+    site: &JsSite,
+    seed: Option<Either<f64, String>>,
+    options_json: Option<String>,
+) -> Result<JsCompileResult> {
+    let seed = seed_of(seed)?;
+    Ok(JsCompileResult {
+        inner: rt::compile_template_at_site(
+            &template_json,
+            &bundle.inner,
+            &site.inner,
+            seed,
+            options_json.as_deref(),
+        )
+        .js()?,
+    })
+}
+
 #[napi]
 pub fn find_sites(template_json: String, bundle: &JsMapBundle) -> Result<Vec<String>> {
     rt::find_sites(&template_json, &bundle.inner).js()

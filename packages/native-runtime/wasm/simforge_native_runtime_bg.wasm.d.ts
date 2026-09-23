@@ -104,6 +104,7 @@ export const checkFeasibility: (a: number, b: number) => [number, number, number
 export const compareSituation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const compileSituation: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
 export const compileTemplate: (a: number, b: number, c: number, d: number, e: number, f: any, g: number, h: number) => [number, number, number];
+export const compileTemplateAtSite: (a: number, b: number, c: number, d: number, e: any, f: number, g: number) => [number, number, number];
 export const compileresult_input: (a: number) => number;
 export const compileresult_manifestJson: (a: number) => [number, number];
 export const compileresult_observationsJson: (a: number) => [number, number];

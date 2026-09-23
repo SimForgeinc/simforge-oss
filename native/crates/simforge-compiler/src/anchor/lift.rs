@@ -498,8 +498,11 @@ pub fn lift_map_bound_template(template: &ScenarioTemplate, index: &DerivedMapIn
             let delta = point - reference_point;
             let relative_s = projection.s - reference_projection.s;
             let relative_t = projection.lateral_m / projection.lane_width_m - reference_projection.lateral_m / reference_projection.lane_width_m;
+            // `rigidOffsetM` owns placement, so `tFrac` is informational here; it is
+            // still clamped to the schema's ±1 bound (as `frame_pose` does) so the
+            // portable template parses. The raw fraction can be several lanes wide.
             issues.push(issue(PortableLiftIssueCode::RoleBindingAmbiguous, PortableLiftSeverity::Warning, format!("roles.{}", role.id()), "actor is outside the source frame cross-section; its formation is carried as a rigid pair", "add a semantic crossing, parking-zone, or junction movement association", true));
-            RoleKind::RelativeTo { r#ref: reference.id().to_owned(), d_lane: relative_t.round().clamp(-8.0,8.0) as i32, ds_m: NumberOrExpr::Number(round(relative_s,6)), t_frac: round(projection.lateral_m / projection.lane_width_m,6), heading_offset_rad: round(angle_diff(scene_pose.heading_rad, scene_role(reference).unwrap().0.heading_rad),6), rigid_offset_m: Some(RigidOffsetM { along_m: round(delta.x * forward.x + delta.y * forward.y,4), across_m: round(-delta.x * forward.y + delta.y * forward.x,4) }) }
+            RoleKind::RelativeTo { r#ref: reference.id().to_owned(), d_lane: relative_t.round().clamp(-8.0,8.0) as i32, ds_m: NumberOrExpr::Number(round(relative_s,6)), t_frac: round((projection.lateral_m / projection.lane_width_m).clamp(-1.0, 1.0),6), heading_offset_rad: round(angle_diff(scene_pose.heading_rad, scene_role(reference).unwrap().0.heading_rad),6), rigid_offset_m: Some(RigidOffsetM { along_m: round(delta.x * forward.x + delta.y * forward.y,4), across_m: round(-delta.x * forward.y + delta.y * forward.x,4) }) }
         };
         let mut binding = FeatureBinding::new(role.id(), kind.name());
         binding.status = BindingStatus::Bound;
@@ -757,6 +760,110 @@ mod tests {
         assert!(codes.contains(&PortableLiftIssueCode::RoleBindingAmbiguous));
         assert!(codes.contains(&PortableLiftIssueCode::SpatialExtensionRemoved));
         assert!(!result.ok);
+    }
+
+    fn parallel_roads_topology(roads: i64) -> TopologyIndex {
+        let mut lanes = serde_json::Map::new();
+        for road in 1..=roads {
+            let y = (road - 1) as f64 * 50.0;
+            let rsl = format!("{road}:0:-1");
+            lanes.insert(rsl.clone(), lane(&rsl, road, -1, y, json!([[0, y], [200, y]])));
+        }
+        serde_json::from_value(json!({
+            "schemaVersion": 1, "mapName": "lift-test", "source": { "xodrSha256": "lift-digest" },
+            "lanes": lanes, "gates": [], "junctions": {}
+        })).unwrap()
+    }
+
+    fn parallel_roads_portable() -> (ScenarioTemplate, crate::bundle::MapBundle) {
+        let bundle = crate::bundle::MapBundle::from_topology("lift-test", parallel_roads_topology(4)).unwrap();
+        let source = template(json!([scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref()))]), json!([]));
+        let lifted = lift_map_bound_template(&source, bundle.index(), &PortableLiftOptions::default());
+        assert!(lifted.ok, "{:?}", lifted.issues);
+        (lifted.template.unwrap(), bundle)
+    }
+
+    #[test]
+    fn pinned_match_scores_only_the_pinned_site_and_yields_the_identical_site() {
+        let (portable, bundle) = parallel_roads_portable();
+        let adapted = adapt_template(&portable);
+        let options = MatchOptions { roles: adapted.roles.clone(), ..Default::default() };
+        let full = crate::anchor::matcher::match_anchor_report(&adapted.anchor, bundle.index(), &options);
+        assert!(full.sites.len() >= 3, "fixture must offer several sites: {:?}", full.sites.len());
+        let wanted = full.sites.last().unwrap().clone();
+
+        let mut pinned_anchor = adapted.anchor.clone();
+        pinned_anchor.pin = Some(crate::anchor::MPin { map_id: bundle.index().map_id.clone(), site_id: wanted.site_id.clone() });
+        let pinned = crate::anchor::matcher::match_anchor_report(&pinned_anchor, bundle.index(), &options);
+        assert_eq!(pinned.sites, vec![wanted.clone()]);
+        assert_eq!(pinned.stats.frames_built, full.stats.frames_built, "frames are still built and capped as in a full match");
+        assert!(pinned.stats.sites_scored < full.stats.sites_scored, "{} vs {}", pinned.stats.sites_scored, full.stats.sites_scored);
+
+        let scoped = crate::anchor::matcher::match_anchor_report(
+            &adapted.anchor,
+            bundle.index(),
+            &MatchOptions { only_site_id: Some(wanted.site_id.clone()), ..options.clone() },
+        );
+        assert!(scoped.sites.iter().chain(&scoped.rejected).all(|site| site.site_id == wanted.site_id));
+        assert_eq!(scoped.sites, vec![wanted]);
+    }
+
+    #[test]
+    fn find_site_by_id_and_compile_at_a_resolved_site_match_the_full_path() {
+        use crate::materialize::{instantiate, instantiate_at_site, MaterializeOptions, SiteSelection};
+        let (portable, bundle) = parallel_roads_portable();
+        let full = crate::sites::match_on_map(&portable, &bundle, &crate::sites::SiteMatchOptions::default()).unwrap();
+        let wanted = full.report.sites.last().unwrap().clone();
+
+        let found = crate::sites::find_site(&portable, &bundle, SiteSelection::Id(&wanted.site_id)).unwrap();
+        assert_eq!(found, wanted);
+
+        let document = portable.to_value();
+        let options = MaterializeOptions::new();
+        let by_id = instantiate(&document, &bundle, SiteSelection::Id(&wanted.site_id), &options);
+        let at_site = instantiate_at_site(&document, &bundle, &found, &options);
+        match (by_id, at_site) {
+            (Ok(a), Ok(b)) => {
+                assert_eq!(serde_json::to_value(&a.manifest).unwrap(), serde_json::to_value(&b.manifest).unwrap());
+                assert_eq!(serde_json::to_value(&a.input).unwrap(), serde_json::to_value(&b.input).unwrap());
+            }
+            (Err(a), Err(b)) => assert_eq!(a.code, b.code),
+            (a, b) => panic!("paths disagree: by id ok={}, at site ok={}", a.is_ok(), b.is_ok()),
+        }
+
+        let mut foreign = found.clone();
+        foreign.anchor_id = "another-template".into();
+        assert_eq!(instantiate_at_site(&document, &bundle, &foreign, &options).unwrap_err().code, "site_mismatch");
+        let mut pinned = portable.to_value();
+        pinned["anchor"]["pin"] = json!({ "mapId": "lift-test", "siteId": full.report.sites[0].site_id });
+        if full.report.sites[0].site_id != found.site_id {
+            assert_eq!(instantiate_at_site(&pinned, &bundle, &found, &options).unwrap_err().code, "site_mismatch");
+        }
+
+        let unknown = crate::sites::find_site(&portable, &bundle, SiteSelection::Id("0000000000000000")).unwrap_err();
+        assert_eq!(unknown.code, "unknown_site");
+        let available = unknown.detail.as_ref().and_then(|d| d.get("available")).and_then(|v| v.as_array()).map_or(0, Vec::len);
+        assert_eq!(available, full.report.sites.len().min(10), "the refusal still names the available sites");
+    }
+
+    #[test]
+    fn rigid_pair_lateral_fraction_is_clamped_and_offset_keeps_the_true_distance() {
+        // 12 m left of a 3.5 m lane: the raw fraction is ~3.4 lanes, outside the
+        // schema's ±1 bound; the rigid offset keeps the exact lateral distance.
+        let source = template(json!([
+            scene_role("ego", 10.0, 0.0, 0.0, Some(main_lane_ref())),
+            scene_role("other", 18.0, -12.0, 0.0, None)
+        ]), json!([]));
+        let result = lift_map_bound_template(&source, &straight_index(), &PortableLiftOptions::default());
+        assert!(result.ok, "{:?}", result.issues);
+        let lifted = result.template.unwrap();
+        let other = lifted.roles.iter().find(|r| r.id() == "other").unwrap();
+        let RoleKind::RelativeTo { t_frac, rigid_offset_m: Some(offset), .. } = &other.kind else { panic!("expected a rigid pair, got {:?}", other.kind.name()) };
+        assert_eq!(*t_frac, 1.0);
+        assert_eq!((offset.along_m, offset.across_m), (8.0, 12.0));
+        let json = serde_json::to_value(&lifted).unwrap();
+        let back: ScenarioTemplate = serde_json::from_value(json).unwrap();
+        assert_eq!(back.roles.len(), 2);
     }
 
     #[test]

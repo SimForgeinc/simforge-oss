@@ -39,6 +39,12 @@ const ALL_CONTROLS: [JunctionControl; 6] = [
 pub struct MatchOptions {
     pub roles: Vec<MRole>,
     pub max_frames: Option<usize>,
+    /// Score only the frames whose site id is this one (plus the anchor's
+    /// pinned site, when it is pinned to this map). Frames are still built and
+    /// counted against `max_frames` exactly as in a full match, and every frame
+    /// of a kept site is scored, so the site this yields is identical to the
+    /// one a full match would produce; only the other sites' scoring is skipped.
+    pub only_site_id: Option<String>,
 }
 
 /// Recenter a corridor frame on the authored structural zero (a merge, lane
@@ -282,6 +288,27 @@ fn approach_lanes_of(index: &DerivedMapIndex, junction_id: &str) -> Vec<String> 
     set.into_iter().collect()
 }
 
+/// The site id a frame will be scored under. Depends only on the frame's origin
+/// and entry lane (never on its evaluation), so it can be taken before scoring;
+/// recentering shifts stations but keeps both.
+fn frame_site_id(index: &DerivedMapIndex, anchor: &MAnchor, frame: &AnchorFrame) -> String {
+    let origin_s = if frame.origin.kind == OriginKind::Corridor {
+        0.0
+    } else {
+        index
+            .lane(&frame.entry_lane_rsl)
+            .map_or(0.0, |l| l.length_m)
+    };
+    compute_site_id(
+        &anchor.id,
+        &index.map_id,
+        &index.topology_digest,
+        &frame.origin.map_feature_id,
+        &frame.entry_lane_rsl,
+        origin_s,
+    )
+}
+
 fn evaluate_frame(
     index: &DerivedMapIndex,
     anchor: &MAnchor,
@@ -299,21 +326,7 @@ fn evaluate_frame(
         soft_score,
         failed_required_clauses: &failed_required,
     });
-    let origin_s = if frame.origin.kind == OriginKind::Corridor {
-        0.0
-    } else {
-        index
-            .lane(&frame.entry_lane_rsl)
-            .map_or(0.0, |l| l.length_m)
-    };
-    let site_id = compute_site_id(
-        &anchor.id,
-        &index.map_id,
-        &index.topology_digest,
-        &frame.origin.map_feature_id,
-        &frame.entry_lane_rsl,
-        origin_s,
-    );
+    let site_id = frame_site_id(index, anchor, &frame);
     let mut matched_reasons = evaluation.reasons;
     for binding in &bindings {
         for note in &binding.notes {
@@ -511,6 +524,24 @@ pub fn match_anchor_report(
         }
     }
     stats.frames_built = frames.len() + mirrored_frames.len();
+
+    // A pinned anchor (or a caller resolving one site id) only ever reports
+    // that site, so the others need not be scored. The site id is known before
+    // scoring and every frame of a wanted site is kept, so the selection below
+    // sees exactly the frames of that site a full match would have.
+    let mut wanted: BTreeSet<&str> = BTreeSet::new();
+    if let Some(id) = &options.only_site_id {
+        wanted.insert(id.as_str());
+    }
+    if let Some(pin) = anchor.pin.as_ref().filter(|pin| pin.map_id == index.map_id) {
+        wanted.insert(pin.site_id.as_str());
+    }
+    if !wanted.is_empty() {
+        frames.retain(|frame| wanted.contains(frame_site_id(index, anchor, frame).as_str()));
+        if let Some(m) = &mirrored_anchor {
+            mirrored_frames.retain(|frame| wanted.contains(frame_site_id(index, m, frame).as_str()));
+        }
+    }
 
     let mut scored: Vec<(MatchedSite, bool)> = Vec::with_capacity(stats.frames_built);
     for frame in frames {
