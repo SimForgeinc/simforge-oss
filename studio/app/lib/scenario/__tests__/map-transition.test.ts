@@ -1,4 +1,6 @@
 import "../../models/__tests__/test-env";
+// Authoritative traces (the saved before's simulation) are local objects signed with the host token.
+process.env.SIMFORGE_LOCAL_HOST_TOKEN ??= "map-transition-test-token";
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -15,7 +17,11 @@ import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { migrate } from "../../../../scripts/migrate";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
 import type { AppContext } from "../../db/app-context";
-import { execute, shutdownDatabase } from "../../db/data-api";
+import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { createScenarioDocument } from "../document-store";
+import { listDocumentVersions, moveDraftToMapVersion, restoreVersionToDraft } from "../sim-history";
+import { setSimulationExecutorForTests } from "../sim-result-store";
+import { fakeAuthoritativeSimulation } from "./sim-fixtures";
 import { writeLocalObject } from "../../s3/s3-object";
 import type { ScenarioDocumentDto } from "../contracts";
 import { KEPT_TOLERANCE_M, LANE_SEARCH_RADIUS_M, MOVE_TOLERANCE_M, planMapTransition } from "../map-transition";
@@ -27,7 +33,7 @@ import {
   poseAt,
   projectOntoLane,
 } from "../map-transition-geometry";
-import { seedPinnedMap } from "./pinning-fixtures";
+import { seedPinnedMap, setMembers, SIMULATION_MEMBERS } from "./pinning-fixtures";
 
 /**
  * Moving a scenario to a newer publication of its map (map-transition.ts), on the committed
@@ -556,5 +562,86 @@ describe("lane chains", () => {
     const matched = matchLaneChain(LANES_A, lanesC, ["68:0:-1", onward], { toleranceM: 3 });
     assert.ok(matched.ok, matched.ok ? "" : matched.reason);
     assert.deepEqual(matched.lanes, ["68:0:-1", onward]);
+  });
+});
+
+describe("moving the draft", () => {
+  /** A and B become pinnable publications (an available browser closure each). */
+  async function pinnable(v: Version, setId: string): Promise<void> {
+    await execute(
+      `INSERT INTO simforge.browser_asset_sets (id, workspace_id, map_version_id, closure_sha256, object_count, byte_length, asset_set_state)
+       VALUES (:id, :workspace_id, :map_version_id, :closure, 1, 1, 'available') ON CONFLICT (id) DO NOTHING`,
+      { id: setId, workspace_id: LOCAL_WORKSPACE_ID, map_version_id: v.id, closure: sha256(setId) },
+    );
+    await setMembers(setId, { ...SIMULATION_MEMBERS, "map.xodr": sha256(v.xodr) });
+    await execute(`UPDATE simforge.map_versions SET browser_asset_set_id = :set WHERE id = :id`, { set: setId, id: v.id });
+  }
+
+  test("the state before the move is saved as a version first; the draft moves; reverting brings it back", async (t) => {
+    t.after(() => setSimulationExecutorForTests(null));
+    setSimulationExecutorForTests(async (subject) => fakeAuthoritativeSimulation("map-move", { assetId: MAP, versionId: subject.mapVersionId }));
+    await pinnable(A, "usbas_mt_a");
+    await pinnable(B, "usbas_mt_b");
+    const created = await createScenarioDocument(context, {
+      title: "Move me",
+      schemaVersion: "2",
+      content: mapBoundContent(),
+      mapVersionId: A.id,
+      datasetId: "usds_pin",
+      authoringQualityId: "medium",
+    });
+
+    const moved = await moveDraftToMapVersion(context, created.id, { expectedVersion: created.draftVersion, targetMapVersionId: B.id });
+    assert.equal(moved.kind, "moved");
+    if (moved.kind !== "moved") return;
+    assert.equal(moved.document.mapVersionId, B.id);
+    assert.equal(moved.plan.geometry, "same");
+    const before = await queryOne<{ created_for: string; map_version_id: string; label: string; source_draft_version: number }>(
+      `SELECT created_for, map_version_id, label, source_draft_version FROM simforge.revisions WHERE id = :id`,
+      { id: moved.before.revisionId },
+    );
+    assert.equal(before?.created_for, "map_move");
+    assert.equal(before?.map_version_id, A.id, "the saved before keeps its original map pin");
+    assert.match(before?.label ?? "", /^Before moving to Richmond v2 \(heights\)/);
+    assert.equal(Number(before?.source_draft_version), created.draftVersion);
+    const beforeSim = await queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM simforge.revision_active_simulation WHERE revision_id = :id`,
+      { id: moved.before.revisionId },
+    );
+    assert.equal(Number(beforeSim?.n), 1, "and its simulation");
+
+    const versions = await listDocumentVersions(context, created.id);
+    const listed = versions?.versions.find((version) => version.revisionId === moved.before.revisionId);
+    assert.equal(listed?.createdFor, "map_move");
+    assert.equal(listed?.map?.mapVersionId, A.id);
+    assert.equal(listed?.matchesDraft, false);
+
+    // Revert to the previous map version: content and pin together.
+    const reverted = await restoreVersionToDraft(context, created.id, moved.before.revisionId, { expectedVersion: moved.document.draftVersion });
+    assert.equal(reverted.kind, "updated");
+    if (reverted.kind !== "updated") return;
+    assert.equal(reverted.document.mapVersionId, A.id);
+    assert.equal(reverted.document.contentSha256, (await queryOne<{ content_sha256: string }>(
+      `SELECT content_sha256 FROM simforge.revisions WHERE id = :id`, { id: moved.before.revisionId },
+    ))?.content_sha256);
+  });
+
+  test("a blocked move changes nothing and saves nothing", async (t) => {
+    t.after(() => setSimulationExecutorForTests(null));
+    setSimulationExecutorForTests(async (subject) => fakeAuthoritativeSimulation("map-move-blocked", { assetId: MAP, versionId: subject.mapVersionId }));
+    const created = await createScenarioDocument(context, {
+      title: "Blocked move",
+      schemaVersion: "2",
+      content: mapBoundContent(),
+      mapVersionId: A.id,
+      datasetId: "usds_pin",
+      authoringQualityId: "medium",
+    });
+    const blocked = await moveDraftToMapVersion(context, created.id, { expectedVersion: created.draftVersion, targetMapVersionId: D.id });
+    assert.equal(blocked.kind, "blocked");
+    const revisions = await queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM simforge.revisions WHERE document_id = :id`, { id: created.id });
+    assert.equal(Number(revisions?.n), 0);
+    const draft = await queryOne<{ map_version_id: string }>(`SELECT map_version_id FROM simforge.drafts WHERE document_id = :id`, { id: created.id });
+    assert.equal(draft?.map_version_id, A.id);
   });
 });

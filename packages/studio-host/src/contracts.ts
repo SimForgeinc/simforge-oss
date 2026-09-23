@@ -543,12 +543,23 @@ export type ScenarioMapPinStatusDto = {
   newerUnavailable: { code: string; message: string } | null;
 };
 
-/** The draft simulated on another map version, compared with what it shows now. */
+/**
+ * The transition view: the plan for moving the draft to another map version, the planned content
+ * simulated there (null when the move is blocked), and that motion compared with what it shows now.
+ */
 export type ScenarioMapRepinPreviewDto = {
   target: { mapVersionId: string; name: string; publishedAt: string };
-  status: ScenarioSimulationStatusDto;
+  plan: ScenarioMapTransitionPlanDto;
+  status: ScenarioSimulationStatusDto | null;
   /** Against the draft's current result; null until the target simulation succeeds. */
   motionDiff: SimulationMotionDiffDto | null;
+};
+
+/** The draft moved to another map version; the state before the move is saved as a version. */
+export type ScenarioMapMoveResultDto = {
+  document: ScenarioDocumentDto;
+  before: { revisionId: string; revisionNumber: number };
+  plan: ScenarioMapTransitionPlanDto;
 };
 
 export type CreateScenarioRevisionResultDto = {

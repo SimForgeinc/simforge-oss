@@ -401,6 +401,13 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     previewMapRepin(documentId, request, signal) {
       return call(documents.previewMapRepin, { params: { documentId }, body: request, signal });
     },
+    moveToMapVersion(document, targetMapVersionId, signal) {
+      return call(documents.moveToMapVersion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, targetMapVersionId },
+        signal,
+      });
+    },
   };
 
   const artifacts: StudioArtifactService = {

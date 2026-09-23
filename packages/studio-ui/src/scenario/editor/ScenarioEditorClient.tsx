@@ -28,6 +28,7 @@ import {
 } from "./status";
 import { SaveStatus } from "./SaveStatus";
 import { NewerMapBanner } from "./versions/NewerMapBanner";
+import { versionsChanged } from "./versions/versions-events";
 import { mapsIncludingPinnedVersion } from "../scene/pinned-map";
 import type { StudioMapEntry } from "@simforge-oss/studio-host";
 import type { ScenarioWorldTarget } from "../scene/ScenarioWorldHost";
@@ -492,15 +493,23 @@ function ScenarioEditorWorkspace({
     return () => abort.abort();
   }, [maps, pinnedDocumentId, pinnedMapVersionId, studioHost]);
 
-  /** The explicit re-pin offered by NewerMapBanner: save pending edits, then move the draft. */
+  /**
+   * "Move to new map version" (NewerMapBanner): save pending edits, then let the host keep the
+   * state before the move as a version and move the draft to the planned content.
+   */
+  const [mapMoveNotice, setMapMoveNotice] = useState<string | null>(null);
   const moveToNewerMap = useCallback(async (targetMapVersionId: string) => {
     const current = recordRef.current;
     if (!current) return;
     await persist();
     const saved = await studioHost.projects.getDocument(current.id);
-    const moved = await studioHost.projects.updateDocument(saved.id, { expectedVersion: saved.draftVersion, mapVersionId: targetMapVersionId });
-    recordRef.current = moved;
-    setRecord(moved);
+    const result = await studioHost.projects.moveToMapVersion(saved, targetMapVersionId);
+    versionsChanged(result.document.id);
+    setMapMoveNotice(
+      `Moved to ${result.plan.target.name}. The scenario as it was is saved as Version ${result.before.revisionNumber}; revert to it from Versions at any time.`,
+    );
+    recordRef.current = result.document;
+    setRecord(result.document);
   }, [persist, studioHost]);
 
   // Boot and failure conditions, published rather than rendered. Only one can be
@@ -618,6 +627,7 @@ function ScenarioEditorWorkspace({
           <NewerMapBanner
             documentId={record?.id ?? null}
             mapVersionId={record?.mapVersionId ?? null}
+            notice={mapMoveNotice}
             onMove={moveToNewerMap}
           />
         }
