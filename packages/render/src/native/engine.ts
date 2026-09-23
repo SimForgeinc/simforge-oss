@@ -26,8 +26,8 @@ import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type Par
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
-import { stripRgbaPadding, type NativeFrameIdentity, type NativeFrameRecord } from './service-client.js';
-import { startNativeRenderService } from './service-process.js';
+import { stripRgbaPadding, type NativeActorObservation, type NativeBundleResponse, type NativeFrameIdentity, type NativeFrameRecord } from './service-client.js';
+import { DEFAULT_SHM_SIZE_MB, startNativeRenderService } from './service-process.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, nativeActorAssetsCacheDir } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
@@ -45,6 +45,8 @@ export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 export const NATIVE_LOAD_STATE_TIMEOUT_MS = 300_000;
 export const NATIVE_FIRST_BUNDLE_TIMEOUT_MS = 600_000;
 export const NATIVE_BUNDLE_TIMEOUT_MS = 120_000;
+/** Bundle requests kept queued behind the one being answered (pipelining). */
+export const NATIVE_BUNDLE_LOOKAHEAD = 2;
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
@@ -88,6 +90,8 @@ export interface NativeRenderEngineOptions {
   readonly antiAlias?: string;
   /** Jittered samples a pinned TAA capture accumulates (default 4; ignored for other AA). */
   readonly taaSamples?: number;
+  /** Bundle requests queued behind the one being answered (default 2; 0 disables pipelining). */
+  readonly bundleLookahead?: number;
 }
 
 /** Anti-aliasing of the pinned (default) capture clock. */
@@ -545,6 +549,39 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           timing.encodeWrite = (timing.encodeWrite ?? 0) + (performance.now() - encodeStarted);
         };
 
+        // Bundle pipelining: with requests queued behind the one it is
+        // answering, the service submits the next capture before collecting
+        // the current one (CPU frame build overlaps GPU work). Needs the
+        // service to report observations inside the bundle, and a ring that
+        // holds every published-but-unread bundle.
+        const bundleBytes = sources.reduce((sum, source) => sum + (source.modality === 'rgb'
+          ? Math.ceil(source.attributes.width * 4 / 256) * 256 * source.attributes.height
+          : 8 * 1024 * 1024), 0);
+        const ringBytes = (options.shmSizeMb ?? DEFAULT_SHM_SIZE_MB) * 1024 * 1024;
+        const requestedLookahead = options.bundleLookahead
+          ?? (process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD ? Number(process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD) : NATIVE_BUNDLE_LOOKAHEAD);
+        const lookahead = Number.isInteger(requestedLookahead) && requestedLookahead > 0
+          && client.supports('render_bundle.pipeline') && client.supports('render_bundle.observe') && ringBytes >= (3 + requestedLookahead) * bundleBytes
+          ? requestedLookahead
+          : 0;
+        const bundleBody = (tick: number) => ({
+          sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'], sim_time_s: lowering.frameTimes[tick],
+          // The non-camera rig is retained by the service: declare it once.
+          ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
+          ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
+          ...(lookahead > 0 ? { pipeline: true, observe: observing } : {}),
+        });
+        const queued: Promise<NativeBundleResponse>[] = [];
+        let nextTick = 0;
+        const send = () => {
+          const tick = nextTick;
+          nextTick += 1;
+          const sent = client.renderBundle(bundleBody(tick), tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS * (1 + lookahead));
+          sent.catch(() => undefined);
+          queued.push(sent);
+        };
+        counters.bundleLookahead = lookahead;
+
         for (let tick = 0; tick < lowering.states.length; tick += 1) {
           if (context.signal.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error('native render aborted');
           const tickStarted = performance.now();
@@ -554,12 +591,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             tickClient[name] = (tickClient[name] ?? 0) + (now - since);
             return now;
           };
-          const response = await client.renderBundle({
-            sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'], sim_time_s: lowering.frameTimes[tick],
-            // The non-camera rig is retained by the service: declare it once.
-            ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
-            ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
-          }, tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS);
+          // Tick 0 (pipeline compile, sensor scenes) goes alone; then keep
+          // `lookahead` requests queued behind the one being answered.
+          while (nextTick < lowering.states.length && nextTick <= (tick === 0 ? 0 : tick + lookahead)) send();
+          const response = await queued.shift()!;
           if (response.frame.simTick !== tick) {
             throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
           }
@@ -570,8 +605,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           for (const [stage, ms] of Object.entries(service.durations)) serverStages.add(stage, ms);
           serverStages.add('total', response.server_ms ?? 0);
           for (const [counter, value] of Object.entries(service.counts)) counters[counter] = (counters[counter] ?? 0) + value;
+          const bundled = response.observed_actors as NativeActorObservation['actors'] | undefined;
           if (observing) {
-            const observation = await client.observeActors();
+            const observation = bundled
+              ? { tick: (response.observed_tick as number | null | undefined) ?? null, actors: bundled }
+              : lookahead > 0 ? null : await client.observeActors();
             if (observation === null) {
               observing = false;
               warnings.push({ code: 'native_observation_unavailable', message: 'the render service does not report observed actor transforms; parity was not graded' });

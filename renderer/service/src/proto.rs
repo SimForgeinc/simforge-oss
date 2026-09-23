@@ -19,7 +19,8 @@ use serde::{Deserialize, Serialize};
 pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Additive ops advertised in `hello.capabilities`.
-pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &["observe_actors", "capture_clock.pinned"];
+pub const NATIVE_SERVICE_CAPABILITIES: &[&str] =
+    &["observe_actors", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline"];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -228,6 +229,15 @@ pub enum RequestBody {
         /// capture clock. Absent: the applied frame's `tick / tickHz`.
         #[serde(default)]
         sim_time_s: Option<f64>,
+        /// Answer with the observed actor transforms of this tick
+        /// (`observed_actors`), instead of a separate `observe_actors`.
+        #[serde(default)]
+        observe: Option<bool>,
+        /// The client keeps the next bundle request queued behind this one:
+        /// the service may submit that capture before collecting this one
+        /// (responses stay in request order).
+        #[serde(default)]
+        pipeline: Option<bool>,
     },
     /// Re-light the prewarmed scene in place. The tiles and the instance-ID
     /// pass stay loaded; the lighting ladder, the cinematic stack on every
@@ -399,6 +409,12 @@ pub enum ResponseBody {
         /// Where `server_ms` went (additive; older clients ignore it).
         #[serde(skip_serializing_if = "Option::is_none")]
         stages: Option<BundleStages>,
+        /// With `observe`: the tick the actors were observed at.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        observed_tick: Option<u32>,
+        /// With `observe`: every scene actor as drawn by this bundle.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        observed_actors: Option<Vec<ObservedActorPose>>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {
@@ -685,11 +701,10 @@ pub struct BundleStages {
     pub lidar_ms: f64,
     /// Radar raycasts and payload encoding.
     pub radar_ms: f64,
-    /// Lidar/radar work that ran while the GPU rendered (overlap mode).
+    /// Lidar/radar scans ran on the ray pool while the GPU rendered.
     pub sensors_overlapped: bool,
-    /// The overlapped snapshot differed from the post-capture world, so the
-    /// scans reran serially (output always matches the serial path).
-    pub sensor_resnapshots: u32,
+    /// Time publication waited for the tick's scans to finish.
+    pub sensor_wait_ms: f64,
     /// Ring publication of lidar/radar payloads and the bundle table.
     pub publish_sensors_ms: f64,
 }
