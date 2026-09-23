@@ -406,7 +406,7 @@
     {
       "file": "renderer/render-core/src/playback.rs",
       "rule": "rs-unwrap-or",
-      "count": 19,
+      "count": 18,
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {

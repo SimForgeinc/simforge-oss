@@ -375,7 +375,10 @@ impl Readiness {
                 "[native_ground_height_unavailable] x={x:.2} z={z:.2} has no map ground within 20 m"
             )),
         };
-        height.unwrap_or_else(|error| panic!("scen-play: {error}"))
+        match height {
+            Ok(y) => y,
+            Err(error) => panic!("scen-play: {error}"),
+        }
     }
 }
 
@@ -1347,10 +1350,14 @@ fn poll_capture_ready(
         if pb.args.ground_y.is_none() {
             match &pb.args.ground_mesh {
                 Some(path) => {
-                    let bytes = std::fs::read(path)
-                        .unwrap_or_else(|error| panic!("scen-play: [native_ground_mesh_unreadable] {}: {error}", path.display()));
-                    let surface = simforge_core::map::ground::GroundSurface::decode(&bytes)
-                        .unwrap_or_else(|error| panic!("scen-play: [native_ground_mesh_invalid] {}: {error}", path.display()));
+                    let bytes = match std::fs::read(path) {
+                        Ok(bytes) => bytes,
+                        Err(error) => panic!("scen-play: [native_ground_mesh_unreadable] {}: {error}", path.display()),
+                    };
+                    let surface = match simforge_core::map::ground::GroundSurface::decode(&bytes) {
+                        Ok(surface) => surface,
+                        Err(error) => panic!("scen-play: [native_ground_mesh_invalid] {}: {error}", path.display()),
+                    };
                     eprintln!("ground-source: ground-mesh {}", surface.digest());
                     readiness.ground_surface = Some(std::sync::Arc::new(surface));
                 }
