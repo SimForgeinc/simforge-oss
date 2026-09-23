@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /**
  * Offset-preserving OpenDRIVE text layer for the elevation refit.
  *
@@ -186,6 +188,18 @@ export function frozenText(text: string, root: XmlElement = scanXml(text)): stri
     at = r.end;
   }
   return out + text.slice(at);
+}
+
+/**
+ * Road-geometry identity of an OpenDRIVE document: sha256 of the file with
+ * every `<elevationProfile>`, `<lateralProfile>` and lane `<height>` line
+ * removed. Two files with equal geometry digests have byte-identical
+ * planView, lanes, links, junctions, signals, objects, ids and header; they
+ * differ at most in their vertical profile (e.g. an elevation refit), so a
+ * document's anchors are valid on both.
+ */
+export function xodrGeometrySha256(text: string): string {
+  return createHash('sha256').update(frozenText(text)).digest('hex');
 }
 
 /**
