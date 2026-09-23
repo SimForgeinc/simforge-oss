@@ -1977,9 +1977,15 @@ impl GroundField {
     /// Cells outside the mesh coverage use the nearest populated cell within
     /// 20 m, then the scene median, then 0.0 for an entirely empty scene.
     pub(crate) fn sample(&self, x: f32, z: f32) -> f32 {
+        self.sample_covered(x, z).or(self.median).unwrap_or(0.0)
+    }
+
+    /// [`Self::sample`] without the off-map median/zero: `None` when no
+    /// populated cell lies within 20 m.
+    pub(crate) fn sample_covered(&self, x: f32, z: f32) -> Option<f32> {
         let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
         if let Some(y) = self.min_y.get(&(cx, cz)) {
-            return *y;
+            return Some(*y);
         }
         for ring in 1..=10i64 {
             let mut best: Option<(i64, f32)> = None;
@@ -1997,10 +2003,10 @@ impl GroundField {
                 }
             }
             if let Some((_, y)) = best {
-                return y;
+                return Some(y);
             }
         }
-        self.median.unwrap_or(0.0)
+        None
     }
 
     /// Median per-cell ground height across the whole scene, or `None` for
@@ -3558,8 +3564,36 @@ impl SceneApp {
     }
 
     /// Ground height under (x, z) from the readiness height field.
+    ///
+    /// Outside mesh coverage this is the scene median (or 0.0 for an empty
+    /// scene): fine for an atmosphere reference height, never for placing
+    /// geometry. Placement uses [`Self::ground_at_covered`].
     pub fn ground_at(&self, x: f32, z: f32) -> f32 {
         self.ground.sample(x, z)
+    }
+
+    /// Ground height under (x, z) when the map covers it: the cell itself or
+    /// the nearest populated cell within 20 m (cell-edge gaps). `None` off
+    /// the map, where a height would be invented.
+    pub fn ground_at_covered(&self, x: f32, z: f32) -> Option<f32> {
+        self.ground.sample_covered(x, z)
+    }
+
+    /// Remove an actor's catalog model (and its ID clones), keeping the
+    /// actor. Used to rebind a different model or animation GLB.
+    pub fn detach_actor_asset(&mut self, actor_id: &str) -> Result<()> {
+        let (model, _, _) = self
+            .actor_models
+            .remove(actor_id)
+            .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no attached catalog asset"))?;
+        self.actor_tint_materials.remove(actor_id);
+        self.actor_animations.remove(actor_id);
+        let world = self.app.world_mut();
+        world.despawn(model);
+        // The cuboid (and its ID clone) stay hidden: an actor is never shown
+        // as its proxy; the caller attaches the replacement in the same tick.
+        self.scene_revision += 1;
+        Ok(())
     }
 
     /// Apply a `simforge.road-detail/v1` sidecar (splat-blended asphalt

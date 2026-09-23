@@ -67,8 +67,17 @@ export const CONTROL_FEATURE_NATIVE_PARITY = 'native-evidence.parity' as const;
 export const CONTROL_FEATURE_NATIVE_STAGE_TIMINGS = 'native-evidence.stage-timings' as const;
 /** `capture` in the native render manifest: how captured pixels relate to time (capture clock, AA samples). */
 export const CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK = 'native-evidence.capture-clock' as const;
+/**
+ * `substitutions` in an engine's render manifest: every substitution the
+ * intent's `allowSubstitutions` permitted and the engine made
+ * (docs/engineering/no-silent-fallbacks.md). A worker whose lease lacks the
+ * feature must refuse an intent that allows substitutions, since it could
+ * not report them.
+ */
+export const CONTROL_FEATURE_RENDER_SUBSTITUTIONS = 'render-evidence.substitutions' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
+  CONTROL_FEATURE_RENDER_SUBSTITUTIONS,
 ] as const;
 
 export const JobInputTransferSchema = z.strictObject({

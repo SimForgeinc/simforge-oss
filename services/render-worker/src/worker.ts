@@ -89,7 +89,7 @@ function uncappedFailureOf(error: unknown): { code: string; message: string; ret
   // Engine errors that carry their own machine code and retry verdict (e.g.
   // native_gpu_memory_insufficient) report them as-is.
   const coded = error as { code?: unknown; retryable?: unknown };
-  if (error instanceof Error && typeof coded.code === 'string' && /^native_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
+  if (error instanceof Error && typeof coded.code === 'string' && /^(?:native|carla|render)_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
     return { code: `render.${coded.code}`, message, retryable: coded.retryable };
   }
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
