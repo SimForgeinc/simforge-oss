@@ -73,8 +73,9 @@ export async function POST(request: Request) {
       );
     }
     if (error instanceof Error && error.message.startsWith("uniscenario_render_resource_")) {
+      const detail = (error as Error & { detail?: unknown }).detail;
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, ...(typeof detail === "string" ? { detail } : {}) },
         { status: 422 },
       );
     }

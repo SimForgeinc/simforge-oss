@@ -136,3 +136,41 @@ describe('assertActorAppearanceGrounded', () => {
     expect(() => assertActorAppearanceGrounded([], [host], assets)).toThrow(/never present/);
   });
 });
+
+describe('shared actor closure tree', () => {
+  it('lays the closure out once per digest and reuses it without copying or re-hashing', async () => {
+    const fixture = await registry({ 'catalog-models.json': catalog, 'models/vehicle.sedan/model.glb': sedanGlb });
+    const treeRoot = path.join(fixture.cacheDir, 'trees');
+    const first = await ensureActorAssets({ ...fixture, treeRoot });
+    expect(first.directory).toBe(path.join(treeRoot, fixture.closure.sha256));
+    const blob = path.join(fixture.cacheDir, 'blobs', 'sha256', digest(sedanGlb).slice(0, 2), digest(sedanGlb));
+    const [tree, cached] = await Promise.all([fs.stat(path.join(first.directory, 'models/vehicle.sedan/model.glb')), fs.stat(blob)]);
+    expect(tree.ino).toBe(cached.ino);
+    const second = await ensureActorAssets({ ...fixture, destination: `${fixture.destination}-2`, treeRoot });
+    expect(second.directory).toBe(first.directory);
+    await expect(fs.stat(`${fixture.destination}-2`)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('rebuilds a shared tree whose member was modified', async () => {
+    const fixture = await registry({ 'catalog-models.json': catalog, 'models/vehicle.sedan/model.glb': sedanGlb });
+    const treeRoot = path.join(fixture.cacheDir, 'trees');
+    const first = await ensureActorAssets({ ...fixture, treeRoot });
+    const member = path.join(first.directory, 'models/vehicle.sedan/model.glb');
+    await fs.rm(member);
+    await fs.writeFile(member, 'tampered');
+    const second = await ensureActorAssets({ ...fixture, treeRoot });
+    expect(await fs.readFile(path.join(second.directory, 'models/vehicle.sedan/model.glb'))).toEqual(sedanGlb);
+  });
+});
+
+describe('actor asset origin layout', () => {
+  it('reaches the same published objects whether the base is the origin or <origin>/actor-assets', async () => {
+    const { actorAssetBlobUrl, actorAssetsClosureUrl } = await import('./actor-assets.js');
+    const sha = 'ab'.repeat(32);
+    for (const base of ['https://cdn.example', 'https://cdn.example/', 'https://cdn.example/actor-assets', 'https://cdn.example/actor-assets/']) {
+      expect(actorAssetBlobUrl(sha, base)).toBe(`https://cdn.example/actor-assets/blobs/sha256/ab/${sha}`);
+      expect(actorAssetsClosureUrl(sha, base)).toBe(`https://cdn.example/actor-assets/closures/${sha}.json`);
+    }
+    expect(actorAssetBlobUrl(sha, 'file:///opt/closure')).toBe(`file:///opt/closure/blobs/sha256/ab/${sha}`);
+  });
+});

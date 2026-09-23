@@ -16,6 +16,7 @@ import {
   type RenderEngineAdapter,
   type RenderExecutionContext,
   type RenderInputFile,
+  type RenderInputSelectionContext,
 } from '../index.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
@@ -27,14 +28,18 @@ import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCs
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
 import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { startNativeRenderService, terminateProcess } from './service-process.js';
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets } from './actor-assets.js';
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, nativeActorAssetsCacheDir } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
-import { collectNativeMapMembers } from './map-closure.js';
-import { stageNativeTextureProfile } from './texture-profile.js';
+import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
+import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
+/** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
+export const NATIVE_LOAD_STATE_TIMEOUT_MS = 300_000;
+export const NATIVE_FIRST_BUNDLE_TIMEOUT_MS = 600_000;
+export const NATIVE_BUNDLE_TIMEOUT_MS = 120_000;
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
@@ -90,6 +95,29 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
   },
   requiresGpu: true,
 };
+
+/**
+ * The claimed inputs a native render reads: every non-map input, the map
+ * master, and exactly the members of the intent's texture tier (see
+ * `planNativeTextureMembers`). A closure carries both tiers plus sources the
+ * renderer never opens (OpenDRIVE, GeoJSON, reports), so a full-tier render
+ * skips the 512 px variants and a `bc7-512` render skips the full images.
+ */
+export async function selectNativeRenderInputs(context: RenderInputSelectionContext): Promise<ReadonlySet<string>> {
+  const intent = parseRenderIntent(context.intent);
+  const selected = new Set(context.inputs.filter((input) => !isNativeMapMemberInputId(input.inputId)).map((input) => input.inputId));
+  const byPath = new Map(context.inputs.filter((input) => input.relativePath && isNativeMapMemberInputId(input.inputId)).map((input) => [input.relativePath!, input]));
+  if (byPath.size === 0) return selected;
+  if (!intent.renderTextures) return new Set(context.inputs.map((input) => input.inputId));
+  selected.add(NATIVE_MAP_MASTER_INPUT_ID);
+  const master = JSON.parse((await context.read(NATIVE_MAP_MASTER_INPUT_ID)).toString('utf8')) as Parameters<typeof planNativeTextureMembers>[0];
+  const plan = await planNativeTextureMembers(master, intent.renderTextures, {
+    sha256: (uri) => byPath.get(uri)?.sha256,
+    readText: async (uri) => (await context.read(nativeMapMemberInputId(uri))).toString('utf8'),
+  });
+  for (const uri of plan.members) selected.add(nativeMapMemberInputId(uri));
+  return selected;
+}
 
 export function resolveBinary(options: NativeRenderEngineOptions): string {
   if (options.binary) return options.binary;
@@ -183,6 +211,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
   return {
     capabilities,
+    inputPlacement: 'cache',
+    selectInputs: selectNativeRenderInputs,
     async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
       const startedAt = new Date().toISOString();
       const wallStarted = performance.now();
@@ -209,6 +239,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
         cacheDirectory: options.nativeCacheDirectory,
       });
+      // Fail in seconds, not after a startup timeout, when the device the job
+      // holds cannot take the scene at this tier (textures + geometry + frame
+      // attachments + reserve, the same estimate the admission check uses).
+      if (context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
+        throw new NativeGpuMemoryError(textureProfile.estimatedBytes, context.gpuMemory, intent.renderTextures);
+      }
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
       const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
@@ -226,15 +262,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (!options.actorAssetsBaseUrl && actorSource.state === 'missing') {
         throw new Error(`the pinned actor closure ${actorSource.digest} is not installed (looked in ${actorSource.searched.join(', ')})`);
       }
+      // A packaged closure directory already holds `blobs/sha256/<xx>/<sha>`: verify it in place, never copy it.
+      const packagedActorRoot = !options.actorAssetsCacheDir && actorSource.state === 'available' && actorSource.source.kind === 'directory'
+        ? actorSource.source.root
+        : undefined;
+      const actorCacheDir = options.actorAssetsCacheDir ?? packagedActorRoot ?? nativeActorAssetsCacheDir(path.join(tmpdir(), 'simforge-actor-assets'));
       const actorAssets = await ensureActorAssets({
         closure: closureInput,
         destination: path.join(context.workspace, 'actor-assets'),
         baseUrl: options.actorAssetsBaseUrl ?? (actorSource.state === 'available' ? actorSource.blobBaseUrl : undefined),
-        // A packaged closure directory already holds `blobs/sha256/<xx>/<sha>`: verify it in place, never copy it.
-        cacheDir: options.actorAssetsCacheDir
-          ?? (actorSource.state === 'available' && actorSource.source.kind === 'directory'
-            ? actorSource.source.root
-            : process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR ?? path.join(tmpdir(), 'simforge-actor-assets')),
+        cacheDir: actorCacheDir,
+        // One shared, hard-linked tree per closure digest beside the writable
+        // cache instead of a 1.3 GB per-job copy.
+        ...(packagedActorRoot ? {} : { treeRoot: path.join(actorCacheDir, 'trees') }),
       });
 
       // The render contract is the render timeline: sample the authoritative
@@ -304,10 +344,27 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
       });
-      const session = await startNativeRenderService({
-        binary, workspace: context.workspace, jobId: context.jobId, scenePath, signal: context.signal,
-        startupTimeoutMs: options.startupTimeoutMs, shmSizeMb: options.shmSizeMb,
-      });
+      // Scene load is the longest silent stretch of a large-map job: report
+      // it as `preparing` seconds against a budget that scales with the scene.
+      const startupTimeoutMs = options.startupTimeoutMs ?? nativeStartupTimeoutMs(textureProfile);
+      const loadStarted = performance.now();
+      const loadTicker = setInterval(() => {
+        const elapsedS = Math.min(startupTimeoutMs / 1000, (performance.now() - loadStarted) / 1000);
+        void context.reportProgress({
+          schema: 'simforge.render-progress/v1', jobId: context.jobId, attempt: context.attempt, sequence: 0,
+          timestamp: new Date().toISOString(), event: 'stage.progress', stage: 'preparing',
+          completed: Math.round(elapsedS), total: Math.round(startupTimeoutMs / 1000), unit: 'seconds',
+        }).catch(() => undefined);
+      }, 10_000);
+      let session;
+      try {
+        session = await startNativeRenderService({
+          binary, workspace: context.workspace, jobId: context.jobId, scenePath, signal: context.signal,
+          startupTimeoutMs, shmSizeMb: options.shmSizeMb,
+        });
+      } finally {
+        clearInterval(loadTicker);
+      }
       const { client } = session;
 
       const encoders = new Map<string, Encoder>();
@@ -322,7 +379,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         timestamp: new Date().toISOString(),
       });
       try {
-        await client.rpc({ op: 'load_scene_state', states: lowering.states });
+        // A wedged service must fail the job, not hold the GPU (and a
+        // heartbeating lease) forever. The first bundle also compiles
+        // pipelines, so it gets the longer budget.
+        await client.rpc({ op: 'load_scene_state', states: lowering.states }, NATIVE_LOAD_STATE_TIMEOUT_MS);
         const cameras = cameraSchedule;
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
         for (const source of sources) {
@@ -350,7 +410,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             // The non-camera rig is retained by the service: declare it once.
             ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
             ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
-          });
+          }, tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS);
           if (response.frame.simTick !== tick) {
             throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
           }
