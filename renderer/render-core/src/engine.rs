@@ -5688,13 +5688,16 @@ mod tests {
     /// warmup, retries, relights) must not change a single byte, for SMAA
     /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
     /// drift with them, which is the determinism bug the pinned clock fixes.
-    fn pinned_scene(aa: crate::profiles::AntiAlias) -> SceneApp {
+    fn pinned_scene(aa: crate::profiles::AntiAlias, clock: CaptureClock) -> SceneApp {
         let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
         let lighting = Lighting { atmosphere: true, cloud_cover: Some(0.6), ..Lighting::default() };
         let mut config = RenderProfileConfig::default();
         config.cinematic.aa = aa;
         let mut app = SceneApp::new_with_profile_config(&lighting, config).unwrap();
+        // As the service does: the clock (and with it the light-clustering
+        // mode) is chosen before the scene loads.
+        app.set_capture_clock(clock);
         app.apply_lighting(&lighting, config).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         let mut spec = test_camera("cam", 160, 96);
@@ -5702,6 +5705,7 @@ mod tests {
         app.add_camera(spec, Profile::Cinematic);
         app.wait_until_ready().unwrap();
         app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+        app.wait_for_capture_ready().unwrap();
         app
     }
 
@@ -5716,8 +5720,7 @@ mod tests {
     fn pinned_capture_does_not_depend_on_frames_drawn_before_it() {
         use crate::profiles::AntiAlias;
         for (aa, samples) in [(AntiAlias::SmaaHigh, 1), (AntiAlias::Taa, 4)] {
-            let mut app = pinned_scene(aa);
-            app.set_capture_clock(CaptureClock::Pinned { samples });
+            let mut app = pinned_scene(aa, CaptureClock::Pinned { samples });
             let first = capture_after(&mut app, 0, 12.5);
             let after_three = capture_after(&mut app, 3, 12.5);
             let after_eleven = capture_after(&mut app, 11, 12.5);
@@ -5730,7 +5733,7 @@ mod tests {
             std::mem::forget(app);
         }
         // The rc.73 clock drifts with every drawn frame (TAA history, jitter, clouds).
-        let mut app = pinned_scene(AntiAlias::Taa);
+        let mut app = pinned_scene(AntiAlias::Taa, CaptureClock::Free);
         let first = capture_after(&mut app, 0, 12.5);
         let after_three = capture_after(&mut app, 3, 12.5);
         assert!(first != after_three, "free clock unexpectedly stable");
@@ -5743,8 +5746,7 @@ mod tests {
         use crate::profiles::AntiAlias;
         let keys = vec!["cam:rgb".to_string()];
         let poses = [([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([-6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0])];
-        let mut app = pinned_scene(AntiAlias::SmaaHigh);
-        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
         let blocking: Vec<Vec<u8>> = poses
             .iter()
             .enumerate()
