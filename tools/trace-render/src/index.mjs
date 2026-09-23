@@ -752,9 +752,12 @@ export async function renderTrace(options) {
       height: args.height,
       sha256: sha256Bytes(readFileSync(videoPath)),
     },
+    // File names only, like the frame and video entries: the manifest is
+    // deterministic and must not change with the checkout or output location.
+    // The bytes are identified by inputHash and traceFileSha256.
     inputs: {
-      instanceFile: resolve(args.instance),
-      traceFile: resolve(args.trace),
+      instanceFile: basename(args.instance),
+      traceFile: basename(args.trace),
       traceFileSha256: sha256Bytes(readFileSync(args.trace)),
     },
   };
