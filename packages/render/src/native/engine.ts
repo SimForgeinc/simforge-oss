@@ -126,7 +126,7 @@ export function nativeTextureEvidence<T extends { capacityBytes: number; capacit
 }
 
 /** Anti-aliasing of the pinned (default) capture clock. */
-export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-high';
+export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-ultra';
 export const NATIVE_DEFAULT_TAA_SAMPLES = 4;
 const ANTI_ALIAS_MODES = new Set(['none', 'fxaa', 'smaa-low', 'smaa-medium', 'smaa-high', 'smaa-ultra', 'taa']);
 
