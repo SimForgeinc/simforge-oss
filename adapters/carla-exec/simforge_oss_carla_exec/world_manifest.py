@@ -32,7 +32,7 @@ class Binding:
     world: str
     runtime_xodr_sha256: str
     signal_id_map: Mapping[str, str]
-    origin: str  # "<sourceFolder>" or "legacy:<note>"
+    origin: str  # the source folder, else legacy:<note>
     unowned_signal_ids: frozenset[str] = frozenset()
 
 
@@ -49,49 +49,69 @@ def _is_sha(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
+#: Every key a generated manifest carries on every map entry and legacy source.
+#: The generator writes empty values explicitly, so a missing key is a malformed
+#: manifest and fails here, never a default.
+MAP_ENTRY_KEYS = ("sourceFolder", "status", "xodr", "carlaWorld", "signalIdMap", "unownedCookedSignalIds",
+                  "blocking", "decisionRequired", "reason", "hold")
+LEGACY_KEYS = ("sourceXodrSha256", "cookedXodrSha256", "carlaWorld", "note", "signalIdMap", "unownedCookedSignalIds")
+
+
+def _require(record: Mapping[str, Any], keys: tuple[str, ...], label: str) -> None:
+    missing = [key for key in keys if key not in record]
+    if missing:
+        raise ValueError(f"CARLA world manifest {label} lacks required key(s): {', '.join(missing)}")
+
+
 def validate(manifest: Mapping[str, Any]) -> None:
-    if manifest.get("schema") != SCHEMA:
+    _require(manifest, ("schema", "maps", "legacySources"), "document")
+    if manifest["schema"] != SCHEMA:
         raise ValueError(f"CARLA world manifest schema must be {SCHEMA}")
     seen_sources: set[str] = set()
     bound_worlds: dict[str, str] = {}
-    for entry in manifest.get("maps", []):
-        status = entry.get("status")
+    by_source = {entry["xodr"]["sha256"]: entry for entry in manifest["maps"] if entry.get("xodr")}
+    for entry in manifest["maps"]:
+        _require(entry, MAP_ENTRY_KEYS, f"entry {entry.get('sourceFolder')!r}")
+        folder, status = entry["sourceFolder"], entry["status"]
         if status not in STATUSES:
-            raise ValueError(f"{entry.get('sourceFolder')}: unknown status {status!r}")
-        xodr = entry.get("xodr") or {}
-        sha = xodr.get("sha256")
-        if sha is None:
+            raise ValueError(f"{folder}: unknown status {status!r}")
+        if entry["xodr"] is None:
             if status != "no-world":
-                raise ValueError(f"{entry.get('sourceFolder')}: only a no-world entry may lack an XODR")
+                raise ValueError(f"{folder}: only a no-world entry may lack an XODR")
             continue
+        sha = entry["xodr"]["sha256"]
         if not _is_sha(sha):
-            raise ValueError(f"{entry.get('sourceFolder')}: xodr sha256 is malformed")
+            raise ValueError(f"{folder}: xodr sha256 is malformed")
         if sha in seen_sources:
             raise ValueError(f"source XODR {sha} appears in two manifest entries")
         seen_sources.add(sha)
         if status in BINDABLE:
-            world = entry.get("carlaWorld")
+            world = entry["carlaWorld"]
             if not isinstance(world, str) or not world or not _is_sha(entry.get("cookedXodrSha256")):
-                raise ValueError(f"{entry['sourceFolder']}: a bindable entry needs carlaWorld and cookedXodrSha256")
+                raise ValueError(f"{folder}: a bindable entry needs carlaWorld and cookedXodrSha256")
             if status == "exact" and entry["cookedXodrSha256"] != sha:
-                raise ValueError(f"{entry['sourceFolder']}: exact entry whose cooked digest differs")
-            if entry.get("derivedFrom"):
+                raise ValueError(f"{folder}: exact entry whose cooked digest differs")
+            if "derivedFrom" in entry:
                 # A refit binds its original's world; the original must bind it too.
-                origin = next((e for e in manifest.get("maps", []) if (e.get("xodr") or {}).get("sha256") == entry["derivedFrom"]), None)
-                if origin is None or origin.get("carlaWorld") != world or origin.get("cookedXodrSha256") != entry["cookedXodrSha256"]:
-                    raise ValueError(f"{entry['sourceFolder']}: a derived source must bind its original's world")
+                origin = by_source.get(entry["derivedFrom"])  # fallback-ok: None is the error case, raised below
+                if origin is None or origin["carlaWorld"] != world or origin.get("cookedXodrSha256") != entry["cookedXodrSha256"]:
+                    raise ValueError(f"{folder}: a derived source must bind its original's world")
             else:
                 if world in bound_worlds:
-                    raise ValueError(f"world {world} is bound by {bound_worlds[world]} and {entry['sourceFolder']}")
-                bound_worlds[world] = entry["sourceFolder"]
-            signal_map = entry.get("signalIdMap", {})
+                    raise ValueError(f"world {world} is bound by {bound_worlds[world]} and {folder}")
+                bound_worlds[world] = folder
+            signal_map = entry["signalIdMap"]
             if len(set(signal_map.values())) != len(signal_map):
-                raise ValueError(f"{entry['sourceFolder']}: signal id map is not one-to-one")
-        elif entry.get("signalIdMap"):
-            raise ValueError(f"{entry['sourceFolder']}: an unbound entry must not carry a signal id map")
-    for legacy in manifest.get("legacySources", []):
-        if not (_is_sha(legacy.get("sourceXodrSha256")) and _is_sha(legacy.get("cookedXodrSha256"))
-                and isinstance(legacy.get("carlaWorld"), str) and legacy.get("note")):
+                raise ValueError(f"{folder}: signal id map is not one-to-one")
+        else:
+            if entry["signalIdMap"] or entry["unownedCookedSignalIds"]:
+                raise ValueError(f"{folder}: an unbound entry must not carry signal bindings")
+            if not (entry["reason"] or entry["hold"] or entry["blocking"] or entry["decisionRequired"]):
+                raise ValueError(f"{folder}: an unbound entry must state why it is unbound")
+    for legacy in manifest["legacySources"]:
+        _require(legacy, LEGACY_KEYS, "legacy source")
+        if not (_is_sha(legacy["sourceXodrSha256"]) and _is_sha(legacy["cookedXodrSha256"])
+                and isinstance(legacy["carlaWorld"], str) and legacy["note"]):
             raise ValueError("legacy source entries need sourceXodrSha256, cookedXodrSha256, carlaWorld and note")
         if legacy["sourceXodrSha256"] in seen_sources:
             raise ValueError(f"legacy source {legacy['sourceXodrSha256']} is also a current source")
@@ -108,34 +128,30 @@ def load(path: str | None = None) -> Mapping[str, Any]:
 def bindings(manifest: Mapping[str, Any] | None = None) -> dict[str, Binding]:
     m = manifest if manifest is not None else load()
     out: dict[str, Binding] = {}
-    for entry in m.get("maps", []):
+    for entry in m["maps"]:
         if entry["status"] in BINDABLE:
             sha = entry["xodr"]["sha256"]
             out[sha] = Binding(sha, entry["carlaWorld"], entry["cookedXodrSha256"],
-                               dict(entry.get("signalIdMap", {})), entry["sourceFolder"],
-                               frozenset(entry.get("unownedCookedSignalIds", ())))
-    for legacy in m.get("legacySources", []):
+                               dict(entry["signalIdMap"]), entry["sourceFolder"],
+                               frozenset(entry["unownedCookedSignalIds"]))
+    for legacy in m["legacySources"]:
         sha = legacy["sourceXodrSha256"]
         out[sha] = Binding(sha, legacy["carlaWorld"], legacy["cookedXodrSha256"],
-                           dict(legacy.get("signalIdMap", {})), f"legacy:{legacy['note']}",
-                           frozenset(legacy.get("unownedCookedSignalIds", ())))
+                           dict(legacy["signalIdMap"]), f"legacy:{legacy['note']}",
+                           frozenset(legacy["unownedCookedSignalIds"]))
     return out
 
 
 def refusals(manifest: Mapping[str, Any] | None = None) -> dict[str, Refusal]:
     m = manifest if manifest is not None else load()
     out: dict[str, Refusal] = {}
-    for entry in m.get("maps", []):
-        sha = (entry.get("xodr") or {}).get("sha256")
-        if sha is None or entry["status"] in BINDABLE:
+    for entry in m["maps"]:
+        if entry["xodr"] is None or entry["status"] in BINDABLE:
             continue
-        reasons = list(entry.get("blocking", [])) + list(entry.get("decisionRequired", []))
-        if entry.get("hold"):
-            reasons.insert(0, str(entry["hold"]))
-        if entry.get("reason"):
-            reasons.insert(0, str(entry["reason"]))
-        out[sha] = Refusal(sha, entry["status"], entry.get("carlaWorld"),
-                           "; ".join(reasons) or entry["status"], entry["sourceFolder"])
+        sha = entry["xodr"]["sha256"]
+        reasons = [str(item) for item in (entry["reason"], entry["hold"]) if item]
+        reasons += [str(item) for item in [*entry["blocking"], *entry["decisionRequired"]]]
+        out[sha] = Refusal(sha, entry["status"], entry["carlaWorld"], "; ".join(reasons), entry["sourceFolder"])
     return out
 
 

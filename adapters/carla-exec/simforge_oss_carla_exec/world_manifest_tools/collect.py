@@ -49,6 +49,7 @@ def collect_nas(run: Runner, root: str, out: Path, *, sudo: bool, previous: dict
     prefix = ["sudo", "-n"] if sudo else []
     listing = run(prefix + ["find", root, "-mindepth", "2", "-maxdepth", "2", "-type", "f",
                             "-printf", r"%P\t%s\t%TY-%Tm-%TdT%TH:%TM:%TSZ\n"]).decode()
+    # fallback-ok: offline collector: no previous listing means nothing to reuse; every file is hashed
     prior = {f["path"]: f for f in (previous or {}).get("files", [])}
     files = []
     for line in sorted(filter(None, listing.splitlines())):

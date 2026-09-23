@@ -1233,7 +1233,9 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
         message = "CARLA render failed its blocking parity gate: " + json.dumps(summary, sort_keys=True)
         emit("warning", {"code": "carla.parity_failed", "message": message[:4096]})
         raise RuntimeError(message)
-    riders = result.get("riderPoseStatic") or []
+    riders = result["riderPoseStatic"] if "riderPoseStatic" in result else None
+    if not isinstance(riders, list):
+        raise RuntimeError("native executor returned no riderPoseStatic list")
     if riders:
         # A known degradation, stated where the UI shows job warnings.
         emit("warning", {

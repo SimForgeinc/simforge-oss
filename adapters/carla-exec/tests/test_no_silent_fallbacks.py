@@ -997,7 +997,7 @@ def _succeeding(substitutions):
             progress("substitution", record)
         return {
             "status": "succeeded", "parity": {"accepted": True}, "artifacts": [],
-            "substitutions": list(substitutions),
+            "substitutions": list(substitutions), "riderPoseStatic": [],
         }
     return execute
 

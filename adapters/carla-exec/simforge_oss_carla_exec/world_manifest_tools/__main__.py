@@ -82,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "generate":
         decisions = json.loads(args.decisions.read_text()) if args.decisions.exists() else {}
         decisions = {k: v for k, v in decisions.items() if not k.startswith("$")}
+        # fallback-ok: offline CLI: absent optional manifest section or display value
         legacy = json.loads(args.out.read_text()).get("legacySources", []) if args.out.exists() else []
         manifest = generate.generate(args.inputs, decisions, legacy)
         world_manifest.validate(manifest)
@@ -126,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
             }, indent=1, sort_keys=True))
         else:
             for entry in manifest["maps"]:
+                # fallback-ok: offline CLI: absent optional manifest section or display value
                 sf = entry.get("simforge", {})
+                # fallback-ok: offline CLI: absent optional manifest section or display value
                 assets = ",".join(sorted({v["mapAssetId"] for v in sf.values()})) or "-"
                 print(f"{entry['status']:20} {entry['sourceFolder']:36} {assets:30} -> {entry.get('carlaWorld')}")
         return 0
