@@ -14,6 +14,7 @@ import {
   NativeRenderManifestSchema,
   NativeRunDiagnosticsSchema,
   parseToleratingUnknownKeys,
+  type TolerantParseSchema,
   assertNativeMapMemberCapacity,
   nativeEvidenceFailure,
   nativeRunExpectations,
@@ -1222,7 +1223,7 @@ async function readReservedJson(reservation: NativeReservation): Promise<unknown
  * strict parse instead of failing the whole job. Every field this plane
  * does know keeps its strict validation, so the lineage checks are intact.
  */
-export function parseEvidenceTolerant<T>(schema: z.ZodType<T>, value: unknown): T {
+export function parseEvidenceTolerant<T>(schema: TolerantParseSchema<T>, value: unknown): T {
   const parsed = parseToleratingUnknownKeys(schema, value);
   if (parsed.ignoredFields.length > 0) console.error(JSON.stringify({ event: "render_evidence_unknown_fields_ignored", fields: parsed.ignoredFields }));
   return parsed.value;

@@ -30,7 +30,7 @@ export {
   NativeEvidenceSchemaError, parseNativeRenderManifestForHost, parseNativeRunDiagnosticsForHost, parseToleratingUnknownKeys,
 } from './evidence.js';
 export type {
-  HostParsedEvidence, NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
+  HostParsedEvidence, NativeEvidenceFailure, TolerantParseIssue, TolerantParseSchema, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
 export { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, NativeServiceTimeoutError, stripRgbaPadding } from './service-client.js';
 export type {
