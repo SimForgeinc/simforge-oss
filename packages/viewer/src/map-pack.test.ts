@@ -8,8 +8,9 @@ const TIER = 'd'.repeat(64);
 const BASE = 'https://studio.test/api/simforge/maps/usmap_x/browser-assets/3d/';
 
 function pack(): { index: BrowserPackIndex; bytes: Map<string, Uint8Array> } {
-  const geometry = new Uint8Array([1, 2, 3, 4, 5, 6]);
-  const textures = new Uint8Array([9, 8, 7, 6]);
+  const header = (members: number) => { const h = new Uint8Array(16); h.set(new TextEncoder().encode('SFBPACK1')); h[8] = members; return h; };
+  const geometry = new Uint8Array([...header(2), 1, 2, 3, 4, 5, 6]);
+  const textures = new Uint8Array([...header(2), 9, 8, 7, 6]);
   const index: BrowserPackIndex = {
     schema: 'simforge.map-browser-pack.v1',
     revision: 'browser-pack-v1',
@@ -18,14 +19,14 @@ function pack(): { index: BrowserPackIndex; bytes: Map<string, Uint8Array> } {
     tier: { id: 'textures-256-bc7', outputSha256: TIER },
     focus: [0, 0, 0],
     chunks: [
-      { file: `packs/objects/${SHA_A}.bin`, sha256: SHA_A, bytes: 6, group: 'core', kind: 'geometry' },
-      { file: `packs/objects/${SHA_B}.bin`, sha256: SHA_B, bytes: 4, group: 'core', kind: 'textures' },
+      { file: `packs/objects/${SHA_A}.bin`, sha256: SHA_A, bytes: 22, group: 'core', kind: 'geometry' },
+      { file: `packs/objects/${SHA_B}.bin`, sha256: SHA_B, bytes: 20, group: 'core', kind: 'textures' },
     ],
     members: {
-      'tiles/road.glb': [0, 0, 4],
-      'tiles/tile_0_0.lod0.glb': [0, 4, 2],
-      'variants/objects/e.ktx2': [1, 0, 3],
-      'variants/objects/f.ktx2': [1, 3, 1],
+      'tiles/road.glb': [0, 16, 4],
+      'tiles/tile_0_0.lod0.glb': [0, 20, 2],
+      'variants/objects/e.ktx2': [1, 16, 3],
+      'variants/objects/f.ktx2': [1, 19, 1],
     },
     albedo: { classifiedFrom: 'textures-256-uastc', sources: 2, rgbMissing: ['variants/objects/f.ktx2'] },
   };
@@ -48,7 +49,7 @@ describe('parseBrowserPackIndex', () => {
 
   it('refuses ranges outside their chunk and unsafe member paths', () => {
     const out = pack().index;
-    out.members['tiles/road.glb'] = [0, 4, 4];
+    out.members['tiles/road.glb'] = [0, 20, 4];
     expect(() => parseBrowserPackIndex(out, expected)).toThrow('range out of chunk');
     const unsafe = pack().index;
     unsafe.members['../secret'] = [0, 0, 1];
@@ -119,6 +120,12 @@ describe('MapPackReader', () => {
   it('rejects a chunk whose size does not match the index', async () => {
     const { index } = pack();
     const reader = new MapPackReader(index, BASE, async () => new ArrayBuffer(3));
-    await expect(reader.read(`${BASE}tiles/road.glb`)).rejects.toThrow('index says 6');
+    await expect(reader.read(`${BASE}tiles/road.glb`)).rejects.toThrow('index says 22');
+  });
+
+  it('rejects a chunk without the pack magic', async () => {
+    const { index } = pack();
+    const reader = new MapPackReader(index, BASE, async () => new ArrayBuffer(22));
+    await expect(reader.read(`${BASE}tiles/road.glb`)).rejects.toThrow('does not start with SFBPACK1');
   });
 });

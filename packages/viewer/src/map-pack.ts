@@ -17,6 +17,8 @@
  */
 
 export const BROWSER_PACK_SCHEMA = 'simforge.map-browser-pack.v1';
+/** Every chunk starts with this magic (then member count and a reserved zero, uint32 LE). */
+export const BROWSER_PACK_CHUNK_MAGIC = 'SFBPACK1';
 
 export type BrowserPackGroup = 'core' | 'vegetation';
 
@@ -198,6 +200,9 @@ export class MapPackReader {
     this.everLoaded.add(index);
     pending = this.loadChunk(url, info, this.abort.signal).then(async (buffer) => {
       if (buffer.byteLength !== info.bytes) throw new Error(`browser pack chunk ${info.file} is ${buffer.byteLength} bytes, index says ${info.bytes}`);
+      if (new TextDecoder().decode(new Uint8Array(buffer, 0, Math.min(8, buffer.byteLength))) !== BROWSER_PACK_CHUNK_MAGIC) {
+        throw new Error(`browser pack chunk ${info.file} does not start with ${BROWSER_PACK_CHUNK_MAGIC}`);
+      }
       this.chunksRead++;
       this.chunkBytesRead += buffer.byteLength;
       const members = this.membersByChunk.get(index) ?? [];
