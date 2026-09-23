@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { queryRows } from "@/app/lib/db/data-api";
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import { CONTROL_FEATURE_PREWARM_DERIVATIVES, WORKER_PREWARM_FEATURES_LABEL } from "@simforge-oss/render";
-import { boundMapDerivatives, MAP_DERIVATIVE_DESCRIPTOR_SQL, mapDerivativeExtraMembers, mapDerivativesDigest } from "./map-derivatives";
+import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, mapDerivativesDigest, type MapDerivativeMemberRow } from "./map-derivatives";
 
 /**
  * Worker cache prewarm: the published native map closures an approved render
@@ -86,7 +86,14 @@ export async function listPrewarmSets(features: ReadonlySet<string> = new Set())
   const sendDerivatives = features.has(CONTROL_FEATURE_PREWARM_DERIVATIVES);
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   const listed = rows.map((row) => {
-    const derivativesSha256 = mapDerivativesDigest(boundMapDerivatives(row.derivatives), hash);
+    let derivativesSha256: string | undefined;
+    try {
+      derivativesSha256 = mapDerivativesDigest(boundMapDerivatives(row.derivatives), hash);
+    } catch {
+      // A malformed binding never takes the whole prewarm manifest down; its
+      // members are not served (the job lease refuses them loudly).
+      derivativesSha256 = undefined;
+    }
     return {
       set: {
         setId: row.set_id,
@@ -160,25 +167,39 @@ async function boundTurnVerdicts(setId: string) {
   return row ? { relativePath: AMBIENT_TURN_VERDICTS_PATH, sha256: row.sha256, sizeBytes: Number(row.byte_length) } : null;
 }
 
-/** Verified native blobs of the derivatives a published set's map version binds by descriptor. */
+/** Verified blobs of the derivative sets a published set's map version binds (map-derivatives.ts). */
 async function boundDerivativeBlobs(setId: string, inSet: ReadonlySet<string> = new Set()) {
-  const rows = await queryRows<{ derivatives: unknown }>(
+  const bindingRows = await queryRows<{ derivatives: unknown }>(
     `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives ${PUBLISHED_SETS} AND s.id = :set_id LIMIT 1`,
     { set_id: setId },
   );
-  const extra = mapDerivativeExtraMembers(boundMapDerivatives(rows[0]?.derivatives), inSet);
-  if (extra.length === 0) return [];
-  const blobs = await queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
-    `SELECT DISTINCT ON (sha256) sha256, byte_length, storage_bucket, storage_key FROM simforge.native_map_asset_blobs
-      WHERE verification_state = 'verified' AND sha256 = ANY(string_to_array(:digests, ','))
-      ORDER BY sha256, id`,
-    { digests: extra.map((member) => member.sha256).join(",") },
+  let bindings;
+  try {
+    bindings = boundMapDerivatives(bindingRows[0]?.derivatives);
+  } catch {
+    return [];
+  }
+  if (bindings.length === 0) return [];
+  const rows = await queryRows<MapDerivativeMemberRow & { storage_bucket: string; storage_key: string }>(
+    `SELECT ds.id AS set_id, dm.relative_path, db.sha256, db.byte_length, db.storage_bucket, db.storage_key
+       FROM simforge.map_versions mv
+       JOIN simforge.native_map_asset_sets s ON s.id = mv.native_map_asset_set_id AND s.id = :set_id AND s.asset_set_state = 'available'
+       ${MAP_DERIVATIVE_MEMBERS_JOIN_SQL}
+      WHERE mv.retired_at IS NULL
+      ORDER BY dm.relative_path`,
+    { set_id: setId },
   );
-  const bySha = new Map(blobs.map((blob) => [blob.sha256, blob]));
-  return extra.flatMap((member) => {
-    const blob = bySha.get(member.sha256);
-    return blob && Number(blob.byte_length) === member.byteLength ? [{ ...member, storageBucket: blob.storage_bucket, storageKey: blob.storage_key }] : [];
-  });
+  let members;
+  try {
+    members = derivativeMembers(bindings, rows);
+  } catch {
+    // An incomplete derivative set is not prewarmed; the job lease refuses it loudly.
+    return [];
+  }
+  const byPath = new Map(rows.map((row) => [row.relative_path, row]));
+  return mapDerivativeExtraMembers(members, inSet).map((member) => ({
+    ...member, storageBucket: byPath.get(member.relativePath)!.storage_bucket, storageKey: byPath.get(member.relativePath)!.storage_key,
+  }));
 }
 
 /**

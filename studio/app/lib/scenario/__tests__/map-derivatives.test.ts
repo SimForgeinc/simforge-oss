@@ -2,27 +2,29 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
 
-import { boundMapDerivatives, mapDerivativeExtraMembers, mapDerivativesDigest } from "../map-derivatives";
+import { boundMapDerivatives, derivativeMembers, mapDerivativeExtraMembers, mapDerivativesDigest } from "../map-derivatives";
 
 const D = (c: string) => c.repeat(64);
-const ready = (schema: string, members: unknown[], manifestSha256 = D("a")) => ({ state: "ready", schema, buildKey: D("b"), manifestSha256, members });
-const lod = (members: unknown[], manifestSha256?: string) => ready("simforge.map-geometry-lod.v1", members, manifestSha256);
-const manifest = { relativePath: "derived/geometry-lod/manifest.json", sha256: D("a"), byteLength: 10 };
-const lodBin = { relativePath: "derived/geometry-lod/lod.bin", sha256: D("c"), byteLength: 20 };
-const image = { relativePath: "derived/geometry-lod/images/abc.ktx2", sha256: D("d"), byteLength: 30 };
-const bc7Manifest = { relativePath: "derived/textures-full-bc7/manifest.json", sha256: D("e"), byteLength: 40 };
-const bc7Object = { relativePath: `derived/textures-full-bc7/objects/${D("f")}.ktx2`, sha256: D("f"), byteLength: 50 };
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+const lod = (extra: Record<string, unknown> = {}) => ({ state: "ready", schema: "simforge.map-geometry-lod.v1", buildKey: D("b"), manifestSha256: D("a"), assetSetId: "usnset_lod_1", objectCount: 2, ...extra });
+const bc7 = (extra: Record<string, unknown> = {}) => ({ state: "ready", schema: "simforge.map-texture-variant.v1", buildKey: D("c"), manifestSha256: D("e"), assetSetId: "usnset_bc7_1", objectCount: 2, ...extra });
+const rows = [
+  { set_id: "usnset_lod_1", relative_path: "derived/geometry-lod/manifest.json", sha256: D("a"), byte_length: 10 },
+  { set_id: "usnset_lod_1", relative_path: "derived/geometry-lod/lod.bin", sha256: D("d"), byte_length: "20" },
+  { set_id: "usnset_bc7_1", relative_path: "derived/textures-full-bc7/manifest.json", sha256: D("e"), byte_length: 30 },
+  { set_id: "usnset_bc7_1", relative_path: `derived/textures-full-bc7/objects/${D("f")}.ktx2`, sha256: D("f"), byte_length: 40 },
+];
 
-test("ready bindings of every kind bind their members, sorted by path", () => {
-  const bindings = boundMapDerivatives({ geometryLod: lod([manifest, lodBin, image]), texturesFullBc7: ready("simforge.map-texture-variant.v1", [bc7Object, bc7Manifest], D("e")) });
-  assert.deepEqual(bindings.map((binding) => binding.kind.key), ["geometryLod", "texturesFullBc7"]);
-  assert.deepEqual(mapDerivativeExtraMembers(bindings, new Set()).map((member) => member.relativePath), [
-    "derived/geometry-lod/images/abc.ktx2", "derived/geometry-lod/lod.bin", "derived/geometry-lod/manifest.json",
-    "derived/textures-full-bc7/manifest.json", bc7Object.relativePath,
+test("ready summaries of every kind bind their derivative sets", () => {
+  const bindings = boundMapDerivatives({ geometryLod: lod(), texturesFullBc7: bc7() });
+  assert.deepEqual(bindings.map((binding) => [binding.kind.key, binding.assetSetId]), [["geometryLod", "usnset_lod_1"], ["texturesFullBc7", "usnset_bc7_1"]]);
+  assert.deepEqual(derivativeMembers(bindings, rows).map((member) => member.relativePath), [
+    "derived/geometry-lod/lod.bin", "derived/geometry-lod/manifest.json",
+    "derived/textures-full-bc7/manifest.json", `derived/textures-full-bc7/objects/${D("f")}.ktx2`,
   ]);
+  assert.equal(derivativeMembers(bindings, rows)[0]!.byteLength, 20);
   // A JSON string (the Data API's jsonb rendering) parses the same way.
-  assert.equal(boundMapDerivatives(JSON.stringify({ geometryLod: lod([manifest]) })).length, 1);
+  assert.equal(boundMapDerivatives(JSON.stringify({ geometryLod: lod() })).length, 1);
 });
 
 test("no binding unless ready", () => {
@@ -31,33 +33,29 @@ test("no binding unless ready", () => {
   assert.deepEqual(boundMapDerivatives({ geometryLod: { state: "failed", reason: "x" }, texturesFullBc7: { state: "building" } }), []);
 });
 
-test("a ready binding that is malformed is refused, never half-used", () => {
-  for (const bad of [
-    lod([lodBin]), // no manifest
-    lod([manifest, lodBin], D("e")), // manifest digest mismatch
-    lod([manifest, { ...lodBin, relativePath: "master.gltf" }]), // outside the derivative directory
-    lod([manifest, { ...lodBin, relativePath: "derived/textures-full-bc7/objects/x.ktx2" }]), // another kind's directory
-    lod([manifest, { ...lodBin, relativePath: "derived/geometry-lod/../../master.gltf" }]),
-    lod([manifest, { ...lodBin, sha256: "nope" }]),
-    lod([manifest, { ...lodBin, byteLength: -1 }]),
-    lod([manifest, manifest]), // duplicate path
-    { ...lod([manifest]), schema: "simforge.map-geometry-lod.v0" },
-  ]) {
+test("a ready summary that is malformed is refused", () => {
+  for (const bad of [lod({ assetSetId: undefined }), lod({ assetSetId: "x; DROP" }), lod({ objectCount: 0 }), lod({ manifestSha256: "nope" }), lod({ schema: "simforge.map-texture-variant.v1" })]) {
     assert.throws(() => boundMapDerivatives({ geometryLod: bad }), /map_derivative_descriptor_invalid:geometryLod/);
   }
-  assert.throws(() => boundMapDerivatives({ texturesFullBc7: ready("simforge.map-geometry-lod.v1", [bc7Manifest], D("e")) }), /texturesFullBc7/);
 });
 
-test("closure members win over descriptor members of the same path", () => {
-  const bindings = boundMapDerivatives({ geometryLod: lod([manifest, lodBin]) });
-  assert.deepEqual(mapDerivativeExtraMembers(bindings, new Set(["derived/geometry-lod/lod.bin"])).map((member) => member.relativePath), ["derived/geometry-lod/manifest.json"]);
-  assert.deepEqual(mapDerivativeExtraMembers([], new Set()), []);
+test("an incomplete or foreign derivative set is refused, never half-used", () => {
+  const bindings = boundMapDerivatives({ geometryLod: lod() });
+  assert.throws(() => derivativeMembers(bindings, rows.slice(1)), /map_derivative_member_unavailable:geometryLod/); // no manifest
+  assert.throws(() => derivativeMembers(bindings, [rows[0]!]), /unavailable/); // count mismatch
+  assert.throws(() => derivativeMembers(boundMapDerivatives({ geometryLod: lod({ manifestSha256: D("9") }) }), rows), /unavailable/);
+  assert.throws(() => derivativeMembers(bindings, [rows[0]!, { ...rows[1]!, relative_path: "master.gltf" }]), /unavailable/);
+});
+
+test("closure members win over derivative members of the same path", () => {
+  const members = derivativeMembers(boundMapDerivatives({ geometryLod: lod() }), rows);
+  assert.deepEqual(mapDerivativeExtraMembers(members, new Set(["derived/geometry-lod/lod.bin"])).map((member) => member.relativePath), ["derived/geometry-lod/manifest.json"]);
 });
 
 test("the derivatives digest changes with any binding and is absent without one", () => {
   assert.equal(mapDerivativesDigest([], hash), undefined);
-  const one = mapDerivativesDigest(boundMapDerivatives({ geometryLod: lod([manifest]) }), hash);
-  const two = mapDerivativesDigest(boundMapDerivatives({ geometryLod: lod([manifest]), texturesFullBc7: ready("simforge.map-texture-variant.v1", [bc7Manifest], D("e")) }), hash);
+  const one = mapDerivativesDigest(boundMapDerivatives({ geometryLod: lod() }), hash);
+  const two = mapDerivativesDigest(boundMapDerivatives({ geometryLod: lod(), texturesFullBc7: bc7() }), hash);
   assert.match(one!, /^[a-f0-9]{64}$/);
   assert.notEqual(one, two);
 });

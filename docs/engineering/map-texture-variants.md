@@ -39,9 +39,11 @@ Rebuilds are byte-identical.
   `texturesFullBc7: false`) builds without the tier.
 - `pnpm maps:textures-full-bc7 -- --map-dir DIR [--check]` for an installed map.
 - SimCloud `reconcile-map-derivatives.ts --derivative textures-full-bc7` for
-  published map versions, bound by `descriptor.texturesFullBc7` exactly like
-  `descriptor.geometryLod` (docs/engineering/map-geometry-lod.md, "Published
-  map versions"; `studio/app/lib/scenario/map-derivatives.ts`).
+  published map versions: a derivative set bound by `descriptor.texturesFullBc7`
+  exactly like `descriptor.geometryLod` (docs/engineering/map-geometry-lod.md,
+  "Published map versions"; `studio/app/lib/scenario/map-derivatives.ts`). A
+  closure without `3d/manifest.json` (no texture-set identity) cannot use the
+  tier and is reported `not-applicable`.
 
 ## How it is used
 
