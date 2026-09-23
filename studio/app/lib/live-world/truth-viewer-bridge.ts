@@ -78,7 +78,7 @@ export function createTruthViewerBridge(
    */
   const buffered: TruthFrame[] = [];
   /**
-   * Distance each actor has travelled at each received step (Σ |v|·dt over
+   * Distance each actor has travelled at each received step (Σ signed v·dt over
    * steps it was present on, the render timeline's `wheelSpinRad` rule). It
    * phases ridden two-wheelers' pedals and wheels by distance, not clock.
    */
@@ -219,9 +219,11 @@ export function createTruthViewerBridge(
       for (const actor of frame.scene.actors) {
         if (actor.kind === 'despawn') continue;
         const before = previous?.get(actor.id);
-        distances.set(actor.id, before === undefined
-          ? 0
-          : before + Math.hypot(actor.velocity[0], actor.velocity[1], actor.velocity[2]) * dt);
+        // Signed like the timeline's speed: velocity against the body's
+        // heading (yaw CCW from +X about +Y) runs the odometer back.
+        const along = actor.velocity[0] * Math.cos(actor.yawRad) - actor.velocity[2] * Math.sin(actor.yawRad);
+        const speed = Math.hypot(actor.velocity[0], actor.velocity[1], actor.velocity[2]);
+        distances.set(actor.id, before === undefined ? 0 : before + (along < 0 ? -speed : speed) * dt);
       }
       odometers.set(frame, distances);
       latest = frame;
