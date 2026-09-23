@@ -49,6 +49,11 @@ import { EditorOverlayHost } from "./inspector/EditorOverlayHost";
 import { EditorConfigurationBlockProvider } from "./inspector/EditorDetailsPanel";
 import { TrafficLightDetailsPanel } from "./inspector/TrafficLightDetailsPanel";
 import {
+  TrafficActorDetailsPanel,
+  type TrafficActorSelection,
+} from "./inspector/TrafficActorDetailsPanel";
+import { trafficActorSelection } from "./traffic-selection";
+import {
   EditorOverlayProvider,
   useEditorOverlay,
 } from "./inspector/editor-overlay-selection";
@@ -262,6 +267,7 @@ export function ScenarioEditorSurface({
   const signalOverlays = sharedPlayback?.overlays ?? localSignalOverlays;
   const signalProjection = useSignalProjection(map.versionId);
   const [selectedSignalHeadId, setSelectedSignalHeadId] = useState<string | null>(null);
+  const [selectedTrafficActor, setSelectedTrafficActor] = useState<TrafficActorSelection | null>(null);
 
   /** Stop whatever is driving the camera, and stop calling it a follow. */
   const releaseCamera = useCallback(() => {
@@ -789,6 +795,61 @@ export function ScenarioEditorSurface({
       canvas.removeEventListener("pointerup", onPointerUp, { capture: true });
     };
   }, [active, controller, editorDocument, signalOverlays, signalProjection.index, state?.mode, viewer]);
+  // Background traffic is not an authored actor, so the editor's own picking
+  // ignores it. A click on one opens a read-only card that says what it is.
+  useEffect(() => {
+    const renderer = sharedActorRenderer;
+    const sceneViewer = viewer;
+    const canvas = sceneViewer?.renderer.domElement ?? null;
+    if (!active || !renderer || !sceneViewer || !canvas || state?.mode !== "idle") return;
+    const raycaster = new Raycaster();
+    const pointer = new Vector2();
+    let press: { pointerId: number; x: number; y: number } | null = null;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      const start = press;
+      press = null;
+      if (!start || start.pointerId !== event.pointerId || event.button !== 0) return;
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
+      const bounds = canvas.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) return;
+      pointer.set(
+        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, sceneViewer.camera);
+      let picked: string | null = null;
+      for (const hit of raycaster.intersectObjects(renderer.pickables(), false)) {
+        picked = renderer.actorIdForHit(hit);
+        if (picked) break;
+      }
+      const traffic = picked
+        ? trafficActorSelection(
+            picked,
+            sharedPlayback?.bundle,
+            sharedPlayback?.controller?.currentActors ?? [],
+          )
+        : null;
+      setSelectedTrafficActor(traffic);
+      if (traffic) setSelectedSignalHeadId(null);
+    };
+    canvas.addEventListener("pointerdown", onPointerDown, { capture: true });
+    canvas.addEventListener("pointerup", onPointerUp, { capture: true });
+    return () => {
+      canvas.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      canvas.removeEventListener("pointerup", onPointerUp, { capture: true });
+    };
+  }, [active, sharedActorRenderer, sharedPlayback?.bundle, sharedPlayback?.controller, state?.mode, viewer]);
+  // A new trace (an edit, or the authoritative swap) may no longer carry the body.
+  useEffect(() => {
+    setSelectedTrafficActor((current) => current && !current.id.startsWith("sumo:")
+      && !sharedPlayback?.bundle?.actors.some((actor) => actor.id === current.id)
+      ? null
+      : current);
+  }, [sharedPlayback?.bundle]);
   useEffect(() => {
     if (!controller) return;
     controller.setPresentationActive(active && !sharedPlayback?.inspecting);
@@ -1101,6 +1162,13 @@ export function ScenarioEditorSurface({
         onConfigureCustomRoute={configureCustomRoute}
         showActorMotionControls={experience === "advanced"}
       />
+      {selectedTrafficActor && active ? (
+        <TrafficActorDetailsPanel
+          key={selectedTrafficActor.id}
+          actor={selectedTrafficActor}
+          onClose={() => setSelectedTrafficActor(null)}
+        />
+      ) : null}
       <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />
       <HifiPreviewSlot
