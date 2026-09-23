@@ -1099,7 +1099,13 @@ export class ActorRenderer {
         animated.mixer.clipAction(clip).reset().play();
         animated.activeClip = clip;
       }
-      animated.mixer.setTime(riderClipTimeS(binding.rider, actor.odometerM ?? 0));
+      // The odometer is the only phase source: a moving ridden actor without
+      // one would pedal in place, so that is an error, not a default. A
+      // stationary one (editor, parked) holds the clip's first pose.
+      if (actor.odometerM === undefined && (actor.speedMps ?? 0) > 0.1) {
+        throw new Error(`ridden two-wheeler ${actor.id} is moving but its view carries no odometerM`);
+      }
+      animated.mixer.setTime(riderClipTimeS(binding.rider, actor.odometerM ?? 0)); // fallback-ok: stationary, checked above
       return animated.drawCalls;
     }
     const requestedName = (actor.speedMps ?? 0) > 0.1

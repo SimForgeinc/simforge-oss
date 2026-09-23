@@ -1721,6 +1721,7 @@ fn in_rider_subtree(world: &World, entity: Entity, model_root: Entity) -> bool {
             let tagged = serde_json::from_str::<serde_json::Value>(&extras.value)
                 .ok()
                 .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
+                // fallback-ok: extras without a semanticClass string are simply not a rider tag
                 .unwrap_or(false);
             if tagged {
                 return true;
