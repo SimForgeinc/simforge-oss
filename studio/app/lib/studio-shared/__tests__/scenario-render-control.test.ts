@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isScenarioParityEvidenceAccepted,
   isScenarioRenderEvidence,
+  scenarioParityEvidencePolicyFailure,
   SCENARIO_REPLAY_PARITY_LIMITS,
   SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS,
   SCENARIO_REFERENCE_EQUIVALENCE_LIMITS,
@@ -22,7 +23,7 @@ function acceptedEvidence() {
       sourceInputDigest: digest,
       planSha256: digest,
     },
-    execution: { mode: "native-physics" as const, fixedTimestepS: 0.02 as const },
+    execution: { mode: "native-physics" as const, purpose: "physics-validation" as const, fixedTimestepS: 0.02 as const, mapBinding: "exact" },
     semantics: {
       verdict: "pass" as const,
       evaluatedInteractionCount: 3,
@@ -33,6 +34,7 @@ function acceptedEvidence() {
       verdict: "pass" as const,
       evaluatedActorCount: 2,
       failedActorIds: [],
+      droppedActorIds: [],
       metrics: { maxPositionM: 0.12 },
     },
     collisions: { verdict: "pass" as const, evaluatedPairCount: 1, failedPairs: [] },
@@ -42,10 +44,41 @@ function acceptedEvidence() {
   };
 }
 
+function replayEvidence() {
+  return {
+    ...acceptedEvidence(),
+    execution: { mode: "trace-replay" as const, purpose: "scenario-render" as const, fixedTimestepS: 0.02 as const, mapBinding: "exact" as string | null },
+    trajectory: {
+      verdict: "pass" as const,
+      acceptanceGate: "replay-sampler-parity" as const,
+      evaluatedActorCount: 3,
+      failedActorIds: [],
+      droppedActorIds: [] as string[],
+      nudgedActorIds: [] as string[],
+      postContactClassification: "not-applicable" as const,
+      metrics: { "max.positionM": 0.0004, "max.rotationDeg": 0.02 },
+    },
+    collisions: { verdict: "pass" as const, source: "timeline" as const, evaluatedPairCount: 0, failedPairs: [] },
+    divergences: [{ code: "spawn-placement:staged:ped", classification: "informational" as const }] as Array<{ code: string; classification: string }>,
+  };
+}
+
 describe("managed render control contracts", () => {
-  it("accepts evidence only when every required comparison passes", () => {
+  it("parses a passing physics-validation run but never accepts it as the scenario render", () => {
     const parsed = ScenarioParityEvidenceV1Schema.parse(acceptedEvidence());
-    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(true);
+    expect(parsed.verdict).toBe("pass");
+    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(false);
+    expect(scenarioParityEvidencePolicyFailure(parsed)?.code).toBe("carla_run_not_scenario_render");
+  });
+
+  it("requires purpose, mapBinding and droppedActorIds, and tolerates no missing key", () => {
+    const evidence = acceptedEvidence();
+    const { purpose: _purpose, ...withoutPurpose } = evidence.execution;
+    expect(ScenarioParityEvidenceV1Schema.safeParse({ ...evidence, execution: withoutPurpose }).success).toBe(false);
+    const { mapBinding: _binding, ...withoutBinding } = evidence.execution;
+    expect(ScenarioParityEvidenceV1Schema.safeParse({ ...evidence, execution: withoutBinding }).success).toBe(false);
+    const { droppedActorIds: _dropped, ...withoutDropped } = evidence.trajectory;
+    expect(ScenarioParityEvidenceV1Schema.safeParse({ ...evidence, trajectory: withoutDropped }).success).toBe(false);
   });
 
   it("keeps reference equivalence distinct from the bounded native-physics ceiling", () => {
@@ -74,7 +107,7 @@ describe("managed render control contracts", () => {
     })).toThrow(/verdict/i);
   });
 
-  it("accepts a truthful failed evidence document for durable diagnosis", () => {
+  it("keeps a truthful failed evidence document parseable for durable diagnosis", () => {
     const failed = ScenarioParityEvidenceV1Schema.parse({
       ...acceptedEvidence(),
       trajectory: {
@@ -90,7 +123,7 @@ describe("managed render control contracts", () => {
   it("keeps diagnostic replay evidence transportable but never accepted", () => {
     const diagnostic = ScenarioParityEvidenceV1Schema.parse({
       ...acceptedEvidence(),
-      execution: { mode: "diagnostic-replay", fixedTimestepS: 0.02 },
+      execution: { mode: "diagnostic-replay", purpose: "scenario-render", fixedTimestepS: 0.02, mapBinding: "exact" },
       verdict: "fail",
     });
     expect(diagnostic.execution.mode).toBe("diagnostic-replay");
@@ -110,6 +143,8 @@ describe("managed render control contracts", () => {
         acceptanceGate: "replay-sampler-parity" as const,
         evaluatedActorCount: 3,
         failedActorIds: [],
+        droppedActorIds: [],
+        nudgedActorIds: [],
         postContactClassification: "not-applicable" as const,
         metrics: { "max.positionM": 0.0004, "max.rotationDeg": 0.02 },
       },
@@ -132,12 +167,46 @@ describe("managed render control contracts", () => {
   });
 
   it("never presents a physics-validation run as the scenario render", () => {
-    const parsed = ScenarioParityEvidenceV1Schema.parse({
-      ...acceptedEvidence(),
-      execution: { mode: "native-physics", purpose: "physics-validation", fixedTimestepS: 0.02 },
-    });
-    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(true);
+    const parsed = ScenarioParityEvidenceV1Schema.parse(acceptedEvidence());
+    expect(isScenarioParityEvidenceAccepted(parsed)).toBe(false);
     expect(isScenarioRenderEvidence(parsed)).toBe(false);
+    // Trace replay that claims a physics-validation purpose is not a render either.
+    const mislabelled = ScenarioParityEvidenceV1Schema.parse({
+      ...replayEvidence(),
+      execution: { ...replayEvidence().execution, purpose: "physics-validation" },
+    });
+    expect(isScenarioRenderEvidence(mislabelled)).toBe(false);
+    expect(scenarioParityEvidencePolicyFailure(mislabelled)?.code).toBe("carla_run_not_scenario_render");
+  });
+
+  it("refuses every recorded degradation in accepted-verdict replay evidence, naming it", () => {
+    const cases: Array<[string, Record<string, unknown>, string, RegExp]> = [
+      ["approximate map", { execution: { ...replayEvidence().execution, mapBinding: "approximate" } }, "carla_map_binding_not_exact", /approximate/],
+      ["no map evidence", { execution: { ...replayEvidence().execution, mapBinding: null } }, "carla_map_binding_not_exact", /no map binding/],
+      ["dropped actor", { trajectory: { ...replayEvidence().trajectory, droppedActorIds: ["ped_child"] } }, "carla_actors_dropped", /ped_child/],
+      ["nudged actor", { trajectory: { ...replayEvidence().trajectory, nudgedActorIds: ["car_2"] } }, "carla_actors_nudged", /car_2/],
+      ["approximate-map divergence", { divergences: [{ code: "map-binding:approximate", classification: "approximate-map" }] }, "carla_render_divergence", /map-binding:approximate/],
+      ["spawn drop divergence", { divergences: [{ code: "spawn-placement:dropped-unplaceable:ped", classification: "spawn-placement-drop" }] }, "carla_render_divergence", /spawn-placement-drop/],
+    ];
+    for (const [label, override, code, message] of cases) {
+      const parsed = ScenarioParityEvidenceV1Schema.parse({ ...replayEvidence(), ...override });
+      const failure = scenarioParityEvidencePolicyFailure(parsed);
+      expect(failure?.code, label).toBe(code);
+      expect(failure?.message, label).toMatch(message);
+      expect(isScenarioParityEvidenceAccepted(parsed), label).toBe(false);
+    }
+    // An informational note (a staged spawn) is not a degradation.
+    const staged = ScenarioParityEvidenceV1Schema.parse(replayEvidence());
+    expect(scenarioParityEvidencePolicyFailure(staged)).toBeNull();
+    expect(isScenarioParityEvidenceAccepted(staged)).toBe(true);
+  });
+
+  it("carries an unknown map binding value to the policy instead of a schema error", () => {
+    const parsed = ScenarioParityEvidenceV1Schema.parse({
+      ...replayEvidence(),
+      execution: { ...replayEvidence().execution, mapBinding: "generated" },
+    });
+    expect(scenarioParityEvidencePolicyFailure(parsed)?.code).toBe("carla_map_binding_not_exact");
   });
 
   it("keeps resource admission and worker identity provider neutral", () => {
