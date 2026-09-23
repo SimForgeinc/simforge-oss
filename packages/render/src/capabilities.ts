@@ -124,14 +124,13 @@ export function assertEngineSupportsIntent(
   }
   const capabilities = new Set<string>(declaration.capabilities);
   for (const required of spec.capabilityIntent.required) {
-    if (required.startsWith('camera.projection.')) continue;
     if (!capabilities.has(required)) reasons.push(`missing capability ${required}`);
   }
   for (const source of spec.sources) {
     if (source.modality === 'lidar' || source.modality === 'radar') continue;
     if (source.attributes.profileSource !== 'authored') continue;
     for (const required of cameraProfileCapabilities(source.attributes.cameraProfile)) {
-      if (!required.startsWith('camera.projection.') && !capabilities.has(required)) {
+      if (!capabilities.has(required)) {
         reasons.push(`missing capability ${required}`);
       }
     }

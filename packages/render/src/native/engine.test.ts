@@ -254,21 +254,19 @@ describe('native retained engine adapter', () => {
     ]));
   });
 
-  it('defers unsupported projection-family rejection to checkpoint 2', () => {
-    const candidate = withProfile(CameraProfileSchema.parse({ projection: { model: 'brown-conrady' } }));
-    const brown: RenderIntentV1 = {
-      ...candidate,
-      renderSpec: {
-        ...candidate.renderSpec,
-        capabilityIntent: {
-          ...candidate.renderSpec.capabilityIntent,
-          required: [...candidate.renderSpec.capabilityIntent.required, 'camera.projection.brown_conrady'],
-        },
-      },
-    };
+  it.each([
+    ['brown-conrady', 'camera.projection.brown_conrady'],
+    ['kannala-brandt', 'camera.projection.kannala_brandt'],
+  ] as const)('rejects authored non-pinhole projection %s with a structured reason', (model, capability) => {
+    expect(rejectionReasons(withProfile(CameraProfileSchema.parse({ projection: { model } })))).toEqual([
+      `missing capability ${capability}`,
+    ]);
+  });
+
+  it('accepts pinhole as the native projection family', () => {
     expect(() => assertEngineSupportsIntent(
       createRenderEngine({ binary: '/bin/true' }).capabilities,
-      brown,
+      withProfile(CameraProfileSchema.parse({ projection: { model: 'pinhole' } })),
     )).not.toThrow();
   });
 
