@@ -21,7 +21,7 @@ import json
 import sys
 from pathlib import Path
 
-from .. import world_manifest
+from .. import actor_bindings, world_manifest
 from . import collect, generate
 
 DEFAULT_DECISIONS = Path(__file__).parent / "decisions.json"
@@ -48,6 +48,14 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("--decisions", type=Path, default=DEFAULT_DECISIONS)
     gen.add_argument("--out", type=Path, default=world_manifest.MANIFEST_PATH)
     gen.add_argument("--check", action="store_true", help="fail if --out differs instead of writing it")
+
+    actors = sub.add_parser("actor-bindings", help="write the CARLA actor binding table")
+    actors.add_argument("--object-catalog", required=True, type=Path,
+                        help="SimCloud config/simforge/carla/carla-object-catalog.json")
+    actors.add_argument("--substitutions", type=Path,
+                        help="OSS catalog/vehicles-carla/carla-substitutions.json (renderer parity)")
+    actors.add_argument("--out", type=Path, default=actor_bindings.TABLE_PATH)
+    actors.add_argument("--check", action="store_true")
 
     derive = sub.add_parser("derive", help="print tables derived from the manifest")
     derive.add_argument("--manifest", type=Path, default=world_manifest.MANIFEST_PATH)
@@ -83,6 +91,23 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(text)
         for entry in manifest["maps"]:
             print(f"{entry['status']:20} {entry['sourceFolder']:40} -> {entry.get('carlaWorld')}")
+        return 0
+    if args.command == "actor-bindings":
+        import hashlib
+        catalog_bytes = args.object_catalog.read_bytes()
+        subs_bytes = args.substitutions.read_bytes() if args.substitutions else None
+        table = actor_bindings.generate(
+            json.loads(catalog_bytes), hashlib.sha256(catalog_bytes).hexdigest(),
+            json.loads(subs_bytes) if subs_bytes else None,
+            hashlib.sha256(subs_bytes).hexdigest() if subs_bytes else None,
+        )
+        text = json.dumps(table, indent=1, sort_keys=True) + "\n"
+        actor_bindings.parse(text.encode())
+        if args.check:
+            return 0 if args.out.exists() and args.out.read_text() == text else 1
+        args.out.write_text(text)
+        print(f"{len(table['bindings'])} bindings, {len(table['unavailable'])} unavailable -> {args.out} "
+              f"(sha256 {hashlib.sha256(text.encode()).hexdigest()})")
         return 0
     if args.command == "derive":
         world_manifest.load.cache_clear()
