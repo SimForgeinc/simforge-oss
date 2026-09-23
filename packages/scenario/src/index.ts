@@ -251,6 +251,20 @@ export {
 export { buildJsonSchema, JSON_SCHEMA_ID, JSON_SCHEMA_PATH } from './json-schema.js';
 
 export {
+  detectMirroredOpenScenarioImport,
+  fixMirroredOpenScenarioImport,
+  FIXED_IMPORTER_EVIDENCE,
+  MIRROR_FIX_VERSION,
+  OPENSCENARIO_IMPORT_EXTENSION_KEY,
+  type MirroredImportDetection,
+  type MirroredImportFixResult,
+  type MirroredImportRoleFlip,
+  type MirroredImportSkippedRole,
+  type MirroredImportSkipReason,
+  type MirrorFixMarker,
+} from './repair/mirrored-openscenario-import.js';
+
+export {
   ScenarioValidationError,
   ScenarioFormatError,
   ScenarioOperationError,
