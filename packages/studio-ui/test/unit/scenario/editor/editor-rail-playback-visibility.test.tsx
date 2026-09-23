@@ -6,9 +6,10 @@ import { TEST_MAP } from "@simforge-oss/editor";
 import type * as EditorRuntimeModule from "../../../../src/lib/scenario/editor/use-editor-runtime";
 
 /**
- * While the simulation preview presents the physics trace, the authoring rail
+ * While the simulation player presents the physics trace, the authoring rail
  * has no job. Leaving it up is not merely noise: its placement tools stay armed,
- * so a click on the canvas drops a new actor into a running scenario.
+ * so a click on the canvas drops a new actor into a running scenario. It is
+ * hidden rather than unmounted, so it comes back exactly as the author left it.
  */
 
 const useEditorRuntime = vi.hoisted(() =>
@@ -60,7 +61,14 @@ const { ScenarioEditorSurface } = await import(
 
 afterEach(() => {
   cleanup();
-  useEditorRuntime.mockClear();
+  useEditorRuntime.mockReset();
+  useEditorRuntime.mockImplementation(() => ({
+    controller: null,
+    editorDocument: null,
+    state: null,
+    error: null,
+    laneCount: null,
+  }));
   window.localStorage.clear();
 });
 
@@ -95,27 +103,83 @@ describe("actor rail visibility during simulation playback", () => {
     expect(screen.getByTestId("mock-tool-sidebar").closest('[data-editor-shell-region="left-sidebar"]')).not.toBeNull();
   });
 
-  it("takes the rail away while playback presents the trace", () => {
+  it("hides the rail, still mounted, while playback presents the trace", () => {
     render(<ScenarioEditorSurface {...surfaceProps()} sharedPlayback={playback(true)} />);
 
-    expect(screen.queryByTestId("mock-tool-sidebar")).toBeNull();
-    expect(document.querySelector('[data-editor-shell-region="left-sidebar"]')).toBeNull();
+    const region = document.querySelector<HTMLElement>('[data-editor-shell-region="left-sidebar"]');
+    expect(region).not.toBeNull();
+    // Hidden from pointer, focus and assistive tech: an armed placement tool
+    // must not drop an actor into a running scenario.
+    expect(region?.hasAttribute("inert")).toBe(true);
+    expect(region?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByTestId("mock-tool-sidebar").closest('[data-editor-shell-region="left-sidebar"]')).toBe(region);
+    expect(document.querySelector('[data-testid="scenario-editor-surface"]')?.getAttribute("data-player-mode")).toBe("true");
   });
 
-  it("brings the rail back, disarmed, when playback ends", () => {
+  it("brings the rail back exactly as it was when playback ends", () => {
     const props = surfaceProps();
     const view = render(<ScenarioEditorSurface {...props} sharedPlayback={playback(false)} />);
 
-    // Arm a placement tool, the way an author mid-placement would leave it.
+    // Open the catalog, the way an author mid-placement would leave it.
     fireEvent.click(screen.getByTestId("mock-tool-sidebar"));
-    expect(screen.getByTestId("mock-tool-sidebar").dataset.activeTool).toBe("vehicles");
+    const rail = screen.getByTestId("mock-tool-sidebar");
+    expect(rail.dataset.activeTool).toBe("vehicles");
 
     view.rerender(<ScenarioEditorSurface {...props} sharedPlayback={playback(true)} />);
-    expect(screen.queryByTestId("mock-tool-sidebar")).toBeNull();
+    // The same element throughout: nothing was unmounted, so nothing was lost.
+    expect(screen.getByTestId("mock-tool-sidebar")).toBe(rail);
 
     view.rerender(<ScenarioEditorSurface {...props} sharedPlayback={playback(false)} />);
-    // Returning to an armed tool would place an actor on the author's next
-    // click, somewhere they last aimed several seconds of playback ago.
-    expect(screen.getByTestId("mock-tool-sidebar").dataset.activeTool).toBe("null");
+    expect(screen.getByTestId("mock-tool-sidebar")).toBe(rail);
+    expect(rail.dataset.activeTool).toBe("vehicles");
+    const region = rail.closest<HTMLElement>('[data-editor-shell-region="left-sidebar"]');
+    expect(region?.hasAttribute("inert")).toBe(false);
+    expect(region?.getAttribute("aria-hidden")).toBeNull();
+  });
+
+  it("disarms a placement tool on entry, so the returning catalog is open but not armed", () => {
+    const controller = {
+      state: { mode: "placing" },
+      cancel: vi.fn(),
+      setPresentationActive: vi.fn(),
+      setSelection: vi.fn(),
+    };
+    useEditorRuntime.mockImplementation(() => ({
+      controller: controller as never,
+      editorDocument: null,
+      state: null,
+      error: null,
+      laneCount: null,
+    }));
+    const props = surfaceProps();
+    const view = render(<ScenarioEditorSurface {...props} sharedPlayback={playback(false)} />);
+    expect(controller.cancel).not.toHaveBeenCalled();
+
+    view.rerender(<ScenarioEditorSurface {...props} sharedPlayback={playback(true)} />);
+    expect(controller.cancel).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the selection: an idle editor is not cancelled on entry", () => {
+    // `cancel()` while idle clears the selection, and the inspector the author
+    // had open must come back when the player exits.
+    const controller = {
+      state: { mode: "idle" },
+      cancel: vi.fn(),
+      setPresentationActive: vi.fn(),
+      setSelection: vi.fn(),
+    };
+    useEditorRuntime.mockImplementation(() => ({
+      controller: controller as never,
+      editorDocument: null,
+      state: null,
+      error: null,
+      laneCount: null,
+    }));
+    const props = surfaceProps();
+    const view = render(<ScenarioEditorSurface {...props} sharedPlayback={playback(false)} />);
+    view.rerender(<ScenarioEditorSurface {...props} sharedPlayback={playback(true)} />);
+    view.rerender(<ScenarioEditorSurface {...props} sharedPlayback={playback(false)} />);
+    expect(controller.cancel).not.toHaveBeenCalled();
+    expect(controller.setSelection).not.toHaveBeenCalled();
   });
 });

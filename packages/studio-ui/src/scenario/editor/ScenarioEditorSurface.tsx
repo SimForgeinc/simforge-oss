@@ -40,13 +40,13 @@ import {
 import {
   actorFrameDistance,
   flyCameraTo,
-  followActorCamera,
   resolveActorFrameTarget,
-  shouldReleaseFollowedActor,
-  type FrameableActor,
 } from "./camera-framing";
 import { EditorOverlayHost } from "./inspector/EditorOverlayHost";
-import { EditorConfigurationBlockProvider } from "./inspector/EditorDetailsPanel";
+import { EditorPlayerModeProvider } from "./player/player-mode";
+import { playerChrome } from "./player/player-mode.stylex";
+import { useChaseCamera } from "./player/use-chase-camera";
+import { ChaseActorLabel, SimulationPlayerBar } from "./player/SimulationPlayerBar";
 import { TrafficLightDetailsPanel } from "./inspector/TrafficLightDetailsPanel";
 import {
   TrafficActorDetailsPanel,
@@ -214,8 +214,6 @@ export function ScenarioEditorSurface({
   const placementSnapshotRef = useRef<PlacementSnapshot | null>(null);
   const routePointCountRef = useRef<number | null>(null);
   const cancelCameraFlightRef = useRef<(() => void) | null>(null);
-  /** The actor the camera is currently following, if the camera work is a follow at all. */
-  const followedActorRef = useRef<string | null>(null);
   const routeLastPointRef = useRef<{ x: number; z: number } | null>(null);
   const routePointerQueueRef = useRef<Array<{
     screen: { x: number; y: number };
@@ -269,11 +267,10 @@ export function ScenarioEditorSurface({
   const [selectedSignalHeadId, setSelectedSignalHeadId] = useState<string | null>(null);
   const [selectedTrafficActor, setSelectedTrafficActor] = useState<TrafficActorSelection | null>(null);
 
-  /** Stop whatever is driving the camera, and stop calling it a follow. */
+  /** Stop whatever flight is driving the camera. */
   const releaseCamera = useCallback(() => {
     cancelCameraFlightRef.current?.();
     cancelCameraFlightRef.current = null;
-    followedActorRef.current = null;
   }, []);
 
   /** One flight at a time: a later frame request cancels the one in the air. */
@@ -284,22 +281,6 @@ export function ScenarioEditorSurface({
     if (!viewer) return;
     releaseCamera();
     cancelCameraFlightRef.current = flyCameraTo(viewer, target, distance);
-  }, [releaseCamera, viewer]);
-
-  /**
-   * Track a moving actor. Shares `cancelCameraFlightRef` with the one-shot
-   * flights so picking a second actor, framing a signal, or leaving the surface
-   * all stop the previous camera work — there is only ever one thing driving the
-   * camera.
-   */
-  const startCameraFollow = useCallback((
-    actorId: string,
-    resolveTarget: () => FrameableActor | null,
-  ) => {
-    if (!viewer) return;
-    releaseCamera();
-    cancelCameraFlightRef.current = followActorCamera(viewer, resolveTarget);
-    followedActorRef.current = actorId;
   }, [releaseCamera, viewer]);
 
   const frameSignalHead = useCallback((headId: string) => {
@@ -425,6 +406,20 @@ export function ScenarioEditorSurface({
     () => (viewer ? indexedEditorHeightSampler(viewer) : () => null),
     [viewer],
   );
+  /**
+   * The simulation player: while the simulation plays the viewport is the
+   * scene and nothing else. Every panel steps aside (hidden, not unmounted, so
+   * it returns exactly as it was) and clicking an actor rides a chase camera
+   * behind it.
+   */
+  const playerMode = Boolean(sharedPlayback?.inspecting);
+  const chaseCamera = useChaseCamera({
+    viewer,
+    renderer: sharedActorRenderer,
+    playback: sharedPlayback?.controller,
+    enabled: active && playerMode,
+    sampleHeight: heightSampler,
+  });
 
   /**
    * Memoised on the extension bag, not recomputed per render.
@@ -486,51 +481,36 @@ export function ScenarioEditorSurface({
    * the scene that is the trace sample at the playhead, not the authored spawn
    * placement `EditorController.frameActor` resolves from the document.
    *
-   * A car that is moving gets followed rather than framed once. Flying to its
-   * position at the instant of the click left it driving out of shot before the
-   * flight even settled, which read as the camera going to the wrong place. The
-   * follow keeps the author's orbit: it moves what the camera looks at, never how
-   * far away or from what angle it looks.
+   * While playback presents the scene the actor is moving, so it is chased
+   * rather than framed once: flying to where it was at the instant of the
+   * click left it driving out of shot before the flight settled.
    */
   const frameActorAtPlayhead = useCallback((actorId: string) => {
-    const resolve = () => resolveActorFrameTarget({
+    if (sharedPlayback?.inspecting && sharedPlayback.controller) {
+      releaseCamera();
+      if (chaseCamera.chase(actorId)) return;
+    }
+    const target = resolveActorFrameTarget({
       actorId,
       inspecting: Boolean(sharedPlayback?.inspecting),
       sampledActors: sharedPlayback?.controller?.currentActors,
       authored: editorDocument?.actor(actorId) ?? null,
       sampleHeight: heightSampler,
     });
-    const target = resolve();
     if (!target) return;
-    // `currentActors` is a live getter on the controller, so re-resolving each
-    // frame reports where the car is now. Only worth following while playback
-    // owns the scene; a parked authored pose has nothing to track.
-    if (sharedPlayback?.inspecting && sharedPlayback.controller) {
-      startCameraFollow(actorId, resolve);
-      return;
-    }
     startCameraFlight(
       new Vector3(target.x, target.y + target.dims.h * 0.5, target.z),
       actorFrameDistance(target.dims),
     );
   }, [
+    chaseCamera.chase,
     editorDocument,
     heightSampler,
+    releaseCamera,
     sharedPlayback?.controller,
     sharedPlayback?.inspecting,
     startCameraFlight,
-    startCameraFollow,
   ]);
-  // Hand the camera back when the follow ends: the actor stops being selected, or playback stops
-  // owning the scene. See `shouldReleaseFollowedActor` for why both are needed.
-  useEffect(() => {
-    if (!shouldReleaseFollowedActor({
-      followedActorId: followedActorRef.current,
-      selection: state?.selection,
-      presenting: Boolean(sharedPlayback?.inspecting),
-    })) return;
-    releaseCamera();
-  }, [releaseCamera, sharedPlayback?.inspecting, state?.selection]);
 
   useEffect(() => {
     const canvas = viewer?.renderer.domElement;
@@ -742,7 +722,8 @@ export function ScenarioEditorSurface({
     const index = signalProjection.index;
     const sceneViewer = viewer;
     const canvas = sceneViewer?.renderer.domElement ?? null;
-    if (!active || !overlays || !index || !sceneViewer || !canvas || state?.mode !== "idle") return;
+    // In the player a click on the scene chases an actor; it never opens a signal.
+    if (!active || playerMode || !overlays || !index || !sceneViewer || !canvas || state?.mode !== "idle") return;
     const raycaster = new Raycaster();
     const pointer = new Vector2();
     let press: { pointerId: number; x: number; y: number } | null = null;
@@ -794,7 +775,7 @@ export function ScenarioEditorSurface({
       canvas.removeEventListener("pointerdown", onPointerDown, { capture: true });
       canvas.removeEventListener("pointerup", onPointerUp, { capture: true });
     };
-  }, [active, controller, editorDocument, signalOverlays, signalProjection.index, state?.mode, viewer]);
+  }, [active, controller, editorDocument, playerMode, signalOverlays, signalProjection.index, state?.mode, viewer]);
   // Background traffic is not an authored actor, so the editor's own picking
   // ignores it. A click on one opens a read-only card that says what it is.
   // Only while authoring: during playback a click belongs to the chase camera
@@ -863,14 +844,15 @@ export function ScenarioEditorSurface({
   }, [active, controller, sharedPlayback?.inspecting]);
   // Playback presents the physics trace, so the authoring tools are not just
   // useless but harmful: an armed placement tool would drop an actor into the
-  // scene mid-run. Disarm on entry and take the rail away, rather than leaving
-  // a disabled-looking bar the author can still aim with. `expandedTool` is the
-  // one piece of rail state the surface owns, and clearing it also settles
-  // `data-left-panel-open` for the floating timeline.
+  // scene mid-run. Disarm on entry. The rail itself only steps aside (the
+  // player hides it, still mounted), so an open catalog comes back open when
+  // the player exits, just no longer armed: the author's next click must not
+  // place an actor where they last aimed several seconds of playback ago.
   useEffect(() => {
-    if (!sharedPlayback?.inspecting) return;
-    controller?.cancel();
-    setExpandedTool(null);
+    if (!sharedPlayback?.inspecting || !controller) return;
+    // Only an armed tool or an open gesture is cancelled: `cancel()` while
+    // idle clears the selection, and the selection must survive the player.
+    if (controller.state.mode !== "idle") controller.cancel();
   }, [controller, sharedPlayback?.inspecting]);
   // Runs after the toggle above, and again on every controller notification, so
   // a ghost that toggle re-showed outside placement mode never reaches a frame.
@@ -965,6 +947,38 @@ export function ScenarioEditorSurface({
     setTransportError(result.configured ? null : "Custom route could not be configured at this timestamp.");
   }, [controller, editorDocument, sharedPlayback, setTransportError, viewer]);
 
+  const exitPlayer = useCallback(() => {
+    if (!sharedPlayback) return;
+    setTransportError(null);
+    stopAndResetTimelinePlayback({
+      controller: sharedPlayback.controller,
+      startTime: sharedPlayback.bundle?.startTime ?? 0,
+      setInspecting: sharedPlayback.setInspecting,
+    });
+  }, [sharedPlayback]);
+  const togglePlayerPlayback = useCallback(() => {
+    try {
+      setTransportError(null);
+      sharedPlayback?.controller?.toggle();
+    } catch (reason) {
+      setTransportError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }, [sharedPlayback?.controller]);
+  const seekPlayer = useCallback((time: number) => {
+    sharedPlayback?.controller?.seek(time);
+  }, [sharedPlayback?.controller]);
+  /** What the chase label and the player call an actor: the timeline's name for it. */
+  const chasedActorLabel = useMemo(() => {
+    const actorId = chaseCamera.chasedActorId;
+    if (!actorId) return null;
+    const named = displayNamesByActorId.get(actorId)
+      ?? state?.actors.find((actor) => actor.id === actorId)?.label;
+    if (named) return named;
+    // Background traffic has no role: say what it is rather than print its id.
+    const traffic = sharedPlayback?.bundle?.actors.find((actor) => actor.id === actorId);
+    return traffic ? `Traffic ${traffic.kind.replace(/_/g, " ")}` : "Traffic vehicle";
+  }, [chaseCamera.chasedActorId, displayNamesByActorId, sharedPlayback?.bundle, state?.actors]);
+
   const localSceneLoading = useSceneLoadingSurfaceProps(
     localMapLoadError
       ? failedSceneLoadProgress(map.label, localMapLoadError)
@@ -983,7 +997,7 @@ export function ScenarioEditorSurface({
   );
 
   return (
-    <EditorConfigurationBlockProvider blocked={Boolean(sharedPlayback?.inspecting)}>
+    <EditorPlayerModeProvider playing={playerMode}>
       <EditorOverlayProvider
         documentKey={editorDocument}
         selectedActorId={singleSelectedId}
@@ -1016,6 +1030,7 @@ export function ScenarioEditorSurface({
           simulationIssues={simulationIssues}
           experience={experience}
           onExperienceToggle={toggleExperience}
+          playerMode={playerMode}
         />
       ) : null}
       <ScenarioEditorShell
@@ -1025,7 +1040,8 @@ export function ScenarioEditorSurface({
         data-testid="scenario-editor-surface"
         data-editor-stage=""
         header={null}
-        leftSidebar={sharedPlayback?.inspecting ? null : (slotProps) => (
+        playerMode={playerMode}
+        leftSidebar={(slotProps) => (
           <div {...slotProps} >
             <ActorLibraryRail
               controller={controller}
@@ -1117,25 +1133,21 @@ export function ScenarioEditorSurface({
           ) : null
         }
         floatingOverlay={environmentSceneReady && editorDocument ? (
+          <>
+          {/* The player hides the timeline rather than unmounting it: its
+              height, name column and dock insets are the author's, and its
+              keyboard bindings (Space plays, Escape exits) stay live. */}
           <div
-            {...stylex.props(styles.floatingTimelineLayer)}
+            {...stylex.props(styles.floatingTimelineLayer, playerMode && playerChrome.hidden)}
+            aria-hidden={playerMode || undefined}
             data-left-panel-open={String(expandedTool !== null)}
             data-testid="floating-timeline-layer"
+            inert={playerMode || undefined}
           >
             {/* 920px is the previous 736px widened by a quarter: the clips need the
                 horizontal room more than the viewport needs the margin, and the
                 name column can now be traded against the track by dragging. */}
             <div {...stylex.props(styles.divRelative)}>
-              {/* Absolutely positioned rather than stacked above the card: the
-                  timeline's height is constrained and user-draggable, and a
-                  flow sibling would take height from the track. Escape is bound
-                  only while playback is inspecting (V1TimelineRail), so the hint
-                  appears exactly when the key does something. */}
-              {sharedPlayback?.inspecting ? (
-                <p {...stylex.props(styles.pressEscapeToExitSimulation)}>
-                  Press Escape to exit simulation
-                </p>
-              ) : null}
               <div
                 aria-hidden="true"
                 {...stylex.props(styles.divAbsolute)}
@@ -1153,11 +1165,27 @@ export function ScenarioEditorSurface({
                 onFrameActor={frameActorAtPlayhead}
                 onFrameSignal={frameSignalHead}
                 onConfigureCustomRoute={configureCustomRoute}
+                onPlaybackEscape={chaseCamera.release}
               />
             </div>
           </div>
+          {active && playerMode && tutorialPlaybackState ? (
+            <SimulationPlayerBar
+              playing={tutorialPlaybackState.playing}
+              time={tutorialPlaybackState.time}
+              startTime={tutorialPlaybackState.startTime}
+              endTime={tutorialPlaybackState.endTime}
+              onPlayPause={togglePlayerPlayback}
+              onSeek={seekPlayer}
+              onExit={exitPlayer}
+              chasedLabel={chasedActorLabel}
+              onFreeCamera={chaseCamera.release}
+            />
+          ) : null}
+          </>
         ) : null}
       />
+      <ChaseActorLabel label={active && playerMode ? chasedActorLabel : null} labelRef={chaseCamera.labelRef} />
       {!externalWorld && (!sceneReady || localMapLoadError !== null) ? (
         <CloudLoadingSurface scope="screen" {...localSceneLoading} />
       ) : null}
@@ -1175,7 +1203,13 @@ export function ScenarioEditorSurface({
           onClose={() => setSelectedTrafficActor(null)}
         />
       ) : null}
-      <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
+      <div
+        {...stylex.props(playerMode && playerChrome.hiddenContents)}
+        aria-hidden={playerMode || undefined}
+        inert={playerMode || undefined}
+      >
+        <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
+      </div>
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />
       <HifiPreviewSlot
         active={active && !sharedPlayback?.inspecting}
@@ -1210,7 +1244,7 @@ export function ScenarioEditorSurface({
         <EditorExperienceChooser onChoose={chooseExperience} />
       ) : null}
       </EditorOverlayProvider>
-    </EditorConfigurationBlockProvider>
+    </EditorPlayerModeProvider>
   );
 }
 
@@ -1362,6 +1396,7 @@ function EditorTimelineOverlayBridge({
   onFrameActor,
   onFrameSignal,
   onConfigureCustomRoute,
+  onPlaybackEscape,
 }: {
   document: EditorDocument;
   state: EditorState | null;
@@ -1375,6 +1410,11 @@ function EditorTimelineOverlayBridge({
   onFrameActor: (actorId: string) => void;
   onFrameSignal: (headId: string) => void;
   onConfigureCustomRoute: (interactionId: string) => void;
+  /**
+   * Escape while the simulation plays. Return true when the press was used
+   * (the player let go of a chased actor); only an unused press exits.
+   */
+  onPlaybackEscape?: () => boolean;
 }) {
   const { selection, actions } = useEditorOverlay();
   const [tutorialRouteInteractionId, setTutorialRouteInteractionId] = useState<string | null>(null);
@@ -1556,7 +1596,9 @@ function EditorTimelineOverlayBridge({
             }
           },
           onSeek: (time) => playback.controller?.seek(time),
+          // The rail binds this to Escape while playback is inspecting.
           onExitInspection: () => {
+            if (onPlaybackEscape?.()) return;
             onTransportError(null);
             stopAndResetTimelinePlayback({
               controller: playback.controller,
