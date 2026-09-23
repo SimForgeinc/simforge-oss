@@ -47,7 +47,7 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && chown -R node:node /scratch /cache /run/simforge
 COPY --from=node-build --chown=node:node /out/worker /opt/simforge/worker
 COPY --from=rust-build /src/renderer/target/release/native-render-service /usr/local/bin/native-render-service
-COPY --from=sky-assets /sky /opt/simforge/sky
+COPY --from=sky-build /renderer/render-core/assets/sky /opt/simforge/sky
 ENV NODE_ENV=production \
     PORT=8080 \
     SIMFORGE_NATIVE_RENDER_BINARY=/usr/local/bin/native-render-service \
