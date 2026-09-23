@@ -998,7 +998,7 @@ export class ShowcasePipeline {
     this.python = python ?? join(this.root, '.venv', 'bin', 'python');
     this.cli = cli ?? join(this.root, 'packages', 'cli', 'bin', 'simforge.js');
     // The 2D tier runs @simforge-oss/trace-render directly (the CLI renders 3D).
-    this.renderer2d = renderer2d ?? join(this.root, 'packages', 'trace-render', 'bin', 'trace-render.js');
+    this.renderer2d = renderer2d ?? join(this.root, 'tools', 'trace-render', 'bin', 'trace-render.js');
     this.bridge = join(this.root, 'tools', 'research', 'showcase', 'stages.py');
     this.schedulerSettings = Object.freeze({
       jobConcurrency: concurrencySetting(jobConcurrency, 4, 'jobConcurrency', 32),
