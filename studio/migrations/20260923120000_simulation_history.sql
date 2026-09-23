@@ -25,7 +25,8 @@
 --   newest succeeded request for the draft's exact content and map version.
 -- * `sim_motion_diffs`: a memo of motion comparisons between two results (pure cache, cascades with
 --   either result).
--- * `revisions.created_for` (render | save | engine_upgrade | import), `label`, `engine_sem_ver` and
+-- * `revisions.created_for` (render | save | engine_upgrade | import | map_move: the state saved
+--   before a draft moved to another map version), `label`, `engine_sem_ver` and
 --   `oss_release`: what the Versions panel shows. Existing revisions were all cut at render submit.
 --   Adding columns does not fire the revision immutability trigger.
 -- * Indexes for the reachability GC (draft-cache results after 90 days, requests after 30 days,
@@ -215,7 +216,7 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'simforge_revisions_created_for_check') THEN
     ALTER TABLE simforge.revisions ADD CONSTRAINT simforge_revisions_created_for_check
-      CHECK (created_for IN ('render', 'save', 'engine_upgrade', 'import')) NOT VALID;
+      CHECK (created_for IN ('render', 'save', 'engine_upgrade', 'import', 'map_move')) NOT VALID;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'simforge_revisions_label_check') THEN
     ALTER TABLE simforge.revisions ADD CONSTRAINT simforge_revisions_label_check

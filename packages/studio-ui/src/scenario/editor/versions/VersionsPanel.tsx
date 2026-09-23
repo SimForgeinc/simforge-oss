@@ -212,6 +212,7 @@ function VersionsPanel({
                 key={version.revisionId}
                 busy={busy}
                 currentEngineSemVer={versions.currentEngineSemVer}
+                draftMapVersionId={draftMapVersionId}
                 onCompare={(simulation) => {
                   const active = version.simulations.find((entry) => entry.active);
                   if (!active || active.simKey === simulation.simKey) return;
@@ -244,6 +245,7 @@ function VersionsPanel({
 function VersionRow({
   version,
   versions,
+  draftMapVersionId,
   currentEngineSemVer,
   busy,
   onRestore,
@@ -253,6 +255,7 @@ function VersionRow({
 }: {
   version: ScenarioVersionDto;
   versions: ScenarioVersionsDto;
+  draftMapVersionId: string | null;
   currentEngineSemVer: string;
   busy: string | null;
   onRestore: () => void;
@@ -261,6 +264,7 @@ function VersionRow({
   onCompare: (simulation: ScenarioVersionSimulationDto) => void;
 }) {
   const needsResimulation = canResimulate(version, currentEngineSemVer);
+  const otherMap = Boolean(version.map && version.map.mapVersionId !== draftMapVersionId);
   return (
     <li
       {...stylex.props(hairline.bottom, hairline.subtle, styles.version)}
@@ -287,10 +291,14 @@ function VersionRow({
             disabled={busy !== null || version.matchesDraft}
             onClick={onRestore}
             size="xs"
-            title={version.matchesDraft ? "The draft already holds this version" : "Copy this version into the draft (undoable)"}
+            title={version.matchesDraft
+              ? "The draft already holds this version"
+              : otherMap
+                ? `Move the draft back to ${mapLabel(version.map)} with this version's content`
+                : "Copy this version into the draft (undoable)"}
             variant="outline"
           >
-            Restore to draft
+            {otherMap && version.createdFor === "map_move" ? "Revert to previous map version" : "Restore to draft"}
           </Button>
           {needsResimulation ? (
             <Button

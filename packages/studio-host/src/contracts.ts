@@ -428,7 +428,8 @@ export type SimulationMotionDiffDto = {
 /** Why a simulation is in a revision's history. */
 export type RevisionSimulationReason = "commit" | "engine_upgrade" | "resimulate" | "import" | "backfill";
 /** Why a revision (a user-visible Version) exists. */
-export type ScenarioVersionCreatedFor = "render" | "save" | "engine_upgrade" | "import";
+/** `map_move`: the draft as it was before it moved to another map version (kept for revert). */
+export type ScenarioVersionCreatedFor = "render" | "save" | "engine_upgrade" | "import" | "map_move";
 
 export type ScenarioVersionActorDto = { id: string; name: string | null } | null;
 
