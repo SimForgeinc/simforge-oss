@@ -45,7 +45,7 @@ import {
   ScenarioWorldSurface,
 } from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldProvider";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
-import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
 import { MapInstallPanel } from "@/app/host";
 import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
@@ -102,7 +102,7 @@ function MapGalleryWorld({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [actorRenderer, setActorRenderer] = useState<ActorRenderer | null>(null);
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
-  const quality = renderingPreferenceQuality(useRenderingPreference() ?? "low");
+  const quality = renderingPreferenceQuality(useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE);
   const target = useMemo<ScenarioWorldTarget>(() => ({
     mapId: map.sourceMapId,
     installedMaps: installedMaps.filter((entry) => entry.installed.browser).map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })),

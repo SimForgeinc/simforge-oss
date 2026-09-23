@@ -794,19 +794,6 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(supports-color@7.2.0)(tsx@4.23.12)
 
-  packages/trace-render:
-    dependencies:
-      sharp:
-        specifier: 0.34.5
-        version: 0.34.5
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.0
-        version: 22.20.1
-      typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
-
   packages/training-env:
     dependencies:
       '@msgpack/msgpack':
@@ -1156,6 +1143,19 @@ importers:
   tools/glb-orm-repair: {}
 
   tools/road-detail-gen: {}
+
+  tools/trace-render:
+    dependencies:
+      sharp:
+        specifier: 0.34.5
+        version: 0.34.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
 
 packages:
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { SubmitScenarioRenderIntentSchema } from "@/app/lib/scenario/render-wire-contracts";
 import { listRenderJobs } from "@/app/lib/scenario/control-plane-store";
 import { createRenderIntentJob } from "@/app/lib/scenario/render-intent-store";
-import { resolveRevisionSimulation } from "@/app/lib/scenario/sim-result-store";
+import { resolveRevisionReplay, RevisionReplayError, SimulationFailedError } from "@/app/lib/scenario/sim-result-store";
 import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
 import {
   readJson,
@@ -37,34 +37,43 @@ export async function POST(request: Request) {
     "read",
   );
   if (access.response) return access.response;
-  // Every render replays the revision's authoritative simulation. A revision
-  // committed before this pipeline (or under another engine) is simulated now,
-  // once; ten renders of one revision share that one result.
-  let simulation;
+  // Every render replays a STORED simulation of the revision: by default its
+  // active (original) result, under whatever engine produced it. Nothing
+  // re-simulates here: a revision without a stored result is refused until
+  // the user explicitly re-simulates it or asks for the legacy OpenSCENARIO
+  // replay, and an engine upgrade never silently changes an old render.
+  let replay;
   try {
-    simulation = await resolveRevisionSimulation(auth.context, parsed.data.revisionId, { waitMs: 20_000 });
+    replay = await resolveRevisionReplay(auth.context, parsed.data.revisionId, {
+      motionSource: parsed.data.motionSource,
+      simKey: parsed.data.simKey,
+    });
   } catch (error) {
-    if (!(error instanceof SimulationClosureUnavailableError)) throw error;
-    return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
-  }
-  if (!simulation) return NextResponse.json({ error: "revision_not_found" }, { status: 404 });
-  if (simulation.state === "failed") {
-    return NextResponse.json({ error: simulation.failureCode, message: simulation.message }, { status: 422 });
-  }
-  if (simulation.state !== "succeeded") {
-    return NextResponse.json(
-      { error: "simulation_pending", retryable: true, simulation },
-      { status: 409, headers: { "Retry-After": "2" } },
-    );
+    if (error instanceof RevisionReplayError) {
+      return NextResponse.json({ error: error.code, message: error.message, ...error.detail }, { status: error.status });
+    }
+    if (error instanceof SimulationClosureUnavailableError || error instanceof SimulationFailedError) {
+      return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
+    }
+    throw error;
   }
   let created;
   try {
-    created = await createRenderIntentJob(auth.context, parsed.data, {
-      simKey: simulation.result.simKey,
-      traceSha256: simulation.result.traceSha256,
-      timelineSha256: simulation.result.timelineSha256,
-      timelineSizeBytes: simulation.result.timelineSizeBytes,
-    });
+    created = await createRenderIntentJob(
+      auth.context,
+      parsed.data,
+      replay.kind === "simulation"
+        ? {
+            simKey: replay.result.simKey,
+            traceSha256: replay.result.traceSha256,
+            timelineSha256: replay.timeline.timelineSha256,
+            timelineSizeBytes: replay.timeline.sizeBytes,
+            engineSemVer: replay.result.engineSemVer,
+            timelineContactOrigin: replay.timeline.contactOrigin,
+          }
+        : null,
+      replay.motionSource,
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "uniscenario_workspace_limit_reached") {
       return NextResponse.json(
@@ -78,6 +87,9 @@ export async function POST(request: Request) {
         { error: error.message, ...(typeof detail === "string" ? { detail } : {}) },
         { status: 422 },
       );
+    }
+    if (error instanceof Error && (error.message === "render_timeline_missing" || error.message === "render_motion_source_conflict")) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     if (error instanceof Error && error.message === "uniscenario_render_intent_idempotency_conflict") {
       return NextResponse.json({ error: error.message }, { status: 409 });

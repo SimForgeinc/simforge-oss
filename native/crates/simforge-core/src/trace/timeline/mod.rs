@@ -478,8 +478,11 @@ pub struct RenderTimeline {
     pub identity: TimelineIdentity,
     pub trace: CanonicalTraceIdentity,
     pub height_source: HeightSource,
-    /// How z and road attitude were obtained (sampler/2).
-    pub contact_origin: ContactOrigin,
+    /// How z and road attitude were obtained. Always present from sampler/2;
+    /// absent on stored sampler/1 documents (which used `xodr-elevation/v1`),
+    /// kept absent so their bytes and digests are unchanged when inspected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact_origin: Option<ContactOrigin>,
     pub map_id: String,
     /// Always `xodr-local` (OpenSCENARIO world frame).
     pub frame: String,
@@ -1233,7 +1236,7 @@ pub fn build_render_timeline(
         },
         trace: identity,
         height_source: source,
-        contact_origin,
+        contact_origin: Some(contact_origin),
         map_id: header.map_id.clone(),
         frame: "xodr-local".to_owned(),
         dt_s: TIMELINE_DT_S,

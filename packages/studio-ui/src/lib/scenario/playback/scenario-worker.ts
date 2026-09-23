@@ -11,6 +11,10 @@ import {
   clampDeclaredAxisHolds,
   compileTemplateAtSiteWith,
   compileTemplateWith,
+  emptyScenarioBaseInput,
+  emptyScenarioManifest,
+  isEmptyScenarioTemplate,
+  withoutRedundantEmptyScenarioClock,
   materializationSemanticLosses,
   matchSitesWith,
   resolveSiteWith,
@@ -21,8 +25,6 @@ import {
 import {
   contentHash,
   pruneDanglingAfterInteractions,
-  parseSimScenarioInput,
-  SIMULATION_DT_S,
   type AmbientTrafficProfile,
   type AmbientTrafficProvenance,
   type AmbientTrafficResult,
@@ -326,29 +328,22 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
   // A blank editor still owns one normal concrete world. It has no authored
   // rows yet, but its ambient SimActors use the same routes, controls, physics,
   // collision handling and trace format as every later authored scenario.
-  if (template.roles.length === 0 && !request.baseInstance) {
+  if (isEmptyScenarioTemplate(template) && !request.baseInstance) {
     // Parked cars belong here too, so they do not blink out of the preview the
-    // moment the last authored actor is deleted.
+    // moment the last authored actor is deleted. The same blank world the
+    // authoritative simulation resolves (`emptyScenarioBaseInput`), so an
+    // empty scenario verifies like any other.
     const base = studioConcreteInput(
       engine,
-      withMapControls(withEditablePhysicsDefault(createEmptyAmbientInput(request.map.sourceMapId)), mapControls),
+      withMapControls(withEditablePhysicsDefault(emptyScenarioBaseInput(request.map.sourceMapId)), mapControls),
       template,
     );
-    const populated = applyRequestedAmbientPopulation(engine, base, graph, request);
     // The core schema requires one actor. Keep a remote, non-render-authoritative
     // clock only when an external provider (SUMO) owns the entire visible
     // population; remove it as soon as native ambient actors exist.
-    const ambient = populated.provenance.actors.length === 0 ? populated : {
-      ...populated,
-      input: { ...populated.input, actors: populated.input.actors.filter((actor) => actor.id !== 'ambient-world-seed') },
-    };
+    const ambient = withoutRedundantEmptyScenarioClock(applyRequestedAmbientPopulation(engine, base, graph, request));
     const result = simulateForRequest(engine, ambient.input, graph, request.operation, request);
-    const manifest = {
-      instanceId: `ambient-world:${request.map.sourceMapId}`,
-      inputHash: contentHash(base),
-      replayKey: { mapId: request.map.sourceMapId, engineGraphDigest: graph.digest, siteId: 'ambient-world' },
-      actors: [],
-    };
+    const manifest = emptyScenarioManifest(request.map.sourceMapId, graph.digest, base);
     return {
       id: request.id,
       revision,
@@ -503,27 +498,6 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
     mapCollisions,
     ...(isInteractiveCompile ? {} : { openScenario: createOpenScenarioSnapshot(engine, template, instance, result.input, result.trace, graph, xodr) }),
   };
-}
-
-/** Empty authored document base. Ambient actors are ordinary runtime actors added afterward. */
-function createEmptyAmbientInput(mapId: string): SimScenarioInput {
-  const parsed = parseSimScenarioInput({
-    mapId,
-    clipSeconds: 20,
-    warmupSeconds: 0,
-    dt: SIMULATION_DT_S,
-    seed: `ambient-world:${mapId}`,
-    actors: [{
-      id: 'ambient-world-seed',
-      kind: 'static_object',
-      static: true,
-      initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 0 },
-      behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 1, z: 0 }] } },
-      tags: ['ambient:internal-clock'],
-    }],
-    physics: { mode: 'dynamic-v1' },
-  });
-  return parsed;
 }
 
 async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, request: ScenarioWorkerRequest): Promise<MapRuntime> {

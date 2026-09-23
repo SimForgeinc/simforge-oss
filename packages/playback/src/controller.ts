@@ -10,6 +10,8 @@ import {
   type DoorStates,
 } from '@simforge-oss/viewer';
 import {
+  isTrafficPlaybackActor,
+  playbackActorOrigin,
   samplePlaybackActors,
   samplePlaybackSignals,
   type PlaybackBundle,
@@ -24,6 +26,15 @@ export type CameraPolicy = 'editor' | 'all-actors' | 'subject-chase' | 'dash-cam
 function isInternalTrafficActor(actor: { readonly id: string }): boolean {
   return actor.id === 'ambient-world-seed';
 }
+
+/**
+ * Shared-renderer layer for worker SUMO traffic replayed from the trace while
+ * the editor (not playback) owns the view. Authored actors are drawn by the
+ * editor there, but traffic has no editor representation, so without this
+ * layer the scene would go empty the moment the live SUMO preview stands down
+ * for the authoritative trace.
+ */
+export const TRACE_TRAFFIC_LAYER = 'trace-traffic';
 
 export interface PlaybackState {
   readonly time: number;
@@ -172,7 +183,7 @@ export function buildAllActorsCameraPlan(
 ): AllActorsCameraPlan | null {
   const selected = actorIds ? new Set(actorIds) : null;
   const authored = bundle.actors.filter((actor) => (
-    !actor.id.startsWith('ambient-') && !actor.tags.some((tag) => tag.startsWith('ambient:'))
+    !isTrafficPlaybackActor(actor)
     && (!selected || selected.has(actor.id))
   ));
   const points: Array<{ x: number; z: number; pad: number }> = [];
@@ -248,7 +259,7 @@ export function buildIncidentCameraPlan(bundle: PlaybackBundle): IncidentCameraP
   }
   if (ids.size === 0 && bundle.trace.header.metricSubject) ids.add(bundle.trace.header.metricSubject);
   if (ids.size < 2) {
-    const authored = bundle.actors.filter((actor) => !actor.id.startsWith('ambient-'));
+    const authored = bundle.actors.filter((actor) => !isTrafficPlaybackActor(actor));
     for (const actor of authored) {
       ids.add(actor.id);
       if (ids.size >= 2) break;
@@ -378,6 +389,9 @@ export class PlaybackController {
   private readonly previousCameraProjection: { near: number; far: number; aspect: number } | null;
   private snapshot: PlaybackState;
   private presentationActive = false;
+  /** Trace-only SUMO traffic; drawn on {@link TRACE_TRAFFIC_LAYER} while the editor owns the view. */
+  private readonly traceTrafficIds: ReadonlySet<string>;
+  private traceTrafficLayerActive = false;
   private signalPresentationKey = '';
 
   constructor(private readonly options: PlaybackControllerOptions) {
@@ -386,6 +400,9 @@ export class PlaybackController {
     this.sampleHeight = options.sampleHeight;
     this.renderer = options.renderer ?? new ActorRenderer();
     this.metadataByActor = new Map(this.bundle.actors.map((actor) => [actor.id, actor]));
+    this.traceTrafficIds = new Set(
+      this.bundle.actors.filter((actor) => playbackActorOrigin(actor) === 'sumo').map((actor) => actor.id),
+    );
     this.cameraPolicy = options.cameraPolicy ?? 'free';
     this.galleryCameraChoice = galleryCameraChoice(this.bundle);
     this.cameraSelectionId = this.cameraPolicy === 'subject-chase'
@@ -468,6 +485,9 @@ export class PlaybackController {
   setPresentationActive(active: boolean): void {
     if (!this.options.renderer || this.presentationActive === active) return;
     this.presentationActive = active;
+    // Worker SUMO traffic moves between the playback layer and the editor's
+    // trace-traffic layer with the view's owner.
+    if (this.traceTrafficIds.size > 0) this.syncScene();
     this.renderer.setLayerVisible('playback', active);
     this.renderer.setLayerVisible('sumo-traffic', active);
     this.renderer.setLayerVisible('editor', !active);
@@ -545,6 +565,7 @@ export class PlaybackController {
     this.transport.dispose();
     if (this.options.renderer) {
       this.renderer.clearLayer('playback');
+      this.renderer.clearLayer(TRACE_TRAFFIC_LAYER);
       this.renderer.setLayerVisible('sumo-traffic', true);
       this.renderer.setLayerVisible('editor', true);
       this.renderer.setLayerVisible('ambient-preview', true);
@@ -673,6 +694,16 @@ export class PlaybackController {
         headingRad,
       }];
     });
+    if (this.options.renderer && !this.presentationActive && this.traceTrafficIds.size > 0) {
+      this.renderer.syncLayer(TRACE_TRAFFIC_LAYER, views.filter((view) => this.traceTrafficIds.has(view.id)));
+      this.traceTrafficLayerActive = true;
+      this.renderer.syncLayer('playback', [...views.filter((view) => !this.traceTrafficIds.has(view.id)), ...propViews]);
+      return;
+    }
+    if (this.traceTrafficLayerActive) {
+      this.traceTrafficLayerActive = false;
+      this.renderer.clearLayer(TRACE_TRAFFIC_LAYER);
+    }
     this.renderer.syncLayer(this.options.renderer ? 'playback' : 'editor', [...views, ...propViews]);
   }
 

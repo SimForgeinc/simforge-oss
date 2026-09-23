@@ -519,6 +519,8 @@ type RenderJobRow = {
   sim_key?: string | null;
   trace_sha256?: string | null;
   timeline_sha256?: string | null;
+  motion_source?: "original" | "resimulated" | "original-xosc" | null;
+  sim_engine_sem_ver?: string | null;
 };
 
 const RENDER_JOB_COLUMNS = `id, workspace_id, revision_id, execution_package_id,
@@ -529,7 +531,9 @@ const RENDER_JOB_COLUMNS = `id, workspace_id, revision_id, execution_package_id,
   job_state, priority, attempt_count, max_attempts, idempotency_key,
   created_at::text AS created_at, updated_at::text AS updated_at,
   started_at::text AS started_at, completed_at::text AS completed_at,
-  failure_code, failure_detail, sim_key, trace_sha256, timeline_sha256`;
+  failure_code, failure_detail, sim_key, trace_sha256, timeline_sha256, motion_source,
+  (SELECT s.engine_sem_ver FROM simforge.sim_results s
+    WHERE s.workspace_id = render_jobs.workspace_id AND s.sim_key = render_jobs.sim_key) AS sim_engine_sem_ver`;
 
 function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
   const telemetry = parseJsonObject(row.telemetry);
@@ -572,8 +576,14 @@ function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
     failureCode: row.failure_code,
     failureDetail: row.failure_detail,
     simulation: row.sim_key && row.trace_sha256
-      ? { simKey: row.sim_key, traceSha256: row.trace_sha256, timelineSha256: row.timeline_sha256 ?? null }
+      ? {
+          simKey: row.sim_key,
+          traceSha256: row.trace_sha256,
+          timelineSha256: row.timeline_sha256 ?? null,
+          engineSemVer: row.sim_engine_sem_ver ?? null,
+        }
       : null,
+    motionSource: row.motion_source ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

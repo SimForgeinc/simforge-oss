@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -49,6 +49,34 @@ test('rejects workspace packages missing from the stack registry', () => {
     writeFileSync(join(item.root, 'packages', 'orphan', 'package.json'), JSON.stringify({ name: '@simforge-oss/orphan' }));
     assert.throws(() => verifyRepositoryNaming(item.root), /packages\/ must contain exactly the registered stack packages/);
   } finally { item.cleanup(); }
+});
+
+test('accepts a stack package registered under services/', () => {
+  const item = fixture();
+  try {
+    mkdirSync(join(item.root, 'services', 'render-worker'), { recursive: true });
+    writeFileSync(join(item.root, 'services', 'render-worker', 'package.json'), JSON.stringify({
+      name: '@simforge-oss/render-worker', version: '0.1.0-rc.45',
+    }));
+    const stackPath = join(item.root, 'config', 'simforge-oss-stack.json');
+    const stack = JSON.parse(readFileSync(stackPath, 'utf8'));
+    stack.packages.push({ name: '@simforge-oss/render-worker', version: '0.1.0-rc.45', path: 'services/render-worker' });
+    writeFileSync(stackPath, JSON.stringify(stack));
+    assert.equal(verifyRepositoryNaming(item.root).packageCount, PACKAGE_NAMES.length + 1);
+  } finally { item.cleanup(); }
+});
+
+test('rejects a stack package outside packages/ and services/, or nested', () => {
+  for (const path of ['tools/render-worker', 'services/render/worker']) {
+    const item = fixture();
+    try {
+      const stackPath = join(item.root, 'config', 'simforge-oss-stack.json');
+      const stack = JSON.parse(readFileSync(stackPath, 'utf8'));
+      stack.packages.push({ name: '@simforge-oss/render-worker', version: '0.1.0-rc.45', path });
+      writeFileSync(stackPath, JSON.stringify(stack));
+      assert.throws(() => verifyRepositoryNaming(item.root), /must live directly under packages\/ or services\//);
+    } finally { item.cleanup(); }
+  }
 });
 
 test('rejects retired package imports', () => {

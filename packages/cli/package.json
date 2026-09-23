@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/cli",
-  "version": "0.1.0-rc.73",
+  "version": "0.1.0-rc.74",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
@@ -29,6 +29,12 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#main": {
+      "development": "./src/main.ts",
+      "default": "./dist/main.js"
     }
   },
   "files": [

@@ -3,8 +3,28 @@ import path from 'node:path';
 import os from 'node:os';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
-import { Agent } from './pi-harness/node_modules/@mariozechner/pi-agent-core/dist/index.js';
-import { streamSimple, validateToolArguments } from './pi-harness/node_modules/@mariozechner/pi-ai/dist/index.js';
+
+// The pi agent harness is a separate npm install (`npm ci --prefix pi-harness`),
+// outside the pnpm workspace. It is only needed to talk to the gateway, so a
+// missing install fails the first agent construction, not every module that
+// imports this one (the authoring runner, its tests, offline tools).
+const PI_HARNESS_HINT = 'pi agent harness is not installed; run `npm ci --prefix experiments/agentic-3d/pi-harness`';
+let piHarness = null;
+try {
+  const [core, ai] = await Promise.all([
+    import('./pi-harness/node_modules/@mariozechner/pi-agent-core/dist/index.js'),
+    import('./pi-harness/node_modules/@mariozechner/pi-ai/dist/index.js'),
+  ]);
+  piHarness = { Agent: core.Agent, streamSimple: ai.streamSimple, validateToolArguments: ai.validateToolArguments };
+} catch (error) {
+  // Only the harness entry points themselves may be absent; a broken install
+  // (a harness module that cannot find its own dependency) still throws.
+  if (error?.code !== 'ERR_MODULE_NOT_FOUND' || !String(error.url ?? '').includes('/pi-harness/node_modules/@mariozechner/')) throw error;
+}
+function harness() {
+  if (!piHarness) throw new Error(PI_HARNESS_HINT);
+  return piHarness;
+}
 
 export const ASTRA_MODEL = 'openai-codex/gpt-6-astra';
 export const AUTHOR_MODEL = 'anthropic/claude-opus-5';
@@ -55,6 +75,7 @@ export function createGatewayAgent({ systemPrompt, tools, sessionDir, gatewayUrl
     'systemPrompt, tools and sessionDir are required');
   fail(Number.isInteger(maxTokens) && maxTokens > 0 && maxTokens <= 16000, 'maxTokens must be an integer in [1,16000]');
   fail(AUTHOR_EFFORTS.includes(effort), 'Unsupported explicit reasoning effort');
+  const { Agent, streamSimple, validateToolArguments } = harness();
   const model = gatewayModel({ gatewayUrl, modelId });
   const requestTimeoutMs = GATEWAY_TIMEOUT_MS[effort];
   fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });

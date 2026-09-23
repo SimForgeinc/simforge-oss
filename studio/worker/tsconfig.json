@@ -1,22 +1,10 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "baseUrl": ".",
-    "types": ["node"],
-    "typeRoots": ["../../../packages/render/node_modules/@types"],
-    "paths": {
-      "@simforge-oss/compiler": ["../../../packages/compiler/src/index.ts"],
-      "@simforge-oss/render/web": ["../../../packages/render/src/index.ts"],
-      "@simforge-oss/maps": ["../../../packages/maps/src/index.ts"],
-      "@simforge-oss/openscenario": ["../../../packages/openscenario/src/index.ts"],
-      "@simforge-oss/openscenario/*": ["../../../packages/openscenario/src/*"],
-      "@simforge-oss/playback": ["../../../packages/playback/src/index.ts"],
-      "@simforge-oss/render": ["../../../packages/render/src/index.ts"],
-      "@simforge-oss/compiler": ["../../../packages/compiler/src/index.ts"],
-      "@simforge-oss/scenario": ["../../../packages/scenario/src/index.ts"],
-      "@simforge-oss/engine": ["../../../packages/engine/src/index.ts"]
-    }
+    "incremental": false,
+    "types": ["node"]
   },
-  "include": ["./*.ts"]
+  "include": ["./*.ts", "./__tests__/*.ts", "./testing/**/*.ts"],
+  "exclude": []
 }

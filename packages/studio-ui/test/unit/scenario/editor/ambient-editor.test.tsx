@@ -10,10 +10,11 @@ import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/t
 
 afterEach(cleanup);
 
-function editorDocument(extensions: Readonly<Record<string, unknown>> = {}) {
+function editorDocument(extensions: Readonly<Record<string, unknown>> = {}, simulation?: unknown) {
   return {
-    data: { extensions },
+    data: { extensions, ...(simulation ? { simulation } : {}) },
     setAmbientTrafficExtension: vi.fn(),
+    setAmbientTrafficExtensions: vi.fn(),
   };
 }
 
@@ -26,6 +27,20 @@ describe("AmbientEditor", () => {
     expect(screen.getByTestId("ambient-traffic-off-status")).not.toBeNull();
     expect(screen.queryByTestId("ambient-traffic-accelerated-signal-cycles")).toBeNull();
     expect(document.setAmbientTrafficExtension).not.toHaveBeenCalled();
+    expect(document.setAmbientTrafficExtensions).not.toHaveBeenCalled();
+  });
+
+  it("gives SUMO a City density in the same edit when a new document has none", () => {
+    const document = editorDocument({}, { seed: "doc", dtS: 0.02 });
+    render(<AmbientEditor document={document as never} sumoAvailable />);
+    expect((screen.getByTestId("ambient-traffic-preset") as HTMLSelectElement).value).toBe("off");
+
+    fireEvent.change(screen.getByTestId("ambient-traffic-provider"), { target: { value: "sumo" } });
+    expect(document.setAmbientTrafficExtensions).toHaveBeenCalledTimes(1);
+    expect(document.setAmbientTrafficExtensions).toHaveBeenCalledWith({
+      [AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: "sumo",
+      [AMBIENT_TRAFFIC_EXTENSION_KEY]: expect.objectContaining({ preset: "city", seed: "ambient-1" }),
+    });
   });
 
   it("writes SimForge's canonical provider, profile, and signal-cycle extensions", () => {
@@ -37,10 +52,10 @@ describe("AmbientEditor", () => {
     fireEvent.change(screen.getByTestId("ambient-traffic-provider"), {
       target: { value: "native" },
     });
-    expect(document.setAmbientTrafficExtension).toHaveBeenCalledWith(
-      AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-      "native",
-    );
+    // A pre-pinning document already runs City traffic: only the source changes.
+    expect(document.setAmbientTrafficExtensions).toHaveBeenCalledWith({
+      [AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: "native",
+    });
 
     fireEvent.change(screen.getByTestId("ambient-traffic-preset"), {
       target: { value: "heavy" },
