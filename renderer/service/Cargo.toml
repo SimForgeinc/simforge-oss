@@ -44,3 +44,5 @@ windows-sys = { version = "0.61", features = [
 # Linux-only (opaque-fd Vulkan/CUDA export): render-core rejects the feature
 # at compile time on other targets.
 gpu-interop = ["render-core/gpu-interop"]
+# Chrome-trace CPU spans (profiling builds only; see render-core).
+trace-chrome = ["render-core/trace-chrome"]

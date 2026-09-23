@@ -101,9 +101,11 @@ impl Manifest {
         for mesh in &manifest.meshes {
             let mut previous = 0.0f32;
             for level in &mesh.levels {
+                // Equal errors are legal: that level's range is empty and it
+                // never draws. Decreasing ones would draw two levels at once.
                 anyhow::ensure!(
-                    level.geometric_error_m > previous,
-                    "geometry LOD mesh {} ({}): level {} error {} is not above the previous {previous}",
+                    level.geometric_error_m >= previous,
+                    "geometry LOD mesh {} ({}): level {} error {} is below the previous {previous}",
                     mesh.mesh,
                     mesh.name,
                     level.level,
@@ -113,8 +115,8 @@ impl Manifest {
             }
             if let Some(impostor) = &mesh.impostor {
                 anyhow::ensure!(
-                    impostor.geometric_error_m > previous,
-                    "geometry LOD mesh {} ({}): impostor error {} is not above the last level's {previous}",
+                    impostor.geometric_error_m >= previous,
+                    "geometry LOD mesh {} ({}): impostor error {} is below the last level's {previous}",
                     mesh.mesh,
                     mesh.name,
                     impostor.geometric_error_m

@@ -59,6 +59,8 @@ libc = { version = "0.2", optional = true }
 
 [features]
 default = ["pcss"]
+# Chrome-trace CPU spans of every Bevy system (profiling builds only).
+trace-chrome = ["bevy/trace_chrome"]
 # PCSS soft shadows (lighting ladder rung 4)
 pcss = ["bevy/experimental_pbr_pcss"]
 # Solari raytraced GI (rung 5) — optional RT-hardware quality tier

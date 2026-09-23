@@ -179,6 +179,30 @@ fn ablate(world: &mut bevy::prelude::World, flags: &[String]) {
     }
 }
 
+/// Per-phase draw structure of the last rendered frame, summed over views:
+/// (views, multidraw batch sets, multidraw bins, batchable bins, unbatchable entities).
+fn phase_stats(world: &mut bevy::prelude::World) -> Vec<(String, [usize; 5])> {
+    use bevy::render::render_phase::{BinnedPhaseItem, ViewBinnedRenderPhases};
+    fn one<P: BinnedPhaseItem>(world: &bevy::prelude::World, name: &str, out: &mut Vec<(String, [usize; 5])>) {
+        let Some(phases) = world.get_resource::<ViewBinnedRenderPhases<P>>() else { return };
+        let mut sum = [0usize; 5];
+        for phase in phases.values() {
+            sum[0] += 1;
+            sum[1] += phase.multidrawable_meshes.len();
+            sum[3] += phase.batchable_meshes.len();
+            sum[4] += phase.unbatchable_meshes.values().map(|u| u.entities.len()).sum::<usize>();
+        }
+        out.push((name.to_string(), sum));
+    }
+    let mut out = Vec::new();
+    one::<bevy::core_pipeline::core_3d::Opaque3d>(world, "opaque", &mut out);
+    one::<bevy::core_pipeline::core_3d::AlphaMask3d>(world, "alpha-mask", &mut out);
+    one::<bevy::core_pipeline::prepass::Opaque3dPrepass>(world, "prepass-opaque", &mut out);
+    one::<bevy::core_pipeline::prepass::AlphaMask3dPrepass>(world, "prepass-alpha-mask", &mut out);
+    one::<bevy::pbr::Shadow>(world, "shadow", &mut out);
+    out
+}
+
 fn vertical_fov(horizontal_deg: f64, width: f64, height: f64) -> f64 {
     2.0 * ((horizontal_deg.to_radians() / 2.0).tan() * height / width).atan().to_degrees()
 }
@@ -346,6 +370,10 @@ fn main() -> Result<()> {
     }
     // fallback-ok: best-effort cleanup of the bench's own ring file
     let _ = std::fs::remove_file(&shm_path);
+    let phases = phase_stats(state.app.render_world_mut());
+    for (name, [views, sets, bins, batchable, unbatchable]) in &phases {
+        eprintln!("  phase {name:20} views {views:3} multidraw sets {sets:5} bins {bins:6} batchable bins {batchable:5} unbatchable {unbatchable:5}");
+    }
     let measured = tick_ms.len().max(1) as f64;
     let mean = tick_ms.iter().sum::<f64>() / measured;
     let mut sorted = tick_ms.clone();

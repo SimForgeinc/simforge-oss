@@ -2529,6 +2529,11 @@ impl SceneApp {
         crate::gpu_diagnostics::take_frame_times(self.app.world())
     }
 
+    /// The render sub-app's world (profiling tools only: phase statistics).
+    pub fn render_world_mut(&mut self) -> &mut World {
+        self.app.sub_app_mut(bevy::render::RenderApp).world_mut()
+    }
+
     /// Direct world access for profiling tools and ablation experiments
     /// (`render-bench`). Production paths go through the typed methods.
     pub fn world_mut(&mut self) -> &mut World {
