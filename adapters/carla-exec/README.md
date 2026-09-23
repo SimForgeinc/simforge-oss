@@ -195,6 +195,52 @@ must state `weather` and `timeOfDay`; `night_lit` and an authored
 - Materialized ambient traffic actors fail `carla_ambient_traffic_unsupported`
   (the format carries no elevation, attitude or body).
 
+### The CARLA world manifest
+
+Which source map renders in which cooked world is not typed by hand. It lives in
+`simforge_oss_carla_exec/assets/carla-world-manifest.json`, GENERATED from three
+read-only inputs: the RoadRunner source exports (one GLB + XODR folder per map on
+the NAS), the cooked engine image, and the SimForge map registry per environment.
+
+```bash
+python -m simforge_oss_carla_exec.world_manifest_tools collect-nas --ssh simforge1 --sudo \
+  --root /mnt/nas/a100-data/GLB_Map_Export --inputs build/wm
+python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked --ssh rtx3080-02 \
+  --container sf-engine-cook --image ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics --inputs build/wm
+# SimCloud: scripts/carla-world-manifest/carla-world-bindings.mjs export --env dev > build/wm/simforge-dev.json
+python -m simforge_oss_carla_exec.world_manifest_tools generate --inputs build/wm   # --check in CI
+python -m simforge_oss_carla_exec.world_manifest_tools derive --format summary|env|json
+```
+
+Each source is matched to the cooked world with the same geoReference and header
+extent, then the road networks are compared road by road (paired by sampled
+reference line, not by id; 1 cm / 0.1° tolerance, the replay parity gate), with
+lanes, elevation, topology, signals and controllers. The status is derived:
+`exact`, `approved-equivalent` (same roads; renumbered ids get a recorded signal
+id map, other differences are listed), `needs-decision` (e.g. the export dropped
+the signal controllers the world was cooked with), `needs-recook`, `no-world`.
+Only the first two bind. `COOKED_MAP_NAMES_BY_XODR_SHA256`,
+`APPROVED_COOKED_XODR_DIGESTS` and `COOKED_SIGNAL_ID_MAPS` are derived from the
+manifest, and a source the manifest marks unbound is refused with the manifest's
+reason before CARLA is touched, whatever the env or binding policy says. Human
+rulings go in `world_manifest_tools/decisions.json` (who, when, which exact
+`decisionRequired` items were accepted). Bindings approved before the manifest
+existed are kept verbatim under `legacySources`.
+
+A derived export tree (`collect-nas --derived --root .../GLB_Map_Export_corrected`)
+adds `derived/<folder>` entries. An elevation-only refit (its report names the
+original by sha256, and the XODR without elevationProfile, lateralProfile and lane
+`<height>` is byte-identical to the original's) inherits the original's world,
+runtime digest and signal maps once `decisions.json` accepts its exact decision
+item, which states the measured elevation change. Anything else is a new network.
+
+`assets/carla-actor-bindings.json` (`world_manifest_tools actor-bindings`) is the
+renderer's catalog-id -> CARLA blueprint table, generated from SimCloud's
+carla-object-catalog.json and the renderer-parity carla-substitutions.json. A
+catalog entry without its own CARLA binding resolves through it; an entry with no
+binding fails by name (carla_blueprint_unavailable) unless the intent allows the
+recorded carla-actor-body substitution. Its sha256 is in every manifest.
+
 ### What replay approximates
 
 The manifest lists these under `approximations`:

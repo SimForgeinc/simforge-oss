@@ -222,7 +222,7 @@ class BoundTimeline:
     def frame_at(self, index: int, t: float) -> PlanFrame:
         self.abort()
         poses = self.timeline.poses(t)
-        signals = dict(self.timeline.signals_at(t))
+        signals = _opendrive_signal_ids(self.timeline.signals_at(t))
         actors: dict[str, ActorFrame] = {}
         for actor_id in self.actor_ids:
             pose = poses[actor_id]
@@ -293,6 +293,20 @@ class BoundTimeline:
             "heightSource": "render-timeline",
             "attitudeSource": "render-timeline",
         }
+
+
+#: The render timeline names a signal head ``signal:<OpenDRIVE signal id>``
+#: (simforge-core); CARLA and the xosc plan use the bare OpenDRIVE id.
+TIMELINE_SIGNAL_PREFIX = "signal:"
+
+
+def _opendrive_signal_ids(signals: Mapping[str, str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for key, value in dict(signals).items():
+        if not isinstance(key, str) or not key.startswith(TIMELINE_SIGNAL_PREFIX) or not key[len(TIMELINE_SIGNAL_PREFIX):]:
+            raise ContractError(f"render timeline signal key {key!r} is not signal:<OpenDRIVE id>")
+        out[key[len(TIMELINE_SIGNAL_PREFIX):]] = value
+    return out
 
 
 def load_bound_timeline(body: bytes, plan: ExecutionPlan, abort: Callable[[], None] | None = None) -> BoundTimeline:

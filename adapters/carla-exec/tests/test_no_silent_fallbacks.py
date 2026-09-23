@@ -538,8 +538,9 @@ class _SensorWorld:
         return SimpleNamespace(set_transform=lambda _t: None)
 
 
-def _sensor_backend(world, mode="trace-replay"):
+def _sensor_backend(world, mode="trace-replay", server_version="0.9.16"):
     backend = object.__new__(CarlaBackend)
+    backend.client = SimpleNamespace(get_server_version=lambda: server_version)
     backend.carla = SimpleNamespace(
         Transform=tr.Transform, Location=tr.Location, Rotation=tr.Rotation, ColorConverter=None,
     )
@@ -1061,3 +1062,31 @@ def test_run_intent_prints_the_machine_code_and_exits_distinctly_on_a_policy_ref
         "schema": "simforge.carla-render-failure/v1", "code": "carla_map_not_cooked",
         "message": "[carla_map_not_cooked] map X has no cooked world", "retryable": False,
     }
+
+
+_UE5_RGB_ATTRIBUTES = frozenset({
+    "enable_postprocess_effects", "fov", "image_size_x", "image_size_y", "lens_circle_falloff",
+    "lens_circle_multiplier", "lens_k", "lens_kcube", "lens_x_size", "lens_y_size",
+    "post_process_profile", "role_name", "ros_name", "sensor_tick", "use_ray_tracing",
+})
+
+
+def test_carla_010_cameras_use_the_named_ue5_native_profile(tmp_path):
+    """CARLA 0.10's rgb camera has none of the UE4 grade attributes; the
+    UE5 profile is named in the evidence instead of silently half-applying."""
+    world = _SensorWorld()
+    world.get_blueprint_library = lambda: SimpleNamespace(find=lambda blueprint_id: _Blueprint(blueprint_id, _UE5_RGB_ATTRIBUTES))
+    backend = _sensor_backend(world, server_version="0.10.0")
+    backend.configure_sensors(_rgb_spec(), tmp_path / "out", 10**9)
+    grade = backend.camera_grade_evidence["primary:ego:hero:rgb"]
+    assert grade["profile"] == "carla-0.10-ue5-native-v1" and grade["attributes"] == {}
+    assert grade["serverVersion"] == "0.10.0" and grade["motionBlurIntensity"] is None
+    yale = _sensor_backend(_SensorWorld(), server_version="0.10.0")
+    yale.world.get_blueprint_library = world.get_blueprint_library
+    yale.map_evidence = {"loadedMapName": "Yale_St_Palo_Alto_CA"}
+    with pytest.raises(CarlaRenderError) as refused:
+        yale.configure_sensors(_rgb_spec(), tmp_path / "out2", 10**9)
+    assert code_of(refused) == "carla_sensor_attribute_unsupported"
+    with pytest.raises(CarlaRenderError) as unknown:
+        _sensor_backend(_SensorWorld(), server_version="0.11.0").configure_sensors(_rgb_spec(), tmp_path / "out3", 10**9)
+    assert code_of(unknown) == "carla_engine_version_unsupported"

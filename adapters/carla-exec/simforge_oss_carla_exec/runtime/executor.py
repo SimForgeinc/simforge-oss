@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .transport import download, upload
+from ..actor_bindings import load as load_actor_bindings
 from .backend import RenderBackend, presentation_video_codec_args, runtime_asset_bindings
 # historical name retained for stored-data compat
 from .compiler import (
@@ -329,7 +330,7 @@ def _resolve_actor_bodies(
             raise ContractError(f"asset catalog has no CARLA binding for {actor_id} ({binding.catalog_name})")
         blueprint = entry.get("blueprintId")
         fidelity = entry.get("fidelity")
-        if not isinstance(fidelity, str) or not fidelity:
+        if isinstance(blueprint, str) and blueprint and (not isinstance(fidelity, str) or not fidelity):
             raise CarlaRenderError(
                 "carla_catalog_binding_incomplete",
                 f'catalog "{binding.catalog_name}" (actor {actor_id}) declares no CARLA binding fidelity, '
@@ -351,7 +352,8 @@ def _resolve_actor_bodies(
             ))
             continue
         reason = (
-            f"the catalog binds no native CARLA body ({blueprint!r})" if not native
+            (f"no CARLA body is bound: {entry['unavailableReason']}" if entry.get("unavailableReason")
+             else f"the catalog binds no native CARLA body ({blueprint!r})") if not native
             else f"this CARLA runtime cannot place {blueprint}"
         )
         if prefixes is None:
@@ -695,6 +697,7 @@ def _manifest_to_path(
             "xosc": {"sha256": lease.execution_package.xosc.sha256, "sizeBytes": lease.execution_package.xosc.size_bytes, "xsdSha256": lease.execution_package.xosc.xsd_sha256},
             "xodr": {"sha256": lease.execution_package.xodr.sha256, "sizeBytes": lease.execution_package.xodr.size_bytes, "mapName": lease.execution_package.xodr.map_name},
             "assetCatalog": {"sha256": lease.execution_package.asset_catalog.sha256, "sizeBytes": lease.execution_package.asset_catalog.size_bytes, "catalogVersionId": lease.execution_package.asset_catalog.catalog_version_id},
+            "actorBindings": load_actor_bindings().evidence(),
         },
         "runtimeRequirements": asdict(lease.execution_package.runtime_requirements),
         "xoscValidation": dict(validation),
@@ -1484,9 +1487,26 @@ def _artifact(
     return {"kind": kind, "artifactUrl": bound["artifactUrl"], "sha256": digest, "sizeBytes": size, "mediaType": media_type, **({"metadata": dict(metadata)} if metadata else {})}
 
 
-def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object]) -> list[dict[str, str]]:
+#: Actor kinds CARLA renders with a blueprint rider (BP_Base2wheeled + AB_Biker).
+RIDDEN_TWO_WHEELER_KINDS = frozenset({"bicycle", "motorcycle", "scooter"})
+RIDER_POSE_STATIC_WARNING = "carla_rider_pose_static"
+RIDER_POSE_STATIC_MESSAGE = (
+    "CARLA trace replay has no wheel/crank state: two-wheeler riders hold a static pose "
+    "(pedals do not turn); native renders pedal from the timeline odometer."
+)
+
+
+def ridden_two_wheelers(plan: ExecutionPlan, execution_mode: str) -> list[str]:
+    """Actors whose rider CARLA cannot animate under trace replay (their legs follow wheel state)."""
+    if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
+        return []
+    return sorted(actor_id for actor_id, binding in plan.actors.items() if binding.kind in RIDDEN_TWO_WHEELER_KINDS)
+
+
+def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object],
+                    riders: list[str] | None = None) -> list[dict[str, object]]:
     """What this render shows that is known not to be exact, stated plainly."""
-    items: list[dict[str, str]] = []
+    items: list[dict[str, object]] = []
     if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
         items.append({"id": "physics-validation", "detail": "CARLA physics drove the vehicles; poses diverge from the scenario trace by design"})
         return items
@@ -1497,6 +1517,9 @@ def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object])
         {"id": "radar-doppler", "detail": "radar velocity comes from CARLA's velocity of a kinematic body; use the timeline speed for Doppler truth"},
         {"id": "collisions", "detail": "contacts are the trace's events; CARLA reports no physical impulses"},
     ])
+    if riders:
+        items.append({"id": "rider-pose-static", "code": RIDER_POSE_STATIC_WARNING,
+                      "detail": RIDER_POSE_STATIC_MESSAGE, "actorIds": list(riders)})
     return items
 
 
@@ -1735,9 +1758,12 @@ def execute_lease(
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ContractError("asset catalog manifest must be valid UTF-8 JSON") from exc
     check_abort("index_asset_catalog")
+    actor_binding_table = load_actor_bindings()
     catalog = runtime_asset_bindings(
         catalog_manifest,
         expected_catalog_version_id=package.asset_catalog.catalog_version_id,
+        manifest_sha256=hashlib.sha256(catalog_bytes).hexdigest(),
+        actor_bindings=actor_binding_table,
         abort=lambda: check_abort("index_asset_catalog"),
     )
     for catalog_id, binding in (runtime_asset_overrides or {}).items():
@@ -2258,7 +2284,7 @@ def execute_lease(
                         "label": "Trace replay" if replay else "CARLA physics validation (not the scenario render)",
                     },
                     "timeline": dict(sampler.evidence()),
-                    "approximations": _approximations(execution_mode, runtime_evidence),
+                    "approximations": _approximations(execution_mode, runtime_evidence, ridden_two_wheelers(plan, execution_mode)),
                 },
                 rendered_appearance if replay else None,
             )
@@ -2274,6 +2300,7 @@ def execute_lease(
         "parity": parity_value,
         "parityEvidence": parity_evidence,
         "substitutions": [dict(item) for item in substitutions],
+        "riderPoseStatic": ridden_two_wheelers(plan, lease.render_spec.execution_mode),
         "artifacts": artifacts,
     }
 

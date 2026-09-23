@@ -15,6 +15,8 @@ from threading import Condition, Lock
 from time import monotonic, sleep
 from typing import Any, Callable, Iterable, Mapping, Protocol
 
+from .. import actor_bindings as _actor_bindings
+from .. import world_manifest as _world_manifest
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
 from .policy import (
     LIDAR_DETERMINISTIC_ATTRIBUTES,
@@ -194,6 +196,45 @@ RGB_QUALITY_ATTRIBUTES: Mapping[str, Mapping[str, str]] = {
     "cinematic": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
 }
 
+#: RGB camera profiles per CARLA engine generation (``client.get_server_version()``
+#: major.minor). The `rrmaps-accepted-v1` grade needs the UE4 post-process
+#: attributes (temp, tint, slope, gamma, motion blur...). CARLA 0.10 (UE5)
+#: removed them from `sensor.camera.rgb` (it exposes post_process_profile and the
+#: lens attributes only), so its profile is the engine's own post-process, named
+#: and recorded, never a silent partial grade. An engine not listed fails.
+RGB_CAMERA_PROFILES: Mapping[str, Mapping[str, Any]] = {
+    "0.9": {
+        "profile": CAMERA_GRADE_PROFILE,
+        "grade": DEFAULT_RGB_CAMERA_GRADE,
+        "quality": RGB_QUALITY_ATTRIBUTES,
+        "mapExposure": True,
+    },
+    "0.10": {
+        "profile": "carla-0.10-ue5-native-v1",
+        "grade": {},
+        "quality": {
+            "preview": {"enable_postprocess_effects": "False"},
+            "standard": {"enable_postprocess_effects": "True"},
+            "high": {"enable_postprocess_effects": "True"},
+            "cinematic": {"enable_postprocess_effects": "True"},
+        },
+        "mapExposure": False,
+    },
+}
+
+
+def rgb_camera_profile(server_version: str) -> tuple[str, Mapping[str, Any]]:
+    parts = str(server_version or "").split(".")
+    generation = ".".join(parts[:2]) if len(parts) >= 2 else ""
+    profile = RGB_CAMERA_PROFILES.get(generation)
+    if profile is None:
+        raise CarlaRenderError(
+            "carla_engine_version_unsupported",
+            f"no RGB camera profile is defined for CARLA server version {server_version!r}",
+        )
+    return generation, profile
+
+
 #: The lighting a cooked world bakes, per exact cooked map name, as CARLA
 #: weather values. A cooked RoadRunner world reports `is_weather_enabled()`
 #: false: `set_weather` cannot change its sun, sky or weather. Such a world
@@ -330,145 +371,51 @@ def blueprint_attribute_readback(actor: Any, names: Iterable[str]) -> dict[str, 
     return {name: str(attributes[name]) for name in sorted(names)}
 
 
-RICHMOND_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "367": "423",
-    "368": "429",
-    "369": "422",
-    "370": "421",
-    "371": "430",
-    "372": "428",
-    "373": "431",
-    "374": "432",
-}
-EL_CAMINO_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "2230": "2233",
-    "2231": "2234",
-    "2232": "2235",
-    "2233": "2236",
-    "2234": "2237",
-    "2235": "2238",
-    "2236": "2239",
-    "2240": "2243",
-    "2241": "2244",
-    "2242": "2245",
-    "2245": "2248",
-    "2246": "2249",
-    "2247": "2251",
-    "2251": "2258",
-    "2252": "2259",
-    "2254": "2261",
-    "2262": "2269",
-    "2271": "2278",
-    "2272": "2279",
-    "2287": "2294",
-    "2288": "2295",
-    "2289": "2296",
-}
-#: Yale Street: the cooked world renumbers its signal heads and merges the
-#: authored map's multi-head poles, so it exposes 46 heads where the authored
-#: OpenDRIVE declares 59. These pairs were derived geometrically, not by guessing
-#: an id offset: authored head positions were projected with the map's own
-#: `geoReference` (transverse Mercator) and matched to the cooked heads' world
-#: transforms by unique nearest neighbour inside 6 m — 45 pairs, worst distance
-#: 4.80 m (`artifacts/production-scenarios/signal-id-map-yale-street-*.json`).
-#: The 14 authored heads with no counterpart are secondary lamps on poles that
-#: are already owned through this map; CARLA has no separate actor for them.
-YALE_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "1425": "1594",
-    "1426": "1595",
-    "1427": "1596",
-    "1428": "1597",
-    "1429": "1599",
-    "1430": "1598",
-    "1431": "1600",
-    "1432": "1601",
-    "1433": "1705",
-    "1435": "1602",
-    "1436": "1603",
-    "1437": "1604",
-    "1438": "1605",
-    "1440": "1607",
-    "1441": "1608",
-    "1442": "1606",
-    "1443": "1609",
-    "1444": "1610",
-    "1463": "1629",
-    "1464": "1628",
-    "1475": "1640",
-    "1476": "1641",
-    "1484": "1645",
-    "1511": "1672",
-    "1512": "1673",
-    "1514": "1675",
-    "1518": "1679",
-    "1519": "1680",
-    "1520": "1681",
-    "1523": "1683",
-    "1524": "1684",
-    "1526": "1685",
-    "1528": "1686",
-    "1529": "1706",
-    "1531": "1688",
-    "1532": "1691",
-    "1536": "1694",
-    "1538": "1695",
-    "1541": "1699",
-    "1542": "1698",
-    "1543": "1700",
-    "1545": "1702",
-    "1546": "1703",
-    "1549": "1693",
-    "1550": "1704",
-}
-#: Runtime signal heads an approved cooked world ships beyond the authored
-#: map, per (cooked map, package XODR, runtime XODR), by OpenDRIVE id. They
-#: cannot be driven from the scenario, so they are forced Red and frozen for
-#: the whole render and recorded in the map evidence. Any unowned head not
-#: listed here (and any head with no OpenDRIVE id) fails the render.
-APPROVED_UNOWNED_COOKED_SIGNALS: Mapping[tuple[str, str, str], frozenset[str]] = {
-    # Richmond cooks three low-mounted pedestrian signals the authored map
-    # never declares, beside the eight remapped vehicular heads.
-    (
-        "Richmond_Field_Station_Richmond_CA",
-        "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
-        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-    ): frozenset({"444", "445", "446"}),
-}
+#: Every cooked-world table below is DERIVED from the generated manifest
+#: ``assets/carla-world-manifest.json`` (see ``simforge_oss_carla_exec.world_manifest``
+#: and ``python -m simforge_oss_carla_exec.world_manifest_tools``). Never edit them
+#: here: regenerate the manifest from the NAS exports, the cooked image and the map
+#: registry instead.
+#:
+#: - COOKED_MAP_NAMES_BY_XODR_SHA256: source XODR sha256 -> cooked runtime world.
+#:   Render packages name maps by their control-plane identity; this is the explicit
+#:   bridge from that source identity to the world CARLA actually cooked.
+#:   SIMFORGE_CARLA_COOKED_MAPS_JSON ({"<cookedName>": "<xodrSha256>"}) extends it.
+#: - APPROVED_COOKED_XODR_DIGESTS: a cooked RoadRunner world re-serializes the
+#:   OpenDRIVE it was built from, so ``to_opendrive()`` is never byte-identical to the
+#:   source XODR. These are the runtime digests approved as the same road network
+#:   (source sha256 -> runtime sha256s); anything else is a different map.
+#:   SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON ({"<source>": ["<runtime>"]}) extends it.
+#: - COOKED_SIGNAL_ID_MAPS: (world, source sha256, runtime sha256) -> authored signal
+#:   id -> runtime signal id, where the cooked world renumbered its heads.
+#: - APPROVED_UNOWNED_COOKED_SIGNALS: runtime signal heads an approved cooked world
+#:   ships beyond the authored map, per (world, source sha256, runtime sha256), by
+#:   OpenDRIVE id. They cannot be driven from the scenario, so they are forced Red and
+#:   frozen for the whole render and recorded in the map evidence. Any unowned head not
+#:   listed (and any head with no OpenDRIVE id) fails the render.
+#: - UNBINDABLE_COOKED_SOURCES: sources the manifest knows have no usable world
+#:   (needs-recook / needs-decision / no-world). They are refused with the manifest's
+#:   reason, whatever the env or the binding policy says.
+_WORLD_MANIFEST = _world_manifest.load()
+COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = _world_manifest.signal_id_maps(_WORLD_MANIFEST)
+COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = _world_manifest.cooked_map_names(_WORLD_MANIFEST)
+APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = _world_manifest.approved_cooked_digests(_WORLD_MANIFEST)
+APPROVED_UNOWNED_COOKED_SIGNALS: Mapping[tuple[str, str, str], frozenset[str]] = _world_manifest.unowned_cooked_signals(_WORLD_MANIFEST)
+UNBINDABLE_COOKED_SOURCES: Mapping[str, _world_manifest.Refusal] = _world_manifest.refusals(_WORLD_MANIFEST)
 
-COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = {
-    (
-        "Richmond_Field_Station_Richmond_CA",
-        "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
-        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-    ): RICHMOND_COOKED_SIGNAL_ID_MAP,
-    (
-        "El_Camino_Rd_Palo_Alto_CA",
-        "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
-        "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
-    ): EL_CAMINO_COOKED_SIGNAL_ID_MAP,
-    (
-        "Yale_St_Palo_Alto_CA",
-        "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
-        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
-    ): YALE_COOKED_SIGNAL_ID_MAP,
-}
 
-#: Cooked RoadRunner worlds shipped in the managed CARLA engine images, keyed
-#: by the sha256 of the source XODR the control plane distributes for the map.
-#: Render packages name maps by their control-plane identity; this registry is
-#: the explicit bridge from that source identity to the runtime world CARLA
-#: actually cooked. SIMFORGE_CARLA_COOKED_MAPS_JSON ({"<cookedName>":
-#: "<xodrSha256>"}) extends it for engines cooking additional worlds.
-COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = {
-    "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": "Richmond_Field_Station_Richmond_CA",
-    "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": "Belmont_Office_Park_Belmont_CA",
-    "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": "El_Camino_Rd_Palo_Alto_CA",
-    # Yale Street is cooked in the engine image (Yale_St_Palo_Alto_CA.umap) but was
-    # missing here, so loading it fell through to a generated bare-OpenDRIVE world:
-    # an empty void with no meshes. The digest is the authored source XODR recorded in
-    # uniscenario.map_versions for usmap_6e5559c1e7c4d9e4c93426f9d1e65f9e.
-    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": "Yale_St_Palo_Alto_CA",
-}
+def cooked_world_refusal(xodr_sha256: str) -> str | None:
+    """The manifest's reason this source must not render in CARLA, if any."""
+    refusal = UNBINDABLE_COOKED_SOURCES.get(xodr_sha256)
+    if refusal is None:
+        return None
+    world = f" (cooked world {refusal.world})" if refusal.world else ""
+    return (
+        f"CARLA world binding refused for source XODR {xodr_sha256} from {refusal.origin}{world}: "
+        f"carla-world-manifest status {refusal.status}: {refusal.reason}. "
+        "It is never rendered on a mismatched world; re-cook the world (or record a decision) "
+        "and regenerate the manifest"
+    )
 
 
 def _configured_cooked_map_names() -> dict[str, str]:
@@ -492,6 +439,8 @@ def _configured_cooked_map_names() -> dict[str, str]:
             raise RuntimeError("SIMFORGE_CARLA_COOKED_MAPS_JSON must map cooked map names to lowercase XODR sha256 values")
         if names.get(sha, name) != name:
             raise RuntimeError(f"SIMFORGE_CARLA_COOKED_MAPS_JSON conflicts with the built-in cooked world for {sha}")
+        if sha in UNBINDABLE_COOKED_SOURCES:
+            raise RuntimeError(f"SIMFORGE_CARLA_COOKED_MAPS_JSON cannot bind {sha}: {cooked_world_refusal(sha)}")
         names[sha] = name
     return names
 
@@ -499,31 +448,6 @@ def _configured_cooked_map_names() -> dict[str, str]:
 def cooked_map_name_for_xodr(xodr_sha256: str) -> str | None:
     """Return the cooked runtime world name for a source XODR, if one exists."""
     return _configured_cooked_map_names().get(xodr_sha256)
-
-
-#: A cooked RoadRunner world re-serializes the OpenDRIVE it was built from, so
-#: ``to_opendrive()`` is never byte-identical to the source XODR. These are the
-#: runtime digests approved as the same road network as a source XODR (source
-#: sha256 -> runtime sha256s), recorded when each world was cooked and its
-#: signal/lane identity was verified. Anything else is a different map.
-#: ``SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`` (``{"<source>": ["<runtime>"]}``)
-#: extends it for engines that cook additional worlds.
-APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = {
-    "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": frozenset({
-        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-    }),
-    "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": frozenset({
-        "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
-    }),
-    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": frozenset({
-        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
-    }),
-    # Belmont: measured 2026-09-22 on the carla-rfs-munich-belmont 0.10.0 cook
-    # (pose-smoke + d9d7-era worker image), whose world the registry above binds.
-    "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": frozenset({
-        "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
-    }),
-}
 
 
 def _is_sha256(value: object) -> bool:
@@ -549,6 +473,11 @@ def approved_cooked_xodr_digests(source_xodr_sha256: str) -> frozenset[str]:
             raise RuntimeError(
                 "SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON must map source XODR sha256 values "
                 "to arrays of runtime XODR sha256 values"
+            )
+        if parsed.get(source_xodr_sha256) and source_xodr_sha256 in UNBINDABLE_COOKED_SOURCES:
+            raise RuntimeError(
+                f"SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON cannot approve {source_xodr_sha256}: "
+                f"{cooked_world_refusal(source_xodr_sha256)}"
             )
         approved.update(parsed.get(source_xodr_sha256, ()))
     return frozenset(approved)
@@ -779,20 +708,49 @@ class _OwnedSignalSnapshot:
     red_time: float
 
 
+#: A ``uniscenario.asset-catalog/v1`` manifest seeded by the control plane
+#: (studio/scripts/seed.ts) carries no ``catalogVersionId``: its version is
+#: content-addressed as ``catalog_local_<sha256 of the manifest bytes>``. Only
+#: that exact derivation is accepted; any other unversioned manifest is refused.
+LOCAL_CATALOG_VERSION_PREFIX = "catalog_local_"
+
+
+def asset_catalog_version_id(manifest: Any, manifest_sha256: str | None) -> str | None:
+    """The catalog version a manifest declares, or its content-addressed local id."""
+    if not isinstance(manifest, Mapping):
+        return None
+    declared = manifest.get("catalogVersionId")
+    if isinstance(declared, str) and declared:
+        return declared
+    if (
+        "catalogVersionId" not in manifest
+        and manifest.get("contractVersion") == "uniscenario.asset-catalog/v1"
+        and _is_sha256(manifest_sha256)
+    ):
+        return LOCAL_CATALOG_VERSION_PREFIX + str(manifest_sha256)
+    return None
+
+
 def runtime_asset_bindings(
     manifest: Any,
     *,
     expected_catalog_version_id: str,
+    manifest_sha256: str | None = None,
+    actor_bindings: "_actor_bindings.ActorBindingTable | None" = None,
     abort: Callable[[], None] | None = None,
 ) -> dict[str, Mapping[str, object]]:
-    """Validate a signed asset catalog and index its CARLA bindings (blueprint, fidelity, class, dims)."""
+    """Validate a signed asset catalog and index its CARLA bindings (blueprint, fidelity, class, dims).
+
+    With ``actor_bindings`` (the renderer's CARLA actor binding table), an entry the
+    catalog does not bind to CARLA is bound through the table; see ``actor_bindings``.
+    """
     check = abort or (lambda: None)
     check()
     if not isinstance(manifest, Mapping):
         raise ContractError("asset catalog manifest must be a JSON object")
     if manifest.get("contractVersion") not in {ASSET_CATALOG_SCHEMA, "uniscenario.asset-catalog/v1"}:
         raise ContractError(f"asset catalog manifest contractVersion must equal {ASSET_CATALOG_SCHEMA}")
-    if manifest.get("catalogVersionId") != expected_catalog_version_id:
+    if asset_catalog_version_id(manifest, manifest_sha256) != expected_catalog_version_id:
         raise ContractError("asset catalog manifest version does not match the execution package")
     entries = manifest.get("entries")
     if not isinstance(entries, list):
@@ -837,6 +795,8 @@ def runtime_asset_bindings(
             }
             if len(narrowed_dims) == 3:
                 indexed["dims"] = narrowed_dims
+        if actor_bindings is not None:
+            indexed = _actor_bindings.resolve(asset_id, indexed, actor_bindings)
         bindings[asset_id] = indexed
     check()
     return bindings
@@ -1039,6 +999,11 @@ class CarlaBackend:
             raise RuntimeError("execution package must name one exact cooked CARLA map")
         policy = map_binding_policy()
         package_sha256 = hashlib.sha256(xodr).hexdigest()
+        refusal = cooked_world_refusal(package_sha256)
+        if refusal is not None:
+            # Known to have no usable world: refuse before touching the server,
+            # whatever the binding policy, and never fall back to a generated world.
+            raise CarlaRenderError("carla_map_world_unbound", refusal)
         cooked_name = cooked_map_name_for_xodr(package_sha256)
         if cooked_name is not None and cooked_name != requested_name:
             raise RuntimeError(
@@ -1271,10 +1236,27 @@ class CarlaBackend:
             if probe is None:
                 continue  # registered but not cooked into this image
             available.add(blueprint_id)
-            if probe.destroy() is False:
-                # A probe left in the world would be rendered.
-                raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe")
+            self._destroy_probe(blueprint_id, probe)
         return frozenset(available)
+
+    def _destroy_probe(self, blueprint_id: str, probe: Any) -> None:
+        """Remove a placement probe for certain, or fail (a probe left in the world is rendered).
+
+        In synchronous mode an actor spawned since the last tick is not yet
+        registered on the client, so ``actor.destroy()`` returns False ("already
+        dead") and the actor stays in the world. A server-side batch
+        ``DestroyActor`` removes it regardless and reports its own error.
+        """
+        command = getattr(getattr(self.carla, "command", None), "DestroyActor", None)
+        apply_batch_sync = getattr(getattr(self, "client", None), "apply_batch_sync", None)
+        if callable(command) and callable(apply_batch_sync):
+            responses = apply_batch_sync([command(probe.id)], False)
+            error = str(getattr(responses[0], "error", "") or "") if responses else "no response"
+            if error:
+                raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe: {error}")
+            return
+        if probe.destroy() is False:
+            raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe")
 
     def spawn(self, actors: Mapping[str, ActorBinding], first_frame: PlanFrame, catalog: Mapping[str, Any], abort: Callable[[], None] | None = None) -> None:
         assert self.world is not None
@@ -2458,14 +2440,24 @@ class CarlaBackend:
                 }
                 if requested.modality == "rgb":
                     loaded_map_name = str(self.map_evidence.get("loadedMapName"))
-                    grade = dict(DEFAULT_RGB_CAMERA_GRADE)
+                    server_version = str(self.client.get_server_version())
+                    generation, camera_profile = rgb_camera_profile(server_version)
+                    grade = dict(camera_profile["grade"])
                     if loaded_map_name in COOKED_MAP_RGB_EXPOSURE:
+                        if not camera_profile["mapExposure"]:
+                            raise CarlaRenderError(
+                                "carla_sensor_attribute_unsupported",
+                                f"cooked map {loaded_map_name} needs exposure_compensation "
+                                f"{COOKED_MAP_RGB_EXPOSURE[loaded_map_name]}, which CARLA {server_version} cameras lack",
+                            )
                         grade["exposure_compensation"] = COOKED_MAP_RGB_EXPOSURE[loaded_map_name]
                     attributes.update(grade)
-                    attributes.update(RGB_QUALITY_ATTRIBUTES[spec.quality])
+                    attributes.update(camera_profile["quality"][spec.quality])
                     self.camera_grade_evidence[key] = {
                         "schema": "simforge.camera-grade-evidence/v1",
-                        "profile": CAMERA_GRADE_PROFILE,
+                        "profile": camera_profile["profile"],
+                        "engineGeneration": generation,
+                        "serverVersion": server_version,
                         "mapName": loaded_map_name,
                         "attributes": dict(sorted(grade.items())),
                         "mapExposureSource": (
@@ -2473,7 +2465,7 @@ class CarlaBackend:
                         ),
                         "quality": spec.quality,
                         "postprocess": spec.quality != "preview",
-                        "motionBlurIntensity": 0.0,
+                        "motionBlurIntensity": 0.0 if "motion_blur_intensity" in attributes else None,
                     }
                     self.visual_quality_stats[key] = {
                         "sampleCount": 0,
@@ -3148,6 +3140,15 @@ class CarlaBackend:
         self.door_states = getattr(self, "door_states", {})
         lights = {key[len("light."):]: value for key, value in appearance.items() if key.startswith("light.")}
         doors = {key[len("door."):]: value for key, value in appearance.items() if key.startswith("door.")}
+        if lights and not callable(getattr(actor, "get_light_state", None)) and all(
+            mode == "off" for mode in lights.values()
+        ):
+            # A body without lights (a walker) shows every light off, which is
+            # exactly the authored state; any lit request still fails below.
+            self.appearance_verification.setdefault(actor_id, {}).update(
+                {f"light.{name}": "body-has-no-lights" for name in lights}
+            )
+            lights = {}
         if lights:
             self._apply_vehicle_lights(actor_id, actor, lights, t)
         if doors:
@@ -3172,6 +3173,12 @@ class CarlaBackend:
         the artifact under test, and render determinism outranks the visual
         plausibility of an automatically-lit night scene.
         """
+        if not callable(getattr(actor, "get_light_state", None)):
+            raise CarlaRenderError(
+                "carla_actor_lights_unsupported",
+                f"actor {actor_id} ({getattr(actor, 'type_id', '?')}) has authored lights "
+                f"{dict(lights)} but its CARLA body has no light state",
+            )
         light_state_cls = getattr(self.carla, "VehicleLightState", None)
         if light_state_cls is None:
             raise RuntimeError("this .xosc authors vehicle light states but the CARLA runtime has no VehicleLightState")
