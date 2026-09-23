@@ -32,9 +32,14 @@ async function atomicWrite(file, bytes) {
   await rename(temporary, file);
 }
 
-async function assertHeadroom(directory) {
+/** Free space a full map's texture derivatives need before they start (and keep while they run). */
+export const TEXTURE_TIERS_MIN_FREE_BYTES = 25e9;
+
+async function assertHeadroom(directory, minFreeBytes) {
   const { bavail, bsize } = await statfs(directory);
-  if (bavail * bsize < 25e9) throw new Error('Texture derivatives require at least 25 GB of free disk space');
+  if (bavail * bsize < minFreeBytes) {
+    throw new Error(`Texture derivatives require at least ${(minFreeBytes / 1e9).toFixed(minFreeBytes < 1e9 ? 3 : 0)} GB of free disk space`);
+  }
 }
 
 /** Read only the GLB JSON chunk, not hundreds of megabytes of vegetation vertices. */
@@ -76,7 +81,8 @@ function verifySlice(source, output) {
  * additive overlay. It never modifies source images, GLBs or the source manifest.
  */
 export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, ktxBin,
-  variants = TEXTURE_VARIANTS, concurrency = 2 } = {}) {
+  variants = TEXTURE_VARIANTS, concurrency = 2, minFreeBytes = TEXTURE_TIERS_MIN_FREE_BYTES } = {}) {
+  if (!Number.isFinite(minFreeBytes) || minFreeBytes < 0) throw new Error('minFreeBytes must be a non-negative number of bytes');
   sourceRoot = await realpath(sourceRoot);
   outputRoot = path.resolve(outputRoot);
   const protectedRoot = path.join(os.homedir(), '.local/share/simforge/maps');
@@ -102,7 +108,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
   outputRoot = await realpath(outputRoot);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error('Texture transcode concurrency must be 1..8');
   if (!variants.length || variants.some(id => !TEXTURE_VARIANTS.includes(id))) throw new Error('Unknown texture variant');
-  await assertHeadroom(outputRoot);
+  await assertHeadroom(outputRoot, minFreeBytes);
   const started = performance.now();
   const manifestBytes = await readFile(path.join(sourceRoot, '3d/manifest.json'));
   const sourceManifestSha256 = sha256(manifestBytes);
@@ -159,7 +165,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
     for (;;) {
       const index = cursor++;
       if (index >= imageFiles.length) break;
-      if (index % 128 === 0) await assertHeadroom(outputRoot);
+      if (index % 128 === 0) await assertHeadroom(outputRoot, minFreeBytes);
       const sourceFile = imageFiles[index];
       const sourceKey = `../images/${sourceFile}`;
       const source = arrayBuffer(await readFile(path.join(sourceRoot, 'images', sourceFile)));
