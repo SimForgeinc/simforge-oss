@@ -3,16 +3,61 @@ import { MemoryStorage, WebTemplateFileStore, defaultDashCamera } from '@simforg
 import { EditorDocument, sensorSubjectRole } from './document';
 import { TEST_MAP } from './map';
 
-async function cameraVehicle(): Promise<{ document: EditorDocument; actorId: string }> {
-  const document = await EditorDocument.openBlank(TEST_MAP, {
+async function blankDocument(): Promise<EditorDocument> {
+  return EditorDocument.openBlank(TEST_MAP, {
     store: new WebTemplateFileStore({ storage: new MemoryStorage() }),
     autosaveMs: 60_000,
   });
+}
+
+/**
+ * A vehicle with no sensors. Placement gives the first vehicle the starter
+ * rig (see `#starterSensors`), so these cases start from a vehicle whose
+ * author removed it.
+ */
+async function cameraVehicle(): Promise<{ document: EditorDocument; actorId: string }> {
+  const document = await blankDocument();
   const [actorId] = document.add([{
     id: 'camera_vehicle', catalogId: 'vehicle.sedan', x: 0, y: 0, z: 0, headingRad: 0,
   }]);
+  document.replaceActorSensors(actorId!, []);
+  expect(document.data.metricSubject).toBeUndefined();
   return { document, actorId: actorId! };
 }
+
+describe('starter sensor rig', () => {
+  it('makes the first placed vehicle the metric subject in the placement undo step', async () => {
+    const document = await blankDocument();
+    const [first] = document.add([{
+      id: 'first_vehicle', catalogId: 'vehicle.sedan', x: 0, y: 0, z: 0, headingRad: 0,
+    }]);
+    expect(document.actor(first!)?.sensors.length).toBeGreaterThan(0);
+    expect(document.data.metricSubject).toBe(first);
+
+    // A second car is traffic: no rig, and the subject stays put.
+    const [second] = document.add([{
+      id: 'second_vehicle', catalogId: 'vehicle.suv', x: 5, y: 0, z: 0, headingRad: 0,
+    }]);
+    expect(document.actor(second!)?.sensors).toEqual([]);
+    expect(document.data.metricSubject).toBe(first);
+
+    expect(document.undo()).toBe(true);
+    expect(document.undo()).toBe(true);
+    expect(document.data.roles).toEqual([]);
+    expect(document.data.metricSubject).toBeUndefined();
+    document.dispose();
+  });
+
+  it('gives a static vehicle no rig and leaves the subject unset', async () => {
+    const document = await blankDocument();
+    const [parked] = document.add([{
+      id: 'parked', catalogId: 'vehicle.sedan', x: 0, y: 0, z: 0, headingRad: 0, static: true,
+    }]);
+    expect(document.actor(parked!)?.sensors).toEqual([]);
+    expect(document.data.metricSubject).toBeUndefined();
+    document.dispose();
+  });
+});
 
 describe('sensor-derived metric subject', () => {
   it('selects the first sensor-bearing role in authoring order', async () => {
@@ -20,7 +65,9 @@ describe('sensor-derived metric subject', () => {
     document.add([{
       id: 'second_vehicle', catalogId: 'vehicle.suv', x: 5, y: 0, z: 0, headingRad: 0,
     }]);
+    // No role carried a sensor at placement, so the second vehicle got the starter rig.
     const second = document.data.roles.find((role) => role.id === 'second_vehicle')!;
+    expect(second.actor.sensors.length).toBeGreaterThan(0);
     document.addActorSensor('second_vehicle', defaultDashCamera(second.actor, 'second_camera'));
     expect(sensorSubjectRole(document.data)).toBe('second_vehicle');
 

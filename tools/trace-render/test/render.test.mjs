@@ -13,6 +13,9 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const INSTANCE = path.join(REPO_ROOT, 'fixtures/evidence/golden-yale-bus-stop/instance.json');
 const TRACE = path.join(REPO_ROOT, 'fixtures/evidence/golden-yale-bus-stop/trace.json.gz');
 const SCRIPT = path.join(REPO_ROOT, 'scripts/render-trace.mjs');
+// Stills and video are byte-identical to the pre-package script's output. The
+// manifest is the package's (renderer @2), pinned with location-independent
+// input names so the hash holds in any checkout and output directory.
 const LEGACY_HASHES = {
   'frames/frame-000.png': 'a15e0f4678325b0577dfc75b123b4e132678f8412181cb83ff10f11b420267d0',
   'frames/frame-000.svg': '257ce36d5c8686d97d31bcc61c41af6cde6220bc08f5261ee0b382d1dd490ea4',
@@ -23,7 +26,7 @@ const LEGACY_HASHES = {
   'frames/frame-003.png': '7a2737c5d8310123245ed1e2dd4a71118a28ed2ebeda530ce323ef8e21095db4',
   'frames/frame-003.svg': '16a444f2d15d14690cfad71f6c93953819bfa94b3f9454a62a58e03ff2ba6d1e',
   'trace-render.mp4': '714c75e7f3602c38dbcf52ec48037f080bada214b709e16298bdcb958a40abc4',
-  'manifest.json': '7a71c11181aacb58efc25c600032db60998b7c6986bff4e7230e34f80354e341',
+  'manifest.json': '2f4101e188a8d6ef734d18cb5528ec87c71983a06d62e2305c70404eb042f2bd',
 };
 
 let tempRoot;

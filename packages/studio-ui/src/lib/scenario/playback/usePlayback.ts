@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { CameraView, CityViewer } from '@simforge-oss/viewer';
 import {
   PlaybackController,
@@ -61,6 +61,10 @@ export function usePlayback({
 }: UsePlaybackOptions): { controller: PlaybackController | null; state: PlaybackState | null; error: string | null } {
   const [controller, setController] = useState<PlaybackController | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The playhead of the controller being replaced. A new bundle that replays
+  // the same input (the authoritative trace arriving for the local preview)
+  // continues from it instead of jumping back to the start.
+  const handoffRef = useRef<PlaybackHandoff | null>(null);
   const playbackRenderer = useMemo(() => {
     if (!renderer || !bundle || !sampleHeight) return renderer;
     const verticalRenderer = withPlaybackVerticalMotion(
@@ -103,9 +107,21 @@ export function usePlayback({
       setError(reason instanceof Error ? reason.message : String(reason));
       return;
     }
+    const handoff = handoffRef.current;
+    handoffRef.current = null;
+    if (handoff && continuesPlayback(handoff, bundle)) {
+      next.seek(handoff.time);
+      if (handoff.playing) next.play();
+    }
     window.__playback = next;
     setController(next);
     return () => {
+      handoffRef.current = {
+        bundle,
+        inputHash: bundle.instance.manifest.inputHash,
+        time: next.state.time,
+        playing: next.state.playing,
+      };
       if (window.__playback === next) delete window.__playback;
       next.dispose();
       setController(null);
@@ -115,6 +131,28 @@ export function usePlayback({
   const liveState = usePlaybackControllerState(subscribeState ? controller : null);
   const state = subscribeState ? liveState : (controller?.state ?? null);
   return { controller, state, error };
+}
+
+type PlaybackHandoff = {
+  readonly bundle: PlaybackBundle;
+  readonly inputHash: string;
+  readonly time: number;
+  readonly playing: boolean;
+};
+
+/**
+ * Whether a replacement bundle continues the previous one: the same executed
+ * input, so the authored actors occupy the same poses at the same time. The
+ * editor swaps its verified local preview for the authoritative trace this way
+ * (same authored digest, plus the worker's SUMO traffic).
+ */
+export function continuesPlayback(
+  handoff: { readonly bundle: object; readonly inputHash: string },
+  bundle: Pick<PlaybackBundle, "instance">,
+): boolean {
+  // Only a replaced trace continues. Any other rebuild (camera, renderer,
+  // viewer) keeps the controller's established start-of-clip behaviour.
+  return handoff.bundle !== bundle && handoff.inputHash === bundle.instance.manifest.inputHash;
 }
 
 /** Subscribe at the smallest UI boundary that actually paints the playhead. */

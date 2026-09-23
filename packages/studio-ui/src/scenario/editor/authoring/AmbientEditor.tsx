@@ -14,8 +14,8 @@ import {
   ambientTrafficProfileForEditor,
 } from "@simforge-oss/playback/traffic";
 import {
-  AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
   ambientTrafficProviderFromExtensions,
+  ambientTrafficSourceSelection,
   type AmbientTrafficProviderId,
   type SumoTrafficStatus,
 } from "@simforge-oss/playback/traffic";
@@ -53,10 +53,10 @@ export function AmbientEditor({
 
   const updateProfile = (next: ResolvedAmbientTrafficProfile) =>
     document.setAmbientTrafficExtension(AMBIENT_TRAFFIC_EXTENSION_KEY, next);
+  // Choosing a traffic engine on a document without a density also picks one.
   const updateProvider = (next: AmbientTrafficProviderId) =>
-    document.setAmbientTrafficExtension(
-      AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-      next,
+    document.setAmbientTrafficExtensions(
+      ambientTrafficSourceSelection(document.data, next),
     );
 
   return (

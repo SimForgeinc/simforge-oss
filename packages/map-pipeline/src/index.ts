@@ -94,6 +94,8 @@ export interface RunMapPipelineOptions {
   /** Web tier cell size in metres (default 100). */
   cellSize?: number;
   ktx2?: Ktx2Options;
+  /** Free-space floor for the texture-tier derivatives (default 25 GB, sized for a full map). */
+  minFreeDiskBytes?: number;
   /** `master.gltf` files of other maps consulted as terrain-texture donors. */
   donorLibrary?: readonly string[];
   /** Build only the master (no web tier). */
@@ -186,6 +188,8 @@ export interface DeriveClosuresOptions {
   cellSize?: number;
   /** KTX-Software installation used for offline native tier transcoding. */
   ktxBinDir?: string;
+  /** See `RunMapPipelineOptions.minFreeDiskBytes`. */
+  minFreeDiskBytes?: number;
   /** See `RunMapPipelineOptions.ambientTurnVerdicts`. */
   ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
   /** See `RunMapPipelineOptions.texturesFullBc7`. */
@@ -438,6 +442,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await cookMapTextures({
       contentDir,
       ...(options.ktxBinDir ? { ktxBinDir: options.ktxBinDir } : {}),
+      ...(options.minFreeDiskBytes === undefined ? {} : { minFreeBytes: options.minFreeDiskBytes }),
       ...(options.gpuVariantTool ? { fullBc7: { masterPath: path.join(master.outputDir, 'master.gltf'), workDir: options.workDir, tool: options.gpuVariantTool } } : {}),
     });
     const stage = await finishStage('web', outputDir, 'web', keys, { toolFingerprint, viewerOnly: master.viewerOnly });
@@ -460,9 +465,12 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
 export async function cookMapTextures(input: {
   contentDir: string;
   ktxBinDir?: string;
+  /** See `RunMapPipelineOptions.minFreeDiskBytes`. */
+  minFreeBytes?: number;
   fullBc7?: { masterPath: string; workDir: string; tool: Awaited<ReturnType<typeof resolveGpuVariantTool>> };
 }): Promise<{ texturesFullBc7Dir?: string }> {
-  await buildTextureTiers({ sourceRoot: input.contentDir, ...(input.ktxBinDir ? { ktxBin: path.join(input.ktxBinDir, 'ktx') } : {}) });
+  await buildTextureTiers({ sourceRoot: input.contentDir, ...(input.ktxBinDir ? { ktxBin: path.join(input.ktxBinDir, 'ktx') } : {}),
+    ...(input.minFreeBytes === undefined ? {} : { minFreeBytes: input.minFreeBytes }) });
   // One read per few megabytes instead of one per member: the browser's
   // per-tier packs (streaming order, ingest albedo classification).
   await buildBrowserPacks({ sourceRoot: input.contentDir });
@@ -596,7 +604,8 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
     ...(options.ambientTurnVerdicts ? { ambientTurnVerdicts: options.ambientTurnVerdicts } : {}),
     ...(options.cellSize ? { cellSize: options.cellSize } : {}),
     ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}),
-    ...(options.texturesFullBc7 !== undefined ? { texturesFullBc7: options.texturesFullBc7 } : {}) });
+    ...(options.texturesFullBc7 !== undefined ? { texturesFullBc7: options.texturesFullBc7 } : {}),
+    ...(options.minFreeDiskBytes === undefined ? {} : { minFreeDiskBytes: options.minFreeDiskBytes }) });
 }
 
 /** The web tier for a master stage - whether just built or materialized from a registry. */

@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio-ui",
-  "version": "0.1.0-rc.73",
+  "version": "0.1.0-rc.74",
   "description": "The SimForge Studio product: scenario datasets, editor, inspector, timeline, render workflows, Three.js viewport hosting and the native playback worker, shared by local Studio and SimCloud behind @simforge-oss/studio-host services.",
   "repository": {
     "type": "git",
@@ -1103,6 +1103,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && tsx --test src/scenario/editor/clipboard/actor-clipboard.test.ts src/scenario/editor/scene-time.test.ts"
+    "test": "vitest run && node --conditions=development --import tsx --test src/scenario/editor/clipboard/actor-clipboard.test.ts src/scenario/editor/scene-time.test.ts"
   }
 }
