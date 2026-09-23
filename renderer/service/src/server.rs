@@ -1526,7 +1526,7 @@ fn rider_clip_time(actor: &ActorState, rider: &render_core::vehicle_model::Rider
          and this scene-state frame carries none (a timeline from before samplerVersion 2, or the \
          xosc-lowered legacy path); re-simulate the scenario",
         actor.id,
-        actor.catalog_id.as_deref().unwrap_or("?"),
+        actor.catalog_id.as_deref().unwrap_or("?"), // fallback-ok: error message text only
     ))?;
     Ok(rider.clip_time_from_wheel_spin(spin))
 }
@@ -1566,7 +1566,11 @@ fn apply_actor_model(
         })?;
         (path.clone(), Some(clip.clone()))
     };
-    let animation_time_s = rider_time.unwrap_or(frame.tick as f32 / frame.tick_hz);
+    // A ridden two-wheeler is phased by distance; everything else by frame time.
+    let animation_time_s = match rider_time {
+        Some(time) => time,
+        None => frame.tick as f32 / frame.tick_hz,
+    };
     let binding = (glb_path.clone(), clip.clone());
     if state.app.actor_has_model(&actor.id) && state.actor_model_bindings.get(&actor.id) != Some(&binding) {
         // The motion changed (idle <-> walk): bind the other clip's GLB.
