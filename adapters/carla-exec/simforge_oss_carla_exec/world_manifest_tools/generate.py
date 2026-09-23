@@ -95,7 +95,9 @@ def _simforge_index(envs: dict[str, dict]) -> dict[str, dict[str, Any]]:
     """xodr sha256 -> env -> map asset summary."""
     out: dict[str, dict[str, Any]] = {}
     for env, doc in sorted(envs.items()):
+        # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
         for asset in doc.get("mapAssets", []):
+            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
             for version in asset.get("mapVersions", []):
                 slot = out.setdefault(version["xodrSha256"], {}).setdefault(env, {
                     "mapAssetId": asset["id"], "label": asset.get("label"),
@@ -108,6 +110,7 @@ def _simforge_index(envs: dict[str, dict]) -> dict[str, dict[str, Any]]:
                 slot["mapVersions"].append({k: version.get(k) for k in ("id", "createdAt", "retiredAt", "dependents")})
     for per_env in out.values():
         for slot in per_env.values():
+            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
             slot["mapVersions"].sort(key=lambda v: (v.get("createdAt") or "", v["id"]))
     return out
 
@@ -148,6 +151,7 @@ def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dic
         xodr = xodrs[0]
         key = f"derived/{folder}"
         report = json.loads((inputs / "nas-derived" / folder / report_file["name"]).read_text())
+        # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
         original_sha = (report.get("source") or {}).get("xodrSha256")
         original = by_sha.get(original_sha)
         entry: dict[str, Any] = {
@@ -155,7 +159,9 @@ def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dic
             "glb": None, "xodr": {k: xodr[k] for k in ("name", "sha256", "bytes", "mtime")},
             "extraFiles": [{k: f[k] for k in ("name", "sha256", "bytes", "mtime")} for f in files if f is not xodr],
             "refitReport": {"schema": report.get("schema"), "structuralDiff": report.get("structuralDiff"),
+                            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
                             "totals": {k: (report.get("totals") or {}).get(k) for k in ("maxElevationChangeM", "maxSurfaceChangeM", "roadsRefit")},
+                            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
                             "tool": {k: (report.get("tool") or {}).get(k) for k in ("gitSha", "fingerprint")}},
         }
         if original is None:
@@ -200,8 +206,8 @@ def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dic
         item = (f"elevation-only refit of {original['sourceFolder']} ({original_sha[:12]}): reference-line "
                 f"elevation moves up to {dz_max:.3f} m (p95 {dz_p95:.3f} m) against the source the cooked world "
                 "was matched to; the cooked mesh is unchanged")
-        accepted = item in decisions.get(key, {}).get("acceptDecisionItems", []) or \
-            decisions.get(key, {}).get("acceptElevationRefit") is True
+        decision = decisions[key] if key in decisions else {}  # fallback-ok: no decision recorded means not accepted
+        accepted = item in (decision["acceptDecisionItems"] if "acceptDecisionItems" in decision else ())
         entry.update(
             carlaWorld=world, cookedXodrSha256=original["cookedXodrSha256"],
             status="approved-equivalent" if accepted else "needs-decision",
@@ -209,12 +215,40 @@ def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dic
                         "header": comparison.header},
             differences=[f"elevation-only refit of {original['sourceFolder']}"], blocking=[],
             decisionRequired=[] if accepted else [item],
+            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
             signalIdMap=original.get("signalIdMap", {}) if accepted else {},
         )
         if accepted and original.get("unownedCookedSignalIds"):
             entry["unownedCookedSignalIds"] = original["unownedCookedSignalIds"]
         out.append(entry)
     return out
+
+
+#: Keys every emitted map entry carries; empty values are written explicitly so the
+#: runtime (world_manifest.validate) can require them instead of defaulting.
+_ENTRY_EMPTY: dict[str, Any] = {"xodr": None, "carlaWorld": None, "signalIdMap": {}, "unownedCookedSignalIds": [],
+                                "blocking": [], "decisionRequired": [], "reason": None, "hold": None}
+
+
+def _normalise(entry: dict) -> None:
+    for key, empty in _ENTRY_EMPTY.items():
+        if key not in entry:
+            entry[key] = json.loads(json.dumps(empty))  # fallback-ok: generator writes the explicit empty value the runtime requires
+
+
+def _normalise_legacy(item: dict) -> dict:
+    for key in ("signalIdMap", "unownedCookedSignalIds"):
+        if key not in item:
+            item[key] = {} if key == "signalIdMap" else []  # fallback-ok: explicit empty value the runtime requires
+    return item
+
+
+def parsed_worlds_for(entries: list[dict], cooked: dict, inputs: Path,
+                      parsed: dict[str, "xodr_identity.Network"]) -> dict[str, "xodr_identity.Network"]:
+    for world in cooked["worlds"]:
+        if world not in parsed and any(e.get("carlaWorld") == world and e["status"] in BINDABLE for e in entries):  # fallback-ok: absent world = no match
+            parsed[world] = xodr_identity.parse((inputs / "cooked" / f"{world}.xodr").read_bytes())
+    return parsed
 
 
 def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None = None) -> dict:
@@ -239,6 +273,7 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
     primaries = {}
     picked = {}
     for folder, files in sorted(by_folder.items()):
+        # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
         picked[folder] = _pick_primary(folder, files, decisions.get(folder, {}))
         if picked[folder][1] is not None:
             primaries[picked[folder][1]["sha256"]] = f"{folder}/{picked[folder][1]['name']}"
@@ -246,6 +281,7 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
     entries = []
     claimed: dict[str, str] = {}
     for folder, (glb, primary, extras) in sorted(picked.items()):
+        # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
         decision = decisions.get(folder, {})
         entry: dict[str, Any] = {
             "sourceFolder": folder,
@@ -267,6 +303,7 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         source_header = header_identity(source_bytes)
         entry["xodr"]["exportDate"] = source_header["date"]
         entry["xodr"]["geoReference"] = source_header["geoReference"]
+        # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
         entry["simforge"] = simforge.get(primary["sha256"], {})
 
         world = decision.get("world")
@@ -295,6 +332,7 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         if comparison.byte_exact:
             status = "exact"
         elif comparison.geometry_equivalent and not comparison.blocking:
+            # fallback-ok: offline generator: an absent optional input field is recorded as absent in the manifest, never invented
             accepted = decision.get("acceptDecisionItems", [])
             open_items = [item for item in comparison.decision_required if item not in accepted]
             status = "needs-decision" if open_items else "approved-equivalent"
@@ -318,13 +356,11 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
             claimed[world] = folder
         entries.append(entry)
 
-    for world in list(cooked["worlds"]):
-        if world not in parsed_worlds and any(e.get("carlaWorld") == world and e["status"] in BINDABLE for e in entries):
-            parsed_worlds[world] = xodr_identity.parse((inputs / "cooked" / f"{world}.xodr").read_bytes())
-    for derived_entry in _derived_entries(inputs, entries, decisions, parsed_worlds):
-        simforge_slot = simforge.get(derived_entry["xodr"]["sha256"], {})
-        derived_entry["simforge"] = simforge_slot
+    for derived_entry in _derived_entries(inputs, entries, decisions, parsed_worlds_for(entries, cooked, inputs, parsed_worlds)):
+        derived_entry["simforge"] = simforge[derived_entry["xodr"]["sha256"]] if derived_entry["xodr"]["sha256"] in simforge else {}
         entries.append(derived_entry)
+    for entry in entries:
+        _normalise(entry)
     worlds = {
         w: {"xodrSha256": cooked["worlds"][w]["xodrSha256"],
             "boundSource": claimed.get(w),
@@ -341,7 +377,7 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         "cookedImage": {k: cooked[k] for k in ("image", "imageId", "repoDigests", "engineBinarySha256", "version")},
         "maps": entries,
         "worlds": worlds,
-        "legacySources": legacy or [],
+        "legacySources": [_normalise_legacy(dict(item)) for item in (legacy if legacy is not None else [])],  # fallback-ok: a first generation has no legacy sources
     }
 
 

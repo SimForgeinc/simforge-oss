@@ -71,8 +71,9 @@ def parse(body: bytes) -> ActorBindingTable:
             raise ContractError(f"CARLA actor binding table both binds and marks unavailable {catalog_id}")
     if any(not isinstance(reason, str) or not reason for reason in unavailable.values()):
         raise ContractError("CARLA actor binding table unavailable reasons must be non-empty strings")
-    return ActorBindingTable(hashlib.sha256(body).hexdigest(), dict(bindings), dict(unavailable),
-                             dict(value.get("source") or {}))
+    if not isinstance(value.get("source"), Mapping):
+        raise ContractError("CARLA actor binding table needs its source provenance")
+    return ActorBindingTable(hashlib.sha256(body).hexdigest(), dict(bindings), dict(unavailable), dict(value["source"]))
 
 
 @lru_cache(maxsize=2)
@@ -120,15 +121,15 @@ def generate(object_catalog: Mapping[str, Any], object_catalog_sha256: str,
     def actor_class_of(blueprint: str, carla_object_id: str | None) -> str:
         if blueprint.startswith("walker."):
             return "pedestrian"
-        obj = objects.get(carla_object_id or "")
+        obj = objects.get(carla_object_id) if carla_object_id else None
         if obj and isinstance(obj.get("actorClass"), str):
             return obj["actorClass"]
         raise ValueError(f"no actorClass for CARLA blueprint {blueprint}")
 
     bindings: dict[str, dict[str, Any]] = {}
     for obj in object_catalog["objects"]:
-        carla = obj.get("carla") or {}
-        if carla.get("blueprintId"):
+        carla = obj["carla"] if isinstance(obj.get("carla"), Mapping) else None
+        if carla is not None and carla.get("blueprintId"):
             bindings[obj["id"]] = {
                 "blueprintId": carla["blueprintId"], "fidelity": "exact",
                 "actorClass": obj.get("actorClass") or actor_class_of(carla["blueprintId"], obj["id"]),
@@ -144,17 +145,20 @@ def generate(object_catalog: Mapping[str, Any], object_catalog_sha256: str,
         }
     unavailable = {item["catalogId"]: item["reason"] for item in object_catalog["unavailable"]}
     parity: dict[str, Any] = {}
-    for catalog_id, sub in ((substitutions or {}).get("substitutions") or {}).items():
-        carla_bp = sub.get("carla")
+    parity_table = substitutions["substitutions"] if substitutions is not None else {}  # fallback-ok: the parity table is an optional generator input
+    for catalog_id, sub in parity_table.items():
+        if "carla" not in sub or not sub.get("reason"):
+            raise ValueError(f"carla-substitutions.json entry {catalog_id} needs carla and reason")
+        carla_bp = sub["carla"]
         if carla_bp is None:
-            bindings.pop(catalog_id, None)
-            unavailable[catalog_id] = f"renderer parity: {sub.get('reason', 'CARLA fails closed')}"
+            bindings.pop(catalog_id, None)  # fallback-ok: removing an absent binding is a no-op, not a default
+            unavailable[catalog_id] = f"renderer parity: {sub['reason']}"
         elif catalog_id in bindings and bindings[catalog_id]["blueprintId"] != carla_bp:
             raise ValueError(
                 f"carla-substitutions.json binds {catalog_id} to {carla_bp} but the object catalog binds "
                 f"{bindings[catalog_id]['blueprintId']}"
             )
-        parity[catalog_id] = sub.get("reason")
+        parity[catalog_id] = sub["reason"]
     for catalog_id in list(unavailable):
         if catalog_id in bindings:
             raise ValueError(f"{catalog_id} is both bound and unavailable in the CARLA object catalog")
