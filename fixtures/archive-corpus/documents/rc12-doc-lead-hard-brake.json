@@ -1,0 +1,77 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Lead vehicle hard brake in flowing traffic",
+    "description": "Ego follows a cruising lead at a parameterised gap. The lead performs a dry-road emergency stop and ego regains collision avoidance after a parameterised reaction delay.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "longitudinal.lead-hard-brake",
+    "tags": ["corridor", "longitudinal", "rear-end", "hard-brake"],
+    "author": "agent/corridor-mechanisms",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      { "id": "initialGapM", "type": "continuous", "unit": "m", "tier": 1, "range": [18, 30], "default": 24, "distribution": "uniform" },
+      { "id": "leadDecelMps2", "type": "continuous", "unit": "m/s^2", "tier": 1, "range": [6, 8], "default": 7, "distribution": "uniform" },
+      { "id": "reactionDelayS", "type": "continuous", "unit": "s", "tier": 1, "range": [0.5, 1.4], "default": 0.9, "distribution": "uniform" }
+    ],
+    "constraints": []
+  },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "lead-hard-brake",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 8], "essentiality": "required" },
+      "speedLimitKph": { "value": [35, 80], "essentiality": "preferred", "weight": 2 },
+      "curvatureDegPer10m": { "value": [0, 5], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [220, null], "essentiality": "required" }
+    },
+    "features": [],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.5 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "following vehicle under test",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": 30, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 30, 60)"
+    },
+    {
+      "id": "lead", "kind": "relative_to", "label": "lead vehicle that performs the emergency stop",
+      "actor": { "class": "car", "catalogId": "vehicle.suv" },
+      "requiredSameSegmentAs": "ego",
+      "requiredHeadingRelation": { "role": "ego", "relation": "parallel", "maxErrorDeg": 10 },
+      "ref": "ego", "dLane": 0, "dsM": "param.initialGapM", "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 30, 60)"
+    }
+  ],
+  "props": [],
+  "choreography": {
+    "clipSeconds": 12,
+    "warmupSeconds": 2,
+    "interactions": [
+      { "id": "ego-delays-response", "actor": "ego", "verb": "set", "trigger": { "kind": "at", "t": 0 }, "target": { "key": "rules.collisionAvoidance", "value": false } },
+      {
+        "id": "lead-brakes", "actor": "lead", "verb": "speed", "trigger": { "kind": "at", "t": 3 },
+        "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "rate", "value": "param.leadDecelMps2" }
+      },
+      {
+        "id": "ego-brakes", "actor": "ego", "verb": "speed", "trigger": { "kind": "after", "of": "lead-brakes", "event": "start", "delayS": "param.reactionDelayS" },
+        "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "rate", "value": 8 }
+      }
+    ]
+  },
+  "invariants": [
+    { "id": "initial-headway", "kind": "headway", "of": "ego", "to": "lead", "range": [1, 3], "window": [0, 3], "essentiality": "required" },
+    { "id": "rear-end-criticality", "kind": "ttc", "of": "ego", "to": "lead", "range": [0.7, 3], "mode": "min", "window": [3, 9], "essentiality": "required" },
+    { "id": "response-budget", "kind": "decel_budget", "of": "ego", "maxMps2": 8, "essentiality": "required" },
+    { "id": "minimum-clearance", "kind": "gap", "of": "ego", "to": "lead", "unit": "distance", "range": [4.5, null], "window": [3, 12], "essentiality": "required" },
+    { "id": "event-sequence", "kind": "event_order", "events": ["lead-brakes", "ego-brakes"], "strict": true, "minSeparationS": "param.reactionDelayS", "essentiality": "required" }
+  ],
+  "variants": [],
+  "metricSubject": "ego"
+}

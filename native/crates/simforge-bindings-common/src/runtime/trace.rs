@@ -1,6 +1,7 @@
-//! Trace documents: current-format parsing, digest, scene-state emission and
-//! evaluation. Everything reads the trace alone; older trace versions are
-//! rejected by the core parser, never backfilled.
+//! Trace documents: parsing (every released format, upgraded in memory by
+//! the core reader), digest, scene-state emission and evaluation. Everything
+//! reads the trace alone. A section an older trace never recorded is never
+//! backfilled for an evaluator: the call fails with `TraceError::Unrecorded`.
 
 use simforge_compiler::expr::ExprScope;
 use simforge_compiler::invariants::{check_invariants, InvariantContext};
@@ -29,13 +30,46 @@ fn gunzip_if_needed(bytes: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>> {
     }
 }
 
-/// A validated current-format trace.
+/// A validated trace, upgraded in memory when it was stored in an older format.
 pub struct Trace {
     trace: SimTrace,
 }
 
+/// Sections each evaluator reads that an older trace may not have recorded.
+const EVALUATE_READS: &[&str] = &[
+    "metrics.criticalitySamples",
+    "ticks.actors.*.lateralOffsetM",
+    "header.physics.crashes",
+];
+const INTENT_READS: &[&str] = &[
+    "semanticLedger",
+    "header.ego",
+    "metrics.criticalitySamples",
+    "ticks.actors.*.lateralOffsetM",
+    "header.physics.crashes",
+];
+
 impl Trace {
-    /// Parse plain or gzip trace JSON; rejects non-current formats.
+    fn require_recorded(&self, sections: &[&str]) -> Result<()> {
+        for section in sections {
+            self.trace
+                .require_recorded(section)
+                .map_err(|e| BindingError::runtime(format!("trace: {e}")))?;
+        }
+        Ok(())
+    }
+
+    /// `TraceUpgrade` JSON (`simforge.trace-upgrade/v1`) when the trace was
+    /// stored in an older format and upgraded in memory; `None` otherwise.
+    pub fn upgrade_json(&self) -> Result<Option<String>> {
+        Ok(match &self.trace.upgrade {
+            Some(upgrade) => Some(serde_json::to_string(upgrade)?),
+            None => None,
+        })
+    }
+
+    /// Parse plain or gzip trace JSON of any released format; older formats
+    /// are upgraded in memory (see `upgrade_json`), unknown ones rejected.
     pub fn parse(bytes: &[u8]) -> Result<Self> {
         let plain = gunzip_if_needed(bytes)?;
         let trace = SimTrace::from_json_slice(&plain)
@@ -67,11 +101,13 @@ impl Trace {
 
     /// `EpisodeMetrics` recorded in the trace, as JSON.
     pub fn metrics_json(&self) -> Result<String> {
+        self.require_recorded(&["metrics.criticalitySamples"])?;
         Ok(serde_json::to_string(&self.trace.metrics)?)
     }
 
     /// `TraceEvaluation` JSON; `filters_json` is an optional camelCase `EvaluateFilters` (unknown keys rejected).
     pub fn evaluate_json(&self, filters_json: Option<&str>) -> Result<String> {
+        self.require_recorded(EVALUATE_READS)?;
         let filters = match filters_json {
             None => EvaluateFilters::default(),
             Some(text) => {
@@ -89,6 +125,7 @@ impl Trace {
 
     /// `IntentEvaluation` JSON for an intent rubric document.
     pub fn intent_rubric_json(&self, rubric_json: &str) -> Result<String> {
+        self.require_recorded(INTENT_READS)?;
         let rubric = parse_rubric(rubric_json)?;
         Ok(serde_json::to_string(&evaluate_intent_rubric(
             &self.trace,
@@ -99,6 +136,7 @@ impl Trace {
     /// `BlindReviewPacket` JSON: the rubric evaluated against this trace,
     /// stripped for review without the authored intent.
     pub fn blind_review_packet_json(&self, rubric_json: &str) -> Result<String> {
+        self.require_recorded(INTENT_READS)?;
         let rubric = parse_rubric(rubric_json)?;
         let evaluation = evaluate_intent_rubric(&self.trace, &rubric);
         Ok(serde_json::to_string(&create_blind_review_packet(
@@ -109,6 +147,7 @@ impl Trace {
 
     /// `BehaviorSummary` JSON; `limits_json` is an optional camelCase `BehaviorSummaryLimits`.
     pub fn behavior_summary_json(&self, limits_json: Option<&str>) -> Result<String> {
+        self.require_recorded(INTENT_READS)?;
         let limits: BehaviorSummaryLimits = match limits_json {
             None => BehaviorSummaryLimits::default(),
             Some(text) => serde_json::from_str(text)
@@ -187,6 +226,7 @@ impl Trace {
             Some(text) => serde_json::from_str(text)
                 .map_err(|e| BindingError::argument(format!("invariant options: {e}")))?,
         };
+        self.require_recorded(EVALUATE_READS)?;
         let scope: ExprScope = o.scope.into();
         let ctx = InvariantContext {
             template: &template,
