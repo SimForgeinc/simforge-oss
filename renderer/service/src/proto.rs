@@ -392,6 +392,9 @@ pub enum ResponseBody {
         /// Server-side render+publish wall time, milliseconds.
         server_ms: f64,
         sensor_to_policy: std::collections::BTreeMap<String,render_core::coordinates::PolicyFromSensor>,
+        /// Where `server_ms` went (additive; older clients ignore it).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stages: Option<BundleStages>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {
@@ -641,4 +644,43 @@ pub struct ObservedActorPose {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_rotation: Option<[f32; 4]>,
     pub visible: bool,
+}
+
+/// Per-stage wall times of one `render_bundle`, milliseconds (`*_ms`) and
+/// counts. Diagnostics only: nothing here changes what is published.
+#[derive(Debug, Clone, Copy, Default, Serialize, PartialEq)]
+pub struct BundleStages {
+    /// Scene-state tick applied to the world (spawn/update/despawn, models).
+    pub apply_ms: f64,
+    /// Camera rig registration, poses and auto-metering.
+    pub rig_ms: f64,
+    /// Pre-capture readiness wait (frames rendered until the GPU was idle).
+    pub readiness_ms: f64,
+    pub readiness_updates: u32,
+    /// The capture: submissions, GPU wait and host copy-out.
+    pub capture_ms: f64,
+    pub capture_attempts: u32,
+    pub capture_settle_updates: u32,
+    /// Part of `capture_ms` the readback map waited on the device.
+    pub readback_wait_ms: f64,
+    /// Part of `capture_ms` spent copying mapped buffers to host memory.
+    pub readback_copy_ms: f64,
+    /// Host bytes read back.
+    pub readback_bytes: u64,
+    /// Planning (padding, depth packing, semantics) and ring publication of camera passes.
+    pub publish_cameras_ms: f64,
+    /// First-use build of the static map BVHs (zero on later ticks).
+    pub sensor_scenes_ms: f64,
+    /// Dynamic actor triangle snapshot and BVH build.
+    pub actor_scene_ms: f64,
+    /// Per-tick class and velocity maps the sensor models read.
+    pub sensor_setup_ms: f64,
+    /// Lidar raycasts and payload encoding.
+    pub lidar_ms: f64,
+    /// Radar raycasts and payload encoding.
+    pub radar_ms: f64,
+    /// Lidar/radar work that ran while the GPU rendered (overlap mode).
+    pub sensors_overlapped: bool,
+    /// Ring publication of lidar/radar payloads and the bundle table.
+    pub publish_sensors_ms: f64,
 }
