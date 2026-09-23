@@ -397,13 +397,13 @@ export type ScenarioRevisionDto = {
 // ── Simulation history (Versions panel) ──────────────────────────────────────
 
 /**
- * `simforge.motion-diff/v1`: two authoritative simulations of one scenario compared tick by tick
+ * `simforge.simulation-diff/v1`: two authoritative simulations of one scenario compared tick by tick
  * over the whole clip (`diffSimulationTraces`, packages/openscenario trace-diff), with the
  * strict-trajectory-v1 comparator's verdict. `summary` is the chip text ("Motion identical" or
  * "max 1.2 m · 2 actors · 1 event changed").
  */
 export type SimulationMotionDiffDto = {
-  format: "simforge.motion-diff/v1";
+  format: "simforge.simulation-diff/v1";
   baseSimKey: string;
   candidateSimKey: string;
   identical: boolean;

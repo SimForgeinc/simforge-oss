@@ -25,6 +25,7 @@ import {
   type SimulationTimeline,
 } from "@simforge-oss/compiler/node";
 import type {
+  RevisionSimulationReason,
   ScenarioActiveSimulationReason,
   ScenarioMotionDiffDto,
   ScenarioMotionSource,
@@ -33,6 +34,7 @@ import type {
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
   ScenarioSimulationTrafficProvider,
+  SimulationMotionDiffDto,
 } from "@simforge-oss/studio-host";
 
 import { GalleryCatalogResolutionError, requireGalleryCatalogEntries } from "@/app/lib/asset-gallery/store";
@@ -867,26 +869,50 @@ export async function reserveSimulationJobOutputs(input: {
 // ── Revisions ─────────────────────────────────────────────────────────────────
 
 /**
- * Bind a revision to a result under the result's engine semantics. A commit
- * also makes it the revision's active simulation: the motion its renders
- * replay from then on, under every later engine.
+ * Append a result to a revision's simulation history (`revision_simulations`, append-only; see
+ * sim-history.ts). A commit also makes it the revision's active simulation: the motion its renders
+ * replay from then on, under every later engine. `reason` defaults from `origin` ('commit' →
+ * commit, 'lazy' → resimulate); `previousSimKey`/`motionDiff` record what it was compared against.
+ * Returns whether a new history row was written (a result is in a revision's history at most once).
  */
 export async function linkRevisionSimulation(
   tx: Transaction | null,
-  input: { workspaceId: string; revisionId: string; simKey: string; engineSemVer: string; origin: "commit" | "lazy"; userId?: string | null },
-): Promise<void> {
-  const sql = `INSERT INTO simforge.revision_simulations (workspace_id, revision_id, engine_sem_ver, sim_key, origin)
-     VALUES (:workspace_id, :revision_id, :engine_sem_ver, :sim_key, :origin)
-     ON CONFLICT (workspace_id, revision_id, engine_sem_ver) DO NOTHING`;
+  input: {
+    workspaceId: string;
+    revisionId: string;
+    simKey: string;
+    engineSemVer: string;
+    origin: "commit" | "lazy";
+    reason?: RevisionSimulationReason;
+    userId?: string | null;
+    previousSimKey?: string | null;
+    motionDiff?: SimulationMotionDiffDto | null;
+  },
+): Promise<boolean> {
+  const reason = input.reason ?? (input.origin === "commit" ? "commit" : "resimulate");
+  const previous = input.previousSimKey && input.previousSimKey !== input.simKey ? input.previousSimKey : null;
+  // `origin` stays written during the expand window (rc.73 readers); ON CONFLICT covers both the
+  // (revision, engine) compatibility key and the (revision, sim_key) history key.
+  const sql = `INSERT INTO simforge.revision_simulations (
+       workspace_id, revision_id, engine_sem_ver, sim_key, origin, reason, created_by_user_id,
+       previous_sim_key, motion_diff
+     ) VALUES (
+       :workspace_id, :revision_id, :engine_sem_ver, :sim_key, :origin, :reason, :user_id,
+       :previous_sim_key, CAST(:motion_diff AS jsonb)
+     ) ON CONFLICT DO NOTHING
+     RETURNING sim_key`;
   const params = {
     workspace_id: input.workspaceId,
     revision_id: input.revisionId,
     engine_sem_ver: input.engineSemVer,
     sim_key: input.simKey,
     origin: input.origin,
+    reason,
+    user_id: input.userId ?? null,
+    previous_sim_key: previous,
+    motion_diff: previous ? input.motionDiff ?? null : null,
   };
-  if (tx) await tx.execute(sql, params);
-  else await queryRows(`${sql} RETURNING revision_id`, params);
+  const rows = tx ? await tx.queryRows<{ sim_key: string }>(sql, params) : await queryRows<{ sim_key: string }>(sql, params);
   if (input.origin === "commit") {
     await setRevisionActiveSimulation(tx, {
       workspaceId: input.workspaceId,
@@ -896,6 +922,7 @@ export async function linkRevisionSimulation(
       userId: input.userId ?? null,
     });
   }
+  return rows.length > 0;
 }
 
 export class RevisionReplayError extends Error {
@@ -1267,12 +1294,23 @@ export async function resimulateRevision(
     mapVersionId: revision.map_version_id,
   }, options);
   if (status.state === "succeeded") {
+    // The history row records what it was compared against: the active result at this moment.
+    const active = await queryOne<{ sim_key: string }>(
+      `SELECT sim_key FROM simforge.revision_active_simulation WHERE workspace_id = :workspace_id AND revision_id = :revision_id`,
+      { workspace_id: context.workspaceId, revision_id: revisionId },
+    );
+    const previousSimKey = active && active.sim_key !== status.result.simKey ? active.sim_key : null;
+    const { simulationMotionDiff } = await import("./sim-diff");
     await linkRevisionSimulation(null, {
       workspaceId: context.workspaceId,
       revisionId,
       simKey: status.result.simKey,
       engineSemVer: status.result.engineSemVer,
       origin: "lazy",
+      reason: "resimulate",
+      userId: context.userId,
+      previousSimKey,
+      motionDiff: previousSimKey ? await simulationMotionDiff(context.workspaceId, previousSimKey, status.result.simKey) : null,
     });
   }
   const motion = (await revisionMotion(context.workspaceId, revisionId))!;

@@ -11,8 +11,8 @@
 --     reason              commit | engine_upgrade | resimulate | import | backfill (replaces `origin`)
 --     created_by_user_id  who asked for it (null for commits by deleted users and for backfill)
 --     previous_sim_key    the entry it was compared against (the revision's active result at the time)
---     motion_diff         `simforge.motion-diff/v1` summary of the strict-trajectory-v1 comparison
---                         (packages/openscenario trace-diff) against previous_sim_key
+--     motion_diff         `simforge.simulation-diff/v1`: per-tick motion, events and signals plus the
+--                         strict-trajectory-v1 verdict (packages/openscenario trace-diff) vs previous_sim_key
 --   Expand window: rc.73 writers insert `origin` only and conflict on (revision, engine_sem_ver); a BEFORE
 --   INSERT trigger derives `reason` from `origin` (and `origin` from `reason` for new writers), and the
 --   (revision, engine_sem_ver) primary key stays until the contract migration.

@@ -345,6 +345,62 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
         signal: opts.signal,
       });
     },
+
+    listVersions(documentId, signal) {
+      return call(documents.listVersions, { params: { documentId }, signal });
+    },
+    saveVersion(document, opts = {}) {
+      return call(documents.saveVersion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, ...(opts.label ? { label: opts.label } : {}) },
+        signal: opts.signal,
+      });
+    },
+    keepPreviousMotion(document, change, signal) {
+      return call(documents.keepPreviousMotion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, previousSimKey: change.previousSimKey, currentSimKey: change.currentSimKey },
+        signal,
+      });
+    },
+    async acceptDraftSimulation(document, simKey, signal) {
+      await call(documents.acceptDraftSimulation, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, simKey },
+        signal,
+      });
+    },
+    resimulateVersion(documentId, revisionId, opts = {}) {
+      return call(documents.resimulateVersion, {
+        params: { documentId, revisionId },
+        body: opts.waitMs === undefined ? {} : { waitMs: opts.waitMs },
+        signal: opts.signal,
+      });
+    },
+    async setVersionActiveSimulation(documentId, revisionId, simKey, signal) {
+      await call(documents.setVersionActiveSimulation, { params: { documentId, revisionId }, body: { simKey }, signal });
+    },
+    getVersionContent(documentId, revisionId, signal) {
+      return call(documents.getVersionContent, { params: { documentId, revisionId }, signal });
+    },
+    restoreVersion(document, revisionId, signal) {
+      return call(documents.restoreVersion, {
+        params: { documentId: document.id, revisionId },
+        body: { expectedVersion: document.draftVersion },
+        signal,
+      });
+    },
+    compareSimulations(baseSimKey, candidateSimKey, signal) {
+      return call(documents.compareSimulations, { query: { base: baseSimKey, candidate: candidateSimKey }, signal });
+    },
+    async getMapPinStatus(documentId, signal) {
+      const status = await call(documents.getMapPinStatus, { params: { documentId }, signal });
+      const { pinnedDescriptor, ...rest } = status;
+      return { ...rest, pinnedMap: pinnedDescriptor ? mapEntry(pinnedDescriptor) : null };
+    },
+    previewMapRepin(documentId, request, signal) {
+      return call(documents.previewMapRepin, { params: { documentId }, body: request, signal });
+    },
   };
 
   const artifacts: StudioArtifactService = {

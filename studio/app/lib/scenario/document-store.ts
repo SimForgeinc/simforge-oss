@@ -21,9 +21,15 @@ import {
   linkRevisionSimulation,
   readSimulationRecord,
   resolveSimulation,
+  setRevisionActiveSimulation,
 } from "./sim-result-store";
-import type { ScenarioSimulationStatusDto } from "@simforge-oss/studio-host";
-import { simforgeEnv } from "@/lib/simforge-env";
+import type {
+  ScenarioSimulationStatusDto,
+  ScenarioVersionCreatedFor,
+  SimulationMotionDiffDto,
+} from "@simforge-oss/studio-host";
+import { SIMFORGE_OSS_RELEASE } from "@simforge-oss/compiler/node";
+import { exportCompilerContract } from "./compiler-identity";
 
 type DocumentRow = {
   id: string;
@@ -1080,7 +1086,21 @@ async function authoritativeRevisionEvidence(
   }, { waitMs: REVISION_SIMULATION_WAIT_MS });
   if (status.state === "failed") return { kind: "failed", status, code: status.failureCode, message: status.message ?? status.failureCode };
   if (status.state !== "succeeded") return { kind: "pending", status };
-  const record = await readSimulationRecord(context.workspaceId, status.result.simKey);
+  return revisionEvidenceFromResult(context, status.result.simKey, subject.mapVersionId, status);
+}
+
+type RevisionEvidence =
+  | { kind: "ready"; simKey: string; engineSemVer: string; ambient: ScenarioAmbientProvenance; traffic: ScenarioMaterializedTrafficReference }
+  | { kind: "failed"; status: ScenarioSimulationStatusDto | null; code: string; message: string };
+
+/** The evidence a revision binds, read from one stored result (the authority's own record). */
+async function revisionEvidenceFromResult(
+  context: AppContext,
+  simKey: string,
+  mapVersionId: string,
+  status: ScenarioSimulationStatusDto | null,
+): Promise<RevisionEvidence> {
+  const record = await readSimulationRecord(context.workspaceId, simKey);
   const ambient = record ? parseJsonObject(record.ambient_provenance as string | Record<string, unknown> | null) : {};
   if (!record?.traffic_artifact_id || !ambient.mode) {
     return {
@@ -1094,7 +1114,7 @@ async function authoritativeRevisionEvidence(
     `SELECT a.sha256, a.byte_length, mv.source_map_asset_id
        FROM simforge.artifacts a JOIN simforge.map_versions mv ON mv.id = :map_version_id
       WHERE a.id = :artifact_id AND a.workspace_id = :workspace_id AND a.artifact_state = 'available'`,
-    { artifact_id: record.traffic_artifact_id, workspace_id: context.workspaceId, map_version_id: subject.mapVersionId },
+    { artifact_id: record.traffic_artifact_id, workspace_id: context.workspaceId, map_version_id: mapVersionId },
   );
   if (!artifact) return { kind: "failed", status, code: "simulation_traffic_missing", message: "The simulation's traffic artifact is unavailable." };
   return {
@@ -1108,7 +1128,7 @@ async function authoritativeRevisionEvidence(
       sizeBytes: Number(artifact.byte_length),
       sourceInputDigest: record.resolved_input_digest,
       mapAssetId: artifact.source_map_asset_id,
-      mapVersionId: subject.mapVersionId,
+      mapVersionId,
     },
   };
 }
@@ -1123,7 +1143,20 @@ async function authoritativeRevisionEvidence(
 export async function createScenarioRevision(
   context: AppContext,
   documentId: string,
-  input: { expectedVersion: number; idempotencyKey?: string },
+  input: {
+    expectedVersion: number;
+    idempotencyKey?: string;
+    /** Why the version exists (the Versions panel's label); `render` for a render submit. */
+    createdFor?: ScenarioVersionCreatedFor;
+    label?: string | null;
+    /**
+     * Bind this stored result instead of resolving the draft under the current engine ("Keep the
+     * old motion"). It must be the result the draft last showed for exactly this draft version.
+     */
+    bindSimKey?: string;
+    /** Compared result for the history row of a bound result on an existing revision. */
+    bindPrevious?: { simKey: string; motionDiff: SimulationMotionDiffDto | null } | null;
+  },
 ) {
   const snapshot = await getScenarioDocument(context, documentId);
   if (!snapshot) return { kind: "not_found" as const };
@@ -1138,11 +1171,34 @@ export async function createScenarioRevision(
     );
   }
   const mapVersionId = snapshot.mapVersionId;
-  const evidence = await authoritativeRevisionEvidence(context, {
-    content: snapshot.content,
-    contentSha256: snapshot.contentSha256,
-    mapVersionId,
-  });
+  const createdFor: ScenarioVersionCreatedFor = input.createdFor ?? (input.bindSimKey ? "engine_upgrade" : "render");
+  if (input.bindSimKey) {
+    const bound = await queryOne<{ last_sim_key: string | null; last_sim_draft_version: number | string | null; map_version_id: string | null }>(
+      `SELECT dr.last_sim_key, dr.last_sim_draft_version, r.map_version_id
+         FROM simforge.drafts dr
+         LEFT JOIN simforge.sim_results r ON r.workspace_id = dr.workspace_id AND r.sim_key = :sim_key
+        WHERE dr.workspace_id = :workspace_id AND dr.document_id = :document_id`,
+      { workspace_id: context.workspaceId, document_id: documentId, sim_key: input.bindSimKey },
+    );
+    if (!bound?.map_version_id) {
+      return { kind: "simulation_failed" as const, status: null, code: "simulation_not_found", message: `simulation ${input.bindSimKey} does not exist in this workspace` };
+    }
+    if (bound.last_sim_key !== input.bindSimKey || Number(bound.last_sim_draft_version) !== snapshot.draftVersion || bound.map_version_id !== mapVersionId) {
+      return {
+        kind: "simulation_failed" as const,
+        status: null,
+        code: "simulation_not_draft_result",
+        message: "Only the motion this draft last showed, for exactly its current content and map, can be kept as a version.",
+      };
+    }
+  }
+  const evidence = input.bindSimKey
+    ? await revisionEvidenceFromResult(context, input.bindSimKey, mapVersionId, null)
+    : await authoritativeRevisionEvidence(context, {
+      content: snapshot.content,
+      contentSha256: snapshot.contentSha256,
+      mapVersionId,
+    });
   if (evidence.kind === "pending") return { kind: "simulation_pending" as const, status: evidence.status };
   if (evidence.kind === "failed") {
     return { kind: "simulation_failed" as const, status: evidence.status, code: evidence.code, message: evidence.message };
@@ -1187,7 +1243,7 @@ export async function createScenarioRevision(
         },
       );
       if (existing) {
-        await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId: existing.id, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "lazy" });
+        await bindExistingRevision(tx, context, existing.id, evidence, input);
         return { kind: "created" as const, revision: revisionDto(existing) };
       }
     }
@@ -1204,7 +1260,7 @@ export async function createScenarioRevision(
     if (existingDraftRevision) {
       // A revision of this draft version predating its simulation binds to it
       // now; one committed through this path already has its binding.
-      await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId: existingDraftRevision.id, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "lazy" });
+      await bindExistingRevision(tx, context, existingDraftRevision.id, evidence, input);
       if (!["failed", "cancelled"].includes(existingDraftRevision.export_state)) {
         return { kind: "created" as const, revision: revisionDto(existingDraftRevision) };
       }
@@ -1217,7 +1273,7 @@ export async function createScenarioRevision(
            materialized_traffic_artifact_id, materialized_traffic_sha256,
            materialized_traffic_size_bytes, materialized_traffic_source_input_digest
          )
-         SELECT :id, r.workspace_id, r.id, 'openscenario_xml_1_4', r.compiler_version, :idempotency_key,
+         SELECT :id, r.workspace_id, r.id, 'openscenario_xml_1_4', :compiler_version, :idempotency_key,
            r.ambient_mode, r.ambient_runtime_version, r.ambient_sumo_version, r.ambient_network_sha256,
            r.ambient_seed, r.ambient_config, r.ambient_config_sha256, r.ambient_result_sha256,
            r.materialized_traffic_artifact_id, r.materialized_traffic_sha256,
@@ -1229,6 +1285,7 @@ export async function createScenarioRevision(
           workspace_id: context.workspaceId,
           revision_id: existingDraftRevision.id,
           idempotency_key: input.idempotencyKey ?? `revision-retry:${retryExportId}`,
+          compiler_version: exportCompilerContract(),
         },
       );
       const retried = await tx.queryOne<RevisionRow>(
@@ -1252,13 +1309,16 @@ export async function createScenarioRevision(
     );
     const revisionId = scenarioId("usrev");
     const exportId = scenarioId("usexp");
-    const compilerVersion = simforgeEnv("COMPILER_VERSION")?.trim() || "uniscenario-compiler@2.0.0";
+    // Exports are dispatched under the compiler contract; the revision records what really produced
+    // its motion (engine semver of its result, OSS release), never a constant.
+    const exportCompilerVersion = exportCompilerContract();
     await tx.execute(
       `INSERT INTO simforge.revisions (
          id, workspace_id, document_id, revision_number, source_draft_version,
          schema_version, canonical_content, content_sha256, map_version_id,
          map_closure_sha256, asset_catalog_version_id,
          compiler_version, openscenario_profile, idempotency_key, created_by_user_id,
+         created_for, label, engine_sem_ver, oss_release,
          ambient_mode, ambient_runtime_version, ambient_sumo_version, ambient_network_sha256,
          ambient_seed, ambient_config, ambient_config_sha256, ambient_result_sha256,
          materialized_traffic_artifact_id, materialized_traffic_sha256,
@@ -1268,6 +1328,7 @@ export async function createScenarioRevision(
          :schema_version, CAST(:content AS jsonb), :content_sha256, :map_version_id,
          :map_closure_sha256, :asset_catalog_version_id,
          :compiler_version, :openscenario_profile, :idempotency_key, :user_id,
+         :created_for, :label, :engine_sem_ver, :oss_release,
          :ambient_mode, :ambient_runtime_version, :ambient_sumo_version, :ambient_network_sha256,
          :ambient_seed, CAST(:ambient_config AS jsonb), :ambient_config_sha256, :ambient_result_sha256,
          :materialized_traffic_artifact_id, :materialized_traffic_sha256,
@@ -1285,10 +1346,14 @@ export async function createScenarioRevision(
         map_version_id: mapPin.mapVersionId,
         map_closure_sha256: mapPin.mapClosureSha256,
         asset_catalog_version_id: mapPin.assetCatalogVersionId,
-        compiler_version: compilerVersion,
+        compiler_version: `@simforge-oss/compiler@${SIMFORGE_OSS_RELEASE}`,
         openscenario_profile: OPENSCENARIO_NATIVE_PROFILE,
         idempotency_key: input.idempotencyKey ?? null,
         user_id: context.userId,
+        created_for: createdFor,
+        label: input.label?.trim() ? input.label.trim().slice(0, 120) : null,
+        engine_sem_ver: evidence.engineSemVer,
+        oss_release: SIMFORGE_OSS_RELEASE,
         ambient_mode: ambientInput.mode,
         ambient_runtime_version: ambientInput.mode === "native" ? ambientInput.runtimeVersion : null,
         ambient_sumo_version: ambientInput.mode === "sumo" ? ambientInput.sumoVersion : null,
@@ -1321,7 +1386,7 @@ export async function createScenarioRevision(
         id: exportId,
         workspace_id: context.workspaceId,
         revision_id: revisionId,
-        compiler_version: compilerVersion,
+        compiler_version: exportCompilerVersion,
         idempotency_key: input.idempotencyKey ?? `revision:${revisionId}`,
         ambient_mode: ambientInput.mode,
         ambient_runtime_version: ambientInput.mode === "native" ? ambientInput.runtimeVersion : null,
@@ -1337,7 +1402,15 @@ export async function createScenarioRevision(
         materialized_traffic_source_input_digest: traffic?.sourceInputDigest ?? null,
       },
     );
-    await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "commit" });
+    await linkRevisionSimulation(tx, {
+      workspaceId: context.workspaceId,
+      revisionId,
+      simKey: evidence.simKey,
+      engineSemVer: evidence.engineSemVer,
+      origin: "commit",
+      reason: createdFor === "engine_upgrade" ? "engine_upgrade" : createdFor === "import" ? "import" : "commit",
+      userId: context.userId,
+    });
     await tx.execute(
       `UPDATE simforge.documents
        SET latest_revision_id = :revision_id, updated_by_user_id = :user_id, updated_at = NOW()
@@ -1356,6 +1429,40 @@ export async function createScenarioRevision(
     if (!created) throw new Error("Scenario revision insert did not return a revision.");
     return { kind: "created" as const, revision: revisionDto(created) };
   });
+}
+
+/**
+ * A revision already exists for this draft version. It gains the simulation in its history; the
+ * active pointer moves only for "Keep the old motion", the author's explicit choice.
+ */
+async function bindExistingRevision(
+  tx: Transaction,
+  context: AppContext,
+  revisionId: string,
+  evidence: { simKey: string; engineSemVer: string },
+  input: { bindSimKey?: string; bindPrevious?: { simKey: string; motionDiff: SimulationMotionDiffDto | null } | null },
+): Promise<void> {
+  const previous = input.bindSimKey && input.bindPrevious?.simKey !== evidence.simKey ? input.bindPrevious ?? null : null;
+  await linkRevisionSimulation(tx, {
+    workspaceId: context.workspaceId,
+    revisionId,
+    simKey: evidence.simKey,
+    engineSemVer: evidence.engineSemVer,
+    origin: "lazy",
+    reason: input.bindSimKey ? "engine_upgrade" : "backfill",
+    userId: context.userId,
+    previousSimKey: previous?.simKey ?? null,
+    motionDiff: previous?.motionDiff ?? null,
+  });
+  if (input.bindSimKey) {
+    await setRevisionActiveSimulation(tx, {
+      workspaceId: context.workspaceId,
+      revisionId,
+      simKey: evidence.simKey,
+      reason: "user",
+      userId: context.userId,
+    });
+  }
 }
 
 function revisionSelect(where: string) {
