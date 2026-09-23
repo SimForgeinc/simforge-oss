@@ -10,7 +10,10 @@ import type {
   ScenarioJobEventDto,
   ScenarioRenderAttemptDto,
   ScenarioRenderJobDetailDto,
+  ScenarioRenderSubstitutionDto,
+  ScenarioRenderWarningDto,
 } from "@simforge-oss/studio-host";
+import { RenderSubstitutionRecordSchema } from "@simforge-oss/studio-shared";
 
 /**
  * The render details tab (#136) and session cards (#137): one job with its attempts, its event log,
@@ -39,6 +42,7 @@ type DetailRow = {
   attempt_count: number;
   max_attempts: number;
   failure_code: string | null;
+  failure_message: string | null;
   billing_mode: string;
   estimated_cost_cents: number | string;
   render_spec_sha256: string;
@@ -90,6 +94,55 @@ function publicTimestamp(value: string | null, required = false): string | null 
 function publicIdentifier(value: string | null): string {
   if (!value || !PUBLIC_ID_RE.test(value)) invalidLineage();
   return value;
+}
+
+/**
+ * Failure codes whose message was written to name what is missing or
+ * degraded (docs/engineering/no-silent-fallbacks.md): engine policy errors
+ * the worker reports as `render.<code>` and control-plane evidence refusals.
+ * Their message is part of the job result; other worker messages (log
+ * tails, transport errors) stay redacted.
+ */
+const NAMED_FAILURE_CODE_RE = /^render\.(?:native|carla|render)_[a-z0-9_]+$/;
+const FAILURE_MESSAGE_MAX = 2_000;
+
+export function publicFailureDetail(code: string | null, message: string | null): string | null {
+  if (!code || !NAMED_FAILURE_CODE_RE.test(code) || typeof message !== "string") return null;
+  const trimmed = message.trim();
+  if (!trimmed) return null;
+  return trimmed.length > FAILURE_MESSAGE_MAX ? `${trimmed.slice(0, FAILURE_MESSAGE_MAX - 3)}...` : trimmed;
+}
+
+const WARNING_LIMIT = 50;
+
+/**
+ * Engine warnings, oldest first: the render worker forwards them as `warning`
+ * progress records, the local CPU lane as `warning` job events whose payload
+ * is `{ code, message }`.
+ */
+export function publicRenderWarnings(records: readonly unknown[], localEvents: readonly unknown[] = []): ScenarioRenderWarningDto[] {
+  const warnings: ScenarioRenderWarningDto[] = [];
+  for (const value of records) {
+    const record = RenderProgressRecordSchema.parse(parseJsonObject(value as string | Record<string, unknown>));
+    if (record.event === "warning") warnings.push({ code: record.code, message: record.message });
+  }
+  for (const value of localEvents) {
+    const payload = parseJsonObject(value as string | Record<string, unknown>);
+    if (typeof payload.code !== "string" || typeof payload.message !== "string") invalidLineage();
+    warnings.push({ code: payload.code, message: payload.message });
+  }
+  return warnings.slice(0, WARNING_LIMIT);
+}
+
+/** The substitutions the succeeded attempt recorded (`render_attempts.metrics.renderSubstitutions`). */
+export function publicRenderSubstitutions(metrics: unknown): ScenarioRenderSubstitutionDto[] {
+  if (metrics === null || metrics === undefined) return [];
+  const object = parseJsonObject(metrics as string | Record<string, unknown>);
+  const raw = object.renderSubstitutions;
+  if (raw === undefined) return [];
+  return RenderSubstitutionRecordSchema.array().parse(raw).map((item) => ({
+    kind: item.kind, subject: item.subject, requested: item.requested, rendered: item.rendered, allowedBy: item.allowedBy,
+  }));
 }
 
 export async function listRenderJobAttempts(
@@ -254,7 +307,8 @@ export async function getRenderJobDetail(
     `SELECT j.id, j.revision_id, j.execution_package_id,
             j.execution_package_control_sha256, j.render_profile_id, j.job_mode, j.job_state, j.progress,
             j.progress_detail, j.renderer_engine, j.intent_sha256,
-            j.priority, j.attempt_count, j.max_attempts, j.failure_code, j.billing_mode,
+            j.priority, j.attempt_count, j.max_attempts, j.failure_code,
+            j.failure_detail->>'message' AS failure_message, j.billing_mode,
             j.estimated_cost_cents, j.render_spec_sha256, j.hidden_at, j.hidden_by_user_id,
             j.parent_render_job_id, j.source_artifact_id, j.model_family, j.model_config_sha256,
             j.created_at, j.updated_at, j.started_at, j.completed_at, j.cancel_requested_at
@@ -270,7 +324,7 @@ export async function getRenderJobDetail(
     || !Number.isSafeInteger(Number(job.attempt_count))
     || Number(job.attempt_count) < 0) invalidLineage();
 
-  const [attempts, events, artifacts, progressRows] = await Promise.all([
+  const [attempts, events, artifacts, progressRows, warningRows, localWarningRows, substitutionRows] = await Promise.all([
     listRenderJobAttempts(context, jobId, {
       executionPackageId: job.execution_package_id,
       controlSha256: job.execution_package_control_sha256!,
@@ -288,6 +342,42 @@ export async function getRenderJobDetail(
           AND p.record->>'event' IN ('stage.started', 'stage.progress')
         ORDER BY p.record->>'stage', p.sequence DESC`,
       { job_id: jobId, workspace_id: context.workspaceId, attempt_number: Number(job.attempt_count) },
+    ),
+    queryRows<{ record: string | Record<string, unknown> }>(
+      `SELECT p.record
+         FROM simforge.render_progress_records p
+         JOIN simforge.render_attempts a ON a.id = p.render_attempt_id
+         JOIN simforge.render_jobs j ON j.id = p.render_job_id
+        WHERE j.id = :job_id AND j.workspace_id = :workspace_id
+          AND a.attempt_number = :attempt_number
+          AND p.record->>'event' = 'warning'
+        ORDER BY p.sequence
+        LIMIT ${WARNING_LIMIT}`,
+      { job_id: jobId, workspace_id: context.workspaceId, attempt_number: Number(job.attempt_count) },
+    ),
+    queryRows<{ payload: string | Record<string, unknown> }>(
+      `SELECT e.event_payload AS payload
+         FROM simforge.operational_job_events e
+        WHERE e.workspace_id = :workspace_id AND e.job_id = :job_id
+          AND e.job_family = 'openscenario_render' AND e.event_type = 'warning'
+          AND e.attempt_id = (
+            SELECT o.id FROM simforge.operational_job_attempts o
+             WHERE o.workspace_id = :workspace_id AND o.job_id = :job_id AND o.job_family = 'openscenario_render'
+             ORDER BY o.attempt_number DESC LIMIT 1
+          )
+        ORDER BY e.event_ordinal
+        LIMIT ${WARNING_LIMIT}`,
+      { job_id: jobId, workspace_id: context.workspaceId },
+    ),
+    queryRows<{ metrics: string | Record<string, unknown> | null }>(
+      `SELECT a.metrics
+         FROM simforge.render_attempts a
+         JOIN simforge.render_jobs j ON j.id = a.render_job_id
+        WHERE j.id = :job_id AND j.workspace_id = :workspace_id
+          AND a.attempt_state = 'succeeded'
+        ORDER BY a.attempt_number DESC
+        LIMIT 1`,
+      { job_id: jobId, workspace_id: context.workspaceId },
     ),
   ]);
 
@@ -312,8 +402,11 @@ export async function getRenderJobDetail(
     attemptCount: Number(job.attempt_count),
     maxAttempts: Number(job.max_attempts),
     failureCode: job.failure_code && PUBLIC_ID_RE.test(job.failure_code) ? job.failure_code : null,
-    // Worker failure details can contain arbitrary payloads. Keep the stable UI field redacted.
-    failureDetail: null,
+    // Worker failure details can contain arbitrary payloads, so only the message of a code that
+    // names what is missing is public (`publicFailureDetail`); everything else stays redacted.
+    failureDetail: job.job_state === "failed" ? publicFailureDetail(job.failure_code, job.failure_message) : null,
+    warnings: publicRenderWarnings(warningRows.map((row) => row.record), localWarningRows.map((row) => row.payload)),
+    substitutions: publicRenderSubstitutions(substitutionRows[0]?.metrics ?? null),
     billingMode: job.billing_mode,
     estimatedCostCents: Number(job.estimated_cost_cents),
     renderSpecSha256: job.render_spec_sha256,

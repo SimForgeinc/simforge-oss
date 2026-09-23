@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { simforgeEnv } from "../lib/simforge-env";
 
-import type { RenderProgressRecord } from "@simforge-oss/render";
+import { RenderInputError, type RenderProgressRecord } from "@simforge-oss/render";
 import { probeLocalBrowserRender, probeLocalNativeRender, NativeTextureCapacityError, NativeMapCapacityError } from "@simforge-oss/render/native";
 
 import { runCompilerLoop } from "./compiler.js";
@@ -261,6 +261,8 @@ function progressOf(record: RenderProgressRecord, previous: number): number {
 
 function failureCode(error: unknown): string {
   if (error instanceof NativeMapFailure) return error.code;
+  // No-silent-fallbacks refusals keep their own code (it names what is missing).
+  if (error instanceof RenderInputError) return error.code;
   if (error instanceof NativeTextureCapacityError || error instanceof NativeMapCapacityError) return error.code;
   const message = error instanceof Error ? error.message : String(error);
   if (/digest|integrity|invalid|missing|undeclared|mismatch/i.test(message)) return "render_invalid_input";
