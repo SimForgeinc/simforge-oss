@@ -1711,12 +1711,35 @@ pub struct SensorTriangle {
 
 /// One visible actor mesh for the ray sensors (see
 /// [`SceneApp::actor_sensor_meshes`]).
+/// Whether a model mesh belongs to a rider: it or an ancestor up to the
+/// model root carries glTF node extras `{"semanticClass": "rider"}`.
+fn in_rider_subtree(world: &World, entity: Entity, model_root: Entity) -> bool {
+    let mut current = Some(entity);
+    while let Some(node) = current {
+        if let Some(extras) = world.get::<bevy::gltf::GltfExtras>(node) {
+            // fallback-ok: bevy_gltf stores extras as validated JSON (a RawValue), so the parse cannot fail; extras without a semanticClass string are simply not a rider tag
+            let tagged = serde_json::from_str::<serde_json::Value>(&extras.value).ok()
+                .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
+                .unwrap_or(false); // fallback-ok: see above
+            if tagged {
+                return true;
+            }
+        }
+        if node == model_root {
+            return false;
+        }
+        current = world.get::<ChildOf>(node).map(|parent| parent.parent());
+    }
+    false
+}
+
 #[derive(Clone, Debug)]
 pub struct ActorSensorMesh {
     pub actor_id: String,
     /// `<actor id>/<glTF node name>` for error messages and diagnostics.
     pub label: String,
-    /// The actor's instance id: every mesh of one actor reports it.
+    /// The actor's instance id, or for a ridden two-wheeler's rider meshes the
+    /// rider's own instance id (class `rider`).
     pub instance_id: u32,
     pub geometry: ActorSensorGeometry,
 }
@@ -2267,12 +2290,20 @@ pub struct SceneApp {
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
     actor_models: HashMap<String, (Entity, f32, usize)>,
+    /// Rest transforms of articulated model nodes (`body`, `wheel_*`).
+    actor_rest_poses: HashMap<String, HashMap<Entity, Transform>>,
     /// Layer-1 ID clone of each actor's cuboid; moved with the actor so the
     /// instance-ID pass never shows a body at its spawn pose.
     actor_id_clones: HashMap<String, Entity>,
     /// Per-actor cloned tint material handles. Catalog materials are shared
     /// assets, so tinting must never mutate the source GLB material.
     actor_tint_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
+    /// Per-actor clones of palette-coloured material slots (ridden two-wheelers).
+    actor_palette_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
+    /// A ridden two-wheeler's rider: its own instance id (class `rider`) and
+    /// the model mesh entities drawn under it, so the ID pass, semantic
+    /// output and lidar/radar label the rider apart from the bike.
+    actor_riders: HashMap<String, (u32, std::collections::HashSet<Entity>)>,
     /// Asset handles are retained by absolute path so repeated actor spawns
     /// instantiate an already-resident GLB rather than reloading it.
     actor_asset_cache: HashMap<String, Handle<Gltf>>,
@@ -2596,8 +2627,11 @@ impl SceneApp {
             gpu_clustering_default: None,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
+            actor_rest_poses: HashMap::new(),
             actor_id_clones: HashMap::new(),
             actor_tint_materials: HashMap::new(),
+            actor_palette_materials: HashMap::new(),
+            actor_riders: HashMap::new(),
             actor_asset_cache: HashMap::new(),
             actor_animations: HashMap::new(),
             actor_classes: HashMap::new(),
@@ -3967,7 +4001,11 @@ impl SceneApp {
             .remove(actor_id)
             .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no attached catalog asset"))?;
         self.actor_tint_materials.remove(actor_id);
+        self.actor_palette_materials.remove(actor_id);
         self.actor_animations.remove(actor_id);
+        if let Some((_, meshes)) = self.actor_riders.get_mut(actor_id) {
+            meshes.clear();
+        }
         let world = self.app.world_mut();
         world.despawn(model);
         // The cuboid (and its ID clone) stay hidden: an actor is never shown
@@ -4072,6 +4110,78 @@ impl SceneApp {
         self.actor_id_clones.insert(id.to_string(), clone);
         self.actor_classes.insert(instance_id, class.to_string());
         self.apply_actor_layers(id);
+    }
+
+    /// Apply the sprung-body attitude and wheel drop of a rigged catalog
+    /// model (sampler/2, docs/engineering/ground-height.md): `body_attitude`
+    /// `(pitch, roll)` rotates the model's `body` node about its origin
+    /// (OpenSCENARIO signs, pitch positive nose down, roll positive right side
+    /// down); `wheel_drop_m` `[FL, FR, RL, RR]` moves the `wheel_*` nodes along
+    /// the body's up axis. The actor transform itself carries road attitude
+    /// only, so the wheels stay on the ground. Models without these nodes
+    /// (single-mesh bodies) keep their pose; absent inputs restore the rest
+    /// pose. Returns the number of nodes posed.
+    pub fn set_actor_articulation(
+        &mut self,
+        actor_id: &str,
+        body_attitude: Option<(f32, f32)>,
+        wheel_drop_m: Option<[f32; 4]>,
+    ) -> Result<usize> {
+        let Some(&(root, scale, _)) = self.actor_models.get(actor_id) else {
+            bail!("actor {actor_id} has no attached catalog asset");
+        };
+        const WHEELS: [&str; 4] = ["wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"];
+        let nodes: Vec<(Entity, String)> = {
+            let world = self.app.world();
+            let mut stack = vec![root];
+            let mut found = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if let Some(name) = world.get::<Name>(entity) {
+                    let name = name.as_str();
+                    if name == "body" || WHEELS.contains(&name) {
+                        found.push((entity, name.to_owned()));
+                    }
+                }
+            }
+            found
+        };
+        let mut posed = 0;
+        for (entity, name) in nodes {
+            let rest = *self
+                .actor_rest_poses
+                .entry(actor_id.to_owned())
+                .or_default()
+                .entry(entity)
+                .or_insert_with(|| {
+                    self.app
+                        .world()
+                        .get::<Transform>(entity)
+                        .copied()
+                        .unwrap_or(Transform::IDENTITY)
+                });
+            let mut pose = rest;
+            if name == "body" {
+                if let Some((pitch, roll)) = body_attitude {
+                    pose.rotation =
+                        Quat::from_rotation_z(-pitch) * Quat::from_rotation_x(roll) * rest.rotation;
+                }
+            } else if let Some(drop) = wheel_drop_m {
+                let index = WHEELS.iter().position(|w| *w == name).expect("wheel name");
+                // Node translations live inside the uniformly scaled model root.
+                pose.translation.y += drop[index] / scale.max(1e-6);
+            }
+            if let Some(mut transform) = self.app.world_mut().get_mut::<Transform>(entity) {
+                if *transform != pose {
+                    *transform = pose;
+                    self.scene_revision += 1;
+                }
+                posed += 1;
+            }
+        }
+        Ok(posed)
     }
 
     /// Pose visible catalog geometry independently of the canonical cuboid.
@@ -4328,12 +4438,39 @@ impl SceneApp {
                     sources.push((entity, mesh.0.clone(), world.get::<SkinnedMesh>(entity).cloned()));
                 }
             }
+            // A ridden two-wheeler's rider (glTF node extras `semanticClass:
+            // "rider"` on it or an ancestor) is its own instance of class
+            // `rider`: the common convention (CARLA, Cityscapes) labels the
+            // person apart from the bicycle/motorcycle.
+            let rider_meshes: std::collections::HashSet<Entity> = sources
+                .iter()
+                .map(|(entity, _, _)| *entity)
+                .filter(|entity| in_rider_subtree(world, *entity, model_root))
+                .collect();
+            let rider_material = if rider_meshes.is_empty() {
+                None
+            } else {
+                let rider_id = match self.actor_riders.get(actor_id) {
+                    Some((id, _)) => *id,
+                    None => {
+                        self.next_instance_id += 1;
+                        self.next_instance_id
+                    }
+                };
+                self.actor_classes.insert(rider_id, "rider".to_string());
+                self.actor_riders.insert(actor_id.to_string(), (rider_id, rider_meshes.clone()));
+                Some(world.resource_mut::<Assets<StandardMaterial>>().add(instance_id_material(rider_id)))
+            };
             for (entity, mesh, skin) in sources {
+                let material = match &rider_material {
+                    Some(rider) if rider_meshes.contains(&entity) => rider.clone(),
+                    _ => id_material.clone(),
+                };
                 let mut cmd = world.spawn((
                     IdClone,
                     Name::new(format!("actor-id:{actor_id}")),
                     Mesh3d(mesh),
-                    MeshMaterial3d(id_material.clone()),
+                    MeshMaterial3d(material),
                     RenderLayers::layer(1),
                     Transform::IDENTITY,
                     ChildOf(entity),
@@ -4372,6 +4509,90 @@ impl SceneApp {
                 .pause();
         }
         Ok(())
+    }
+
+    /// Write linear-RGB base colours into named material slots of an attached
+    /// actor model (a ridden two-wheeler's `rider_*` palette slots). Each slot
+    /// is cloned per actor, so instances sharing the GLB keep their own
+    /// colours. Every requested slot must exist in the model: a missing slot
+    /// fails instead of leaving the authored colour in place.
+    pub fn set_actor_material_colors(&mut self, actor_id: &str, colors: &[(String, [f32; 3])]) -> Result<()> {
+        if colors.is_empty() {
+            return Ok(());
+        }
+        let (model_root, _, _) = *self
+            .actor_models
+            .get(actor_id)
+            .ok_or_else(|| anyhow::anyhow!("set material colours before attaching a model: {actor_id}"))?;
+        let targets = {
+            let world = self.app.world();
+            let mut stack = vec![model_root];
+            let mut targets: Vec<(Entity, String, Handle<StandardMaterial>)> = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                let (Some(name), Some(material)) = (
+                    world.get::<GltfMaterialName>(entity),
+                    world.get::<MeshMaterial3d<StandardMaterial>>(entity),
+                ) else {
+                    continue;
+                };
+                if colors.iter().any(|(slot, _)| slot == &**name) {
+                    targets.push((entity, name.to_string(), material.0.clone()));
+                }
+            }
+            targets.sort_by_key(|(entity, _, _)| entity.index());
+            targets
+        };
+        let mut owned = Vec::new();
+        for (slot, color) in colors {
+            let slot_targets: Vec<_> = targets.iter().filter(|(_, name, _)| name == slot).collect();
+            let Some((_, _, source)) = slot_targets.first() else {
+                bail!("actor {actor_id} model has no material slot {slot:?}");
+            };
+            let handle = {
+                let world = self.app.world_mut();
+                let mut material = world
+                    .resource::<Assets<StandardMaterial>>()
+                    .get(source)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("material {slot:?} missing after actor model load"))?;
+                material.base_color = Color::linear_rgb(color[0], color[1], color[2]);
+                world.resource_mut::<Assets<StandardMaterial>>().add(material)
+            };
+            for (entity, _, _) in slot_targets {
+                self.app.world_mut().entity_mut(*entity).insert(MeshMaterial3d(handle.clone()));
+            }
+            owned.push(handle);
+        }
+        self.actor_palette_materials.insert(actor_id.to_string(), owned);
+        self.scene_revision += 1;
+        Ok(())
+    }
+
+    /// Linear-RGB base colours of the named slots on an attached model, in
+    /// entity order (diagnostics and tests).
+    pub fn actor_material_colors(&self, actor_id: &str, slot: &str) -> Vec<[f32; 3]> {
+        let Some((model_root, _, _)) = self.actor_models.get(actor_id) else {
+            return Vec::new();
+        };
+        let world = self.app.world();
+        let materials = world.resource::<Assets<StandardMaterial>>();
+        let mut stack = vec![*model_root];
+        let mut out = Vec::new();
+        while let Some(entity) = stack.pop() {
+            if let Some(children) = world.get::<Children>(entity) {
+                stack.extend(children.iter());
+            }
+            if world.get::<GltfMaterialName>(entity).is_some_and(|name| &**name == slot) {
+                if let Some(material) = world.get::<MeshMaterial3d<StandardMaterial>>(entity).and_then(|m| materials.get(&m.0)) {
+                    let c = material.base_color.to_linear();
+                    out.push([c.red, c.green, c.blue]);
+                }
+            }
+        }
+        out
     }
 
     /// The world transform the renderer last drew for an actor's canonical
@@ -4441,8 +4662,18 @@ impl SceneApp {
                 world.despawn(model);
             }
             self.actor_tint_materials.remove(id);
+            self.actor_palette_materials.remove(id);
             self.actor_animations.remove(id);
+            if let Some((rider_id, _)) = self.actor_riders.remove(id) {
+                self.actor_classes.remove(&rider_id);
+            }
+            self.actor_rest_poses.remove(id);
         }
+    }
+
+    /// The rider instance id of a ridden two-wheeler, if its model has a rider.
+    pub fn actor_rider_instance_id(&self, actor_id: &str) -> Option<u32> {
+        self.actor_riders.get(actor_id).map(|(id, _)| *id)
     }
 
     /// Semantic class name of a dynamic-actor instance id, if any.
@@ -4632,6 +4863,10 @@ impl SceneApp {
                             triangles: skinned_world_triangles(mesh, &joints, &label)?,
                         }
                     }
+                };
+                let instance_id = match self.actor_riders.get(actor_id) {
+                    Some((rider_id, meshes)) if meshes.contains(&entity) => *rider_id,
+                    _ => instance_id,
                 };
                 out.push(ActorSensorMesh { actor_id: actor_id.clone(), label, instance_id, geometry });
                 contributed += 1;
@@ -6504,6 +6739,53 @@ mod tests {
     /// animation clock, and an instance-ID pass drawn from the model.
     /// Runs on a GPU, or on lavapipe with
     /// `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+    /// A ridden two-wheeler's rider is its own instance (class `rider`) in the
+    /// ID pass and in the lidar/radar meshes, separate from the bike, and its
+    /// ride clip poses the skin. GPU (or lavapipe) as below.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn ridden_two_wheeler_rider_is_its_own_instance() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let bike = repo.join("catalog/vehicles-carla/models/vehicle_motorcycle_harley_rider.glb");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
+        app.add_camera(
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 160, 120) },
+            Profile::Sensor,
+        );
+        app.wait_until_ready().unwrap();
+        app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5], false);
+        app.attach_actor_asset("moto", &bike, 0.9, None, Some("ride"), 0.25).unwrap();
+        app.set_actor_asset_pose("moto", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.set_actor_material_colors("moto", &[("rider_top".into(), [0.8, 0.1, 0.1])]).unwrap();
+        assert_eq!(app.actor_material_colors("moto", "rider_top").first().copied(), Some([0.8, 0.1, 0.1]));
+        assert!(app.set_actor_material_colors("moto", &[("no_such_slot".into(), [1.0, 1.0, 1.0])]).is_err());
+        app.warmup(2);
+        let bike_id = app.actor_instance_id("moto").unwrap();
+        let rider_id = app.actor_rider_instance_id("moto").expect("the Harley model carries a rider");
+        assert_ne!(bike_id, rider_id);
+        assert_eq!(app.actor_instance_class(rider_id), Some("rider"));
+        assert_eq!(app.actor_instance_class(bike_id), Some("motorcycle"));
+        let meshes = app.actor_sensor_meshes().unwrap();
+        let rider: Vec<_> = meshes.iter().filter(|m| m.instance_id == rider_id).collect();
+        assert!(!rider.is_empty() && rider.len() < meshes.len(), "rider and bike meshes both present");
+        assert!(rider.iter().any(|m| matches!(m.geometry, ActorSensorGeometry::Skinned { .. })), "the rider body is skinned");
+        // Rider pixels sit above bike pixels in a side view.
+        app.set_pose("cam", &[0.0, 1.0, -14.0], &[0.0, 0.9, -20.0]).unwrap();
+        let frame = app.render_once(1).unwrap();
+        let id = &frame.passes["cam:id"].bytes;
+        let rows_of = |instance: u32| -> Vec<usize> {
+            let b = instance.to_le_bytes();
+            id.chunks_exact(4).enumerate().filter(|(_, px)| px[..3] == b[..3]).map(|(i, _)| i / 160).collect()
+        };
+        let (rider_rows, bike_rows) = (rows_of(rider_id), rows_of(bike_id));
+        assert!(rider_rows.len() > 100 && bike_rows.len() > 100, "rider {} px, bike {} px", rider_rows.len(), bike_rows.len());
+        let mean = |rows: &[usize]| rows.iter().sum::<usize>() as f32 / rows.len() as f32;
+        assert!(mean(&rider_rows) < mean(&bike_rows), "rider is drawn above the bike");
+        app.remove_actor("moto");
+        assert_eq!(app.actor_instance_class(rider_id), None);
+    }
+
     #[test]
     #[ignore = "focused GPU integration test"]
     fn actor_sensor_meshes_are_the_drawn_catalog_meshes() {

@@ -23,6 +23,7 @@ public static class Program
         if (args.Length > 2 && args[2] == "--animations") { AnimationExport.Run(args[0], args[1]); return 0; }
         if (args.Length > 2 && args[2] == "--sections") { SectionProbe.Run(args[0], args[1]); return 0; }
         if (args.Length > 3 && args[2] == "--dumpbp") { SectionProbe.DumpBp(args[0], args[1], args[3]); return 0; }
+        if (args.Length > 3 && args[2] == "--skel") { SkelProbe.Run(args[0], args[1], args[3]); return 0; }
         if (args.Length > 3 && args[2] == "--dumpbps") { SectionProbe.DumpBps(args[0], args[1], args[3]); return 0; }
         var contentDir = args[0]; // dir containing CarlaUnreal/Content/...
         var outDir = args[1];

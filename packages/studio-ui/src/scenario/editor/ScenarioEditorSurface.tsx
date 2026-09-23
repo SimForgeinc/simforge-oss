@@ -140,6 +140,7 @@ import {
   simpleRouteTutorialStorage,
 } from "./tutorial/simple-route-tutorial";
 import { MultiSelectionPanel } from "./MultiSelectionPanel";
+import { MirroredImportBanner } from "./MirroredImportBanner";
 import { UnanchoredActorBadges } from "./UnanchoredActorBadges";
 import { useEditorClipboard } from "./clipboard/use-editor-clipboard";
 import {
@@ -1103,6 +1104,7 @@ export function ScenarioEditorSurface({
             </div>
           ) : state ? (
             <div {...stylex.props(styles.divFlex)}>
+              {sharedPlayback?.inspecting ? null : <MirroredImportBanner document={editorDocument} />}
               {clipboardNotice ? (
                 <p
                   {...stylex.props([hairline.all, styles.clipboardNotice])}

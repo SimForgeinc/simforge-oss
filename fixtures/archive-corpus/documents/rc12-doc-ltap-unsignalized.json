@@ -1,0 +1,335 @@
+{
+ "scenarioVersion": 2,
+ "meta": {
+  "name": "LTAP/OD \u2014 unprotected left (unsignalized, tuned)",
+  "description": "The worked example. Ego approaches a signalised four-way on a multi-lane arterial and turns left across an oncoming through vehicle. The oncoming car is bound to a conflicting junction gate, never to a position, and its start is back-solved so that it is `arrivalTtc` seconds from the crossing point at the moment ego reaches it. Both speeds are expressions over the posted limit, so the scenario means the same thing on a 40 kph street and a 65 kph arterial.",
+  "createdAt": "2026-08-01T00:00:00.000Z",
+  "modifiedAt": "2026-08-01T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "C3.ltap-od",
+  "tags": [
+   "junction",
+   "unprotected-left",
+   "crossing-conflict",
+   "worked-example"
+  ],
+  "author": "human",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "arrivalTtc",
+    "type": "continuous",
+    "description": "Seconds between ego reaching the conflict point and the oncoming car reaching it. 1.2-2.5 s is the band where an unprotected left goes from routine to critical.",
+    "unit": "s",
+    "tier": 1,
+    "range": [
+     1.2,
+     2.5
+    ],
+    "default": 2.0,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "noon"
+ },
+ "anchor": {
+  "id": "ltap-od-unsignalized",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     2,
+     4
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   },
+   "throughLanesOpposing": {
+    "value": [
+     1,
+     4
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     30,
+     80
+    ],
+    "essentiality": "preferred"
+   },
+   "runwayUpstreamM": {
+    "value": [
+     60,
+     null
+    ],
+    "essentiality": "required"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     45,
+     null
+    ],
+    "essentiality": "required"
+   }
+  },
+  "features": [
+   {
+    "id": "jx",
+    "kind": "junction",
+    "label": "the intersection ego turns left at",
+    "essentiality": "required",
+    "atM": {
+     "value": [
+      0,
+      0
+     ],
+     "essentiality": "required"
+    },
+    "arms": {
+     "value": [
+      3,
+      4
+     ],
+     "essentiality": "preferred",
+     "weight": 2
+    },
+    "control": {
+     "value": [
+      "all_way_stop",
+      "minor_stop",
+      "uncontrolled"
+     ],
+     "essentiality": "required",
+     "weight": 3
+    },
+    "egoTurn": {
+     "value": [
+      "left"
+     ],
+     "essentiality": "required"
+    },
+    "conflictingApproach": {
+     "value": {
+      "from": "opposing",
+      "turn": "straight",
+      "crossingAngleDeg": [
+       110,
+       180
+      ]
+     },
+     "essentiality": "required"
+    },
+    "sizeM": {
+     "value": [
+      12,
+      60
+     ],
+     "essentiality": "cosmetic"
+    }
+   }
+  ],
+  "policy": {
+   "allowMirror": true,
+   "maxSitesPerMap": 8,
+   "diversity": "moderate",
+   "minScore": 0.4
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "the vehicle under test, turning left",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": "-(0.7 * lane.speedLimitKph / 3.6) * 6",
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "clamp(0.7 * lane.speedLimitKph, 18, 44)"
+  },
+  {
+   "id": "oncoming",
+   "kind": "conflicting_gate",
+   "label": "the opposing through vehicle ego turns across",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.suv"
+   },
+   "essentiality": "required",
+   "feature": "jx",
+   "from": "opposing",
+   "turn": "straight",
+   "arriveAtConflict": {
+    "relativeTo": "ego",
+    "deltaT": "param.arrivalTtc"
+   },
+   "requiredUpstreamRunwayM": 60,
+   "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 22, 48)"
+  }
+ ],
+ "props": [],
+ "choreography": {
+  "clipSeconds": 12,
+  "warmupSeconds": 2,
+  "interactions": [
+   {
+    "id": "ego-commits",
+    "label": "ego does not wait for a gap \u2014 the defining error of an LTAP/OD",
+    "actor": "ego",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.yieldToVehicles",
+     "value": false
+    }
+   },
+   {
+    "id": "ego-disables-avoidance",
+    "label": "ego physically commits to the accepted left-turn gap instead of silently braking away from it",
+    "actor": "ego",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.collisionAvoidance",
+     "value": false
+    }
+   },
+   {
+    "id": "ego-takes-bound-left-turn",
+    "label": "the authored action closes against the matcher's exact physical left-turn movement",
+    "actor": "ego",
+    "verb": "route",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "mode": "turn",
+     "feature": "jx",
+     "turn": "left"
+    }
+   },
+   {
+    "id": "oncoming-holds",
+    "label": "through traffic has right of way and does not give it up",
+    "actor": "oncoming",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.yieldToVehicles",
+     "value": false
+    }
+   },
+   {
+    "id": "oncoming-commits",
+    "label": "the oncoming driver has not seen ego yet, so it does not brake for it",
+    "actor": "oncoming",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.collisionAvoidance",
+     "value": false
+    }
+   },
+   {
+    "id": "ego-slows-for-the-turn",
+    "label": "ego drops to a turning speed on the approach",
+    "actor": "ego",
+    "verb": "speed",
+    "trigger": {
+     "kind": "when",
+     "condition": {
+      "kind": "distance",
+      "from": "ego",
+      "to": {
+       "feature": "jx",
+       "at": "entry"
+      },
+      "measure": "euclidean",
+      "op": "<=",
+      "valueM": 30
+     },
+     "byLatest": 12,
+     "ifNever": "fire"
+    },
+    "target": {
+     "mode": "absolute",
+     "valueKph": "clamp(0.6 * lane.speedLimitKph, 18, 34)"
+    },
+    "dynamics": {
+     "shape": "linear",
+     "constraint": "rate",
+     "value": 2.2
+    }
+   }
+  ]
+ },
+ "invariants": [
+  {
+   "id": "criticality",
+   "kind": "pet",
+   "label": "the pair must actually get close",
+   "essentiality": "required",
+   "of": "ego",
+   "to": "oncoming",
+   "range": [
+    0.2,
+    3.0
+   ],
+   "window": [
+    3,
+    11
+   ]
+  },
+  {
+   "id": "arrival-band",
+   "kind": "arrival",
+   "label": "the solved arrival offset must survive the run",
+   "essentiality": "required",
+   "of": "oncoming",
+   "at": {
+    "feature": "jx",
+    "at": "center"
+   },
+   "syncWith": "ego",
+   "deltaTRange": [
+    1.0,
+    2.7
+   ]
+  },
+  {
+   "id": "ego-decel-budget",
+   "kind": "decel_budget",
+   "label": "if ego needs more than a hard stop, the conflict was unavoidable, not critical",
+   "essentiality": "preferred",
+   "of": "ego",
+   "maxMps2": 8.0
+  }
+ ],
+ "variants": [],
+ "metricSubject": "ego"
+}

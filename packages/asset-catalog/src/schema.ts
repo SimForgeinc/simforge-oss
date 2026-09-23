@@ -60,6 +60,13 @@ const externalModelSchema = z.discriminatedUnion('kind', [
       idle: z.string().min(1).optional(),
       locomotion: z.string().min(1).optional(),
     }).optional(),
+    rider: z.strictObject({
+      clip: z.string().min(1),
+      clipDurationS: z.number().positive(),
+      metersPerCycle: z.number().positive(),
+      slots: z.array(z.string().regex(/^rider_[a-z_]+$/)).min(1),
+      palettes: z.array(z.record(z.string(), z.tuple([z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1)])).nullable()).min(1),
+    }).optional(),
     clipAssets: z.strictObject({
       idle: externalAnimationAssetSchema,
       locomotion: externalAnimationAssetSchema,

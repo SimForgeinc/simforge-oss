@@ -7,12 +7,10 @@
 import type { CarlaTimelineFrame } from "../carla-live-e2e";
 import type { EsminiActorTrajectory } from "../scenario-validation-job";
 import { runKinematicChecks, type KinematicThresholds } from "./kinematic";
-import { runOscRoundTripChecks, type OscCheckSourceActor, type OscRoundTripOptions } from "./osc";
 import type { CheckActorTrack, ScenarioCheck, ScenarioCheckReport, ScenarioCheckStatus } from "./types";
 
 export type { CheckActorTrack, CheckTrackSample, ScenarioCheck, ScenarioCheckCategory, ScenarioCheckReport, ScenarioCheckStatus } from "./types";
 export { runKinematicChecks, DEFAULT_KINEMATIC_THRESHOLDS, type KinematicThresholds } from "./kinematic";
-export { runOscRoundTripChecks, OSC_SUPPORTED_PLACEMENT_MODES, type OscCheckSourceActor, type OscRoundTripOptions } from "./osc";
 export { compareRuns, parityToChecks, type ParityResult, type ActorParity, type ParityTolerance } from "./parity";
 
 /** Roll a flat list of checks into a report with an overall verdict. */
@@ -100,27 +98,15 @@ export interface PostSimChecklistInput {
   /** The trace produced by the 2D simulation (or a CARLA render). */
   tracks: CheckActorTrack[];
   kinematicThresholds?: KinematicThresholds;
-  /**
-   * When present, also run the OSC fidelity checks: the source actors and the
-   * `.xosc` the writer emitted for them. Omit to produce a lint-only report.
-   */
-  osc?: {
-    sourceActors: OscCheckSourceActor[];
-    xml: string;
-    options?: OscRoundTripOptions;
-  };
   generatedAt?: string | null;
 }
 
 /**
- * Build the full post-simulation checklist: OSC fidelity (optional) + kinematic
- * plausibility + trace integrity, summarized into one pass/warn/fail report.
+ * Build the full post-simulation checklist: kinematic plausibility + trace
+ * integrity, summarized into one pass/warn/fail report.
  */
 export function buildPostSimChecklist(input: PostSimChecklistInput): ScenarioCheckReport {
   const checks: ScenarioCheck[] = [];
-  if (input.osc) {
-    checks.push(...runOscRoundTripChecks(input.osc.sourceActors, input.osc.xml, input.osc.options));
-  }
   checks.push(...runKinematicChecks(input.tracks, input.kinematicThresholds));
   return summarizeChecks(checks, input.generatedAt ?? null);
 }

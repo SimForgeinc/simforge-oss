@@ -90,6 +90,13 @@ pub struct PlaybackArgs {
     /// actor as `actor-model-substitution:`.
     #[arg(long, default_value_t = false)]
     pub allow_pedestrian_substitution: bool,
+    /// Explicitly draw ridden two-wheelers (catalog models with a rider)
+    /// without their rider. scen-play draws rigid model parts and cannot
+    /// pose a skinned rider; without this flag such an actor is an error.
+    /// Logged per actor as `actor-model-substitution:`; render with
+    /// native-render-service for the ridden look.
+    #[arg(long, default_value_t = false)]
+    pub allow_riderless_two_wheelers: bool,
     /// Override terrain-following placement with a fixed road-surface elevation.
     #[arg(long)]
     pub ground_y: Option<f32>,
@@ -480,6 +487,21 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                         desc.id,
                         desc.catalog_id,
                         entry.glb_path.display()
+                    );
+                }
+                if entry.rider.is_some() {
+                    if !args.allow_riderless_two_wheelers {
+                        anyhow::bail!(
+                            "[scen_play_rider_unposable] {} ({}) is a ridden two-wheeler; scen-play draws rigid \
+                             model parts and cannot pose its skinned rider. Render it with native-render-service, or \
+                             pass --allow-riderless-two-wheelers to draw the bike alone (recorded)",
+                            desc.id,
+                            desc.catalog_id
+                        );
+                    }
+                    eprintln!(
+                        "actor-model-substitution: two-wheeler {} ({}) drawn without its rider (--allow-riderless-two-wheelers)",
+                        desc.id, desc.catalog_id
                     );
                 }
                 model_assignments.insert(desc.id.clone(), desc.catalog_id.clone());
@@ -1183,17 +1205,32 @@ fn build_model_recipe(
     }
 
     let mut parts: Vec<ModelPart> = Vec::new();
-    let mut stack: Vec<(Handle<GltfNode>, Transform)> = gltf
+    // A ridden model's rider (nodes tagged `extras.semanticClass = "rider"`
+    // and their subtrees) is skinned; scen-play only draws it when the run
+    // explicitly allowed riderless two-wheelers, and then leaves it out.
+    let is_rider = |node: &GltfNode| {
+        node.extras.as_ref().is_some_and(|extras| {
+            // fallback-ok: bevy_gltf stores extras as validated JSON (a RawValue), so the parse cannot fail; no semanticClass string means not a rider
+            serde_json::from_str::<serde_json::Value>(&extras.value).ok()
+                .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
+                == Some(true)
+        })
+    };
+    let mut stack: Vec<(Handle<GltfNode>, Transform, bool)> = gltf
         .nodes
         .iter()
         .filter(|n| !child_ids.contains(&n.id()))
-        .map(|n| (n.clone(), Transform::IDENTITY))
+        .map(|n| (n.clone(), Transform::IDENTITY, false))
         .collect();
-    while let Some((node_handle, parent_tf)) = stack.pop() {
+    while let Some((node_handle, parent_tf, parent_rider)) = stack.pop() {
         let node = gltf_nodes.get(&node_handle)?;
         let tf = parent_tf.mul_transform(node.transform);
+        let rider = parent_rider || is_rider(node);
         for child in &node.children {
-            stack.push((child.clone(), tf));
+            stack.push((child.clone(), tf, rider));
+        }
+        if rider && entry.rider.is_some() {
+            continue;
         }
         let Some(mesh_handle) = &node.mesh else {
             continue;

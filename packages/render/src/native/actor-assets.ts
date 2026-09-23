@@ -31,16 +31,18 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  * The immutable actor closure: sha256 and byte size of the closure document
  * `actor-assets/closures/<digest>.json` as served by the origin.
  *
- * `70dde8bb` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
- * of its 165 catalog entries are `carla-0.10.0-ue5` (805.9 MiB of its 1,288.9
- * MiB of distinct blobs), and the 35 Meshy and 62 procedural entries no CARLA
- * model covers are carried over unchanged. It is not on the public origin: an
+ * `4f298a9f` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
+ * of its 165 catalog entries are `carla-0.10.0-ue5` (1,316.0 MiB of distinct
+ * blobs), and the 35 Meshy and 62 procedural entries no CARLA model covers are
+ * carried over unchanged. It differs from its predecessor `70dde8bb` only in
+ * `vehicle.bicycle` and `vehicle.motorcycle`, which are now ridden (rider
+ * contract in their catalog-models.json entries). It is not on the public origin: an
  * install resolves it from a packaged `share/actor-assets` directory or
  * `SIMFORGE_ACTOR_ASSETS_ROOT` until a maintainer uploads the closure document
  * and its blobs.
  */
-export const PINNED_ACTOR_ASSETS_DIGEST = '70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4';
-export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 22969;
+export const PINNED_ACTOR_ASSETS_DIGEST = '4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f';
+export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 22971;
 export const DEFAULT_ACTOR_ASSETS_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 
 

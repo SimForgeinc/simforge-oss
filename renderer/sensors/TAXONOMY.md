@@ -22,8 +22,18 @@ Background/sky = 0.
 | 4  | car        | scenario-model actor class `car`                              |
 | 5  | truck      | actor class `truck`; scenario `kind: bus` folds into truck    |
 | 6  | pedestrian | actor class `pedestrian`                                      |
-| 7  | cyclist    | actor class `cyclist`                                         |
+| 7  | cyclist    | actor class `cyclist`: the bicycle (its rider is class 9)     |
 | 8  | prop       | any other prop-catalog static                                 |
+| 9  | rider      | the person on a ridden two-wheeler: meshes under a glTF node tagged `extras.semanticClass = "rider"` |
+
+**Riders.** Ridden bicycle/motorcycle models (`catalog/vehicles-carla`
+`*_rider.glb`) carry their rider as part of the actor model. The engine gives
+the rider meshes a second instance id of class `rider`, so the instance pass,
+semantic output and lidar/radar hits separate the person from the vehicle, as
+Cityscapes and CARLA (0.9.14+: rider 13, bicycle 19, motorcycle 18) do. The
+service's CARLA-layout output uses the legacy CityScapes palette, which has
+neither class: there the rider is `Pedestrian` (4) and the two-wheeler
+`Vehicles` (10), and the instance ids still differ.
 
 Matching order for statics: vegetation before building before road keywords,
 fallback `prop`.
@@ -47,7 +57,7 @@ id), alongside per-instance semantic classes.
 `intensity = albedo(class) × (0.25 + 0.75 × |cos incidence|)`, clamped to
 [0, 1] — a deterministic stand-in for reflectivity, not a calibrated model.
 Class albedos: road 0.25, building 0.45, vegetation 0.55, car 0.70,
-truck/bus 0.65, pedestrian/cyclist 0.60, prop 0.50, unlabeled 0.
+truck/bus 0.65, pedestrian/cyclist/rider 0.60, prop 0.50, unlabeled 0.
 
 ## Beam / fan conventions
 

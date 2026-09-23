@@ -1,4 +1,4 @@
-import type { ScenarioMapEntry } from '@simforge-oss/editor';
+import type { ScenarioMapEntry, ScenarioMapGround } from '@simforge-oss/editor';
 
 export interface MapArtifactDigests {
   readonly xodrSha256: string;
@@ -38,6 +38,9 @@ export interface MapEntry {
    * closure (see ambient-turn-cache.ts).
    */
   readonly ambientTurnVerdicts: string | null;
+  /** `derived/ground/ground-mesh.bin` when the version carries it (engine 0.11 ground contact). */
+  readonly ground: string | null;
+  readonly groundStatus: ScenarioMapGround | null;
 }
 
 function withoutTrailingSlash(url: string): string {
@@ -77,5 +80,7 @@ export function playbackMapEntry(map: ScenarioMapEntry): MapEntry {
       ? assetUrl('derived/sumo/sumo-network-manifest.json')
       : null,
     ambientTurnVerdicts: map.ambientTurnVerdicts ? assetUrl('derived/ambient/turn-verdicts.json.gz') : null,
+    ground: map.ground ? assetUrl('derived/ground/ground-mesh.bin') : null,
+    groundStatus: map.ground ?? null,
   };
 }

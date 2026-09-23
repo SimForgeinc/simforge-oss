@@ -1,0 +1,40 @@
+{
+  "id": "baseline-constant-speed",
+  "feature": "Init TeleportAction + step SpeedAction; default controller keeps lane and speed",
+  "osc": [
+    "TeleportAction",
+    "WorldPosition",
+    "SpeedAction",
+    "AssignRouteAction"
+  ],
+  "description": "One car on lane -2 at 20 m/s, no events.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "8.5 Init section execution",
+      "7.4.1.1 Control strategy (default strategies: keep lane, keep current speed)",
+      "6.3.1 World coordinate system (right-handed, z up, heading CCW from x)"
+    ],
+    "derivation": "Init sets v=20 m/s instantly (step). With no motion action the default strategies keep lane -2 (y=-5.25) and 20 m/s: x(t)=50+20t.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20
+      }
+    }
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

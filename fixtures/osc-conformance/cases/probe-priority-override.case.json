@@ -1,0 +1,65 @@
+{
+  "id": "probe-priority-override",
+  "feature": "Event priority override stops a running sibling",
+  "osc": [
+    "Event.priority=override",
+    "LaneChangeAction"
+  ],
+  "description": "As probe-priority-parallel but E2 has priority override: E1 is stopped at t=2 and the speed then holds.",
+  "clipSeconds": 7,
+  "kind": "xosc",
+  "xosc": "probes/probe-priority-override.xosc",
+  "oscVersion": "1.3",
+  "actors": [],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "8.4.2.2 Event priority (override/skip/parallel)",
+      "7.4.1.1 Control strategy (default strategies: keep lane, keep current speed)"
+    ],
+    "derivation": "override: E2 entering runningState stops E1 (stopTransition). E1 had reached 22.5 m/s at t=2; the default strategy then keeps 22.5 m/s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 30,
+            "shape": "linear",
+            "durationS": 4
+          },
+          {
+            "t0": 2
+          }
+        ],
+        "lateral": [
+          {
+            "t0": 2,
+            "toY": -1.75,
+            "shape": "sinusoidal",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "e1": {
+        "start": 1.0,
+        "end": 2.0
+      },
+      "e2": {
+        "start": 2.0,
+        "end": 5.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "not-expressible",
+    "esmini": "agrees"
+  }
+}

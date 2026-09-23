@@ -199,7 +199,7 @@ export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fet
   });
   let timeline: SimulationTimeline;
   try {
-    timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, catalogDigest: null });
+    timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, ground: closure.ground, catalogDigest: null });
   } catch (error) {
     throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }

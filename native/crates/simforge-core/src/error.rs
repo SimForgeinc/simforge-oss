@@ -98,6 +98,8 @@ pub enum SimIssueCode {
     LateralTrackingFailed,
     // physical plausibility of the executed motion
     ImplausibleMotion,
+    // ground contact
+    GroundWheelUnsupported,
 }
 
 impl SimIssueCode {
@@ -128,6 +130,7 @@ impl SimIssueCode {
             Self::LateralDurationClamped => "lateral_duration_clamped",
             Self::LateralTrackingFailed => "lateral_tracking_failed",
             Self::ImplausibleMotion => "implausible_motion",
+            Self::GroundWheelUnsupported => "ground_wheel_unsupported",
         }
     }
 }

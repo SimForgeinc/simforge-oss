@@ -2,7 +2,7 @@
   "sceneId": "richmond-06-timeline",
   "mapId": "richmond-field-station",
   "profile": "sensor",
-  "description": "Blind-crest two-way corridor (edge case 06) instantiated on richmond-field-station: 4 moving actors replayed from the render timeline (scene-state.v1 at 24 fps, baked XODR heights, road + body attitude) through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler.",
+  "description": "Blind-crest two-way corridor (edge case 06) instantiated on richmond-field-station: 4 moving actors replayed from the render timeline (scene-state.v1 at 24 fps, baked XODR heights, road + body attitude) through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler. Two-wheelers are drawn without their rider (--allow-riderless-two-wheelers, recorded as actor-model-substitution): scen-play draws rigid parts and cannot pose the skinned rider, so this golden keeps guarding the bike geometry; the ridden look is covered by native-render-service.",
   "binary": "renderer/target/release/scen-play",
   "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
   "corpusFiles": [
@@ -27,6 +27,7 @@
     "{repo}/catalog/vehicles-carla",
     "--pedestrian-models",
     "{repo}/catalog/pedestrians-carla",
+    "--allow-riderless-two-wheelers",
     "--out-dir",
     "{out}"
   ],

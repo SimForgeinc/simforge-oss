@@ -75,6 +75,31 @@ describe('render timeline → native scene states', () => {
     }
   });
 
+  it('carries sampler/2 wheel spin, body attitude and wheel drop on vehicle records', async () => {
+    const timeline = await planeTimeline();
+    try {
+      const withAttitude = lowerRenderTimelineToNative(timeline, [schedule(25, 10)], { attitude: true });
+      const yawOnly = lowerRenderTimelineToNative(timeline, [schedule(25, 10)]);
+      const ambulance = (lowering: typeof yawOnly, tick: number) =>
+        lowering.states[tick]!.actors.find((actor) => actor.id === 'ambulance')!;
+      const tick = 100;
+      const t = withAttitude.frameTimes[tick]!;
+      const p = pose(timeline, 'ambulance', t);
+      const record = ambulance(withAttitude, tick);
+      expect(record.wheelSpinRad).toBeCloseTo(p.wheelSpinRad!, 5);
+      expect(record.bodyAttitude!.pitchRad).toBeCloseTo(p.bodyPitchRad, 5);
+      expect(record.bodyAttitude!.rollRad).toBeCloseTo(p.bodyRollRad, 5);
+      expect(record.wheelDropM).toHaveLength(4);
+      // Yaw-only frames carry no attitude of any kind, but keep the odometer.
+      const plain = ambulance(yawOnly, tick);
+      expect(plain.bodyAttitude).toBeUndefined();
+      expect(plain.wheelDropM).toBeUndefined();
+      expect(plain.wheelSpinRad).toBeCloseTo(p.wheelSpinRad!, 5);
+    } finally {
+      timeline.free();
+    }
+  });
+
   it('a renderer that draws the lowered states exactly passes the Bevy parity gate', async () => {
     const timeline = await planeTimeline();
     try {

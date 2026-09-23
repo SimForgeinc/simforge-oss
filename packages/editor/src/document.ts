@@ -1288,6 +1288,28 @@ export class EditorDocument {
     });
   }
 
+  /**
+   * Apply a one-time repair of stored data (for example
+   * `fixMirroredOpenScenarioImport`) as one undoable, autosaved gesture: the
+   * named roles are replaced verbatim and the extension values set as given.
+   *
+   * Nothing is derived. {@link update} re-authors an actor (it quantises,
+   * carries timed routes with the pose and drops runtime lane chains); a repair
+   * corrects what was stored and must write exactly what it computed.
+   */
+  applyRepair(repair: {
+    readonly roles?: readonly RoleBinding[];
+    readonly extensions?: Readonly<Record<string, unknown>>;
+  }): void {
+    const roles = repair.roles ?? [];
+    const unknown = roles.find((role) => !this.#doc.role(role.id));
+    if (unknown) throw new Error(`repair names unknown role "${unknown.id}"`);
+    this.#transaction(() => {
+      for (const role of roles) this.#doc.replaceRole(role.id, role);
+      for (const [key, value] of Object.entries(repair.extensions ?? {})) this.#doc.setExtension(key, value);
+    });
+  }
+
   undo(): boolean {
     const size = this.#groups.pop();
     if (size === undefined) return false;

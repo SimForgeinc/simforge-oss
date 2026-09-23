@@ -123,6 +123,18 @@ pub struct LongitudinalCommand {
     /// `speed` only — cruise state to restore when an explicit `until` releases it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prior_cruise_override_mps: Option<Option<f64>>,
+    /// `speed` with a fixed target: the profile owns the longitudinal
+    /// kinematic state (an OpenSCENARIO SpeedAction prescribes speed) until it
+    /// completes or a safety cap overrules it, after which the body is driven
+    /// by the physical tracking law for the rest of the command.
+    #[serde(default)]
+    pub prescribed: bool,
+    /// Distance covered by the prescribed profile since it fired.
+    #[serde(default)]
+    pub progress_m: f64,
+    /// `gap`: the completion event has been published (the command keeps tracking).
+    #[serde(default)]
+    pub completed: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,6 +173,9 @@ pub struct LateralCommand {
     pub pending: Option<PendingRetarget>,
     pub side: Option<LaneChangeSide>,
     pub done: bool,
+    /// Route station when the command fired; progress origin of a
+    /// `distance`-constrained lateral transition.
+    pub origin_s: f64,
 }
 
 /// Per-actor memory for a static stop control. Each actor stops once, dwells,
@@ -268,6 +283,10 @@ pub struct ActorRuntime {
     pub heading_rad: f64,
 
     pub present: bool,
+    /// Presence requested by an `exist` interaction this tick. It takes effect
+    /// for the step that starts at the trigger tick, so the trigger-tick sample
+    /// still shows the old state (docs/engineering/openscenario-conformance.md D-01).
+    pub pending_present: Option<bool>,
     /// `true` once route motion finished; the body may remain visibly present.
     pub retired: bool,
 

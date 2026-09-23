@@ -80,6 +80,12 @@ export declare class MapBundle {
   get graph(): LaneGraph
   /** Bundle from in-memory sources: `sourcesJson = {mapId, derived?, locations?, searchIndex?, xodr?, signalsGeojson?}` plus the topology sidecar bytes. */
   static fromSources(sourcesJson: string, topology: Uint8Array): MapBundle
+  /**
+   * Attach the map's ground surface (`derived/ground/ground-mesh.bin`);
+   * returns its digest. Worlds built afterwards ground every body on it.
+   */
+  attachGround(groundMesh: Uint8Array): string
+  get groundDigest(): string | null
   /** `{signalPrograms, roadControls}` bound from the map's signal catalog. */
   controlPlanJson(): string
   /** The merged `TopologyIndex`. */
@@ -241,9 +247,17 @@ export declare class Site {
 export type JsSite = Site
 
 export declare class Trace {
-  /** Parse plain or gzip current-format trace JSON; older formats are rejected. */
+  /**
+   * Parse plain or gzip trace JSON of any released format; older formats
+   * are upgraded in memory (see `upgradeJson`), unknown ones rejected.
+   */
   static parse(data: Uint8Array): Trace
   digest(): string
+  /**
+   * `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+   * format upgraded in memory; `null` for a current-format trace.
+   */
+  upgradeJson(): string | null
   toJson(): string
   sceneStateJson(): string
   metricsJson(): string

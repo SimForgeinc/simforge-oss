@@ -228,6 +228,8 @@ export interface ActorRenderState {
   readonly bodyColor?: string;
   readonly animationTimeS?: number;
   readonly speedMps?: number;
+  /** Distance travelled since spawn, metres; phases ridden two-wheelers (timeline `wheelSpinRad * 0.35`). */
+  readonly odometerM?: number;
   readonly downProgress?: number;
 }
 
@@ -603,6 +605,9 @@ export function validateParityFixture(raw: unknown): ParityFixture {
   return doc;
 }
 
+/** The render timeline's `wheelSpinRad` radius: `odometerM = wheelSpinRad * 0.35`. */
+export const TIMELINE_WHEEL_RADIUS_M = 0.35;
+
 /**
  * Map one scene-state.v1 actor tick (+ its static description and playback
  * cues) into the render state a conforming renderer draws. This is the
@@ -615,6 +620,8 @@ export function actorRenderStateFromSceneState(
     readonly rotation?: Quat;
     readonly yawRad: number;
     readonly velocity: Vec3;
+    /** Render-timeline odometer channel (`Σ v·dt / 0.35 m`), when the frame carries it. */
+    readonly wheelSpinRad?: number;
   },
   timeS: number,
   fallbackDims: ActorDims,
@@ -634,6 +641,7 @@ export function actorRenderStateFromSceneState(
     catalogIdAuthored: true,
     animationTimeS: timeS,
     speedMps: Math.hypot(vx, vy, vz),
+    ...(tickRecord.wheelSpinRad === undefined ? {} : { odometerM: tickRecord.wheelSpinRad * TIMELINE_WHEEL_RADIUS_M }),
     ...(desc.color === undefined ? {} : { bodyColor: desc.color }),
     ...cues,
   };

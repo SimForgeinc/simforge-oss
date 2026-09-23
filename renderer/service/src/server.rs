@@ -1418,6 +1418,7 @@ fn resolve_actor_model(state: &ServiceState, actor: &ActorState, class: &str) ->
             yaw_offset_rad: 0.0,
             ground_offset_m: 0.0,
             animations: HashMap::new(),
+            rider: None,
         }));
     }
     let primitive = |reason: String| -> Result<Option<VehicleModelEntry>, String> {
@@ -1577,6 +1578,20 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
     Ok(())
 }
 
+/// A ridden two-wheeler's clip time at this frame: its odometer phase. The
+/// odometer is the timeline's `wheelSpinRad`; without it the rider cannot be
+/// posed and the frame fails rather than drawing a frozen or riderless bike.
+fn rider_clip_time(actor: &ActorState, rider: &render_core::vehicle_model::RiderSpec) -> Result<f32, String> {
+    let spin = actor.wheel_spin_rad.filter(|v| v.is_finite()).ok_or_else(|| format!(
+        "[native_rider_odometer_missing] ridden two-wheeler {} ({}) needs the render timeline's wheelSpinRad to pose its rider, \
+         and this scene-state frame carries none (a timeline from before samplerVersion 2, or the \
+         xosc-lowered legacy path); re-simulate the scenario",
+        actor.id,
+        actor.catalog_id.as_deref().unwrap_or("?"), // fallback-ok: error message text only
+    ))?;
+    Ok(rider.clip_time_from_wheel_spin(spin))
+}
+
 /// Attach, rebind or pose an actor's catalog model for this frame.
 #[allow(clippy::too_many_arguments)]
 fn apply_actor_model(
@@ -1592,9 +1607,14 @@ fn apply_actor_model(
     let moving = actor.velocity.iter().map(|value| value * value).sum::<f32>().sqrt() > 0.2
         || actor.catalog_id.as_deref().is_some_and(|id| id.ends_with("_walking"));
     let motion = if moving { "walk" } else { "idle" };
+    // A ridden two-wheeler plays its one ride clip, phased by distance (never
+    // by wall or frame time), and always renders with its rider.
+    let rider_time = model.rider.as_ref().map(|rider| rider_clip_time(actor, rider)).transpose()?;
     // A catalog entry with animation clips must have the one this motion
     // needs: rendering it without would freeze the actor in its bind pose.
-    let (glb_path, clip) = if model.animations.is_empty() {
+    let (glb_path, clip) = if let Some(rider) = &model.rider {
+        (model.glb_path.clone(), Some(rider.clip.clone()))
+    } else if model.animations.is_empty() {
         (model.glb_path.clone(), None)
     } else {
         let (path, clip) = model.animations.get(motion).ok_or_else(|| {
@@ -1607,7 +1627,11 @@ fn apply_actor_model(
         })?;
         (path.clone(), Some(clip.clone()))
     };
-    let animation_time_s = frame.tick as f32 / frame.tick_hz;
+    // A ridden two-wheeler is phased by distance; everything else by frame time.
+    let animation_time_s = match rider_time {
+        Some(time) => time,
+        None => frame.tick as f32 / frame.tick_hz,
+    };
     let binding = (glb_path.clone(), clip.clone());
     if state.app.actor_has_model(&actor.id) && state.actor_model_bindings.get(&actor.id) != Some(&binding) {
         // The motion changed (idle <-> walk): bind the other clip's GLB.
@@ -1647,6 +1671,12 @@ fn apply_actor_model(
             .app
             .attach_actor_asset(&actor.id, &glb_path, scale, tint, clip.as_deref(), animation_time_s)
             .map_err(|error| format!("[native_actor_model_load_failed] actor {}: {error:#}", actor.id))?;
+        if let Some(rider) = &model.rider {
+            state
+                .app
+                .set_actor_material_colors(&actor.id, &rider.colors_for(&actor.id))
+                .map_err(|error| format!("[native_rider_palette_failed] actor {}: {error:#}", actor.id))?;
+        }
         state.actor_model_bindings.insert(actor.id.clone(), binding);
     } else if clip.is_some() {
         state
@@ -1657,7 +1687,14 @@ fn apply_actor_model(
     let asset_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,model.ground_offset_m,0.0)).to_array();
     let asset_rotation=rotation*Quat::from_rotation_y(model.yaw_offset_rad);
     state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
-        .map_err(|error|format!("catalog pose: {error:#}"))
+        .map_err(|error|format!("catalog pose: {error:#}"))?;
+    state.app.set_actor_articulation(
+        &actor.id,
+        actor.body_attitude.map(|a| (a.pitch_rad, a.roll_rad)),
+        actor.wheel_drop_m,
+    )
+    .map(|_| ())
+    .map_err(|error|format!("catalog articulation: {error:#}"))
 }
 
 /// Height precedence for authored scene state. Non-zero actor Y is
@@ -2772,6 +2809,12 @@ fn prepare_sensor_work(
                 format!("[native_actor_class_missing] actor {} has no class in the world", actor.id)
             })?;
             actor_classes.insert(instance_id, sensors::taxonomy::SemanticClass::try_from_actor_class(class)?);
+            // A ridden two-wheeler's rider is its own instance (class `rider`)
+            // moving with the bike.
+            if let Some(rider_id) = state.app.actor_rider_instance_id(&actor.id) {
+                instance_velocities.insert(rider_id, Vec3::from_array(actor.velocity));
+                actor_classes.insert(rider_id, sensors::taxonomy::SemanticClass::Rider);
+            }
         }
     }
     let binary = state.episode.as_ref().is_some_and(|episode| {
@@ -2999,7 +3042,7 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        base_y_precedence, actor_color, build_map_sensor_scenes, build_sensor_scene, capture_keys,
+        base_y_precedence, actor_color, rider_clip_time, build_map_sensor_scenes, build_sensor_scene, capture_keys,
         instance_coverage, on_road, parse_bundle_passes, row_stride, CombinedSensorScene,
     };
     use render_core::engine::SensorTriangle;
@@ -3162,6 +3205,35 @@ mod tests {
     }
 
     #[test]
+    fn ridden_two_wheeler_clip_time_is_its_odometer_phase_and_requires_it() {
+        let rider = render_core::vehicle_model::RiderSpec {
+            clip: "ride".into(),
+            clip_duration_s: 1.0,
+            meters_per_cycle: 4.2,
+            palettes: vec![None],
+        };
+        let actor = |spin: Option<f64>| ActorState {
+            id: "bike-1".into(),
+            kind: "update".into(),
+            catalog_id: Some("vehicle.bicycle".into()),
+            actor_class: Some("cyclist".into()),
+            color: None,
+            transform: ActorTransform { position: [0.0; 3], rotation: [0.0, 0.0, 0.0, 1.0] },
+            dims: None,
+            velocity: [3.0, 0.0, 0.0],
+            wheel_spin_rad: spin,
+            body_attitude: None,
+            wheel_drop_m: None,
+        };
+        // 6.3 m travelled = 1.5 cycles -> half-way through the clip.
+        let t = rider_clip_time(&actor(Some(6.3 / 0.35)), &rider).unwrap();
+        assert!((t - 0.5).abs() < 1e-5, "{t}");
+        let error = rider_clip_time(&actor(None), &rider).unwrap_err();
+        assert!(error.contains("wheelSpinRad") && error.contains("bike-1"), "{error}");
+        assert!(rider_clip_time(&actor(Some(f64::NAN)), &rider).is_err());
+    }
+
+    #[test]
     fn authored_actor_color_and_no_color_palette_are_deterministic() {
         let actor = |color: Option<&str>| ActorState {
             id: "vehicle-test".into(),
@@ -3175,6 +3247,9 @@ mod tests {
             },
             dims: None,
             velocity: [0.0; 3],
+            wheel_spin_rad: None,
+            body_attitude: None,
+            wheel_drop_m: None,
         };
         let red = actor_color(&actor(Some("#8f2f2f")), "car").unwrap();
         assert_eq!(red, [143.0 / 255.0, 47.0 / 255.0, 47.0 / 255.0]);

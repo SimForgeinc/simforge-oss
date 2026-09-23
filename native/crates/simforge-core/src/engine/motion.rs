@@ -6,9 +6,9 @@
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
 
-use crate::error::{SimIssue, SimIssueCode};
+use crate::error::{SimEngineError, SimIssue, SimIssueCode};
 use crate::map::LaneId;
-use crate::math::{angle_delta, cos, hypot, normalize_angle, sin, Vec2};
+use crate::math::{angle_delta, atan2, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
     BodyIndex, MotionBackend, MotionDirection, MotionIntent, VehicleMotionState, WorldContactRef,
     WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
@@ -22,9 +22,10 @@ use super::actor::{
 };
 use super::controllers::{
     cruise_speed, desired_gap_m, distance_to_stop_line, find_leader, governor_cap,
-    heading_with_slip, lateral_step, limits_for, longitudinal_accel, minimum_jerk_sample,
-    ConflictHazard, Leader,
+    heading_with_slip, lateral_progress_rate, lateral_sample_at, lateral_step, limits_for,
+    longitudinal_accel, prescribed_speed_step, ConflictHazard, Leader,
 };
+use crate::types::{DynamicsConstraint, DynamicsShape};
 use super::cornering::{cornering_plan, CornerSpeedInput, CorneringPlan};
 use super::gear::{
     gear_of_motion_direction, govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS,
@@ -67,6 +68,16 @@ pub(super) struct Plan {
     /// Timed-route hand-over happened while planning (the plan already
     /// reflects the released route).
     pub released_timed: bool,
+    /// The authored profile set the kinematic state this tick; a dynamic body
+    /// is re-seated on it (`set_state`) when the plan is applied.
+    pub prescribed: bool,
+    /// New travelled-distance progress of a prescribed speed profile.
+    pub speed_progress_m: Option<f64>,
+    /// Acceleration a re-seated body carries into its next step.
+    pub prescribed_accel: Option<f64>,
+    /// A safety cap overruled the prescribed speed profile: the command drops
+    /// to physical tracking for the rest of its life.
+    pub drop_speed_prescription: bool,
 }
 
 impl Plan {
@@ -90,8 +101,31 @@ impl Plan {
             retire: false,
             swap: None,
             released_timed: false,
+            prescribed: false,
+            speed_progress_m: None,
+            prescribed_accel: None,
+            drop_speed_prescription: false,
         }
     }
+}
+
+/// Lateral rate of the actor's lateral command at the middle of this tick,
+/// for the longitudinal share of a prescribed lateral motion. A step
+/// transition has no rate (it is a jump, not a sideways drive).
+fn lateral_mid_rate(a: &ActorRuntime, t: f64, dt: f64, distance_m: f64) -> f64 {
+    let Some(cmd) = &a.lat_cmd else {
+        return 0.0;
+    };
+    if cmd.dynamics.shape == DynamicsShape::Step {
+        return 0.0;
+    }
+    let p = if cmd.dynamics.constraint == DynamicsConstraint::Distance {
+        (a.route_s + distance_m / 2.0 - cmd.origin_s) / cmd.dynamics.value.max(1e-9)
+    } else {
+        (t + dt / 2.0 - cmd.fired_at) / cmd.duration.max(1e-9)
+    };
+    let speed = distance_m / dt;
+    lateral_sample_at(cmd, p, lateral_progress_rate(cmd, speed)).rate
 }
 
 /// How far behind its last route position a tracked dynamic body is looked
@@ -135,6 +169,16 @@ impl Simulation {
     /* ------------------------------------------------------------ planning */
 
     pub(super) fn plan_all(&mut self, t: f64) -> EngineResult<()> {
+        // `exist` takes effect over the step that starts at its trigger tick:
+        // the trigger-tick sample (already recorded) shows the old state.
+        for a in &mut self.actors {
+            if let Some(present) = a.pending_present.take() {
+                a.present = present;
+                if present {
+                    a.retired = false;
+                }
+            }
+        }
         self.build_conflict_samples();
         self.build_nearby_index();
         let n = self.actors.len();
@@ -674,6 +718,10 @@ impl Simulation {
         let lim = limits_for(a);
         let dynamic_profile = a.body.and_then(|body| self.physics.profile(body).cloned());
         let desired_speed = match &a.long_cmd {
+            // A prescribed profile only needs the cornering envelope as a curve
+            // speed check; its own shape decides how it gets to the target
+            // (with 0 the envelope would otherwise converge to rest itself).
+            Some(cmd) if cmd.kind == LongitudinalKind::Speed && cmd.prescribed => cmd.v0.max(cmd.target),
             Some(cmd) if cmd.kind == LongitudinalKind::Speed => cmd.target,
             _ => cruise_speed(a, lane_speed_limit),
         };
@@ -759,6 +807,14 @@ impl Simulation {
             lane_speed_limit,
             commanded_leader.as_ref().or(nearest_leader.as_ref()),
         );
+        // An authored speed profile owns the longitudinal state unless a human
+        // is at the wheel or the body is reversing.
+        let profile_step = if action.is_none() && !a.is_reverse() {
+            prescribed_speed_step(a, t, dt)
+        } else {
+            None
+        };
+        let commanded_accel = accel;
 
         let conflict = if a.best_effort_world_path {
             None
@@ -846,7 +902,13 @@ impl Simulation {
                 accel = route_end_cap;
             }
         }
-        accel = accel.max(-lim.brake_hard * friction_scale);
+        // A safety cap that binds overrules the profile for good: the body is
+        // then driven by the tracking law (the command is no longer exact).
+        let prescribe_long = profile_step.is_some() && accel >= commanded_accel - 1e-9;
+        plan.drop_speed_prescription = profile_step.is_some() && !prescribe_long;
+        if !prescribe_long {
+            accel = accel.max(-lim.brake_hard * friction_scale);
+        }
         plan.required_decel = if leader_is_ambient && !a.is_ambient {
             gov.required_decel_excluding_leader
         } else {
@@ -863,9 +925,27 @@ impl Simulation {
             accel = ((geared - a.speed_mps) / dt).max(-lim.brake_hard * friction_scale);
             speed = (a.speed_mps + accel * dt).max(0.0);
         }
+        let mut path_distance = speed * dt;
+        if let (true, Some(step)) = (prescribe_long, profile_step) {
+            speed = step.speed_mps;
+            accel = (speed - a.speed_mps) / dt;
+            path_distance = step.distance_m;
+            plan.speed_progress_m = Some(step.progress_m);
+            plan.prescribed_accel = Some(step.accel_mps2);
+        }
+        // An authored lateral transition owns the lateral state (shape and
+        // duration as written) unless a human is at the wheel.
+        let prescribe_lat = a.lat_cmd.is_some() && action.is_none() && !a.is_reverse();
+        let mut along = path_distance;
+        if prescribe_lat {
+            // Speed is the length of the velocity vector: a sideways motion
+            // takes its share of the distance covered (ASAM 7.4.1.1).
+            let dy = lateral_mid_rate(a, t, dt, path_distance) * dt;
+            along = (path_distance * path_distance - dy * dy).max(0.0).sqrt();
+        }
         plan.accel = accel;
         plan.speed = speed;
-        plan.route_s = a.route_s + speed * dt;
+        plan.route_s = a.route_s + along;
         if let Some((station_index, station)) = a.route_stations.iter().enumerate().find(|(idx, station)| {
             !a.route_station_states[*idx].released
                 && a.route_s <= station.s + 0.05
@@ -933,12 +1013,17 @@ impl Simulation {
             let preview_pose = a.route.pose_at(preview_s);
             let preview_time = 0.4f64.max(steering_lookahead / a.speed_mps.abs().max(1.0));
             let preview_ref = match &a.lat_cmd {
-                Some(cmd) => minimum_jerk_sample(
-                    cmd.from,
-                    cmd.to,
-                    t + dt + preview_time - cmd.fired_at,
-                    cmd.duration,
-                ),
+                Some(cmd) => {
+                    let p = if cmd.dynamics.constraint == DynamicsConstraint::Distance
+                        && cmd.dynamics.shape != DynamicsShape::Step
+                    {
+                        (a.route_s + a.speed_mps * (dt + preview_time) - cmd.origin_s)
+                            / cmd.dynamics.value.max(1e-9)
+                    } else {
+                        (t + dt + preview_time - cmd.fired_at) / cmd.duration.max(1e-9)
+                    };
+                    lateral_sample_at(cmd, p, lateral_progress_rate(cmd, a.speed_mps))
+                }
                 None => super::controllers::LateralSample {
                     offset: plan.lateral_reference_offset,
                     rate: plan.lateral_reference_rate,
@@ -1025,7 +1110,55 @@ impl Simulation {
             plan.position = position;
             plan.heading = st.yaw_rad;
             self.telemetry[index.index()] = Some(result.telemetry);
-            if let (true, Some(cmd)) = (lat.complete, &a.lat_cmd) {
+            if prescribe_long || prescribe_lat {
+                // Re-seat the body on the authored kinematics; physics keeps the
+                // rest of its state (steer, wheels, gear) for when it resumes.
+                let v = if prescribe_long { speed } else { st.longitudinal_velocity_mps.abs() };
+                let covered = if prescribe_long {
+                    path_distance
+                } else {
+                    0.5 * (a.speed_mps + v) * dt
+                };
+                if prescribe_lat {
+                    let dy = lateral_mid_rate(a, t, dt, covered) * dt;
+                    let s_new = a.route_s + (covered * covered - dy * dy).max(0.0).sqrt();
+                    let v_along = (v * v - lat.rate * lat.rate).max(0.0).sqrt();
+                    plan.route_s = s_new;
+                    plan.lateral_offset = lat.offset;
+                    plan.lateral_rate = lat.rate;
+                    plan.lateral_accel = lat.accel;
+                    plan.position = a.route.point_with_offset(s_new, lat.offset);
+                    plan.heading = normalize_angle(
+                        a.route.pose_at(s_new).heading_rad
+                            + if lat.rate == 0.0 { 0.0 } else { atan2(lat.rate, v_along.max(1e-6)) },
+                    );
+                    plan.lateral_complete = lat.complete;
+                    if lat.complete {
+                        if let Some(cmd) = a.lat_cmd.as_ref().filter(|c| c.kind == LateralKind::ChangeLane) {
+                            plan.swap = cmd.pending.clone();
+                        }
+                    }
+                } else {
+                    let forward = Vec2 { x: cos(st.yaw_rad), y: sin(st.yaw_rad) };
+                    let moved = Vec2 { x: position.x - a.position.x, y: position.y - a.position.y };
+                    let along_physics = moved.x * forward.x + moved.y * forward.y;
+                    let corrected = Vec2 {
+                        x: position.x + forward.x * (covered - along_physics),
+                        y: position.y + forward.y * (covered - along_physics),
+                    };
+                    let projected = track_on_route(a, corrected, dt);
+                    plan.route_s = projected.s;
+                    plan.lateral_offset = a.route.lateral_offset_at(projected.s, corrected);
+                    plan.lateral_rate = (plan.lateral_offset - a.lateral_offset_m) / dt;
+                    plan.lateral_accel = (plan.lateral_rate - a.lateral_rate_mps) / dt;
+                    plan.position = corrected;
+                }
+                plan.speed = v;
+                plan.longitudinal_velocity = Some(v * a.direction_sign());
+                plan.accel = (v - a.speed_mps) / dt;
+                plan.prescribed = true;
+            }
+            if let (true, Some(cmd)) = (lat.complete && !prescribe_lat, &a.lat_cmd) {
                 let reference_heading = normalize_angle(
                     heading_with_slip(
                         a.route.pose_at(projected.s).heading_rad,
@@ -1162,11 +1295,33 @@ impl Simulation {
                 a.lateral_reference_accel_mps2 = plan.lateral_reference_accel;
                 a.position = plan.position;
                 a.heading_rad = plan.heading;
-                if a.timed_route.is_some() && a.crash.is_none() {
+                if let Some(cmd) = a.long_cmd.as_mut() {
+                    if let Some(progress) = plan.speed_progress_m {
+                        cmd.progress_m = progress;
+                    }
+                    if plan.drop_speed_prescription {
+                        cmd.prescribed = false;
+                    }
+                }
+                if (a.timed_route.is_some() || plan.prescribed) && a.crash.is_none() {
                     if let Some(body) = a.body {
                         let backend = &mut self.physics;
                         let current = backend.state(body);
                         let sign = a.direction_sign();
+                        // A prescribed profile hands physics the state it would
+                        // have if it had driven it: its own acceleration and
+                        // freely rolling wheels, so nothing lurches on release.
+                        let accel = if a.timed_route.is_none() {
+                            plan.prescribed_accel.unwrap_or(plan.accel)
+                        } else {
+                            plan.accel
+                        };
+                        let wheel = match (a.timed_route.is_none(), backend.profile(body)) {
+                            (true, Some(profile)) if profile.wheel_radius_m > 0.0 => {
+                                plan.speed * sign / profile.wheel_radius_m
+                            }
+                            _ => current.map_or(0.0, |c| c.wheel_angular_speed_radps),
+                        };
                         backend
                             .set_state(
                                 body,
@@ -1178,9 +1333,8 @@ impl Simulation {
                                     lateral_velocity_mps: 0.0,
                                     yaw_rate_radps: 0.0,
                                     steer_rad: current.map_or(0.0, |c| c.steer_rad),
-                                    wheel_angular_speed_radps: current
-                                        .map_or(0.0, |c| c.wheel_angular_speed_radps),
-                                    longitudinal_acceleration_mps2: plan.accel * sign,
+                                    wheel_angular_speed_radps: wheel,
+                                    longitudinal_acceleration_mps2: accel * sign,
                                 },
                             )
                             .map_err(engine_err)?;
@@ -1191,7 +1345,8 @@ impl Simulation {
                 }
                 if a.speed_mps < 0.05 {
                     if a.standstill_since_s.is_none() {
-                        a.standstill_since_s = Some(t);
+                        // The state just applied is the state at t + dt.
+                        a.standstill_since_s = Some(t + self.dt);
                     }
                 } else {
                     a.standstill_since_s = None;
@@ -1525,6 +1680,89 @@ impl Simulation {
         lane
     }
 
+    /// Ground every present body on the map surface (see `engine::contact`).
+    /// Runs every tick, warm-up and live mode included, so each contact
+    /// continues from the previous one. A body with no surface under it is an
+    /// engine error.
+    pub(super) fn update_contacts(&mut self) -> EngineResult<()> {
+        let Some(ground) = self.options.ground.clone() else {
+            return Ok(());
+        };
+        for index in 0..self.actors.len() {
+            let a = &self.actors[index];
+            if !a.present {
+                self.contact[index] = super::contact::ContactState::default();
+                continue;
+            }
+            let wheelbase = a
+                .body
+                .and_then(|body| self.physics.profile(body))
+                .map(|profile| profile.wheelbase_m);
+            let geometry = super::contact::ContactGeometry::for_actor(a.kind, &a.dims, wheelbase);
+            let lane = a.route.pose_at(a.route_s).lane.or_else(|| {
+                if a.route.is_freeform() {
+                    a.freeform_lane_binding.and_then(|b| b.1)
+                } else {
+                    None
+                }
+            });
+            let road_hint = lane.and_then(|lane| {
+                self.graph
+                    .rsl(lane)
+                    .split(':')
+                    .next()
+                    .and_then(|road| road.parse::<i64>().ok())
+            });
+            let state = super::contact::solve_contact(
+                &ground,
+                geometry,
+                a.position.x,
+                a.position.y,
+                a.heading_rad,
+                &self.contact[index],
+                road_hint,
+                &a.id,
+            )
+            .map_err(|e| {
+                SimEngineError::new(
+                    format!(
+                        "actor {} has no ground under it at t={:.2}s: {e}",
+                        a.id, self.t
+                    ),
+                    Vec::new(),
+                )
+            })?;
+            if state.any_unsupported() {
+                let path = format!("actors.{}", a.id);
+                let already = self.issues.iter().any(|issue| {
+                    issue.code == SimIssueCode::GroundWheelUnsupported && issue.path == path
+                });
+                if !already {
+                    let wheels: Vec<&str> = ["FL", "FR", "RL", "RR"]
+                        .iter()
+                        .zip(state.unsupported)
+                        .filter_map(|(name, hanging)| hanging.then_some(*name))
+                        .collect();
+                    let reason = format!(
+                        "actor {} has wheel(s) {} over a hole in the rendered map at t={:.2}s (x={:.2}, y={:.2}); the body rests on its other wheels",
+                        a.id,
+                        wheels.join("+"),
+                        self.t,
+                        a.position.x,
+                        a.position.y
+                    );
+                    self.issues.push(SimIssue::warning(
+                        SimIssueCode::GroundWheelUnsupported,
+                        path,
+                        reason,
+                    ));
+                }
+            }
+            self.contact[index] = state;
+        }
+        Ok(())
+    }
+
     pub(super) fn record_tracks(&mut self, t: f64) -> EngineResult<()> {
         // Resolve freeform lane bindings first (mutable), then borrow for frames.
         for index in 0..self.actors.len() {
@@ -1582,6 +1820,11 @@ impl Simulation {
                         s: a.route_s,
                         present: a.present,
                         physics,
+                        contact: self
+                            .options
+                            .ground
+                            .as_ref()
+                            .map(|_| self.contact[a.index.index()].frame),
                         route_ref: self.route_refs.get(a.route_ref),
                     }
                 })
