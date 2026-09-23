@@ -112,9 +112,22 @@ type RawExecutionPackageControlSource = Omit<
   scenario_duration_s: number;
 };
 
-function requireCookedCarlaMapName(mapName: string | null): string {
+/**
+ * A CARLA render needs the map asset bound to one cooked world. The binding is
+ * set from the generated CARLA world manifest (OSS adapters/carla-exec,
+ * carla-world-manifest.json): a map whose export no longer matches its cooked
+ * world (needs-recook), awaits a ruling (needs-decision) or has none (no-world)
+ * stays unbound and is refused here, never rendered on another world.
+ */
+function requireCookedCarlaMapName(mapName: string | null, mapAssetId: string | null): string {
   const normalized = mapName?.trim();
-  if (!normalized) throw new Error("uniscenario_carla_map_binding_missing");
+  if (!normalized) {
+    const error = new Error("uniscenario_carla_map_binding_missing") as Error & { detail?: string };
+    error.detail =
+      `map asset ${mapAssetId ?? "(none)"} has no cooked CARLA world bound; the CARLA world manifest ` +
+      "lists it as needs-recook, needs-decision or no-world, and it is never rendered on a mismatched world";
+    throw error;
+  }
   return normalized;
 }
 
@@ -863,7 +876,7 @@ export async function createRenderJob(
     if (!rawPackage) return [];
     const packageSource: ExecutionPackageControlSource = {
       ...rawPackage,
-      map_name: requireCookedCarlaMapName(rawPackage.map_name),
+      map_name: requireCookedCarlaMapName(rawPackage.map_name, rawPackage.map_asset_id),
       ambient_config: parseJsonObject(rawPackage.ambient_config),
     };
     const resourceRequest = deriveRenderResourceRequest(
@@ -2058,7 +2071,7 @@ export async function leaseRenderJob(input: { workerNodeId: string; leaseSeconds
     if (!rawRow) return null;
     const row: LeaseSourceRow = {
       ...rawRow,
-      map_name: requireCookedCarlaMapName(rawRow.map_name),
+      map_name: requireCookedCarlaMapName(rawRow.map_name, rawRow.map_asset_id),
       render_spec: parseStoredRenderSpec(rawRow.render_spec, rawRow.job_mode),
       resource_request: ScenarioRenderResourceRequestSchema.parse(parseJsonObject(rawRow.resource_request)),
       parity_thresholds: rawRow.parity_thresholds ? parseJsonObject(rawRow.parity_thresholds) : null,

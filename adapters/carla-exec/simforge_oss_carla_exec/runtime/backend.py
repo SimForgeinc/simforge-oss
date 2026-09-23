@@ -15,6 +15,7 @@ from threading import Condition, Lock
 from time import monotonic, sleep
 from typing import Any, Callable, Iterable, Mapping, Protocol
 
+from .. import world_manifest as _world_manifest
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
 from .contract import (
     ASSET_CATALOG_SCHEMA,
@@ -279,130 +280,45 @@ def apply_supported_blueprint_attributes(
     return applied, unsupported
 
 
-RICHMOND_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "367": "423",
-    "368": "429",
-    "369": "422",
-    "370": "421",
-    "371": "430",
-    "372": "428",
-    "373": "431",
-    "374": "432",
-}
-EL_CAMINO_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "2230": "2233",
-    "2231": "2234",
-    "2232": "2235",
-    "2233": "2236",
-    "2234": "2237",
-    "2235": "2238",
-    "2236": "2239",
-    "2240": "2243",
-    "2241": "2244",
-    "2242": "2245",
-    "2245": "2248",
-    "2246": "2249",
-    "2247": "2251",
-    "2251": "2258",
-    "2252": "2259",
-    "2254": "2261",
-    "2262": "2269",
-    "2271": "2278",
-    "2272": "2279",
-    "2287": "2294",
-    "2288": "2295",
-    "2289": "2296",
-}
-#: Yale Street: the cooked world renumbers its signal heads and merges the
-#: authored map's multi-head poles, so it exposes 46 heads where the authored
-#: OpenDRIVE declares 59. These pairs were derived geometrically, not by guessing
-#: an id offset: authored head positions were projected with the map's own
-#: `geoReference` (transverse Mercator) and matched to the cooked heads' world
-#: transforms by unique nearest neighbour inside 6 m — 45 pairs, worst distance
-#: 4.80 m (`artifacts/production-scenarios/signal-id-map-yale-street-*.json`).
-#: The 14 authored heads with no counterpart are secondary lamps on poles that
-#: are already owned through this map; CARLA has no separate actor for them.
-YALE_COOKED_SIGNAL_ID_MAP: Mapping[str, str] = {
-    "1425": "1594",
-    "1426": "1595",
-    "1427": "1596",
-    "1428": "1597",
-    "1429": "1599",
-    "1430": "1598",
-    "1431": "1600",
-    "1432": "1601",
-    "1433": "1705",
-    "1435": "1602",
-    "1436": "1603",
-    "1437": "1604",
-    "1438": "1605",
-    "1440": "1607",
-    "1441": "1608",
-    "1442": "1606",
-    "1443": "1609",
-    "1444": "1610",
-    "1463": "1629",
-    "1464": "1628",
-    "1475": "1640",
-    "1476": "1641",
-    "1484": "1645",
-    "1511": "1672",
-    "1512": "1673",
-    "1514": "1675",
-    "1518": "1679",
-    "1519": "1680",
-    "1520": "1681",
-    "1523": "1683",
-    "1524": "1684",
-    "1526": "1685",
-    "1528": "1686",
-    "1529": "1706",
-    "1531": "1688",
-    "1532": "1691",
-    "1536": "1694",
-    "1538": "1695",
-    "1541": "1699",
-    "1542": "1698",
-    "1543": "1700",
-    "1545": "1702",
-    "1546": "1703",
-    "1549": "1693",
-    "1550": "1704",
-}
-COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = {
-    (
-        "Richmond_Field_Station_Richmond_CA",
-        "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
-        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-    ): RICHMOND_COOKED_SIGNAL_ID_MAP,
-    (
-        "El_Camino_Rd_Palo_Alto_CA",
-        "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
-        "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
-    ): EL_CAMINO_COOKED_SIGNAL_ID_MAP,
-    (
-        "Yale_St_Palo_Alto_CA",
-        "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
-        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
-    ): YALE_COOKED_SIGNAL_ID_MAP,
-}
+#: Every cooked-world table below is DERIVED from the generated manifest
+#: ``assets/carla-world-manifest.json`` (see ``simforge_oss_carla_exec.world_manifest``
+#: and ``python -m simforge_oss_carla_exec.world_manifest_tools``). Never edit them
+#: here: regenerate the manifest from the NAS exports, the cooked image and the map
+#: registry instead.
+#:
+#: - COOKED_MAP_NAMES_BY_XODR_SHA256: source XODR sha256 -> cooked runtime world.
+#:   Render packages name maps by their control-plane identity; this is the explicit
+#:   bridge from that source identity to the world CARLA actually cooked.
+#:   SIMFORGE_CARLA_COOKED_MAPS_JSON ({"<cookedName>": "<xodrSha256>"}) extends it.
+#: - APPROVED_COOKED_XODR_DIGESTS: a cooked RoadRunner world re-serializes the
+#:   OpenDRIVE it was built from, so ``to_opendrive()`` is never byte-identical to the
+#:   source XODR. These are the runtime digests approved as the same road network
+#:   (source sha256 -> runtime sha256s); anything else is a different map.
+#:   SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON ({"<source>": ["<runtime>"]}) extends it.
+#: - COOKED_SIGNAL_ID_MAPS: (world, source sha256, runtime sha256) -> authored signal
+#:   id -> runtime signal id, where the cooked world renumbered its heads.
+#: - UNBINDABLE_COOKED_SOURCES: sources the manifest knows have no usable world
+#:   (needs-recook / needs-decision / no-world). They are refused with the manifest's
+#:   reason, whatever the env or the binding policy says.
+_WORLD_MANIFEST = _world_manifest.load()
+COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = _world_manifest.signal_id_maps(_WORLD_MANIFEST)
+COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = _world_manifest.cooked_map_names(_WORLD_MANIFEST)
+APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = _world_manifest.approved_cooked_digests(_WORLD_MANIFEST)
+UNBINDABLE_COOKED_SOURCES: Mapping[str, _world_manifest.Refusal] = _world_manifest.refusals(_WORLD_MANIFEST)
 
-#: Cooked RoadRunner worlds shipped in the managed CARLA engine images, keyed
-#: by the sha256 of the source XODR the control plane distributes for the map.
-#: Render packages name maps by their control-plane identity; this registry is
-#: the explicit bridge from that source identity to the runtime world CARLA
-#: actually cooked. SIMFORGE_CARLA_COOKED_MAPS_JSON ({"<cookedName>":
-#: "<xodrSha256>"}) extends it for engines cooking additional worlds.
-COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = {
-    "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": "Richmond_Field_Station_Richmond_CA",
-    "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": "Belmont_Office_Park_Belmont_CA",
-    "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": "El_Camino_Rd_Palo_Alto_CA",
-    # Yale Street is cooked in the engine image (Yale_St_Palo_Alto_CA.umap) but was
-    # missing here, so loading it fell through to a generated bare-OpenDRIVE world:
-    # an empty void with no meshes. The digest is the authored source XODR recorded in
-    # uniscenario.map_versions for usmap_6e5559c1e7c4d9e4c93426f9d1e65f9e.
-    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": "Yale_St_Palo_Alto_CA",
-}
+
+def cooked_world_refusal(xodr_sha256: str) -> str | None:
+    """The manifest's reason this source must not render in CARLA, if any."""
+    refusal = UNBINDABLE_COOKED_SOURCES.get(xodr_sha256)
+    if refusal is None:
+        return None
+    world = f" (cooked world {refusal.world})" if refusal.world else ""
+    return (
+        f"CARLA world binding refused for source XODR {xodr_sha256} from {refusal.origin}{world}: "
+        f"carla-world-manifest status {refusal.status}: {refusal.reason}. "
+        "It is never rendered on a mismatched world; re-cook the world (or record a decision) "
+        "and regenerate the manifest"
+    )
 
 
 def _configured_cooked_map_names() -> dict[str, str]:
@@ -426,6 +342,8 @@ def _configured_cooked_map_names() -> dict[str, str]:
             raise RuntimeError("SIMFORGE_CARLA_COOKED_MAPS_JSON must map cooked map names to lowercase XODR sha256 values")
         if names.get(sha, name) != name:
             raise RuntimeError(f"SIMFORGE_CARLA_COOKED_MAPS_JSON conflicts with the built-in cooked world for {sha}")
+        if sha in UNBINDABLE_COOKED_SOURCES:
+            raise RuntimeError(f"SIMFORGE_CARLA_COOKED_MAPS_JSON cannot bind {sha}: {cooked_world_refusal(sha)}")
         names[sha] = name
     return names
 
@@ -433,31 +351,6 @@ def _configured_cooked_map_names() -> dict[str, str]:
 def cooked_map_name_for_xodr(xodr_sha256: str) -> str | None:
     """Return the cooked runtime world name for a source XODR, if one exists."""
     return _configured_cooked_map_names().get(xodr_sha256)
-
-
-#: A cooked RoadRunner world re-serializes the OpenDRIVE it was built from, so
-#: ``to_opendrive()`` is never byte-identical to the source XODR. These are the
-#: runtime digests approved as the same road network as a source XODR (source
-#: sha256 -> runtime sha256s), recorded when each world was cooked and its
-#: signal/lane identity was verified. Anything else is a different map.
-#: ``SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`` (``{"<source>": ["<runtime>"]}``)
-#: extends it for engines that cook additional worlds.
-APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = {
-    "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643": frozenset({
-        "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-    }),
-    "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a": frozenset({
-        "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
-    }),
-    "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5": frozenset({
-        "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
-    }),
-    # Belmont: measured 2026-09-22 on the carla-rfs-munich-belmont 0.10.0 cook
-    # (pose-smoke + d9d7-era worker image), whose world the registry above binds.
-    "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63": frozenset({
-        "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
-    }),
-}
 
 
 def _is_sha256(value: object) -> bool:
@@ -483,6 +376,11 @@ def approved_cooked_xodr_digests(source_xodr_sha256: str) -> frozenset[str]:
             raise RuntimeError(
                 "SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON must map source XODR sha256 values "
                 "to arrays of runtime XODR sha256 values"
+            )
+        if parsed.get(source_xodr_sha256) and source_xodr_sha256 in UNBINDABLE_COOKED_SOURCES:
+            raise RuntimeError(
+                f"SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON cannot approve {source_xodr_sha256}: "
+                f"{cooked_world_refusal(source_xodr_sha256)}"
             )
         approved.update(parsed.get(source_xodr_sha256, ()))
     return frozenset(approved)
@@ -920,6 +818,11 @@ class CarlaBackend:
             raise RuntimeError("execution package must name one exact cooked CARLA map")
         policy = map_binding_policy()
         package_sha256 = hashlib.sha256(xodr).hexdigest()
+        refusal = cooked_world_refusal(package_sha256)
+        if refusal is not None:
+            # Known to have no usable world: refuse before touching the server,
+            # whatever the binding policy, and never fall back to a generated world.
+            raise RuntimeError(refusal)
         cooked_name = cooked_map_name_for_xodr(package_sha256)
         if cooked_name is not None and cooked_name != requested_name:
             raise RuntimeError(
