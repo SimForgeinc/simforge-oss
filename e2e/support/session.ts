@@ -91,7 +91,13 @@ export async function launchBrowserStudio(
   let browser: Browser | undefined;
   let browserContext: BrowserContext | undefined;
   try {
-    browser = await chromium.launch({ headless: options.headless ?? envValue(E2E_ENV.headed) !== "1" });
+    browser = await chromium.launch({
+      headless: options.headless ?? envValue(E2E_ENV.headed) !== "1",
+      // Headless Chromium draws WebGL on SwiftShader unless it is told to use
+      // the machine's GPU. Opt in with SIMFORGE_E2E_GPU=1 where one exists:
+      // streaming a whole map on a software rasteriser takes minutes.
+      args: envValue(E2E_ENV.gpu) === "1" ? GPU_BROWSER_ARGS : [],
+    });
     context.register(() => browser?.close());
     browserContext = await browser.newContext({ viewport: options.viewport ?? { width: 1440, height: 900 } });
     const page = await browserContext.newPage();
@@ -129,6 +135,9 @@ export async function launchBrowserStudio(
 }
 
 const require = createRequire(import.meta.url);
+
+/** Chromium flags that put headless WebGL on the real GPU (ANGLE over Vulkan). */
+const GPU_BROWSER_ARGS = ["--use-angle=vulkan", "--enable-features=Vulkan", "--ignore-gpu-blocklist", "--enable-gpu"];
 
 /** The workspace Electron executable Studio's own `pnpm desktop` uses. */
 function workspaceElectronBinary(): string {

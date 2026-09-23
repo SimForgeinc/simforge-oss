@@ -38,9 +38,9 @@ function ignoreActorRenderer(): void {}
  * The drive plays on the dashboard's shared world, so the map the editor was
  * just showing carries on without a reload. Everything else the session needs
  * that only the browser can supply loads here: the installed map entry and its
- * lane topology. The recorded clip goes straight into this document — the
- * variation was created for exactly this drive — and the drive leaves for the
- * scenario list once it is saved.
+ * lane topology. A recorded clip is written into this document only when the
+ * driver presses "Keep take"; the drive then leaves for the scenario list.
+ * Nothing is saved on a timer, on leaving, or on unload.
  */
 export function DriverInTheLoopDrive({
   content,
@@ -126,15 +126,26 @@ export function DriverInTheLoopDrive({
   }, [datasetId, router]);
 
   /**
-   * Write the driven template into this scenario.
+   * Write a kept take into this scenario.
    *
-   * The session applies the clip to its own live document through the editor's
-   * `replaceActorMotion`, so the interaction and every motion it displaces are
-   * handled exactly as an authored take would be; what arrives here is the
-   * finished template, saved in one PATCH.
+   * What arrives is the finished template: the clip as the actor's motion,
+   * with every motion it displaces removed. When it displaces motion the actor
+   * already had, the draft as it is now — that motion included — is first
+   * frozen into an immutable revision, so the previous motion stays
+   * recoverable from the scenario's revisions (the Versions history). If that
+   * revision cannot be made, nothing is written and the take stays on screen
+   * with the reason: the motion is never replaced without a way back.
    */
   const saveClip = useCallback(
-    async (template: ScenarioTemplateV2) => {
+    async (template: ScenarioTemplateV2, { replacesMotion }: { replacesMotion: boolean }) => {
+      if (replacesMotion) {
+        try {
+          await studioHost.projects.ensureRevision({ documentId, expectedDraftVersion: draftVersion });
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          throw new Error(`the current motion could not be kept as a revision, so it was not replaced (${reason})`);
+        }
+      }
       await studioHost.projects.saveDocument(
         { id: documentId, draftVersion, title, authoringQualityId: quality },
         template,
