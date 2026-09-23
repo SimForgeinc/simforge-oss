@@ -135,6 +135,11 @@ pub struct CanonicalTraceIdentity {
     pub input_hash: String,
     pub map_id: String,
     pub engine_graph_digest: String,
+    /// `traceVersion` of the stored document when the trace was upgraded in
+    /// memory from an older format ([`crate::trace::upgrade`]); absent for a
+    /// trace read in the current format.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgraded_from_trace_version: Option<u32>,
 }
 
 impl CanonicalTraceIdentity {
@@ -148,6 +153,7 @@ impl CanonicalTraceIdentity {
             input_hash: trace.header.input_hash.clone(),
             map_id: trace.header.map_id.clone(),
             engine_graph_digest: trace.header.engine_graph_digest.clone(),
+            upgraded_from_trace_version: trace.upgrade.as_ref().map(|u| u.source_trace_version),
         })
     }
 }
@@ -480,14 +486,31 @@ impl RenderTimeline {
             .map(|i| &self.actors[i])
     }
 
+    /// Parse a stored timeline of ANY sampler version, for inspection only:
+    /// comparing motion across sampler versions and motion diffs. Renderers
+    /// use [`RenderTimeline::from_json_slice`]; a stored timeline from another
+    /// sampler is never rendered, it is re-derived from its trace under the
+    /// current sampler (a new timeline key).
+    pub fn inspect_json_slice(bytes: &[u8]) -> Result<Self, TimelineError> {
+        let bytes = maybe_gunzip(bytes)?;
+        let timeline: RenderTimeline = serde_json::from_slice(&bytes)?;
+        timeline.validate_structure()?;
+        Ok(timeline)
+    }
+
     pub fn validate(&self) -> Result<(), TimelineError> {
-        if self.version != RENDER_TIMELINE_VERSION {
-            return Err(TimelineError::UnsupportedVersion(self.version.clone()));
-        }
         if self.identity.sampler_version != SAMPLER_VERSION {
             return Err(TimelineError::UnsupportedSampler {
                 found: self.identity.sampler_version.clone(),
             });
+        }
+        self.validate_structure()
+    }
+
+    /// Every check except the sampler version.
+    fn validate_structure(&self) -> Result<(), TimelineError> {
+        if self.version != RENDER_TIMELINE_VERSION {
+            return Err(TimelineError::UnsupportedVersion(self.version.clone()));
         }
         let bad = |m: String| Err(TimelineError::Malformed(m));
         if self.frame != "xodr-local" {
@@ -656,7 +679,10 @@ fn tick_at_or_after(t: &[f64], event_t: f64) -> u32 {
 }
 
 /// Build the render timeline for `trace` against `height`. The trace must
-/// be a validated current-format trace at [`TIMELINE_DT_S`].
+/// be a validated trace (read in the current format, or upgraded in memory
+/// from an older one) at [`TIMELINE_DT_S`]. Its identity is
+/// [`SimTrace::digest`]: bind a stored trace's recorded identity first
+/// ([`SimTrace::bind_recorded_identity`]).
 pub fn build_render_timeline(
     trace: &SimTrace,
     height: &HeightField,
