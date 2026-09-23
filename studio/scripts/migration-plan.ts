@@ -76,3 +76,29 @@ export function migrationsLedger(env: NodeJS.ProcessEnv = process.env): string {
   }
   return declared;
 }
+
+/**
+ * Migrations the host has already applied under the same filename, which this
+ * run records as adopted instead of executing.
+ *
+ * A host that keeps its own ledger (see {@link migrationsLedger}) may carry
+ * copies of these migrations and apply them first, through its own runner.
+ * Running the copy here again fails (the column already exists) or, worse,
+ * half-applies. Only the host knows what it applied, so it says so, explicitly,
+ * in `SIMFORGE_STUDIO_ADOPT_MIGRATIONS` (comma-separated filenames). Nothing is
+ * adopted unless it is named.
+ */
+export function adoptedMigrations(env: NodeJS.ProcessEnv = process.env): Set<string> {
+  const declared = env.SIMFORGE_STUDIO_ADOPT_MIGRATIONS?.trim();
+  const names = new Set<string>();
+  if (!declared) return names;
+  for (const raw of declared.split(",")) {
+    const name = raw.trim();
+    if (!name) continue;
+    if (!/^[A-Za-z0-9_.-]+\.sql$/.test(name) || name.includes("..")) {
+      throw new Error(`SIMFORGE_STUDIO_ADOPT_MIGRATIONS entries must be migration filenames, not ${JSON.stringify(name)}`);
+    }
+    names.add(name);
+  }
+  return names;
+}

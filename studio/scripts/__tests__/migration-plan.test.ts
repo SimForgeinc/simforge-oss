@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import {
   DEFAULT_MIGRATIONS_LEDGER,
+  adoptedMigrations,
   localOnlyReason,
   migrationHostKind,
   migrationsLedger,
@@ -68,5 +69,16 @@ test("the ledger table is the default unless a plain identifier replaces it", ()
       /plain \[schema\.\]table identifier/,
       hostile,
     );
+  }
+});
+
+test("nothing is adopted unless the host names it, and only filenames are accepted", () => {
+  assert.deepEqual([...adoptedMigrations({})], []);
+  assert.deepEqual(
+    [...adoptedMigrations({ SIMFORGE_STUDIO_ADOPT_MIGRATIONS: " 0001_a.sql, ,20260920130000_b.sql " })],
+    ["0001_a.sql", "20260920130000_b.sql"],
+  );
+  for (const hostile of ["x.sql; DROP TABLE t", "../x.sql", "x", "a/b.sql"]) {
+    assert.throws(() => adoptedMigrations({ SIMFORGE_STUDIO_ADOPT_MIGRATIONS: hostile }), /must be migration filenames/, hostile);
   }
 });

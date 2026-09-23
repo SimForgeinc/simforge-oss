@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execute, executeScript, queryRows, shutdownDatabase } from "@/app/lib/db/data-api";
-import { localOnlyReason, migrationHostKind, migrationsLedger } from "./migration-plan";
+import { adoptedMigrations, localOnlyReason, migrationHostKind, migrationsLedger } from "./migration-plan";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDirectory = resolve(appRoot, "migrations");
@@ -19,6 +19,7 @@ const migrationsDirectory = resolve(appRoot, "migrations");
 export async function migrate(): Promise<string[]> {
   const ledger = migrationsLedger();
   const hostKind = migrationHostKind();
+  const adopted = adoptedMigrations();
   await execute(`CREATE TABLE IF NOT EXISTS ${ledger} (
     id TEXT PRIMARY KEY,
     filename TEXT UNIQUE,
@@ -39,6 +40,17 @@ export async function migrate(): Promise<string[]> {
     const localOnly = localOnlyReason(sql);
     if (localOnly && hostKind !== "local") {
       console.log(`skip ${filename}: local-only — ${localOnly}`);
+      continue;
+    }
+    if (adopted.has(filename)) {
+      // The host applied its copy of this migration; record it, don't run it again.
+      await execute(
+        `INSERT INTO ${ledger} (id, filename)
+         VALUES (:filename, :filename)
+         ON CONFLICT (id) DO UPDATE SET filename = EXCLUDED.filename`,
+        { filename },
+      );
+      console.log(`adopted ${filename}`);
       continue;
     }
     await executeScript(sql);
