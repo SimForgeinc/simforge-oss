@@ -314,13 +314,14 @@ export function simulationObjectKeys(workspaceId: string, completion: Pick<Simul
 
 /**
  * The render timeline step (WS-B): trace + the map's height source → the
- * canonical timeline every renderer samples. Best effort: a render without it
- * falls back to the XOSC, so a failure here never fails the simulation.
+ * canonical timeline every renderer samples. It is the render contract: no
+ * renderer re-derives poses from the XOSC, so a simulation whose timeline
+ * cannot be built fails (`render_timeline_build_failed`).
  */
 export async function buildSimulationTimeline(
   simulation: AuthoritativeSimulation,
   closure: Pick<SimulationMapClosure, "xodr" | "topology">,
-): Promise<SimulationTimeline | null> {
+): Promise<SimulationTimeline> {
   try {
     const { buildRenderTimeline } = await import("@simforge-oss/render/timeline");
     return await buildRenderTimeline({
@@ -330,8 +331,7 @@ export async function buildSimulationTimeline(
       catalogDigest: null,
     });
   } catch (error) {
-    console.warn(`[simulation] render timeline for ${simulation.simKey} unavailable: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

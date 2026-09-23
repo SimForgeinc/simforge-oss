@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,11 +17,12 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE,
+  CONTROL_FEATURE_NATIVE_STAGE_TIMINGS,
 } from '../worker-control.js';
-import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { RenderInputError } from '../render-input-error.js';
+import { parseRenderIntent, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 
-import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { lowerTimelineToNative } from './timeline-lowering.js';
 import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
@@ -28,15 +30,17 @@ import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCs
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
 import { stripRgbaPadding, type NativeActorObservation, type NativeBundleResponse, type NativeFrameIdentity, type NativeFrameRecord } from './service-client.js';
 import { DEFAULT_SHM_SIZE_MB, startNativeRenderService } from './service-process.js';
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, nativeActorAssetsCacheDir } from './actor-assets.js';
+import {
+  NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAnimationsBound, assertActorAppearanceGrounded, ensureActorAssets, nativeActorAssetsCacheDir,
+} from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
-import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
-import { resolveNativeLighting } from './lighting.js';
+import { resolveActorAssets, resolveEncoder, resolveNativeRenderService, type LocalExecutableSource } from './local-runtime.js';
+import { nativeLightingSiteFromOpenDrive, resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 import {
-  DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, nvencAvailable,
+  DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
   type NativeVideoCodec, type NativeVideoEncoderPreference, type VideoFormat,
 } from './video-encoder.js';
 
@@ -188,6 +192,121 @@ export function resolveBinary(options: NativeRenderEngineOptions): string {
 }
 
 
+/** The ffmpeg a native render encodes with, and how it was found (recorded in the manifest). */
+export interface NativeEncoderIdentity {
+  readonly path: string;
+  readonly source: 'option' | LocalExecutableSource;
+  readonly version: string;
+}
+
+/**
+ * The encoder binary: the engine option, else the runtime's resolved ffmpeg
+ * (`resolveEncoder`: env, runtime root, then a PATH lookup that is recorded
+ * as `path`). Nothing found fails the job (`native_encoder_missing`); a bare
+ * `ffmpeg` is never spawned on the chance that one exists.
+ */
+export function resolveNativeEncoder(options: Pick<NativeRenderEngineOptions, 'ffmpegBinary'>, env: NodeJS.ProcessEnv = process.env): { path: string; source: NativeEncoderIdentity['source'] } {
+  if (options.ffmpegBinary) return { path: options.ffmpegBinary, source: 'option' };
+  const encoder = resolveEncoder(env);
+  if (encoder.state === 'available') return { path: encoder.path, source: encoder.source };
+  throw new RenderInputError('native_encoder_missing', `no ffmpeg encoder is installed for the native render (looked in ${encoder.searched.length > 0 ? encoder.searched.join(', ') : 'nowhere: PATH is empty'})`);
+}
+
+/** `ffmpeg -version`'s banner line, which names the build; a binary that cannot report it cannot encode. */
+export function nativeEncoderVersion(ffmpeg: string): string {
+  const probe = spawnSync(ffmpeg, ['-hide_banner', '-version'], { encoding: 'utf8', timeout: 20_000 });
+  const banner = probe.status === 0 ? probe.stdout.split('\n')[0]?.trim() : undefined;
+  if (!banner) {
+    throw new RenderInputError('native_encoder_missing', `ffmpeg ${ffmpeg} did not report its version (${probe.error?.message ?? `exit ${String(probe.status)}`})`);
+  }
+  return banner.slice(0, 512);
+}
+
+/**
+ * Near/far planes of the service's cameras. The service has one pair for
+ * every camera (`ServiceCamera` carries none), so the RGB cameras must agree
+ * on theirs; lidar and radar cast their own rays and never move them.
+ */
+export function nativeCameraClipPlanes(sources: readonly RenderSourceV3[]): { nearM: number; farM: number } {
+  const cameras = sources.filter((source) => source.modality === 'rgb');
+  const lead = cameras[0];
+  if (!lead || lead.modality !== 'rgb') throw new RenderInputError('native_render_camera_missing', 'native render requires at least one RGB camera');
+  for (const camera of cameras) {
+    if (camera.modality !== 'rgb') continue;
+    if (camera.attributes.nearM !== lead.attributes.nearM || camera.attributes.farM !== lead.attributes.farM) {
+      throw new RenderInputError(
+        'native_camera_clip_planes_conflict',
+        `cameras ${lead.outputName} (${lead.attributes.nearM}-${lead.attributes.farM} m) and ${camera.outputName} (${camera.attributes.nearM}-${camera.attributes.farM} m) ask for different clip planes; the native service renders every camera with one pair`,
+      );
+    }
+  }
+  return { nearM: lead.attributes.nearM, farM: lead.attributes.farM };
+}
+
+/** Largest mount roll, radians, the native cameras treat as level. */
+export const NATIVE_ROLL_TOLERANCE_RAD = 1e-6;
+
+/**
+ * Refuses sources the service would render other than authored:
+ * - a camera whose frame exceeds the engine's limits;
+ * - a rolled camera mount: the service aims cameras by eye/target with a
+ *   world-up vector, so camera roll would be dropped (lidar and radar mounts
+ *   carry their full rotation, roll included);
+ * - an asymmetric lidar vertical band: the service's lidar fan is symmetric
+ *   about the mount, and tilting the rig to fake it would tilt the scan plane.
+ */
+/**
+ * The video the intent asks for, as the native encoder can make it: MP4/H.264
+ * at the reference quality (libx264 CRF 18, or NVENC at its measured
+ * equivalent), which meets `draft`, `standard` and `high`. Another container
+ * or codec, or `lossless`, is refused rather than encoded as something else.
+ */
+export function assertNativeVideoProfileSupported(video: RenderIntentV1['renderSpec']['video']): void {
+  if (!video) return;
+  if (video.container !== 'mp4' || video.codec !== 'h264') {
+    throw new RenderInputError('native_video_profile_unsupported', `the native engine encodes mp4+h264; the intent asks for ${video.container}+${video.codec}`);
+  }
+  if (video.quality === 'lossless') {
+    throw new RenderInputError('native_video_quality_unsupported', 'the native engine encodes lossy H.264 (CRF 18); the intent asks for lossless video');
+  }
+}
+
+export function assertNativeSourcesSupported(sources: readonly RenderSourceV3[]): void {
+  for (const source of sources) {
+    if (source.modality === 'rgb') {
+      const { width, height } = source.attributes;
+      if (width > CAPABILITIES.limits.maxWidth || height > CAPABILITIES.limits.maxHeight) {
+        throw new RenderInputError('native_camera_size_unsupported', `camera ${source.outputName} asks for ${width}x${height}; the native engine renders at most ${CAPABILITIES.limits.maxWidth}x${CAPABILITIES.limits.maxHeight}`);
+      }
+      if (Math.abs(source.transform.rotation.rollRad) > NATIVE_ROLL_TOLERANCE_RAD) {
+        throw new RenderInputError('native_sensor_roll_unsupported', `camera ${source.outputName} is mounted with roll ${source.transform.rotation.rollRad} rad; the native service aims cameras without roll`);
+      }
+    }
+    if (source.modality === 'lidar') {
+      const { upperFovDeg, lowerFovDeg } = source.attributes;
+      if (Math.abs(upperFovDeg + lowerFovDeg) > 1e-9) {
+        throw new RenderInputError('native_lidar_asymmetric_fov_unsupported', `lidar ${source.outputName} scans ${lowerFovDeg} to ${upperFovDeg} deg; the native service casts a vertical fan symmetric about the mount`);
+      }
+    }
+  }
+}
+
+/** A service frame must be the pass, size and format this job asked for. */
+function assertFrameMatchesRequest(frame: NativeFrameRecord, encoder: Encoder, tick: number): void {
+  const expected = encoder.source.modality === 'rgb'
+    ? { format: 'rgba8', width: encoder.width, height: encoder.height, pass: 'rgb' }
+    : encoder.source.modality === 'lidar'
+      ? { format: 'ply-ascii', pass: 'lidar' }
+      : { format: 'radar-csv', pass: 'radar' };
+  const geometry = 'width' in expected && (frame.width !== expected.width || frame.height !== expected.height);
+  if (frame.pass !== expected.pass || geometry) {
+    throw new RenderInputError('native_frame_geometry_mismatch', `the render service returned a ${frame.width}x${frame.height} ${frame.pass} frame for ${encoder.source.outputName} at tick ${tick}; the job asked for ${'width' in expected ? `${expected.width}x${expected.height} ` : ''}${expected.pass}`);
+  }
+  if (frame.format !== expected.format) {
+    throw new RenderInputError('native_frame_format_mismatch', `the render service returned ${frame.format} for ${encoder.source.outputName} at tick ${tick}; expected ${expected.format}`);
+  }
+}
+
 /** One source's video: its ffmpeg encoder plus the source it encodes. */
 interface Encoder {
   readonly source: RenderSourceV3;
@@ -264,8 +383,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
     ? { ...CAPABILITIES, engineVersion: options.engineVersion }
     : CAPABILITIES;
   const binary = resolveBinary(options);
-  const encoder = resolveEncoder();
-  const ffmpeg = options.ffmpegBinary ?? (encoder.state === 'available' ? encoder.path : 'ffmpeg');
 
   return {
     capabilities,
@@ -291,7 +408,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
       const unsupported = sources.find((source) => source.modality !== 'rgb' && source.modality !== 'lidar' && source.modality !== 'radar');
-      if (unsupported) throw new Error(`native retained engine does not render ${unsupported.modality} sources`);
+      if (unsupported) throw new RenderInputError('native_modality_unsupported', `native retained engine does not render ${unsupported.modality} source ${unsupported.outputName}`);
+      assertNativeSourcesSupported(sources);
+      assertNativeVideoProfileSupported(intent.renderSpec.video);
+      const clipPlanes = nativeCameraClipPlanes(sources);
+      // Resolve the encoder before any download or GPU work: a job that
+      // cannot encode fails in milliseconds, naming the missing binary.
+      const encoderBinary = resolveNativeEncoder(options);
+      const encoderIdentity: NativeEncoderIdentity = { ...encoderBinary, version: nativeEncoderVersion(encoderBinary.path) };
+      const ffmpeg = encoderIdentity.path;
       const rgbSchedules = context.schedules.filter((schedule) => {
         const source = sources.find((candidate) => candidate.outputName === schedule.sourceId);
         return source?.modality === 'rgb';
@@ -351,28 +476,22 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       phase('actorAssets');
       // The render contract is the render timeline: sample the authoritative
-      // trace through the shared sampler. Re-lowering the derived xosc is a
-      // labelled fallback for execution packages that predate the timeline.
+      // trace through the shared sampler. There is no other scene source; a
+      // job without one fails instead of re-deriving poses from the xosc.
       const timelineInput = context.inputs.get(RENDER_TIMELINE_INPUT_ID);
+      if (!timelineInput) {
+        throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none`);
+      }
       const warnings: { code: string; message: string }[] = [];
-      let lowering: NativeSceneLowering;
-      let timelineSha256: string | undefined;
-      let timelineBytes: Uint8Array | undefined;
       const applyAttitude = options.applyAttitude !== false;
-      if (timelineInput) {
-        timelineBytes = await fs.readFile(timelineInput.path);
-        const timelineLowering = await lowerTimelineToNative(timelineBytes, rgbSchedules, { attitude: applyAttitude });
-        if (timelineLowering.timelineSha256 !== timelineInput.sha256) {
-          throw new Error(`render_timeline_digest_mismatch: ${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineLowering.timelineSha256}`);
-        }
-        lowering = timelineLowering;
-        timelineSha256 = timelineLowering.timelineSha256;
-      } else {
-        const xosc = await fs.readFile(xoscInput.path);
-        lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
-        warnings.push({ code: 'scene_source_openscenario_legacy', message: 'no render.timeline input; poses were re-lowered from the derived OpenSCENARIO export' });
+      const timelineBytes = await fs.readFile(timelineInput.path);
+      const lowering = await lowerTimelineToNative(timelineBytes, rgbSchedules, { attitude: applyAttitude });
+      const timelineSha256 = lowering.timelineSha256;
+      if (timelineSha256 !== timelineInput.sha256) {
+        throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
       }
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
+      assertActorAnimationsBound(lowering.appearances, lowering.states, actorAssets);
       phase('lowering');
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
@@ -396,7 +515,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // Observed per-frame actor transforms (`observe_actors`): what the
       // renderer drew, graded against the shared sampler after the run.
       const observedFrames: string[] = [];
-      let observing = true;
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
       // The scenario's environment as the renderer's physical lighting and
@@ -404,7 +522,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // model, same profile. The service meters the sky through each
       // frame's camera on top (`autoMeter`).
       const capture = nativeCaptureSettings(options);
+      // The sun is placed at the map's own site: its OpenDRIVE geoReference.
+      const mapSha256 = intent.scenarioRevision.map.sha256;
+      const xodrInput = [...context.inputs.values()].find((input) => input.sha256 === mapSha256);
+      if (!xodrInput) {
+        throw new RenderInputError('native_lighting_site_unknown', `the map's OpenDRIVE (${mapSha256}) was not delivered with the job; the sun cannot be placed`);
+      }
+      const site = nativeLightingSiteFromOpenDrive(await fs.readFile(xodrInput.path, 'utf8'), intent.scenarioRevision.map.mapId);
       const resolvedLook = resolveNativeLighting(intent.renderSpec.authoredEnvironment, {
+        site,
         cloudFixedStepS: 1 / Math.max(1, ...rgbSchedules.map((schedule) => schedule.framesPerSecond)),
       });
       const look = {
@@ -417,8 +543,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         lighting: look.lighting,
         profileConfig: look.profileConfig,
         autoMeter: options.autoMeter ?? true,
-        nearM: Math.min(...sources.map((source) => source.modality === 'rgb' ? source.attributes.nearM : 0.05)),
-        farM: Math.max(...sources.map((source) => source.modality === 'rgb' ? source.attributes.farM : 1_000)),
+        nearM: clipPlanes.nearM,
+        farM: clipPlanes.farM,
         warmupFrames: 20,
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
@@ -452,12 +578,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       }
       phase('serviceStart');
       const { client } = session;
-      // A service that predates the pinned clock renders update-count frames
-      // whatever the scene spec asked for: record what actually ran.
-      const captureClock = capture.clock === 'pinned' && !client.supports('capture_clock.pinned') ? 'free' : capture.clock;
-      if (captureClock !== capture.clock) {
-        warnings.push({ code: 'native_capture_clock_unsupported', message: 'the render service does not pin the capture clock; frames use update-count semantics' });
+      // A service that predates the pinned clock would render update-count
+      // frames whatever the scene spec asked for: refuse instead.
+      if (capture.clock === 'pinned' && !client.supports('capture_clock.pinned')) {
+        await session.close();
+        throw new RenderInputError('native_capture_clock_unsupported', 'the render service does not pin the capture clock; the pinned (simulation-time) capture this job asks for cannot run on it');
       }
+      const captureClock = capture.clock;
 
       const encoders = new Map<string, Encoder>();
       const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
@@ -526,8 +653,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
               const rasterizer = rasterizers.get(frame.sensorId)!;
               const rasterStarted = performance.now();
               const rgba = rasterizer instanceof LidarVideoRasterizer
-                ? rasterizer.frame(parseLidarPly(payload))
-                : rasterizer.frame(parseRadarCsv(payload));
+                ? rasterizer.frame(parseLidarPly(payload, `lidar ${frame.sensorId} tick ${tick}`))
+                : rasterizer.frame(parseRadarCsv(payload, `radar ${frame.sensorId} tick ${tick}`));
               timing.raster = (timing.raster ?? 0) + (performance.now() - rasterStarted);
               // `write` copies the frame: the rasterizer reuses its buffer.
               writes.push(encoder.video.write(rgba));
@@ -569,7 +696,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           // The non-camera rig is retained by the service: declare it once.
           ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
           ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
-          ...(lookahead > 0 ? { pipeline: true, observe: observing } : {}),
+          ...(lookahead > 0 ? { pipeline: true, observe: true } : {}),
         });
         const queued: Promise<NativeBundleResponse>[] = [];
         let nextTick = 0;
@@ -606,22 +733,20 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           serverStages.add('total', response.server_ms ?? 0);
           for (const [counter, value] of Object.entries(service.counts)) counters[counter] = (counters[counter] ?? 0) + value;
           const bundled = response.observed_actors as NativeActorObservation['actors'] | undefined;
-          if (observing) {
+          {
             const observation = bundled
               ? { tick: (response.observed_tick as number | null | undefined) ?? null, actors: bundled }
               : lookahead > 0 ? null : await client.observeActors();
             if (observation === null) {
-              observing = false;
-              warnings.push({ code: 'native_observation_unavailable', message: 'the render service does not report observed actor transforms; parity was not graded' });
-            } else {
-              observedFrames.push(JSON.stringify({
-                tick, time: lowering.frameTimes[tick],
-                actors: observation.actors.map((actor) => ({
-                  id: actor.id, position: actor.position, rotation: actor.rotation, visible: actor.visible,
-                  ...(actor.modelPosition ? { modelPosition: actor.modelPosition, modelRotation: actor.modelRotation } : {}),
-                })),
-              }));
+              throw new RenderInputError('native_render_parity_unavailable', `the render service reported no observed actor transforms at tick ${tick}; the render timeline's pose parity cannot be graded`);
             }
+            observedFrames.push(JSON.stringify({
+              tick, time: lowering.frameTimes[tick],
+              actors: observation.actors.map((actor) => ({
+                id: actor.id, position: actor.position, rotation: actor.rotation, visible: actor.visible,
+                ...(actor.modelPosition ? { modelPosition: actor.modelPosition, modelRotation: actor.modelRotation } : {}),
+              })),
+            }));
             clientMark = clientStage('observe', clientMark);
           }
           // Copy this tick's payloads out of the shared-memory ring now: the
@@ -636,8 +761,22 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
               if (frame.pass !== 'rgb' || !wantedMicros.get(frame.sensorId)?.has(frameMicros)) continue;
               if (!encoders.has(frame.sensorId)) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
             }
+            assertFrameMatchesRequest(frame, encoders.get(frame.sensorId)!, tick);
             items.push({ frame, payload: await client.readFrame(frame) });
             digests[`${frame.sensorId}:${frame.pass}`] = frame.digest;
+          }
+          // Every requested camera frame and every retained lidar/radar must
+          // arrive: a missing one would leave its video a frame short (or
+          // shifted) instead of failing here, at the tick that lost it.
+          for (const [sourceId, micros] of wantedMicros) {
+            if (micros.has(frameMicros) && !items.some((item) => item.frame.sensorId === sourceId && item.frame.pass === 'rgb')) {
+              throw new RenderInputError('native_frame_missing', `the render service returned no rgb frame for camera ${sourceId} at tick ${tick}`);
+            }
+          }
+          for (const sourceId of rasterizers.keys()) {
+            if (!items.some((item) => item.frame.sensorId === sourceId && item.frame.pass !== 'rgb')) {
+              throw new RenderInputError('native_frame_missing', `the render service returned no sensor frame for ${sourceId} at tick ${tick}`);
+            }
           }
           clientMark = clientStage('read', clientMark);
           await drainInFlight();
@@ -682,8 +821,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       // The parity gate: with a timeline, every drawn actor must match the
       // shared sampler at its frame time (Bevy: <= 1e-3 m / 0.05 deg).
-      let parity: ParityReport | undefined;
-      if (timelineBytes && observing && observedFrames.length > 0) {
+      if (observedFrames.length !== lowering.states.length) {
+        throw new RenderInputError('native_render_parity_unavailable', `observed actor transforms cover ${observedFrames.length} of ${lowering.states.length} ticks; parity cannot be graded`);
+      }
+      let parity: ParityReport;
+      {
         const timeline = await openRenderTimeline(timelineBytes);
         try {
           parity = compareObserved(timeline, observedFrames.join('\n'), {
@@ -702,12 +844,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       await writeJson(tracePath, {
         ...traceDocument,
         ...(observedFrames.length > 0 ? { observedFramesPath: observedRelative, observedFrames: observedFrames.map((line) => JSON.parse(line) as unknown) } : {}),
-        ...(parity ? { parity } : {}),
+        parity,
+        attitude: applyAttitude ? 'full' : 'yaw-only',
       });
       const traceDigest = await hashFile(tracePath);
       phase('parityAndTrace');
-      if (parity && !parity.pass) {
-        throw new Error(`native_render_parity_failed: max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
+      if (!parity.pass) {
+        throw new RenderInputError('native_render_parity_failed', `max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
       }
 
       const videoRecords = [];
@@ -784,6 +927,18 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           autoMeter: options.autoMeter ?? true,
           provenance: look.provenance,
         },
+        ...(features.has(CONTROL_FEATURE_NATIVE_ENCODER) ? { encoder: {
+          ...encoderIdentity,
+          videos: [...encoders.values()]
+            .sort((left, right) => left.source.outputName.localeCompare(right.source.outputName))
+            .map((encoder) => ({
+              actorId: encoder.source.actorId,
+              sensorId: encoder.source.sensorId,
+              codec: encoder.video.codec,
+              ...(encoder.video.fellBack ? { startedAs: 'h264_nvenc' as const } : {}),
+              args: encoderCodecArgs(encoder.video.codec),
+            })),
+        } } : {}),
         videos: videoRecords,
       }));
       const nativeManifestDigest = await hashFile(nativeManifestPath);
@@ -826,7 +981,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
-        ...(parity && features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
+        ...(features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
           schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
           maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
           maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,

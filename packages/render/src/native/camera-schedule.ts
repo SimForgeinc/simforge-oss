@@ -1,5 +1,6 @@
 import { PRONTO_CHASE_CAMERA_SENSOR_ID, type RenderSensorSourceHost, type RenderSourceV3 } from '@simforge-oss/scenario';
 
+import { RenderInputError } from '../render-input-error.js';
 import type { NativeSceneState } from './lowering.js';
 
 /**
@@ -17,6 +18,14 @@ export interface NativeSensorAttach {
   /** Degrees, CARLA sense (clockwise from above); the service subtracts it. */
   readonly yawDeg: number;
   readonly pitchDeg: number;
+  /**
+   * Mount roll, degrees: the service composes `Ry(yaw)·Rz(pitch)·Rx(roll)`
+   * exactly as the browser capture does with the authored angles. Lidar and
+   * radar honour it; cameras are refused when rolled
+   * (`assertNativeSourcesSupported`), since the service aims them with a
+   * world-up vector.
+   */
+  readonly rollDeg: number;
   /**
    * Keep the host's own geometry in this view. A rigid rig mount sits inside
    * the body shell and must not see it; the trailing chase camera exists to.
@@ -81,16 +90,17 @@ function hostActorId(source: RenderSourceV3, hosts: ReadonlyMap<string, string>)
 /**
  * The authored mount as the service's attachment. Authored mount yaw is CCW;
  * the service's attach yaw is CARLA's clockwise sense, so the sign flips here
- * and nowhere else. `pitchOffsetDeg` re-centres a sensor whose vertical band
- * is asymmetric (a lidar's `[lower, upper]`) onto the service's symmetric one.
+ * and nowhere else. Pitch and roll pass through: the service applies
+ * `Ry(-yawDeg)·Rz(pitch)·Rx(roll)`, the browser capture's `Ry(yaw)·Rz(pitch)·Rx(roll)`.
  */
-function attachment(source: RenderSourceV3, actorId: string, pitchOffsetDeg = 0): NativeSensorAttach {
+function attachment(source: RenderSourceV3, actorId: string): NativeSensorAttach {
   const mount = source.transform.position;
   return {
     actorId,
     offsetM: [mount.x, -mount.z, mount.y],
     yawDeg: -source.transform.rotation.yawRad * 180 / Math.PI,
-    pitchDeg: source.transform.rotation.pitchRad * 180 / Math.PI + pitchOffsetDeg,
+    pitchDeg: source.transform.rotation.pitchRad * 180 / Math.PI,
+    rollDeg: source.transform.rotation.rollRad * 180 / Math.PI,
     hostVisible: source.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID,
   };
 }
@@ -163,9 +173,12 @@ export function createNativeSensorRigs(
   for (const source of sources) {
     if (source.modality === 'lidar') {
       const { upperFovDeg, lowerFovDeg } = source.attributes;
+      if (Math.abs(upperFovDeg + lowerFovDeg) > 1e-9) {
+        throw new RenderInputError('native_lidar_asymmetric_fov_unsupported', `lidar ${source.outputName} scans ${lowerFovDeg} to ${upperFovDeg} deg; the native service casts a vertical fan symmetric about the mount`);
+      }
       lidars.push({
         sensorId: source.outputName,
-        attach: attachment(source, hostActorId(source, hosts), (upperFovDeg + lowerFovDeg) / 2),
+        attach: attachment(source, hostActorId(source, hosts)),
         channels: source.attributes.channels,
         rotationFrequencyHz: source.attributes.rotationFrequencyHz,
         pointsPerSecond: source.attributes.pointsPerSecond,

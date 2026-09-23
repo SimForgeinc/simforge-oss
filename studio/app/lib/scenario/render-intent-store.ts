@@ -487,6 +487,13 @@ export async function createRenderIntentJob(
     const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
       ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
       : [];
+    // The native engine renders from the timeline and nothing else
+    // (docs/engineering/no-silent-fallbacks.md): a revision whose simulation
+    // has none is refused here (the same code the engine would fail with)
+    // instead of a worker leasing it first.
+    if (input.engine === "native" && timelineAssets.length === 0) {
+      throw new Error("native_render_timeline_missing");
+    }
     const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets], fleetGpuBytes);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({

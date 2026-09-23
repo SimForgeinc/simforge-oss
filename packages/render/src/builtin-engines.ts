@@ -8,6 +8,7 @@ import { RenderArtifactManifestSchema, type RenderArtifactManifest } from './art
 import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration } from './capabilities.js';
 import { loadRenderEngine, type RenderEngineAdapter, type RenderExecutionContext } from './engine.js';
 import { parseProgressJsonl } from './progress.js';
+import { RENDER_INPUT_ERROR_CODE, RenderInputError, renderInputErrorFromServiceMessage, type RenderInputErrorCode } from './render-input-error.js';
 
 export type BuiltinRenderEngineId = 'browser' | 'carla' | 'native';
 
@@ -89,6 +90,8 @@ class CarlaProcessEngine implements RenderEngineAdapter {
       '--output', context.workspace,
       '--progress', progressPath,
       '--manifest', manifestPath,
+      // The adapter records substitutions only when the lease negotiated it.
+      '--control-features', [...(context.controlFeatures ?? [])].sort().join(','),
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
@@ -137,11 +140,33 @@ class CarlaProcessEngine implements RenderEngineAdapter {
     }
     context.signal.removeEventListener('abort', terminate);
     await forwardProgress();
+    if (result.code === 3) {
+      // A policy refusal (docs/engineering/no-silent-fallbacks.md): the
+      // adapter's last stdout line names the missing thing and its code.
+      throw carlaRenderFailure(stdout) ?? new Error(`CARLA renderer refused the render without a failure record: stdout=${stdout} stderr=${stderr}`);
+    }
     if (result.code !== 0) {
       throw new Error(`CARLA renderer exited code=${String(result.code)} signal=${String(result.signal)} stdout=${stdout} stderr=${stderr}`);
     }
     return RenderArtifactManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
   }
+}
+
+/** The adapter's `simforge.carla-render-failure/v1` record, as a non-retryable error. */
+export function carlaRenderFailure(stdout: string): RenderInputError | undefined {
+  const line = stdout.trim().split('\n').at(-1);
+  if (!line) return undefined;
+  let record: { schema?: unknown; code?: unknown; message?: unknown };
+  try {
+    record = JSON.parse(line) as typeof record;
+  } catch {
+    return undefined;
+  }
+  if (record.schema !== 'simforge.carla-render-failure/v1' || typeof record.code !== 'string' || typeof record.message !== 'string') {
+    return undefined;
+  }
+  return renderInputErrorFromServiceMessage(record.message)
+    ?? (RENDER_INPUT_ERROR_CODE.test(record.code) ? new RenderInputError(record.code as RenderInputErrorCode, record.message) : undefined);
 }
 
 export async function loadBuiltinRenderEngine(

@@ -166,7 +166,16 @@ export async function renderRun(options: RenderRunOptions): Promise<number> {
     if (manifest.artifacts.length === 0) throw new CliError('render_failed', 'engine produced no artifacts');
     const manifestPath = join(workspace, 'render-artifact-manifest.json');
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o644 });
-    emit({ intentSha256, manifestPath, artifactCount: manifest.artifacts.length }, { pretty: options.pretty });
+    // A final-render engine reports degraded output by failing, never by a
+    // warning (docs/engineering/no-silent-fallbacks.md); the browser preview
+    // labels what it omitted, and the result shows it.
+    if (manifest.engine.backend !== 'browser' && manifest.warnings.length > 0) {
+      throw new CliError('render_failed', `engine reported degraded output: ${manifest.warnings.map((warning) => `${warning.code}: ${warning.message}`).join('; ')}`);
+    }
+    emit({
+      intentSha256, manifestPath, artifactCount: manifest.artifacts.length,
+      ...(manifest.warnings.length > 0 ? { warnings: manifest.warnings } : {}),
+    }, { pretty: options.pretty });
     return EXIT.ok;
   } finally {
     process.off('SIGINT', cancel);

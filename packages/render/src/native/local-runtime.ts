@@ -4,6 +4,7 @@ import { delimiter, join } from 'node:path';
 import { nativeExecutableName, nativeRuntimeRoot } from '@simforge-oss/native-runtime';
 import { z } from 'zod';
 
+import { RenderInputError } from '../render-input-error.js';
 import { PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 
 /**
@@ -60,19 +61,28 @@ const RuntimeManifestComponentSchema = z.object({
 });
 const RuntimeManifestComponentsSchema = z.object({ components: z.array(z.unknown()).default([]) });
 
-/** The `components[]` of the installed runtime manifest, or none when absent/unreadable. */
+/**
+ * The `components[]` of the installed runtime manifest; none when the runtime
+ * installs no manifest. A manifest that exists but cannot be read is a broken
+ * installation (`native_runtime_manifest_invalid`), never "no components":
+ * that would quietly resolve the service from another location.
+ */
 function runtimeManifestComponents(root: string): Array<z.infer<typeof RuntimeManifestComponentSchema>> {
+  const manifestPath = join(root, RUNTIME_MANIFEST_RELATIVE);
+  if (fileSize(manifestPath) === null) return [];
+  let raw: unknown;
   try {
-    const raw: unknown = JSON.parse(readFileSync(join(root, RUNTIME_MANIFEST_RELATIVE), 'utf8'));
-    const parsed = RuntimeManifestComponentsSchema.safeParse(raw);
-    if (!parsed.success) return [];
-    return parsed.data.components.flatMap((item) => {
-      const component = RuntimeManifestComponentSchema.safeParse(item);
-      return component.success ? [component.data] : [];
-    });
-  } catch {
-    return [];
+    raw = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    throw new RenderInputError('native_runtime_manifest_invalid', `${manifestPath} is not readable JSON: ${(error as Error).message}`);
   }
+  const parsed = RuntimeManifestComponentsSchema.safeParse(raw);
+  if (!parsed.success) throw new RenderInputError('native_runtime_manifest_invalid', `${manifestPath} has no components list`);
+  return parsed.data.components.map((item, index) => {
+    const component = RuntimeManifestComponentSchema.safeParse(item);
+    if (!component.success) throw new RenderInputError('native_runtime_manifest_invalid', `${manifestPath} component ${index} is malformed`);
+    return component.data;
+  });
 }
 
 function pathCandidates(base: string, env: NodeJS.ProcessEnv): string[] {
@@ -174,11 +184,19 @@ export function resolveActorAssets(env: NodeJS.ProcessEnv = process.env): LocalA
 /** Everything a baseline local native render needs, with the reasons it is not ready. */
 export function probeLocalNativeRender(env: NodeJS.ProcessEnv = process.env): LocalNativeRenderProbe {
   const runtimeRoot = nativeRuntimeRoot(env);
-  const renderService = resolveNativeRenderService(env);
+  const reasons: string[] = [];
+  let renderService: LocalExecutable;
+  try {
+    renderService = resolveNativeRenderService(env);
+  } catch (error) {
+    // The probe reports a broken installation as a reason, not a crash.
+    if (!(error instanceof RenderInputError)) throw error;
+    reasons.push(error.message);
+    renderService = { state: 'missing', path: null, source: null, searched: [] };
+  }
   const encoder = resolveEncoder(env);
   const actorAssets = resolveActorAssets(env);
-  const reasons: string[] = [];
-  if (renderService.state === 'missing') {
+  if (renderService.state === 'missing' && renderService.searched.length > 0) {
     reasons.push(`The native render service is not installed (looked in ${renderService.searched.join(', ')}).`);
   }
   if (encoder.state === 'missing') reasons.push('No ffmpeg encoder is installed with the runtime.');
