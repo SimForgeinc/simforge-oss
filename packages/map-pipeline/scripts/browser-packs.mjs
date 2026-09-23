@@ -34,7 +34,24 @@ import path from 'node:path';
  *   3d/variants/manifest.json            variants['browser-pack:<tier>'] -> index
  */
 export const BROWSER_PACK_SCHEMA = 'simforge.map-browser-pack.v1';
-export const BROWSER_PACK_REVISION = 'browser-pack-v1';
+export const BROWSER_PACK_REVISION = 'browser-pack-v2';
+/**
+ * Every chunk starts with this 16-byte header: the magic, then the member
+ * count and a reserved zero (uint32 LE). Besides naming the format, it keeps a
+ * chunk that holds a single member from being byte-identical to that member,
+ * which would give two different blobs (a .bin and a .glb) one content
+ * address in a registry keyed by digest.
+ */
+export const BROWSER_PACK_CHUNK_MAGIC = 'SFBPACK1';
+export const BROWSER_PACK_CHUNK_HEADER_BYTES = 16;
+
+function chunkHeader(members) {
+  const header = Buffer.alloc(BROWSER_PACK_CHUNK_HEADER_BYTES);
+  header.write(BROWSER_PACK_CHUNK_MAGIC, 0, 'ascii');
+  header.writeUInt32LE(members, 8);
+  return header;
+}
+
 /** Chunks close at the first member boundary past this size. */
 export const BROWSER_PACK_CHUNK_BYTES = 16 * 1024 * 1024;
 
@@ -103,14 +120,16 @@ function boxDistance(bounds, point) {
 
 /**
  * Streaming order of scene files: the road layer, then city cells by
- * distance from the focus, then vegetation cells by distance. Ties break on
+ * distance from the focus, then vegetation cells, coarsest level first. Ties break on
  * the file name so the order, and therefore every chunk digest, is stable.
  */
 export function streamingOrder(manifest) {
   const focus = initialFocus(manifest);
+  // Coarse levels first everywhere, then each finer level nearest-first: a
+  // cell's coarse vegetation can be on screen before any full plant is read.
   const byDistance = (tiles) => tiles
     .flatMap((tile) => (tile.lods ?? []).map((lod) => ({ file: lod.file, distance: boxDistance(tile.bounds, focus), level: lod.level ?? 0 })))
-    .sort((a, b) => a.distance - b.distance || a.level - b.level || a.file.localeCompare(b.file))
+    .sort((a, b) => b.level - a.level || a.distance - b.distance || a.file.localeCompare(b.file))
     .map((entry) => entry.file);
   return {
     focus,
@@ -244,7 +263,7 @@ export async function buildBrowserPacks({ sourceRoot, outputRoot = sourceRoot, t
     let currentKey = null;
     const flush = async () => {
       if (current.length === 0) return;
-      const bytes = Buffer.concat(current.map((entry) => entry.bytes));
+      const bytes = Buffer.concat([chunkHeader(current.length), ...current.map((entry) => entry.bytes)]);
       const digest = sha256(bytes);
       const file = `packs/objects/${digest}.bin`;
       const target = path.join(outputRoot, '3d', file);
@@ -255,7 +274,7 @@ export async function buildBrowserPacks({ sourceRoot, outputRoot = sourceRoot, t
         if (error.code !== 'ENOENT') throw error;
         await atomicWrite(target, bytes);
       }
-      let offset = 0;
+      let offset = BROWSER_PACK_CHUNK_HEADER_BYTES;
       for (const entry of current) {
         members[entry.member] = [chunks.length, offset, entry.bytes.length];
         offset += entry.bytes.length;

@@ -13,7 +13,10 @@ import { buildMaster, masterToolFingerprint } from './master.js';
 import type { MasterReport } from './master.js';
 import { ROAD_SIDECAR_REVISION, writeRoadSidecars } from './sidecars.js';
 import { buildWebTier, webTierToolFingerprint } from './web-tier.js';
-import type { WebTierReport } from './web-tier.js';
+import type { VegetationLodLevel, WebTierReport } from './web-tier.js';
+import { substituteLods } from './geometry-lod/substitute.js';
+import { parseGeometryLodManifest } from './geometry-lod/schema.js';
+import type { GltfDocument } from './geometry-lod/gltf-read.js';
 import type { Ktx2Options } from './ktx2.js';
 import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSourceDigest } from './source.js';
 import { withStageLock } from './stage-lock.js';
@@ -408,7 +411,9 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
   const decoderDigest = sha256(`${(await hashFile(decoderJs)).sha256}\0${(await hashFile(decoderWasm)).sha256}`);
   const toolFingerprint = sha256(`${webTierToolFingerprint(cellSize)}\0decoder=${decoderDigest}\0${TEXTURE_TIERS_REVISION}\0tiers=${TEXTURE_VARIANTS.join(',')}\0${BROWSER_PACK_REVISION}`);
   // XODR, location catalogs, reports and map aliases cannot invalidate identical render cells.
-  const members = Object.fromEntries(Object.entries(master.closure.members).filter(([file]) => (sceneMember(file) && file !== 'master-report.json') || file === 'env/sky.hdr'));
+  // The render LOD chains of the geometry derivative feed the vegetation cells' coarser levels.
+  const members = Object.fromEntries(Object.entries(master.closure.members).filter(([file]) => (sceneMember(file) && file !== 'master-report.json') || file === 'env/sky.hdr'
+    || (file.startsWith(`${GEOMETRY_LOD_DIR}/`) && !file.startsWith(`${GEOMETRY_LOD_DIR}/sensor`))));
   const inputDigest = sha256(canonicalJson(members));
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'web', cacheKey);
@@ -422,7 +427,8 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     const contentDir = await resetStageContent(outputDir);
     const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
     const document = await io.read(path.join(master.outputDir, 'master.gltf'));
-    const report = await buildWebTier(document, contentDir, { cellSize });
+    const lodLevels = await vegetationLodLevels(io, master.outputDir, contentDir);
+    const report = await buildWebTier(document, contentDir, { cellSize, ...(lodLevels ? { vegetationLevels: lodLevels } : {}) });
     await mkdir(path.join(contentDir, '3d', 'env'), { recursive: true });
     await linkOrCopy(path.join(master.outputDir, 'env', 'sky.hdr'), path.join(contentDir, '3d', 'env', 'sky.hdr'));
     await copyMembers(master.outputDir, contentDir, Object.keys(master.closure.members).filter((file) => /^images\/[^/]+\.ktx2$/.test(file)));
@@ -462,6 +468,56 @@ export async function cookMapTextures(input: {
   await buildBrowserPacks({ sourceRoot: input.contentDir });
   if (!input.fullBc7) return {};
   return { texturesFullBc7Dir: await texturesFullBc7Stage(input.fullBc7.masterPath, input.contentDir, input.fullBc7.workDir, input.fullBc7.tool) };
+}
+
+/**
+ * The geometry derivative's levels as substituted masters, one at a time
+ * (level k: every LOD'd mesh at k, clamped per mesh, past its last level the
+ * cross-card impostor). Impostor atlases join the web closure's `images/`
+ * under their own content names, so the cells reference them like any
+ * master image and the texture tiers cook them for every GPU. Null when the
+ * master carries no derivative.
+ */
+export async function vegetationLodLevels(io: NodeIO, masterDir: string, contentDir: string): Promise<(() => AsyncIterable<VegetationLodLevel>) | null> {
+  const lodDir = path.join(masterDir, ...GEOMETRY_LOD_DIR.split('/'));
+  let manifestBytes: Buffer;
+  try { manifestBytes = await readFile(path.join(lodDir, 'manifest.json')); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }
+  const manifest = parseGeometryLodManifest(JSON.parse(manifestBytes.toString('utf8')));
+  const masterJson = JSON.parse(await readFile(path.join(masterDir, 'master.gltf'), 'utf8')) as GltfDocument;
+  const lodJson = JSON.parse(await readFile(path.join(lodDir, 'lod.gltf'), 'utf8')) as GltfDocument;
+  const maxLevel = Math.max(0, ...manifest.meshes.map((mesh) => mesh.levels.length + (mesh.impostor ? 1 : 0)));
+  if (maxLevel === 0) return null;
+  const prefix = `${GEOMETRY_LOD_DIR}/`;
+  for (const image of lodJson.images ?? []) {
+    if (typeof image.uri !== 'string' || !image.uri.endsWith('.ktx2')) continue;
+    await linkOrCopy(path.join(lodDir, image.uri), path.join(contentDir, 'images', path.basename(image.uri)));
+  }
+  const errorAt = (level: number) => {
+    const byMesh = new Map(manifest.meshes.map((mesh) => {
+      const clamped = Math.min(level, mesh.levels.length + (mesh.impostor ? 1 : 0));
+      const error = clamped === 0 ? 0 : clamped > mesh.levels.length ? mesh.impostor!.geometricErrorM : mesh.levels[clamped - 1]!.geometricErrorM;
+      return [mesh.mesh, error] as const;
+    }));
+    return (index: number) => byMesh.get(index) ?? 0;
+  };
+  return async function* levels() {
+    for (let level = 1; level <= maxLevel; level++) {
+      const { json } = substituteLods(masterJson, lodJson, manifest, { cameras: [], marginM: 0, fPx: 1, pixelErrorPx: 1, lodPrefix: prefix, forceLevel: level });
+      const resources: Record<string, Uint8Array<ArrayBuffer>> = {};
+      for (const buffer of json.buffers ?? []) {
+        if (typeof buffer.uri === 'string') resources[buffer.uri] = new Uint8Array(await readFile(path.join(masterDir, buffer.uri)));
+      }
+      // Cells reference images by URI only; the bytes are never read.
+      for (const image of json.images ?? []) {
+        if (typeof image.uri !== 'string') continue;
+        if (image.uri.startsWith(`${prefix}images/`)) image.uri = `images/${path.basename(image.uri)}`;
+        resources[image.uri] = new Uint8Array(0);
+      }
+      const document = await io.readJSON({ json: json as never, resources });
+      yield { level, document, errorM: errorAt(level) };
+    }
+  };
 }
 
 /** Physics derivatives depend on topology, without invalidating render-cell encoding. */

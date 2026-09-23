@@ -127,9 +127,14 @@ describe('buildBrowserPacks', () => {
       }
       // Streaming order: the road leads the first core geometry chunk, the near cell precedes the far one.
       const core = indexes[id]!.members;
-      expect(core['tiles/road.glb']![1]).toBe(0);
+      expect(core['tiles/road.glb']![1]).toBe(16); // right after the chunk header
       expect(core['tiles/tile_1_0.lod0.glb']![1]).toBeLessThan(core['tiles/tile_2_0.lod0.glb']![1]);
       expect(indexes[id]!.chunks[core['tiles/veg_1_0.lod0.glb']![0]]!.group).toBe('vegetation');
+    }
+    // Every chunk starts with the pack magic, so no chunk equals a member it holds.
+    for (const chunk of indexes['textures-256-bc7']!.chunks) {
+      const data = await readFile(path.join(root, '3d', chunk.file));
+      expect(data.subarray(0, 8).toString('ascii')).toBe('SFBPACK1');
     }
     const geometry = (id: string) => indexes[id]!.chunks.filter((chunk) => chunk.kind === 'geometry').map((chunk) => chunk.sha256);
     expect(geometry('textures-256-bc7')).toEqual(geometry('textures-256-uastc'));

@@ -135,10 +135,11 @@ const DEFAULTS = {
    */
   maxScreenSpaceError: 300,
   /**
-   * Vegetation errors in this manifest are ~16x the city's for the same cell,
-   * so they need their own threshold or every tree tile would pin to LOD0.
+   * Largest projected error, in device pixels, of a vegetation cell level.
+   * Web-tier cells carry the geometry derivative's levels with their error in
+   * metres (docs/engineering/map-geometry-lod.md).
    */
-  vegetationScreenSpaceError: 2000,
+  vegetationScreenSpaceError: 2,
   /**
    * Estimated GPU bytes. 1.5 GB, not the 2.5 GB the textures would happily
    * fill: Chrome's GPU process on an M-series MacBook kills the tab somewhere
