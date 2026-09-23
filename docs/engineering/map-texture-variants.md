@@ -65,3 +65,50 @@ About 1.3-1.4x the UASTC bytes, fetched once per worker cache by background
 prewarm (never on a job's critical path), against ~125 s of CPU saved on every
 job start. The per-map table for all published maps is in the dev
 reconciliation report.
+
+## Browser tiers and packs
+
+The browser tiers (`3d/variants/textures-<256|512>-<codec>`) are cooked the
+same way, for every GPU family: `uastc` (the portable source), `bc7`
+(desktop), `astc` (Apple and most mobile) and `etc2` (the WebGL2 baseline
+elsewhere), zstd-supercompressed with prebuilt mips
+(`packages/map-pipeline/scripts/texture-tiers.mjs`). The viewer picks the
+codec its WebGL context exposes (BC7, then ASTC, then ETC2) for Low and Medium
+alike and transcodes nothing. It transcodes UASTC only when the context
+exposes none of them or the map was published without that tier, and then
+says so in `tierSelection.downgradeReason`.
+
+**Browser packs** (`simforge.map-browser-pack.v1`,
+`packages/map-pipeline/scripts/browser-packs.mjs`) put one tier's scene
+members, every `tiles/*.glb` and the tier's `variants/objects/*.ktx2`, into
+content-addressed chunks of about 16 MB:
+
+```
+3d/packs/objects/<sha256>.bin                   chunk, named by its digest
+3d/variants/browser-pack-<tier>-<sha256>.json   index: chunks, member -> [chunk, offset, length], albedo
+3d/variants/manifest.json                       variants['browser-pack:<tier>'] -> index
+```
+
+- **Order.** The road layer comes first, then city cells nearest the viewer's
+  initial focus (the cell nearest the scene centre). Each cell is followed by
+  the textures it is the first to use. Vegetation cells follow in chunks of
+  their own, so a profile without foliage never reads them.
+- **Shared geometry.** Geometry chunks depend only on the scene, so every
+  tier's index names the same geometry chunk files.
+- **Albedo classification.** `albedo.rgbMissing` lists the base-colour images
+  whose RGB is zero at the tier's base level. It is decoded from the UASTC
+  level that the BC7/ASTC objects are transcoded from. The viewer used to find
+  these images with a render and GPU readback per texture on every load.
+- **Chunk reads.** A warm load reads a handful of chunks from the map cache
+  instead of about 2,000 members. A cold load downloads a few large objects
+  instead of about 2,000 small ones.
+- **Inflate.** The viewer inflates texture chunks on a module-worker pool
+  (`ktx-parse` and `zstddec`, served next to the Basis transcoder).
+- **Missing pack.** A map without a pack for the selected tier loads member
+  by member. This is logged as `[map-pack]` and reported in
+  `getStats().loadDiagnostics.mapPack`.
+
+Build them with the web stage (`webStage` runs `buildBrowserPacks` after the
+tiers) or, for an installed map, with
+`pnpm maps:browser-packs -- --map <id> --source-root <map root> --output-root <overlay>`.
+Rebuilds are byte-identical.

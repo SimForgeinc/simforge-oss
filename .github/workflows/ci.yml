@@ -41,6 +41,7 @@ jobs:
       - run: pnpm verify:origins
       - run: pnpm typecheck
       - run: pnpm test:release
+      - run: pnpm test:bench
       - name: Test the repository scripts
         # Nothing referenced scripts/__tests__ before this step: five test
         # files sat in the tree looking like coverage and never executed.

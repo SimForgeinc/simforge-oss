@@ -23,6 +23,10 @@
         "types": "./dist/scripts/texture-tiers.d.mts",
         "default": "./dist/scripts/texture-tiers.mjs"
       },
+      "./browser-packs": {
+        "types": "./dist/scripts/browser-packs.d.mts",
+        "default": "./dist/scripts/browser-packs.mjs"
+      },
       "./static-map-colliders": {
         "types": "./dist/scripts/static-map-colliders.d.mts",
         "default": "./dist/scripts/static-map-colliders.mjs"
@@ -56,6 +60,11 @@
       "development": "./scripts/texture-tiers.mjs",
       "types": "./dist/scripts/texture-tiers.d.mts",
       "default": "./dist/scripts/texture-tiers.mjs"
+    },
+    "./browser-packs": {
+      "development": "./scripts/browser-packs.mjs",
+      "types": "./dist/scripts/browser-packs.d.mts",
+      "default": "./dist/scripts/browser-packs.mjs"
     },
     "./static-map-colliders": {
       "development": "./scripts/static-map-colliders.mjs",

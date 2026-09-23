@@ -18,7 +18,13 @@ export const SCENARIO_AUTHORING_QUALITY_IDS = [
   "medium",
 ] as const;
 export type ScenarioAuthoringQuality = (typeof SCENARIO_AUTHORING_QUALITY_IDS)[number];
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "medium" satisfies ScenarioAuthoringQuality;
+/**
+ * Texture tier a new document starts with: the tier of the default browser
+ * rendering profile (studio-ui `DEFAULT_RENDERING_PREFERENCE`, "Low · no
+ * foliage"), so a fresh scenario never asks for sharper textures than the
+ * default profile downloads.
+ */
+export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "low" satisfies ScenarioAuthoringQuality;
 
 export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export type ScenarioDatasetVisibility = (typeof SCENARIO_DATASET_VISIBILITIES)[number];
