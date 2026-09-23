@@ -303,6 +303,30 @@ await step("deps", async () => {
   return install.run.join(" ");
 });
 
+// 2b. prepare: build outputs the server needs, restored from the shared turbo cache when possible
+if (cfg.prepare?.length) {
+  await step("prepare", async () => {
+    const { turboCommand } = await import("./lib/turbo.mjs");
+    const done = [];
+    for (const [i, p] of cfg.prepare.entries()) {
+      const logFile = join(logDir, `prepare-${i}.log`);
+      let res;
+      if (p.turbo) {
+        const t = await turboCommand(layout, worktree, [].concat(p.turbo), p.packages ?? []);
+        res = await runLogged(t.bin, t.args, { cwd: worktree, env: { ...env0, ...t.env }, logFile });
+        await t.close();
+        const cached = readFileSync(logFile, "utf8").match(/Cached:\s+(\d+) cached, (\d+) total/);
+        done.push(`${[].concat(p.turbo).join("+")}${cached ? ` (${cached[1]}/${cached[2]} cached)` : ""}`);
+      } else {
+        res = await runLogged(p.run[0], p.run.slice(1), { cwd: join(worktree, p.cwd ?? "."), env: env0, logFile });
+        done.push(p.run.join(" "));
+      }
+      if (res.code !== 0) throw new Error(`prepare step failed; see ${logFile}`);
+    }
+    return done.join("; ");
+  });
+}
+
 // 3. ports
 if (!state.ports) {
   const names = cfg.ports ?? ["web"];

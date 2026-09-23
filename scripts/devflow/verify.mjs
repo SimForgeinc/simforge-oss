@@ -24,6 +24,7 @@ import { affectedCrates, workspaceCrates } from "./lib/cargo.mjs";
 import { ensureTool, toolPathDir } from "./lib/tools.mjs";
 import { sccacheRemoteEnv, turboRemoteCache } from "./lib/remote-cache.mjs";
 import { acquireSlot, jobsPerSlot, slotCount } from "./lib/slots.mjs";
+import { turboFlags as libTurboFlags } from "./lib/turbo.mjs";
 import { CACHE_ROOT, matchesAny, runLogged, seconds, sh, tail, trySh, withNodePath } from "./lib/util.mjs";
 
 const USAGE = `Usage: verify [--full] [--base <ref>] [--only <steps>] [--no-remote-cache] [--stream] [--plan]
@@ -200,18 +201,7 @@ async function withSlot(label, heavy, fn) {
   }
 }
 
-function turboFlags() {
-  return [
-    "--continue",
-    "--output-logs=errors-only",
-    "--summarize",
-    `--cache-dir=${join(CACHE_ROOT, "turbo", layout.name)}`,
-    `--concurrency=${jobsPerSlot()}`,
-    "--env-mode=loose",
-    "--ui=stream",
-    "--log-order=grouped",
-  ];
-}
+const turboFlags = () => libTurboFlags(layout);
 
 // ---------------------------------------------------------------- command steps (checks, golden, full)
 async function runCommandStep(name, step) {

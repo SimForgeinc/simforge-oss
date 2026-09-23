@@ -117,8 +117,12 @@ export default {
     install: { run: ["pnpm", "install", "--frozen-lockfile", "--prefer-offline"], lockfile: "pnpm-lock.yaml" },
     ports: ["studio"],
     envFiles: [".env.local", "studio/.env.local"],
+    // The dev server resolves workspace packages from source; only the Rust
+    // artifacts (napi addon + wasm) must exist, and they come from the turbo cache.
+    prepare: [{ turbo: "build:artifacts", packages: ["@simforge-oss/native-runtime"] }],
     vars: (ctx) => ({
       PORT: String(ctx.ports.studio),
+      NODE_OPTIONS: "--conditions=development",
       // OSS Studio keeps its PGlite database and artifacts here: one per env.
       SIMFORGE_CLOUD_ROOT: ctx.stateDir,
       ...(ctx.httpsUrl ? { NEXT_PUBLIC_BASE_URL: ctx.httpsUrl, SIMFORGE_ALLOWED_DEV_ORIGINS: `localhost,127.0.0.1,${ctx.tailnetHost}` } : {}),
