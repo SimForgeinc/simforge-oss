@@ -161,6 +161,10 @@ describe('map master pipeline', () => {
     expect(masterFiles).toContain('geometry.bin');
     expect(masterFiles).toContain('master-report.json');
     expect(masterFiles).toContain('env/sky.hdr');
+    // Geometry derivatives ride in the master (docs/engineering/map-geometry-lod.md).
+    expect(masterFiles).toContain('derived/geometry-lod/manifest.json');
+    expect(masterFiles).toContain('derived/geometry-lod/lod.gltf');
+    expect(masterFiles).toContain('derived/geometry-lod/sensor.gltf');
     const albedoDigest = sha256(albedoPng);
     const normalDigest = sha256(normalPng);
     const occlusionDigest = sha256(occlusionPng);

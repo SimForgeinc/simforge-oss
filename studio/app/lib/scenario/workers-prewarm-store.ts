@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { queryRows } from "@/app/lib/db/data-api";
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
+import { boundGeometryLod, geometryLodExtraMembers } from "./map-geometry-lod";
 
 /**
  * Worker cache prewarm: the published native map closures an approved render
@@ -58,10 +59,12 @@ export async function listPrewarmSets() {
   const rows = await queryRows<{
     set_id: string; map_version_id: string; map_id: string; closure_sha256: string;
     object_count: number | string; byte_length: number | string; created_at: string; turn_verdicts_sha256: string | null;
+    geometry_lod_sha256: string | null;
   }>(
     `SELECT s.id AS set_id, mv.id AS map_version_id, mv.source_map_id AS map_id,
             s.closure_sha256, s.object_count, s.byte_length, mv.created_at::text AS created_at,
-            mv.descriptor->'ambientTurnVerdicts'->>'sha256' AS turn_verdicts_sha256
+            mv.descriptor->'ambientTurnVerdicts'->>'sha256' AS turn_verdicts_sha256,
+            mv.descriptor->'geometryLod'->>'manifestSha256' AS geometry_lod_sha256
      ${PUBLISHED_SETS}
      ORDER BY mv.created_at DESC, s.id`,
   );
@@ -74,9 +77,10 @@ export async function listPrewarmSets() {
     byteLength: Number(row.byte_length),
     createdAt: row.created_at,
     ...(row.turn_verdicts_sha256 && /^[a-f0-9]{64}$/.test(row.turn_verdicts_sha256) ? { turnVerdictsSha256: row.turn_verdicts_sha256 } : {}),
+    ...(row.geometry_lod_sha256 && /^[a-f0-9]{64}$/.test(row.geometry_lod_sha256) ? { geometryLodSha256: row.geometry_lod_sha256 } : {}),
   }));
   const generation = createHash("sha256")
-    .update(JSON.stringify(sets.map((set) => [set.setId, set.closureSha256, set.objectCount, set.turnVerdictsSha256 ?? null])))
+    .update(JSON.stringify(sets.map((set) => [set.setId, set.closureSha256, set.objectCount, set.turnVerdictsSha256 ?? null, set.geometryLodSha256 ?? null])))
     .digest("hex");
   return { schema: CONTROL_SCHEMA, type: "worker.prewarm-manifest" as const, generation, sets };
 }
@@ -105,6 +109,13 @@ export async function listPrewarmMembers(setId: string, after: string | null, pa
   if (next === null) {
     const verdicts = await boundTurnVerdicts(setId);
     if (verdicts && !members.some((member) => member.relativePath === AMBIENT_TURN_VERDICTS_PATH)) members.push(verdicts);
+    // Geometry derivatives bound by descriptor (map-geometry-lod.ts), likewise.
+    const inSet = new Set((await queryRows<{ relative_path: string }>(
+      `SELECT relative_path FROM simforge.native_map_asset_members
+        WHERE asset_set_id = :set_id AND relative_path LIKE 'derived/geometry-lod/%'`,
+      { set_id: setId },
+    )).map((row) => row.relative_path));
+    for (const member of await boundGeometryLodBlobs(setId, inSet)) members.push({ relativePath: member.relativePath, sha256: member.sha256, sizeBytes: member.byteLength });
   }
   return { schema: CONTROL_SCHEMA, type: "worker.prewarm-members" as const, members, next };
 }
@@ -123,6 +134,28 @@ async function boundTurnVerdicts(setId: string) {
   );
   const row = rows[0];
   return row ? { relativePath: AMBIENT_TURN_VERDICTS_PATH, sha256: row.sha256, sizeBytes: Number(row.byte_length) } : null;
+}
+
+/** Verified native blobs of the geometry derivative a published set's map version binds by descriptor. */
+async function boundGeometryLodBlobs(setId: string, inSet: ReadonlySet<string> = new Set()) {
+  const rows = await queryRows<{ geometry_lod: unknown }>(
+    `SELECT mv.descriptor->'geometryLod' AS geometry_lod ${PUBLISHED_SETS} AND s.id = :set_id LIMIT 1`,
+    { set_id: setId },
+  );
+  const raw = typeof rows[0]?.geometry_lod === "string" ? JSON.parse(rows[0].geometry_lod) : rows[0]?.geometry_lod;
+  const extra = geometryLodExtraMembers(boundGeometryLod(raw), inSet);
+  if (extra.length === 0) return [];
+  const blobs = await queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
+    `SELECT DISTINCT ON (sha256) sha256, byte_length, storage_bucket, storage_key FROM simforge.native_map_asset_blobs
+      WHERE verification_state = 'verified' AND sha256 = ANY(string_to_array(:digests, ','))
+      ORDER BY sha256, id`,
+    { digests: extra.map((member) => member.sha256).join(",") },
+  );
+  const bySha = new Map(blobs.map((blob) => [blob.sha256, blob]));
+  return extra.flatMap((member) => {
+    const blob = bySha.get(member.sha256);
+    return blob && Number(blob.byte_length) === member.byteLength ? [{ ...member, storageBucket: blob.storage_bucket, storageKey: blob.storage_key }] : [];
+  });
 }
 
 /**
@@ -155,6 +188,12 @@ export async function signPrewarmBlobs(setId: string, sha256s: readonly string[]
     { set_id: setId, digests: digests.join(",") },
   );
   if (verdictRows[0] && !rows.some((row) => row.sha256 === verdictRows[0]!.sha256)) rows.push(verdictRows[0]);
+  const wanted = new Set(digests);
+  for (const member of await boundGeometryLodBlobs(setId)) {
+    if (wanted.has(member.sha256) && !rows.some((row) => row.sha256 === member.sha256)) {
+      rows.push({ sha256: member.sha256, storage_bucket: member.storageBucket, storage_key: member.storageKey });
+    }
+  }
   const expiresAt = new Date(Date.now() + BLOB_URL_TTL_SECONDS * 1000).toISOString();
   await Promise.all(rows.map(async (row) => {
     downloads[row.sha256] = {
