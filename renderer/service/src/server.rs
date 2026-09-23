@@ -61,6 +61,13 @@ pub struct SceneSpec {
     /// Optional actor-id -> absolute GLB override.
     #[serde(default)]
     pub actor_model_refs: HashMap<String, String>,
+    /// Explicit opt-in for development/policy harnesses whose scenes use
+    /// generic catalog ids: an actor without a resolvable catalog model
+    /// renders as its class cuboid (logged per actor as `primitive-actor:`).
+    /// Off by default and never set by the SimForge render engine: without
+    /// it an unresolvable model fails the tick.
+    #[serde(default)]
+    pub allow_primitive_actors: bool,
     /// Meter the sky through the first RGB camera of every render when the
     /// authored lighting names no `meter_view` (the Lookdev Lab's per-frame
     /// metering: a sunward low sun stops the camera down instead of
@@ -536,6 +543,12 @@ pub struct ServiceState {
     sensor_scenes: Option<std::sync::Arc<MapSensorScenes>>,
     /// Actor mesh trees built once per mesh asset for this job.
     actor_blas: ActorBlasCache,
+    /// Identity each live actor spawned with (see [`SpawnedActor`]).
+    spawned_actors: HashMap<String, SpawnedActor>,
+    /// The (GLB, clip) each actor's attached model was bound with.
+    actor_model_bindings: HashMap<String, (PathBuf, Option<String>)>,
+    /// [`SceneSpec::allow_primitive_actors`].
+    allow_primitive_actors: bool,
     /// Whether caching the built scenes waits for the write (the one-shot
     /// `--build-sensor-cache` mode) or leaves it to a background thread.
     pub sync_sensor_cache_writes: bool,
@@ -676,12 +689,11 @@ impl ServiceState {
             .legend
             .iter()
             .map(|(instance_id, name)| {
-                let class = self
-                    .app
-                    .actor_instance_class(*instance_id)
-                    .map(sensors::taxonomy::SemanticClass::from_actor_class)
-                    .unwrap_or_else(|| sensors::taxonomy::SemanticClass::from_mesh_name(name));
-                (*instance_id, class)
+                // Static ids never collide with actor ids (actors take ids
+                // above the frozen legend); a static mesh's class is its
+                // name's taxonomy class (TAXONOMY.md: unmatched names are
+                // the prop class by definition).
+                (*instance_id, sensors::taxonomy::SemanticClass::from_mesh_name(name))
             })
             .collect();
         let classes = std::sync::Arc::new(classes);
@@ -739,6 +751,9 @@ impl ServiceState {
             sensor_scenes: None,
             sync_sensor_cache_writes: false,
             actor_blas: ActorBlasCache::default(),
+            spawned_actors: HashMap::new(),
+            actor_model_bindings: HashMap::new(),
+            allow_primitive_actors: spec.allow_primitive_actors,
             static_sensor_classes: None,
             needs_settle: true,
             sensor_cache_dir: spec
@@ -1043,9 +1058,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             };
             if let Err(error)=state.ensure_sensor_scenes() {return WireResponse::error(i,error);}
             episode.evaluate(&|pose| on_road(&state.sensor_scenes.as_ref().expect("sensor scenes built").road,pose));
-            for frame in &state.scene {
-                for actor in &frame.actors { state.app.remove_actor(&actor.id); }
-            }
+            forget_all_actors(state);
             state.scene.clear();
             state.app.clear_cameras();
             state.cache.clear();
@@ -1122,13 +1135,23 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             }
         }
         RequestBody::LoadSceneState { states } => {
-            if let Some(first) = states.first() {
-                if let Err(error) = first.validate() {
-                    return WireResponse::error(i, error);
+            let Some(first) = states.first() else {
+                return WireResponse::error(i, "[native_scene_state_empty] load_scene_state carries no frames");
+            };
+            let map_id = first.map_id.clone();
+            for (index, frame) in states.iter().enumerate() {
+                if let Err(error) = frame.validate() {
+                    return WireResponse::error(i, format!("scene frame {index}: {error}"));
+                }
+                if frame.map_id != map_id {
+                    return WireResponse::error(i, format!(
+                        "[native_scene_map_mismatch] scene frame {index} is on map {:?}, frame 0 on {map_id:?}", frame.map_id
+                    ));
                 }
             }
             let ticks = states.len();
-            let map_id = states.first().map(|s| s.map_id.clone()).unwrap_or_default();
+            // A new stream is a new world: nothing from a previous one stays.
+            forget_all_actors(state);
             state.scene = states;
             state.episode=None;
             state.current_tick = None;
@@ -1254,17 +1277,28 @@ fn observe_actors(state: &ServiceState) -> Vec<crate::proto::ObservedActorPose> 
     actors
 }
 
+/// Remove an actor and everything the service tracks about it.
+fn forget_actor(state: &mut ServiceState, id: &str) {
+    state.app.remove_actor(id);
+    state.actor_extents.remove(id);
+    state.spawned_actors.remove(id);
+    state.actor_model_bindings.remove(id);
+}
+
+fn forget_all_actors(state: &mut ServiceState) {
+    for id in state.app.actor_ids() {
+        forget_actor(state, &id);
+    }
+}
+
 /// Compiled frames are complete snapshots. A despawn between sampled image
 /// times must not leave an invisible-to-metrics actor in RGB or lidar.
 fn replace_episode_frame(state:&mut ServiceState, frame:SceneState) {
     {
         let live:std::collections::HashSet<&str>=frame.actors.iter()
             .filter(|actor|actor.kind!="despawn").map(|actor|actor.id.as_str()).collect();
-        for previous in &state.scene {
-            for actor in &previous.actors {
-                if !live.contains(actor.id.as_str()) {state.app.remove_actor(&actor.id);}
-            }
-        }
+        let stale:Vec<String>=state.app.actor_ids().into_iter().filter(|id|!live.contains(id.as_str())).collect();
+        for id in stale {forget_actor(state,&id);}
     }
     state.scene.clear();
     state.scene.push(frame);
@@ -1294,9 +1328,14 @@ fn render_episode(state: &mut ServiceState, i: u64) -> WireResponse {
     }
 }
 
-fn resolve_actor_model(state: &ServiceState, actor: &ActorState) -> Option<VehicleModelEntry> {
+/// The catalog model an actor must render with. Every failure names the
+/// actor and what is missing: the service never keeps a proxy in its place
+/// (docs/engineering/no-silent-fallbacks.md). `Ok(None)` only for body-centred
+/// catalog entries, whose catalog definition is the primitive, and for
+/// actors of a scene spec that explicitly allows primitive actors.
+fn resolve_actor_model(state: &ServiceState, actor: &ActorState, class: &str) -> Result<Option<VehicleModelEntry>, String> {
     if let Some(path) = state.actor_model_refs.get(&actor.id) {
-        return Some(VehicleModelEntry {
+        return Ok(Some(VehicleModelEntry {
             glb_path: path.clone(),
             attribution: String::new(),
             source: "scene-spec-override".to_string(),
@@ -1307,58 +1346,119 @@ fn resolve_actor_model(state: &ServiceState, actor: &ActorState) -> Option<Vehic
             yaw_offset_rad: 0.0,
             ground_offset_m: 0.0,
             animations: HashMap::new(),
-        });
+        }));
     }
-    let catalog_id = actor.catalog_id.as_deref()?;
-    let catalog = if actor.actor_class.as_deref() == Some("pedestrian") {
-        state.pedestrian_models.as_ref()?
-    } else {
-        state.vehicle_models.as_ref()?
+    let primitive = |reason: String| -> Result<Option<VehicleModelEntry>, String> {
+        if state.allow_primitive_actors {
+            eprintln!("primitive-actor: {} renders as its class cuboid (scene spec allowPrimitiveActors): {reason}", actor.id);
+            Ok(None)
+        } else {
+            Err(reason)
+        }
     };
-    catalog.resolve(catalog_id).cloned()
+    let Some(catalog_id) = actor.catalog_id.as_deref() else {
+        return primitive(format!("[native_actor_catalog_missing] actor {} ({class}) has no catalogId", actor.id));
+    };
+    let (catalog, which) = if class == "pedestrian" {
+        (state.pedestrian_models.as_ref(), "pedestrianModels")
+    } else {
+        (state.vehicle_models.as_ref(), "vehicleModels")
+    };
+    let Some(catalog) = catalog else {
+        return primitive(format!(
+            "[native_actor_catalog_unavailable] actor {} needs catalog model {catalog_id}, but the scene spec has no {which} directory",
+            actor.id
+        ));
+    };
+    match catalog.resolve(catalog_id) {
+        Some(entry) => Ok(Some(entry.clone())),
+        None => primitive(format!(
+            "[native_actor_model_unresolved] actor {}: catalog id {catalog_id} has no model in the {which} catalog",
+            actor.id
+        )),
+    }
+}
+
+/// Identity an actor was spawned with; frames may move it, never change it.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct SpawnedActor {
+    class: String,
+    catalog_id: Option<String>,
+    dims: [f32; 3],
+    color: Option<String>,
 }
 
 /// Apply scene-state frame `index` to the world (spawn/update/despawn).
+///
+/// Strict: an actor without a class, dims or a resolvable catalog model, a
+/// model that is missing or fails to load, a motion clip the catalog entry
+/// lacks, an actor whose identity changes between frames, and a live actor a
+/// frame does not account for all fail the tick with a `[native_*]` code.
 fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> {
     let frame = state
         .scene
         .get(index as usize)
         .cloned()
         .ok_or_else(|| format!("tick_index {index} out of range (loaded {} ticks)", state.scene.len()))?;
+    if !(frame.tick_hz.is_finite() && frame.tick_hz > 0.0) {
+        return Err(format!("[native_scene_tick_hz_invalid] scene frame {index} has tickHz {}", frame.tick_hz));
+    }
+    let mut seen = std::collections::HashSet::new();
     for actor in &frame.actors {
+        if !seen.insert(actor.id.as_str()) {
+            return Err(format!("[native_scene_actor_duplicated] actor {} appears twice in scene frame {index}", actor.id));
+        }
         match actor.kind.as_str() {
-            "despawn" => {
-                state.app.remove_actor(&actor.id);
-                state.actor_extents.remove(&actor.id);
-            }
+            "despawn" => forget_actor(state, &actor.id),
             "spawn" | "update" => {
-                let class = actor.actor_class.clone().unwrap_or_else(|| "prop".into());
-                let color = actor_color(actor, &class)?;
+                let class = actor.actor_class.clone().ok_or_else(|| {
+                    format!("[native_actor_class_missing] actor {} has no actorClass", actor.id)
+                })?;
                 let body_centred = actor
                     .catalog_id
                     .as_deref()
                     .is_some_and(render_core::catalog::body_centred_origin);
-                let dims = actor.dims.map(|d| {
+                let authored_dims = actor.dims.ok_or_else(|| {
+                    format!("[native_actor_dims_missing] actor {} ({class}) has no dims", actor.id)
+                })?;
+                if ![authored_dims.l, authored_dims.w, authored_dims.h].iter().all(|v| v.is_finite() && *v > 0.0) {
+                    return Err(format!("[native_actor_dims_invalid] actor {} dims {authored_dims:?}", actor.id));
+                }
+                let dims = {
                     use render_core::coordinates::{source_to_bevy,LengthWidthHeight,SourceRotation,FrameBasis};
-                    source_to_bevy(LengthWidthHeight {length:d.l,width:d.w,height:d.h},
+                    source_to_bevy(LengthWidthHeight {length:authored_dims.l,width:authored_dims.w,height:authored_dims.h},
                         SourceRotation::WorldQuaternion(actor.transform.rotation),FrameBasis::Rig).size_xyz.to_array()
-                }).unwrap_or_else(|| actor_dims(&class));
+                };
+                let identity = SpawnedActor {
+                    class: class.clone(),
+                    catalog_id: actor.catalog_id.clone(),
+                    dims: [authored_dims.l, authored_dims.w, authored_dims.h],
+                    color: actor.color.clone(),
+                };
+                match state.spawned_actors.get(&actor.id) {
+                    Some(previous) if *previous != identity => {
+                        return Err(format!(
+                            "[native_actor_identity_changed] actor {} changed from {previous:?} to {identity:?} without a despawn",
+                            actor.id
+                        ));
+                    }
+                    Some(_) => {}
+                    None => {
+                        state.spawned_actors.insert(actor.id.clone(), identity);
+                    }
+                }
+                let color = actor_color(actor, &class)?;
                 // Body-centred catalog entries (articulated robot components)
-                // are placed verbatim with their full rotation and never get
-                // a GLB or a ground fallback.
-                let model = if body_centred { None } else { resolve_actor_model(state, actor) };
+                // are placed verbatim with their full rotation: their catalog
+                // definition is the primitive, so they never get a GLB.
+                let model = if body_centred { None } else { resolve_actor_model(state, actor, &class)? };
                 // The full attitude is applied: render-timeline frames carry
-                // road + body pitch/roll; xosc-lowered frames are yaw-only
-                // quaternions, so they render exactly as before.
+                // road + body pitch/roll.
                 let [qx, qy, qz, qw] = actor.transform.rotation;
                 let rotation = Quat::from_xyzw(qx, qy, qz, qw).normalize();
                 let mut position = actor.transform.position;
                 if !body_centred {
-                    position[1] = actor_base_y(
-                        position[1],
-                        frame.ground_y,
-                        state.app.ground_at(position[0], position[2]),
-                    );
+                    position[1] = actor_base_y(state, &actor.id, position, frame.ground_y)?;
                 }
                 // Source vehicle positions are ground origins; cuboids are
                 // centre-origin, lifted along the body's own up axis.
@@ -1380,79 +1480,132 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                     false,
                 );
                 if let Some(model) = model {
-                    let moving = actor.velocity.iter().map(|value| value * value).sum::<f32>().sqrt() > 0.2
-                        || actor.catalog_id.as_deref().is_some_and(|id| id.ends_with("_walking"));
-                    let animation = model.animations.get(if moving { "walk" } else { "idle" });
-                    let (glb_path, clip) = animation
-                        .map(|(path, clip)| (path, Some(clip.as_str())))
-                        .unwrap_or((&model.glb_path, None));
-                    let animation_time_s = if frame.tick_hz > 0.0 {
-                        frame.tick as f32 / frame.tick_hz
-                    } else {
-                        0.0
-                    };
-                    if !state.app.actor_has_model(&actor.id) {
-                        if !glb_path.is_file() {
-                            eprintln!(
-                                "catalog model for {} is missing; retaining proxy: {}",
-                                actor.id,
-                                glb_path.display()
-                            );
-                            continue;
-                        }
-                        let scale = model.uniform_scale.unwrap_or_else(|| {
-                            if model.scale_to_dims {
-                                model
-                                    .model_length_m
-                                    .filter(|length| *length > 0.1)
-                                    .map(|length| dims[0] / length as f32)
-                                    .unwrap_or(1.0)
-                            } else {
-                                1.0
-                            }
-                        });
-                        state.needs_settle = true;
-                        if let Err(error) = state.app.attach_actor_asset(
-                            &actor.id,
-                            glb_path,
-                            scale,
-                            model.tintable.then_some(color),
-                            clip,
-                            animation_time_s,
-                        ) {
-                            eprintln!(
-                                "catalog model for {} failed to load; retaining proxy: {error:#}",
-                                actor.id
-                            );
-                        }
-                    } else if clip.is_some() {
-                        let _ = state
-                            .app
-                            .set_actor_animation_time(&actor.id, animation_time_s);
-                    }
-                    if state.app.actor_has_model(&actor.id) {
-                        let asset_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,model.ground_offset_m,0.0)).to_array();
-                        let asset_rotation=rotation*Quat::from_rotation_y(model.yaw_offset_rad);
-                        state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
-                            .map_err(|error|format!("catalog pose: {error:#}"))?;
-                    }
+                    apply_actor_model(state, actor, &model, &frame, dims, color, position, rotation)?;
                 }
             }
             other => return Err(format!("unknown actor kind {other:?} for {}", actor.id)),
         }
     }
+    // Every frame is a complete snapshot of the live actors: one missing
+    // without a despawn would otherwise stay frozen and visible.
+    let mut unaccounted: Vec<String> = state
+        .app
+        .actor_ids()
+        .into_iter()
+        .filter(|id| !seen.contains(id.as_str()))
+        .collect();
+    if !unaccounted.is_empty() {
+        unaccounted.sort();
+        return Err(format!(
+            "[native_scene_actor_unaccounted] scene frame {index} neither updates nor despawns live actor(s) {}",
+            unaccounted.join(", ")
+        ));
+    }
     state.current_tick = Some(index);
     Ok(())
 }
 
-/// Height precedence for authored scene state. Non-zero actor Y is canonical;
-/// frame `groundY` is the explicit fallback for legacy zero-height traces;
-/// mesh sampling is only the last resort when neither is authored.
-fn actor_base_y(authored_y: f32, frame_ground_y: Option<f32>, sampled_y: f32) -> f32 {
-    if authored_y.abs() >= 1e-4 {
-        authored_y
+/// Attach, rebind or pose an actor's catalog model for this frame.
+#[allow(clippy::too_many_arguments)]
+fn apply_actor_model(
+    state: &mut ServiceState,
+    actor: &ActorState,
+    model: &VehicleModelEntry,
+    frame: &SceneState,
+    dims: [f32; 3],
+    color: [f32; 3],
+    position: [f32; 3],
+    rotation: Quat,
+) -> Result<(), String> {
+    let moving = actor.velocity.iter().map(|value| value * value).sum::<f32>().sqrt() > 0.2
+        || actor.catalog_id.as_deref().is_some_and(|id| id.ends_with("_walking"));
+    let motion = if moving { "walk" } else { "idle" };
+    // A catalog entry with animation clips must have the one this motion
+    // needs: rendering it without would freeze the actor in its bind pose.
+    let (glb_path, clip) = if model.animations.is_empty() {
+        (model.glb_path.clone(), None)
     } else {
-        frame_ground_y.unwrap_or(sampled_y)
+        let (path, clip) = model.animations.get(motion).ok_or_else(|| {
+            format!(
+                "[native_actor_animation_missing] actor {} ({}) is {motion}ing but its catalog model binds no {motion:?} clip (has {:?})",
+                actor.id,
+                actor.catalog_id.as_deref().unwrap_or("-"),
+                { let mut names: Vec<_> = model.animations.keys().collect(); names.sort(); names }
+            )
+        })?;
+        (path.clone(), Some(clip.clone()))
+    };
+    let animation_time_s = frame.tick as f32 / frame.tick_hz;
+    let binding = (glb_path.clone(), clip.clone());
+    if state.app.actor_has_model(&actor.id) && state.actor_model_bindings.get(&actor.id) != Some(&binding) {
+        // The motion changed (idle <-> walk): bind the other clip's GLB.
+        state
+            .app
+            .detach_actor_asset(&actor.id)
+            .map_err(|error| format!("[native_actor_model_rebind_failed] actor {}: {error:#}", actor.id))?;
+        state.actor_model_bindings.remove(&actor.id);
+    }
+    if !state.app.actor_has_model(&actor.id) {
+        if !glb_path.is_file() {
+            return Err(format!(
+                "[native_actor_model_missing] actor {}: catalog model file {} does not exist",
+                actor.id,
+                glb_path.display()
+            ));
+        }
+        let scale = match (model.uniform_scale, model.scale_to_dims) {
+            (Some(scale), _) => scale,
+            (None, true) => {
+                let length = model.model_length_m.filter(|length| *length > 0.1).ok_or_else(|| {
+                    format!(
+                        "[native_actor_model_scale_unknown] actor {}: catalog model {} scales to the actor's length but its model length is unknown",
+                        actor.id,
+                        glb_path.display()
+                    )
+                })?;
+                dims[0] / length as f32
+            }
+            (None, false) => 1.0,
+        };
+        state.needs_settle = true;
+        // Only an authored colour tints the paint slot; without one the model
+        // renders its own authored paint (never a class palette colour).
+        let tint = (model.tintable && actor.color.is_some()).then_some(color);
+        state
+            .app
+            .attach_actor_asset(&actor.id, &glb_path, scale, tint, clip.as_deref(), animation_time_s)
+            .map_err(|error| format!("[native_actor_model_load_failed] actor {}: {error:#}", actor.id))?;
+        state.actor_model_bindings.insert(actor.id.clone(), binding);
+    } else if clip.is_some() {
+        state
+            .app
+            .set_actor_animation_time(&actor.id, animation_time_s)
+            .map_err(|error| format!("[native_actor_animation_failed] actor {}: {error:#}", actor.id))?;
+    }
+    let asset_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,model.ground_offset_m,0.0)).to_array();
+    let asset_rotation=rotation*Quat::from_rotation_y(model.yaw_offset_rad);
+    state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
+        .map_err(|error|format!("catalog pose: {error:#}"))
+}
+
+/// Height precedence for authored scene state. Non-zero actor Y is
+/// canonical; frame `groundY` covers zero-height traces; without either the
+/// scene-state contract says "snap to the map" (`groundY` absent), which
+/// must land on mapped ground: off the map is an error, never an invented
+/// height.
+fn actor_base_y(state: &ServiceState, actor_id: &str, position: [f32; 3], frame_ground_y: Option<f32>) -> Result<f32, String> {
+    Ok(base_y_precedence(position[1], frame_ground_y, || state.app.ground_at_covered(position[0], position[2]))
+        .ok_or_else(|| format!(
+            "[native_ground_height_unavailable] actor {actor_id} at x={:.2} z={:.2} has no authored height and no map ground within 20 m",
+            position[0], position[2]
+        ))?)
+}
+
+fn base_y_precedence(authored_y: f32, frame_ground_y: Option<f32>, sampled_y: impl FnOnce() -> Option<f32>) -> Option<f32> {
+    if authored_y.abs() >= 1e-4 {
+        Some(authored_y)
+    } else {
+        frame_ground_y.or_else(sampled_y)
     }
 }
 
@@ -1462,19 +1615,6 @@ fn quat_yaw(q: &[f32; 4]) -> f32 {
     let sin = 2.0 * (w * y + z * x);
     let cos = 1.0 - 2.0 * (y * y + z * z);
     sin.atan2(cos)
-}
-
-/// Interim actor geometry: cuboids per class until the prop-catalog actor
-/// pipeline lands in render-core (same stand-in as the WSB3 harness).
-fn actor_dims(class: &str) -> [f32; 3] {
-    match class {
-        "car" => [4.5, 1.6, 1.8],
-        "van" | "suv" | "pickup" => [4.8, 1.9, 2.0],
-        "truck" | "bus" => [8.0, 3.0, 2.5],
-        "motorcycle" | "cyclist" => [2.2, 1.5, 0.9],
-        "pedestrian" => [0.5, 1.8, 0.5],
-        _ => [1.0, 1.0, 1.0],
-    }
 }
 
 fn class_color(class: &str) -> [f32; 3] {
@@ -1542,11 +1682,7 @@ fn resolve_sensor_mount(
             )
         })?;
     let position = actor.transform.position;
-    let actor_y = actor_base_y(
-        position[1],
-        frame.ground_y,
-        state.app.ground_at(position[0], position[2]),
-    );
+    let actor_y = actor_base_y(state, &attach.actor_id, position, frame.ground_y)?;
     // Sensors ride the body rigidly, pitch and roll included (yaw-only for
     // xosc-lowered frames, whose rotations carry no attitude).
     let [qx, qy, qz, qw] = actor.transform.rotation;
@@ -1572,7 +1708,19 @@ fn resolve_sensor_mount(
     })
 }
 
-fn upsert_lidar_rig(state: &mut ServiceState, sensor: &ServiceLidar) {
+fn lidar_config(sensor: &ServiceLidar) -> sensors::lidar::LidarConfig {
+    sensors::lidar::LidarConfig {
+        channels: sensor.channels,
+        rotation_frequency_hz: sensor.rotation_frequency_hz,
+        points_per_second: sensor.points_per_second,
+        vfov_deg: sensor.vertical_fov_deg,
+        hfov_deg: sensor.horizontal_fov_deg,
+        range_m: sensor.range_m,
+    }
+}
+
+fn upsert_lidar_rig(state: &mut ServiceState, sensor: &ServiceLidar) -> Result<(), String> {
+    lidar_config(sensor).validate().map_err(|error| format!("lidar {}: {error}", sensor.sensor_id))?;
     match state
         .lidars
         .iter_mut()
@@ -1581,9 +1729,23 @@ fn upsert_lidar_rig(state: &mut ServiceState, sensor: &ServiceLidar) {
         Some(registered) => *registered = sensor.clone(),
         None => state.lidars.push(sensor.clone()),
     }
+    Ok(())
 }
 
-fn upsert_radar_rig(state: &mut ServiceState, sensor: &ServiceRadar) {
+fn upsert_radar_rig(state: &mut ServiceState, sensor: &ServiceRadar) -> Result<(), String> {
+    let bad = |what: String| Err(format!("[native_radar_config_invalid] radar {}: {what}", sensor.sensor_id));
+    if sensor.points_per_second == 0 {
+        return bad("points per second is 0".into());
+    }
+    if !(sensor.horizontal_fov_deg.is_finite() && sensor.horizontal_fov_deg > 0.0 && sensor.horizontal_fov_deg <= 180.0) {
+        return bad(format!("horizontal FOV {} deg (0, 180]", sensor.horizontal_fov_deg));
+    }
+    if !(sensor.vertical_fov_deg.is_finite() && sensor.vertical_fov_deg > 0.0 && sensor.vertical_fov_deg < 180.0) {
+        return bad(format!("vertical FOV {} deg (0, 180)", sensor.vertical_fov_deg));
+    }
+    if !(sensor.range_m.is_finite() && sensor.range_m > 0.0) {
+        return bad(format!("range {} m", sensor.range_m));
+    }
     match state
         .radars
         .iter_mut()
@@ -1592,14 +1754,26 @@ fn upsert_radar_rig(state: &mut ServiceState, sensor: &ServiceRadar) {
         Some(registered) => *registered = sensor.clone(),
         None => state.radars.push(sensor.clone()),
     }
+    Ok(())
 }
 
 /// Upsert a camera spec into the retained rig (registration order kept).
-fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) {
+fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) -> Result<(), String> {
+    let bad = |what: String| Err(format!("[native_camera_config_invalid] camera {}: {what}", cam.sensor_id));
+    if cam.width == 0 || cam.height == 0 {
+        return bad(format!("size {}x{}", cam.width, cam.height));
+    }
+    if !(cam.fov_deg.is_finite() && cam.fov_deg > 0.0 && cam.fov_deg < 180.0) {
+        return bad(format!("vertical FOV {} deg", cam.fov_deg));
+    }
+    if !matches!(cam.depth_encoding.as_deref(), None | Some("linear") | Some("carla")) {
+        return bad(format!("unknown depth encoding {:?} (linear, carla)", cam.depth_encoding));
+    }
     match state.rig.iter_mut().find(|c| c.sensor_id == cam.sensor_id) {
         Some(slot) => *slot = cam.clone(),
         None => state.rig.push(cam.clone()),
     }
+    Ok(())
 }
 
 /// GPU pass set every service camera is registered with. Which of them
@@ -1701,18 +1875,41 @@ fn publish_frame(
 }
 
 /// Derive the CARLA semantic layout from an instance-ID payload.
-fn semantic_from_ids(state: &ServiceState, id_data: &[u8], width: u32, height: u32, stride: usize) -> Vec<u8> {
+///
+/// Every instance id in the pass must be a static legend entry or a live
+/// actor with a mappable class: an unknown id or class fails the pass
+/// instead of being written as unlabeled.
+fn semantic_from_ids(state: &ServiceState, id_data: &[u8], width: u32, height: u32, stride: usize) -> Result<Vec<u8>, String> {
     let legend = &state.legend;
     let app = &state.app;
-    crate::carla::semantic_from_ids(id_data, width, height, stride, |id| {
-        if let Some(class) = app.actor_instance_class(id) {
-            return crate::carla::actor_class_of(class);
+    let mut classes: HashMap<u32, u8> = HashMap::new();
+    let mut failure: Option<String> = None;
+    let out = crate::carla::semantic_from_ids(id_data, width, height, stride, |id| {
+        if let Some(class) = classes.get(&id) {
+            return *class;
         }
-        legend
-            .get(&id)
-            .map(|name| crate::carla::static_class_of(name))
-            .unwrap_or(0)
-    })
+        let class = if let Some(class) = app.actor_instance_class(id) {
+            crate::carla::actor_class_of(class)
+        } else if let Some(name) = legend.get(&id) {
+            Ok(crate::carla::static_class_of(name))
+        } else {
+            Err(format!("[native_semantic_instance_unknown] instance id {id} in the ID pass is neither a static mesh nor a live actor"))
+        };
+        match class {
+            Ok(class) => {
+                classes.insert(id, class);
+                class
+            }
+            Err(error) => {
+                failure.get_or_insert(error);
+                0
+            }
+        }
+    });
+    match failure {
+        Some(error) => Err(error),
+        None => Ok(out),
+    }
 }
 
 /// One camera pass ready for publication, in canonical order.
@@ -1769,14 +1966,14 @@ fn plan_camera_passes(
             format_tag: FORMAT_DEPTH32F,
             format_name: if carla { "carla-depth-bgra" } else { "depth32f" },
             data: if carla {
-                crate::carla::depth_to_carla(raw, cam.width, cam.height, stride, state.near_m, state.far_m)
+                crate::carla::depth_to_carla(raw, cam.width, cam.height, stride, state.near_m)
             } else {
                 raw.to_vec()
             },
         });
     }
     if want_semantic {
-        let out = semantic_from_ids(state, take("id")?, cam.width, cam.height, stride);
+        let out = semantic_from_ids(state, take("id")?, cam.width, cam.height, stride)?;
         planned.push(PlannedPass { pass: "semantic", format_tag: FORMAT_RGBA8, format_name: "rgba8", data: out });
     }
     Ok(planned)
@@ -1797,7 +1994,9 @@ fn render_tick(
         }
     }
     for cam in &cameras {
-        upsert_rig(state, cam);
+        if let Err(error) = upsert_rig(state, cam) {
+            return WireResponse::error(i, error);
+        }
     }
     if let Err(error) = sync_rig(state, &cameras) {
         return WireResponse::error(i, error);
@@ -2164,13 +2363,13 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
     let (want, want_id_output, want_semantic) = parse_bundle_passes(&requested).map_err(|error| WireResponse::error(i, error))?;
     for cam in cameras.iter().flatten() {
-        upsert_rig(state, cam);
+        upsert_rig(state, cam).map_err(|error| WireResponse::error(i, error))?;
     }
     for sensor in lidars.iter().flatten() {
-        upsert_lidar_rig(state, sensor);
+        upsert_lidar_rig(state, sensor).map_err(|error| WireResponse::error(i, error))?;
     }
     for sensor in radars.iter().flatten() {
-        upsert_radar_rig(state, sensor);
+        upsert_radar_rig(state, sensor).map_err(|error| WireResponse::error(i, error))?;
     }
     if state.rig.is_empty() && state.lidars.is_empty() && state.radars.is_empty() {
         return Err(WireResponse::error(
@@ -2231,7 +2430,7 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     stages.capture_ms = ms(mark);
     // The world is now exactly as the capture drew it: snapshot the scan
     // inputs here and let the scans run while the GPU works.
-    let policy_host = policy_host_frame(state);
+    let policy_host = policy_host_frame(state).map_err(|error| WireResponse::error(i, error))?;
     let mut sensor_to_policy = std::collections::BTreeMap::new();
     let mut scan = None;
     if sensors_wanted {
@@ -2321,6 +2520,12 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
             Err(_) => return WireResponse::error(i, "sensor scan thread panicked"),
         };
         stages.sensor_wait_ms = ms(mark);
+        if !result.unknown_instances.is_empty() {
+            return WireResponse::error(i, format!(
+                "[native_sensor_instance_unknown] lidar/radar hit instance id(s) {:?} that are neither static meshes nor live actors",
+                result.unknown_instances
+            ));
+        }
         stages.actor_scene_ms = result.actor_scene_ms;
         stages.lidar_ms = result.lidar_ms;
         stages.radar_ms = result.radar_ms;
@@ -2375,16 +2580,18 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
 }
 
 /// The ego frame sensor poses are reported relative to in policy episodes.
-fn policy_host_frame(state: &ServiceState) -> Option<render_core::coordinates::SensorFrame> {
-    let episode = state.episode.as_ref()?;
-    let frame = state.scene.get(state.current_tick? as usize)?;
-    let actor = frame.actors.iter().find(|actor| actor.id == episode.ego_id)?;
+fn policy_host_frame(state: &ServiceState) -> Result<Option<render_core::coordinates::SensorFrame>, String> {
+    let Some(episode) = state.episode.as_ref() else { return Ok(None) };
+    let Some(frame) = state.current_tick.and_then(|tick| state.scene.get(tick as usize)) else { return Ok(None) };
+    let actor = frame.actors.iter().find(|actor| actor.id == episode.ego_id).ok_or_else(|| {
+        format!("[native_episode_ego_missing] episode ego {} is not in the current scene frame", episode.ego_id)
+    })?;
     let p = actor.transform.position;
-    let origin = Vec3::new(p[0], actor_base_y(p[1], frame.ground_y, state.app.ground_at(p[0], p[2])), p[2]);
-    Some(render_core::coordinates::SensorFrame::from_bevy_pose(
+    let origin = Vec3::new(p[0], actor_base_y(state, &actor.id, p, frame.ground_y)?, p[2]);
+    Ok(Some(render_core::coordinates::SensorFrame::from_bevy_pose(
         origin,
         Quat::from_rotation_y(quat_yaw(&actor.transform.rotation)),
-    ))
+    )))
 }
 
 /// One lidar scan of a tick: resolved mount and payload encoding.
@@ -2434,6 +2641,9 @@ struct SensorPayload {
 
 struct SensorResult {
     payloads: Vec<SensorPayload>,
+    /// Hit instance ids that are neither static legend entries nor live
+    /// actors (must be empty: the finish step fails the bundle otherwise).
+    unknown_instances: Vec<u32>,
     actor_scene_ms: f64,
     lidar_ms: f64,
     radar_ms: f64,
@@ -2449,22 +2659,23 @@ fn prepare_sensor_work(
     let static_classes = state.static_sensor_classes();
     let actors = snapshot_actor_sensor_instances(&mut state.app, &mut state.actor_blas)?;
     let frame = state.current_tick.and_then(|index| state.scene.get(index as usize));
-    let tick_hz = frame.map(|frame| frame.tick_hz).filter(|tick_hz| *tick_hz > 0.0).unwrap_or(20.0);
+    let tick_hz = frame
+        .map(|frame| frame.tick_hz)
+        .ok_or_else(|| "[native_scene_tick_missing] lidar/radar requested before any scene tick was applied".to_string())?;
     let mut instance_velocities = HashMap::new();
     // The static legend alone would drop every actor back to the default
     // albedo: the current frame's actors are resolved through the engine.
     let mut actor_classes = HashMap::new();
     if let Some(frame) = frame {
-        for actor in &frame.actors {
-            let Some(instance_id) = state.app.actor_instance_id(&actor.id) else { continue };
+        for actor in frame.actors.iter().filter(|actor| actor.kind != "despawn") {
+            let instance_id = state.app.actor_instance_id(&actor.id).ok_or_else(|| {
+                format!("[native_scene_actor_unaccounted] actor {} of the current frame is not in the world", actor.id)
+            })?;
             instance_velocities.insert(instance_id, Vec3::from_array(actor.velocity));
-            if let Some(class) = state
-                .app
-                .actor_instance_class(instance_id)
-                .map(sensors::taxonomy::SemanticClass::from_actor_class)
-            {
-                actor_classes.insert(instance_id, class);
-            }
+            let class = state.app.actor_instance_class(instance_id).ok_or_else(|| {
+                format!("[native_actor_class_missing] actor {} has no class in the world", actor.id)
+            })?;
+            actor_classes.insert(instance_id, sensors::taxonomy::SemanticClass::try_from_actor_class(class)?);
         }
     }
     let binary = state.episode.as_ref().is_some_and(|episode| {
@@ -2480,14 +2691,7 @@ fn prepare_sensor_work(
         }
         lidars.push(LidarJob {
             sensor_id: sensor.sensor_id.clone(),
-            config: sensors::lidar::LidarConfig {
-                channels: sensor.channels,
-                rotation_frequency_hz: sensor.rotation_frequency_hz,
-                points_per_second: sensor.points_per_second,
-                vfov_deg: sensor.vertical_fov_deg,
-                hfov_deg: sensor.horizontal_fov_deg,
-                range_m: sensor.range_m,
-            },
+            config: lidar_config(sensor),
             origin: mount.origin,
             rotation: mount.rotation,
             binary,
@@ -2498,13 +2702,14 @@ fn prepare_sensor_work(
         let mount = resolve_sensor_mount(state, &sensor.attach)?;
         radars.push(RadarJob {
             sensor_id: sensor.sensor_id.clone(),
-            config: sensors::radar::RadarConfig::from_budget(
-                Some(sensor.points_per_second),
+            config: sensors::radar::RadarConfig::from_points_per_second(
+                sensor.points_per_second,
                 tick_hz,
                 sensor.horizontal_fov_deg,
                 sensor.vertical_fov_deg,
                 sensor.range_m,
-            ),
+            )
+            .map_err(|error| format!("radar {}: {error}", sensor.sensor_id))?,
             origin: mount.origin,
             rotation: mount.rotation,
             host_velocity: mount.host_velocity,
@@ -2519,12 +2724,18 @@ fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResu
     let actor_scene = build_actor_sensor_scene(&work.actors);
     let actor_scene_ms = started.elapsed().as_secs_f64() * 1000.0;
     let combined_scene = CombinedSensorScene { static_scene, actor_scene: &actor_scene };
+    // Every hit resolves to a static legend class or a live actor; an id
+    // that resolves to neither is recorded and fails the bundle rather than
+    // being labelled a prop.
+    let unknown = std::sync::Mutex::new(std::collections::BTreeSet::new());
     let instance_class = |instance_id: u32| -> sensors::taxonomy::SemanticClass {
-        work.actor_classes
-            .get(&instance_id)
-            .or_else(|| work.static_classes.get(&instance_id))
-            .copied()
-            .unwrap_or(sensors::taxonomy::SemanticClass::Prop)
+        match work.actor_classes.get(&instance_id).or_else(|| work.static_classes.get(&instance_id)) {
+            Some(class) => *class,
+            None => {
+                unknown.lock().expect("unknown-instance set").insert(instance_id);
+                sensors::taxonomy::SemanticClass::Unlabeled
+            }
+        }
     };
     let mut payloads = Vec::with_capacity(work.lidars.len() + work.radars.len());
     let started = std::time::Instant::now();
@@ -2552,7 +2763,15 @@ fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResu
             job.origin,
             job.rotation,
             job.host_velocity,
-            &|instance_id| work.instance_velocities.get(&instance_id).copied().unwrap_or(Vec3::ZERO),
+            &|instance_id| match work.instance_velocities.get(&instance_id) {
+                Some(velocity) => *velocity,
+                // Static geometry does not move.
+                None if work.static_classes.contains_key(&instance_id) => Vec3::ZERO,
+                None => {
+                    unknown.lock().expect("unknown-instance set").insert(instance_id);
+                    Vec3::ZERO
+                }
+            },
         );
         payloads.push(SensorPayload {
             sensor_id: job.sensor_id.clone(),
@@ -2563,7 +2782,9 @@ fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResu
             data: sensors::formats::encode_radar_csv(&detections),
         });
     }
-    SensorResult { payloads, actor_scene_ms, lidar_ms, radar_ms: started.elapsed().as_secs_f64() * 1000.0 }
+    let radar_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let unknown_instances = unknown.into_inner().expect("unknown-instance set").into_iter().collect();
+    SensorResult { payloads, unknown_instances, actor_scene_ms, lidar_ms, radar_ms }
 }
 
 /// PNG demotion: encoding happens off the critical path after the response.
@@ -2595,7 +2816,7 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        actor_base_y, actor_color, build_map_sensor_scenes, build_sensor_scene, capture_keys,
+        base_y_precedence, actor_color, build_map_sensor_scenes, build_sensor_scene, capture_keys,
         instance_coverage, on_road, parse_bundle_passes, row_stride, CombinedSensorScene,
     };
     use render_core::engine::SensorTriangle;
@@ -2678,9 +2899,11 @@ mod tests {
 
     #[test]
     fn authored_actor_height_precedes_mesh_ground() {
-        assert_eq!(actor_base_y(2.225, None, -9.7), 2.225);
-        assert_eq!(actor_base_y(0.0, Some(3.5), -9.7), 3.5);
-        assert_eq!(actor_base_y(0.0, None, 1.75), 1.75);
+        assert_eq!(base_y_precedence(2.225, None, || Some(-9.7)), Some(2.225));
+        assert_eq!(base_y_precedence(0.0, Some(3.5), || Some(-9.7)), Some(3.5));
+        assert_eq!(base_y_precedence(0.0, None, || Some(1.75)), Some(1.75));
+        // Off the map with no authored height: no invented height.
+        assert_eq!(base_y_precedence(0.0, None, || None), None);
     }
 
     #[test]
@@ -2786,7 +3009,7 @@ mod tests {
                 world: bevy::math::Mat4::from_translation(origin),
                 instance_id: actor_triangles[0].instance_id,
             }],
-            static_classes: std::sync::Arc::new(HashMap::from([(1, SemanticClass::Building)])),
+            static_classes: std::sync::Arc::new(HashMap::from([(1, SemanticClass::Building), (2, SemanticClass::Building), (3, SemanticClass::Prop)])),
             actor_classes: HashMap::from([(7, SemanticClass::Car)]),
             instance_velocities: HashMap::from([(7, Vec3::new(3.0, 0.0, 0.0))]),
             lidars: vec![super::LidarJob {

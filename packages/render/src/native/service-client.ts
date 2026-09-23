@@ -4,6 +4,7 @@ import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { decode, encode } from '@msgpack/msgpack';
+import { renderInputErrorFromServiceMessage } from '../render-input-error.js';
 
 const HEADER_BYTES = 4;
 const RECORD_HEADER_BYTES = 128;
@@ -197,7 +198,10 @@ export class NativeServiceClient {
     } finally {
       clearTimeout(timer);
     }
-    if (!value.ok) throw new Error(value.error ?? `native service ${value.op} failed`);
+    if (!value.ok) {
+      const message = value.error ?? `native service ${value.op} failed`;
+      throw renderInputErrorFromServiceMessage(message) ?? new Error(message);
+    }
     return value;
   }
 

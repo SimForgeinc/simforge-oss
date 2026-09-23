@@ -50,6 +50,33 @@ impl RadarConfig {
     }
 }
 
+impl RadarConfig {
+    /// The service's strict variant of [`Self::from_budget`]: the per-frame
+    /// ray budget is exactly `points_per_second / tick_hz` (rounded), laid out
+    /// as the model's square azimuth x elevation grid (the fan's documented
+    /// discretisation). A budget the model cannot honour is an error, never
+    /// silently raised to the 64-ray floor.
+    pub fn from_points_per_second(
+        points_per_second: u32,
+        tick_hz: f32,
+        hfov_deg: f32,
+        vfov_deg: f32,
+        range_m: f32,
+    ) -> Result<RadarConfig, String> {
+        if !(tick_hz.is_finite() && tick_hz > 0.0) {
+            return Err(format!("[native_radar_config_invalid] tick rate {tick_hz} Hz"));
+        }
+        let per_frame = (points_per_second as f32 / tick_hz).round() as u32;
+        if per_frame < 64 {
+            return Err(format!(
+                "[native_radar_config_invalid] {points_per_second} points/s at {tick_hz} Hz is {per_frame} rays per frame; the radar model needs at least 64"
+            ));
+        }
+        let side = (per_frame as f32).sqrt().round() as u32;
+        Ok(RadarConfig { hfov_deg, vfov_deg, range_m, azimuth_rays: side, elevation_rows: side })
+    }
+}
+
 pub struct RadarDetection {
     pub depth: f32,
     /// Positive azimuth points toward sensor +Z (camera-right at zero heading).
