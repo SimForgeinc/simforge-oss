@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { hasCompletedLocalSetup, isOtherTabRenderingPreferenceChange, markLocalSetupCompleted, readRenderingPreference, renderingPreferenceQuality, RENDERING_PREFERENCE_CHANGE_EVENT, RENDERING_PREFERENCE_STORAGE_KEY, saveRenderingPreference } from "../../../../src/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, hasCompletedLocalSetup, isOtherTabRenderingPreferenceChange, markLocalSetupCompleted, readRenderingPreference, renderingPreferenceQuality, RENDERING_PREFERENCE_CHANGE_EVENT, RENDERING_PREFERENCE_CHOICES, RENDERING_PREFERENCE_STORAGE_KEY, renderingPreferenceChoiceLabel, renderingPreferenceLabel, saveRenderingPreference } from "../../../../src/components/rendering-preference";
 import { sceneViewerOptions } from "../../../../src/scenario/editor/authoring-quality";
 import { loadViewportSettings, saveViewportSettings, viewportVegetationVisible } from "../../../../src/scenario/editor/regions/slots/viewport-settings";
 
@@ -8,33 +8,44 @@ beforeEach(() => { window.localStorage.clear(); vi.spyOn(HTMLCanvasElement.proto
 afterEach(() => vi.restoreAllMocks());
 
 describe("rendering preference storage", () => {
-  it.each([
-    ["NVIDIA GeForce RTX 4090", true, false, 16384, "medium"],
-    ["Apple M3", false, true, 16384, "medium"],
-    ["AMD Radeon Graphics", true, false, 16384, "low"],
-    ["NVIDIA GeForce RTX 4090", false, false, 16384, "low"],
-    ["NVIDIA GeForce RTX 4090", true, false, 256, "low"],
-    ["SwiftShader", true, true, 16384, "low"],
-  ] as const)("selects a safe stable default for %s (BC7 %s, ASTC %s, max %s)", (renderer, bc7, astc, max, expected) => {
-    const loseContext = vi.fn();
-    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue({
-      MAX_TEXTURE_SIZE: 1, RENDERER: 2, VENDOR: 3,
-      getParameter: (key: number) => key === 1 ? max : key === 2 ? renderer : "GPU vendor",
-      getExtension: (name: string) => name === "EXT_texture_compression_bptc" ? (bc7 ? {} : null) : name === "WEBGL_compressed_texture_astc" ? (astc ? {} : null) : name === "WEBGL_lose_context" ? { loseContext } : null,
-    } as unknown as WebGL2RenderingContext);
-    expect(readRenderingPreference()).toBe(expected);
-    expect(loseContext).toHaveBeenCalledOnce();
-    vi.mocked(HTMLCanvasElement.prototype.getContext).mockClear().mockReturnValue(null);
-    expect(readRenderingPreference()).toBe(expected);
+  it("defaults to Low · no foliage when nothing is stored, without probing the GPU", () => {
+    expect(DEFAULT_RENDERING_PREFERENCE).toBe("low-no-foliage");
+    expect(readRenderingPreference()).toBe("low-no-foliage");
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
   });
 
-  it("falls back to Low when capability probing or storage is unavailable", () => {
-    expect(readRenderingPreference()).toBe("low");
-    expect(readRenderingPreference({ getItem() { throw new Error("SecurityError"); } })).toBe("low");
+  it("never persists the default: a stored value is always an explicit choice", () => {
+    expect(readRenderingPreference()).toBe("low-no-foliage");
+    expect(window.localStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY)).toBeNull();
+    expect(readRenderingPreference()).toBe("low-no-foliage");
   });
 
-  it("never confuses an auto choice or a new selection with completed local setup", () => {
+  it.each(["low", "medium", "low-no-foliage"] as const)("respects a saved %s choice", (saved) => {
+    window.localStorage.setItem(RENDERING_PREFERENCE_STORAGE_KEY, saved);
+    expect(readRenderingPreference()).toBe(saved);
+    expect(window.localStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY)).toBe(saved);
+  });
+
+  it("keeps an explicitly saved Medium across reads", () => {
+    saveRenderingPreference("medium");
+    expect(readRenderingPreference()).toBe("medium");
+    expect(readRenderingPreference()).toBe("medium");
+    expect(window.localStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY)).toBe("medium");
+  });
+
+  it("falls back to the default when storage is unavailable", () => {
+    expect(readRenderingPreference(null)).toBe(DEFAULT_RENDERING_PREFERENCE);
+    expect(readRenderingPreference({ getItem() { throw new Error("SecurityError"); } })).toBe(DEFAULT_RENDERING_PREFERENCE);
+  });
+
+  it("labels only the default choice with (default)", () => {
+    expect(RENDERING_PREFERENCE_CHOICES.map((choice) => renderingPreferenceChoiceLabel(choice.id))).toEqual([
+      "Low · no foliage (default)", "Low", "Medium",
+    ]);
+    expect(renderingPreferenceLabel("low-no-foliage")).toBe("Low · no foliage");
+  });
+
+  it("never confuses the default or a new selection with completed local setup", () => {
     readRenderingPreference();
     readRenderingPreference();
     saveRenderingPreference("medium");
@@ -59,10 +70,9 @@ describe("rendering preference storage", () => {
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
   });
 
-  it("replaces corrupt storage with a stable auto selection", () => {
+  it("reads corrupt storage as the default", () => {
     window.localStorage.setItem(RENDERING_PREFERENCE_STORAGE_KEY, "automatic");
-    expect(readRenderingPreference()).toBe("low");
-    expect(window.localStorage.getItem(RENDERING_PREFERENCE_STORAGE_KEY)).toBe("low");
+    expect(readRenderingPreference()).toBe(DEFAULT_RENDERING_PREFERENCE);
   });
 
   it.each([["roads-only", "low"], ["ultra-low-3d", "low"], ["minimal", "low"], ["high", "medium"]] as const)("migrates %s to %s", (removed, current) => {
