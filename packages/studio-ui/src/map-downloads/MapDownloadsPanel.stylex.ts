@@ -117,7 +117,8 @@ export const styles = stylex.create({
   car: {
     position: "absolute",
     bottom: space.s2,
-    left: "calc(var(--road-progress, 0) * (100% - 1.5rem))",
+    // The car stops short of the finish flag, which lights when it arrives.
+    left: "calc(var(--road-progress, 0) * (100% - 2.75rem))",
     width: "1.5rem",
     height: "1.5rem",
     color: colors.accent,
@@ -255,7 +256,8 @@ export const styles = stylex.create({
   },
   tileCity: { position: "relative", height: "100%" },
   tileCheck: { position: "absolute", top: space.s2, insetInlineStart: space.s2 },
-  tileBadge: { position: "absolute", top: space.s2, insetInlineEnd: space.s2 },
+  /** An opaque plate under the state chip: the city behind it must not bleed through its wash. */
+  tileBadge: { position: "absolute", top: space.s2, insetInlineEnd: space.s2, display: "inline-flex", backgroundColor: colors.panelSolid },
   tileBody: { display: "grid", gap: space.s1, minWidth: 0, paddingInline: space.s3, paddingBlock: space.s2_5 },
   tileRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.s2, minWidth: 0 },
   tileName: { minWidth: 0, fontSize: text.sizeSm, fontWeight: text.weightMedium, lineHeight: text.lineSm, color: colors.ink },
@@ -279,6 +281,7 @@ export const styles = stylex.create({
     borderTopColor: colors.hairline,
   },
   barSummary: { display: "grid", gap: space.s0_5, minWidth: 0 },
+  barHint: { display: { default: "none", [layout.bpSm]: "block" } },
   barActions: { display: "flex", flexWrap: "wrap", gap: space.s2, justifyContent: "flex-end" },
   icon: { width: "1rem", height: "1rem" },
 });

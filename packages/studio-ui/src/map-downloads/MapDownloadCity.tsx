@@ -123,6 +123,8 @@ const Block = memo(function Block({ cell, height, lit, active }: {
         points={points(base)}
         {...stylex.props(styles.lot, lit && styles.lotLit, active && [styles.lotActive, motionRecipe.pulse])}
       />
+      {/* The block's ghost: the skyline is readable before a byte arrives. */}
+      <polygon points={points([left!, bottom!, roofBottom!, roofLeft!, roof[0]!, roofRight!, right!, bottom!])} {...stylex.props(styles.ghost, lit && styles.ghostLit)} />
       <g {...mergeStyleProps(stylex.props(styles.building, lit && styles.buildingLit), undefined, { "--rise": height } as CSSProperties)}>
         <polygon points={points([left!, bottom!, roofBottom!, roofLeft!])} {...stylex.props(styles.wallLeft)} />
         <polygon points={points([bottom!, right!, roofRight!, roofBottom!])} {...stylex.props(styles.wallRight)} />

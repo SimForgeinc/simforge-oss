@@ -853,7 +853,7 @@ function MapTile({
             <MetaLabel data-testid="map-downloads-tile-size">
               {reason ? "—" : plan ? (live && live.state === "downloading" ? `${formatDownloadBytes(residentBytes)} / ${formatDownloadBytes(total)}` : formatDownloadBytes(total)) : map.locked ? "—" : "Sizing…"}
             </MetaLabel>
-            {residentBytes > 0 && plan && !locked && !confirmingDelete ? (
+            {(state === "done" || state === "partial") && plan && !locked && !confirmingDelete ? (
               <IconButton label={`Delete ${map.label} from this browser`} size="xs" onClick={onDelete} data-testid="map-downloads-delete">
                 <Trash2 />
               </IconButton>
@@ -906,7 +906,7 @@ function ActionBar({ job, starting, sizing, selectedCount, missingBytes, selecti
     <div {...stylex.props(styles.bar)} data-testid="map-downloads-bar">
       <div {...stylex.props(styles.barSummary)}>
         <span {...stylex.props(typography.label, textLayout.truncate)} data-testid="map-downloads-summary">{summary}</span>
-        {!inJob ? <span {...stylex.props(typography.meta)}>Downloading keeps going when you close this panel.</span> : null}
+        {!inJob ? <span {...stylex.props(typography.meta, styles.barHint)}>Downloading keeps going when you close this panel.</span> : null}
       </div>
       <div {...stylex.props(styles.barActions)}>
         {running ? (
