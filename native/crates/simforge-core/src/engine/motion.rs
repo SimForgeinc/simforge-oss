@@ -1345,7 +1345,8 @@ impl Simulation {
                 }
                 if a.speed_mps < 0.05 {
                     if a.standstill_since_s.is_none() {
-                        a.standstill_since_s = Some(t);
+                        // The state just applied is the state at t + dt.
+                        a.standstill_since_s = Some(t + self.dt);
                     }
                 } else {
                     a.standstill_since_s = None;
