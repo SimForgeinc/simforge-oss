@@ -739,6 +739,16 @@ pub fn compile_situation(
     Ok(out)
 }
 
+/// The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars.
+#[wasm_bindgen(js_name = studioConcreteInput)]
+pub fn studio_concrete_input(input: &WasmScenarioInput, template_json: &str) -> Result<WasmScenarioInput, JsValue> {
+    rt::studio_concrete_input(&input.inner, template_json).map(|inner| WasmScenarioInput { inner }).js()
+}
+/// The refinements every executor applies to the input it runs (stable high-speed world routes, cruise restoration).
+#[wasm_bindgen(js_name = executionRefinements)]
+pub fn execution_refinements(input: &WasmScenarioInput) -> Result<WasmScenarioInput, JsValue> {
+    rt::execution_refinements(&input.inner).map(|inner| WasmScenarioInput { inner }).js()
+}
 /// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
 #[wasm_bindgen(js_name = ambientTurnVerdictsJson)]
 pub fn ambient_turn_verdicts_json(graph: &WasmLaneGraph) -> String {

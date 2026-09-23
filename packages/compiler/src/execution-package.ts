@@ -36,13 +36,10 @@ import {
   validateOpenScenarioXml14,
   type OpenScenarioXml14Validation,
 } from '@simforge-oss/openscenario/node';
-import { withBoundedSpeedCruiseRestoration, withStableHighSpeedWorldRoutes } from '@simforge-oss/playback';
 import { parseTemplate, serializeTemplate, type ScenarioTemplateV2 } from '@simforge-oss/scenario';
 
 import type { MapControlPlan } from './map-signals.js';
 import { compileTemplateWith, materializationSemanticLosses, type MaterializeOptions } from './materialize.js';
-import { withStudioBodyColorTags } from './studio/body-color.js';
-import { bakedParkedCarsFromExtensions, withParkedCarActors } from './studio/parked-cars.js';
 import { clampDeclaredAxisHolds, type AxisUntilClamp } from './template-axis-clamp.js';
 import type { MapBundle } from './types.js';
 import { buildXodrElevationResolver } from './xodr-elevation.js';
@@ -270,14 +267,9 @@ function concreteInput(
   const losses = materializationSemanticLosses(product.manifest.notes);
   if (losses.length > 0) throw new Error(`semantic_loss:${JSON.stringify(losses)}`);
   if (!product.manifest.feasible) throw new Error(`materialization_infeasible:${JSON.stringify(product.manifest.issues)}`);
-  // Applied at the same points the browser worker applies them, so the concrete
-  // input digests agree. Paint tags come first (the browser stamps them before
-  // parked cars on the map-bound path); a document with no authored paint and
-  // no baked cars is untouched.
-  const controlled = withParkedCarActors(
-    withStudioBodyColorTags(withMapControls(product.input, bundle.controlPlan()), template),
-    bakedParkedCarsFromExtensions(template.extensions),
-  );
+  // The document's Studio content (paint tags, then baked parked cars), by the
+  // same native implementation the editor worker applies at the same point.
+  const controlled = runtime.studioConcreteInput(withMapControls(product.input, bundle.controlPlan()), template);
   const ambient = runtime.materializeAmbientTraffic(
     controlled,
     bundle.graph,
@@ -305,7 +297,7 @@ function concreteInput(
  * world resolves it without running the clip.
  */
 function executionResolvedInput(input: SimScenarioInput, graph: LaneGraph): { executed: SimScenarioInput; resolved: SimScenarioInput } {
-  const executed = withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
+  const executed = JSON.parse(engine().executionRefinements(input).toJson()) as SimScenarioInput;
   return { executed, resolved: engine().simulation(executed, { graph, captureTrace: false }).input() };
 }
 

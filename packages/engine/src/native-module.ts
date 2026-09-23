@@ -455,6 +455,10 @@ export interface NativeModule {
    * Returns the generated scenario and its `AmbientTrafficProvenance` JSON.
    */
   materializeAmbientTraffic(input: NativeScenarioInput, graph: NativeLaneGraph, profileJson: string, optionsJson?: string | null): [NativeScenarioInput, string];
+  /** The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars (absent before engine 0.10.0). */
+  studioConcreteInput?(input: NativeScenarioInput, templateJson: string): NativeScenarioInput;
+  /** The refinements every executor applies to the input it runs (absent before engine 0.10.0). */
+  executionRefinements?(input: NativeScenarioInput): NativeScenarioInput;
   /** `simforge.ambient-turn-verdicts/v1` table of the turn verdicts this module holds for `graph` (absent before engine 0.9.0). */
   ambientTurnVerdictsJson?(graph: NativeLaneGraph): string;
   /** Seed this module's turn-verdict memo from a persisted table; refuses another ENGINE_SEM_VER. */

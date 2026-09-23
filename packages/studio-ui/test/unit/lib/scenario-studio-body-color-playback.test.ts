@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { contentHash, parseSimScenarioInput } from "@simforge-oss/engine";
 import { parsePlaybackPair } from "@simforge-oss/playback";
-import { withStudioBodyColorTags } from "@simforge-oss/compiler";
+import { engine } from "@simforge-oss/engine/node";
 
 /**
  * The regression this fixes, proven through the real decoder rather than
@@ -50,7 +50,10 @@ function playedActors(bodyColor: unknown, { decorate = true } = {}) {
     physics: { mode: "dynamic-v1" },
   });
 
-  const input = decorate ? withStudioBodyColorTags(materialized, template) : materialized;
+  // Native paint reconciliation, as the editor worker and the host apply it.
+  const input = decorate
+    ? JSON.parse(engine().studioConcreteInput(materialized, template).toJson()) as typeof materialized
+    : materialized;
   const inputHash = contentHash(input);
   const times = [0, 0.2, 0.4, 0.6, 0.8, 1];
 
