@@ -1,7 +1,7 @@
 {
   "sceneId": "yale-05-timeline",
   "mapId": "yale-street",
-  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline through `simforge-render job` (committed document lowered to the service stream with groundY 0: baked heights authoritative). Chase camera: the retired playback binary's follow camera on the first actor (delivery-truck). Ticks 0..119 render; tick 60 is hashed. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile. Recorded substitutions: the cyclist is drawn without its rider through actorModelRefs (riderless catalog GLB; the committed scene state has no wheelSpinRad to pose a rider), and the generic pedestrian.adult actor renders catalog walker walker.pedestrian.0015 (the model catalog/packs/starter-pedestrians maps pedestrian.adult to; pedestrians-carla has no pedestrian.adult entry and the service never substitutes).",
+  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline (scene-state.v1 sampled at 24 fps over 0..6 s; baked XODR heights, road + body attitude, wheel odometer) through `simforge-render job` (committed document lowered to the service stream with groundY 0: baked heights authoritative). Chase camera: the retired playback binary's follow camera on the first actor (delivery-truck). Ticks 0..119 render; tick 60 is hashed. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile. The cyclist renders with its rider, posed from the timeline's wheelSpinRad odometer. Recorded substitution: the generic pedestrian.adult actor renders catalog walker walker.pedestrian.0015 (the model catalog/packs/starter-pedestrians maps pedestrian.adult to; pedestrians-carla has no pedestrian.adult entry and the service never substitutes).",
   "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
     "master.gltf"
@@ -25,10 +25,7 @@
       },
       "warmupFrames": 20,
       "vehicleModels": "{repo}/catalog/vehicles-carla",
-      "pedestrianModels": "{repo}/catalog/pedestrians-carla",
-      "actorModelRefs": {
-        "wrong-way-rider": "{repo}/catalog/vehicles-carla/models/vehicle_bicycle_gazelle_omafiets.glb"
-      }
+      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
     },
     "rig": {
       "cameras": [

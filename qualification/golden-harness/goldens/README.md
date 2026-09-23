@@ -49,16 +49,15 @@ are retired evidence: every scene must be re-recorded with `simforge-render`
 (rc.75) before the gate is armed again; `verify` reports missing keys as
 drift until then.
 
-The timeline scenes' parity gate additionally needs:
-- the job to write `<outDir>/observed-frames.jsonl` when the job sets
-  `observe` (the job currently refuses the key), and
-- render-timeline fixtures in the current timeline schema: the committed
-  `fixtures/*.timeline.json.gz` predate `contactOrigin` and `wheelSpinRad`,
-  so today's sampler (`simforge render parity`) cannot read them. Regenerate
-  them from the source traces (`simforge render timeline <trace> --map <map>`)
-  and the matching scene-state documents (`simforge render scene-state
-  <timeline> --fps 24`), then drop the riderless `actorModelRefs` so the
-  two-wheelers render with their posed riders.
+The timeline scenes' fixtures were regenerated on 2026-09-23 from their
+source traces (edge cases 05/06, engine 0.7.0; trace `inputHash`
+`1ebb3cb0…` / `7defd6a3…`) with today's timeline builder on the maps' xodr
+elevation (`simforge render timeline <trace> --map <map>`, no ground
+derivative in those map versions), then `simforge render scene-state
+<timeline> --fps 24 --end 6`. They carry `contactOrigin`, `wheelSpinRad`,
+`bodyAttitude` and `wheelDropM`, so the two-wheelers render with their posed
+riders and `simforge render parity` reads the timelines. The job writes
+`observed-frames.jsonl` (`observe`), which the parity gate grades.
 
 ## Re-record
 

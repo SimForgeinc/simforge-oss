@@ -1,7 +1,7 @@
 {
   "sceneId": "richmond-06-timeline",
   "mapId": "richmond-field-station",
-  "description": "Blind-crest two-way corridor (edge case 06) instantiated on richmond-field-station: 4 moving actors replayed from the render timeline (scene-state.v1 at 24 fps, baked XODR heights, road attitude) through `simforge-render job`: the committed document is lowered to the service's per-tick stream with groundY 0, so the baked heights are authoritative (the retired playback binary's --authored-height). Chase camera: the retired playback binary's follow camera (9 m behind, 3 m up, aimed 8 m ahead of the first actor, vertical FOV 58) as a rigid attach. Ticks 0..119 render; tick 60 is hashed. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler. The motorcycle is drawn without its rider through actorModelRefs (the riderless catalog GLB, unscaled, untinted; recorded as an actor substitution in the manifest): the committed scene state predates wheelSpinRad, which the service needs to pose a rider.",
+  "description": "Blind-crest two-way corridor (edge case 06) instantiated on richmond-field-station: 4 moving actors replayed from the render timeline (scene-state.v1 sampled at 24 fps over 0..6 s by `simforge render scene-state`; baked XODR heights, road + body attitude, wheel odometer) through `simforge-render job`: the committed document is lowered to the service's per-tick stream with groundY 0, so the baked heights are authoritative (the retired playback binary's --authored-height). Chase camera: the retired playback binary's follow camera (9 m behind, 3 m up, aimed 8 m ahead of the first actor, vertical FOV 58) as a rigid attach. Ticks 0..119 render; tick 60 is hashed. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler. The motorcycle renders with its rider, posed from the timeline's wheelSpinRad odometer.",
   "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
   "corpusFiles": [
     "master.gltf"
@@ -22,10 +22,7 @@
       },
       "warmupFrames": 20,
       "vehicleModels": "{repo}/catalog/vehicles-carla",
-      "pedestrianModels": "{repo}/catalog/pedestrians-carla",
-      "actorModelRefs": {
-        "following-motorcycle": "{repo}/catalog/vehicles-carla/models/vehicle_motorcycle_harley.glb"
-      }
+      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
     },
     "rig": {
       "cameras": [
