@@ -147,10 +147,10 @@ fn a_trace_without_contact_gets_the_same_contact_derived_at_timeline_build() {
     let height = HeightField::ground(Arc::clone(&ground));
     let from_trace = build_render_timeline(&grounded, &height, None).unwrap();
     let derived = build_render_timeline(&bare, &height, None).unwrap();
-    assert_eq!(from_trace.contact_origin, ContactOrigin::Trace);
+    assert_eq!(from_trace.contact_origin, Some(ContactOrigin::Trace));
     assert_eq!(
         derived.contact_origin,
-        ContactOrigin::DerivedAtTimelineBuild
+        Some(ContactOrigin::DerivedAtTimelineBuild)
     );
     assert_eq!(from_trace.height_source.kind, "ground-contact/v1");
     assert_eq!(

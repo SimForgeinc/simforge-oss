@@ -76,7 +76,12 @@ export interface BuildRenderTimelineInput {
    * resolver and says so: `contactOrigin: 'legacy-xodr-elevation'`.
    */
   readonly ground?: Uint8Array | null;
-  /** The identity recorded next to a stored trace (`sim_results.trace_sha256`). */
+  /**
+   * The identity recorded next to a STORED trace (`sim_results.trace_sha256`),
+   * after the caller verified the stored bytes. A current-format trace must
+   * recompute to it; a trace upgraded in memory from an older format adopts
+   * it (its writer's digest can't be recomputed after a format change).
+   */
   readonly recordedTraceSha256?: string | null;
 }
 
@@ -115,20 +120,32 @@ function built(timeline: RenderTimelineHandle): BuiltRenderTimeline {
  */
 export async function buildRenderTimeline(input: BuildRenderTimelineInput): Promise<BuiltRenderTimeline> {
   const wasm = await timelineRuntime();
+  // `null` and absent mean the same thing to the binding (not pinned / not
+  // recorded): normalized, not defaulted.
+  const catalogDigest = input.catalogDigest === null ? undefined : input.catalogDigest;
+  const recorded = input.recordedTraceSha256 === null ? undefined : input.recordedTraceSha256;
   const timeline = input.ground
     ? wasm.RenderTimeline.buildOnGround(
-      bytesOf(input.trace), input.ground, bytesOf(input.xodr), bytesOf(input.topology),
-      input.catalogDigest ?? undefined, input.recordedTraceSha256 ?? undefined,
+      bytesOf(input.trace), input.ground, bytesOf(input.xodr), bytesOf(input.topology), catalogDigest, recorded,
     )
-    : wasm.RenderTimeline.build(
-      bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology),
-      input.catalogDigest ?? undefined, input.recordedTraceSha256 ?? undefined,
-    );
+    : wasm.RenderTimeline.build(bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology), catalogDigest, recorded);
   try {
     return built(timeline);
   } finally {
     timeline.free();
   }
+}
+
+/**
+ * Open a stored timeline of ANY sampler version for inspection only (motion
+ * comparison across sampler versions). Never render it: a timeline from
+ * another sampler is re-derived from its trace under the current one.
+ */
+export async function inspectRenderTimeline(bytes: Uint8Array | string): Promise<RenderTimelineHandle> {
+  const wasm = await timelineRuntime();
+  let raw = bytesOf(bytes);
+  if (raw[0] === 0x1f && raw[1] === 0x8b) raw = gunzipSync(raw);
+  return wasm.RenderTimeline.inspect(raw);
 }
 
 /** Open (parse and validate) timeline bytes: plain or gzipped canonical JSON. */

@@ -155,7 +155,12 @@ fn check_trace(dir: &Path, entry: &Value) -> Result<(), String> {
     if sha256(&bytes) != str_of(entry, "storedSha256") {
         return Err("stored bytes changed (the corpus is append-only)".into());
     }
-    let plain = maybe_gunzip(&bytes).map_err(|e| e.to_string())?;
+    let mut plain = maybe_gunzip(&bytes).map_err(|e| e.to_string())?.into_owned();
+    if entry["container"] == "browser-preview" {
+        // A legacy editor preview envelope: the trace is its `trace` member.
+        let envelope: Value = serde_json::from_slice(&plain).map_err(|e| e.to_string())?;
+        plain = serde_json::to_vec(&envelope["trace"]).map_err(|e| e.to_string())?;
+    }
     let mut trace = SimTrace::from_json_slice(&plain).map_err(|e| format!("read: {e}"))?;
 
     // Shape and unrecorded sections.
@@ -241,8 +246,30 @@ fn check_trace(dir: &Path, entry: &Value) -> Result<(), String> {
             "upgraded trace motion {got}, expected {expected_motion}"
         ));
     }
-    let timeline = build_render_timeline(&trace, &HeightField::flat(0.0), None)
-        .map_err(|e| format!("timeline: {e}"))?;
+    if expect["timeline"] == "refused-unsupported-dt" {
+        // The render timeline runs at the one fixed step; a trace at another
+        // dt is refused loudly, never resampled.
+        return match build_render_timeline(&trace, &HeightField::flat(0.0), None) {
+            Err(simforge_core::trace::timeline::TimelineError::UnsupportedDt { .. }) => Ok(()),
+            Err(e) => Err(format!("timeline refused for the wrong reason: {e}")),
+            Ok(_) => Err("timeline built from a trace off the fixed step".into()),
+        };
+    }
+    if expect["timeline"] != "builds" {
+        return Err(format!("unknown timeline expectation {}", expect["timeline"]));
+    }
+    let height = match entry.get("height").filter(|v| v.is_object()) {
+        Some(h) => {
+            let repo = dir.join("../..");
+            let read = |key: &str| -> Result<Vec<u8>, String> {
+                let bytes = std::fs::read(repo.join(str_of(h, key))).map_err(|e| format!("height {key}: {e}"))?;
+                Ok(maybe_gunzip(&bytes).map_err(|e| e.to_string())?.into_owned())
+            };
+            HeightField::from_xodr(&read("xodr")?, &read("topology")?).map_err(|e| format!("height: {e}"))?
+        }
+        None => HeightField::flat(0.0),
+    };
+    let timeline = build_render_timeline(&trace, &height, None).map_err(|e| format!("timeline: {e}"))?;
     if timeline.trace.trace_sha256 != digest {
         return Err("timeline does not name the trace's identity".into());
     }
@@ -302,6 +329,15 @@ fn check_trace(dir: &Path, entry: &Value) -> Result<(), String> {
         if archived.identity.sampler_version == SAMPLER_VERSION {
             RenderTimeline::from_json_slice(&tl_bytes)
                 .map_err(|e| format!("stored timeline under its own sampler: {e}"))?;
+            // Same sampler and the real height source: the re-derived
+            // timeline is the stored one, byte for byte.
+            if entry.get("height").is_some_and(|v| v.is_object()) {
+                let rebuilt = timeline.sha256().map_err(|e| e.to_string())?;
+                let stored = archived.sha256().map_err(|e| e.to_string())?;
+                if rebuilt != stored || rebuilt != sha256(&tl_bytes) {
+                    return Err(format!("re-derived timeline {rebuilt} differs from the stored {stored}"));
+                }
+            }
         }
     }
     Ok(())

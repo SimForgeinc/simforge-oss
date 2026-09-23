@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { resolveScenarioMap, ScenarioVersionConflict } from "@simforge-oss/studio-host";
+import { ScenarioVersionConflict } from "@simforge-oss/studio-host";
 import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { TemplateDocument } from "@simforge-oss/scenario";
@@ -20,6 +20,8 @@ import {
   documentJsonFilename,
   downloadDocumentJson,
   readDocumentTransferFile,
+  resolveImportMap,
+  ScenarioImportMapError,
   ScenarioImportError,
 } from "./document-json-transfer";
 import { documentName, documentSummaryFromDocument } from "./document-list-utils";
@@ -33,7 +35,18 @@ const APP_VERSION = "0.1.0-editor";
 
 type DetailsDraft = { id: string; name: string; description: string };
 
+/** An import that can only proceed as an explicit transfer onto another map version. */
+export type ScenarioImportTransferOffer = {
+  file: File;
+  target: { mapVersionId: string; sourceMapId: string; label: string };
+  message: string;
+};
+
 export type ScenarioDocumentActionsResult = {
+  /** Set when the last import failed but can be transferred onto an identical-geometry version. */
+  importTransfer: ScenarioImportTransferOffer | null;
+  confirmImportTransfer: () => void;
+  dismissImportTransfer: () => void;
   busyDocumentId: string | null;
   renamingDocumentId: string | null;
   renameDraft: string;
@@ -110,6 +123,7 @@ export function useScenarioDocumentActions({
   const [renameDraft, setRenameDraft] = useState("");
   const [creatingDocument, setCreatingDocument] = useState(false);
   const [importingDocument, setImportingDocument] = useState(false);
+  const [importTransfer, setImportTransfer] = useState<ScenarioImportTransferOffer | null>(null);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [detailsDraft, setDetailsDraft] = useState<DetailsDraft | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
@@ -337,12 +351,30 @@ export function useScenarioDocumentActions({
   );
 
   const importDocument = useCallback(
-    async (file: File) => {
+    async (file: File, transferTo?: { mapVersionId: string; sourceMapId: string; label: string }) => {
       if (!datasetId) return;
       setImportingDocument(true);
+      setImportTransfer(null);
       try {
         const parsed = readDocumentTransferFile(JSON.parse(await file.text()));
-        const map = resolveScenarioMap(parsed, maps);
+        // The exact version the file was authored on, even when it is not the
+        // newest publication; a different version only by explicit transfer.
+        let map;
+        if (transferTo) {
+          map = transferTo;
+        } else {
+          try {
+            const exact = parsed.mapVersionId && !maps.some((candidate) => candidate.mapVersionId === parsed.mapVersionId)
+              ? await studioHost.artifacts.getMapVersionIdentity(parsed.mapVersionId)
+              : null;
+            map = resolveImportMap(parsed, maps, exact);
+          } catch (resolveError) {
+            if (resolveError instanceof ScenarioImportMapError && resolveError.transferTarget) {
+              setImportTransfer({ file, target: resolveError.transferTarget, message: resolveError.message });
+            }
+            throw resolveError;
+          }
+        }
         const content = reconcileTemplateMapIdentity(parsed.content, map);
         if (content.sourceMap?.mapId !== map.sourceMapId || content.anchor.pin?.mapId !== map.sourceMapId) {
           throw new ScenarioImportError(
@@ -465,6 +497,11 @@ export function useScenarioDocumentActions({
     deleteDocument,
     downloadDocument,
     handleImportFile,
+    importTransfer,
+    confirmImportTransfer: () => {
+      if (importTransfer) void importDocument(importTransfer.file, importTransfer.target);
+    },
+    dismissImportTransfer: () => setImportTransfer(null),
     startEditDetails,
     closeDetailsDialog,
     saveDetails,

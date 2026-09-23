@@ -336,10 +336,13 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     evaluateSimulation(simKey, filters, signal) {
       return call(documents.evaluateSimulation, { params: { simKey }, body: filters ? { filters } : {}, signal });
     },
-    resolveRevisionSimulation(revisionId, opts = {}) {
-      return call(documents.resolveRevisionSimulation, {
+    getRevisionMotion(revisionId, signal) {
+      return call(documents.getRevisionMotion, { params: { revisionId }, signal });
+    },
+    resimulateRevision(revisionId, opts = {}) {
+      return call(documents.resimulateRevision, {
         params: { revisionId },
-        body: opts.waitMs === undefined ? {} : { waitMs: opts.waitMs },
+        body: opts.waitMs === undefined ? { action: "resimulate" } : { action: "resimulate", waitMs: opts.waitMs },
         signal: opts.signal,
       });
     },
@@ -349,6 +352,14 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     listMaps(signal, opts) {
       if (opts?.fresh) shared.invalidate(MAP_READ_KEY);
       return shared.read(MAP_READ_KEY, MAP_SHARE_MS, async () => (await call(maps.list, {})).maps.map(mapEntry), signal);
+    },
+    async getMapVersionIdentity(mapVersionId, signal) {
+      try {
+        return await call(maps.versionIdentity, { params: { mapVersionId }, signal });
+      } catch (error) {
+        if (error instanceof StudioHostRequestError && error.status === 404) return null;
+        throw error;
+      }
     },
     listMapFootprints(signal) {
       return shared.read(MAP_FOOTPRINT_READ_KEY, MAP_SHARE_MS, () => call(maps.footprints, {}), signal);

@@ -1893,10 +1893,11 @@ impl WasmRenderTimeline {
     pub fn contact_origin(&self) -> String {
         use render_timeline::ContactOrigin;
         match self.inner.contact_origin {
-            ContactOrigin::Trace => "trace",
-            ContactOrigin::DerivedAtTimelineBuild => "derived-at-timeline-build",
-            ContactOrigin::Synthetic => "synthetic",
-            ContactOrigin::LegacyXodrElevation => "legacy-xodr-elevation",
+            Some(ContactOrigin::Trace) => "trace",
+            Some(ContactOrigin::DerivedAtTimelineBuild) => "derived-at-timeline-build",
+            Some(ContactOrigin::Synthetic) => "synthetic",
+            // Stored sampler/1 timelines were all built on the OpenDRIVE resolver.
+            Some(ContactOrigin::LegacyXodrElevation) | None => "legacy-xodr-elevation",
         }
         .to_owned()
     }

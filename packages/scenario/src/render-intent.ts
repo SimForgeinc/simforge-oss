@@ -7,6 +7,11 @@ import { Sha256 } from './sha256.js';
 import { canonicalJson } from './canonical-json.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
+/** `RenderIntentV1.motionSource`: see the field. */
+export const RENDER_MOTION_SOURCES = ['original', 'resimulated', 'original-xosc'] as const;
+export type RenderMotionSource = typeof RENDER_MOTION_SOURCES[number];
+/** The intent's explicit legacy replay (no stored trace; poses from the xosc). */
+export const LEGACY_XOSC_MOTION_SOURCE = 'original-xosc' satisfies RenderMotionSource;
 /**
  * A trailing presentation camera authored on the sensor host. It rides outside the
  * measurement rig so a render can ship a drive-along view without restating the rig counts.
@@ -112,6 +117,16 @@ export const RenderIntentV1Schema = z.strictObject({
   nativeVramCapacityBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   assets: z.array(RenderIntentAssetSchema).max(RENDER_INTENT_MAX_ASSETS),
   seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  /**
+   * Where the rendered motion comes from. Absent, `original` and
+   * `resimulated` render the declared `render.timeline` (required).
+   * `original-xosc` is the explicit legacy replay for revisions that have
+   * no stored trace: poses re-lowered from the revision's OpenSCENARIO
+   * export (yaw-only attitude, catalog/class bodies), recorded as scene
+   * source `openscenario-legacy`. It is never chosen automatically, and it
+   * refuses an intent that also declares a timeline.
+   */
+  motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
 }).check((ctx) => {
   const ids = new Set<string>();
   ctx.value.assets.forEach((asset, index) => {

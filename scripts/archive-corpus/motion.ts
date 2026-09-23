@@ -24,10 +24,12 @@ export function quantize(v: number, decimals: number): number {
  * actor is absent. Rust computes the same document from the upgraded trace
  * and from the render timeline (`tests/archive_corpus.rs`).
  */
-export function motionOf(trace: { ticks: { t: number[]; actors: Record<string, Record<string, unknown>> } }): Json {
+export function motionOf(trace: { header?: { frame?: string }; ticks: { t: number[]; actors: Record<string, Record<string, unknown>> } }): Json {
   const actors: Record<string, Json> = {};
   for (const id of Object.keys(trace.ticks.actors).sort()) {
-    const track = trace.ticks.actors[id] as { present: number[]; x: number[]; y: number[]; headingRad: number[] };
+    const stored = trace.ticks.actors[id] as { present: number[]; x: number[]; y?: number[]; z?: number[]; headingRad: number[] };
+    // Legacy editor previews stored the scene frame (`z = -y`, headings unchanged).
+    const track = { ...stored, y: (trace as { header?: { frame?: string } }).header?.frame === 'scene' ? stored.z!.map((z) => -z) : stored.y! };
     const at = (values: number[], d: number) => values.map((v, i) => (track.present[i] === 1 ? quantize(v, d) : null));
     actors[id] = { present: track.present.map((p) => (p === 1 ? 1 : 0)), x: at(track.x, 4), y: at(track.y, 4), headingRad: at(track.headingRad, 6) };
   }

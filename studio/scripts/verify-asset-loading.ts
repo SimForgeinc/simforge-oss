@@ -21,6 +21,7 @@ import { verifyWorldNavigation } from "./verify-world-navigation";
 import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import { checksumBoundPutRequiredHeaders, getPresignedGetUrl, getPresignedPutUrl } from "../app/lib/s3/s3-presign";
+import { hostUrl } from "./host-url";
 
 const gateStarted = performance.now();
 const args = new Map(process.argv.slice(2).map((arg) => {
@@ -48,7 +49,7 @@ const pass = (message: string) => console.log(`PASS ${message}`);
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(new URL(path, base), { ...init, headers: { authorization, ...init.headers }, signal: AbortSignal.timeout(60_000) });
+  const response = await fetch(hostUrl(base, path), { ...init, headers: { authorization, ...init.headers }, signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
   return await response.json() as T;
 }
@@ -67,7 +68,7 @@ const allMembers = Object.entries({ ".map-release.json": { bytes: releaseBytes.l
 assert(allMembers.length >= 32, "the gate requires a real closure, not a tiny fixture");
 const members = args.has("all") ? allMembers : Array.from({ length: 32 }, (_, i) => allMembers[Math.floor(i * allMembers.length / 32)]!);
 await mkdir(out, { recursive: true });
-const getMember = (path: string, headers: Record<string, string> = {}) => fetch(new URL(`${map.browserAssetRootUrl}/${path}`, base), {
+const getMember = (path: string, headers: Record<string, string> = {}) => fetch(hostUrl(base, `${map.browserAssetRootUrl}/${path}`), {
   headers: { authorization, ...headers }, redirect: "manual", signal: AbortSignal.timeout(30_000),
 });
 
@@ -182,7 +183,7 @@ async function verifyObjectGrantsAreOriginAgnostic() {
     assert(!/^[a-z][a-z0-9+.-]*:/i.test(grant), `${label} grant must carry no scheme or authority: ${grant}`);
     assert(grant.startsWith("/api/local-objects/"), `${label} grant must be a root-relative object reference: ${grant}`);
   }
-  const stored = await fetch(new URL(put, base), {
+  const stored = await fetch(hostUrl(base, put), {
     method: "PUT",
     headers: checksumBoundPutRequiredHeaders("text/plain", digest),
     body: bytes,
@@ -194,7 +195,7 @@ async function verifyObjectGrantsAreOriginAgnostic() {
   const authorities = [base, new URL(base)];
   authorities[1]!.hostname = "localhost";
   for (const origin of authorities) {
-    const response = await fetch(new URL(get, origin));
+    const response = await fetch(hostUrl(origin, get));
     assert.equal(response.status, 200, `object GET from ${origin.origin} answered ${response.status}`);
     assert.equal(sha256(new Uint8Array(await response.arrayBuffer())), digest, `object GET from ${origin.origin} bytes`);
   }
@@ -212,7 +213,7 @@ async function verifyObjectGrantsAreOriginAgnostic() {
 async function redeemObjectGrantInBrowser(context: BrowserContext, grant: { get: string; digest: string }) {
   const page = await context.newPage();
   try {
-    await page.goto(new URL("/smoke", browserOrigin).href, { waitUntil: "domcontentloaded" });
+    await page.goto(hostUrl(browserOrigin, "/smoke").href, { waitUntil: "domcontentloaded" });
     const observed = await page.evaluate(async (reference) => {
       const response = await fetch(reference);
       const buffer = await response.arrayBuffer();

@@ -8,7 +8,10 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ScenarioDatasetDto } from "../../../src/lib/scenario/contracts";
+import type {
+  ScenarioDatasetDto,
+  ScenarioDocumentSummaryDto,
+} from "../../../src/lib/scenario/contracts";
 import { ScenarioDatasetsClient } from "../../../src/scenario/ScenarioDatasetsClient";
 import { StudioHostTestProvider } from "../../helpers/studio-host";
 import {
@@ -83,6 +86,41 @@ function dataset(
     renderSubmittedCount: 9,
     renderCompletedCount: 7,
     exportCompletedCount: 5,
+    createdByUserName: "Ada",
+    updatedByUserName: null,
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-03T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function documentSummary(
+  overrides: Partial<ScenarioDocumentSummaryDto> = {},
+): ScenarioDocumentSummaryDto {
+  return {
+    id: "doc_1",
+    workspaceId: "ws_1",
+    title: "Unprotected left",
+    description: null,
+    datasetId: "usds_1",
+    datasetSortOrder: 0,
+    mapVersionId: "mv_rfs",
+    mapLabel: "Richmond Field Station",
+    latestRevisionId: "rev_1",
+    revisionCount: 1,
+    archetype: null,
+    author: null,
+    contentTags: [],
+    tags: [],
+    roleCount: 2,
+    hasSensorProfile: false,
+    propCount: 0,
+    variantCount: 0,
+    clipSeconds: 12,
+    negativeControl: false,
+    derivationKind: null,
+    derivedFromDocumentId: null,
+    hasRender: false,
     createdByUserName: "Ada",
     updatedByUserName: null,
     createdAt: "2026-08-01T00:00:00.000Z",
@@ -253,13 +291,53 @@ describe("ScenarioDatasetsClient", () => {
     fireEvent.change(search, { target: { value: "cut-in" } });
     fireEvent.click(screen.getByRole("button", { name: "Hide scenario search" }));
     expect(screen.queryByRole("searchbox", { name: "Filter scenarios by name" })).toBeNull();
-    expect(header.contains(screen.getByTestId("scenario-add-scenario"))).toBe(true);
+    // The dataset's primary action is a labelled button in the header, not an icon among the tools.
+    const newScenario = screen.getByTestId("scenario-new-scenario");
+    expect(header.contains(newScenario)).toBe(true);
+    expect(tools?.contains(newScenario)).toBe(false);
+    expect(newScenario.textContent).toBe("New scenario");
     // And "Add scenario" again as the last row of the list, like Slack's "Add channels".
     const index = screen.getByTestId("scenario-document-index");
     const footerRow = screen.getByTestId("scenario-add-scenario-row");
     expect(index.lastElementChild === footerRow || index.contains(footerRow)).toBe(true);
     expect(header.contains(footerRow)).toBe(false);
     expect(topBar.childElementCount).toBe(0);
+  });
+
+  it("opens the create flow from the header's New scenario action, in a dataset that already has scenarios", async () => {
+    fetchMock.mockImplementation(
+      quietHost((url) =>
+        url.includes("/api/simforge/documents/summaries")
+          ? jsonResponse({ documents: [documentSummary()], nextCursor: "next" })
+          : null,
+      ),
+    );
+    renderDatasetsClient();
+    // A populated dataset is exactly where it went missing: the empty state has its own button.
+    await screen.findByText("Richmond Field Station");
+    const header = screen.getByTestId("scenario-scenario-list-header");
+    const newScenario = screen.getByRole("button", { name: "New scenario" });
+    expect(header.contains(newScenario)).toBe(true);
+    expect(screen.queryByRole("dialog", { name: "Select map" })).toBeNull();
+    fireEvent.click(newScenario);
+    expect(screen.getByRole("dialog", { name: "Select map" })).toBeTruthy();
+    // And the foot-of-list row still offers the full menu, import included.
+    openMenu("Add scenario");
+    expect(screen.getByRole("menuitem", { name: "Import Scenario JSON" })).toBeTruthy();
+  });
+
+  it("hides New scenario on a dataset the viewer cannot edit", () => {
+    render(
+      <StudioHostTestProvider>
+        <TopBarSlotProvider>
+          <ScenarioDatasetsClient
+            initialDatasets={[dataset({ isSystemManaged: true, systemSlug: "shared" })]}
+          />
+        </TopBarSlotProvider>
+      </StudioHostTestProvider>,
+    );
+    expect(screen.getByTestId("scenario-scenario-list-header")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New scenario" })).toBeNull();
   });
 
   it("offers a way in when the workspace has no datasets", () => {

@@ -168,4 +168,24 @@ describe("local worker simulate lane", () => {
     assert.equal((await fetcher(`${base}unknown.bin`)).status, 404);
     await assert.rejects(fetcher("https://elsewhere.example/map.xodr"), /outside the claimed closure/);
   });
+
+  test("fetches an absolute local-object URL from the host that handed out the work", async () => {
+    // A host bound to a network address can mint object URLs on an authority it
+    // does not listen on (object-url.ts); the bytes are on the claiming host.
+    const seen: string[] = [];
+    const base = "https://simulation-closure.invalid/k/";
+    const claim = claimBody();
+    const xodr = claim.map.members.find((member) => member.relativePath === "map.xodr")!;
+    xodr.sha256 = createHash("sha256").update("ok").digest("hex");
+    xodr.downloadUrl = "http://127.0.0.1:5199/api/local-objects/map.xodr?sig";
+    const presigned = claim.map.members.find((member) => member.relativePath !== "map.xodr")!;
+    presigned.downloadUrl = "https://bucket.s3.amazonaws.com/member?X-Amz-Signature=x";
+    const fetcher = claimMemberFetcher(claim, base, new URL("http://100.72.252.40:5199"), (async (target: URL) => { seen.push(String(target)); return new Response("ok"); }) as never);
+    await fetcher(`${base}map.xodr`);
+    await fetcher(`${base}${presigned.relativePath}`).catch(() => undefined);
+    assert.deepEqual(seen, [
+      "http://100.72.252.40:5199/api/local-objects/map.xodr?sig",
+      "https://bucket.s3.amazonaws.com/member?X-Amz-Signature=x",
+    ]);
+  });
 });
