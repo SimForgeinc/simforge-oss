@@ -15,7 +15,7 @@ Load Genesis and official Ponytail full, then run `genesis brief .` for the curr
 Fetch full records with `genesis context . --id ID` only when needed. Do not load project.json or historical proof wholesale.
 Ask the index before reading code: `genesis query . search|scope|callers|callees|impact|path` (`--json` for parsing). Run `genesis query . impact PATH` before editing shared code. Answers are advisory static analysis; `ambiguous` means candidates were not ruled out, so confirm in source.
 Run `genesis serve .` for a live map of the repository when structure is unclear; it reindexes on save and is read-only. Run `genesis index .` if the index is stale and nothing is watching.
-Context fingerprint: 616eec42e34eede6ee88b3959ede6ac9bf93253ea6af5160c6d360fca08f4d1a. Use --since only after receiving that full packet; kickoff is not the packet.
+Context fingerprint: 33f8978184a5d4e2a72860d10b6a44987f2d1c1534d1c45a0061a6cb3c34a03b. Use --since only after receiving that full packet; kickoff is not the packet.
 - DECISION-4a42acce: Checkpoint-1 roll approximation boundary
 - KNOWLEDGE-9f3d54a8: Phase 0 camera baseline: AC-002 refuted at eye-target boundary
 - DECISION-c044a4f5: Camera plan amendment and AC-002 contingency

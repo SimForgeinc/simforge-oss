@@ -4,7 +4,7 @@
 
 - workflow: new-product
 - phase: verify
-- plan approval: Krishna Teja at 2026-09-23T06:30:12.861Z
+- plan approval: Krishna Teja at 2026-09-23T12:51:15.393Z
 
 ## Tasks
 
@@ -90,15 +90,15 @@
 
 ### CAM-S1-POST-PROJECTION — On the stacked Phase 1 completion branch, after manifest v2, CAM-01-CAP-005 and the geometry fixture, add unsupported projection-family rejection with stable machine-readable reasons. This is new work and must not enter the checkpoint-1 PR.
 
-- state/risk: queued / medium
+- state/risk: done / medium
 - requirements: FR-014, AC-005, NFR-001, NFR-002, NFR-003, NFR-005
-- scope: packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts
-- gates: projection-rejection: pnpm --filter @simforge-oss/render test -- src/native/engine.test.ts, independent-review: pending
+- scope: packages/render/src/capabilities.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts
+- gates: projection-rejection: pnpm --filter @simforge-oss/render test -- src/native/engine.test.ts, independent-review: pass
 - next: Do not start in the checkpoint delivery run. After the gate-critical follow-up tasks pass on the stacked completion branch, implement only projection-family rejection, then run/review/checkpoint.
 
 ### CAM-S1-POST-MANIFEST-V2 — On the stacked Phase 1 completion branch created by CAM-S1-POST-SERVICE-ROLL, emit mandatory camera-profile evidence under native render-manifest v2, conditionally move diagnostics to v2, enforce fields in evidence.ts, and parse v1 read-only as camera-profile-evidence: absent (pre-v2); exclude this from the checkpoint-1 PR.
 
-- state/risk: queued / medium
+- state/risk: rejected / medium
 - requirements: FR-016, FR-017, AC-008, NFR-001, NFR-002, NFR-003, NFR-005
 - scope: packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/evidence.ts, packages/render/src/native/evidence.test.ts
 - gates: manifest-v2: pnpm --filter @simforge-oss/render test -- src/native/engine.test.ts src/native/evidence.test.ts, independent-review: pending
@@ -114,18 +114,18 @@
 
 ### CAM-S1-POST-GEOMETRY — On the stacked Phase 1 completion branch, add the nonzero yaw/pitch/roll plus off-centre principal-point fixture that proves selected-path projection and exported calibration agreement; exclude it from the checkpoint-1 PR.
 
-- state/risk: queued / medium
+- state/risk: rejected / medium
 - requirements: FR-013, FR-019, AC-006, NFR-001, NFR-002, NFR-005
 - scope: packages/render/src/native/camera-schedule.test.ts, packages/render/src/native/engine.test.ts
 - gates: geometric-fixture: pnpm --filter @simforge-oss/render test -- src/native/camera-schedule.test.ts src/native/engine.test.ts, independent-review: pending
 - next: Do not start until actual/reported calibration is available; add one analytic fixture, then run/review/checkpoint.
 
-### CAM-S1-FINAL-VERIFY — Verify completed Spec 1 against the current source hash without promoting checkpoint-1 evidence, then open a second stacked draft PR against camera/phase-1-config-capability titled Camera fidelity — Phase 1 completion [Genesis Spec 1, checkpoint 2]. Run workspace typecheck, all scenario tests, focused native camera tests, deterministic schema generation and diff hygiene; report GPU engine.e2e and golden-gate status truthfully.
+### CAM-S1-FINAL-VERIFY — Verify completed Spec 1 against the current source hash without promoting checkpoint-1 evidence, then open a second stacked draft PR against camera/phase-1-config-capability titled Camera fidelity — Phase 1 completion [Genesis Spec 1, checkpoint 2]. Run workspace typecheck, all scenario tests, focused native camera tests, Studio wire-contract tests, and branch-tip diff hygiene; report GPU engine.e2e and golden-gate status truthfully.
 
-- state/risk: queued / medium
+- state/risk: done / medium
 - requirements: AC-004, AC-005, AC-006, AC-007, AC-008, AC-009, AC-010, AC-011, NFR-001, NFR-002, NFR-003, NFR-004, NFR-005, NFR-006, NFR-007
-- scope: packages/scenario, packages/render
-- gates: workspace-typecheck: pnpm typecheck, scenario-suite: pnpm --filter @simforge-oss/scenario test, native-camera-suite: pnpm --filter @simforge-oss/render test -- src/native/camera-schedule.test.ts src/native/engine.test.ts src/native/evidence.test.ts, diff-hygiene: git diff --check, stacked-pr-contract: node -e "const{execFileSync}=require('child_process');const p=JSON.parse(execFileSync('gh',['pr','view','--json','isDraft,title,baseRefName'],{encoding:'utf8'}));if(!p.isDraft||p.title!=='Camera fidelity — Phase 1 completion [Genesis Spec 1, checkpoint 2]'||p.baseRefName!=='camera/phase-1-config-capability')process.exit(1)", independent-review: pending
+- scope: packages/scenario, packages/render, studio/app/lib/scenario/render-wire-contracts.ts, studio/app/lib/scenario/render-wire-contracts.test.ts, .genesis
+- gates: workspace-typecheck: pnpm typecheck, scenario-suite: pnpm --filter @simforge-oss/scenario test, native-camera-suite: pnpm --filter @simforge-oss/render test -- src/native/camera-schedule.test.ts src/native/engine.test.ts src/native/evidence.test.ts, studio-wire-contracts: pnpm --filter @simforge-oss/studio exec tsx --test app/lib/scenario/render-wire-contracts.test.ts, diff-hygiene: git diff --check HEAD -- . ':!.genesis', stacked-pr-contract: node -e "const{execFileSync}=require('child_process');const p=JSON.parse(execFileSync('gh',['pr','view','--json','isDraft,title,baseRefName'],{encoding:'utf8'}));if(!p.isDraft||p.title!=='Camera fidelity — Phase 1 completion [Genesis Spec 1, checkpoint 2]'||p.baseRefName!=='camera/phase-1-config-capability')process.exit(1)", independent-review: pass
 - next: Run all mandatory gates against one source hash, obtain independent review, checkpoint, push the stacked completion branch, open the exact second draft PR against camera/phase-1-config-capability, verify its contract, and report skipped or unrun GPU/golden checks without promotion.
 
 ### CAM-S1-COMPAT — Repair only the checkpoint-discovered generic camera-profile integration fixtures, pass full workspace typecheck and the complete scenario suite, independently review, checkpoint, and create one narrow compatibility commit without a capability ID.
@@ -206,4 +206,52 @@
 - requirements: FR-013, AC-002, AC-011, NFR-001, NFR-002
 - scope: packages/render/src/capabilities.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/engine.e2e.test.ts, studio/app/lib/scenario/render-wire-contracts.ts, studio/app/lib/scenario/render-wire-contracts.test.ts, docs/engineering/camera-baseline-findings.md, SPEC.md, .genesis
 - gates: rotation-evidence: pnpm --filter @simforge-oss/render exec vitest run src/native/engine.test.ts, studio-capability-contract: pnpm --filter @simforge-oss/studio exec tsx --test app/lib/scenario/render-wire-contracts.test.ts, horizon-direction: node -e "const s=require('fs').readFileSync('packages/render/src/native/engine.e2e.test.ts','utf8');for(const x of ['SIMFORGE_NATIVE_E2E','counter-clockwise','alignedHorizon'])if(!s.includes(x))process.exit(1)", no-absolute-local-paths: node -e "const fs=require('fs'),root=process.cwd(),files=['SPEC.md','.genesis/KICKOFF.md','.genesis/PLAN.md','.genesis/project.json','.genesis/patches/CAM-S1-POST-SERVICE-ROLL.patch'];for(const f of files){const s=fs.readFileSync(f,'utf8');if(s.includes(root)||s.includes('file://'+root))throw Error(f)}", diff-check: git diff --check, independent-review: pass
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-MANIFEST-V2-FINAL — On camera/phase-1-completion after the completed service-roll replacement chain, emit mandatory camera-profile evidence under simforge.native-render-manifest/v2, retain diagnostics v1 because no mandatory camera fields are added there, enforce absent and inconsistent v2 camera evidence in evidence.ts, and parse v1 read-only as camera-profile-evidence: absent (pre-v2); do not open or update a PR, then stop after the task gate.
+
+- state/risk: done / medium
+- requirements: FR-016, FR-017, AC-008, NFR-001, NFR-002, NFR-003, NFR-005
+- scope: packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/evidence.ts, packages/render/src/native/evidence.test.ts
+- gates: manifest-v2: pnpm --filter @simforge-oss/render test -- src/native/engine.test.ts src/native/evidence.test.ts, independent-review: pass
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-MANIFEST-V2-STUDIO — Before committing CAM-S1-POST-MANIFEST-V2-FINAL, add and run the Studio worker schema fixture against a valid simforge.native-render-manifest/v2 payload, preserving the completed manifest implementation as one source commit, then push without opening a PR.
+
+- state/risk: done / medium
+- requirements: FR-017, AC-008, NFR-001, NFR-005
+- scope: packages/render/src/native/engine.ts, packages/render/src/native/evidence.ts, packages/render/src/native/evidence.test.ts, studio/app/lib/scenario/render-wire-contracts.test.ts
+- gates: manifest-v2: pnpm --filter @simforge-oss/render exec vitest run src/native/engine.test.ts src/native/evidence.test.ts, studio-v2-fixture: pnpm --filter @simforge-oss/studio exec tsx --test app/lib/scenario/render-wire-contracts.test.ts, diff-check: git diff --check, independent-review: pass
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-CAP005-FINAL — Implement CAM-01-CAP-005 on camera/phase-1-completion as one commit: CameraCalibrationSet { actual, reported, perturbation? } with yaw-offset first; image formation, truth and native render_bundle camera requests use actual; consumer payloads and consumer manifest sections use reported only; privileged evidence records perturbation metadata without actual calibration values; schema and emitted-byte non-leakage tests; T08 control pair proves identical render_bundle camera requests and differing reported calibration; authored reported-calibration-override contributes required capability and engines lacking it reject the request. Stop after fresh gates and one commit.
+
+- state/risk: rejected / medium
+- requirements: FR-018, AC-007, NFR-001, NFR-002, NFR-003, NFR-005, NFR-007
+- scope: packages/scenario/src/schema/v2/sensors.ts, packages/scenario/src/schema/v2/sensor-rigs.ts, packages/scenario/src/render-spec.ts, packages/scenario/src/render-spec-builders.ts, packages/scenario/src/__tests__/sensors.test.ts, packages/render/src/capabilities.ts, packages/render/src/native/camera-schedule.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/evidence.ts, packages/render/src/native/evidence.test.ts
+- gates: calibration-isolation: pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/sensors.test.ts && pnpm --filter @simforge-oss/render exec vitest run src/native/engine.test.ts src/native/evidence.test.ts src/native/camera-schedule.test.ts, consumer-non-leakage: node -e "const{execFileSync}=require('child_process');const s=execFileSync('git',['diff','--check'],{encoding:'utf8'});if(s)process.exit(1)", independent-review: pending
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-CAP005-V2 — Replace the scope-incomplete CAP005 task without changing behavior: implement CAM-01-CAP-005 as one commit with CameraCalibrationSet { actual, reported, perturbation? }, yaw-offset first, actual-only image formation/truth/native requests, reported-only consumer calibration, privileged perturbation metadata without actual values, schema and byte non-leakage tests, the T08 control pair, required reported-calibration-override capability negotiation, and synchronized generated v2 schema.
+
+- state/risk: done / medium
+- requirements: FR-018, AC-007, NFR-001, NFR-002, NFR-003, NFR-005, NFR-007
+- scope: packages/scenario/src/schema/v2/sensors.ts, packages/scenario/src/schema/v2/sensor-rigs.ts, packages/scenario/src/render-spec.ts, packages/scenario/src/render-spec-builders.ts, packages/scenario/src/__tests__/sensors.test.ts, packages/scenario/schema/scenario-template.v2.schema.json, packages/render/src/capabilities.ts, packages/render/src/native/camera-schedule.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/evidence.ts, packages/render/src/native/evidence.test.ts
+- gates: calibration-isolation: pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/sensors.test.ts src/__tests__/v2-json-schema.test.ts && pnpm --filter @simforge-oss/render exec vitest run src/native/engine.test.ts src/native/evidence.test.ts src/native/camera-schedule.test.ts, consumer-non-leakage: git diff --check, independent-review: pass
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-GEOMETRY-FINAL — Implement CAM-08-CAP-002 / AC-006 as one commit: analytically prove a nonzero yaw/pitch/roll camera schedule and pinhole-K landmark projection from actual calibration; prove unperturbed reported calibration reproduces pixels and yaw-offset reported calibration differs by exactly the declared offset; declare authored principal-point-offset unsupported on native, reject it, record centred effective value, and note Bevy sub_camera_view as the Phase 2/4 route; add a SIMFORGE_NATIVE_E2E rendered-landmark assertion and report it not run without native inputs; push and stop after fresh gates.
+
+- state/risk: rejected / medium
+- requirements: FR-013, FR-019, AC-006, NFR-001, NFR-002, NFR-005
+- scope: packages/scenario/src/schema/v2/sensors.ts, packages/scenario/src/__tests__/sensors.test.ts, packages/scenario/schema/scenario-template.v2.schema.json, packages/render/src/capabilities.ts, packages/render/src/native/camera-schedule.test.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/engine.e2e.test.ts, packages/render/src/native/evidence.test.ts, studio/app/lib/scenario/render-wire-contracts.test.ts
+- gates: analytic-geometry: pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/sensors.test.ts src/__tests__/v2-json-schema.test.ts && pnpm --filter @simforge-oss/render exec vitest run src/native/camera-schedule.test.ts src/native/engine.test.ts src/native/evidence.test.ts, rendered-landmark-contract: node -e "const s=require('fs').readFileSync('packages/render/src/native/engine.e2e.test.ts','utf8');for(const x of ['SIMFORGE_NATIVE_E2E','landmark','project'])if(!s.includes(x))process.exit(1)", diff-check: git diff --check, independent-review: pending
+- next: Run the task pre-flight.
+
+### CAM-S1-POST-GEOMETRY-V2 — Implement CAM-08-CAP-002 / AC-006 as one commit: analytically prove a nonzero yaw/pitch/roll camera schedule and pinhole-K landmark projection from actual calibration; prove unperturbed reported calibration reproduces pixels and yaw-offset reported calibration differs by exactly the declared offset; declare authored principal-point-offset unsupported on native and in Studio's strict mirror, reject it, record centred effective value, and note Bevy sub_camera_view as the Phase 2/4 route; add a SIMFORGE_NATIVE_E2E rendered-landmark assertion and report it not run without native inputs; push and stop after fresh gates.
+
+- state/risk: done / medium
+- requirements: FR-013, FR-019, AC-006, NFR-001, NFR-002, NFR-005
+- scope: packages/scenario/src/schema/v2/sensors.ts, packages/scenario/src/__tests__/sensors.test.ts, packages/scenario/schema/scenario-template.v2.schema.json, packages/render/src/capabilities.ts, packages/render/src/native/camera-schedule.test.ts, packages/render/src/native/engine.ts, packages/render/src/native/engine.test.ts, packages/render/src/native/engine.e2e.test.ts, packages/render/src/native/evidence.test.ts, studio/app/lib/scenario/render-wire-contracts.ts, studio/app/lib/scenario/render-wire-contracts.test.ts
+- gates: analytic-geometry: pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/sensors.test.ts src/__tests__/v2-json-schema.test.ts && pnpm --filter @simforge-oss/render exec vitest run src/native/camera-schedule.test.ts src/native/engine.test.ts src/native/evidence.test.ts && pnpm --filter @simforge-oss/studio exec tsx --test app/lib/scenario/render-wire-contracts.test.ts, rendered-landmark-contract: node -e "const s=require('fs').readFileSync('packages/render/src/native/engine.e2e.test.ts','utf8');for(const x of ['SIMFORGE_NATIVE_E2E','landmark','project'])if(!s.includes(x))process.exit(1)", diff-check: git diff --check, independent-review: pass
 - next: Run the task pre-flight.
