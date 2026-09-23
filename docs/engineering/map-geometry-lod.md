@@ -76,7 +76,10 @@ their centre says nothing about the part next to the camera).
 2.5 %; else 35 %, 12 %, 4 %), dropped when they save less than 25 % over the
 previous level. Each primitive is classified:
 
-- *Card-like* (foliage): alpha-masked, at least 16 connected components
+- *Card-like* (foliage): a plant (the mesh or the material name says so:
+  leaf, bark, bush, maple, oak, eucalyptus, ...; a parked car's alpha-masked
+  interior or an iron fence has the same shape and is simplified instead),
+  alpha-masked, at least 16 connected components
   (position-welded), median component at most 256 triangles, and cards at
   least 30 % of the primitive. Structural pieces (a component above
   max(2000, 5 %) triangles: trunks, main branches) are simplified. The cards
@@ -99,7 +102,10 @@ was calibrated against the image gate below.
 the triangles) get a cross-card impostor: three vertical cards through the
 tree axis (0/60/120 degrees) and one horizontal card at the canopy's
 area-weighted height, 8 triangles. Each card is an orthographic bake of the
-full-detail tree along its normal by a deterministic CPU rasterizer (2x2
+full-detail tree along its normal by a deterministic CPU rasterizer. Textures
+come from what the renderer samples: the texture's KTX2 (`KHR_texture_basisu`)
+source, transcoded with the pinned KTX-Software at the smallest mip of at
+least 1024 px (published closures carry no PNGs), else the PNG. Bake: 2x2
 supersampling, per-triangle mip selection, alpha test at the material cutoff,
 double-sided normals facing the viewer, alpha-dilated). Its error is
 `0.25 * depth extent`, so it is chosen only where the flattened depth is
@@ -177,8 +183,15 @@ the host trajectory, 2.4M rays on Belmont, the production `bvh.rs`:
 
 The instanced exact BVH gets the size and build time of the proxy without
 changing a single range. Its only difference is the tie-break between
-coincident duplicates, which can be made identical. The proxy is kept for
-consumers without instancing and is never selected implicitly.
+coincident duplicates, which can be made identical.
+
+**Decision (2026-09-22):** production lidar and radar use exact instanced
+geometry (`InstancedScene`: a BLAS per master mesh, a TLAS over instances; ties
+broken by distance, then instance id, triangle index and insertion order; an
+exact tie between the static and actor layers goes to the static hit). The
+simplified sensor proxy stays in the derivative, **opt-in only**: a job must
+request it explicitly and the render manifest must record it; it is never
+selected implicitly.
 
 ## Published map versions
 

@@ -15,6 +15,8 @@ export interface SourcePrimitive {
   data: PrimitiveData;
   material: number | undefined;
   alphaMasked: boolean;
+  /** The mesh or the material names a plant (card thinning applies only to plants). */
+  vegetation?: boolean;
 }
 
 export interface PreparedPrimitive extends SourcePrimitive {
@@ -24,7 +26,7 @@ export interface PreparedPrimitive extends SourcePrimitive {
 
 export function preparePrimitive(primitive: SourcePrimitive): PreparedPrimitive {
   const components = connectedComponents(primitive.data);
-  return { ...primitive, components, cards: analyzeCards(primitive.data, components, primitive.alphaMasked) };
+  return { ...primitive, components, cards: analyzeCards(primitive.data, components, primitive.alphaMasked && primitive.vegetation !== false) };
 }
 
 export type LevelMethod = 'simplify' | 'card-thin';

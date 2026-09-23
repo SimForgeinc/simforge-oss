@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -10,6 +11,7 @@ import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { sha256 } from '../src/closure.js';
+import { encodeKtx2 } from '../src/ktx2.js';
 import { buildGeometryLod, geometryLodBuildKey, parseGeometryLodManifest } from '../src/geometry-lod/index.js';
 import type { GeometryLodManifest } from '../src/geometry-lod/index.js';
 import { analyzeCards, connectedComponents, thinCards } from '../src/geometry-lod/mesh-ops.js';
@@ -129,9 +131,13 @@ async function writeMaster(directory: string): Promise<void> {
     .addPrimitive(primitive(document, buffer, trunk(), { colors: true }).setMaterial(bark))
     .addPrimitive(primitive(document, buffer, leaves(1200)).setMaterial(leaf));
   const plane = document.createMesh('Terrain').addPrimitive(primitive(document, buffer, ground()).setMaterial(soil));
+  // Not a plant: an alpha-masked car interior has the same many-small-pieces shape.
+  const interior = document.createMaterial('MI_Interior_Charger').setAlphaMode('MASK').setAlphaCutoff(0.5).setBaseColorTexture(leafTexture);
+  const car = document.createMesh('SM_ChargerParked').addPrimitive(primitive(document, buffer, leaves(700)).setMaterial(interior));
   const scene = document.createScene('Scene');
   document.getRoot().setDefaultScene(scene);
   scene.addChild(document.createNode('Ground').setMesh(plane));
+  for (let i = 0; i < 30; i++) scene.addChild(document.createNode(`Car_${i}`).setMesh(car).setTranslation([i * 6 - 90, 0, 60]));
   const random = rng(11);
   for (let i = 0; i < 40; i++) {
     const s = 1 + random() * 0.5;
@@ -194,7 +200,7 @@ describe('geometry-lod mesh operations', () => {
   });
 
   it('aggregates cards per voxel with their exact total area', () => {
-    const prepared = preparePrimitive({ data: decodedLeaves(), material: 0, alphaMasked: true });
+    const prepared = preparePrimitive({ data: decodedLeaves(), material: 0, alphaMasked: true, vegetation: true });
     const { positions, indices } = aggregateCards(prepared, 1.0);
     let area = 0;
     for (let t = 0; t < indices.length; t += 3) {
@@ -237,8 +243,14 @@ describe('buildGeometryLod', () => {
   });
 
   it('gives the tree a LOD chain, an impostor and a shadow level; leaves the single terrain alone', () => {
-    expect(manifest.meshes.map((mesh) => mesh.name)).toEqual(['SM_TestTree']);
-    const tree = manifest.meshes[0]!;
+    expect(manifest.meshes.map((mesh) => mesh.name).sort()).toEqual(['SM_ChargerParked', 'SM_TestTree']);
+    const tree = manifest.meshes.find((mesh) => mesh.name === 'SM_TestTree')!;
+    // The car is simplified, never card-thinned or impostored.
+    const car = manifest.meshes.find((mesh) => mesh.name === 'SM_ChargerParked')!;
+    expect(car.class).toBe('opaque');
+    expect(car.primitives[0]!.cardLike).toBe(false);
+    expect(car.impostor).toBeNull();
+    expect(car.levels.every((level) => level.method === 'simplify')).toBe(true);
     expect(tree.instances).toBe(40);
     expect(tree.class).toBe('foliage');
     expect(tree.primitives.map((p) => p.cardLike)).toEqual([false, true]);
@@ -259,7 +271,7 @@ describe('buildGeometryLod', () => {
   it('keeps every LOD primitive layout identical to its master primitive', async () => {
     const master = JSON.parse(await readFile(path.join(masterDir, 'master.gltf'), 'utf8'));
     const lod = JSON.parse(await readFile(path.join(out(), 'lod.gltf'), 'utf8'));
-    const tree = manifest.meshes[0]!;
+    const tree = manifest.meshes.find((mesh) => mesh.name === 'SM_TestTree')!;
     const source = master.meshes[tree.mesh];
     const layout = (json: typeof master, primitive: { attributes: Record<string, number> }) =>
       Object.fromEntries(Object.entries(primitive.attributes).map(([semantic, index]) => {
@@ -281,9 +293,11 @@ describe('buildGeometryLod', () => {
 
   it('builds a sensor proxy for every master primitive, smaller than the source', () => {
     const entries = manifest.sensor.primitives;
-    const tree = manifest.meshes[0]!.mesh;
-    const terrain = 1 - tree;
-    expect(entries.map((entry) => `${entry.mesh}/${entry.primitive}`).sort()).toEqual([`${tree}/0`, `${tree}/1`, `${terrain}/0`].sort());
+    const master = JSON.parse(readFileSync(path.join(masterDir, 'master.gltf'), 'utf8')) as { meshes: Array<{ name: string }> };
+    const index = (name: string) => master.meshes.findIndex((mesh) => mesh.name === name);
+    const tree = index('SM_TestTree'), terrain = index('Terrain'), car = index('SM_ChargerParked');
+    expect(entries.map((entry) => `${entry.mesh}/${entry.primitive}`).sort()).toEqual([`${tree}/0`, `${tree}/1`, `${terrain}/0`, `${car}/0`].sort());
+    expect(entries.find((entry) => entry.mesh === car)!.method).not.toBe('card-aggregate');
     const leavesEntry = entries.find((entry) => entry.mesh === tree && entry.primitive === 1)!;
     expect(leavesEntry.method).toBe('card-aggregate');
     expect(leavesEntry.triangles).toBeLessThan(leavesEntry.sourceTriangles);
@@ -307,11 +321,13 @@ describe('substituteLods', () => {
     const lod = JSON.parse(await readFile(path.join(root, 'out-a', 'lod.gltf'), 'utf8'));
     const manifest = parseGeometryLodManifest(JSON.parse(await readFile(path.join(root, 'out-a', 'manifest.json'), 'utf8')));
     const near = substituteLods(master, lod, manifest, { cameras: [[-70, 2, -40]], marginM: 0, fPx: 900, pixelErrorPx: 1, lodPrefix: 'derived/geometry-lod/' });
-    expect(near.report.instances).toBe(40);
+    expect(near.report.instances).toBe(70);
     expect(near.report.byLevel['L0']).toBeGreaterThan(0);
     expect(near.report.trianglesAfter).toBeLessThanOrEqual(near.report.trianglesBefore);
     const far = substituteLods(master, lod, manifest, { cameras: [[1e6, 0, 0]], marginM: 0, fPx: 900, pixelErrorPx: 1, lodPrefix: 'derived/geometry-lod/' });
-    expect(far.report.byLevel).toEqual({ impostor: 40 });
+    expect(far.report.byLevel['impostor']).toBe(40);
+    // The cars (no impostor) take their coarsest level, whatever it is.
+    expect(Object.values(far.report.byLevel).reduce((sum, count) => sum + count, 0)).toBe(70);
     // Every retargeted node points at a mesh whose primitives resolve.
     for (const node of far.json.nodes!) {
       if (node.mesh === undefined) continue;
@@ -324,3 +340,24 @@ describe('substituteLods', () => {
   });
 });
 
+describe('impostor textures from KTX2', () => {
+  // Published closures carry only the KTX2 (KHR_texture_basisu) encodings; the
+  // bake must decode them. Needs the pinned KTX-Software.
+  const ktx = process.env['SIMFORGE_KTX_BIN_DIR'];
+  it.skipIf(!ktx)('bakes the impostor from the KTX2 source when the PNG is not in the closure', async () => {
+    const dir = path.join(root, 'master-ktx2');
+    await cp(masterDir, dir, { recursive: true });
+    const json = JSON.parse(await readFile(path.join(dir, 'master.gltf'), 'utf8'));
+    const encoded = await encodeKtx2(leafPng, 'color', { ktxBinDir: ktx! });
+    const ktxUri = `images/${sha256(encoded.bytes)}.ktx2`;
+    await writeFile(path.join(dir, ktxUri), encoded.bytes);
+    json.images.push({ uri: ktxUri, mimeType: 'image/ktx2' });
+    for (const texture of json.textures) texture.extensions = { KHR_texture_basisu: { source: json.images.length - 1 } };
+    await writeFile(path.join(dir, 'master.gltf'), JSON.stringify(json));
+    await rm(path.join(dir, 'images', `${sha256(leafPng)}.png`));
+    const result = await buildGeometryLod({ masterDir: dir, outputDir: path.join(root, 'out-ktx2'), skipKtx2: true, selection, ktx2: { ktxBinDir: ktx! } });
+    const tree = result.manifest.meshes.find((mesh) => mesh.name === 'SM_TestTree')!;
+    expect(tree.impostor).not.toBeNull();
+    for (const coverage of tree.impostor!.coverage) expect(coverage).toBeGreaterThan(0.02);
+  });
+});
