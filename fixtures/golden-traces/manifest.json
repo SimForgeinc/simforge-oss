@@ -42,6 +42,13 @@
       "ticks": 801,
       "traceSha256": "af1add33597757623674c02257db19a24aa05ab05ef59b7bfd3975db2eaf4763"
     },
+    "rfs-template-ltap-carla-catalog": {
+      "actors": 2,
+      "inputHash": "d235b33815e397b6b6624abf749a6f16c9281501f6d9a89fb631f4081dd49758",
+      "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
+      "ticks": 801,
+      "traceSha256": "32129f84db604b9915e30a4b2f0b3008bf0fb5e040127733cbf6cc3abae7ba53"
+    },
     "rfs-template-ltap-pinned-seed": {
       "actors": 2,
       "inputHash": "1dc509fd7f10042eb488d663dff06ec0ee09744cca8fc5e84124fa55ae25f60e",
