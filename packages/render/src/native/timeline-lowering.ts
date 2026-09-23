@@ -70,6 +70,7 @@ export function lowerRenderTimelineToNative(
   const stride = actors.length * SCENE_FRAME_RECORD_LEN;
   const previous = new Array<boolean>(actors.length).fill(false);
   const rendered = new Set<string>();
+  const classes = actors.map((actor) => nativeActorClass(actor.kind, `actor ${actor.id}`));
   const states = frameTimes.map((clipTime, tick): NativeSceneState => {
     const out: NativeSceneState['actors'][number][] = [];
     actors.forEach((actor, index) => {
@@ -83,7 +84,7 @@ export function lowerRenderTimelineToNative(
         id: actor.id,
         kind: present ? (was ? 'update' : 'spawn') : 'despawn',
         catalogId: actor.catalogId,
-        actorClass: nativeActorClass(actor.kind),
+        actorClass: classes[index]!,
         dims: actor.dims,
         ...(actor.color ? { color: actor.color } : {}),
         transform: {
@@ -115,7 +116,7 @@ export function lowerRenderTimelineToNative(
   });
   const appearances = actors
     .filter((actor) => rendered.has(actor.id))
-    .map((actor): NativeActorAppearance => ({ actorId: actor.id, catalogId: actor.catalogId, authored: actor.catalogAuthored }));
+    .map((actor): NativeActorAppearance => ({ actorId: actor.id, kind: actor.kind, catalogId: actor.catalogId, authored: actor.catalogAuthored }));
   const timelineSha256 = timeline.sha256;
   const sha256 = createHash('sha256').update(canonicalSceneJson({ timelineSha256, states })).digest('hex');
   return {

@@ -100,7 +100,7 @@ pub fn copy_passes(
             continue;
         };
         let width = src.texture_descriptor.size.width as usize;
-        let pixel = src.texture_descriptor.format.block_copy_size(None).unwrap_or(4);
+        let pixel = src.texture_descriptor.format.block_copy_size(None).unwrap_or(4); // fallback-ok: capture targets are RGBA8/R32F, both 4-byte blocks
         let padded = aligned_row(width, pixel as usize);
         ctx.command_encoder().copy_texture_to_buffer(
             src.texture.as_image_copy(),
@@ -152,7 +152,7 @@ pub fn receive_passes(
                 if res.is_err() {
                     panic!("map buffer failed");
                 }
-                let _ = tx.send(());
+                let _ = tx.send(()); // fallback-ok: receiver gone means the app is shutting down
             });
     }
     let t0 = Instant::now();
@@ -166,7 +166,7 @@ pub fn receive_passes(
 
     for p in &pending {
         let data = p.buffer.slice(..).get_mapped_range().to_vec();
-        let _ = sender.send(SentPass {
+        let _ = sender.send(SentPass { // fallback-ok: receiver gone means the app is shutting down
             key: p.key.clone(),
             frame: stamp.0,
             data,

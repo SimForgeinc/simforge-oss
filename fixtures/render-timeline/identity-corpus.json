@@ -23,7 +23,7 @@
       "id": "02-police-roadside-stop",
       "poseDigest": "2fec3d35db880c9800cce42bfcef56220021678e3560562b47cded5db9b6f122",
       "timelineKey": "21cf6767b8df0fe1ef5d9a85b0c87131eda5b9515a23fa559d56b41ebf3ab1ca",
-      "timelineSha256": "54f02a642f6de1b502a966a77a29b312280e2e8caf9c128b5513431983f50c95",
+      "timelineSha256": "426365fd5be8ede476967952e497814bfa5a86fde5ee5dd4e83d917cf5bda03d",
       "trace": "examples/edge-cases/02-police-roadside-stop/scenario.trace.json.gz"
     },
     {
@@ -61,7 +61,7 @@
       "id": "05-cyclist-occlusion-conflict",
       "poseDigest": "6851d5aa6c746e850bebd6b914a53c960ba48605fc046a259ab47d6a3c848000",
       "timelineKey": "80c7cc14b5a7625b5a3e9f56f5f71e32556dec3f0742a9de33273d40ac1a4a26",
-      "timelineSha256": "5339612a2b17a8cf2671a770d892dfd6bae750de68a1bd1d0f15a67050ae5cce",
+      "timelineSha256": "322fac47ea75758af0baee87eb34943722a2b8c69fe4672594304e2a5b23e2a3",
       "trace": "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz"
     },
     {
@@ -87,7 +87,7 @@
       "id": "07-protected-left-red-runner",
       "poseDigest": "3c897e793a94ec2f56db679444ad403468d36023032e25498207c99892eeec1a",
       "timelineKey": "e061e90119d08b3d0a70e67ba8d7438b865eceb995e637499c0fef6c79c4de08",
-      "timelineSha256": "7d1384b9971907c3ec1e7563e2d70f18d3c8dc6de433cedda0657c0da587f3f8",
+      "timelineSha256": "b1c33ea8b5b4bff4c113f0517f93d1018407af21f1f1d6a677161a6bb1ef9427",
       "trace": "examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz"
     },
     {
@@ -139,7 +139,7 @@
       "id": "11-double-threat-crosswalk",
       "poseDigest": "dc5fea5a0285153bed34f760fb3e72a8472ec7e631d3c11a316ac169f8c03784",
       "timelineKey": "e2ca8ab6f8b28512a521d3307021000e536b70ba2ee25ac7ab6b6123f6d7ac52",
-      "timelineSha256": "3a3ca077c010ee76eb3c31846feb9d73081417e4b7964cf9188300f340c13597",
+      "timelineSha256": "4130a44633985eef182d99982c69107ff9bfa7f5d2aa027b333c7efb21587fba",
       "trace": "examples/edge-cases/11-double-threat-crosswalk/scenario.trace.json.gz"
     },
     {

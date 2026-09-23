@@ -909,6 +909,24 @@ export type ScenarioPresignedArtifactDto = ScenarioRenderArtifactDto & {
   expiresInSeconds: number;
 };
 
+/** An engine warning a render attempt reported. Render-affecting conditions fail the job instead. */
+export type ScenarioRenderWarningDto = {
+  code: string;
+  message: string;
+};
+
+/**
+ * A substitution the render intent explicitly allowed (`allowSubstitutions`)
+ * and the engine made, e.g. a CARLA actor rendered with another body.
+ */
+export type ScenarioRenderSubstitutionDto = {
+  kind: string;
+  subject: string;
+  requested: string;
+  rendered: string;
+  allowedBy: string;
+};
+
 export type ScenarioRenderJobDetailDto = {
   id: string;
   revisionId: string;
@@ -928,7 +946,12 @@ export type ScenarioRenderJobDetailDto = {
   attemptCount: number;
   maxAttempts: number;
   failureCode: string | null;
+  /** The failure message, when the code names what is missing (`render.native_*`, `render.carla_*`, `render.render_*`). */
   failureDetail: string | null;
+  /** Warnings the current attempt's engine reported, oldest first. */
+  warnings?: ScenarioRenderWarningDto[];
+  /** Substitutions the intent allowed and the engine made in the succeeded attempt. */
+  substitutions?: ScenarioRenderSubstitutionDto[];
   billingMode: string;
   estimatedCostCents: number;
   renderSpecSha256: string;

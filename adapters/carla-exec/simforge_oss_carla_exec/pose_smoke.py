@@ -12,7 +12,8 @@ sensors are attached, so it also runs against a render-less (``-nullrhi``)
 simulator.
 
 It fails (exit 1) when any actor ends above or below the ground surface, is
-displaced from its authored pose, or does not follow its authored motion. It is
+displaced from its authored pose, does not follow its authored motion, or is
+a walking pedestrian whose legs do not move (frozen or T-posed gait). It is
 the qualification check for the two defects this module exists to catch:
 floating props and pedestrians that stand still while their plan walks away.
 """
@@ -24,6 +25,7 @@ from typing import Any, Mapping
 from .runtime.backend import CarlaBackend
 from .runtime.compiler import compile_xosc14
 from .runtime.contract import EXECUTION_MODE_TRACE_REPLAY, normalize_execution_mode
+from .runtime.policy import CarlaRenderError, WalkerAnimationMonitor
 from .runtime.pose_gates import GROUND_LABELS, PoseGateError
 from .runtime.replay import CARLA_PITCH_SIGN, CARLA_ROLL_SIGN, ReplayParityGate, expected_replay_poses
 from .runtime.timeline import PlanTimeline
@@ -222,6 +224,9 @@ def run_pose_smoke(
             if result["attitude"]["verdict"] != "pass":
                 failures.append(f"CARLA attitude conventions differ from the replay mapping: {result['attitude']}")
         backend.spawn(plan.actors, plan.frames[0], SMOKE_CATALOG)
+        # The walking pedestrian's legs must move (renders fail otherwise);
+        # sampled here too, although no sensor is attached.
+        backend.walker_animation = WalkerAnimationMonitor()
         backend.prepare_scenario(plan.frames[0])
         backend.validate_placement()
         sampler = PlanTimeline(plan)
@@ -280,7 +285,9 @@ def run_pose_smoke(
             result["replay"] = backend.replay_evidence()
         else:
             result["poseGates"] = backend.pose_gate.report()
-    except PoseGateError as exc:
+        result["walkerAnimation"] = backend.walker_animation.report()
+        backend.walker_animation.finish()
+    except (PoseGateError, CarlaRenderError) as exc:
         failures.append(str(exc))
     finally:
         backend.cleanup()

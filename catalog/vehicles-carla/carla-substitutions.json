@@ -1,0 +1,65 @@
+{
+  "comment": "Catalog ids whose native/browser model and CARLA blueprint are NOT the same source model. Every other catalog id must resolve to the same model in both renderers (carla-blueprints.json vs studio/app/generated/carla-object-catalog.json equivalents); packages/asset-catalog/src/__tests__/renderer-parity.test.ts enforces this table both ways. `carla: null` = CARLA fails closed (unavailable); `native: null` = the procedural builder draws it natively.",
+  "substitutions": {
+    "vehicle.shuttle_bus": {
+      "native": "vehicle_van_mercedes_sprinter",
+      "carla": null,
+      "reason": "CARLA has no shuttle body and the Sprinter is not bound for this id; native shows a long-wheelbase Sprinter."
+    },
+    "vehicle.bus": {
+      "native": "vehicle_bus_mitsubishi_fusorosa",
+      "carla": null,
+      "reason": "The only CARLA bus body (Fuso Rosa, 10.2 m) fails the dimension gate for a 12.2 m bus, so CARLA fails closed."
+    },
+    "vehicle.minivan": {
+      "native": "vehicle_minivan_bmw_gran_tourer",
+      "carla": "vehicle.nissan.patrol",
+      "reason": "Pre-existing. Alignable: CARLA ships vehicle.ue4.bmw.grantourer."
+    },
+    "vehicle.kia.carnival": {
+      "native": "vehicle_minivan_bmw_gran_tourer",
+      "carla": "vehicle.kia.carnival",
+      "reason": "The Kia Carnival is not in the converted native pack; native shows the BMW minivan silhouette."
+    },
+    "vehicle.honda_civic": {
+      "native": "vehicle_sedan_dodge_charger",
+      "carla": "vehicle.lincoln.mkz",
+      "reason": "Pre-existing. Alignable: CARLA ships vehicle.dodge.charger."
+    },
+    "vehicle.toyota_camry": {
+      "native": "vehicle_sedan_chevrolet_impala",
+      "carla": "vehicle.lincoln.mkz",
+      "reason": "Pre-existing. Alignable: CARLA ships vehicle.ue4.chevrolet.impala."
+    },
+    "vehicle.tesla_model_3": {
+      "native": "vehicle_sedan_tesla_model3",
+      "carla": "vehicle.lincoln.mkz",
+      "reason": "CARLA 0.10 has no Model 3 blueprint (the native model is a static mesh from the content pack)."
+    },
+    "vehicle.ford_mustang": {
+      "native": "vehicle_coupe_ford_mustang",
+      "carla": "vehicle.dodge.charger",
+      "reason": "Pre-existing. Alignable: CARLA ships vehicle.ue4.ford.mustang."
+    },
+    "vehicle.chevrolet_corvette": {
+      "native": "vehicle_coupe_audi_tt",
+      "carla": "vehicle.dodge.charger",
+      "reason": "Pre-existing. Alignable: CARLA ships vehicle.ue4.audi.tt."
+    },
+    "vehicle.jeep_wrangler": {
+      "native": "vehicle_suv_jeep_wrangler",
+      "carla": "vehicle.nissan.patrol",
+      "reason": "CARLA 0.10 has no Wrangler blueprint (the native model comes from the content pack)."
+    },
+    "vehicle.police_suv": {
+      "native": null,
+      "carla": "vehicle.dodgecop.charger",
+      "reason": "No CARLA police SUV: native draws the procedural police SUV builder, CARLA the police Charger."
+    },
+    "vehicle.porsche_911": {
+      "native": null,
+      "carla": "vehicle.dodge.charger",
+      "reason": "No usable 911 counterpart in either pack: native keeps its procedural builder, CARLA the Charger."
+    }
+  }
+}

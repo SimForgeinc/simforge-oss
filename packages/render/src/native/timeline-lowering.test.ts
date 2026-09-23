@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { FIXED_SCHEDULE_V1_SCHEMA, type FixedSchedule } from '../schedule.js';
 import { compareObserved, openRenderTimeline, pose, timelineRuntime } from '../timeline/index.js';
 import { lowerRenderTimelineToNative } from './timeline-lowering.js';
+import { nativeActorClass } from './lowering.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const TRACE = join(REPO, 'examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz');
@@ -72,6 +73,20 @@ describe('render timeline → native scene states', () => {
       expect(pose(timeline, 'ambulance', lowering.frameTimes[despawn - 1]!).present).toBe(true);
     } finally {
       timeline.free();
+    }
+  });
+
+  it('the Rust timeline and the lowering agree on every actor class (one shared table)', async () => {
+    const wasm = await timelineRuntime();
+    for (const example of ['03-red-light-ambulance-preemption', '05-cyclist-occlusion-conflict']) {
+      const built = wasm.RenderTimeline.buildFlat(readFileSync(join(REPO, `examples/edge-cases/${example}/scenario.trace.json.gz`)), 0, undefined);
+      try {
+        for (const actor of JSON.parse(built.actorsJson()) as { kind: string; actorClass: string }[]) {
+          expect(actor.actorClass, `${example} ${actor.kind}`).toBe(nativeActorClass(actor.kind));
+        }
+      } finally {
+        built.free();
+      }
     }
   });
 

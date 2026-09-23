@@ -183,8 +183,13 @@ export function claimTrafficStep(claim: SimulationJobClaim, hostUrl: URL, fetchI
   });
 }
 
-/** Simulate a claim and derive its render timeline, exactly as a host does inline. */
-export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch): Promise<{ simulation: AuthoritativeSimulation; timeline: SimulationTimeline | null }> {
+/**
+ * Simulate a claim and derive its render timeline, exactly as a host does
+ * inline. The timeline is the render contract every renderer samples: a
+ * simulation whose timeline cannot be built fails
+ * (`render_timeline_build_failed`) instead of completing without one.
+ */
+export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch): Promise<{ simulation: AuthoritativeSimulation; timeline: SimulationTimeline }> {
   const closure = await closureFor(claim, hostUrl, fetchImpl);
   const simulation = simulateAuthoritative({
     canonicalContent: claim.canonicalContent,
@@ -192,11 +197,11 @@ export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fet
     catalogEntries: claim.catalogEntries as never,
     trafficStep: await claimTrafficStep(claim, hostUrl, fetchImpl),
   });
-  let timeline: SimulationTimeline | null = null;
+  let timeline: SimulationTimeline;
   try {
     timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, ground: closure.ground, catalogDigest: null });
   } catch (error) {
-    process.stderr.write(`${JSON.stringify({ component: "simforge-local-simulator", event: "timeline.unavailable", simKey: simulation.simKey, error: error instanceof Error ? error.message : String(error) })}\n`);
+    throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
   return { simulation, timeline };
 }

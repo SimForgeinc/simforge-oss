@@ -24,6 +24,8 @@ import {
   type ScenarioRenderJobMode,
   type ScenarioRenderJobStatus,
   type ScenarioRenderProgressDto,
+  type ScenarioRenderSubstitutionDto,
+  type ScenarioRenderWarningDto,
   type ScenarioValidationRunDto,
 } from "../contracts";
 import { ScenarioExportStatusSchema } from "./documents";
@@ -207,6 +209,19 @@ export const ScenarioJobEventSchema = object<ScenarioJobEventDto>({
   createdAt: string(),
 });
 
+export const ScenarioRenderWarningSchema = object<ScenarioRenderWarningDto>({
+  code: string(),
+  message: string(),
+});
+
+export const ScenarioRenderSubstitutionSchema = object<ScenarioRenderSubstitutionDto>({
+  kind: string(),
+  subject: string(),
+  requested: string(),
+  rendered: string(),
+  allowedBy: string(),
+});
+
 export const ScenarioRenderJobDetailSchema = object<ScenarioRenderJobDetailDto>({
   id: string(),
   revisionId: string(),
@@ -225,6 +240,8 @@ export const ScenarioRenderJobDetailSchema = object<ScenarioRenderJobDetailDto>(
   maxAttempts: number(),
   failureCode: nullable(string()),
   failureDetail: nullable(string()),
+  warnings: optional(array(ScenarioRenderWarningSchema)),
+  substitutions: optional(array(ScenarioRenderSubstitutionSchema)),
   billingMode: string(),
   estimatedCostCents: number(),
   renderSpecSha256: string(),
