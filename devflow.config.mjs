@@ -64,9 +64,11 @@ export default {
   ],
 
   cargo: [
-    // Engine: fmt + nextest over affected crates; the wasm bindings crate is
-    // built for wasm32 when affected. The PyO3 wheel crate is its own workspace.
-    { name: "native", dir: "native", mode: "test", wasm: ["simforge-bindings-wasm"], exclude: ["simforge-bindings-python"] },
+    // Engine: fmt + nextest over affected crates. The wasm32 and napi builds of
+    // the bindings are the turbo task @simforge-oss/native-runtime#build:artifacts
+    // (triggered by any native/ change), so they come from the shared turbo cache
+    // when another worktree or CI already built the same sources.
+    { name: "native", dir: "native", mode: "test", exclude: ["simforge-bindings-python"] },
     // Bevy renderer: type-check only in the inner loop (its CPU conformance
     // tests run in the render-cpu check); full tests run under --full.
     { name: "renderer", dir: "renderer", mode: "check", fullMode: "check" },

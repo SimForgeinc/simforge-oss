@@ -159,7 +159,9 @@ if (args.plan) {
 let rustEnvCache = null;
 async function rustEnv() {
   if (rustEnvCache) return rustEnvCache;
-  const env = { ...baseEnv, CARGO_INCREMENTAL: "0", CARGO_BUILD_JOBS: String(jobsPerSlot()) };
+  // Incremental stays on: workspace crates rebuild incrementally in this worktree,
+  // and sccache still caches every non-incremental (dependency) compilation.
+  const env = { ...baseEnv, CARGO_BUILD_JOBS: String(jobsPerSlot()) };
   env.PATH = `${await toolPathDir()}:${env.PATH}`;
   const sccache = process.env.DEVFLOW_SCCACHE === "0" ? null : await ensureTool("sccache").catch(() => null);
   let remote = { kind: "local" };
