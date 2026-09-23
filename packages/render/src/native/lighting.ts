@@ -105,8 +105,8 @@ export interface WeatherPreset {
 
 /** The lab's `WEATHER_PRESETS`, keyed by renderer label. */
 export const WEATHER_PRESETS: Readonly<Record<NativeWeather, WeatherPreset>> = {
-  clear: { weather: 'clear', cloudCover: 0, visibilityM: 80_000, haze: 0, wetness: 0, turbidity: 2.4, cloudType: 0.85, cloudBaseM: 1200, cloudTopM: 2800, cloudDensity: 1 },
-  cloudy: { weather: 'cloudy', cloudCover: 0.45, visibilityM: 30_000, haze: 0.03, wetness: 0, turbidity: 2.8, cloudType: 0.85, cloudBaseM: 1200, cloudTopM: 2800, cloudDensity: 1 },
+  clear: { weather: 'clear', cloudCover: 0, visibilityM: 25_000, haze: 0, wetness: 0, turbidity: 2.4, cloudType: 0.85, cloudBaseM: 1200, cloudTopM: 2800, cloudDensity: 1 },
+  cloudy: { weather: 'cloudy', cloudCover: 0.45, visibilityM: 20_000, haze: 0.03, wetness: 0, turbidity: 2.8, cloudType: 0.85, cloudBaseM: 1200, cloudTopM: 2800, cloudDensity: 1 },
   overcast: { weather: 'overcast', cloudCover: 0.95, visibilityM: 12_000, haze: 0.10, wetness: 0.05, turbidity: 3.2, cloudType: 0.15, cloudBaseM: 700, cloudTopM: 1900, cloudDensity: 1.4 },
   fog: { weather: 'fog', cloudCover: 0.75, visibilityM: 150, haze: 0.20, wetness: 0.15, turbidity: 3.0, cloudType: 0.10, cloudBaseM: 400, cloudTopM: 1200, cloudDensity: 1.4 },
   rain: { weather: 'rain', cloudCover: 0.90, visibilityM: 3_000, haze: 0.10, wetness: 0.85, turbidity: 2.6, cloudType: 0.30, cloudBaseM: 500, cloudTopM: 2600, cloudDensity: 1.8 },

@@ -404,9 +404,10 @@ impl RenderConfig {
                     metering: MeteringMode::Dashcam,
                     trim: 0.05,
                 },
-                // A typical automotive camera: f/1.8, 1/8000 s .. 1/30 s,
+                // A typical automotive camera: f/1.8, 1/32000 s .. 1/30 s (EV100 up to
+                // ~16.7, so a sunlit scene never clamps),
                 // gain up to ISO 6400.
-                sensor: SensorConfig { f_number: 1.8, min_shutter_s: 1.0 / 8000.0, max_shutter_s: 1.0 / 30.0, iso_max: 6400.0 },
+                sensor: SensorConfig { f_number: 1.8, min_shutter_s: 1.0 / 32000.0, max_shutter_s: 1.0 / 30.0, iso_max: 6400.0 },
                 wdr: WdrConfig { white_stops: 6.0, mid_grey: 0.2 },
             },
             atmosphere: AtmosphereConfig { haze_density: 1.0 },

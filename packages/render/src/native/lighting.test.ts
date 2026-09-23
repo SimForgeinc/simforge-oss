@@ -43,7 +43,7 @@ describe('native lighting', () => {
     const { lighting, provenance } = at({ ...BASE, extensions: { [SCENE_TIME_EXTENSION_KEY]: { minutes: 385 } } });
     expect(lighting).toMatchObject({
       sun_elev_deg: 5.758, sun_azim_deg: 115.248, weather: 'clear', atmosphere: true,
-      visibility_m: 80_000, turbidity: 2.4, cloud_cover: 0, haze: 0, wetness: 0,
+      visibility_m: 25_000, turbidity: 2.4, cloud_cover: 0, haze: 0, wetness: 0,
       sun_scale: 1, ambient_scale: 1, ev100_bias: 0,
     });
     expect(lighting.night).toMatchObject({
@@ -55,7 +55,7 @@ describe('native lighting', () => {
   });
 
   it('maps every drawable scenario weather onto a renderer air mass', () => {
-    expect(weatherPreset('cloudy')).toMatchObject({ weather: 'cloudy', cloudCover: 0.45, visibilityM: 30_000 });
+    expect(weatherPreset('cloudy')).toMatchObject({ weather: 'cloudy', cloudCover: 0.45, visibilityM: 20_000 });
     expect(weatherPreset('heavy_rain')).toMatchObject({ weather: 'rain', wetness: 1, visibilityM: 1_500 });
     expect(weatherPreset('fog_dense')).toMatchObject({ weather: 'fog', visibilityM: 150 });
   });
