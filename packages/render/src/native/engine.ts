@@ -107,6 +107,13 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
     'full-mount-rotation',
     'map.static_semantics',
   ],
+  features: {
+    'full-mount-rotation': {
+      support: 'supported',
+      evidenceTier: 'integrated',
+      note: 'GPU rendered-horizon proof pending',
+    },
+  },
   modalities: ['rgb', 'lidar', 'radar'],
   limits: {
     maxSimultaneousSensors: 64,

@@ -68,6 +68,13 @@ describe('native retained engine adapter', () => {
       backend: 'native',
       modalities: ['rgb', 'lidar', 'radar'],
       requiresGpu: true,
+      features: {
+        'full-mount-rotation': {
+          support: 'supported',
+          evidenceTier: 'integrated',
+          note: 'GPU rendered-horizon proof pending',
+        },
+      },
     });
     expect(engine.capabilities.capabilities).toEqual(expect.arrayContaining([
       'sensor.rgb', 'sensor.lidar', 'sensor.radar', 'artifact.video', 'artifact.manifest', 'artifact.trace', 'artifact.sensor_archive',

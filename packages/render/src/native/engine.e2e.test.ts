@@ -188,9 +188,11 @@ suite('native retained service GPU e2e', () => {
     const rolledFrame = await grayVideoFrame(path.join(output, rolledVideo!.relativePath), 12);
     expect(baselineFrame).toHaveLength(320 * 180);
     expect(rolledFrame).toHaveLength(320 * 180);
-    const alignedHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 10);
+    // Image Y points down, so authored +roll about +X must align under a
+    // counter-clockwise image rotation, represented as -10 in this sampler.
+    const alignedHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, -10);
     const flatHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 0);
-    const oppositeHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, -10);
+    const oppositeHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 10);
     expect(alignedHorizon).toBeLessThan(flatHorizon * 0.8);
     expect(alignedHorizon).toBeLessThan(oppositeHorizon * 0.7);
     const trace = JSON.parse(await fs.readFile(path.join(output, 'trace/native-trace.json'), 'utf8')) as {

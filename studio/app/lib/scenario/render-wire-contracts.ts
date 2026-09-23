@@ -110,6 +110,13 @@ const LocalEngineCapabilityApproximationSchema = z.custom<EngineCapabilityApprox
   (value) => EngineCapabilityApproximationSchema.safeParse(value).success,
   { message: "Invalid render engine capability approximation." },
 );
+const LocalEngineCapabilityFeaturesSchema = z.strictObject({
+  "full-mount-rotation": z.strictObject({
+    support: z.literal("supported"),
+    evidenceTier: z.enum(["declared", "integrated", "exercised", "qualified"]),
+    note: z.string().min(1).optional(),
+  }),
+});
 const UniqueCapabilitiesSchema = z.array(LocalEngineCapabilitySchema)
   .min(1)
   .max(32)
@@ -127,6 +134,7 @@ export const ScenarioRendererCapabilitySchema = z.strictObject({
   backend: ScenarioRendererEngineSchema,
   protocolVersion: z.literal(1),
   capabilities: UniqueCapabilitiesSchema,
+  features: LocalEngineCapabilityFeaturesSchema.optional(),
   approximations: z.array(LocalEngineCapabilityApproximationSchema).max(32).optional(),
   modalities: UniqueModalitiesSchema,
   limits: z.strictObject({

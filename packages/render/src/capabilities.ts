@@ -44,6 +44,14 @@ export const EngineCapabilityApproximationSchema = z.strictObject({
   reason: z.string().min(1),
 });
 
+export const EngineCapabilityFeaturesSchema = z.strictObject({
+  'full-mount-rotation': z.strictObject({
+    support: z.literal('supported'),
+    evidenceTier: z.enum(['declared', 'integrated', 'exercised', 'qualified']),
+    note: z.string().min(1).optional(),
+  }),
+});
+
 export const EngineCapabilityDeclarationSchema = z.strictObject({
   schema: z.literal(ENGINE_CAPABILITIES_V1_SCHEMA),
   engineId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
@@ -51,6 +59,7 @@ export const EngineCapabilityDeclarationSchema = z.strictObject({
   backend: z.enum(['browser', 'carla', 'native']),
   protocolVersion: z.literal(1),
   capabilities: z.array(EngineCapabilitySchema).min(1).max(32),
+  features: EngineCapabilityFeaturesSchema.optional(),
   approximations: z.array(EngineCapabilityApproximationSchema).max(32).optional(),
   modalities: z.array(z.enum(['rgb', 'depth', 'semantic', 'instance', 'lidar', 'radar'])).min(1).max(6),
   limits: z.strictObject({

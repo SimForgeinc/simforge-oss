@@ -12,6 +12,11 @@ import {
 test("Studio accepts checkpoint-1 native capabilities and completion evidence", () => {
   const nativeCapabilities = createRenderEngine({ binary: "/bin/true" }).capabilities;
   assert.deepEqual(ScenarioRendererCapabilitySchema.parse(nativeCapabilities), nativeCapabilities);
+  assert.deepEqual(nativeCapabilities.features?.["full-mount-rotation"], {
+    support: "supported",
+    evidenceTier: "integrated",
+    note: "GPU rendered-horizon proof pending",
+  });
 
   const completion = CompleteRenderJobV2Schema.parse({
     schema: "simforge.render-worker-control/v2",
