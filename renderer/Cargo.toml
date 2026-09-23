@@ -30,7 +30,10 @@ edition = "2021"
 #   and draw order is a function of the scene, not of the run: sorted phases
 #   break equal sort keys by main entity, and binned phases keep each bin in
 #   entity order (without this, blended items at equal distance composited
-#   differently between runs and two golden record runs disagreed); and a
+#   differently between runs and two golden record runs disagreed); views
+#   without indirect drawing (pinned RGB captures, the ID pass) also draw
+#   their bins in entity order, not in allocation-ordered key order (under
+#   CPU load, coplanar depth ties flipped between two lavapipe runs); and a
 #   directional cascade resolves visibility ranges (LODs) from its camera
 #   (upstream looked the camera up by a main-world id in a render-world
 #   query, fell back to the world origin, and LOD chains the CPU and GPU

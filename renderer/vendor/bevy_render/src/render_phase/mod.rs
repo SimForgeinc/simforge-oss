@@ -945,6 +945,12 @@ impl<BPI> BinnedRenderPhase<BPI>
 where
     BPI: BinnedPhaseItem,
 {
+    /// SimForge patch: true when this view draws in CPU order (no indirect
+    /// drawing, so no GPU culling compacts its instances).
+    pub(crate) fn cpu_ordered(&self) -> bool {
+        self.gpu_preprocessing_mode != GpuPreprocessingMode::Culling
+    }
+
     /// Bins a new entity.
     ///
     /// The `phase_type` parameter specifies whether the entity is a
@@ -2227,6 +2233,12 @@ impl RenderBin {
     /// Returns true if the bin contains no entities.
     fn is_empty(&self) -> bool {
         self.entities.is_empty()
+    }
+
+    /// SimForge patch: the bin's first entity (its least after
+    /// [`Self::sort_entities`]).
+    pub(crate) fn first_entity(&self) -> Option<MainEntity> {
+        self.entities.first().map(|(entity, _)| *entity)
     }
 
     /// SimForge patch: order the bin's entities by entity id. Insertion and
