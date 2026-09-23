@@ -1,0 +1,10 @@
+{
+  "schema": "simforge.map-load-budgets.v1",
+  "note": "Warm-load ceilings (ms after navigation start; counts per load) for the map-load benchmark on the reference GPU runner (RTX 5080, Chrome/ANGLE-Vulkan, 1600x900). Time budgets bound the warm median, count budgets the warm maximum. Lower a budget when a change makes it faster; never raise one to make a regression pass.",
+  "budgets": [
+    { "map": "richmond-field-station", "setting": "low-no-foliage", "mode": "editor", "usableMs": 3500, "interactiveMs": 5000, "cacheReads": 40, "mapNetworkRequests": 0, "basisTranscodes": 0, "albedoReadbacks": 0 },
+    { "map": "richmond-field-station", "setting": "low-no-foliage", "mode": "drive", "usableMs": 3500, "interactiveMs": 5000, "cacheReads": 40, "mapNetworkRequests": 0, "basisTranscodes": 0, "albedoReadbacks": 0 },
+    { "map": "richmond-field-station", "setting": "medium", "mode": "editor", "usableMs": 4000, "interactiveMs": 5000, "cacheReads": 60, "mapNetworkRequests": 0, "basisTranscodes": 0, "albedoReadbacks": 0 },
+    { "map": "richmond-field-station", "setting": "medium", "mode": "drive", "usableMs": 4000, "interactiveMs": 5000, "cacheReads": 60, "mapNetworkRequests": 0, "basisTranscodes": 0, "albedoReadbacks": 0 }
+  ]
+}
