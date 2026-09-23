@@ -27,6 +27,7 @@
     "maps:derivatives": "node scripts/build-map-derivatives.mjs",
     "maps:derivatives:smoke": "node scripts/smoke-map-derivative-toolchain.mjs",
     "maps:sumo": "node scripts/build-sumo-derivatives.mjs",
+    "maps:ground": "tsx --conditions=development scripts/build-ground-derivatives.mts",
     "maps:sumo:toolchain": "node scripts/install-sumo-toolchain.mjs",
     "maps:sumo:smoke": "tsx --conditions=development packages/map-pipeline/smoke/sumo-derivatives.mts",
     "maps:ambient-verdicts": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/ambient-turn-verdicts.ts",
