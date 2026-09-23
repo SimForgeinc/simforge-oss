@@ -249,6 +249,8 @@ export function lowerOpenScenarioToNative(
         kind,
         catalogId: nativeActorCatalogId(actor.kind, metadata?.tags ?? actor.tags, `actor ${actor.id}`),
         actorClass: nativeActorClass(actor.kind, `actor ${actor.id}`),
+        // The OpenSCENARIO BoundingBox dimensions (the service requires dims).
+        dims: { l: q(actor.dims.l), w: q(actor.dims.w), h: q(actor.dims.h) },
         transform: {
           position: [q(sample.x), q(sample.z), q(-sample.y)],
           rotation: [0, q(Math.sin(yaw / 2)), 0, q(Math.cos(yaw / 2))],

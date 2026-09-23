@@ -300,8 +300,11 @@ export function nativeEvidencePolicyFailure(input: NativeNegotiatedEvidence & {
   features: ReadonlySet<string>;
   /** sha256 of the intent's `render.timeline` asset, or null when the intent declares none. */
   timelineSha256: string | null;
+  /** The intent's `motionSource`: only `original-xosc` permits the legacy scene source. */
+  motionSource?: string;
 }): RenderEvidenceRejection | null {
   const { manifest, diagnostics, features, timelineSha256 } = input;
+  const legacyReplay = input.motionSource === "original-xosc";
   if (features.has(RENDER_CONTROL_FEATURE_NATIVE_SCENE_SOURCE)) {
     if (!manifest.sceneSource) return missingField("manifest", "sceneSource", RENDER_CONTROL_FEATURE_NATIVE_SCENE_SOURCE);
     if (!diagnostics.sceneSource) return missingField("diagnostics", "sceneSource", RENDER_CONTROL_FEATURE_NATIVE_SCENE_SOURCE);
@@ -310,6 +313,18 @@ export function nativeEvidencePolicyFailure(input: NativeNegotiatedEvidence & {
         code: "native_scene_source_mismatch",
         message: `the native manifest (${manifest.sceneSource}) and diagnostics (${diagnostics.sceneSource}) disagree on the scene source or timeline`,
       };
+    }
+    if (legacyReplay) {
+      // The explicitly requested legacy replay of a revision without a
+      // stored trace: it must say so, and there is no timeline to grade.
+      if (manifest.sceneSource !== "openscenario-legacy" || timelineSha256) {
+        return {
+          code: "native_scene_source_mismatch",
+          message: `the intent requests the legacy OpenSCENARIO replay but the render reports ${manifest.sceneSource}${timelineSha256 ? " and the intent also declares a render.timeline" : ""}`,
+          details: { sceneSource: manifest.sceneSource },
+        };
+      }
+      return null;
     }
     if (manifest.sceneSource === "openscenario-legacy") {
       return {

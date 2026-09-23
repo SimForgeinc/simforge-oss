@@ -965,6 +965,21 @@ def test_an_uncooked_map_is_refused_before_carla_is_contacted(tmp_path, monkeypa
     assert lease.execution_package.xodr.map_name == "Belmont_Office_Park_Belmont_CA"
 
 
+def test_a_render_without_a_timeline_needs_the_explicit_legacy_replay(tmp_path, monkeypatch):
+    """Formerly an intent without render.timeline silently replayed the xosc."""
+    intent, _sha, inputs = _local_intent(tmp_path, cooked=True, monkeypatch=monkeypatch)
+    assert intent["motionSource"] == "original-xosc"
+    implicit = {key: value for key, value in intent.items() if key != "motionSource"}
+    implicit_sha = hashlib.sha256(local._canonical_render_intent_json(implicit).encode()).hexdigest()
+    with pytest.raises(CarlaRenderError) as refused:
+        local._intent_lease(implicit, implicit_sha, "b" * 64, inputs, tmp_path / "out")
+    assert code_of(refused) == "carla_render_timeline_missing"
+    bogus = {**intent, "motionSource": "whatever"}
+    bogus_sha = hashlib.sha256(local._canonical_render_intent_json(bogus).encode()).hexdigest()
+    with pytest.raises(ContractError):
+        local._intent_lease(bogus, bogus_sha, "b" * 64, inputs, tmp_path / "out")
+
+
 def _run_args(tmp_path, intent, control_features=""):
     intent_path = tmp_path / "intent.json"
     intent_path.write_text(json.dumps(intent))

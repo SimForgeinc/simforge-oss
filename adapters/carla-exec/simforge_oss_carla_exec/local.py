@@ -672,9 +672,11 @@ def _intent_lease(
     output_dir: Path,
 ) -> tuple[Any, dict[str, Path]]:
     expected_fields = {"schema", "intentId", "executionPackage", "scenarioRevision", "renderSpec", "sensorHosts", "assets", "seed"}
-    if set(intent) - {"allowSubstitutions"} != expected_fields or intent.get("schema") not in INTENT_SCHEMAS:
+    if set(intent) - {"allowSubstitutions", "motionSource"} != expected_fields or intent.get("schema") not in INTENT_SCHEMAS:
         raise ContractError(f"render intent must use strict {INTENT_SCHEMA} fields")
     parse_allow_substitutions(intent.get("allowSubstitutions"))
+    if intent.get("motionSource") not in (None, "original", "resimulated", "original-xosc"):
+        raise ContractError(f"render intent motionSource {intent.get('motionSource')!r} is not original, resimulated or original-xosc")
     intent_id = intent.get("intentId")
     revision = intent.get("scenarioRevision")
     assets = intent.get("assets")
@@ -953,6 +955,21 @@ def _intent_lease(
     )
     if len(timeline_paths) > 1:
         raise ContractError("render intent contains multiple render timelines")
+    # The render contract is the render timeline. The only other motion
+    # source is the explicitly requested legacy replay of a revision without a
+    # stored trace (`motionSource: original-xosc`); it is never chosen because
+    # a timeline is absent (docs/engineering/no-silent-fallbacks.md).
+    legacy_replay = intent.get("motionSource") == "original-xosc"
+    if legacy_replay and timeline_paths:
+        raise CarlaRenderError(
+            "carla_motion_source_conflict",
+            "the intent requests the legacy OpenSCENARIO replay but also declares render.timeline",
+        )
+    if not legacy_replay and not timeline_paths:
+        raise CarlaRenderError(
+            "carla_render_timeline_missing",
+            "CARLA renders the declared render.timeline; the intent has none and does not request motionSource 'original-xosc'",
+        )
     return lease, {
         "local:manifest": manifest_path, "local:xosc": xosc_path,
         "local:xodr": xodr_path, "local:catalog": catalog_path, "local:traffic": traffic_path,
