@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { RenderInputFile } from '../engine.js';
 import { collectNativeMapMembers, nativeMapMemberInputId } from './map-closure.js';
-import { NativeTextureCapacityError, stageNativeTextureProfile } from './texture-profile.js';
+import { NativeTextureCapacityError, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 
 const directories: string[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(directories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true }))); });
@@ -89,7 +89,9 @@ it('selects exactly one tier before any texture is downloaded, and stages from o
   vi.spyOn(await import('@simforge-oss/scenario'), 'parseRenderIntent').mockImplementation((intent) => intent as never);
   const paths = async (tier: 'uastc-full' | 'bc7-512') => [...await selectNativeRenderInputs(context(tier))].map((id) => byId.get(id)!.relativePath).sort();
   expect(await paths('uastc-full')).toEqual(['geometry.bin', 'images/full.ktx2', 'master.gltf']);
-  expect(reads).toEqual(['master.gltf']);
+  // uastc-full reads only the master and the small variants manifest (to
+  // look for ingest-built GPU blocks, absent here): never an image.
+  expect(reads).toEqual(['master.gltf', '3d/variants/manifest.json']);
   expect(await paths('bc7-512')).toEqual(['3d/manifest.json', '3d/variants/bc7.json', '3d/variants/manifest.json', '3d/variants/objects/bc7.ktx2', 'geometry.bin', 'master.gltf']);
   expect(reads).not.toContain('images/full.ktx2');
 
@@ -153,4 +155,85 @@ it('a completed staging is reused from its marker without touching the members a
   expect(await fs.readFile(path.join(path.dirname(first.masterPath), 'images/full.ktx2'))).toHaveLength(80);
   // The capacity check still applies to a reused staging.
   await expect(stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 1024 })).rejects.toThrow(NativeTextureCapacityError);
+});
+
+it('uastc-full uploads the ingest-built GPU blocks when the closure has them, and reports a load-time transcode otherwise', async () => {
+  const value = await fixture();
+  const members = [...value.closure.members.values()];
+  const manifest = value.closure.members.get('3d/manifest.json')!;
+  const header = (format: number) => {
+    const bytes = Buffer.alloc(80);
+    Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]).copy(bytes);
+    bytes.writeUInt32LE(format, 12); bytes.writeUInt32LE(1024, 20); bytes.writeUInt32LE(1024, 24); bytes.writeUInt32LE(1, 36); bytes.writeUInt32LE(1, 40);
+    return bytes;
+  };
+  const add = async (relativePath: string, bytes: Buffer | string) => {
+    const file = path.join(value.directory, relativePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, bytes);
+    const input = { inputId: nativeMapMemberInputId(relativePath), relativePath, path: file, sha256: createHash('sha256').update(bytes).digest('hex'), sizeBytes: Buffer.byteLength(bytes) };
+    members.push(input);
+    return input;
+  };
+  // Without the variant: the same UASTC staging as before, flagged.
+  const miss = await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(miss.transcodeAtLoad).toBe('closure has no textures-full-bc7 variant');
+  expect(JSON.parse(await fs.readFile(miss.masterPath, 'utf8')).images[1].uri).toBe('images/full.ktx2');
+
+  const gpu = await add('3d/variants/objects/full-bc7.ktx2', header(145));
+  const index = await add('3d/variants/full-bc7.json', JSON.stringify({
+    schemaVersion: 1, id: 'textures-full-bc7', sourceManifestSha256: manifest.sha256,
+    images: { '../images/full.ktx2': { file: 'variants/objects/full-bc7.ktx2', outputSha256: gpu.sha256, width: 1024, height: 1024, codec: 'bc7' } },
+  }));
+  const variantsIndex = members.findIndex((member) => member.relativePath === '3d/variants/manifest.json');
+  const variants = JSON.parse(await fs.readFile(members[variantsIndex]!.path, 'utf8'));
+  variants.variants['textures-full-bc7'] = { file: 'full-bc7.json', outputSha256: index.sha256, sourceManifestSha256: manifest.sha256 };
+  members.splice(variantsIndex, 1);
+  await add('3d/variants/manifest.json', JSON.stringify(variants));
+  const closure = collectNativeMapMembers(members);
+
+  const plan = await planNativeTextureMembers(JSON.parse(await fs.readFile(closure.members.get('master.gltf')!.path, 'utf8')), 'uastc-full', {
+    sha256: (uri) => closure.members.get(uri)?.sha256,
+    readText: (uri) => fs.readFile(closure.members.get(uri)!.path, 'utf8'),
+  });
+  expect(plan.transcodeAtLoad).toBeUndefined();
+  expect([...plan.members]).toContain('3d/variants/objects/full-bc7.ktx2');
+  expect([...plan.members]).not.toContain('images/full.ktx2');
+  const hit = await stageNativeTextureProfile({ ...value, closure, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(hit.transcodeAtLoad).toBeUndefined();
+  expect(JSON.parse(await fs.readFile(hit.masterPath, 'utf8')).images[1]).toMatchObject({ uri: '3d/variants/objects/full-bc7.ktx2', mimeType: 'image/ktx2' });
+  // Same VRAM estimate: 16 B per 4x4 block for UASTC and BC7 alike.
+  expect(hit.textureBytes).toBe(miss.textureBytes);
+  expect(hit.cacheKey).not.toBe(miss.cacheKey);
+});
+
+it('finds the GPU variant in derived/textures-full-bc7/ (backfilled onto an immutable closure) before 3d/variants', async () => {
+  const value = await fixture();
+  const members = [...value.closure.members.values()];
+  const manifest = value.closure.members.get('3d/manifest.json')!;
+  const add = async (relativePath: string, bytes: Buffer | string) => {
+    const file = path.join(value.directory, relativePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, bytes);
+    const input = { inputId: nativeMapMemberInputId(relativePath), relativePath, path: file, sha256: createHash('sha256').update(bytes).digest('hex'), sizeBytes: Buffer.byteLength(bytes) };
+    members.push(input);
+    return input;
+  };
+  const header = Buffer.alloc(80);
+  Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]).copy(header);
+  header.writeUInt32LE(145, 12); header.writeUInt32LE(1024, 20); header.writeUInt32LE(1024, 24); header.writeUInt32LE(1, 36); header.writeUInt32LE(1, 40);
+  const gpu = await add('derived/textures-full-bc7/objects/abc.ktx2', header);
+  const index = await add('derived/textures-full-bc7/index-1.json', JSON.stringify({
+    schemaVersion: 1, id: 'textures-full-bc7', sourceManifestSha256: manifest.sha256,
+    images: { '../images/full.ktx2': { file: 'objects/abc.ktx2', outputSha256: gpu.sha256, width: 1024, height: 1024, codec: 'bc7' } },
+  }));
+  await add('derived/textures-full-bc7/manifest.json', JSON.stringify({
+    schema: 'simforge.map-texture-variant.v1', sourceManifestSha256: manifest.sha256,
+    variants: { 'textures-full-bc7': { file: 'index-1.json', outputSha256: index.sha256, sourceManifestSha256: manifest.sha256 } },
+  }));
+  const closure = collectNativeMapMembers(members);
+  const staged = await stageNativeTextureProfile({ ...value, closure, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(staged.transcodeAtLoad).toBeUndefined();
+  expect(JSON.parse(await fs.readFile(staged.masterPath, 'utf8')).images[1].uri).toBe('derived/textures-full-bc7/objects/abc.ktx2');
+  expect(await fs.readFile(path.join(path.dirname(staged.masterPath), 'derived/textures-full-bc7/objects/abc.ktx2'))).toEqual(header);
 });

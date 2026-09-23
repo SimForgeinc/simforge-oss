@@ -67,7 +67,17 @@ export interface NativeTexturePlan {
   readonly images: ReadonlyMap<number, string>;
   readonly variantDigest: string;
   readonly variant: boolean;
+  /**
+   * `uastc-full` only: why the service will transcode UASTC at load instead
+   * of uploading the ingest-built `textures-full-bc7` blocks (identical
+   * pixels either way); `undefined` when the GPU variant is used.
+   */
+  readonly transcodeAtLoad?: string;
 }
+
+/** The ingest-built full-resolution GPU-block variant of `uastc-full` (`ktx2-gpu-variant`). */
+export const NATIVE_FULL_GPU_VARIANT_ID = 'textures-full-bc7';
+const FULL_GPU_VARIANT_CODECS = ['bc7', 'bc5', 'bc4'];
 
 /**
  * Selects exactly the closure members a texture tier renders from. Pure
@@ -104,6 +114,44 @@ export async function planNativeTextureMembers(
     if (variant.schemaVersion !== 1 || variant.id !== 'textures-512-bc7' || variant.sourceManifestSha256 !== manifestSha256) throw new Error('native_ml_texture_index_invalid');
     variantDigest = indexSha256;
   }
+  // uastc-full: prefer the pre-transcoded blocks when ingest built them.
+  // The variant's envelope lives in derived/textures-full-bc7/ (new builds
+  // and backfills of immutable published closures alike), else in the
+  // closure's own 3d/variants/manifest.json; index and image files resolve
+  // against the envelope's base directory.
+  let fullVariant: Variant | undefined;
+  let fullVariantBase = '';
+  let transcodeAtLoad: string | undefined;
+  if (renderTextures === 'uastc-full') {
+    const manifestSha256 = source.sha256('3d/manifest.json');
+    const envelope = [
+      { uri: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/manifest.json`, base: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/`, indexBase: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/` },
+      { uri: '3d/variants/manifest.json', base: '3d/', indexBase: '3d/variants/' },
+    ].find((candidate) => source.sha256(candidate.uri));
+    if (!manifestSha256 || !envelope) {
+      transcodeAtLoad = 'closure has no texture variants';
+    } else {
+      const manifest = JSON.parse(await source.readText(envelope.uri)) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
+      const entry = manifest.variants?.[NATIVE_FULL_GPU_VARIANT_ID];
+      const indexUri = entry ? `${envelope.indexBase}${entry.file}` : undefined;
+      if (!entry || !indexUri) transcodeAtLoad = `closure has no ${NATIVE_FULL_GPU_VARIANT_ID} variant`;
+      else if (manifest.sourceManifestSha256 !== manifestSha256 || entry.sourceManifestSha256 !== manifestSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} is bound to another manifest`;
+      else if (source.sha256(indexUri) !== entry.outputSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is missing or its digest differs`;
+      else {
+        const index = JSON.parse(await source.readText(indexUri)) as Variant;
+        if (index.schemaVersion !== 1 || index.id !== NATIVE_FULL_GPU_VARIANT_ID || index.sourceManifestSha256 !== manifestSha256) {
+          transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is invalid`;
+        } else {
+          fullVariant = index;
+          fullVariantBase = envelope.base;
+          members.add('3d/manifest.json');
+          members.add(envelope.uri);
+          members.add(assertIndexUri(indexUri));
+          variantDigest = entry.outputSha256;
+        }
+      }
+    }
+  }
   const imageIndices = new Set<number>();
   for (const texture of document.textures ?? []) {
     const index = texture.extensions?.KHR_texture_basisu?.source ?? texture.source;
@@ -121,6 +169,13 @@ export async function planNativeTextureMembers(
       const sha256 = requireMember(uri);
       if (sha256 !== replacement.outputSha256) throw new Error(`native_ml_texture_digest_mismatch: ${uri}`);
     }
+    // A full GPU variant omits images that need no transcode (passthrough).
+    const gpu = fullVariant?.images[`../${image.uri}`];
+    if (gpu) {
+      if (!FULL_GPU_VARIANT_CODECS.includes(gpu.codec)) throw new Error(`native_texture_variant_codec_invalid: ${gpu.codec} for ${image.uri}`);
+      uri = `${fullVariantBase}${gpu.file}`;
+      if (requireMember(uri) !== gpu.outputSha256) throw new Error(`native_texture_variant_digest_mismatch: ${uri}`);
+    }
     requireMember(uri);
     images.set(index, uri);
   }
@@ -128,7 +183,12 @@ export async function planNativeTextureMembers(
     if (!buffer.uri || buffer.uri.startsWith('data:')) throw new Error('native_external_geometry_required');
     requireMember(buffer.uri);
   }
-  return { members, images, variantDigest, variant: variant !== undefined };
+  return { members, images, variantDigest, variant: variant !== undefined, ...(transcodeAtLoad ? { transcodeAtLoad } : {}) };
+}
+
+function assertIndexUri(uri: string): string {
+  assertSafeNativeMapMemberPath(uri);
+  return uri;
 }
 
 const KTX2_MAGIC = Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]);
@@ -221,7 +281,7 @@ export async function stageNativeTextureProfile(input: {
     for (const uri of uniqueImages) textureBytes += headers.get(uri)!;
     for (const [index, uri] of plan.images) {
       const image = document.images![index]!;
-      if (plan.variant) {
+      if (uri !== image.uri) {
         image.uri = uri;
         image.mimeType = 'image/ktx2';
       }
@@ -235,7 +295,7 @@ export async function stageNativeTextureProfile(input: {
   const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
   if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
   const budgetBytes = input.budgetBytes ?? estimatedBytes;
-  const profile = { masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
+  const profile = { ...(plan.transcodeAtLoad ? { transcodeAtLoad: plan.transcodeAtLoad } : {}), masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
   if (staged) return profile;
   await fs.mkdir(directory, { recursive: true });
   await forEachConcurrent([...selected], 32, async ([uri, member]) => {
