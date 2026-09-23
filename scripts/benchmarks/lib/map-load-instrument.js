@@ -91,14 +91,16 @@
 
   // Map fetches: wrap the network fetch, and whatever later replaces
   // window.fetch (the map asset gateway), so both layers are visible.
-  const kind = (url) => /\/3d\/manifest\.json/.test(url) ? 'manifest' : /variants\/manifest\.json/.test(url) ? 'variants-manifest'
+  // Only map data counts: actor models (/catalog/...) and app APIs are not map loads.
+  const isMap = (url) => /\/api\/simforge\/maps\/[^/]+\/browser-assets\/|\/api\/map-assets\/[^/]+\/3d-asset\//.test(url);
+  const kind = (url) => !isMap(url) ? 'other' : /\/3d\/manifest\.json/.test(url) ? 'manifest' : /variants\/manifest\.json/.test(url) ? 'variants-manifest'
     : /variants\/(textures|browser-pack)-[^/]+\.json/.test(url) ? 'index' : /packs\/objects\//.test(url) ? 'pack-chunk'
     : /\.glb(\?|$)/.test(url) ? 'glb' : /\.ktx2(\?|$)/.test(url) ? 'ktx2' : /\/api\//.test(url) ? 'api' : 'other';
   const wrapFetch = (fn, layer) => {
     if (!fn || fn.__mapLoadBench) return fn;
     const wrapped = function (input, init) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input?.url ?? String(input);
-      const record = { layer, kind: kind(url), start: now(), end: null, cacheHit: null };
+      const record = { layer, kind: kind(url), url: url.replace(/^https?:\/\/[^/]+/, '').slice(0, 160), start: now(), end: null, cacheHit: null };
       if (record.kind !== 'other' && record.kind !== 'api') B.fetches.push(record);
       return fn.call(this, input, init).then((response) => {
         record.end = now();
