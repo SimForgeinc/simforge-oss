@@ -141,3 +141,16 @@ it('refuses fast, with advice, when the device cannot hold the scene', async () 
   expect(nativeStartupTimeoutMs({ textureBytes: 5.48e9, geometryBytes: 143e6 })).toBeGreaterThan(600_000);
   expect(nativeStartupTimeoutMs({ textureBytes: 1e12, geometryBytes: 1e12 })).toBe(1_800_000);
 });
+
+it('a completed staging is reused from its marker without touching the members again', async () => {
+  const value = await fixture();
+  const first = await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 16 * 1024 ** 3 });
+  // The staged tree holds its own links: the second run neither re-reads
+  // KTX2 headers nor re-links, so a vanished source blob does not matter.
+  await fs.rm(path.join(value.directory, 'images/full.ktx2'));
+  const second = await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 16 * 1024 ** 3 });
+  expect(second).toEqual(first);
+  expect(await fs.readFile(path.join(path.dirname(first.masterPath), 'images/full.ktx2'))).toHaveLength(80);
+  // The capacity check still applies to a reused staging.
+  await expect(stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 1024 })).rejects.toThrow(NativeTextureCapacityError);
+});
