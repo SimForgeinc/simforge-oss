@@ -92,6 +92,62 @@ Knob notes, from both the sweep and the render-video agent's one-knob pass on a 
 - The SMAA levels differ by FLIP ≤ 0.002 at the same cost. The config still exposes all four because they are part of the wire form.
 - On one camera the frame is geometry- and shadow-bound. What moves cost is cascades, shadows, LOD, resolution and TAA; every screen-space effect lands within 0.6 ms.
 
+## Look: the dash-cam camera model, haze and shadows
+
+### Why the shadows were dark
+
+The sky fill is physical. On a 0.5-albedo plane under a box (the `sky_fill_probe` test), the rendered shadow/lit ratio is 0.132, 0.166 and 0.24 at sun elevations of 45°, 30° and 15°. The atmosphere model's E_diffuse/E_total at the same elevations is 0.126, 0.176 and 0.32. The camera made the shadows black: an incident-light meter exposed 18% grey for sunlight on dark asphalt, and AgX then crushed the toe.
+
+### The camera model (`render-core/src/camera_model.rs`, `camera.*` and `grading.toneMap: dashcamWdr`)
+
+1. The camera meters every frame from its own HDR image and nothing else, so a capture never depends on earlier frames. The meter is a 128-bin log-luminance histogram built with integer atomics, so it is deterministic. The metering mask weights the bottom of the frame over the sky (`dashcam`); `average` and `centerWeighted` are the other modes. The meter takes a trimmed mean and aims it at an 18% key, plus `compensationEv`.
+2. The metered EV100 is split into shutter (1/32000 to 1/30 s at f/1.8) and then gain (up to ISO 6400). Each frame records EV100, shutter, ISO and gain in the result `exposure` field and in the platform `exposure` diagnostics.
+3. A global WDR log curve maps the image: white at `whiteStops` above the key, the key at `midGrey`, highlights desaturating to white.
+
+There is no temporal adaptation. Bevy's `AutoExposure` depends on the previous frame, which would break history-free captures. `camera_model_exposure_does_not_depend_on_the_previous_frame` is the test for this.
+
+| Option | GPU ms/camera (3080, 720p) | Visible effect | Verdict |
+|---|---|---|---|
+| AgX + incident meter (before) | 0.02 (tonemapping) | shadowed road luma 0–8 of 255; 95–100% of shadow pixels below luma 40 | replaced |
+| Fixed EV + WDR curve (`camera.exposure.mode: fixed`) | 0.055 | 1−FLIP 0.20 vs the metered reference: about 2 EV off | knob only |
+| **Instant metering + WDR curve (default)** | **0.055** (0.12–0.13 at 1080p) | shadow luma 46–85, lit road 100–177; 0–5% of shadow pixels below luma 40 | **default** |
+| Temporal adaptation (Bevy `AutoExposure`) | ≈ the same | output depends on the previous frame | rejected |
+| Local tone mapping | about 0.2–0.4 (not built) | the global curve already leaves ≤ 5% of shadow pixels crushed; halo risk | not needed |
+
+The camera model costs about 0.44 ms per tick for the 8-camera rig, 0.9% of the training frame's 49 ms.
+
+Road luminance on the Belmont clear scene (sun 36°, 8×720p rig, tick 381), before → after. Pixels are split into shadow and lit road by the HDR capture and the semantic pass. S/L is the displayed shadow/lit luminance ratio; the scene's own HDR ratio is 0.08–0.17.
+
+| Camera | Shadow luma / lit luma, before | Showcase | Training |
+|---|---|---|---|
+| chase | 0 / 89 | 59 / 178 (S/L 0.18) | 62 / 177 (0.19) |
+| front | 0 / 64 | 53 / 138 (0.16) | 55 / 138 (0.19) |
+| left side | 4 / 96 | 85 / 160 (0.23) | 84 / 158 (0.23) |
+| rear left | 0 / 94 | 60 / 171 (0.16) | 63 / 169 (0.16) |
+
+### Haze
+
+Clear air is 25 km (TS weather presets and the engine weather table; it was 80 km), and cloudy is 20 km. `atmosphere.hazeDensity` (default 1) scales the boundary-layer term that closes Koschmieder's relation. At 25 km the term is weak: about 1.6% veil at 100 m. Toward a low sun, forward scattering (g ≈ 0.78) makes it visible. Its value is calibrated against real dash-cam footage (dash-cam calibration notes).
+
+### Tree shadows through geometry LOD (fixed)
+
+Directional shadow cascades selected LOD levels on the GPU from the wrong position. Vendored `bevy_render` resolved a cascade's camera by looking up a main-world id in a render-world query, which always missed, so the GPU fell back to Bevy's shadow LOD origin. CPU visibility used the camera. A tree's LOD chain member reached the shadow map only where both selections agreed. In the training preset (8 px) almost no Belmont street tree cast a shadow. Showcase (2 px) lost fewer, and the loss depended on camera distance and on the order in which looks were applied. Cars under trees looked sunlit because nothing shaded them: shadow receivers were never the problem (`a_car_in_shadow_is_darker_than_in_sun`: 0.35/0.34 of sun luminance). The cascade camera is now mapped by main entity, and misses are counted (`directional_shadow_cascades_resolve_lods_from_their_camera`, which fails with the upstream lookup).
+
+### Wet roads and SSR (fixed)
+
+SSR reads the deferred G-buffer, but every material drew forward, so SSR contributed nothing. Belmont rain at wetness 0.85 rendered identical bytes with SSR on and off. With SSR in the look, wet road materials now draw deferred. Dry roads and every other material stay forward, so dry frames are unchanged (`a_wet_road_reflects_in_screen_space`).
+
+### Presets vs the reference (clear Belmont, dash-cam look, tree-shadow fix)
+
+| Config | 1−FLIP | SSIM | GPU ms/frame (8 cameras) |
+|---|---|---|---|
+| showcase, 720p | 0.928 | 0.937 | 77 |
+| training, 720p | 0.830 | 0.761 | 49 |
+| showcase, 512×384 | 0.919 | 0.930 | 68 |
+| training, 512×384 | 0.807 | 0.745 | 41 |
+
+The earlier sweep tables above were scored under the AgX look, with the tree-shadow bug present. The two looks' scores are not comparable: the dash-cam look lifts shadows, and that exposes the detail differences inside them.
+
 ## Where a frame went (rc.73)
 
 - **It was geometry-bound, not pixel-bound.** Each view ran about 105 M vertex invocations per pass (depth prepass and main pass) against about 2 M fragment invocations.
