@@ -85,6 +85,15 @@ export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
   CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER,
 ] as const;
+/**
+ * Control-plane fields newer than a worker's baseline parsers, in the other
+ * direction: the worker lists what it parses in `labels.prewarmFeatures`
+ * (comma-separated) and the control plane sends a field only to a worker that
+ * listed its feature. `prewarm.derivatives` = `PrewarmSet.derivativesSha256`.
+ */
+export const WORKER_PREWARM_FEATURES_LABEL = 'prewarmFeatures' as const;
+export const CONTROL_FEATURE_PREWARM_DERIVATIVES = 'prewarm.derivatives' as const;
+export const WORKER_PREWARM_FEATURES = [CONTROL_FEATURE_PREWARM_DERIVATIVES] as const;
 
 export const JobInputTransferSchema = z.strictObject({
   inputId: z.string().min(1).max(256),
@@ -236,6 +245,13 @@ export const PrewarmSetSchema = z.strictObject({
   createdAt: z.string().min(1).max(64),
   /** The bound ambient turn-verdict table (an extra member), when the map version has one. */
   turnVerdictsSha256: RenderSha256Schema.optional(),
+  /**
+   * Digest of the render derivatives bound to the map version by descriptor
+   * (geometry LODs, the GPU texture tier), listed as extra members. Sent only
+   * to a worker whose `prewarmFeatures` lists `prewarm.derivatives`; it keys
+   * the worker's cached member list so a backfill is prewarmed too.
+   */
+  derivativesSha256: RenderSha256Schema.optional(),
 });
 export const PrewarmManifestRequestSchema = z.strictObject({
   ...ControlBaseShape,

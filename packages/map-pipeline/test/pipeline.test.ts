@@ -138,7 +138,8 @@ describe('map master pipeline', () => {
   it('builds a verbatim master with external images and a web tier that shares them', async () => {
     const workDir = await mkdtemp(path.join(os.tmpdir(), 'simforge-pipeline-work-'));
     temporaryRoots.push(workDir);
-    const result = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES });
+    const gpuTool = process.env['SIMFORGE_KTX2_GPU_VARIANT_BIN'];
+    const result = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES, texturesFullBc7: gpuTool ? { tool: gpuTool } : false });
     const master = result.stages.master;
     const web = result.stages.web!;
 
@@ -151,7 +152,13 @@ describe('map master pipeline', () => {
       await closureFromDirectory(master.outputDir),
       await closureFromDirectory(web.outputDir, 'web', web.toolFingerprint),
     );
-    expect(prebuilt.closure.members).toEqual(result.canonical.closure.members);
+    // The native closure is the composition plus the ingest-built GPU texture tier.
+    const nativeOnly = Object.fromEntries(Object.entries(result.canonical.closure.members).filter(([file]) => !file.startsWith('derived/textures-full-bc7/')));
+    expect(prebuilt.closure.members).toEqual(nativeOnly);
+    if (gpuTool) {
+      expect(result.canonical.closure.members['derived/textures-full-bc7/manifest.json']).toBeDefined();
+      expect(Object.keys(result.canonical.closure.members).filter((file) => file.startsWith('derived/textures-full-bc7/objects/')).length).toBe(3);
+    }
     const envelope = JSON.parse(await readFile(path.join(web.outputDir, '3d/variants/manifest.json'), 'utf8'));
     const bc7IndexPath = `3d/variants/${envelope.variants['textures-512-bc7'].file}`;
     const bc7Index: { images: Record<string, { file: string }> } = JSON.parse(await readFile(path.join(web.outputDir, bc7IndexPath), 'utf8'));
@@ -166,6 +173,10 @@ describe('map master pipeline', () => {
     expect(masterFiles).toContain('geometry.bin');
     expect(masterFiles).toContain('master-report.json');
     expect(masterFiles).toContain('env/sky.hdr');
+    // Geometry derivatives ride in the master (docs/engineering/map-geometry-lod.md).
+    expect(masterFiles).toContain('derived/geometry-lod/manifest.json');
+    expect(masterFiles).toContain('derived/geometry-lod/lod.gltf');
+    expect(masterFiles).toContain('derived/geometry-lod/sensor.gltf');
     const albedoDigest = sha256(albedoPng);
     const normalDigest = sha256(normalPng);
     const occlusionDigest = sha256(occlusionPng);
@@ -252,7 +263,7 @@ describe('map master pipeline', () => {
     expect(web.report.instancedNodes).toBe(2);
 
     // Cached stages return the same closure without rebuilding.
-    const again = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES });
+    const again = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES, texturesFullBc7: gpuTool ? { tool: gpuTool } : false });
     expect(again.canonical.digest).toBe(result.canonical.digest);
     expect(again.derived[0]!.digest).toBe(result.derived[0]!.digest);
 

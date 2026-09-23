@@ -106,7 +106,7 @@ export interface VegetationInstanceFile {
   lodKeepCounts?: number[][];
 }
 export type MapTextureTier = 'low' | 'medium' | 'render' | 'ml';
-export type TextureCodec = 'uastc' | 'bc7' | 'astc';
+export type TextureCodec = 'uastc' | 'bc7' | 'astc' | 'etc2';
 export interface TierSelection {
   readonly requested: MapTextureTier;
   readonly actual: MapTextureTier;
@@ -233,7 +233,7 @@ export interface CityViewerLiveQuality {
 export interface CityViewerStats {
   tierSelection: TierSelection;
   loadDiagnostics: {
-    capabilities: { maxTextureSize: number; bc7: boolean; astc: boolean; vendor: string | null; renderer: string | null };
+    capabilities: { maxTextureSize: number; bc7: boolean; astc: boolean; etc2?: boolean; vendor: string | null; renderer: string | null };
     availableVariantIds: string[];
     lastError: {
       name: string; message: string; code?: string; field?: string; cause?: string;
@@ -252,6 +252,8 @@ export interface CityViewerStats {
     admissionRefusals: Record<string, LayerStats['lastAdmissionRefusal']>;
     residencyBytes: Record<string, { resident: number; pending: number }>;
     residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
+    /** Browser pack of the selected tier: `missing` means members load one request at a time. */
+    mapPack?: ({ state: 'packed' | 'missing'; tier: string; reason: string | null; variantSource?: 'closure' | 'derived' | null } & Partial<import('./map-pack').MapPackStats>) | null;
     actorModels: Readonly<Record<string, { state: 'idle' | 'loading' | 'ready' | 'failed'; url: string; downgradeReason: string }>>;
   };
   /** Required visible geometry is resident, independently of final texture quality. */

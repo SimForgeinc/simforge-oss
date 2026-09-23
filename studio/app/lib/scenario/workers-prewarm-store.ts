@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { queryRows } from "@/app/lib/db/data-api";
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
+import { CONTROL_FEATURE_PREWARM_DERIVATIVES, WORKER_PREWARM_FEATURES_LABEL } from "@simforge-oss/render";
+import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, mapDerivativesDigest, type MapDerivativeMemberRow } from "./map-derivatives";
 
 /**
  * Worker cache prewarm: the published native map closures an approved render
@@ -54,29 +56,62 @@ export async function approvedRenderWorker(workerNodeId: string, registrationId?
   return rows.length > 0;
 }
 
-export async function listPrewarmSets() {
+/** The prewarm features a registered worker declared (`labels.prewarmFeatures`, comma-separated). */
+export async function workerPrewarmFeatures(workerNodeId: string): Promise<Set<string>> {
+  const rows = await queryRows<{ features: string | null }>(
+    `SELECT metadata->'labels'->>'${WORKER_PREWARM_FEATURES_LABEL}' AS features FROM simforge.worker_nodes WHERE id = :id AND environment = :environment`,
+    { id: workerNodeId, environment: runtimeEnvironment() },
+  );
+  return new Set((rows[0]?.features ?? "").split(",").map((feature) => feature.trim()).filter(Boolean));
+}
+
+/**
+ * Published sets. `derivativesSha256` (descriptor-bound derivatives) is sent
+ * only to a worker that declared `prewarm.derivatives`: an rc.73 worker's
+ * strict schema rejects unknown keys. The generation covers it either way.
+ */
+export async function listPrewarmSets(features: ReadonlySet<string> = new Set()) {
   const rows = await queryRows<{
     set_id: string; map_version_id: string; map_id: string; closure_sha256: string;
     object_count: number | string; byte_length: number | string; created_at: string; turn_verdicts_sha256: string | null;
+    derivatives: unknown;
   }>(
     `SELECT s.id AS set_id, mv.id AS map_version_id, mv.source_map_id AS map_id,
             s.closure_sha256, s.object_count, s.byte_length, mv.created_at::text AS created_at,
-            mv.descriptor->'ambientTurnVerdicts'->>'sha256' AS turn_verdicts_sha256
+            mv.descriptor->'ambientTurnVerdicts'->>'sha256' AS turn_verdicts_sha256,
+            ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives
      ${PUBLISHED_SETS}
      ORDER BY mv.created_at DESC, s.id`,
   );
-  const sets = rows.map((row) => ({
-    setId: row.set_id,
-    mapVersionId: row.map_version_id,
-    mapId: row.map_id,
-    closureSha256: row.closure_sha256,
-    objectCount: Number(row.object_count),
-    byteLength: Number(row.byte_length),
-    createdAt: row.created_at,
-    ...(row.turn_verdicts_sha256 && /^[a-f0-9]{64}$/.test(row.turn_verdicts_sha256) ? { turnVerdictsSha256: row.turn_verdicts_sha256 } : {}),
-  }));
+  const sendDerivatives = features.has(CONTROL_FEATURE_PREWARM_DERIVATIVES);
+  const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+  const listed = rows.map((row) => {
+    let derivativesSha256: string | undefined;
+    try {
+      derivativesSha256 = mapDerivativesDigest(boundMapDerivatives(row.derivatives), hash);
+    } catch {
+      // A malformed binding never takes the whole prewarm manifest down; its
+      // members are not served (the job lease refuses them loudly).
+      derivativesSha256 = undefined;
+    }
+    return {
+      set: {
+        setId: row.set_id,
+        mapVersionId: row.map_version_id,
+        mapId: row.map_id,
+        closureSha256: row.closure_sha256,
+        objectCount: Number(row.object_count),
+        byteLength: Number(row.byte_length),
+        createdAt: row.created_at,
+        ...(row.turn_verdicts_sha256 && /^[a-f0-9]{64}$/.test(row.turn_verdicts_sha256) ? { turnVerdictsSha256: row.turn_verdicts_sha256 } : {}),
+        ...(sendDerivatives && derivativesSha256 ? { derivativesSha256 } : {}),
+      },
+      derivativesSha256,
+    };
+  });
+  const sets = listed.map((entry) => entry.set);
   const generation = createHash("sha256")
-    .update(JSON.stringify(sets.map((set) => [set.setId, set.closureSha256, set.objectCount, set.turnVerdictsSha256 ?? null])))
+    .update(JSON.stringify(listed.map(({ set, derivativesSha256 }) => [set.setId, set.closureSha256, set.objectCount, set.turnVerdictsSha256 ?? null, derivativesSha256 ?? null])))
     .digest("hex");
   return { schema: CONTROL_SCHEMA, type: "worker.prewarm-manifest" as const, generation, sets };
 }
@@ -105,6 +140,13 @@ export async function listPrewarmMembers(setId: string, after: string | null, pa
   if (next === null) {
     const verdicts = await boundTurnVerdicts(setId);
     if (verdicts && !members.some((member) => member.relativePath === AMBIENT_TURN_VERDICTS_PATH)) members.push(verdicts);
+    // Derivatives bound by descriptor (map-derivatives.ts), likewise.
+    const inSet = new Set((await queryRows<{ relative_path: string }>(
+      `SELECT relative_path FROM simforge.native_map_asset_members
+        WHERE asset_set_id = :set_id AND relative_path LIKE 'derived/%'`,
+      { set_id: setId },
+    )).map((row) => row.relative_path));
+    for (const member of await boundDerivativeBlobs(setId, inSet)) members.push({ relativePath: member.relativePath, sha256: member.sha256, sizeBytes: member.byteLength });
   }
   return { schema: CONTROL_SCHEMA, type: "worker.prewarm-members" as const, members, next };
 }
@@ -123,6 +165,41 @@ async function boundTurnVerdicts(setId: string) {
   );
   const row = rows[0];
   return row ? { relativePath: AMBIENT_TURN_VERDICTS_PATH, sha256: row.sha256, sizeBytes: Number(row.byte_length) } : null;
+}
+
+/** Verified blobs of the derivative sets a published set's map version binds (map-derivatives.ts). */
+async function boundDerivativeBlobs(setId: string, inSet: ReadonlySet<string> = new Set()) {
+  const bindingRows = await queryRows<{ derivatives: unknown }>(
+    `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives ${PUBLISHED_SETS} AND s.id = :set_id LIMIT 1`,
+    { set_id: setId },
+  );
+  let bindings;
+  try {
+    bindings = boundMapDerivatives(bindingRows[0]?.derivatives);
+  } catch {
+    return [];
+  }
+  if (bindings.length === 0) return [];
+  const rows = await queryRows<MapDerivativeMemberRow & { storage_bucket: string; storage_key: string }>(
+    `SELECT ds.id AS set_id, dm.relative_path, db.sha256, db.byte_length, db.storage_bucket, db.storage_key
+       FROM simforge.map_versions mv
+       JOIN simforge.native_map_asset_sets s ON s.id = mv.native_map_asset_set_id AND s.id = :set_id AND s.asset_set_state = 'available'
+       ${MAP_DERIVATIVE_MEMBERS_JOIN_SQL}
+      WHERE mv.retired_at IS NULL
+      ORDER BY dm.relative_path`,
+    { set_id: setId },
+  );
+  let members;
+  try {
+    members = derivativeMembers(bindings, rows);
+  } catch {
+    // An incomplete derivative set is not prewarmed; the job lease refuses it loudly.
+    return [];
+  }
+  const byPath = new Map(rows.map((row) => [row.relative_path, row]));
+  return mapDerivativeExtraMembers(members, inSet).map((member) => ({
+    ...member, storageBucket: byPath.get(member.relativePath)!.storage_bucket, storageKey: byPath.get(member.relativePath)!.storage_key,
+  }));
 }
 
 /**
@@ -155,6 +232,12 @@ export async function signPrewarmBlobs(setId: string, sha256s: readonly string[]
     { set_id: setId, digests: digests.join(",") },
   );
   if (verdictRows[0] && !rows.some((row) => row.sha256 === verdictRows[0]!.sha256)) rows.push(verdictRows[0]);
+  const wanted = new Set(digests);
+  for (const member of await boundDerivativeBlobs(setId)) {
+    if (wanted.has(member.sha256) && !rows.some((row) => row.sha256 === member.sha256)) {
+      rows.push({ sha256: member.sha256, storage_bucket: member.storageBucket, storage_key: member.storageKey });
+    }
+  }
   const expiresAt = new Date(Date.now() + BLOB_URL_TTL_SECONDS * 1000).toISOString();
   await Promise.all(rows.map(async (row) => {
     downloads[row.sha256] = {

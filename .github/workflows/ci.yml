@@ -47,6 +47,7 @@ jobs:
         # additive changes need the refreshed scenario-contract.lock.json.
         run: pnpm scenario:contract:check --base "origin/${{ github.base_ref || 'main' }}"
       - run: pnpm test:release
+      - run: pnpm test:bench
       - name: Test the repository scripts
         # Nothing referenced scripts/__tests__ before this step: five test
         # files sat in the tree looking like coverage and never executed.

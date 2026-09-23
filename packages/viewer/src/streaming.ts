@@ -136,6 +136,13 @@ export interface TileStreamLayerOptions {
   required?: (def: StreamTileDef, distance: number) => boolean;
   /** Dynamic upper LOD bound for runtime fidelity modes. */
   maxDesiredIndex?: (def: StreamTileDef) => number;
+  /**
+   * Decoded-but-not-displayed assets allowed at once (fetching + upload queue +
+   * compiling). Defaults to {@link MAX_UPLOAD_BACKLOG}; the viewer widens it
+   * while the first view is assembling, when nothing interactive is on screen
+   * to protect and a depth of 3 serialises the load.
+   */
+  maxBacklog?: () => number;
   /** Optional admission/eviction bias. Larger values are lower priority (vegetation uses this). */
   priorityBias?: number;
   onDisplay?: (def: StreamTileDef, asset: PreparedAsset, index: number) => void;
@@ -383,7 +390,8 @@ export class TileStreamLayer {
     // pacer uploads it. Letting the fetchers run ahead of the (deliberately
     // slow) upload pacer is how the transient footprint explodes, so the
     // backlog is capped.
-    if (this.uploadQueue.length + this.compiling.size >= MAX_UPLOAD_BACKLOG) return;
+    const backlog = this.opts.maxBacklog?.() ?? MAX_UPLOAD_BACKLOG;
+    if (this.uploadQueue.length + this.compiling.size >= backlog) return;
     let active = 0;
     for (const entry of this.entries.values()) if (entry.loading) active++;
     if (active >= this.opts.maxConcurrent) return;
@@ -401,7 +409,7 @@ export class TileStreamLayer {
 
     for (const entry of wanted) {
       if (active >= this.opts.maxConcurrent
-        || active + this.uploadQueue.length + this.compiling.size >= MAX_UPLOAD_BACKLOG) break;
+        || active + this.uploadQueue.length + this.compiling.size >= backlog) break;
 
       // If the selected detail cannot fit, walk toward the coarsest LOD. A
       // resident fallback is immediately usable; otherwise try to admit the

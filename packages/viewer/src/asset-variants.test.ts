@@ -79,6 +79,24 @@ it('selects only native formats exposed by the actual context and reports codec 
   expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ actual: 'medium', codec: 'uastc', variantId: 'textures-512-uastc', downgradeReason: expect.stringContaining('unavailable') });
   maxTextureSize = 256;
   expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ actual: 'low', codec: 'uastc', longestEdgePx: 256, downgradeReason: expect.stringContaining('MAX_TEXTURE_SIZE') });
+  maxTextureSize = 4096;
   maxTextureSize = 128;
   expect(() => selectTextureTier('medium', probeTextureCapabilities(gl))).toThrow('minimum Low');
+});
+
+it('cooks Low for the GPU too: BC7, then ASTC, then ETC2, and transcodes UASTC only when none is exposed', () => {
+  const extensions = new Set(['EXT_texture_compression_bptc', 'WEBGL_compressed_texture_astc', 'WEBGL_compressed_texture_etc']);
+  const gl = {
+    MAX_TEXTURE_SIZE: 0x0d33,
+    getParameter: () => 4096,
+    getExtension: (name: string) => extensions.has(name) ? {} : null,
+  } as unknown as WebGL2RenderingContext;
+  expect(selectTextureTier('low', probeTextureCapabilities(gl))).toMatchObject({ actual: 'low', codec: 'bc7', variantId: 'textures-256-bc7', downgradeReason: null });
+  extensions.delete('EXT_texture_compression_bptc');
+  expect(selectTextureTier('low', probeTextureCapabilities(gl))).toMatchObject({ codec: 'astc', variantId: 'textures-256-astc', downgradeReason: null });
+  extensions.delete('WEBGL_compressed_texture_astc');
+  expect(selectTextureTier('low', probeTextureCapabilities(gl))).toMatchObject({ codec: 'etc2', variantId: 'textures-256-etc2', downgradeReason: null });
+  expect(selectTextureTier('medium', probeTextureCapabilities(gl))).toMatchObject({ codec: 'etc2', variantId: 'textures-512-etc2' });
+  extensions.clear();
+  expect(selectTextureTier('low', probeTextureCapabilities(gl))).toMatchObject({ codec: 'uastc', variantId: 'textures-256-uastc', downgradeReason: expect.stringContaining('transcoding portable UASTC') });
 });
