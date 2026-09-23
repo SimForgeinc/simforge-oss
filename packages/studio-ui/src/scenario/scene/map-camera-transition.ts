@@ -2,7 +2,12 @@ import type { AssetDownloadStats, CameraView } from "@simforge-oss/viewer";
 import { VisibleClock } from "../../lib/visible-clock";
 
 export const MAP_ZOOM_IN_MS = 1_800;
-export const MAP_MODEL_STABLE_MS = 600;
+/**
+ * Quiet window before a map counts as loaded. It guarded against the old
+ * whole-queue test briefly reading zero between decode batches; the required
+ * view scope (below) does not flap that way, so a few polls are enough.
+ */
+export const MAP_MODEL_STABLE_MS = 200;
 export const MAP_MODEL_LOAD_TIMEOUT_MS = 90_000;
 
 export type MapModelLoadSnapshot = {
@@ -24,16 +29,26 @@ export type MapModelLoadSnapshot = {
   wantedTiles?: number;
   /** Estimated GPU bytes held by resident tiles. */
   residentBytes?: number;
+  /**
+   * Assets the current view requires that are not resident yet (roads, and
+   * every city cell on screen or within the block the camera stands in), and
+   * on-screen cells showing nothing. When the viewer reports them, loaded
+   * means "the view is complete": prefetch beyond it and vegetation keep
+   * streaming in behind an interactive scene instead of holding it back.
+   */
+  requiredPendingAssets?: number;
+  missingInViewTiles?: number;
 };
 
 export function mapModelsFullyLoaded(snapshot: MapModelLoadSnapshot): boolean {
+  const viewComplete = snapshot.requiredPendingAssets !== undefined
+    ? snapshot.requiredPendingAssets === 0 && (snapshot.missingInViewTiles ?? 0) === 0
+    : snapshot.loading === 0 && snapshot.queued === 0 && snapshot.uploading === 0;
   return Boolean(
     snapshot.roadReady &&
       snapshot.roadVisible &&
       snapshot.sceneAssetsReady !== false &&
-      snapshot.loading === 0 &&
-      snapshot.queued === 0 &&
-      snapshot.uploading === 0 &&
+      viewComplete &&
       !snapshot.streamingError,
   );
 }
@@ -153,6 +168,8 @@ function snapshotActivityKey(snapshot: MapModelLoadSnapshot): string {
     snapshot.downloads?.cachedBytes ?? 0,
     snapshot.downloads?.discoveryComplete,
     snapshot.downloads?.totalBytes ?? "unknown",
+    snapshot.requiredPendingAssets ?? "-",
+    snapshot.missingInViewTiles ?? "-",
   ].join(":");
 }
 

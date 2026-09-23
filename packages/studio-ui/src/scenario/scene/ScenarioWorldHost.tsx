@@ -12,10 +12,7 @@ import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
 import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
-  animateMapCamera,
   type MapModelLoadSnapshot,
-  MAP_ZOOM_IN_MS,
-  pulledBackMapView,
   waitForMapModelsFullyLoaded,
 } from "./map-camera-transition";
 import {
@@ -593,13 +590,10 @@ export function ScenarioWorldHost({
               message: `Loading ${current.label} assets`,
               detail: "Loading roads, buildings, and map objects…",
             });
-            const destinationView =
-              supportsMapCameraTransition(viewer) && !prefersReducedMotion()
-                ? viewer.controls.getView()
-                : null;
-            const pulledBackDestination = destinationView
-              ? pulledBackMapView(destinationView)
-              : null;
+            // The scene loads at the view it opens on and is revealed there as
+            // soon as that view is complete. It used to load from a pulled-back
+            // view and then zoom in for 1.8 s: the required scope was judged at
+            // the wrong view, and the zoom was pure latency on every load.
             const prepareReveal = () => {
               const latest = targetRef.current ?? retainedTargetRef.current;
               if (
@@ -622,34 +616,10 @@ export function ScenarioWorldHost({
                 return;
               }
               cancelModelSettleRef.current = null;
-              if (
-                supportsMapCameraTransition(viewer) &&
-                destinationView &&
-                pulledBackDestination &&
-                transitionPhaseRef.current === "loading" &&
-                !prefersReducedMotion()
-              ) {
-                viewer.setCameraPoseConstraintsEnabled(false);
-                viewer.controls.setEnabled(false);
-                updateTransitionPhase("zooming-in");
-                cancelCameraAnimationRef.current = animateMapCamera(
-                  (view) => viewer.controls.applyView(view),
-                  pulledBackDestination,
-                  destinationView,
-                  MAP_ZOOM_IN_MS,
-                  prepareReveal,
-                );
-              } else {
-                prepareReveal();
-              }
+              prepareReveal();
             };
 
             if (supportsMapModelReadiness(viewer)) {
-              if (pulledBackDestination) {
-                viewer.setCameraPoseConstraintsEnabled(false);
-                viewer.controls.setEnabled(false);
-                viewer.controls.applyView(pulledBackDestination);
-              }
               updateTransitionPhase("loading");
               cancelModelSettleRef.current?.();
               cancelModelSettleRef.current = waitForMapModelsFullyLoaded(
@@ -670,6 +640,8 @@ export function ScenarioWorldHost({
                     residentTiles: stats.residentTiles,
                     wantedTiles: wantedTiles(stats),
                     residentBytes: stats.residentBytes,
+                    requiredPendingAssets: stats.requiredPendingAssets,
+                    missingInViewTiles: stats.coverage.city?.missingInViewTiles ?? 0,
                   };
                 },
                 completeMapLoad,
@@ -737,14 +709,6 @@ export function ScenarioWorldHost({
 }
 
 
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 function supportsMapCameraTransition(
   viewer: CityViewer | null,

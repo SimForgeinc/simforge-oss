@@ -67,6 +67,17 @@ describe("map camera transition", () => {
     cancel();
   });
 
+  it("counts the view as loaded once its required scope is resident, while prefetch and vegetation still stream", () => {
+    const base = { roadReady: true, roadVisible: true, loading: 3, queued: 12, uploading: 2 };
+    // Without the viewer's required-scope counters the whole queue must drain.
+    expect(mapModelsFullyLoaded(base)).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 1, missingInViewTiles: 0 })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 1 })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0 })).toBe(true);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0, streamingError: "boom" })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0, roadVisible: false })).toBe(false);
+  });
+
   it("times out only after work stops progressing, not during a slow download", () => {
     vi.useFakeTimers();
     const downloads = {
