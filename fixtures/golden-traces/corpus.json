@@ -1,0 +1,303 @@
+{
+  "schema": "simforge.golden-corpus/v1",
+  "description": "Golden-trace corpus: the CI lock on engine semantics (docs/engineering/engine-semver.md). `ci` cases run on the committed Richmond Field Station closure under maps/; `local` cases run on installed private maps and are skipped where absent. Digests live in manifest.json, written by `pnpm golden-traces:update`.",
+  "cases": [
+    {
+      "id": "rfs-uturn-car",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "u-turn",
+        "eased-stop-at-route-end"
+      ],
+      "source": {
+        "kind": "input",
+        "path": "fixtures/golden-traces/inputs/rfs-uturn-car.input.json"
+      }
+    },
+    {
+      "id": "rfs-uturn-truck",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "u-turn",
+        "truck-turn-geometry",
+        "eased-stop-at-route-end"
+      ],
+      "source": {
+        "kind": "input",
+        "path": "fixtures/golden-traces/inputs/rfs-uturn-truck.input.json"
+      }
+    },
+    {
+      "id": "rfs-stop-and-go",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "stop",
+        "stop-and-go",
+        "speed-interaction"
+      ],
+      "source": {
+        "kind": "input",
+        "path": "fixtures/golden-traces/inputs/rfs-stop-and-go.input.json"
+      }
+    },
+    {
+      "id": "rfs-walkers-crossing",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "walker",
+        "pedestrian-vehicle-conflict"
+      ],
+      "source": {
+        "kind": "input",
+        "path": "fixtures/golden-traces/inputs/rfs-walkers-crossing.input.json"
+      }
+    },
+    {
+      "id": "rfs-collider-building",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "static-map-colliders",
+        "collision-response"
+      ],
+      "source": {
+        "kind": "input",
+        "path": "fixtures/golden-traces/inputs/rfs-collider-building.input.json"
+      }
+    },
+    {
+      "id": "rfs-ambient-heavy-1",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "signals",
+        "stop"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-1",
+        "clipSeconds": 12,
+        "maxActors": 48
+      }
+    },
+    {
+      "id": "rfs-ambient-heavy-2",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "signals",
+        "stop"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-2",
+        "clipSeconds": 12,
+        "maxActors": 48
+      }
+    },
+    {
+      "id": "rfs-ambient-city-1",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-city",
+        "signals",
+        "stop"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "city",
+        "seed": "ambient-1",
+        "clipSeconds": 12,
+        "maxActors": 48
+      }
+    },
+    {
+      "id": "rfs-template-ltap",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "template-compile",
+        "pinned-site",
+        "legacy-seed-from-name"
+      ],
+      "source": {
+        "kind": "template",
+        "path": "examples/ltap-opposing.template.json",
+        "siteId": "3dd7bb59d80de7ee",
+        "drawIndex": 0
+      }
+    },
+    {
+      "id": "rfs-template-ltap-pinned-seed",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "template-compile",
+        "pinned-site",
+        "pinned-simulation-seed"
+      ],
+      "source": {
+        "kind": "template",
+        "path": "fixtures/golden-traces/templates/ltap-opposing.pinned.template.json",
+        "siteId": "3dd7bb59d80de7ee",
+        "drawIndex": 0
+      }
+    },
+    {
+      "id": "stopspin-richmond-field-station-ambient-1",
+      "tier": "local",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-1",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-richmond-field-station-ambient-2",
+      "tier": "local",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-2",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-richmond-field-station-ambient-3",
+      "tier": "local",
+      "map": "richmond-field-station",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-3",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-yale-street-ambient-1",
+      "tier": "local",
+      "map": "yale-street",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-1",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-yale-street-ambient-2",
+      "tier": "local",
+      "map": "yale-street",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-2",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-yale-street-ambient-3",
+      "tier": "local",
+      "map": "yale-street",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-3",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-el-camino-road-ambient-1",
+      "tier": "local",
+      "map": "el-camino-road",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-1",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-el-camino-road-ambient-2",
+      "tier": "local",
+      "map": "el-camino-road",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-2",
+        "clipSeconds": 60
+      }
+    },
+    {
+      "id": "stopspin-el-camino-road-ambient-3",
+      "tier": "local",
+      "map": "el-camino-road",
+      "covers": [
+        "ambient-traffic",
+        "ambient-heavy",
+        "stop-spin-corpus"
+      ],
+      "source": {
+        "kind": "ambient",
+        "preset": "heavy",
+        "seed": "ambient-3",
+        "clipSeconds": 60
+      }
+    }
+  ]
+}

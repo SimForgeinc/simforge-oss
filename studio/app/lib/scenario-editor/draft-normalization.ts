@@ -246,7 +246,7 @@ function readScenarioMetadata(
 }
 
 const DEFAULT_DURATION_SECONDS = SCENARIO_TIMING.defaultDurationSeconds;
-const DEFAULT_FIXED_DELTA_SECONDS = 0.05;
+const DEFAULT_FIXED_DELTA_SECONDS = SIMULATION_DEFAULTS.fixedDeltaSeconds;
 const DEFAULT_PHYSICS_PROFILE_ID = SIMULATION_DEFAULTS.physicsProfileId;
 
 type DraftNormalizationOptions = {
@@ -890,7 +890,8 @@ function buildNativeDraft(
     },
     simulationConfig: {
       duration_seconds: draft.durationSeconds,
-      fixed_delta_seconds: draft.fixedDeltaSeconds,
+      // One simulation step everywhere (20 ms); a legacy draft's other value is not carried forward.
+      fixed_delta_seconds: SIMULATION_DEFAULTS.fixedDeltaSeconds,
       physics_profile_id: draft.physicsProfileId,
     },
     // The expanded ambient members are ephemeral; only the region spec below

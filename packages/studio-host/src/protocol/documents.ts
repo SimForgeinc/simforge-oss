@@ -16,6 +16,9 @@ import {
   type ScenarioRevisionDto,
   type ScenarioRevisionEvidenceDto,
   type ScenarioSimulationPreviewDto,
+  type ScenarioSimulationResultDto,
+  type ScenarioSimulationStatusDto,
+  type ScenarioSimulationVerificationDto,
   type ScenarioTagDto,
 } from "../contracts";
 import { endpoint } from "./endpoint";
@@ -79,6 +82,8 @@ export const ScenarioDocumentSchema = object<ScenarioDocumentDto>({
   mapVersionId: nullable(string()),
   mapSourceMapId: optional(nullable(string())),
   mapXodrSha256: optional(nullable(string())),
+  mapClosureSha256: optional(nullable(string())),
+  assetCatalogVersionId: optional(nullable(string())),
   datasetId: string(),
   authoringQualityId: oneOf(SCENARIO_AUTHORING_QUALITY_IDS),
   createdAt: string(),
@@ -274,6 +279,8 @@ export type UpdateDocumentRequest = {
   description?: string;
   content?: ScenarioTemplateV2;
   authoringQualityId?: ScenarioAuthoringQuality;
+  /** Explicit re-pin to another immutable map version (see `resolveScenarioMap`). */
+  mapVersionId?: string;
 };
 
 export type DuplicateDocumentRequest = { title?: string; datasetId?: string };
@@ -378,30 +385,32 @@ export type UpsertDocumentRatingRequest = {
 };
 export type ListRatingAggregatesRequest = { documentIds: string[] };
 
-export type CreateRevisionRequest = ScenarioRevisionEvidenceDto & {
+/**
+ * A revision commit names only the draft version it freezes; the host binds
+ * the authoritative simulation's traffic evidence itself.
+ */
+export type CreateRevisionRequest = {
   expectedVersion: number;
   idempotencyKey: string;
 };
 
-export type ReserveSimulationPreviewRequest = { expectedVersion: number; sha256: string; sizeBytes: number };
-export type CompleteSimulationPreviewRequest = ReserveSimulationPreviewRequest & { artifactId: string };
-
-export type ReserveMaterializedTrafficRequest = Omit<ScenarioMaterializedTrafficReferenceDto, "artifactId"> & {
-  expectedVersion: number;
-};
-export type CompleteMaterializedTrafficRequest = ScenarioMaterializedTrafficReferenceDto;
+export type ResolveSimulationRequest = { expectedVersion?: number; waitMs?: number };
+export type SimulationVerificationOutcomeDto = { outcome: "verified" | "mismatch"; authoritativeTraceSha256: string };
+/** The native evaluation of one authoritative trace (`TraceEvaluation` from `@simforge-oss/engine`). */
+export type SimulationEvaluationDto = { simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } };
 
 // ── Endpoints ────────────────────────────────────────────────────────────────
 
 const DOCUMENTS = "/api/simforge/documents" as const;
 const TAGS = "/api/simforge/tags" as const;
+const SIMULATIONS = "/api/simforge/simulations" as const;
 const document = ({ documentId }: { documentId: string }) => `${DOCUMENTS}/${encodeURIComponent(documentId)}` as const;
 const tag = ({ tagId }: { tagId: string }) => `${TAGS}/${encodeURIComponent(tagId)}` as const;
 
 /**
  * `documents` group, protocol v1: documents, their organizational tags,
- * ratings, revisions and the two reserve/complete upload handshakes. The byte
- * upload itself is a `PUT` to the reservation's `uploadUrl`, not an endpoint here.
+ * ratings, revisions and authoritative simulations. The client uploads nothing
+ * for a simulation or a revision: the host computes both.
  */
 export const documentsProtocol = {
   listSummaries: endpoint<void, ListDocumentSummariesQuery, void, ScenarioDocumentSummaryPageDto>({
@@ -540,41 +549,38 @@ export const documentsProtocol = {
     response: CreateScenarioRevisionResultSchema,
   }),
 
-  /** A readable document with no current generated preview answers JSON null. */
-  getSimulationPreview: endpoint<{ documentId: string }, void, void, ScenarioSimulationPreviewDto | null>({
+  /**
+   * The authoritative simulation of the document's current draft, resolved by
+   * the host (memoized by content, joined when in flight, executed inline or
+   * on a CPU runner). The client sends only the draft version it shows.
+   */
+  resolveSimulation: endpoint<{ documentId: string }, void, ResolveSimulationRequest, ScenarioSimulationStatusDto & { draftVersion: number }>({
+    method: "POST",
+    path: (params) => `${document(params)}/simulation`,
+    response: passthrough<ScenarioSimulationStatusDto & { draftVersion: number }>(),
+  }),
+  /** One immutable authoritative result by `simKey`. */
+  getSimulation: endpoint<{ simKey: string }, void, void, ScenarioSimulationResultDto>({
     method: "GET",
-    path: (params) => `${document(params)}/simulation-preview`,
-    response: nullable(ScenarioSimulationPreviewSchema),
+    path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}`,
+    response: passthrough<ScenarioSimulationResultDto>(),
   }),
-  reserveSimulationPreview: endpoint<{ documentId: string }, void, ReserveSimulationPreviewRequest, UploadReservationDto>({
+  /** Report the editor's local preview digest against the authoritative result (telemetry). */
+  verifySimulation: endpoint<{ simKey: string }, void, ScenarioSimulationVerificationDto, SimulationVerificationOutcomeDto>({
     method: "POST",
-    path: (params) => `${document(params)}/simulation-preview`,
-    response: UploadReservationSchema,
+    path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/verification`,
+    response: passthrough<SimulationVerificationOutcomeDto>(),
   }),
-  completeSimulationPreview: endpoint<{ documentId: string }, void, CompleteSimulationPreviewRequest, { ok: true }>({
+  /** Grade the authoritative trace by key with the native evaluator (never re-simulates). */
+  evaluateSimulation: endpoint<{ simKey: string }, void, { filters?: Record<string, unknown> }, SimulationEvaluationDto>({
     method: "POST",
-    path: (params) => `${document(params)}/simulation-preview/complete`,
-    response: object({ ok: literal(true) }),
+    path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/evaluation`,
+    response: passthrough<SimulationEvaluationDto>(),
   }),
-
-  reserveMaterializedTraffic: endpoint<
-    { documentId: string },
-    void,
-    ReserveMaterializedTrafficRequest,
-    UploadReservationDto
-  >({
+  /** The authoritative simulation a revision renders and is evaluated against (lazily re-simulated if needed). */
+  resolveRevisionSimulation: endpoint<{ revisionId: string }, void, { waitMs?: number }, ScenarioSimulationStatusDto>({
     method: "POST",
-    path: (params) => `${document(params)}/materialized-traffic/reserve`,
-    response: UploadReservationSchema,
-  }),
-  completeMaterializedTraffic: endpoint<
-    { documentId: string },
-    void,
-    CompleteMaterializedTrafficRequest,
-    ScenarioMaterializedTrafficReferenceDto
-  >({
-    method: "POST",
-    path: (params) => `${document(params)}/materialized-traffic/complete`,
-    response: ScenarioMaterializedTrafficReferenceSchema,
+    path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/simulation`,
+    response: passthrough<ScenarioSimulationStatusDto>(),
   }),
 } as const;

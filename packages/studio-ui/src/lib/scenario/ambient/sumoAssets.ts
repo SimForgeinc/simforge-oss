@@ -1,11 +1,19 @@
 import {
   buildSumoRoadOccupancyIndex,
   buildSumoRouteDocument as buildSharedSumoRouteDocument,
+  localizeSumoRouteCandidates,
+  selectActorCenteredSumoDemand,
   sumoNumericSeed,
-  sumoSceneToNetwork,
+  sumoSignalBookIndication,
+  synthesizeSumoSignalPrograms,
   validateSumoNetworkManifest,
   validateSumoRuntimeManifest,
+  SUMO_DEMAND_ROUTE_OPTIONS,
+  SUMO_DEMAND_WARMUP_SECONDS,
+  type ControlIndication,
   type ResolvedAmbientTrafficProfile,
+  type RoadControl,
+  type SignalProgram,
   type SumoNetworkManifest,
   type SumoRuntimeManifest,
   type SumoRoadOccupancyIndex,
@@ -13,7 +21,6 @@ import {
 import type { ActorView } from "@simforge-oss/viewer";
 import type { MapEntry } from "../maps";
 import type {
-  NetworkWorldTransform,
   TrafficNetworkPayload,
   TrafficStepResult,
 } from "@simforge-oss/playback";
@@ -34,6 +41,24 @@ export {
   SUMO_RUNTIME_MODULE_URL,
   SUMO_RUNTIME_WASM_URL,
 };
+// One demand implementation for the preview and the worker (`@simforge-oss/engine`).
+export { localizeSumoRouteCandidates, selectActorCenteredSumoDemand, SUMO_DEMAND_WARMUP_SECONDS };
+export type { LocalizedSumoRouteCandidates } from "@simforge-oss/engine";
+
+/**
+ * The SimForge signal book the preview's SUMO obeys: the compiled programs
+ * and the local trace's recorded phases. With it, preview vehicles stop at
+ * the same heads the editor paints — and at the same heads the worker's
+ * authoritative traffic stops at.
+ */
+export interface SumoPreviewSignalBook {
+  readonly programs: readonly SignalProgram[];
+  readonly roadControls: readonly RoadControl[];
+  readonly trace: {
+    readonly header: { readonly dt: number; readonly warmupSeconds: number; readonly clipSeconds: number };
+    readonly ticks: { readonly signals?: Readonly<Record<string, { readonly phase: readonly ControlIndication[] }>> };
+  };
+}
 
 export type SumoMapManifest = SumoNetworkManifest & {
   readonly mapVersionId: string;
@@ -91,6 +116,7 @@ export async function loadSumoAssets(
   signal?: AbortSignal,
   fixedStepSeconds = .05,
   allSignalsGreen = false,
+  signalBook?: SumoPreviewSignalBook,
 ): Promise<LoadedSumoAssets> {
   if (!(fixedStepSeconds > 0) || !Number.isFinite(fixedStepSeconds)) {
     throw new Error("SUMO fixed step must be finite and positive");
@@ -187,13 +213,14 @@ export async function loadSumoAssets(
   }
   const { runtime, wasmBinary, wasmModule } = runtimeAssets;
   const { manifest, networkXml, signalTopology, occupancyRoads } = mapAssets;
-  // Real map timing is authoritative by default. Authors can explicitly opt
-  // into a fitted preview cycle without changing link topology.
+  // The SimForge signal book is authoritative. Authors can explicitly opt
+  // into a fitted preview cycle (or all-green) without changing link topology.
   const synchronized = signalNetworkForScenario(
     networkXml,
     acceleratedSignalCycles,
     20,
     allSignalsGreen,
+    signalBook,
   );
   const network = new TextEncoder().encode(synchronized.xml).buffer;
   const localized = localizeSumoRouteCandidates(
@@ -245,7 +272,19 @@ export function signalNetworkForScenario(
   acceleratedSignalCycles: boolean,
   scenarioSeconds = 20,
   allSignalsGreen = false,
+  signalBook?: SumoPreviewSignalBook,
 ): { readonly xml: string; readonly adjustedControllers: number } {
+  if (signalBook && !acceleratedSignalCycles && !allSignalsGreen) {
+    // Same step mapping as the worker: SUMO time 0 is scene time -warmup.
+    const preRollSteps = Math.round(SUMO_DEMAND_WARMUP_SECONDS / 0.02);
+    const synthesis = synthesizeSumoSignalPrograms(networkXml, signalBook.programs, {
+      stepSeconds: 0.02,
+      stepCount: preRollSteps + Math.round(signalBook.trace.header.clipSeconds / 0.02) + 1,
+      indication: sumoSignalBookIndication({ ...signalBook.trace, header: { ...signalBook.trace.header, dt: 0.02 } }, preRollSteps),
+      roadControls: signalBook.roadControls,
+    });
+    return { xml: synthesis.xml, adjustedControllers: synthesis.report.trafficLights };
+  }
   const synchronized = acceleratedSignalCycles
     ? fitSumoSignalProgramsToScenario(networkXml, scenarioSeconds)
     : { xml: networkXml, adjustedControllers: 0 };
@@ -274,166 +313,13 @@ export function validateSumoRuntimeBinary(
   return binary;
 }
 
-const SUMO_REPLENISHMENT_PERIOD_SECONDS = 40;
-const SUMO_DEPARTURE_WINDOW_SECONDS = 30;
-export const SUMO_DEMAND_WARMUP_SECONDS = 60;
-const SUMO_LOCAL_RADIUS_METERS = 300;
-const SUMO_APPROACH_RADIUS_METERS = 700;
+const SUMO_REPLENISHMENT_PERIOD_SECONDS = SUMO_DEMAND_ROUTE_OPTIONS.replenishmentPeriodSeconds!;
 
 export function buildSumoRouteDocument(
   candidates: readonly (readonly string[])[],
   profile: ResolvedAmbientTrafficProfile,
 ): string {
-  return buildSharedSumoRouteDocument(candidates, profile, {
-    departureWindowSeconds: SUMO_DEPARTURE_WINDOW_SECONDS,
-    replenishmentPeriodSeconds: SUMO_REPLENISHMENT_PERIOD_SECONDS,
-    replenishmentStride: 4,
-    flowEndSeconds: 3600,
-  });
-}
-
-/**
- * Prefer routes whose departure edge is close to the authored action/camera.
- * This is intentionally an offline XML scan during provider initialization;
- * no network conversion or route finding is moved onto the main frame loop.
- */
-export function localizeSumoRouteCandidates(
-  candidates: readonly (readonly string[])[],
-  networkXml: string,
-  transform: NetworkWorldTransform,
-  focuses: readonly SumoDemandFocus[],
-): LocalizedSumoRouteCandidates {
-  const geometry = parseEdgeGeometry(networkXml);
-  if (focuses.length === 0) {
-    return {
-      candidates,
-      nearbyCandidates: [],
-      approachCandidates: [],
-      backgroundCandidates: candidates,
-      nearbyRouteStarts: 0,
-    };
-  }
-  const networkFocuses = focuses.map((focus) => sumoSceneToNetwork(focus, transform));
-  const ranked = candidates
-    .map((candidate, ordinal) => {
-      const point = geometry.centers.get(candidate[0] ?? "");
-      const distances = point
-        ? networkFocuses.map(
-            (focus) =>
-              Math.hypot(point.x - focus.x, point.y - focus.y) * transform.scale,
-          )
-        : [];
-      const distance = distances.length > 0 ? Math.min(...distances) : Number.POSITIVE_INFINITY;
-      const focusIndex = distances.indexOf(distance);
-      return { candidate, ordinal, distance, focusIndex };
-    })
-    .sort(
-      (left, right) =>
-        left.distance - right.distance || left.ordinal - right.ordinal,
-    );
-  const nearby = balanceSumoCandidatesAcrossFocuses(
-    ranked.filter((item) => item.distance <= SUMO_LOCAL_RADIUS_METERS),
-    focuses.length,
-  );
-  const approach = balanceSumoCandidatesAcrossFocuses(
-    ranked.filter(
-      (item) =>
-        item.distance > SUMO_LOCAL_RADIUS_METERS &&
-        item.distance <= SUMO_APPROACH_RADIUS_METERS,
-    ),
-    focuses.length,
-  );
-  const background = balanceSumoCandidatesAcrossFocuses(
-    ranked.filter((item) => item.distance > SUMO_APPROACH_RADIUS_METERS),
-    focuses.length,
-  );
-  return {
-    candidates: [...nearby, ...approach, ...background],
-    nearbyCandidates: nearby,
-    approachCandidates: approach,
-    backgroundCandidates: background,
-    nearbyRouteStarts: nearby.length,
-  };
-}
-
-export interface LocalizedSumoRouteCandidates {
-  readonly candidates: readonly (readonly string[])[];
-  readonly nearbyCandidates: readonly (readonly string[])[];
-  readonly approachCandidates: readonly (readonly string[])[];
-  readonly backgroundCandidates: readonly (readonly string[])[];
-  readonly nearbyRouteStarts: number;
-}
-
-/** Select a deterministic 70/20/10 local/approach/background population. */
-export function selectActorCenteredSumoDemand(
-  localized: LocalizedSumoRouteCandidates,
-  maxActors: number,
-): readonly (readonly string[])[] {
-  const target = Math.min(Math.max(0, maxActors), localized.candidates.length);
-  const nearbyTarget = Math.ceil(target * 0.7);
-  const approachTarget = Math.floor(target * 0.2);
-  const backgroundTarget = Math.max(0, target - nearbyTarget - approachTarget);
-  const selected = [
-    ...localized.nearbyCandidates.slice(0, nearbyTarget),
-    ...localized.approachCandidates.slice(0, approachTarget),
-    ...localized.backgroundCandidates.slice(0, backgroundTarget),
-  ];
-  if (selected.length === target) return selected;
-  const used = new Set(selected);
-  for (const candidate of localized.candidates) {
-    if (selected.length >= target) break;
-    if (!used.has(candidate)) {
-      selected.push(candidate);
-      used.add(candidate);
-    }
-  }
-  return selected;
-}
-
-function balanceSumoCandidatesAcrossFocuses<T extends {
-  readonly candidate: readonly string[];
-  readonly focusIndex: number;
-}>(ranked: readonly T[], focusCount: number): readonly (readonly string[])[] {
-  const queues = Array.from({ length: focusCount }, () => [] as T[]);
-  const unassigned: T[] = [];
-  for (const item of ranked) {
-    const queue = queues[item.focusIndex];
-    if (queue) queue.push(item);
-    else unassigned.push(item);
-  }
-  const balanced: (readonly string[])[] = [];
-  let offset = 0;
-  while (balanced.length < ranked.length - unassigned.length) {
-    for (const queue of queues) {
-      const item = queue[offset];
-      if (item) balanced.push(item.candidate);
-    }
-    offset += 1;
-  }
-  return [...balanced, ...unassigned.map((item) => item.candidate)];
-}
-
-function parseEdgeGeometry(networkXml: string): {
-  centers: Map<string, { x: number; y: number }>;
-} {
-  const centers = new Map<string, { x: number; y: number }>();
-  const edgePattern = /<edge\b[^>]*\bid="([^"]+)"[^>]*\bshape="([^"]+)"[^>]*>/g;
-  for (const match of networkXml.matchAll(edgePattern)) {
-    if (match[1]!.startsWith(":")) continue;
-    const coordinates = match[2]!
-      .trim()
-      .split(/\s+/)
-      .map((entry) => entry.split(",").map(Number));
-    const valid = coordinates.filter(
-      (point) => Number.isFinite(point[0]) && Number.isFinite(point[1]),
-    );
-    if (valid.length === 0) continue;
-    centers.set(match[1]!, {
-      x: valid.reduce((sum, point) => sum + point[0]!, 0) / valid.length,
-      y: valid.reduce((sum, point) => sum + point[1]!, 0) / valid.length,
-    });
-  }
-  return { centers };
+  return buildSharedSumoRouteDocument(candidates, profile, SUMO_DEMAND_ROUTE_OPTIONS);
 }
 
 export function decodeSumoActorViews(

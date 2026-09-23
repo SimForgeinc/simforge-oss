@@ -842,6 +842,20 @@ pub fn apply_situation_transaction_json(
 
 /* --------------------------------------------------------------- ambient */
 
+/// The ambient turn-feasibility verdicts the process holds for `graph`'s
+/// transitions (`simforge.ambient-turn-verdicts/v1` JSON). Persist it beside
+/// the map closure, keyed by `closureDigest` and `ENGINE_SEM_VER`, and load it
+/// in a later session to skip the probes; the population is unchanged.
+pub fn ambient_turn_verdicts_json(graph: &Graph) -> String {
+    simforge_compiler::ambient_turns::turn_verdicts_json(graph.lane_graph())
+}
+
+/// Seed the process memo from a persisted verdict table; returns the count.
+/// Refuses a table from another `ENGINE_SEM_VER`.
+pub fn load_ambient_turn_verdicts(json: &str) -> Result<usize> {
+    simforge_compiler::ambient_turns::load_turn_verdicts_json(json).map_err(crate::error::BindingError::argument)
+}
+
 /// Materialise an ambient-traffic profile onto `scenario` over `graph`.
 /// `options_json`: `{reservations: [{x, z, radiusM}], excludedLaneRsls, allowAuthoredCorridor, extraTravelSeconds, targetMultiplier, cohortRadiusBonusM}`.
 pub fn materialize_ambient_traffic(

@@ -21,7 +21,7 @@ import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { lowerTimelineToNative } from './timeline-lowering.js';
-import { RENDER_TIMELINE_INPUT_ID } from '../timeline/index.js';
+import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
@@ -56,9 +56,8 @@ export interface NativeRenderEngineOptions {
   readonly actorAssetsCacheDir?: string;
   readonly nativeCacheDirectory?: string;
   /**
-   * Send the timeline's road + body pitch/roll to the service. Only a
-   * service that applies full actor rotations may enable it; the released
-   * service applies yaw only.
+   * Send the timeline's road + body pitch/roll to the service (default on:
+   * the service applies full actor rotations). Off sends yaw-only rotations.
    */
   readonly applyAttitude?: boolean;
 }
@@ -245,10 +244,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const warnings: { code: string; message: string }[] = [];
       let lowering: NativeSceneLowering;
       let timelineSha256: string | undefined;
+      let timelineBytes: Uint8Array | undefined;
+      const applyAttitude = options.applyAttitude !== false;
       if (timelineInput) {
-        const timelineLowering = await lowerTimelineToNative(
-          await fs.readFile(timelineInput.path), rgbSchedules, { attitude: options.applyAttitude === true },
-        );
+        timelineBytes = await fs.readFile(timelineInput.path);
+        const timelineLowering = await lowerTimelineToNative(timelineBytes, rgbSchedules, { attitude: applyAttitude });
         if (timelineLowering.timelineSha256 !== timelineInput.sha256) {
           throw new Error(`render_timeline_digest_mismatch: ${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineLowering.timelineSha256}`);
         }
@@ -267,7 +267,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const wantsSensorArchive = intent.renderSpec.artifacts.includes('sensorArchive');
       const traceRelative = 'trace/native-trace.json';
       const tracePath = path.join(context.workspace, traceRelative);
-      await writeJson(tracePath, {
+      const traceDocument = {
         schema: 'simforge.render-trace/v1',
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
@@ -278,8 +278,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         mapId: lowering.mapId,
         fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frames: lowering.states,
-      });
-      const traceDigest = await hashFile(tracePath);
+      };
+      // Observed per-frame actor transforms (`observe_actors`): what the
+      // renderer drew, graded against the shared sampler after the run.
+      const observedFrames: string[] = [];
+      let observing = true;
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
       // The scenario's environment as the renderer's physical lighting and
@@ -353,6 +356,21 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           }
           serverMs += response.server_ms ?? 0;
           frameIdentities.push(response.frame);
+          if (observing) {
+            const observation = await client.observeActors();
+            if (observation === null) {
+              observing = false;
+              warnings.push({ code: 'native_observation_unavailable', message: 'the render service does not report observed actor transforms; parity was not graded' });
+            } else {
+              observedFrames.push(JSON.stringify({
+                tick, time: lowering.frameTimes[tick],
+                actors: observation.actors.map((actor) => ({
+                  id: actor.id, position: actor.position, rotation: actor.rotation, visible: actor.visible,
+                  ...(actor.modelPosition ? { modelPosition: actor.modelPosition, modelRotation: actor.modelRotation } : {}),
+                })),
+              }));
+            }
+          }
           const frameMicros = Math.round(lowering.frameTimes[tick]! * 1_000_000);
           for (const frame of response.frames) {
             if (frame.pass === 'lidar' || frame.pass === 'radar') {
@@ -399,6 +417,35 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           for (const archive of archives.values()) await archive.writer.abort(new Error('native render did not complete'));
         }
         await session.close();
+      }
+
+      // The parity gate: with a timeline, every drawn actor must match the
+      // shared sampler at its frame time (Bevy: <= 1e-3 m / 0.05 deg).
+      let parity: ParityReport | undefined;
+      if (timelineBytes && observing && observedFrames.length > 0) {
+        const timeline = await openRenderTimeline(timelineBytes);
+        try {
+          parity = compareObserved(timeline, observedFrames.join('\n'), {
+            name: 'bevy', positionToleranceM: 1e-3, angleToleranceDeg: 0.05,
+            frame: 'scene-yup', heightReference: 'ground', compareAttitude: applyAttitude,
+          });
+        } finally {
+          timeline.free();
+        }
+      }
+      const observedRelative = 'trace/observed-frames.jsonl';
+      if (observedFrames.length > 0) {
+        await fs.mkdir(path.join(context.workspace, 'trace'), { recursive: true });
+        await fs.writeFile(path.join(context.workspace, observedRelative), `${observedFrames.join('\n')}\n`);
+      }
+      await writeJson(tracePath, {
+        ...traceDocument,
+        ...(observedFrames.length > 0 ? { observedFramesPath: observedRelative, observedFrames: observedFrames.map((line) => JSON.parse(line) as unknown) } : {}),
+        ...(parity ? { parity } : {}),
+      });
+      const traceDigest = await hashFile(tracePath);
+      if (parity && !parity.pass) {
+        throw new Error(`native_render_parity_failed: max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
       }
 
       const videoRecords = [];
@@ -494,6 +541,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
+        ...(parity ? { parity: {
+          schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
+          maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
+          maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,
+          presenceMismatches: parity.presenceMismatches,
+        } } : {}),
         timings: { wallMs: performance.now() - wallStarted, serverMs },
       }));
       const diagnosticsDigest = await hashFile(diagnosticsPath);

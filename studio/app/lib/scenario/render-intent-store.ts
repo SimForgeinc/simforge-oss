@@ -2,6 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
+import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
@@ -39,7 +40,7 @@ type ImmutableLineageRow = {
  */
 type NativeAsset = {
   assetId: string;
-  kind: "map" | "catalog";
+  kind: "map" | "catalog" | "other";
   sha256: string;
   sizeBytes: number;
 };
@@ -58,6 +59,9 @@ type InsertedJob = {
   job_mode: "browser_render" | "full_render";
   job_state: ScenarioRenderJobDto["status"];
   progress: number;
+  sim_key: string | null;
+  trace_sha256: string | null;
+  timeline_sha256: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -202,6 +206,22 @@ function selectedSensorHosts(input: SubmitScenarioRenderIntent, lineage: Immutab
   })).sort((left, right) => left.sourceId.localeCompare(right.sourceId));
 }
 
+/**
+ * The render seed. A document with a pinned `simulation.seed` derives it from
+ * that seed alone, so a rename or a save (which change `content_sha256` through
+ * `meta.modifiedAt`) no longer changes it. A revision frozen before pinning
+ * keeps its legacy seed, the first 32 bits of its content digest, so its
+ * renders stay reproducible.
+ */
+export function renderSeed(content: Record<string, unknown>, scenarioSha256: string): number {
+  const simulation = content["simulation"];
+  const pinned = simulation && typeof simulation === "object" ? (simulation as { seed?: unknown }).seed : undefined;
+  const digest = typeof pinned === "string" && pinned.length > 0
+    ? sha256(`simforge.render-seed/v1|${pinned}`)
+    : scenarioSha256;
+  return Number.parseInt(digest.slice(0, 8), 16);
+}
+
 function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
@@ -283,13 +303,18 @@ function buildIntent(
       },
       ...nativeAssets,
     ],
-    seed: Number.parseInt(lineage.scenario_sha256.slice(0, 8), 16),
+    seed: renderSeed(content, lineage.scenario_sha256),
   });
 }
 
 export async function createRenderIntentJob(
   context: Pick<AppContext, "workspaceId" | "userId">,
   input: SubmitScenarioRenderIntent,
+  /**
+   * The revision's authoritative simulation (resolved by the caller): the job
+   * records the trace and render timeline every renderer replays.
+   */
+  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null; timelineSizeBytes: number | null } | null = null,
 ): Promise<ScenarioRenderJobDto | null> {
   const renderSpec = input.renderSpec;
   const resources = deriveRenderIntentResources(renderSpec);
@@ -300,6 +325,7 @@ export async function createRenderIntentJob(
     });
     const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string; render_textures: string | null; native_vram_budget: string | null }>(
       `SELECT id, revision_id, execution_package_id, job_mode, job_state, progress,
+              sim_key, trace_sha256, timeline_sha256,
               intent_sha256, renderer_engine, render_spec_sha256,
               render_intent->>'renderTextures' AS render_textures,
               render_intent->>'nativeVramBudgetBytes' AS native_vram_budget,
@@ -416,7 +442,12 @@ export async function createRenderIntentJob(
         sizeBytes: actorClosure.sizeBytes,
       });
     }
-    const intent = buildIntent(input, lineage, nativeAssets);
+    // The render timeline every renderer samples, bound into the intent as the
+    // `render.timeline` input (its bytes are the stored canonical JSON).
+    const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
+      ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
+      : [];
+    const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets]);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({
       schema: "uniscenario.render-control-lineage/v1",
@@ -429,14 +460,17 @@ export async function createRenderIntentJob(
          id, workspace_id, revision_id, execution_package_id, execution_package_control_sha256,
          render_spec, render_spec_sha256, render_intent, intent_sha256, renderer_engine,
          parity_thresholds, resource_request, request_contract_version,
-         job_mode, billing_mode, estimated_cost_cents, priority, idempotency_key, requested_by_user_id
+         job_mode, billing_mode, estimated_cost_cents, priority, idempotency_key, requested_by_user_id,
+         sim_key, trace_sha256, timeline_sha256
        ) VALUES (
          :id, :workspace_id, :revision_id, :execution_package_id, :control_sha256,
          CAST(:render_spec AS jsonb), :render_spec_sha256, CAST(:render_intent AS jsonb), :intent_sha256, :renderer_engine,
          CAST(:parity_thresholds AS jsonb), CAST(:resource_request AS jsonb), :request_contract_version,
-         :job_mode, 'free', 0, :priority, :idempotency_key, :user_id
+         :job_mode, 'free', 0, :priority, :idempotency_key, :user_id,
+         :sim_key, :trace_sha256, :timeline_sha256
        )
        RETURNING id, revision_id, execution_package_id, job_mode, job_state, progress,
+                 sim_key, trace_sha256, timeline_sha256,
                  created_at::text AS created_at, updated_at::text AS updated_at`,
       {
         id: scenarioId("usrj"),
@@ -458,6 +492,9 @@ export async function createRenderIntentJob(
         priority: input.priority ?? 0,
         idempotency_key: input.idempotencyKey,
         user_id: context.userId,
+        sim_key: simulation?.simKey ?? null,
+        trace_sha256: simulation?.traceSha256 ?? null,
+        timeline_sha256: simulation?.timelineSha256 ?? null,
       },
     );
     return rows[0] ?? null;
@@ -481,6 +518,9 @@ export async function createRenderIntentJob(
     workerAttestation: null,
     failureCode: null,
     failureDetail: null,
+    simulation: inserted.sim_key && inserted.trace_sha256
+      ? { simKey: inserted.sim_key, traceSha256: inserted.trace_sha256, timelineSha256: inserted.timeline_sha256 ?? null }
+      : null,
     createdAt: inserted.created_at,
     updatedAt: inserted.updated_at,
   };

@@ -95,7 +95,17 @@ pub fn action_fields() -> Vec<JsValue> {
 }
 #[wasm_bindgen(js_name = engineVersion)]
 pub fn engine_version() -> String {
-    simforge_bindings_common::ENGINE_VERSION.to_owned()
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+/// Engine semantics version; `engineVersion()` is its former name.
+#[wasm_bindgen(js_name = engineSemVer)]
+pub fn engine_sem_ver() -> String {
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+/// Build provenance JSON (never a cache key).
+#[wasm_bindgen(js_name = engineBuild)]
+pub fn engine_build() -> String {
+    simforge_bindings_common::engine_build_json()
 }
 #[wasm_bindgen(js_name = actorRow)]
 pub fn actor_row() -> u32 {
@@ -466,6 +476,11 @@ impl WasmMapBundle {
     pub fn digest(&self) -> String {
         self.inner.digest().to_owned()
     }
+    /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+    #[wasm_bindgen(getter, js_name = closureDigest)]
+    pub fn closure_digest(&self) -> String {
+        self.inner.bundle().closure_digest().to_owned()
+    }
     #[wasm_bindgen(getter)]
     pub fn graph(&self) -> WasmLaneGraph {
         WasmLaneGraph {
@@ -702,6 +717,16 @@ pub fn compile_situation(
     Ok(out)
 }
 
+/// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
+#[wasm_bindgen(js_name = ambientTurnVerdictsJson)]
+pub fn ambient_turn_verdicts_json(graph: &WasmLaneGraph) -> String {
+    rt::ambient_turn_verdicts_json(&graph.inner)
+}
+/// Load persisted ambient turn verdicts into this module; returns the count. Refuses another ENGINE_SEM_VER.
+#[wasm_bindgen(js_name = loadAmbientTurnVerdicts)]
+pub fn load_ambient_turn_verdicts(json: &str) -> Result<u32, JsValue> {
+    rt::load_ambient_turn_verdicts(json).map(|n| n as u32).js()
+}
 /// Returns `[ScenarioInput, provenanceJson]`.
 #[wasm_bindgen(js_name = materializeAmbientTraffic)]
 pub fn materialize_ambient_traffic(

@@ -1,5 +1,4 @@
 export * from './canonicalPreview';
-export * from './simulation-preview';
 export * from './controller';
 export * from './liveSimulationPlan';
 export * from './mapRuntime';
@@ -18,3 +17,4 @@ export * from './traffic-provider/signalState';
 export * from './traffic-provider/sumoRuntimeInstantiation';
 export * from './traffic-provider/sumoWasmProvider';
 export * from './capture';
+export * from './scenario-instance';

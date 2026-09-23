@@ -24,6 +24,7 @@ use simforge_core::types::{
     SimActor, SimScenarioInput, Trigger, TurnRelation,
 };
 
+use crate::ambient_turns::{is_steered_class, turn_is_feasible, TurnFeasibilityCache};
 use crate::error::{CompileError, CompileResult};
 
 /* ---------------------------------------------------------------- profile */
@@ -468,6 +469,14 @@ fn weighted_successor(
     candidates[candidates.len() - 1]
 }
 
+/// Walk a lane path from `start`, choosing successors by the profile's flow
+/// weights among the transitions `kind` can actually drive
+/// (`ambient_turns`). Infeasible successors are removed BEFORE the weighted
+/// draw, so the draw count per step is unchanged and the walk stays a pure
+/// function of the seed. When no successor is drivable the walk ends there; a
+/// walk that ends that way shorter than [`MIN_BLOCKED_ROUTE_M`] is rejected
+/// (empty), because the vehicle would only drive up to a junction and stop.
+#[allow(clippy::too_many_arguments)]
 fn walk_route(
     graph: &Arc<LaneGraph>,
     start: DirectedLane,
@@ -475,6 +484,8 @@ fn walk_route(
     rng: &mut Rng,
     start_route_s: f64,
     required_downstream_m: f64,
+    kind: ActorKind,
+    turns: &mut TurnFeasibilityCache,
 ) -> Vec<LaneId> {
     let mut lanes = vec![start.lane];
     let mut current = start;
@@ -483,6 +494,7 @@ fn walk_route(
     let mut visited: BTreeSet<usize> = BTreeSet::new();
     visited.insert(start.slot());
     let mut successors: Vec<DirectedLane> = Vec::new();
+    let mut blocked = false;
     while length_m < need_m && lanes.len() < 32 {
         successors.clear();
         successors.extend(
@@ -495,17 +507,63 @@ fn walk_route(
         if successors.is_empty() {
             break;
         }
+        successors.retain(|c| turn_is_feasible(graph, current, *c, kind, turns));
+        if successors.is_empty() {
+            blocked = true;
+            break;
+        }
         let next = weighted_successor(graph, &successors, profile, rng);
         current = next;
         visited.insert(next.slot());
         lanes.push(next.lane);
         length_m += graph.length_of(next.lane);
     }
+    if blocked && length_m < MIN_BLOCKED_ROUTE_M {
+        return Vec::new();
+    }
     if simforge_core::map::build_lane_path_route(graph, &lanes).is_ok() {
         lanes
     } else {
         Vec::new()
     }
+}
+
+/// Shortest route kept when the walk stopped at a junction no successor of
+/// which the class can drive.
+const MIN_BLOCKED_ROUTE_M: f64 = 80.0;
+
+/// The fastest a generated body may start at `route_s` on `lanes`: the corner
+/// planner's approach cap there, so a vehicle spawned just before a tight
+/// connector can still brake to the corner speed the engine will ask of it.
+fn spawn_speed_cap(
+    graph: &Arc<LaneGraph>,
+    lanes: &[LaneId],
+    route_s: f64,
+    kind: ActorKind,
+    cruise_mps: f64,
+) -> f64 {
+    if !is_steered_class(kind) {
+        return cruise_mps;
+    }
+    let (Some(profile), Ok(route)) = (
+        simforge_core::physics::actor_physics_profile(kind),
+        simforge_core::map::build_lane_path_route(graph, lanes),
+    ) else {
+        return cruise_mps;
+    };
+    let plan = simforge_core::engine::cornering::cornering_plan(
+        &simforge_core::engine::cornering::CornerSpeedInput {
+            route: &route,
+            route_s,
+            current_speed_mps: cruise_mps,
+            desired_speed_mps: cruise_mps,
+            comfortable_lateral_acceleration_mps2: 2.2,
+            comfortable_deceleration_mps2: 2.5,
+            physical_lateral_acceleration_mps2: profile.max_lateral_acceleration_mps2,
+            physical_deceleration_mps2: profile.max_longitudinal_decel_mps2,
+        },
+    );
+    plan.speed_limit_mps.min(cruise_mps).max(0.0)
 }
 
 fn choose_vehicle_kind(profile: &ResolvedAmbientTrafficProfile, rng: &mut Rng) -> ActorKind {
@@ -600,6 +658,7 @@ pub fn create_ambient_candidate_pool(
     let rng = Rng::from_label(&format!("{key}|ambient-candidate-pool-v1"));
     let attempt_limit = (candidate_budget * 4).max(80);
     let profile_tag = &profile_hash[..16];
+    let mut turns = TurnFeasibilityCache::new();
     for attempt in 0..attempt_limit {
         if pool.candidates.len() >= candidate_budget {
             break;
@@ -634,10 +693,22 @@ pub fn create_ambient_candidate_pool(
         let factor =
             (1.0 + actor_rng.range(-profile.speed_variance, profile.speed_variance)).max(0.35);
         let cruise = lane_speed * factor;
-        let route = walk_route(graph, lane, profile, &mut actor_rng, route_s, 5_000.0);
+        let route = walk_route(
+            graph,
+            lane,
+            profile,
+            &mut actor_rng,
+            route_s,
+            5_000.0,
+            requested_kind,
+            &mut turns,
+        );
         if route.is_empty() {
             continue;
         }
+        // The route starts on `lane` in traversal direction, so its arc
+        // length at the spawn point is `route_s`.
+        let start_speed = spawn_speed_cap(graph, &route, route_s, requested_kind, cruise);
         let storage_s = (if lane.reversed {
             length_m - route_s
         } else {
@@ -669,7 +740,7 @@ pub fn create_ambient_candidate_pool(
                     z: scene.z,
                     heading_rad: sample.heading_rad,
                 },
-                speed_mps: cruise,
+                speed_mps: start_speed,
             },
             behavior: ActorBehavior {
                 rules: ActorRules {

@@ -22,11 +22,12 @@
 import { createHash } from 'node:crypto';
 
 import {
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForDocument,
   canonicalJson,
   type AmbientTrafficProvenance,
   type LaneGraph,
   type SimScenarioInput,
+  type SimTrace,
 } from '@simforge-oss/engine';
 import { engine, runtimeIdentity } from '@simforge-oss/engine/node';
 import { exportOpenScenarioXml14, type AsamExportResult, type AsamExportWarning } from '@simforge-oss/openscenario';
@@ -45,6 +46,7 @@ import { bakedParkedCarsFromExtensions, withParkedCarActors } from './studio/par
 import { clampDeclaredAxisHolds, type AxisUntilClamp } from './template-axis-clamp.js';
 import type { MapBundle } from './types.js';
 import { buildXodrElevationResolver } from './xodr-elevation.js';
+import { persistAmbientTurnVerdictsToDisk } from './maps.js';
 
 export const EXECUTION_PACKAGE_CONTRACT = 'uniscenario.execution-package/v1';
 export const CAPABILITY_REPORT_CONTRACT = 'uniscenario.capability-report/v1';
@@ -101,6 +103,13 @@ export interface ResolvedExecutionInput {
   readonly concrete: ConcreteExecutionInput;
   /** The exact input the native engine executes; the export and the digest are taken from it. */
   readonly resolvedInput: SimScenarioInput;
+  /**
+   * The refined concrete input handed to the engine constructor (playback
+   * refinements applied, before the engine's own normalization). Running the
+   * clip from this is exactly what the editor's scenario worker runs, so the
+   * authoritative trace and the editor's local trace share one identity.
+   */
+  readonly executedInput: SimScenarioInput;
 }
 
 /**
@@ -162,6 +171,50 @@ export interface ExecutionPackageRequest {
   readonly xsdPath: string;
   readonly validateXml?: OpenScenarioXmlValidator | undefined;
   readonly projections?: Readonly<Record<string, ExecutionProjection>> | undefined;
+  /**
+   * The revision's authoritative simulation. When present the package is a
+   * derived view of it: the resolved input comes from its resolution record
+   * and the XOSC trajectories from its trace. Nothing is resolved,
+   * materialized or simulated again, so no traffic engine runs here.
+   */
+  readonly simulation?: AuthoritativeSimulationInput | undefined;
+}
+
+/** The authoritative simulation an execution package is derived from. */
+export interface AuthoritativeSimulationInput {
+  readonly simKey: string;
+  readonly traceSha256: string;
+  readonly trace: SimTrace;
+  /** The `simforge.sim-resolution/v1` record the simulation stored beside its trace. */
+  readonly resolution: {
+    readonly resolvedInputDigest: string;
+    readonly resolvedInput: SimScenarioInput;
+    readonly ambientTraffic: AmbientTrafficProvenance;
+    readonly siteId: string;
+    readonly materialization: unknown;
+    readonly axisUntilClamps: readonly AxisUntilClamp[];
+  };
+}
+
+/** Rebuild the resolution from a stored record, verifying it names exactly the traced input. */
+export function resolutionFromSimulation(canonicalContent: unknown, simulation: AuthoritativeSimulationInput): ResolvedExecutionInput {
+  const { resolution, trace } = simulation;
+  const digest = executionSourceInputDigest(resolution.resolvedInput);
+  if (digest !== resolution.resolvedInputDigest || trace.header.inputHash !== digest) {
+    throw new Error(`simulation_resolution_mismatch: record ${resolution.resolvedInputDigest}, input ${digest}, trace ${trace.header.inputHash}`);
+  }
+  return {
+    template: parseTemplate(canonicalContent),
+    axisUntilClamps: resolution.axisUntilClamps,
+    concrete: {
+      input: resolution.resolvedInput,
+      siteId: resolution.siteId,
+      materialization: resolution.materialization,
+      ambientTraffic: resolution.ambientTraffic,
+    },
+    resolvedInput: resolution.resolvedInput,
+    executedInput: resolution.resolvedInput,
+  };
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -229,9 +282,11 @@ function concreteInput(
     controlled,
     bundle.graph,
     ambientMode === 'native'
-      ? ambientTrafficProfileFromExtensions(template.extensions)
+      ? ambientTrafficProfileForDocument(template)
       : { version: 1, preset: 'off', seed: 'execution-provider-off' },
   );
+  // The next process on this closure skips the turn probes (timing only).
+  void persistAmbientTurnVerdictsToDisk(bundle);
   return {
     input: JSON.parse(ambient.scenario.toJson()) as SimScenarioInput,
     siteId: product.manifest.replayKey.siteId,
@@ -249,9 +304,9 @@ function concreteInput(
  * projects stop lines onto the route's connecting lanes). Constructing the
  * world resolves it without running the clip.
  */
-function executionResolvedInput(input: SimScenarioInput, graph: LaneGraph): SimScenarioInput {
-  const refined = withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
-  return engine().simulation(refined, { graph, captureTrace: false }).input();
+function executionResolvedInput(input: SimScenarioInput, graph: LaneGraph): { executed: SimScenarioInput; resolved: SimScenarioInput } {
+  const executed = withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
+  return { executed, resolved: engine().simulation(executed, { graph, captureTrace: false }).input() };
 }
 
 /**
@@ -271,8 +326,8 @@ export function resolveExecutionInput(
   if (!validation.ok) throw new Error(`template_invalid:${JSON.stringify(validation.issues)}`);
   const concrete = concreteInput(normalizedTemplate, map, ambientMode, catalogEntries);
   assertRuntimeAssetIdentities(concrete.input);
-  const resolvedInput = executionResolvedInput(concrete.input, map.graph);
-  return { template, axisUntilClamps, concrete, resolvedInput };
+  const { executed, resolved } = executionResolvedInput(concrete.input, map.graph);
+  return { template, axisUntilClamps, concrete, resolvedInput: resolved, executedInput: executed };
 }
 
 /** Exact native resolved-input identity shared by the browser and every host. */
@@ -308,6 +363,7 @@ async function exportExecutionDocument(
     worldElevation: buildXodrElevationResolver(request.xodr, request.map.topology, preferredRoadsByActor),
     roadFile: `${request.map.mapId}.xodr`,
     executionMode: 'trajectory-replay',
+    ...(request.simulation ? { replayTrace: request.simulation.trace } : {}),
     trustedAmbientActorIds: resolved.concrete.ambientTraffic.actors.map((actor) => actor.id),
     author: template.meta.author ?? 'SimForge',
     description: template.meta.description || template.meta.name,
@@ -347,7 +403,9 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
   const runtimeMapName = request.runtimeMapName.trim();
   if (!runtimeMapName) throw new Error('runtime_map_identity_missing');
   const { ambient } = request;
-  const resolved = resolveExecutionInput(request.canonicalContent, request.map, ambient.mode, request.catalogEntries);
+  const resolved = request.simulation
+    ? resolutionFromSimulation(request.canonicalContent, request.simulation)
+    : resolveExecutionInput(request.canonicalContent, request.map, ambient.mode, request.catalogEntries);
   const canonicalBytes = new TextEncoder().encode(serializeTemplate(resolved.template));
   if (sha256(canonicalBytes) !== request.expectedContentSha256) throw new Error('revision_content_digest_mismatch');
   if (sha256(canonicalJsonBytes(ambient.ambientConfig)) !== ambient.configSha256) {
@@ -428,6 +486,7 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
     materialization: resolved.concrete.materialization,
     axisUntilClamps: resolved.axisUntilClamps,
     projections,
+    simulation: request.simulation ? { simKey: request.simulation.simKey, traceSha256: request.simulation.traceSha256 } : null,
   };
   const preliminary = [
     xosc,
@@ -459,6 +518,8 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
       overlapActorIds,
     },
     projections,
+    // The trace every renderer replays; the XOSC above is derived from it.
+    ...(request.simulation ? { simKey: request.simulation.simKey, traceSha256: request.simulation.traceSha256 } : {}),
     files: preliminary.map((item) => ({ kind: item.kind, mediaType: item.mediaType, sha256: item.sha256, sizeBytes: item.bytes.byteLength })),
   };
   const manifestArtifact = artifact('execution-manifest', 'application/json', canonicalJsonBytes(manifest));

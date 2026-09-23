@@ -5,6 +5,7 @@ import type { DerivedTopology, LocationCatalog } from "@simforge-oss/maps";
 import {
   compileExecutionPackage,
   createMapBundle,
+  type AuthoritativeSimulationInput,
   type ExecutionAmbientProvenance,
   type ExecutionArtifact,
   type ExecutionPackage,
@@ -27,6 +28,13 @@ export type CompilerClaim = {
     artifacts: Array<{ id: string; kind: MapArtifactKind; mediaType: string; sha256: string; sizeBytes: number; downloadUrl: string; downloadHeaders?: Record<string, string> }>;
   };
   ambient: ExecutionAmbientProvenance;
+  /** The revision's authoritative simulation; the package is derived from it (null only for legacy exports). */
+  simulation?: {
+    simKey: string;
+    traceSha256: string;
+    trace: { sha256: string; sizeBytes: number; downloadUrl: string };
+    resolution: { sha256: string; sizeBytes: number; downloadUrl: string };
+  } | null;
 };
 export type CompileResult = ExecutionPackage & { artifacts: CompilerArtifact[] };
 
@@ -75,6 +83,16 @@ export async function compileClaim(claim: CompilerClaim, xsdPath: string, signal
   if (claim.compilerVersion !== COMPILER_VERSION) throw new Error("compiler_version_mismatch");
   const loaded = await loadMapClosure(claim, signal);
   const xodrArtifact = claim.map.artifacts.find((item) => item.kind === "map-xodr")!;
+  // Replay the authoritative simulation: its trace and resolution record are
+  // content-addressed and verified here, and nothing is simulated again.
+  const simulation = claim.simulation
+    ? {
+        simKey: claim.simulation.simKey,
+        traceSha256: claim.simulation.traceSha256,
+        trace: decodeJson<AuthoritativeSimulationInput["trace"]>(await download(claim.simulation.trace.downloadUrl, claim.simulation.trace.sizeBytes, claim.simulation.trace.sha256, signal)),
+        resolution: decodeJson<AuthoritativeSimulationInput["resolution"]>(await download(claim.simulation.resolution.downloadUrl, claim.simulation.resolution.sizeBytes, claim.simulation.resolution.sha256, signal)),
+      }
+    : undefined;
   const result = await compileExecutionPackage({
     revisionId: claim.revision.id,
     expectedContentSha256: claim.revision.contentSha256,
@@ -93,6 +111,7 @@ export async function compileClaim(claim: CompilerClaim, xsdPath: string, signal
     ambient: claim.ambient,
     compilerVersion: COMPILER_VERSION,
     xsdPath,
+    ...(simulation ? { simulation } : {}),
   });
   return result as CompileResult;
 }

@@ -1,5 +1,6 @@
 import {
   actorPhysicsBackends,
+  contentHash,
   DYNAMIC_V1_DEFAULT_SUBSTEP_S,
   resolvePhysicsConfig,
   type Condition,
@@ -1015,7 +1016,17 @@ export function exportOpenScenarioXml14(
     ? preflightLateralActionDurations(input, options)
     : new Map<string, number>();
   let replayTrace: SimTrace | null = null;
-  if (executionMode === 'trajectory-replay') {
+  if (executionMode === 'trajectory-replay' && options.replayTrace) {
+    // The authoritative trace, not a re-run: bind it to exactly this input.
+    if (options.replayTrace.header.inputHash !== contentHash(input)) {
+      throw new AsamExportError([{
+        code: 'trajectory_replay_trace_mismatch',
+        path: 'replayTrace.header.inputHash',
+        reason: `replay trace was simulated from input ${options.replayTrace.header.inputHash}, not the exported input ${contentHash(input)}`,
+      }]);
+    }
+    replayTrace = options.replayTrace;
+  } else if (executionMode === 'trajectory-replay') {
     try {
       // Export is a faithful replay operation, not a tier-2 acceptance run.
       // The normal simulation/validation pipeline owns feasibility gates;

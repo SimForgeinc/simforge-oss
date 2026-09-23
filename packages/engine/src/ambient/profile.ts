@@ -172,21 +172,88 @@ const CITY_PRESET_DEFAULTS = {
 
 export const AMBIENT_TRAFFIC_EXTENSION_KEY = 'studio.ambientTraffic.profile.v1';
 
+/**
+ * The LEGACY ambient default: what a document written before pinning (no
+ * `simulation` block) gets when it names no profile. Immutable old revisions
+ * still resolve through it, so their traffic is reproducible; drafts had it
+ * written explicitly by the one-time pinning migration.
+ */
 export function defaultAmbientTrafficProfile(): ResolvedAmbientTrafficProfile {
   return resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'ambient-1' });
 }
 
-/** Read the canonical authored ambient profile used by browser and compiler. */
+/** The ambient default for pinned (current-format) documents: no generated traffic. */
+export function offAmbientTrafficProfile(): ResolvedAmbientTrafficProfile {
+  return resolveAmbientTrafficProfile({ version: 1, preset: 'off', seed: 'ambient-1' });
+}
+
+/**
+ * What an absent profile means. `'off'` for documents with a pinned
+ * `simulation` block (every document written since pinning); `'legacy-city'`
+ * only for documents written before it.
+ */
+export type AmbientProfileMissingDefault = 'off' | 'legacy-city';
+
+/** Why an authored ambient profile was refused. A validation error, never a silent fallback. */
+export class AmbientTrafficProfileError extends Error {
+  readonly code = 'ambient_profile_invalid';
+  constructor(readonly issues: readonly string[]) {
+    super(`The ambient traffic profile (${AMBIENT_TRAFFIC_EXTENSION_KEY}) is invalid: ${issues.join('; ')}`);
+    this.name = 'AmbientTrafficProfileError';
+  }
+}
+
+/** The missing-profile default of a document: `off` once it carries a `simulation` block. */
+export function ambientProfileMissingDefault(document: { readonly simulation?: unknown } | null | undefined): AmbientProfileMissingDefault {
+  return document?.simulation != null ? 'off' : 'legacy-city';
+}
+
+/**
+ * Validate the authored ambient profile extension without resolving a
+ * default. `absent` when the document names none.
+ */
+export function validateAmbientTrafficProfileExtension(
+  extensions: Readonly<Record<string, unknown>> | undefined,
+): { readonly kind: 'absent' } | { readonly kind: 'valid'; readonly profile: ResolvedAmbientTrafficProfile } | { readonly kind: 'invalid'; readonly issues: readonly string[] } {
+  const value = extensions?.[AMBIENT_TRAFFIC_EXTENSION_KEY];
+  if (value === undefined) return { kind: 'absent' };
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return { kind: 'invalid', issues: ['must be an object'] };
+  }
+  try {
+    return { kind: 'valid', profile: resolveAmbientTrafficProfile(value as AmbientTrafficProfile) };
+  } catch (error) {
+    const issues = error instanceof z.ZodError
+      ? error.issues.map((issue) => `${issue.path.join('.') || '(profile)'}: ${issue.message}`)
+      : [error instanceof Error ? error.message : String(error)];
+    return { kind: 'invalid', issues };
+  }
+}
+
+/**
+ * Read the canonical authored ambient profile used by browser and compiler.
+ *
+ * An absent profile resolves to `missing` (see {@link ambientProfileMissingDefault};
+ * pass the document's own default). A malformed profile throws
+ * {@link AmbientTrafficProfileError}: it used to fall back silently to City,
+ * which simulated traffic the author never asked for.
+ */
 export function ambientTrafficProfileFromExtensions(
   extensions: Readonly<Record<string, unknown>> | undefined,
+  missing: AmbientProfileMissingDefault = 'legacy-city',
 ): ResolvedAmbientTrafficProfile {
-  const value = extensions?.[AMBIENT_TRAFFIC_EXTENSION_KEY];
-  if (value === undefined) return defaultAmbientTrafficProfile();
-  try {
-    return resolveAmbientTrafficProfile(value as AmbientTrafficProfile);
-  } catch {
-    return defaultAmbientTrafficProfile();
-  }
+  const read = validateAmbientTrafficProfileExtension(extensions);
+  if (read.kind === 'valid') return read.profile;
+  if (read.kind === 'invalid') throw new AmbientTrafficProfileError(read.issues);
+  return missing === 'off' ? offAmbientTrafficProfile() : defaultAmbientTrafficProfile();
+}
+
+/** {@link ambientTrafficProfileFromExtensions} with the document's own missing-profile default. */
+export function ambientTrafficProfileForDocument(document: {
+  readonly simulation?: unknown;
+  readonly extensions?: Readonly<Record<string, unknown>> | undefined;
+}): ResolvedAmbientTrafficProfile {
+  return ambientTrafficProfileFromExtensions(document.extensions, ambientProfileMissingDefault(document));
 }
 
 /** Resolve defaults once so hashes and worker messages have one canonical shape. */

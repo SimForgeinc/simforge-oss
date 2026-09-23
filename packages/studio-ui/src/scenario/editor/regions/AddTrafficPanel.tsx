@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-  ambientTrafficProfileFromExtensions,
+  ambientTrafficProfileForEditor,
   ambientTrafficProviderFromExtensions,
   profileForPreset,
   type AmbientTrafficProviderId,
@@ -78,7 +78,7 @@ export function AddTrafficPanel({
 
   const extensions = document.data.extensions;
   const provider = ambientTrafficProviderFromExtensions(extensions);
-  const profile = ambientTrafficProfileFromExtensions(extensions);
+  const profile = ambientTrafficProfileForEditor(document.data);
   const phase = sumoStatus?.phase === "disabled" ? "off" : sumoStatus?.phase ?? "off";
 
   return (
@@ -91,7 +91,7 @@ export function AddTrafficPanel({
             return (
               <PanelTile
                 active={provider === choice.value}
-                detail={choice.value === "sumo" && provider === "sumo" ? phase : choice.detail}
+                detail={choice.value === "sumo" && provider === "sumo" ? `preview ${phase}` : choice.detail}
                 disabled={blocked}
                 icon={<Icon aria-hidden="true" size={22} strokeWidth={1.6} />}
                 index={index}
@@ -167,7 +167,7 @@ export function trafficSearchResults(
   if (!document) return [];
   const extensions = document.data.extensions;
   const provider = ambientTrafficProviderFromExtensions(extensions);
-  const profile = ambientTrafficProfileFromExtensions(extensions);
+  const profile = ambientTrafficProfileForEditor(document.data);
   const results: SceneSearchResult[] = [];
   for (const choice of SOURCE_CHOICES) {
     if (!matchesSearch(query, choice.label, choice.detail, "traffic source", choice.value)) continue;

@@ -6,6 +6,7 @@ import type {
   Pose,
   SimActor,
   SimScenarioInput,
+  SimTrace,
 } from '@simforge-oss/engine';
 
 export const ASAM_FORMATS = ['xosc-1.4', 'xosc-1.3-esmini', 'osc-2.2'] as const;
@@ -123,6 +124,15 @@ export interface AsamExportOptions {
    * selects trajectory replay for standards-faithful interchange.
    */
   readonly executionMode?: 'actions' | 'trajectory-replay' | undefined;
+  /**
+   * The authoritative trace of exactly `input` (its `header.inputHash` must be
+   * the input's content hash). A trajectory-replay export then embeds these
+   * tracks instead of running the engine: the xosc is a derived view of the
+   * one simulation every consumer replays, never a re-simulation. A trace
+   * without warm-up ticks (the authoritative clip trace) exports its first
+   * vertex at the warm-up offset, so the pre-roll holds the t=0 pose.
+   */
+  readonly replayTrace?: SimTrace | undefined;
   /** Maximum distance between exported route waypoints. */
   readonly routeSampleM?: number | undefined;
   /**

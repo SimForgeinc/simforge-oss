@@ -16,7 +16,6 @@ import type {
   ScenarioJobFamily,
   ScenarioJobProvenanceDto,
   ScenarioMapCoverageDto,
-  ScenarioMaterializedTrafficReferenceDto,
   ScenarioOperationalJobDto,
   ScenarioPostprocessInput,
   ScenarioRatingAggregateDto,
@@ -25,8 +24,9 @@ import type {
   ScenarioRenderJobDto,
   ScenarioRenderJobMode,
   ScenarioRevisionDto,
-  ScenarioRevisionEvidenceDto,
-  ScenarioSimulationPreviewDto,
+  ScenarioSimulationResultDto,
+  ScenarioSimulationStatusDto,
+  ScenarioSimulationVerificationDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
   IndexedArtifact,
@@ -48,14 +48,6 @@ export type StudioMapEntry = ScenarioMapEntry & {
   readonly coordinateSystemId: string;
 };
 
-/** Immutable bytes of one browser-materialized traffic artifact, as the engine produced them. */
-export type MaterializedTrafficUpload = {
-  readonly bytes: Uint8Array;
-  readonly sha256: string;
-  readonly sizeBytes: number;
-  readonly mapAssetId: string;
-  readonly mapVersionId: string;
-};
 
 /**
  * Project persistence: datasets, documents, tags, ratings, revisions and the
@@ -102,10 +94,14 @@ export interface StudioProjectService {
   /**
    * Patch metadata. `expectedVersion` makes a rename safe without a lock: if the
    * draft moved underneath, the route 409s with a `ScenarioVersionConflict`.
+   *
+   * `mapVersionId` is the explicit re-pin: it moves the draft to another
+   * immutable map version (pinning that version's closure digest and asset
+   * catalog). It is the ONLY way a document's map version changes.
    */
   updateDocument(
     documentId: string,
-    input: { expectedVersion: number; title?: string; description?: string },
+    input: { expectedVersion: number; title?: string; description?: string; mapVersionId?: string },
   ): Promise<ScenarioDocumentDto>;
   duplicateDocument(documentId: string, input?: { title?: string; datasetId?: string }): Promise<ScenarioDocumentDto>;
   transferDocument(documentId: string, input: TransferDocumentRequest): Promise<ScenarioDocumentDto>;
@@ -139,43 +135,57 @@ export interface StudioProjectService {
   clearDocumentRating(documentId: string): Promise<ScenarioRatingAggregateDto | null>;
 
   listRevisions(documentId: string, signal?: AbortSignal): Promise<ScenarioRevisionDto[]>;
+  /**
+   * Freeze one saved draft into an immutable revision. The host binds the
+   * authoritative simulation's traffic evidence; the client sends nothing
+   * but the draft version.
+   */
   createRevision(
     document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
-    evidence: ScenarioRevisionEvidenceDto,
     options?: { idempotencyKey?: string; signal?: AbortSignal },
   ): Promise<CreateScenarioRevisionResultDto>;
   /**
    * Resolve the immutable revision for one saved draft before entering
    * export/render state. The read-before-write finds the revision created for
-   * the exact draft version; failed exports get a new stable key so the server
-   * can attach a retry export to the same revision.
+   * the exact draft version; otherwise the draft's authoritative simulation is
+   * awaited (the host runs it) and the revision is created from it. Failed
+   * exports get a new stable key so the server can attach a retry export.
    */
   ensureRevision(input: {
     documentId: string;
     expectedDraftVersion?: number | null;
-    evidence?: ScenarioRevisionEvidenceDto | null;
     signal?: AbortSignal;
+    /** Progress while the host simulates the draft (queued on a CPU runner, for instance). */
+    onSimulation?: (status: ScenarioSimulationStatusDto) => void;
   }): Promise<CreateScenarioRevisionResultDto>;
 
-  getSimulationPreview(documentId: string, signal?: AbortSignal): Promise<ScenarioSimulationPreviewDto | null>;
-  saveSimulationPreview(
-    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
-    bytes: Uint8Array,
-    sha256: string,
-    signal?: AbortSignal,
-  ): Promise<void>;
   /**
-   * Reserve, upload exact canonical bytes, and complete one immutable browser
-   * traffic artifact. `sourceInputDigest` is the digest the host's compiler
-   * recomputes and compares against; the caller passes the value its host
-   * expects rather than the client guessing which canonicalization applies.
+   * The authoritative simulation of a document's current draft. `waitMs`
+   * bounds how long the host waits on an execution someone else holds.
    */
-  uploadMaterializedTraffic(
+  resolveSimulation(
     document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
-    upload: MaterializedTrafficUpload,
-    sourceInputDigest: string,
+    options?: { waitMs?: number; signal?: AbortSignal },
+  ): Promise<ScenarioSimulationStatusDto & { draftVersion: number }>;
+  /** One immutable authoritative result by key. */
+  getSimulation(simKey: string, signal?: AbortSignal): Promise<ScenarioSimulationResultDto>;
+  /** Report the local preview's digest against the authoritative result; a mismatch is a determinism bug. */
+  verifySimulation(
+    simKey: string,
+    verification: ScenarioSimulationVerificationDto,
     signal?: AbortSignal,
-  ): Promise<ScenarioMaterializedTrafficReferenceDto>;
+  ): Promise<{ outcome: "verified" | "mismatch"; authoritativeTraceSha256: string }>;
+  /** Evaluate the authoritative trace by key (the same bytes every render replays). */
+  evaluateSimulation(
+    simKey: string,
+    filters?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<{ simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } }>;
+  /** The authoritative simulation a revision renders and is evaluated against. */
+  resolveRevisionSimulation(
+    revisionId: string,
+    options?: { waitMs?: number; signal?: AbortSignal },
+  ): Promise<ScenarioSimulationStatusDto>;
 }
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */

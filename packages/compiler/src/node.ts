@@ -65,3 +65,4 @@ export function templateIdentity(template: ScenarioTemplateV2): TemplateIdentity
 export function cellSeed(templateId: string, paramsVersion: string, siteId: string, drawIndex: number): string {
   return cellSeedWith(engine().module, templateId, paramsVersion, siteId, drawIndex);
 }
+export * from './simulation.js';

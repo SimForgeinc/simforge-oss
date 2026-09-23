@@ -6,7 +6,7 @@ import {
 import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
 import { queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
-import { getMapArtifactDownloadUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
+import { getMapArtifactDownloadUrl, getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
 import { sha256, scenarioId } from "./core";
 import {
   claimFirstEligibleScenarioJob,
@@ -55,6 +55,16 @@ type ClaimRow = {
   materialized_traffic_source_input_digest: string;
   traffic_bucket: string;
   traffic_key: string;
+  /** The revision's authoritative simulation bound to this export's traffic evidence; null for exports queued before it existed. */
+  sim_key: string | null;
+  sim_trace_sha256: string | null;
+  sim_bucket: string | null;
+  sim_trace_key: string | null;
+  sim_trace_size: number | null;
+  sim_trace_gzip_sha256: string | null;
+  sim_resolution_key: string | null;
+  sim_resolution_size: number | null;
+  sim_resolution_sha256: string | null;
 };
 
 type MapArtifactRow = {
@@ -268,7 +278,11 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
          e.ambient_config_sha256, e.ambient_result_sha256,
          e.materialized_traffic_artifact_id, e.materialized_traffic_sha256,
          e.materialized_traffic_size_bytes, e.materialized_traffic_source_input_digest,
-         ta.storage_bucket AS traffic_bucket, ta.storage_key AS traffic_key, e.attempt_count
+         ta.storage_bucket AS traffic_bucket, ta.storage_key AS traffic_key, e.attempt_count,
+         sim.sim_key, sim.trace_sha256 AS sim_trace_sha256, sim.storage_bucket AS sim_bucket,
+         sim.trace_storage_key AS sim_trace_key, sim.trace_byte_length AS sim_trace_size,
+         sim.trace_gzip_sha256 AS sim_trace_gzip_sha256, sim.resolution_storage_key AS sim_resolution_key,
+         sim.resolution_byte_length AS sim_resolution_size, sim.resolution_sha256 AS sim_resolution_sha256
        FROM simforge.exports e
        JOIN simforge.revisions r ON r.id = e.revision_id AND r.workspace_id = e.workspace_id
        JOIN simforge.map_versions mv ON mv.id = r.map_version_id
@@ -277,6 +291,17 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
         AND (acv.workspace_id IS NULL OR acv.workspace_id = mv.workspace_id)
        JOIN simforge.artifacts ta ON ta.id = e.materialized_traffic_artifact_id
          AND ta.workspace_id = e.workspace_id AND ta.artifact_state = 'available'
+       -- The authoritative simulation the export is derived from: the revision's
+       -- result whose resolved input is the one its traffic evidence is bound to.
+       LEFT JOIN LATERAL (
+         SELECT s.sim_key, s.trace_sha256, s.storage_bucket, s.trace_storage_key, s.trace_byte_length,
+                s.trace_gzip_sha256, s.resolution_storage_key, s.resolution_byte_length, s.resolution_sha256
+           FROM simforge.revision_simulations rs
+           JOIN simforge.sim_results s ON s.workspace_id = rs.workspace_id AND s.sim_key = rs.sim_key
+          WHERE rs.workspace_id = r.workspace_id AND rs.revision_id = r.id
+            AND s.resolved_input_digest = e.materialized_traffic_source_input_digest
+          ORDER BY rs.created_at DESC LIMIT 1
+       ) sim ON TRUE
        WHERE e.id = :export_id AND e.export_state = 'queued' AND e.cancel_requested_at IS NULL
          AND e.attempt_count < e.max_attempts
          AND mv.xodr_artifact_id IS NOT NULL AND mv.topology_artifact_id IS NOT NULL
@@ -388,6 +413,24 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
       mapVersionId: claimed.map_version_id,
     },
     catalogEntries: gallery.entries.map(galleryCatalogEntry),
+    // The export is a derived view of this trace: the compiler replays it and
+    // never resolves, materializes or simulates the scenario again.
+    simulation: claimed.sim_key && claimed.sim_bucket && claimed.sim_trace_key && claimed.sim_resolution_key
+      ? {
+          simKey: claimed.sim_key,
+          traceSha256: claimed.sim_trace_sha256!,
+          trace: {
+            sha256: claimed.sim_trace_gzip_sha256!,
+            sizeBytes: Number(claimed.sim_trace_size),
+            downloadUrl: await getPresignedGetUrl(claimed.sim_trace_key, claimed.sim_bucket),
+          },
+          resolution: {
+            sha256: claimed.sim_resolution_sha256!,
+            sizeBytes: Number(claimed.sim_resolution_size),
+            downloadUrl: await getPresignedGetUrl(claimed.sim_resolution_key, claimed.sim_bucket),
+          },
+        }
+      : null,
     map: {
       id: claimed.map_version_id,
       sourceMapId: claimed.map_id,

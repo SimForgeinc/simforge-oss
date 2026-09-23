@@ -63,6 +63,9 @@ simforge debug             <template|instance.json>
                        [--compare prior-report.json]
                        [--fail-on-collision --fail-on-road-departure
                         --fail-on-fallback --fail-on-never-fired]
+simforge traffic sumo      <template|instance.json>
+                       [--preset P --seed S --max-actors N --duration S]
+                       [--repeat N --out DIR --signal-authority simforge|netconvert]
 simforge validate          <instance|template> [--tier 1|2 --map --site --draw]
 simforge evaluate          <trace> [--filter critical|negative-control|all]
                        [--trivial-ttc S --reject-collisions]
@@ -218,13 +221,29 @@ crashes, road departures, rejected lane changes, never-fired triggers and
 preemptions. Actions carry their firing/release events. Required template
 invariants and selected strict gates determine exit status.
 
-SUMO is intentionally fail-closed. `--provider sumo` requires the pinned
-`dev-assets/sumo-runtime/{sumo.mjs,sumo.wasm,runtime-manifest.json}` and the
-selected map's `derived/sumo/sumo-network-manifest.json`; missing assets produce
-an actionable `sumo_unavailable` error rather than silently changing providers.
-The current lean bridge reports SUMO positions, heading, speed, acceleration,
-lane position and indicators. It does not yet expose the SUMO lane/road ID or
-its internal traffic-light phase; those limitations are explicit in the report.
+SUMO is intentionally fail-closed. `--provider sumo` and `traffic sumo`
+require the pinned
+`dev-assets/sumo-runtime/{sumo.mjs,sumo.wasm,runtime-manifest.json}` (or
+`$SIMFORGE_SUMO_RUNTIME_DIR`) and the selected map's
+`derived/sumo/sumo-network-manifest.json`. Missing assets produce an actionable
+`sumo_unavailable` error rather than silently changing providers.
+
+Both run the worker SUMO step (`docs/engineering/sumo-worker-traffic.md`):
+- the authored actors are simulated with ambient traffic off;
+- SUMO then runs one-way at the 0.02 s trace grid, with its traffic lights
+  rewritten from the SimForge signal book;
+- its vehicles are merged into the trace.
+
+`traffic sumo` prints:
+- the traffic key and digests;
+- the signal-book agreement;
+- a red-light audit against the rendered heads.
+
+`--repeat N` fails unless every run is byte-identical. `--out DIR` writes the
+materialized traffic, the merged and authored traces, the diagnostics and
+`sumo-step-input.json`, which can be replayed on any host that has only the
+runtime. `--signal-authority netconvert` keeps the derivative's own programs,
+for audits only.
 
 ## ASAM interchange
 

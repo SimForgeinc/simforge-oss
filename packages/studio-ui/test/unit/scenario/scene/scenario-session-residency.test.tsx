@@ -27,9 +27,10 @@ vi.mock("../../../../src/lib/scenario/playback/usePlayback", () => ({
 vi.mock("../../../../src/lib/scenario/useMapSignalOverlays", () => ({ useMapSignalOverlays: () => null }));
 vi.mock("../../../../src/lib/scenario/ambient/sumoAssets", () => ({ loadSumoAssets: async () => ({}) }));
 vi.mock("@simforge-oss/viewer", () => ({ indexedWorldHeightSampler: () => () => null }));
-vi.mock("../../../../src/lib/scenario/playback/simulationPreview", () => ({
-  encodeSimulationPreview: async () => ({ bytes: new Uint8Array([1]), sha256: "f".repeat(64) }),
-  downloadSimulationPreview: async () => { throw new Error("no saved preview in this test"); },
+const authoritative = vi.hoisted(() => ({ bundle: vi.fn() }));
+vi.mock("../../../../src/lib/scenario/playback/authoritativeSimulation", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  authoritativePlaybackBundle: authoritative.bundle,
 }));
 
 import { useScenarioSession } from "../../../../src/scenario/scene/useScenarioSession";
@@ -85,22 +86,37 @@ function documentAt(draftVersion: number, clipSeconds = 20): ScenarioDocumentDto
   return record as unknown as ScenarioDocumentDto;
 }
 
-function fakeBundle(tag: string) {
-  return { tag, actors: [], instance: { manifest: { inputHash: tag } } };
+function fakeBundle(tag: string, traceSha256 = "t".repeat(64)) {
+  return { tag, actors: [], instance: { manifest: { inputHash: tag } }, traceSha256 };
+}
+
+function succeeded(traceSha256 = "t".repeat(64), draftVersion = 1) {
+  return {
+    state: "succeeded" as const,
+    requestKey: "r".repeat(64),
+    draftVersion,
+    result: { simKey: "k".repeat(64), traceSha256, authoredTraceSha256: traceSha256, engineSemVer: "0.8.0", trafficProvider: "off" },
+  };
 }
 
 function host(initial: ScenarioDocumentDto) {
-  const saveSimulationPreview = vi.fn(async () => undefined);
+  const resolveSimulation = vi.fn(async (document: { draftVersion: number }) => succeeded("t".repeat(64), document.draftVersion));
+  const verifySimulation = vi.fn(async () => ({ outcome: "verified", authoritativeTraceSha256: "t".repeat(64) }));
   const services = {
     artifacts: { listMaps: async () => [MAP] },
-    projects: {
-      getDocument: async () => initial,
-      getSimulationPreview: async () => null,
-      saveSimulationPreview,
-    },
+    projects: { getDocument: async () => initial, resolveSimulation, verifySimulation },
   };
   // The hook touches only these services; the rest of the host surface is unused.
-  return { services: services as unknown as StudioHostServices, saveSimulationPreview };
+  return { services: services as unknown as StudioHostServices, resolveSimulation, verifySimulation };
+}
+
+function renderSession(services: StudioHostServices) {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <StudioHostProvider host={services}>{children}</StudioHostProvider>
+  );
+  return renderHook(() => useScenarioSession({
+    documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
+  }), { wrapper });
 }
 
 afterEach(() => {
@@ -109,40 +125,91 @@ afterEach(() => {
 });
 
 describe("scenario session trace residency", () => {
-  it("retries a failed preview save without rebuilding the playable trace", async () => {
-    const { services, saveSimulationPreview } = host(documentAt(1));
-    saveSimulationPreview.mockRejectedValueOnce(new Error("Publish unavailable"));
+  it("labels the local preview Verified when the authoritative trace digest matches, uploading nothing", async () => {
+    const { services, resolveSimulation, verifySimulation } = host(documentAt(1));
+    worker.prepare.mockImplementation(async () => fakeBundle("local"));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
+    expect(resolveSimulation.mock.calls[0]?.[0]).toEqual({ id: "doc_1", draftVersion: 1 });
+    expect(verifySimulation).toHaveBeenCalledWith("k".repeat(64), expect.objectContaining({
+      documentId: "doc_1", localTraceSha256: "t".repeat(64),
+    }));
+    expect(rendered.result.current.bundle).toMatchObject({ tag: "local" });
+    expect(authoritative.bundle).not.toHaveBeenCalled();
+  });
+
+  it("shows the authoritative trace, flags the mismatch and reports it when the digests differ", async () => {
+    const { services, resolveSimulation, verifySimulation } = host(documentAt(1));
+    resolveSimulation.mockImplementation(async () => succeeded("a".repeat(64)));
+    worker.prepare.mockImplementation(async () => fakeBundle("local", "b".repeat(64)));
+    authoritative.bundle.mockImplementation(async () => fakeBundle("authoritative", "a".repeat(64)));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification).toMatchObject({
+      status: "mismatch", localTraceSha256: "b".repeat(64), authoritativeTraceSha256: "a".repeat(64), showingAuthoritative: true,
+    }));
+    expect(rendered.result.current.bundle).toMatchObject({ tag: "authoritative" });
+    expect(verifySimulation).toHaveBeenCalledWith("k".repeat(64), expect.objectContaining({ localTraceSha256: "b".repeat(64) }));
+    expect(worker.prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it("verifies a SUMO preview against its authored trace, then replays the worker's SUMO traffic", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
+    resolveSimulation.mockImplementation(async () => ({
+      ...succeeded(),
+      result: { ...succeeded().result, traceSha256: "s".repeat(64), authoredTraceSha256: "t".repeat(64), trafficProvider: "sumo" },
+    }));
+    worker.prepare.mockImplementation(async () => fakeBundle("local"));
+    authoritative.bundle.mockImplementation(async () => fakeBundle("authoritative-sumo", "s".repeat(64)));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "authoritative-sumo" }));
+    expect(rendered.result.current.playback.simulationVerification).toMatchObject({ status: "verified", traceSha256: "s".repeat(64) });
+    expect(authoritative.bundle).toHaveBeenCalledTimes(1);
+    expect(resolveSimulation).toHaveBeenCalledTimes(1);
+    expect(worker.prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the preview local while the simulation is queued on a worker, then verifies", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
+    resolveSimulation
+      .mockImplementationOnce(async () => ({ state: "queued", requestKey: "r".repeat(64), draftVersion: 1 }) as never)
+      .mockImplementationOnce(async () => succeeded());
+    worker.prepare.mockImplementation(async () => fakeBundle("local"));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
+    expect(resolveSimulation).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports an unavailable simulation and retries without rebuilding the playable trace", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
+    resolveSimulation.mockImplementationOnce(async () => ({
+      state: "failed", requestKey: "r".repeat(64), draftVersion: 1, failureCode: "simulation_failed", message: "Runner offline",
+    }) as never);
     worker.prepare.mockImplementation(async () => fakeBundle("retry"));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <StudioHostProvider host={services}>{children}</StudioHostProvider>
-    );
-    const rendered = renderHook(() => useScenarioSession({
-      documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
-    }), { wrapper });
-    await waitFor(() => expect(rendered.result.current.playback.savedSimulationError).toBe("Publish unavailable"));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification).toMatchObject({ status: "unavailable", message: "Runner offline" }));
     const trace = rendered.result.current.bundle;
-    act(() => rendered.result.current.playback.retrySimulationSave?.());
-    await waitFor(() => expect(rendered.result.current.playback.savedSimulationStatus).toBe("saved"));
-    expect(rendered.result.current.playback.savedSimulationError).toBeNull();
+    act(() => rendered.result.current.playback.retrySimulationVerification?.());
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
     expect(rendered.result.current.bundle).toBe(trace);
     expect(worker.prepare).toHaveBeenCalledTimes(1);
   });
 
-  it("opens a superseded draft on its source's current geometry-compatible map", async () => {
+  it("never silently moves a pinned draft to a newer publication", async () => {
     const { services } = host({
       ...documentAt(1), mapVersionId: "retired-publication",
       mapSourceMapId: MAP.sourceMapId, mapXodrSha256: MAP.artifacts!.xodrSha256,
     });
-    worker.prepare.mockImplementation(async () => fakeBundle("forward-resolved"));
     const wrapper = ({ children }: { children: ReactNode }) => (
       <StudioHostProvider host={services}>{children}</StudioHostProvider>
     );
     const rendered = renderHook(() => useScenarioSession({
       documentId: "doc_1", viewer: null, actorRenderer: null, loadedMapVersionId: null,
     }), { wrapper });
-    await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "forward-resolved" }));
-    expect(rendered.result.current.map?.mapVersionId).toBe(MAP.mapVersionId);
-    expect(rendered.result.current.failed).toBe(false);
+    // The pinned version is gone; a geometry-compatible build is only an explicit re-pin away.
+    await waitFor(() => expect(rendered.result.current.failed).toBe(true));
+    expect(rendered.result.current.message).toContain(MAP.mapVersionId);
+    expect(rendered.result.current.bundle).toBeNull();
+    expect(worker.prepare).not.toHaveBeenCalled();
   });
 
   it("refuses drift before producing a driveable preview", async () => {
@@ -162,64 +229,45 @@ describe("scenario session trace residency", () => {
     expect(worker.prepare).not.toHaveBeenCalled();
   });
 
-  it("keeps the compiled trace across an autosave echo, and persists it once the content is saved", async () => {
-    const { services, saveSimulationPreview } = host(documentAt(1));
+  it("keeps the compiled trace across an autosave echo and verifies it once per saved version", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
     worker.prepare.mockImplementation(async () => fakeBundle("v1"));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <StudioHostProvider host={services}>{children}</StudioHostProvider>
-    );
-    const rendered = renderHook(() => useScenarioSession({
-      documentId: "doc_1",
-      viewer: null,
-      actorRenderer: null,
-      loadedMapVersionId: null,
-    }), { wrapper });
+    const rendered = renderSession(services);
 
-    await waitFor(() => expect(rendered.result.current.bundle).not.toBeNull());
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
     const compiled = rendered.result.current.bundle;
     expect(worker.prepare).toHaveBeenCalledTimes(1);
-    // Content at version 1 is what the server holds, so the trace is persisted for it.
-    await waitFor(() => expect(saveSimulationPreview).toHaveBeenCalledTimes(1));
-    expect(saveSimulationPreview.mock.calls[0]?.[0]).toEqual({ id: "doc_1", draftVersion: 1 });
+    expect(resolveSimulation).toHaveBeenCalledTimes(1);
 
-    // A dirty edit: identical content, so the trace and the worker run are reused.
+    // A dirty edit with identical content: the trace and the worker run are reused.
     act(() => rendered.result.current.updateDocument({ ...documentAt(1), title: "Renamed" }));
     expect(rendered.result.current.bundle).toBe(compiled);
 
-    // The autosave echo advances the version without changing content.
+    // The autosave echo advances the version without changing content: verified again for it.
     act(() => rendered.result.current.updateDocument(documentAt(2)));
     expect(rendered.result.current.bundle).toBe(compiled);
     expect(worker.prepare).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(saveSimulationPreview).toHaveBeenCalledTimes(2));
-    expect(saveSimulationPreview.mock.calls[1]?.[0]).toEqual({ id: "doc_1", draftVersion: 2 });
+    await waitFor(() => expect(resolveSimulation).toHaveBeenCalledTimes(2));
+    expect(resolveSimulation.mock.calls[1]?.[0]).toEqual({ id: "doc_1", draftVersion: 2 });
   });
 
-  it("drops the trace and recompiles when the authored content changes, without uploading the unsaved trace", async () => {
-    const { services, saveSimulationPreview } = host(documentAt(1));
+  it("recompiles an edit as a local preview and verifies only once the content is saved", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
     worker.prepare.mockImplementation(async (content: { choreography: { clipSeconds: number } }) => fakeBundle(`clip-${content.choreography.clipSeconds}`));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <StudioHostProvider host={services}>{children}</StudioHostProvider>
-    );
-    const rendered = renderHook(() => useScenarioSession({
-      documentId: "doc_1",
-      viewer: null,
-      actorRenderer: null,
-      loadedMapVersionId: null,
-    }), { wrapper });
-    await waitFor(() => expect(rendered.result.current.bundle).not.toBeNull());
-    await waitFor(() => expect(saveSimulationPreview).toHaveBeenCalledTimes(1));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
 
     act(() => rendered.result.current.updateDocument(documentAt(1, 30)));
     expect(rendered.result.current.bundle).toBeNull();
-    await waitFor(() => expect(worker.prepare).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(rendered.result.current.bundle).toMatchObject({ tag: "clip-30" }));
-    // Version 1 on the server still holds the 20 s content; the 30 s trace is not persisted under it.
-    expect(saveSimulationPreview).toHaveBeenCalledTimes(1);
+    // Version 1 on the server still holds the 20 s content: the 30 s preview stays local.
+    expect(rendered.result.current.playback.simulationVerification?.status).toBe("local");
+    expect(resolveSimulation).toHaveBeenCalledTimes(1);
 
-    // The save lands: the same trace is now the preview of version 2.
+    // The save lands: the same trace is verified as version 2.
     act(() => rendered.result.current.updateDocument(documentAt(2, 30)));
-    await waitFor(() => expect(saveSimulationPreview).toHaveBeenCalledTimes(2));
-    expect(saveSimulationPreview.mock.calls[1]?.[0]).toEqual({ id: "doc_1", draftVersion: 2 });
+    await waitFor(() => expect(resolveSimulation).toHaveBeenCalledTimes(2));
+    expect(resolveSimulation.mock.calls[1]?.[0]).toEqual({ id: "doc_1", draftVersion: 2 });
     expect(worker.prepare).toHaveBeenCalledTimes(2);
   });
 });

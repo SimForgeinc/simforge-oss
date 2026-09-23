@@ -1,16 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { resolveScenarioMap, ScenarioMapResolutionError } from "./scenario-map";
+import { resolveScenarioMap, resolveScenarioMapUpgrade, ScenarioMapResolutionError } from "./scenario-map";
 
 const binding = { mapVersionId: "old", mapSourceMapId: "di-rosa-sf", mapXodrSha256: "a".repeat(64) };
 const installed = { mapVersionId: "new", sourceMapId: "di-rosa-sf", artifacts: { xodrSha256: binding.mapXodrSha256 }, topologyUrl: "/new/topology" };
 
 describe("scenario map resolution", () => {
   it("refuses an ambiguous installed catalog instead of choosing by array order", () => {
-    expect(() => resolveScenarioMap(binding, [installed, { ...installed, mapVersionId: "another" }]))
+    expect(() => resolveScenarioMapUpgrade(binding, [installed, { ...installed, mapVersionId: "another" }]))
       .toThrowError(expect.objectContaining({ code: "scenario_map_ambiguous" }));
   });
-  it("opens a superseded scenario on the current publication of its source", () => {
-    expect(resolveScenarioMap(binding, [installed]).topologyUrl).toBe("/new/topology");
+  it("never silently substitutes a newer publication for the pinned version", () => {
+    expect(() => resolveScenarioMap(binding, [installed])).toThrowError(
+      expect.objectContaining({ code: "scenario_map_version_superseded", requestedMapVersionId: "old", installedMapVersionId: "new" }),
+    );
+  });
+  it("offers the compatible newer publication only as an explicit upgrade", () => {
+    expect(resolveScenarioMapUpgrade(binding, [installed]).topologyUrl).toBe("/new/topology");
+  });
+  it("resolves the pinned version exactly when it is installed, even beside a newer one", () => {
+    const pinned = { ...installed, mapVersionId: "old", topologyUrl: "/old/topology" };
+    expect(resolveScenarioMap(binding, [installed, pinned]).topologyUrl).toBe("/old/topology");
   });
   it("reports a genuinely absent source, without substituting another map", () => {
     expect(() => resolveScenarioMap(binding, [{ ...installed, sourceMapId: "other" }])).toThrowError(
