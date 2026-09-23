@@ -76,8 +76,12 @@ import {
  * determinism violation, recorded and never allowed to replace the original.
  */
 
-/** Bump when the TypeScript half of the pipeline changes what a request resolves to. */
-export const SIMULATION_PIPELINE_REVISION = 2;
+/**
+ * Bump when the TypeScript half of the pipeline changes what a request resolves to.
+ * 3: documents with no authored actors resolve to the blank world instead of
+ * failing `unsupported_portable_semantics`, so their memoized failures re-resolve.
+ */
+export const SIMULATION_PIPELINE_REVISION = 3;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
@@ -1008,7 +1012,13 @@ export async function revisionMotion(workspaceId: string, revisionId: string): P
        SELECT 1 FROM simforge.execution_packages ep
          JOIN simforge.artifacts xosc ON xosc.id = ep.xosc_artifact_id AND xosc.workspace_id = ep.workspace_id
           AND xosc.artifact_state = 'available'
+         JOIN simforge.artifacts xodr ON xodr.id = ep.xodr_artifact_id
+         JOIN simforge.revisions r ON r.id = ep.revision_id AND r.workspace_id = ep.workspace_id
+         JOIN simforge.map_versions mv ON mv.id = r.map_version_id
         WHERE ep.workspace_id = :workspace_id AND ep.revision_id = :revision_id
+          -- The export replays on the revision's roads only if it was compiled
+          -- against them: a revision re-pointed to another map is not offered it.
+          AND xodr.sha256 = mv.xodr_sha256
      ) AS available`,
     { workspace_id: workspaceId, revision_id: revisionId },
   );

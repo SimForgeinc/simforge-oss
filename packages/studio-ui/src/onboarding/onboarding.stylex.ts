@@ -390,7 +390,7 @@ export const onboarding = stylex.create({
   /** One segmented control; the selected segment reads as the accent chip. */
   qualitySegments: {
     display: "grid",
-    gridTemplateColumns: { default: "repeat(2, minmax(0, 1fr))", "@media (min-width: 640px)": "repeat(4, minmax(0, 1fr))" },
+    gridTemplateColumns: { default: "repeat(2, minmax(0, 1fr))", "@media (min-width: 640px)": "repeat(3, minmax(0, 1fr))" },
     gap: space.sm,
     marginTop: space.md,
   },
@@ -428,14 +428,6 @@ export const onboarding = stylex.create({
     borderColor: colors.accent,
     backgroundColor: colors.accent,
     color: colors.accentText,
-  },
-  recommendedTag: {
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    opacity: 0.8,
   },
   qualityGuidance: {
     marginTop: space.sm,

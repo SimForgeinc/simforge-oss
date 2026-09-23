@@ -7,7 +7,7 @@
  */
 
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -35,8 +35,12 @@ interface Run {
 }
 
 async function simforge(...args: string[]): Promise<Run> {
+  return simforgeWith({}, ...args);
+}
+
+async function simforgeWith(env: Record<string, string>, ...args: string[]): Promise<Run> {
   try {
-    const r = await execa('node', [BIN, ...args], { reject: false, timeout: 180_000 });
+    const r = await execa('node', [BIN, ...args], { reject: false, timeout: 180_000, env });
     return { code: r.exitCode ?? 0, stdout: r.stdout, stderr: r.stderr };
   } catch (error) {
     const e = error as ExecaError;
@@ -48,9 +52,32 @@ function json<T = Record<string, unknown>>(run: Run): T {
   return JSON.parse(run.stdout) as T;
 }
 
+/**
+ * A fixture map install: one map whose bundle has every file `availableMaps`
+ * requires. The vocabulary cases read only presence, so the files are empty;
+ * they must not depend on which maps this machine happens to have installed.
+ */
+const FIXTURE_MAP = 'fixture-crossing';
+const FIXTURE_BUNDLE_FILES = [
+  'map.xodr',
+  'signals.geojson.gz',
+  'topology-index.json.gz',
+  'derived/topology-derived.json.gz',
+  'derived/locations.json.gz',
+];
+
 let tmp: string;
+let fixtureDevAssets: string;
 beforeAll(async () => {
   tmp = await mkdtemp(path.join(os.tmpdir(), 'simforge-smoke-'));
+  fixtureDevAssets = path.join(tmp, 'dev-assets');
+  for (const file of FIXTURE_BUNDLE_FILES) {
+    const target = path.join(fixtureDevAssets, FIXTURE_MAP, file);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, '');
+  }
+  // Not a map: a directory missing its bundle files stays out of the vocabulary.
+  await mkdir(path.join(fixtureDevAssets, 'half-installed'), { recursive: true });
 });
 afterAll(async () => {
   if (tmp) await rm(tmp, { recursive: true, force: true });
@@ -87,19 +114,25 @@ describe('simforge — contract', () => {
   });
 
   it('reports an unknown map with the closed vocabulary attached', async () => {
-    const run = await simforge('locations', 'find', '--map', 'not-a-map');
+    const run = await simforgeWith({ SCEN_DEV_ASSETS: fixtureDevAssets }, 'locations', 'find', '--map', 'not-a-map');
     expect(run.code).toBe(1);
-    const error = JSON.parse(run.stderr) as { code: string; detail: { known: string[] } };
+    const error = JSON.parse(run.stderr) as { code: string; detail: { known: string[]; devAssets: string } };
     expect(error.code).toBe('unknown_map');
-    expect(error.detail.known).toContain(MAP);
+    expect(error.detail.known).toEqual([FIXTURE_MAP]);
+    expect(error.detail.devAssets).toBe(fixtureDevAssets);
   });
 
-  it('lists the five maps and their artifacts', async () => {
-    const run = await simforge('maps', 'list');
+  it('lists the maps a registry publishes', async () => {
+    // `maps list` reads a registry index (9ce4b2cd), not the local install; a
+    // file:// registry keeps the case off the network.
+    const registry = path.join(tmp, 'registry');
+    await mkdir(registry, { recursive: true });
+    const index = { [FIXTURE_MAP]: { latest: 'v2', summary: { label: 'Fixture crossing' }, versions: ['v1', 'v2'] } };
+    await writeFile(path.join(registry, 'index.json'), JSON.stringify(index));
+    const url = `file://${registry}`;
+    const run = await simforge('maps', 'list', '--registry', url);
     expect(run.code).toBe(0);
-    const payload = json<{ maps: Array<{ mapId: string; artifacts: Record<string, boolean> }> }>(run);
-    expect(payload.maps).toHaveLength(5);
-    expect(payload.maps.map((m) => m.mapId)).toContain(MAP);
+    expect(json(run)).toEqual({ registry: url, maps: index });
   });
 
   it('prints the published JSON Schema paths', async () => {

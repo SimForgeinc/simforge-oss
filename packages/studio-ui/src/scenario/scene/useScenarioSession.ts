@@ -22,6 +22,7 @@ import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { contentHash } from "@simforge-oss/engine";
 import {
   CollisionActorOverrides,
+  isTrafficPlaybackActor,
   type PlaybackBundle,
   type PlaybackController,
 } from "@simforge-oss/playback";
@@ -503,6 +504,8 @@ export function useScenarioSession({
   });
   const cameraActorIds = useMemo(
     () => bundle?.actors
+      // Traffic never frames the camera: 47 SUMO cars would zoom out to the city.
+      .filter((actor) => !isTrafficPlaybackActor(actor))
       .filter((actor) => !["pedestrian", "animal", "static_object"].includes(actor.kind))
       .map((actor) => actor.id)
       .sort(),

@@ -408,6 +408,14 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
       if (opts?.fresh) shared.invalidate(MAP_READ_KEY);
       return shared.read(MAP_READ_KEY, MAP_SHARE_MS, async () => (await call(maps.list, {})).maps.map(mapEntry), signal);
     },
+    async getMapVersionIdentity(mapVersionId, signal) {
+      try {
+        return await call(maps.versionIdentity, { params: { mapVersionId }, signal });
+      } catch (error) {
+        if (error instanceof StudioHostRequestError && error.status === 404) return null;
+        throw error;
+      }
+    },
     listMapFootprints(signal) {
       return shared.read(MAP_FOOTPRINT_READ_KEY, MAP_SHARE_MS, () => call(maps.footprints, {}), signal);
     },

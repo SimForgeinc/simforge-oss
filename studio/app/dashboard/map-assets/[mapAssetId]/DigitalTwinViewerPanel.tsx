@@ -16,7 +16,7 @@ import type {
   ViewerPath,
   ViewerPoint3,
 } from "@simforge-oss/viewer";
-import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
@@ -75,7 +75,7 @@ export function DigitalTwinViewerPanel({
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
-  const quality = useRenderingPreference() ?? "low";
+  const quality = useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE;
   const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
     ? "native"
     : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"

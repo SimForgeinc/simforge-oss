@@ -18,7 +18,13 @@ export const SCENARIO_AUTHORING_QUALITY_IDS = [
   "medium",
 ] as const;
 export type ScenarioAuthoringQuality = (typeof SCENARIO_AUTHORING_QUALITY_IDS)[number];
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "medium" satisfies ScenarioAuthoringQuality;
+/**
+ * Texture tier a new document starts with: the tier of the default browser
+ * rendering profile (studio-ui `DEFAULT_RENDERING_PREFERENCE`, "Low · no
+ * foliage"), so a fresh scenario never asks for sharper textures than the
+ * default profile downloads.
+ */
+export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "low" satisfies ScenarioAuthoringQuality;
 
 export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export type ScenarioDatasetVisibility = (typeof SCENARIO_DATASET_VISIBILITIES)[number];
@@ -325,6 +331,20 @@ export type ScenarioRevisionResimulationDto = {
   motion: ScenarioRevisionMotionDto;
   /** Null until the re-simulation succeeded, or when the revision has no active result to compare. */
   motionDiff: ScenarioMotionDiffDto | null;
+};
+
+/**
+ * One map version by id, whether or not it is the newest publication of its
+ * source: what an import needs to bind a scenario to the EXACT version it was
+ * authored on. `pinnable` is false for a retired version or one whose
+ * published closure is gone (a scenario can't be pinned to it).
+ */
+export type ScenarioMapVersionIdentityDto = {
+  mapVersionId: string;
+  sourceMapId: string | null;
+  xodrSha256: string;
+  retiredAt: string | null;
+  pinnable: boolean;
 };
 
 /** The editor's comparison of its local preview against the authoritative trace. */
