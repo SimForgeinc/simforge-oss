@@ -1,11 +1,8 @@
-import { spawn, type ChildProcessByStdio } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
-import { once } from 'node:events';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import type { Readable, Writable } from 'node:stream';
 
 import {
   ENGINE_CAPABILITIES_V1_SCHEMA,
@@ -18,7 +15,9 @@ import {
   type RenderInputFile,
   type RenderInputSelectionContext,
 } from '../index.js';
-import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from '../worker-control.js';
+import {
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS,
+} from '../worker-control.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
@@ -27,20 +26,27 @@ import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type Par
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
-import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
-import { startNativeRenderService, terminateProcess } from './service-process.js';
+import { stripRgbaPadding, type NativeActorObservation, type NativeBundleResponse, type NativeFrameIdentity, type NativeFrameRecord } from './service-client.js';
+import { DEFAULT_SHM_SIZE_MB, startNativeRenderService } from './service-process.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, nativeActorAssetsCacheDir } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
+import {
+  DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, nvencAvailable,
+  type NativeVideoCodec, type NativeVideoEncoderPreference, type VideoFormat,
+} from './video-encoder.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 /** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
 export const NATIVE_LOAD_STATE_TIMEOUT_MS = 300_000;
 export const NATIVE_FIRST_BUNDLE_TIMEOUT_MS = 600_000;
 export const NATIVE_BUNDLE_TIMEOUT_MS = 120_000;
+/** Bundle requests kept queued behind the one being answered (pipelining). */
+export const NATIVE_BUNDLE_LOOKAHEAD = 2;
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
@@ -66,6 +72,45 @@ export interface NativeRenderEngineOptions {
    * the service applies full actor rotations). Off sends yaw-only rotations.
    */
   readonly applyAttitude?: boolean;
+  /**
+   * Video encoder: `auto` (default; NVENC where this ffmpeg can open a
+   * session on the device, libx264 otherwise), `libx264` or `h264_nvenc`
+   * (required). `SIMFORGE_NATIVE_VIDEO_ENCODER` sets it for a worker.
+   */
+  readonly videoEncoder?: NativeVideoEncoderPreference;
+  /** NVENC sessions one job may open (default 6; the rest use libx264). */
+  readonly nvencMaxSessions?: number;
+  /**
+   * `pinned` (default): one capture per frame, each a function of its scene
+   * and simulation time. `free`: the rc.73 update-count semantics, kept for
+   * byte-identical comparison. `SIMFORGE_NATIVE_CAPTURE_CLOCK` overrides.
+   */
+  readonly captureClock?: 'pinned' | 'free';
+  /** Cinematic anti-aliasing (`smaa-high`, `taa`, ...); default `NATIVE_DEFAULT_ANTI_ALIAS`. */
+  readonly antiAlias?: string;
+  /** Jittered samples a pinned TAA capture accumulates (default 4; ignored for other AA). */
+  readonly taaSamples?: number;
+  /** Bundle requests queued behind the one being answered (default 2; 0 disables pipelining). */
+  readonly bundleLookahead?: number;
+}
+
+/** Anti-aliasing of the pinned (default) capture clock. */
+export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-high';
+export const NATIVE_DEFAULT_TAA_SAMPLES = 4;
+const ANTI_ALIAS_MODES = new Set(['none', 'fxaa', 'smaa-low', 'smaa-medium', 'smaa-high', 'smaa-ultra', 'taa']);
+
+/** The capture semantics a render asks for (engine options, then the worker environment). */
+export function nativeCaptureSettings(options: NativeRenderEngineOptions, env: NodeJS.ProcessEnv = process.env): {
+  clock: 'pinned' | 'free'; antiAlias: string; samplesPerFrame: number;
+} {
+  const clock = options.captureClock ?? (env.SIMFORGE_NATIVE_CAPTURE_CLOCK as 'pinned' | 'free' | undefined) ?? 'pinned';
+  if (clock !== 'pinned' && clock !== 'free') throw new Error(`native_capture_clock_invalid: ${String(clock)} (pinned | free)`);
+  // The free clock is the rc.73 look, byte for byte: its TAA and nothing else.
+  const antiAlias = clock === 'free' ? 'taa' : options.antiAlias ?? env.SIMFORGE_NATIVE_ANTI_ALIAS ?? NATIVE_DEFAULT_ANTI_ALIAS;
+  if (!ANTI_ALIAS_MODES.has(antiAlias)) throw new Error(`native_anti_alias_invalid: ${antiAlias}`);
+  const taaSamples = options.taaSamples ?? (env.SIMFORGE_NATIVE_TAA_SAMPLES ? Number(env.SIMFORGE_NATIVE_TAA_SAMPLES) : NATIVE_DEFAULT_TAA_SAMPLES);
+  if (!Number.isInteger(taaSamples) || taaSamples < 1 || taaSamples > 16) throw new Error(`native_taa_samples_invalid: ${taaSamples}`);
+  return { clock, antiAlias, samplesPerFrame: clock === 'pinned' && antiAlias === 'taa' ? taaSamples : 1 };
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -143,50 +188,46 @@ export function resolveBinary(options: NativeRenderEngineOptions): string {
 }
 
 
+/** One source's video: its ffmpeg encoder plus the source it encodes. */
 interface Encoder {
   readonly source: RenderSourceV3;
   readonly width: number;
   readonly height: number;
   readonly framesPerSecond: number;
-  readonly process: ChildProcessByStdio<Writable, null, Readable>;
-  readonly path: string;
-  readonly stderr: string[];
-  readonly completion: Promise<unknown[]>;
-  frames: number;
+  readonly video: VideoEncoder;
 }
 
-interface VideoFormat {
-  readonly width: number;
-  readonly height: number;
-  readonly framesPerSecond: number;
-}
-
-function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3, format: VideoFormat): Encoder {
-  const child = spawn(ffmpeg, [
-    '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba',
-    '-s', `${format.width}x${format.height}`,
-    '-r', String(format.framesPerSecond), '-i', 'pipe:0',
-    '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart', outputPath,
-  ], { stdio: ['pipe', 'ignore', 'pipe'] });
-  const stderr: string[] = [];
-  child.stderr.setEncoding('utf8');
-  child.stderr.on('data', (chunk: string) => {
-    stderr.push(chunk);
-    if (stderr.length > 32) stderr.shift();
-  });
+function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3, format: VideoFormat, codec: NativeVideoCodec): Encoder {
   return {
     source, width: format.width, height: format.height, framesPerSecond: format.framesPerSecond,
-    process: child, path: outputPath, stderr, completion: once(child, 'exit'), frames: 0,
+    video: new VideoEncoder(ffmpeg, outputPath, format, codec),
   };
 }
 
-async function finishEncoder(encoder: Encoder): Promise<void> {
-  encoder.process.stdin.end();
-  const [code, signal] = await encoder.completion as [number | null, NodeJS.Signals | null];
-  if (code !== 0) {
-    throw new Error(`ffmpeg exited code=${String(code)} signal=${String(signal)}\n${encoder.stderr.join('')}`);
+/** `auto` (NVENC where the device can open a session, else libx264), or a fixed codec. */
+function videoEncoderPreference(options: NativeRenderEngineOptions): NativeVideoEncoderPreference {
+  const requested = options.videoEncoder ?? process.env.SIMFORGE_NATIVE_VIDEO_ENCODER ?? 'auto';
+  if (requested !== 'auto' && requested !== 'libx264' && requested !== 'h264_nvenc') {
+    throw new Error(`native_video_encoder_invalid: ${requested} (auto | libx264 | h264_nvenc)`);
   }
+  return requested;
+}
+
+/**
+ * Where the service caches static sensor scenes (content-addressed, see
+ * `renderer/service`): the worker's persistent cache directory.
+ */
+function nativeSensorCacheDir(options: NativeRenderEngineOptions): string | undefined {
+  const root = process.env.SIMFORGE_NATIVE_SENSOR_CACHE_DIR
+    ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-sensor-scenes') : undefined)
+    ?? (options.nativeCacheDirectory ? path.join(path.dirname(options.nativeCacheDirectory), 'native-sensor-scenes') : undefined);
+  return root && root.length > 0 ? root : undefined;
+}
+
+/** Ticks whose raw RGBA frames are dumped for offline comparison (`SIMFORGE_NATIVE_DUMP_TICKS=0,24,95`). */
+function dumpTicks(): ReadonlySet<number> {
+  const raw = process.env.SIMFORGE_NATIVE_DUMP_TICKS ?? '';
+  return new Set(raw.split(',').map((value) => Number(value.trim())).filter((value) => Number.isSafeInteger(value) && value >= 0));
 }
 
 interface SensorArchive {
@@ -233,6 +274,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
     async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
       const startedAt = new Date().toISOString();
       const wallStarted = performance.now();
+      // Stage timings (`timings.stages`): one-off phases, per-tick service
+      // stages from each bundle response, and per-tick host stages.
+      const startupMs: Record<string, number> = {};
+      let phaseStarted = wallStarted;
+      const phase = (name: string): void => {
+        const now = performance.now();
+        startupMs[name] = (startupMs[name] ?? 0) + (now - phaseStarted);
+        phaseStarted = now;
+      };
+      const serverStages = new StageSamples();
+      const clientStages = new StageSamples();
+      const counters: Record<string, number> = {};
+      const tickRecords: string[] = [];
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
@@ -262,6 +316,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
         throw new NativeGpuMemoryError(textureProfile.estimatedBytes, context.gpuMemory, intent.renderTextures);
       }
+      phase('textureProfile');
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
       const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
@@ -294,6 +349,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(packagedActorRoot ? {} : { treeRoot: path.join(actorCacheDir, 'trees') }),
       });
 
+      phase('actorAssets');
       // The render contract is the render timeline: sample the authoritative
       // trace through the shared sampler. Re-lowering the derived xosc is a
       // labelled fallback for execution packages that predate the timeline.
@@ -317,6 +373,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         warnings.push({ code: 'scene_source_openscenario_legacy', message: 'no render.timeline input; poses were re-lowered from the derived OpenSCENARIO export' });
       }
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
+      phase('lowering');
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
       // Lidar and radar videos ride the cameras' fixed-step clock: one frame
@@ -346,9 +403,14 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // the Lookdev Lab's cinematic look: same weather presets, same solar
       // model, same profile. The service meters the sky through each
       // frame's camera on top (`autoMeter`).
-      const look = resolveNativeLighting(intent.renderSpec.authoredEnvironment, {
+      const capture = nativeCaptureSettings(options);
+      const resolvedLook = resolveNativeLighting(intent.renderSpec.authoredEnvironment, {
         cloudFixedStepS: 1 / Math.max(1, ...rgbSchedules.map((schedule) => schedule.framesPerSecond)),
       });
+      const look = {
+        ...resolvedLook,
+        profileConfig: { ...resolvedLook.profileConfig, cinematic: { ...resolvedLook.profileConfig.cinematic, aa: capture.antiAlias } },
+      };
       await writeJson(scenePath, {
         glbs: [masterPath],
         profile: 'cinematic',
@@ -360,10 +422,16 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         warmupFrames: 20,
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
+        captureClock: capture.clock,
+        taaSamples: capture.samplesPerFrame,
+        ...(sensorRigs.lidars.length + sensorRigs.radars.length > 0 && nativeSensorCacheDir(options)
+          ? { sensorCacheDir: nativeSensorCacheDir(options) }
+          : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.
       const startupTimeoutMs = options.startupTimeoutMs ?? nativeStartupTimeoutMs(textureProfile);
+      phase('sceneSpec');
       const loadStarted = performance.now();
       const loadTicker = setInterval(() => {
         const elapsedS = Math.min(startupTimeoutMs / 1000, (performance.now() - loadStarted) / 1000);
@@ -382,7 +450,14 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       } finally {
         clearInterval(loadTicker);
       }
+      phase('serviceStart');
       const { client } = session;
+      // A service that predates the pinned clock renders update-count frames
+      // whatever the scene spec asked for: record what actually ran.
+      const captureClock = capture.clock === 'pinned' && !client.supports('capture_clock.pinned') ? 'free' : capture.clock;
+      if (captureClock !== capture.clock) {
+        warnings.push({ code: 'native_capture_clock_unsupported', message: 'the render service does not pin the capture clock; frames use update-count semantics' });
+      }
 
       const encoders = new Map<string, Encoder>();
       const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
@@ -391,6 +466,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       let serverMs = 0;
       const frameIdentities: NativeFrameIdentity[] = [];
       let encodingComplete = false;
+      // Host work of tick N (sensor rasterisation, encoder writes, archives)
+      // runs while the service renders tick N+1: one tick in flight, strictly
+      // in order, so every video and archive receives its frames in tick order.
+      let inFlight: Promise<void> | undefined;
+      const drainInFlight = async (): Promise<void> => {
+        const pending = inFlight;
+        inFlight = undefined;
+        if (pending) await pending;
+      };
       const progressBase = () => ({
         schema: 'simforge.render-progress/v1' as const, jobId: context.jobId, attempt: context.attempt, sequence: 0,
         timestamp: new Date().toISOString(),
@@ -400,14 +484,22 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         // heartbeating lease) forever. The first bundle also compiles
         // pipelines, so it gets the longer budget.
         await client.rpc({ op: 'load_scene_state', states: lowering.states }, NATIVE_LOAD_STATE_TIMEOUT_MS);
+        phase('loadSceneState');
         const cameras = cameraSchedule;
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
+        // NVENC sessions go to the camera videos first (the heavy encodes);
+        // sensor visualisations follow in declaration order.
+        const preference = videoEncoderPreference(options);
+        const codecs = assignVideoCodecs(
+          [...sources.filter((source) => source.modality === 'rgb'), ...sources.filter((source) => source.modality !== 'rgb')].map((source) => source.outputName),
+          { preference, nvenc: preference !== 'libx264' && nvencAvailable(ffmpeg), maxSessions: options.nvencMaxSessions ?? DEFAULT_NVENC_MAX_SESSIONS },
+        );
         for (const source of sources) {
           const outputPath = path.join(context.workspace, 'video', `${source.outputName}.mp4`);
           const format: VideoFormat = source.modality === 'rgb'
             ? { width: source.attributes.width, height: source.attributes.height, framesPerSecond: source.attributes.fps }
             : sensorVideo;
-          encoders.set(source.outputName, startEncoder(ffmpeg, outputPath, source, format));
+          encoders.set(source.outputName, startEncoder(ffmpeg, outputPath, source, format, codecs.get(source.outputName)!));
           if (source.modality === 'lidar') {
             rasterizers.set(source.outputName, new LidarVideoRasterizer(format.width, format.height, source.attributes.rangeM, source.transform.position.y));
           } else if (source.modality === 'radar') {
@@ -417,24 +509,107 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             archives.set(source.outputName, await openSensorArchive(path.join(context.workspace, 'sensors', `${source.outputName}.zip`)));
           }
         }
+        phase('encoderStart');
         const wantedMicros = new Map<string, Set<number>>();
         for (const [sourceId, schedule] of scheduleBySource) wantedMicros.set(sourceId, new Set(scheduleFrameMicros(schedule)));
 
+        const dumps = dumpTicks();
+        const dumpDirectory = path.join(context.workspace, 'diagnostics', 'frames');
+        if (dumps.size > 0) await fs.mkdir(dumpDirectory, { recursive: true });
+        const tickDetails: Record<string, unknown>[] = [];
+        type TickItem = { readonly frame: NativeFrameRecord; readonly payload: Buffer };
+        const consumeTick = async (tick: number, items: readonly TickItem[], timing: Record<string, number>): Promise<void> => {
+          const writes: Promise<void>[] = [];
+          for (const { frame, payload } of items) {
+            const encoder = encoders.get(frame.sensorId)!;
+            if (frame.pass === 'lidar' || frame.pass === 'radar') {
+              const rasterizer = rasterizers.get(frame.sensorId)!;
+              const rasterStarted = performance.now();
+              const rgba = rasterizer instanceof LidarVideoRasterizer
+                ? rasterizer.frame(parseLidarPly(payload))
+                : rasterizer.frame(parseRadarCsv(payload));
+              timing.raster = (timing.raster ?? 0) + (performance.now() - rasterStarted);
+              // `write` copies the frame: the rasterizer reuses its buffer.
+              writes.push(encoder.video.write(rgba));
+              const archive = archives.get(frame.sensorId);
+              if (archive) {
+                const archiveStarted = performance.now();
+                const extension = frame.pass === 'lidar' ? 'ply' : 'csv';
+                await archive.writer.add(`tick-${String(tick).padStart(6, '0')}.${extension}`, payload, context.signal);
+                timing.archive = (timing.archive ?? 0) + (performance.now() - archiveStarted);
+              }
+              continue;
+            }
+            const rgba = stripRgbaPadding(payload, frame.width, frame.height);
+            if (dumps.has(tick)) await fs.writeFile(path.join(dumpDirectory, `tick-${String(tick).padStart(6, '0')}.${frame.sensorId}.${frame.width}x${frame.height}.rgba`), rgba);
+            writes.push(encoder.video.write(rgba));
+          }
+          const encodeStarted = performance.now();
+          await Promise.all(writes);
+          timing.encodeWrite = (timing.encodeWrite ?? 0) + (performance.now() - encodeStarted);
+        };
+
+        // Bundle pipelining: with requests queued behind the one it is
+        // answering, the service submits the next capture before collecting
+        // the current one (CPU frame build overlaps GPU work). Needs the
+        // service to report observations inside the bundle, and a ring that
+        // holds every published-but-unread bundle.
+        const bundleBytes = sources.reduce((sum, source) => sum + (source.modality === 'rgb'
+          ? Math.ceil(source.attributes.width * 4 / 256) * 256 * source.attributes.height
+          : 8 * 1024 * 1024), 0);
+        const ringBytes = (options.shmSizeMb ?? DEFAULT_SHM_SIZE_MB) * 1024 * 1024;
+        const requestedLookahead = options.bundleLookahead
+          ?? (process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD ? Number(process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD) : NATIVE_BUNDLE_LOOKAHEAD);
+        const lookahead = Number.isInteger(requestedLookahead) && requestedLookahead > 0
+          && client.supports('render_bundle.pipeline') && client.supports('render_bundle.observe') && ringBytes >= (3 + requestedLookahead) * bundleBytes
+          ? requestedLookahead
+          : 0;
+        const bundleBody = (tick: number) => ({
+          sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'], sim_time_s: lowering.frameTimes[tick],
+          // The non-camera rig is retained by the service: declare it once.
+          ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
+          ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
+          ...(lookahead > 0 ? { pipeline: true, observe: observing } : {}),
+        });
+        const queued: Promise<NativeBundleResponse>[] = [];
+        let nextTick = 0;
+        const send = () => {
+          const tick = nextTick;
+          nextTick += 1;
+          const sent = client.renderBundle(bundleBody(tick), tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS * (1 + lookahead));
+          sent.catch(() => undefined);
+          queued.push(sent);
+        };
+        counters.bundleLookahead = lookahead;
+
         for (let tick = 0; tick < lowering.states.length; tick += 1) {
           if (context.signal.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error('native render aborted');
-          const response = await client.renderBundle({
-            sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'],
-            // The non-camera rig is retained by the service: declare it once.
-            ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
-            ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
-          }, tick === 0 ? NATIVE_FIRST_BUNDLE_TIMEOUT_MS : NATIVE_BUNDLE_TIMEOUT_MS);
+          const tickStarted = performance.now();
+          const tickClient: Record<string, number> = {};
+          const clientStage = (name: string, since: number): number => {
+            const now = performance.now();
+            tickClient[name] = (tickClient[name] ?? 0) + (now - since);
+            return now;
+          };
+          // Tick 0 (pipeline compile, sensor scenes) goes alone; then keep
+          // `lookahead` requests queued behind the one being answered.
+          while (nextTick < lowering.states.length && nextTick <= (tick === 0 ? 0 : tick + lookahead)) send();
+          const response = await queued.shift()!;
           if (response.frame.simTick !== tick) {
             throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
           }
           serverMs += response.server_ms ?? 0;
           frameIdentities.push(response.frame);
+          let clientMark = clientStage('bundleRpc', tickStarted);
+          const service = splitServiceStages(response.stages);
+          for (const [stage, ms] of Object.entries(service.durations)) serverStages.add(stage, ms);
+          serverStages.add('total', response.server_ms ?? 0);
+          for (const [counter, value] of Object.entries(service.counts)) counters[counter] = (counters[counter] ?? 0) + value;
+          const bundled = response.observed_actors as NativeActorObservation['actors'] | undefined;
           if (observing) {
-            const observation = await client.observeActors();
+            const observation = bundled
+              ? { tick: (response.observed_tick as number | null | undefined) ?? null, actors: bundled }
+              : lookahead > 0 ? null : await client.observeActors();
             if (observation === null) {
               observing = false;
               warnings.push({ code: 'native_observation_unavailable', message: 'the render service does not report observed actor transforms; parity was not graded' });
@@ -447,53 +622,62 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
                 })),
               }));
             }
+            clientMark = clientStage('observe', clientMark);
           }
+          // Copy this tick's payloads out of the shared-memory ring now: the
+          // next bundle reuses it while this tick is still being encoded.
           const frameMicros = Math.round(lowering.frameTimes[tick]! * 1_000_000);
+          const items: TickItem[] = [];
+          const digests: Record<string, string> = {};
           for (const frame of response.frames) {
             if (frame.pass === 'lidar' || frame.pass === 'radar') {
-              const encoder = encoders.get(frame.sensorId);
-              const rasterizer = rasterizers.get(frame.sensorId);
-              if (!encoder || !rasterizer) throw new Error(`native service returned unknown ${frame.pass} sensor ${frame.sensorId}`);
-              const payload = await client.readFrame(frame);
-              const rgba = rasterizer instanceof LidarVideoRasterizer
-                ? rasterizer.frame(parseLidarPly(payload))
-                : rasterizer.frame(parseRadarCsv(payload));
-              if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
-              encoder.frames += 1;
-              const archive = archives.get(frame.sensorId);
-              if (archive) {
-                const extension = frame.pass === 'lidar' ? 'ply' : 'csv';
-                await archive.writer.add(`tick-${String(tick).padStart(6, '0')}.${extension}`, payload, context.signal);
-              }
-              continue;
+              if (!encoders.has(frame.sensorId) || !rasterizers.has(frame.sensorId)) throw new Error(`native service returned unknown ${frame.pass} sensor ${frame.sensorId}`);
+            } else {
+              if (frame.pass !== 'rgb' || !wantedMicros.get(frame.sensorId)?.has(frameMicros)) continue;
+              if (!encoders.has(frame.sensorId)) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
             }
-            if (frame.pass !== 'rgb' || !wantedMicros.get(frame.sensorId)?.has(frameMicros)) continue;
-            const encoder = encoders.get(frame.sensorId);
-            if (!encoder) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
-            const rgba = stripRgbaPadding(await client.readFrame(frame), frame.width, frame.height);
-            if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
-            encoder.frames += 1;
+            items.push({ frame, payload: await client.readFrame(frame) });
+            digests[`${frame.sensorId}:${frame.pass}`] = frame.digest;
           }
+          clientMark = clientStage('read', clientMark);
+          await drainInFlight();
+          clientMark = clientStage('pipelineWait', clientMark);
+          const detail: Record<string, unknown> = { tick, serverMs: response.server_ms ?? null, server: response.stages ?? null, client: tickClient, crc32: digests };
+          tickDetails.push(detail);
+          const consumed = consumeTick(tick, items, tickClient);
+          // Surfaced by the next drain; never an unhandled rejection meanwhile.
+          consumed.catch(() => undefined);
+          inFlight = consumed;
           const total = lowering.states.length;
           // Every ~1% (at least each second-ish tick group) and the last tick: enough for a live bar, not a flood.
           if (tick + 1 === total || (tick + 1) % Math.max(1, Math.floor(total / 100)) === 0) {
             await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'rendering', completed: tick + 1, total, unit: 'frames' });
+            clientMark = clientStage('progress', clientMark);
           }
+          detail.tickMs = performance.now() - tickStarted;
         }
+        await drainInFlight();
+        for (const detail of tickDetails) {
+          clientStages.add('tick', detail.tickMs as number);
+          for (const [stage, ms] of Object.entries(detail.client as Record<string, number>)) clientStages.add(stage, ms);
+          tickRecords.push(JSON.stringify(detail));
+        }
+        phase('ticks');
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 0, total: 1, unit: 'items' });
-        await Promise.all([...encoders.values()].map(finishEncoder));
+        await Promise.all([...encoders.values()].map((encoder) => encoder.video.finish()));
+        phase('encoderFinish');
         for (const archive of archives.values()) archive.receipt = await archive.writer.close(context.signal);
+        phase('archiveClose');
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 1, total: 1, unit: 'items' });
         encodingComplete = true;
       } finally {
         if (!encodingComplete) {
-          for (const encoder of encoders.values()) {
-            encoder.process.stdin.destroy();
-            terminateProcess(encoder.process);
-          }
+          await drainInFlight().catch(() => undefined);
+          for (const encoder of encoders.values()) encoder.video.abort();
           for (const archive of archives.values()) await archive.writer.abort(new Error('native render did not complete'));
         }
         await session.close();
+        phase('serviceClose');
       }
 
       // The parity gate: with a timeline, every drawn actor must match the
@@ -521,6 +705,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(parity ? { parity } : {}),
       });
       const traceDigest = await hashFile(tracePath);
+      phase('parityAndTrace');
       if (parity && !parity.pass) {
         throw new Error(`native_render_parity_failed: max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
       }
@@ -528,14 +713,14 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const videoRecords = [];
       const artifacts: RenderArtifactManifest['artifacts'] = [];
       for (const encoder of [...encoders.values()].sort((left, right) => left.source.outputName.localeCompare(right.source.outputName))) {
-        const digest = await hashFile(encoder.path);
-        const relativePath = path.relative(context.workspace, encoder.path);
+        const digest = await hashFile(encoder.video.path);
+        const relativePath = path.relative(context.workspace, encoder.video.path);
         const expectedFrames = encoder.source.modality === 'rgb'
           ? scheduleBySource.get(encoder.source.outputName)?.frameCount
           : sensorVideo.frameCount;
         if (expectedFrames === undefined) throw new Error(`native render produced ${encoder.source.outputName} without a schedule`);
-        if (encoder.frames !== expectedFrames) {
-          throw new Error(`native render encoded ${encoder.frames} frames for ${encoder.source.outputName}; its schedule requires ${expectedFrames}`);
+        if (encoder.video.frames !== expectedFrames) {
+          throw new Error(`native render encoded ${encoder.video.frames} frames for ${encoder.source.outputName}; its schedule requires ${expectedFrames}`);
         }
         videoRecords.push({
           actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, relativePath,
@@ -546,13 +731,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             mount: encoder.source.transform,
           },
           width: encoder.width, height: encoder.height,
-          framesPerSecond: encoder.framesPerSecond, frameCount: encoder.frames,
+          framesPerSecond: encoder.framesPerSecond, frameCount: encoder.video.frames,
           sha256: digest.sha256, sizeBytes: digest.sizeBytes,
         });
         artifacts.push({
           identity: { role: 'video', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: encoder.source.modality },
           relativePath, sha256: digest.sha256, sizeBytes: digest.sizeBytes,
-          mediaType: 'video/mp4', frameCount: encoder.frames,
+          mediaType: 'video/mp4', frameCount: encoder.video.frames,
         });
         const archive = archives.get(encoder.source.outputName);
         if (archive) {
@@ -560,7 +745,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           artifacts.push({
             identity: { role: 'sensorArchive', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: encoder.source.modality },
             relativePath: path.relative(context.workspace, archive.path), sha256: archive.receipt.sha256, sizeBytes: archive.receipt.byteLength,
-            mediaType: 'application/zip', frameCount: encoder.frames,
+            mediaType: 'application/zip', frameCount: encoder.video.frames,
           });
         }
       }
@@ -587,6 +772,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...sceneSourceEvidence,
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
+        ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture: {
+          clock: captureClock === 'pinned' ? 'simulation-time' as const : 'update-count' as const,
+          antiAlias: capture.antiAlias,
+          samplesPerFrame: captureClock === 'pinned' ? capture.samplesPerFrame : 1,
+        } } : {}),
         look: {
           profile: 'cinematic',
           lighting: look.lighting,
@@ -603,6 +793,21 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         mediaType: 'application/json', frameCount: null,
       });
 
+      phase('evidence');
+      const stageTimings: NativeStageTimings = {
+        schema: NATIVE_STAGE_TIMINGS_V1_SCHEMA,
+        ticks: frameIdentities.length,
+        startupMs,
+        server: serverStages.summary(),
+        client: clientStages.summary(),
+        counters,
+        encoders: Object.fromEntries([...encoders.values()].map((encoder) => [encoder.source.outputName, encoder.video.codec])),
+      };
+      // Per-tick detail stays in the workspace (not an uploaded artifact);
+      // the summary goes to the worker log and, when accepted, the evidence.
+      await fs.mkdir(path.join(context.workspace, 'diagnostics'), { recursive: true });
+      await fs.writeFile(path.join(context.workspace, 'diagnostics', 'native-stages.jsonl'), `${tickRecords.join('\n')}\n`);
+      console.error(JSON.stringify({ event: 'native.stage_timings', jobId: context.jobId, wallMs: performance.now() - wallStarted, serverMs, ...stageTimings }));
       const diagnosticsRelative = 'diagnostics/native-run.json';
       const diagnosticsPath = path.join(context.workspace, diagnosticsRelative);
       await writeJson(diagnosticsPath, NativeRunDiagnosticsSchema.parse({
@@ -627,7 +832,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,
           presenceMismatches: parity.presenceMismatches,
         } } : {}),
-        timings: { wallMs: performance.now() - wallStarted, serverMs },
+        timings: {
+          wallMs: performance.now() - wallStarted,
+          serverMs,
+          ...(features.has(CONTROL_FEATURE_NATIVE_STAGE_TIMINGS) ? { stages: stageTimings } : {}),
+        },
       }));
       const diagnosticsDigest = await hashFile(diagnosticsPath);
       artifacts.push({

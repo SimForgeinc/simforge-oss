@@ -183,7 +183,8 @@ function hashPasses(outPrefix, passes, hashScene) {
 function buildInvocation(scene, glbs, outPrefix) {
   if (scene.invocationTemplate) {
     // Generic argv template ({glbs} -> csv, {out} -> output prefix/dir,
-    // {sceneState} -> the expanded committed scene state, {corpus} -> root).
+    // {sceneState} -> the expanded committed scene state, {corpus} -> root,
+    // {repo} -> the repository root, e.g. for the committed actor catalogs).
     let sceneStatePath = '';
     if (scene.sceneState?.gz) {
       sceneStatePath = `${outPrefix}.scene-state.json`;
@@ -194,7 +195,7 @@ function buildInvocation(scene, glbs, outPrefix) {
     fs.mkdirSync(outPrefix, { recursive: true });
     return scene.invocationTemplate.map((t) =>
       t === '{glbs}' ? glbs.join(',') : t.replaceAll('{out}', outPrefix)
-        .replaceAll('{sceneState}', sceneStatePath).replaceAll('{corpus}', corpusRoot));
+        .replaceAll('{sceneState}', sceneStatePath).replaceAll('{corpus}', corpusRoot).replaceAll('{repo}', repoRoot));
   }
   const a = scene.rendererArgs;
   const cameras = Array.from({ length: Math.max(1, a.cameras) }, (_, c) => ({

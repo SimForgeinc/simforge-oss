@@ -97,7 +97,7 @@ pub fn derive_vehicle_light_states(
 ) -> Vec<VehicleLightState> {
     let mut lit: Vec<&LightInput> = actors
         .iter()
-        .filter(|a| a.is_vehicle && a.headlights.unwrap_or(global_low_beams))
+        .filter(|a| a.is_vehicle && a.headlights.unwrap_or(global_low_beams)) // fallback-ok: per-actor headlight override; None follows the scene-wide low-beam rule
         .collect();
     lit.sort_by(|a, b| a.id.cmp(&b.id));
     let beam_ids: std::collections::HashSet<&str> = lit
@@ -111,7 +111,7 @@ pub fn derive_vehicle_light_states(
         if !actor.is_vehicle {
             continue;
         }
-        let low_beams = actor.headlights.unwrap_or(global_low_beams);
+        let low_beams = actor.headlights.unwrap_or(global_low_beams); // fallback-ok: per-actor headlight override; None follows the scene-wide low-beam rule
         let state = VehicleLightState {
             actor_id: actor.id.clone(),
             low_beams,

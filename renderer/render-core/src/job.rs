@@ -166,7 +166,7 @@ pub fn run_job(job: &RenderJob) -> Result<RenderResults> {
     let mut geoms: HashMap<String, CamGeom> = HashMap::new();
     for entry in &job.schedule {
         for cam in &entry.cameras {
-            let profile = cam.profile.unwrap_or(job.profile);
+            let profile = cam.profile.unwrap_or(job.profile); // fallback-ok: documented: a camera without a profile uses the job profile
             match geoms.get(&cam.sensor_id) {
                 Some(g) => {
                     if g.width != cam.width
@@ -197,6 +197,11 @@ pub fn run_job(job: &RenderJob) -> Result<RenderResults> {
 
     let t_start = Instant::now();
     let mut app = SceneApp::new_with_profile_config(&job.lighting, job.profile_config)?;
+    // The constructor spawns the ladder with calibration defaults; only a
+    // relight applies the job's ambient scale, EV bias, weather, night and
+    // sky controls (the service does the same in `prewarm`). Without it a
+    // batch job silently rendered a different look than it declared.
+    app.apply_lighting(&job.lighting, job.profile_config)?;
     app.load_tiles(&job.glbs)?;
     app.load_vegetation(&job.veg_glbs)?;
     let mut sensors: Vec<&String> = geoms.keys().collect();
