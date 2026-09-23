@@ -39,7 +39,8 @@ def ssh_runner(host: str) -> Runner:
     return run
 
 
-def collect_nas(run: Runner, root: str, out: Path, *, sudo: bool, previous: dict | None = None) -> dict:
+def collect_nas(run: Runner, root: str, out: Path, *, sudo: bool, previous: dict | None = None,
+                label: str = "nas") -> dict:
     """List + hash every file under ``root/<folder>/``; copy the XODRs.
 
     GLBs are gigabytes on NFS: when ``previous`` (an earlier nas.json) has the
@@ -57,23 +58,23 @@ def collect_nas(run: Runner, root: str, out: Path, *, sudo: bool, previous: dict
         old = prior.get(rel)
         if old and old.get("bytes") == entry["bytes"] and old.get("mtime") == mtime and old.get("sha256"):
             entry["sha256"] = old["sha256"]
-        elif name.lower().endswith(".xodr"):
+        elif name.lower().endswith((".xodr", ".json")):
             data = run(prefix + ["cat", f"{root}/{rel}"])
             entry["sha256"] = hashlib.sha256(data).hexdigest()
-            target = out / "nas" / folder / name
+            target = out / label / folder / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
         else:
             entry["sha256"] = run(prefix + ["sha256sum", f"{root}/{rel}"]).decode().split()[0]
-        if name.lower().endswith(".xodr") and not (out / "nas" / folder / name).exists():
+        if name.lower().endswith((".xodr", ".json")) and not (out / label / folder / name).exists():
             data = run(prefix + ["cat", f"{root}/{rel}"])
             if hashlib.sha256(data).hexdigest() != entry["sha256"]:
                 raise RuntimeError(f"{rel} changed while it was being collected")
-            (out / "nas" / folder).mkdir(parents=True, exist_ok=True)
-            (out / "nas" / folder / name).write_bytes(data)
+            (out / label / folder).mkdir(parents=True, exist_ok=True)
+            (out / label / folder / name).write_bytes(data)
         files.append(entry)
     doc = {"schema": "simforge.carla-world-manifest.nas/v1", "root": root, "files": files}
-    (out / "nas.json").write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n")
+    (out / f"{label}.json").write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n")
     return doc
 
 
