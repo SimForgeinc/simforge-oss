@@ -27,7 +27,11 @@ edition = "2021"
 #   and draw order is a function of the scene, not of the run: sorted phases
 #   break equal sort keys by main entity, and binned phases keep each bin in
 #   entity order (without this, blended items at equal distance composited
-#   differently between runs and two golden record runs disagreed).
+#   differently between runs and two golden record runs disagreed); and a
+#   directional cascade resolves visibility ranges (LODs) from its camera
+#   (upstream looked the camera up by a main-world id in a render-world
+#   query, fell back to the world origin, and LOD chains the CPU and GPU
+#   selected differently cast no shadow at all).
 # Every other Bevy crate stays pinned to crates.io 0.19.1.
 [patch.crates-io]
 bevy_gltf = { path = "vendor/bevy_gltf" }

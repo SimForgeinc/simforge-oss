@@ -602,6 +602,13 @@ impl ColorGrading {
     }
 }
 
+/// SIMFORGE PATCH: render-world count of directional shadow views whose
+/// camera could not be resolved (their LODs then fall back to
+/// [`RenderShadowLodOrigin`]). Counted only when the app inserts it; a
+/// correct frame adds nothing. See `prepare_view_uniforms`.
+#[derive(Default, Resource, Debug)]
+pub struct DirectionalShadowLodMisses(pub u64);
+
 /// A resource, part of the render world, that stores the resolved origin for
 /// LOD selection for shadow maps of point and spot lights.
 #[derive(Default, Resource, Debug)]
@@ -1011,7 +1018,25 @@ pub fn prepare_view_uniforms(
     )>,
     frame_count: Res<FrameCount>,
     shadow_lod_origin: Option<Res<RenderShadowLodOrigin>>,
+    mut lod_misses: Option<ResMut<DirectionalShadowLodMisses>>,
 ) {
+    // SIMFORGE PATCH (directional shadow LOD origin): a directional cascade
+    // view names its camera by MAIN-world entity (`auxiliary_entity`), but
+    // upstream looked it up in this RENDER-world query by that id. The lookup
+    // missed (or hit an unrelated render entity), so cascades resolved
+    // visibility ranges (LODs) from `RenderShadowLodOrigin` (the world origin
+    // when none is set) while CPU visibility (`VisibleEntityRanges`) used the
+    // camera: a LOD chain member was only drawn into the cascade where both
+    // agreed, and whole forests lost their shadows depending on the LOD
+    // switch distances. Resolve the camera by its main entity instead.
+    let camera_positions: HashMap<MainEntity, Vec3> = views
+        .iter()
+        .filter(|(_, camera, view, ..)| {
+            camera.is_some()
+                && view.retained_view_entity.auxiliary_entity == MainEntity::from(Entity::PLACEHOLDER)
+        })
+        .map(|(_, _, view, ..)| (view.retained_view_entity.main_entity, view.world_from_view.translation()))
+        .collect();
     let view_iter = views.iter();
     let view_count = view_iter.len();
     let Some(mut writer) =
@@ -1085,17 +1110,13 @@ pub fn prepare_view_uniforms(
                 // present), we use the position of that camera as the LOD view
                 // position. This ensures that each rendered object has a shadow
                 // and that no invisible objects have shadows.
-                match views.get(
-                    extracted_view
-                        .retained_view_entity
-                        .auxiliary_entity
-                        .entity(),
-                ) {
-                    Ok((_, _, camera_view, _, _, _, _)) => {
-                        camera_view.world_from_view.translation()
-                    }
-                    Err(_) => shadow_lod_origin.0,
+                let resolved = camera_positions.get(&extracted_view.retained_view_entity.auxiliary_entity).copied();
+                if resolved.is_none()
+                    && let Some(misses) = lod_misses.as_mut()
+                {
+                    misses.0 += 1;
                 }
+                resolved.unwrap_or(shadow_lod_origin.0)
             }
         };
 

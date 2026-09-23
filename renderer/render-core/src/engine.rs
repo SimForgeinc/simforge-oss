@@ -2652,6 +2652,10 @@ impl SceneApp {
                 .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get()).min(16)); // fallback-ok: thread count only; output does not depend on it
             app.sub_app_mut(RenderApp)
                 .insert_resource(EncoderFinishThreads(threads))
+                // Counts directional shadow views whose camera the vendored
+                // bevy_render could not resolve for LOD selection (a
+                // correct frame adds nothing; see the regression test).
+                .init_resource::<bevy::render::view::DirectionalShadowLodMisses>()
                 .add_systems(RenderGraph, apply_encoder_finish_threads.in_set(RenderGraphSystems::Begin));
         }
         // A CPU or virtual adapter (lavapipe, llvmpipe, SwiftShader) renders a
@@ -7319,6 +7323,15 @@ mod tests {
         }
     }
 
+    fn sedan_scene_with(config: &crate::render_config::RenderConfig) -> SceneApp {
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let mut app = SceneApp::new_with_profile_config(&Lighting::default(), config.profile_config()).unwrap();
+        app.apply_render_config(config).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app
+    }
+
     fn sedan_scene() -> SceneApp {
         let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
@@ -7515,6 +7528,129 @@ mod tests {
             app.render_once(2 + tick as u64).unwrap_or_else(|error| panic!("after reconfigure to {:?}: {error}", config.aa.mode));
         }
         std::mem::forget(app);
+    }
+
+    /// A car in a caster's shadow is darker than the same car in sun, in
+    /// both presets. Two identical catalog cars (the actor path the service
+    /// uses) on a ground plane, one under an overhead slab; each car is
+    /// masked by its instance-ID pixels and its mean linear luminance
+    /// compared, next to the ground's own shadowed/sunlit ratio. GPU or
+    /// lavapipe. `SIMFORGE_CAR_SHADE_DUMP=dir` writes the frames.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_car_in_shadow_is_darker_than_in_sun() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let (w, h) = (256usize, 160usize);
+        let elev: f32 = 40.0;
+        let lighting = Lighting { atmosphere: true, sun_elev_deg: elev, sun_azim_deg: 180.0, ..Default::default() };
+        for preset in [Preset::Showcase, Preset::Training] {
+            let config = RenderConfig::preset(preset);
+            let mut app = SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+            app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+            app.add_camera(CameraSpec {
+                passes: PassSet { rgb: true, id: true, depth: false, hdr: true },
+                ..test_camera("cam", w as u32, h as u32)
+            });
+            app.wait_until_ready().unwrap();
+            let slab_height = 6.0;
+            {
+                let world = app.app.world_mut();
+                let roots: Vec<Entity> = world.query_filtered::<Entity, With<WorldAssetRoot>>().iter(world).collect();
+                for root in roots {
+                    world.entity_mut(root).insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                }
+                let plane = world.resource_mut::<Assets<Mesh>>().add(Plane3d::default().mesh().size(300.0, 300.0));
+                let slab = world.resource_mut::<Assets<Mesh>>().add(Cuboid::new(10.0, 0.4, 10.0));
+                let grey = world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
+                    base_color: Color::linear_rgb(0.3, 0.3, 0.3),
+                    perceptual_roughness: 1.0,
+                    ..default()
+                });
+                world.spawn((Mesh3d(plane), MeshMaterial3d(grey.clone()), Transform::IDENTITY));
+                // Sun due south (-z) at `elev`: the shadow of a slab at
+                // height H lands H / tan(elev) towards +z.
+                let offset = slab_height / elev.to_radians().tan();
+                world.spawn((Mesh3d(slab), MeshMaterial3d(grey), Transform::from_xyz(-6.0, slab_height, -offset)));
+            }
+            for (id, x) in [("shaded", -6.0f32), ("sunlit", 6.0)] {
+                app.upsert_actor(id, "car", [x, 0.8, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.8, 0.8, 0.8]);
+                app.attach_actor_asset(id, &vehicle, 1.0, None, None, 0.0).unwrap();
+                app.set_actor_asset_pose(id, [x, 0.0, 0.0], Quat::IDENTITY).unwrap();
+            }
+            app.set_pose("cam", &[0.0, 14.0, 16.0], &[0.0, 0.0, 0.0]).unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let frame = app.render_once(1).unwrap();
+            let hdr = strip_padding(&frame.passes["cam:hdr"].bytes, w, h, 8);
+            let ids = strip_padding(&frame.passes["cam:id"].bytes, w, h, 4);
+            if let Ok(dir) = std::env::var("SIMFORGE_CAR_SHADE_DUMP") {
+                let rgb = strip_padding(&frame.passes["cam:rgb"].bytes, w, h, 4);
+                image::save_buffer(format!("{dir}/car-shade-{preset:?}.png"), &rgb, w as u32, h as u32, image::ColorType::Rgba8).unwrap();
+            }
+            let luminance = |i: usize| {
+                let c = |k: usize| half::f16::from_le_bytes([hdr[i * 8 + 2 * k], hdr[i * 8 + 2 * k + 1]]).to_f32();
+                0.2126 * c(0) + 0.7152 * c(1) + 0.0722 * c(2)
+            };
+            let id_at = |i: usize| u32::from(ids[i * 4]) | (u32::from(ids[i * 4 + 1]) << 8) | (u32::from(ids[i * 4 + 2]) << 16);
+            let mean_of = |instance: u32| {
+                let px: Vec<f32> = (0..w * h).filter(|&i| id_at(i) == instance).map(luminance).collect();
+                assert!(px.len() > 200, "{preset:?}: only {} pixels of instance {instance}", px.len());
+                px.iter().sum::<f32>() / px.len() as f32
+            };
+            let shaded = mean_of(app.actor_instance_id("shaded").unwrap());
+            let sunlit = mean_of(app.actor_instance_id("sunlit").unwrap());
+            // The ground next to each car (background pixels, id 0, in the
+            // lower half): the darkest and brightest deciles.
+            let mut ground: Vec<f32> = (w * h / 2..w * h).filter(|&i| id_at(i) == 0).map(luminance).collect();
+            ground.sort_by(f32::total_cmp);
+            let decile = ground.len() / 10;
+            let ground_ratio = (ground[..decile].iter().sum::<f32>() / decile as f32)
+                / (ground[ground.len() - decile..].iter().sum::<f32>() / decile as f32);
+            let ratio = shaded / sunlit;
+            eprintln!("{preset:?}: car shaded/sunlit {ratio:.3} (shaded {shaded:.4}, sunlit {sunlit:.4}); ground {ground_ratio:.3}");
+            assert!(ratio < 0.6, "{preset:?}: a car in shadow is {ratio:.3} of the same car in sun (ground {ground_ratio:.3})");
+            std::mem::forget(app);
+        }
+    }
+
+    /// Directional shadow cascades pick LODs from their own camera. The
+    /// vendored bevy_render resolved a cascade's camera by a main-world id in
+    /// a render-world query; the lookup always missed, so cascades picked
+    /// visibility ranges (LODs) from Bevy's fallback origin while CPU
+    /// visibility used the camera. A LOD chain member was drawn into the
+    /// shadow map only where both picks agreed: on Belmont every street tree
+    /// lost its shadow in the training preset (box 3 A/B in
+    /// docs/engineering/native-render-gpu-profile.md). Every cascade of every
+    /// camera, shared or not, must now resolve its camera. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn directional_shadow_cascades_resolve_lods_from_their_camera() {
+        use crate::render_config::{Preset, RenderConfig};
+        for preset in [Preset::Showcase, Preset::Training] {
+            let config = RenderConfig::preset(preset);
+            let mut app = sedan_scene_with(&config);
+            // A camera that keeps its own cascades, and two sharing a set.
+            app.add_camera(test_camera("chase", 64, 48));
+            app.add_camera(test_camera("front", 96, 64));
+            app.add_camera(test_camera("rear", 96, 64));
+            app.set_camera_shared_shadows("chase", false);
+            for (cam, eye, target) in [
+                ("chase", [0.0, 3.0, 9.0], [0.0, 0.5, 0.0]),
+                ("front", [0.0, 1.5, 4.0], [0.0, 1.0, -10.0]),
+                ("rear", [0.0, 1.5, 4.0], [0.0, 1.0, 14.0]),
+            ] {
+                app.set_pose(cam, &eye, &target).unwrap();
+            }
+            app.wait_until_ready().unwrap();
+            app.render_once(1).unwrap();
+            app.render_once(2).unwrap();
+            let misses = app.app.sub_app(RenderApp).world().resource::<bevy::render::view::DirectionalShadowLodMisses>().0;
+            std::mem::forget(app);
+            assert_eq!(misses, 0, "{preset:?}: {misses} cascade views picked LODs from the fallback origin");
+        }
     }
 
     /// A device error stops rendering for good; the next wait must fail at
