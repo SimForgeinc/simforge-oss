@@ -48,6 +48,8 @@ const budgetsFile = args.get('budgets');
 const outDir = path.resolve(args.get('out') ?? 'artifacts/bench/map-load');
 const gpu = args.get('gpu') ?? 'vulkan';
 const keepProfiles = args.get('keep-profiles') === 'true';
+/** Chrome trace (with CPU samples) of the last warm run of each surface, for stage attribution. */
+const traceRuns = args.get('trace') === 'true';
 const instrumentation = await readFile(new URL('./lib/map-load-instrument.js', import.meta.url), 'utf8');
 
 const GPU_ARGS = {
@@ -124,7 +126,7 @@ function route(documents, mapId, setting, mode) {
   return `/dashboard/scenario?dataset=${document.datasetId}&document=${document.id}`;
 }
 
-async function measure(profile, target, setting, mode) {
+async function measure(profile, target, setting, mode, traceFile = null) {
   const context = await chromium.launchPersistentContext(profile, {
     headless: args.get('headed') !== 'true', args: GPU_ARGS[gpu], ignoreHTTPSErrors: true,
     viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1,
@@ -139,6 +141,13 @@ async function measure(profile, target, setting, mode) {
     await context.addInitScript({ content: instrumentation });
     const page = context.pages()[0] ?? await context.newPage();
     const url = await authenticate(context, target);
+    const cdp = traceFile ? await context.newCDPSession(page) : null;
+    if (cdp) {
+      await cdp.send('Tracing.start', {
+        traceConfig: { recordMode: 'recordContinuously', includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute', 'blink.user_timing', 'gpu', 'toplevel', 'disabled-by-default-v8.cpu_profiler'] },
+        transferMode: 'ReturnAsStream',
+      });
+    }
     await page.goto(url, { waitUntil: 'commit', timeout: 120_000 });
     const marks = { usableMs: null, interactiveMs: null, firstViewerDrawMs: null, fullMs: null };
     let last = null;
@@ -177,6 +186,18 @@ async function measure(profile, target, setting, mode) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     const bench = await page.evaluate(() => window.__mapLoadBench);
+    if (cdp) {
+      const done = new Promise((resolve) => cdp.once('Tracing.tracingComplete', resolve));
+      await cdp.send('Tracing.end');
+      const { stream } = await done;
+      const chunks = [];
+      for (;;) {
+        const { data, eof, base64Encoded } = await cdp.send('IO.read', { handle: stream, size: 1 << 20 });
+        chunks.push(base64Encoded ? Buffer.from(data, 'base64') : Buffer.from(data));
+        if (eof) break;
+      }
+      await writeFile(traceFile, Buffer.concat(chunks));
+    }
     const mapFetches = bench.fetches.filter((fetch) => fetch.layer === 'network');
     return {
       contextMs: bench.gl.contextAt,
@@ -200,6 +221,8 @@ async function measure(profile, target, setting, mode) {
       getErrorCalls: bench.gl.getError,
       getErrorMs: bench.gl.getErrorMs,
       mainThreadLongTaskMs: bench.longTasks.reduce((sum, [, duration]) => sum + duration, 0),
+      // The host is shared: record how busy it was, so a slow run can be told from a regression.
+      loadAverage1m: os.loadavg()[0],
       tier: last?.tier ?? null,
       pack: last?.pack ?? null,
       error: last?.error ?? (marks.interactiveMs === null ? 'did not become interactive before the timeout' : null),
@@ -211,6 +234,7 @@ async function measure(profile, target, setting, mode) {
 
 await mkdir(outDir, { recursive: true });
 const profilesRoot = await mkdtemp(path.join(os.tmpdir(), 'map-load-bench-'));
+const partialFile = path.join(outDir, 'map-load-partial.json');
 const report = { schema: 'simforge.map-load-benchmark.v1', baseUrl, gpu, runs, startedAt: new Date().toISOString(), machine: await machineState(), results: [] };
 try {
   const setupContext = await chromium.launchPersistentContext(path.join(profilesRoot, 'setup'), { headless: true, ignoreHTTPSErrors: true });
@@ -227,14 +251,19 @@ try {
         for (let run = 0; run < runs; run++) {
           const cold = !coldTaken;
           coldTaken = true;
-          const sample = await measure(profile, route(documents, mapId, setting, mode), setting, mode);
+          const traceFile = traceRuns && run === runs - 1 ? path.join(outDir, `trace-${mapId}-${setting}-${mode}.json`) : null;
+          // A crashed or failed run is a result (it fails its budgets), not the end of the benchmark.
+          const sample = await measure(profile, route(documents, mapId, setting, mode), setting, mode, traceFile)
+            .catch((error) => ({ contextMs: null, firstFrameMs: null, usableMs: null, interactiveMs: null, fullMs: null, error: String(error?.message ?? error).split('\n')[0] }));
           if (cold) entry.cold = sample;
           else entry.warm.push(sample);
-          console.error(`${mapId} ${setting} ${mode} ${cold ? 'cold' : 'warm'}: usable ${Math.round(sample.usableMs ?? -1)} interactive ${Math.round(sample.interactiveMs ?? -1)} full ${Math.round(sample.fullMs ?? -1)} ms, ${sample.cacheReads} cache reads, ${sample.mapNetworkRequests} map requests${sample.error ? `, error: ${sample.error}` : ''}`);
+          console.error(`${mapId} ${setting} ${mode} ${cold ? 'cold' : 'warm'}: usable ${Math.round(sample.usableMs ?? -1)} interactive ${Math.round(sample.interactiveMs ?? -1)} full ${Math.round(sample.fullMs ?? -1)} ms, ${sample.cacheReads} cache reads, ${sample.mapNetworkRequests} map requests, load ${os.loadavg()[0].toFixed(1)}${sample.error ? `, error: ${sample.error}` : ''}`);
         }
         entry.warmMedian = Object.fromEntries(['contextMs', 'firstFrameMs', 'usableMs', 'interactiveMs', 'fullMs', 'cacheReads', 'mapNetworkRequests', 'mainThreadLongTaskMs']
           .map((field) => [field, median(entry.warm.map((sample) => sample[field]))]));
         report.results.push(entry);
+        // Written after every surface so an interrupted run keeps what it measured.
+        await writeFile(partialFile, `${JSON.stringify(report, null, 2)}\n`);
       }
     }
   }
