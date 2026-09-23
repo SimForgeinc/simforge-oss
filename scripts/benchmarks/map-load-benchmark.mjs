@@ -163,6 +163,9 @@ async function measure(profile, target, setting, mode, traceFile = null) {
           t: performance.now(),
           usable: stats?.usable ?? false,
           draws: stats?.drawCalls ?? 0,
+          triangles: stats?.triangles ?? 0,
+          residentBytes: stats?.residentBytes ?? 0,
+          fps: stats?.fps ?? null,
           idle: Boolean(stats && stats.loadProgress.stage === 'ready' && stats.loading === 0 && stats.queued === 0 && stats.uploading === 0 && stats.pendingTextureUploads === 0),
           error: stats?.streamingError ?? null,
           tier: stats?.tierSelection ?? null,
@@ -224,6 +227,11 @@ async function measure(profile, target, setting, mode, traceFile = null) {
       mainThreadLongTaskMs: bench.longTasks.reduce((sum, [, duration]) => sum + duration, 0),
       // The host is shared: record how busy it was, so a slow run can be told from a regression.
       loadAverage1m: os.loadavg()[0],
+      // What the settled view costs to draw (the last sample).
+      drawCalls: last?.draws ?? null,
+      triangles: last?.triangles ?? null,
+      residentBytes: last?.residentBytes ?? null,
+      fps: last?.fps ?? null,
       tier: last?.tier ?? null,
       pack: last?.pack ?? null,
       error: last?.error ?? (marks.interactiveMs === null ? 'did not become interactive before the timeout' : null),
