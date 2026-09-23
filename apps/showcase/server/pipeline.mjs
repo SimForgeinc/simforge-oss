@@ -873,9 +873,8 @@ async function renderCell(context, cell, outDir, { redact = false, tier = '2d', 
   await mkdir(outDir, { recursive: true });
   let rendered;
   if (tier === '2d') {
-    const renderer = join(context.root, 'packages', 'trace-render', 'bin', 'trace-render.js');
     const args = [
-      renderer,
+      context.renderer2d,
       '--trace', cell.traceFile,
       '--instance', cell.instanceFile,
       '--out', outDir,
@@ -988,6 +987,7 @@ export class ShowcasePipeline {
     root,
     python,
     cli,
+    renderer2d,
     jobConcurrency = 4,
     batchConcurrency = 3,
     render2dConcurrency = 4,
@@ -997,6 +997,8 @@ export class ShowcasePipeline {
     this.root = root ?? resolve(import.meta.dirname, '../../..');
     this.python = python ?? join(this.root, '.venv', 'bin', 'python');
     this.cli = cli ?? join(this.root, 'packages', 'cli', 'bin', 'simforge.js');
+    // The 2D tier runs @simforge-oss/trace-render directly (the CLI renders 3D).
+    this.renderer2d = renderer2d ?? join(this.root, 'packages', 'trace-render', 'bin', 'trace-render.js');
     this.bridge = join(this.root, 'tools', 'research', 'showcase', 'stages.py');
     this.schedulerSettings = Object.freeze({
       jobConcurrency: concurrencySetting(jobConcurrency, 4, 'jobConcurrency', 32),
@@ -1024,6 +1026,7 @@ export class ShowcasePipeline {
       root: this.root,
       python: this.python,
       cli: this.cli,
+      renderer2d: this.renderer2d,
       timings: {},
       resumedStages: [],
       failedStage: null,
