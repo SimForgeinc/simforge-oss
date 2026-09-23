@@ -5,6 +5,7 @@ import { RenderSourceTransformSchema, type RenderIntentV1 } from '@simforge-oss/
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID } from './actor-assets.js';
 import { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
+import { NativeStageTimingsSchema } from './stage-timings.js';
 
 /**
  * The evidence documents a native run uploads alongside its videos. The
@@ -117,6 +118,8 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
   timings: z.strictObject({
     wallMs: z.number().finite().nonnegative(),
     serverMs: z.number().finite().nonnegative(),
+    /** Per-stage breakdown; gated by `native-evidence.stage-timings`. */
+    stages: NativeStageTimingsSchema.optional(),
   }),
 }).check((ctx) => {
   const diagnostics = ctx.value;

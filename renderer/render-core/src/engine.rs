@@ -793,6 +793,38 @@ struct SentPass {
 #[derive(Resource, Deref)]
 struct RenderSender(crossbeam_channel::Sender<SentPass>);
 
+/// Render-world timing of the last host readback, shared with the main world
+/// (same pattern as [`GpuPending`]): how long the map waited on the device
+/// (the frame's GPU work plus the copies) and how long the copy-out took.
+#[derive(Resource, Clone, Default)]
+struct ReadbackClock(std::sync::Arc<std::sync::Mutex<ReadbackTiming>>);
+
+#[derive(Clone, Copy, Default, Debug)]
+struct ReadbackTiming {
+    wait_ms: f64,
+    copy_ms: f64,
+    bytes: u64,
+}
+
+/// Where the time of the last [`SceneApp::capture`] went (diagnostics; the
+/// service reports it per bundle).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CaptureStats {
+    /// Submissions made (1 on a settled scene; more when a submission was
+    /// withdrawn because pipelines were still compiling).
+    pub attempts: u32,
+    /// Empty submissions [`SceneApp::capture`] spent settling the GPU.
+    pub settle_updates: u32,
+    /// Wall time of the capture submissions (CPU frame + GPU wait + copy-out).
+    pub submit_ms: f64,
+    /// Time the readback map waited on the device, summed over attempts.
+    pub readback_wait_ms: f64,
+    /// Time spent copying mapped staging buffers to host memory.
+    pub readback_copy_ms: f64,
+    /// Host bytes read back by the accepted submission.
+    pub readback_bytes: u64,
+}
+
 /// Outcome of one device-sink copy for one sensor in one submission.
 #[cfg(feature = "gpu-interop")]
 struct SentDevice {
@@ -1711,6 +1743,10 @@ pub struct SceneApp {
     #[cfg(feature = "gpu-interop")]
     device_streams: HashMap<String, DeviceCopy>,
     ready: bool,
+    /// Timing of the last capture (see [`CaptureStats`]).
+    last_capture: CaptureStats,
+    /// Shared with the render world's `receive_passes`.
+    readback_clock: ReadbackClock,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -1909,9 +1945,11 @@ impl SceneApp {
             medium_handle = Some(handle);
         }
 
+        let readback_clock = ReadbackClock::default();
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
         render_app
             .insert_resource(RenderSender(tx))
+            .insert_resource(readback_clock.clone())
             .init_resource::<Staging>()
             .init_resource::<ExtractedTargets>()
             .init_resource::<ExtractedCapture>()
@@ -1959,6 +1997,8 @@ impl SceneApp {
             #[cfg(feature = "gpu-interop")]
             device_streams: HashMap::new(),
             ready: false,
+            last_capture: CaptureStats::default(),
+            readback_clock,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -3705,12 +3745,15 @@ impl SceneApp {
     }
 
     /// Wait for the current capture cameras' GPU permutations, not the prewarm rig.
-    pub fn wait_for_capture_ready(&mut self) -> Result<()> {
+    /// Returns the number of frames it rendered to get there.
+    pub fn wait_for_capture_ready(&mut self) -> Result<u32> {
         let deadline = Instant::now() + Duration::from_secs(300);
         let mut last_sample = self.app.world().resource::<GpuPending>().samples();
         let mut idle_frames = 0;
+        let mut updates = 0u32;
         loop {
             self.app.update();
+            updates += 1;
             while self.receiver.try_recv().is_ok() {}
             let pending = self.app.world().resource::<GpuPending>();
             let sample = pending.samples();
@@ -3718,7 +3761,7 @@ impl SceneApp {
                 last_sample = sample;
                 idle_frames = if pending.is_idle() { idle_frames + 1 } else { 0 };
                 if idle_frames >= GPU_IDLE_FRAMES {
-                    return Ok(());
+                    return Ok(updates);
                 }
             }
             if Instant::now() > deadline {
@@ -4156,8 +4199,19 @@ impl SceneApp {
         self.drain_outputs();
         let mut stale = 0usize;
         let mut missing: Vec<String> = Vec::new();
+        let mut stats = CaptureStats::default();
         for _ in 0..3 {
+            *self.readback_clock.0.lock().expect("readback clock") = ReadbackTiming::default();
+            let submitted = Instant::now();
             let generation = self.submit(request.clone());
+            stats.attempts += 1;
+            stats.submit_ms += submitted.elapsed().as_secs_f64() * 1000.0;
+            {
+                let timing = *self.readback_clock.0.lock().expect("readback clock");
+                stats.readback_wait_ms += timing.wait_ms;
+                stats.readback_copy_ms += timing.copy_ms;
+                stats.readback_bytes = timing.bytes;
+            }
             let mut passes: HashMap<String, CapturedPass> =
                 HashMap::with_capacity(request.keys.len());
             while let Ok(p) = self.receiver.try_recv() {
@@ -4223,6 +4277,7 @@ impl SceneApp {
             // is not a frame of the resident scene. Settle and resubmit.
             let settled = self.app.world().resource::<GpuPending>().is_idle();
             if missing.is_empty() && settled {
+                self.last_capture = stats;
                 return Ok(CapturedFrame {
                     identity: FrameIdentity {
                         sim_tick,
@@ -4238,9 +4293,10 @@ impl SceneApp {
             self.withdraw_device_frames(device)?;
             if !settled {
                 missing.push("gpu-settled (pipelines compiling or materials unbound during the frame)".into());
-                self.settle_gpu()?;
+                stats.settle_updates += self.settle_gpu()?;
             }
         }
+        self.last_capture = stats;
         bail!(
             "capture incomplete: generation {} missing {:?} ({stale} outputs of other generations discarded)",
             self.generation,
@@ -4252,9 +4308,10 @@ impl SceneApp {
     /// compiling and no material unbound for [`GPU_IDLE_FRAMES`]
     /// consecutive frames. Bounded: a permutation that never compiles is an
     /// error, not a black frame.
-    fn settle_gpu(&mut self) -> Result<()> {
+    fn settle_gpu(&mut self) -> Result<u32> {
         let deadline = Instant::now() + Duration::from_secs(120);
         let mut idle = 0u32;
+        let mut updates = 0u32;
         while idle < GPU_IDLE_FRAMES {
             if Instant::now() > deadline {
                 let pending = self.app.world().resource::<GpuPending>();
@@ -4265,10 +4322,16 @@ impl SceneApp {
                 );
             }
             self.submit(CaptureRequest::default());
+            updates += 1;
             idle = if self.app.world().resource::<GpuPending>().is_idle() { idle + 1 } else { 0 };
         }
         self.drain_outputs();
-        Ok(())
+        Ok(updates)
+    }
+
+    /// Timing of the last [`Self::capture`] (diagnostics).
+    pub fn last_capture_stats(&self) -> CaptureStats {
+        self.last_capture
     }
 
     /// Return device slots filled by a submission that will not be
@@ -4610,12 +4673,14 @@ fn receive_passes(
     device: Res<RenderDevice>,
     sender: Res<RenderSender>,
     capture: Res<ExtractedCapture>,
+    clock: Res<ReadbackClock>,
     mut staging: ResMut<Staging>,
 ) {
     let pending = staging.0.iter().filter(|b| b.copied).count();
     if pending == 0 {
         return;
     }
+    let waited = Instant::now();
     let (s, r) = crossbeam_channel::bounded::<()>(pending);
     for b in staging.0.iter().filter(|b| b.copied) {
         let tx = s.clone();
@@ -4630,8 +4695,12 @@ fn receive_passes(
     for _ in 0..pending {
         r.recv().expect("map_async result");
     }
+    let wait_ms = waited.elapsed().as_secs_f64() * 1000.0;
+    let copied = Instant::now();
+    let mut bytes = 0u64;
     for b in staging.0.iter_mut().filter(|b| b.copied) {
         let data = b.buffer.slice(..).get_mapped_range().to_vec();
+        bytes += data.len() as u64;
         b.buffer.unmap();
         b.copied = false;
         let _ = sender.send(SentPass {
@@ -4643,6 +4712,11 @@ fn receive_passes(
             data,
         });
     }
+    *clock.0.lock().expect("readback clock") = ReadbackTiming {
+        wait_ms,
+        copy_ms: copied.elapsed().as_secs_f64() * 1000.0,
+        bytes,
+    };
 }
 
 /// Fill each requested device stream slot from this submission.

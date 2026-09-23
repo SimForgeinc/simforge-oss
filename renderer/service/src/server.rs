@@ -1622,6 +1622,8 @@ fn render_bundle_op(
     device_sensors: Vec<String>,
 ) -> WireResponse {
     let t0 = std::time::Instant::now();
+    let mut stages = crate::proto::BundleStages::default();
+    let ms = |since: std::time::Instant| since.elapsed().as_secs_f64() * 1000.0;
     // Default rgb-only: the policy hot loop.
     let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
     let (want, want_id_output, want_semantic) = match parse_bundle_passes(&requested) {
@@ -1643,30 +1645,48 @@ fn render_bundle_op(
             "render_bundle: no sensors registered (send `cameras`, `lidars`, or `radars` once)",
         );
     }
+    let mark = std::time::Instant::now();
     if let Some(index) = tick_index {
         if let Err(error) = apply_scene_tick(state, index) {
             return WireResponse::error(i, error);
         }
     }
+    stages.apply_ms = ms(mark);
+    let mark = std::time::Instant::now();
     let rig = state.rig.clone();
     let lidar_rig = state.lidars.clone();
     let radar_rig = state.radars.clone();
     if let Err(error) = sync_rig(state, &rig) {
         return WireResponse::error(i, error);
     }
+    stages.rig_ms = ms(mark);
     let host_keys = capture_keys(&rig, want);
     for sensor_id in &device_sensors {
         if !rig.iter().any(|cam| cam.sensor_id == *sensor_id) {
             return WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig"));
         }
     }
-    if let Err(error) = state.app.wait_for_capture_ready() {
-        return WireResponse::error(i, format!("capture readiness: {error:#}"));
+    let mark = std::time::Instant::now();
+    match state.app.wait_for_capture_ready() {
+        Ok(updates) => stages.readiness_updates = updates,
+        Err(error) => return WireResponse::error(i, format!("capture readiness: {error:#}")),
     }
+    stages.readiness_ms = ms(mark);
+    let mark = std::time::Instant::now();
     let captured = match capture_bundle(state, sim_tick, &host_keys, &device_sensors) {
         Ok(captured) => captured,
         Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
     };
+    stages.capture_ms = ms(mark);
+    {
+        let capture = state.app.last_capture_stats();
+        stages.capture_attempts = capture.attempts;
+        stages.capture_settle_updates = capture.settle_updates;
+        stages.readback_wait_ms = capture.readback_wait_ms;
+        stages.readback_copy_ms = capture.readback_copy_ms;
+        stages.readback_bytes = capture.readback_bytes;
+    }
+    let mark = std::time::Instant::now();
 
     let start_cursor = state.shm.cursor_total();
     let mut frames: Vec<FrameRecord> = Vec::new();
@@ -1695,9 +1715,16 @@ fn render_bundle_op(
             }
         }
     }
+    stages.publish_cameras_ms = ms(mark);
+    let mut sensor_payload_mark = None;
     if !lidar_rig.is_empty() || !radar_rig.is_empty() {
+        let mark = std::time::Instant::now();
         state.ensure_sensor_scenes();
+        stages.sensor_scenes_ms = ms(mark);
+        let mark = std::time::Instant::now();
         let actor_scene = build_sensor_scene(state.app.sensor_triangles(true));
+        stages.actor_scene_ms = ms(mark);
+        let setup_mark = std::time::Instant::now();
         let combined_scene = CombinedSensorScene {
             static_scene: &state.sensor_scenes.as_ref().expect("sensor scenes built").static_scene,
             actor_scene: &actor_scene,
@@ -1770,6 +1797,8 @@ fn render_bundle_op(
             u32,
             Vec<u8>,
         )> = Vec::with_capacity(lidar_rig.len() + radar_rig.len());
+        stages.sensor_setup_ms = ms(setup_mark);
+        let mark = std::time::Instant::now();
         for sensor in &lidar_rig {
             let mount = match resolve_sensor_mount(state, &sensor.attach) {
                 Ok(mount) => mount,
@@ -1806,6 +1835,8 @@ fn render_bundle_op(
                 if binary {sensors::formats::encode_lidar_ply_binary(&points)} else {sensors::formats::encode_lidar_ply(&points)},
             ));
         }
+        stages.lidar_ms = ms(mark);
+        let mark = std::time::Instant::now();
         for sensor in &radar_rig {
             let mount = match resolve_sensor_mount(state, &sensor.attach) {
                 Ok(mount) => mount,
@@ -1841,6 +1872,8 @@ fn render_bundle_op(
                 sensors::formats::encode_radar_csv(&detections),
             ));
         }
+        stages.radar_ms = ms(mark);
+        sensor_payload_mark = Some(std::time::Instant::now());
         for (sensor_id, pass, format_tag, format_name, count, data) in sensor_payloads {
             if let Err(error) = publish_bundle_frame(
                 state, &sensor_id, pass, count, 1, format_tag, format_name, sim_tick, &data, &mut entries,
@@ -1862,7 +1895,10 @@ fn render_bundle_op(
             ),
         );
     }
-    match state.shm.publish_bundle(sim_tick, start_cursor, &entries) {
+    let publish_mark = sensor_payload_mark.unwrap_or_else(std::time::Instant::now);
+    let published_bundle = state.shm.publish_bundle(sim_tick, start_cursor, &entries);
+    stages.publish_sensors_ms = ms(publish_mark);
+    match published_bundle {
         Ok((bundle_offset, bundle_len)) => WireResponse {
             i,
             body: ResponseBody::RenderBundle {
@@ -1875,6 +1911,7 @@ fn render_bundle_op(
                 device: captured.device,
                 sensor_to_policy,
                 server_ms: t0.elapsed().as_secs_f64() * 1000.0,
+                stages: Some(stages),
             },
         },
         Err(error) => WireResponse::error(i, format!("publish bundle: {error}")),
