@@ -35,11 +35,10 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.text,
   },
-  // min-h-0 flex-1 overflow-y-auto
+  /** The column's scroller (`scroll.y`): the list moves, the column header above it does not. */
   scenarioDocumentList: {
     minHeight: 0,
     flex: "1 1 0%",
-    overflowY: "auto",
   },
   // border-b border-white/10 px-3 py-4 text-sm text-muted-foreground
   divSm: {

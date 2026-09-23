@@ -24,7 +24,8 @@ import {
   DEFAULT_SCENARIO_TAG_COLOR,
   DEFAULT_SCENARIO_TAG_COLORS,
 } from "./scenarioListCache";
-import { focus, hairline, textLayout, typography } from "../../stylex/recipes.stylex";
+import { focus, hairline, scroll, textLayout, typography } from "../../stylex/recipes.stylex";
+import { revealInScroller } from "../../lib/reveal-in-scroller";
 
 type SharedRowHandlers = Pick<
   React.ComponentProps<typeof ScenarioDocumentRow>,
@@ -265,7 +266,7 @@ export function ScenarioDocumentCreator({
             </div>
           </div>
         ) : null}
-        <div {...stylex.props(styles.scenarioDocumentList)} data-testid="scenario-document-list">
+        <div {...stylex.props(scroll.y, styles.scenarioDocumentList)} data-testid="scenario-document-list">
           {documentsLoading && documents.length === 0 ? (
             <CloudLoadingSurface
           scope="pane"
@@ -334,9 +335,11 @@ function MapDocumentGroup({
   const sectionRef = useRef<HTMLElement | null>(null);
   // Opening a group can come from the coverage map, where the group may be anywhere in the column —
   // including below the fold. Scrolling the card itself into view is what makes a click on a region
-  // land on its scenarios rather than on an unchanged-looking list.
+  // land on its scenarios rather than on an unchanged-looking list. Only the list scrolls:
+  // `scrollIntoView` would also scroll the page shell, sliding the rail and this column's header under
+  // the top bar and leaving an empty band under the map.
   useEffect(() => {
-    if (expanded) sectionRef.current?.scrollIntoView({ block: "nearest" });
+    if (expanded && sectionRef.current) revealInScroller(sectionRef.current);
   }, [expanded]);
 
   return (

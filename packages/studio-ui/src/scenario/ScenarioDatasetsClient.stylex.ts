@@ -9,12 +9,11 @@ export const styles = stylex.create({
   coverageSurface: { pointerEvents: "auto", position: "absolute", inset: 0, transitionProperty: "transform, filter", transitionDuration: { default: "420ms", [layout.reducedMotion]: "0ms" } },
   coverageBlurred: { transform: "scale(1.02)", filter: motion.blurGlass },
   editorSession: { pointerEvents: "none", position: "absolute", inset: 0, zIndex: layers.float, visibility: "visible", opacity: 1 },
-  // relative h-full min-h-0 overflow-hidden bg-background text-foreground
+  /** The page: exactly `main`'s box. Clipped, never scrolled (`scroll.clip`). */
   scenarioDatasetIndex: {
     position: "relative",
     height: "100%",
     minHeight: 0,
-    overflow: "hidden",
     backgroundColor: colors.bg,
     color: colors.text,
   },
@@ -25,7 +24,8 @@ export const styles = stylex.create({
    * to the tallest item's content — the strip's full icon column once a workspace has more datasets
    * than fit — and the overflow-hidden page then clips the bottom of both panes: the strip stops
    * scrolling, the scenario list stops scrolling, and the "Add scenario" row at the column's foot is
-   * drawn below the fold where nobody can reach it.
+   * drawn below the fold where nobody can reach it. The grid itself is clipped (`scroll.clip`): the
+   * strip's list and the column's list are the only things here that scroll.
    */
   panelGrid: {
     display: "grid",

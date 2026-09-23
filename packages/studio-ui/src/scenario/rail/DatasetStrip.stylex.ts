@@ -18,12 +18,18 @@ export const styles = stylex.create({
     backgroundColor: colors.scrimLight,
     paddingBlock: space.s2,
   },
-  /** The icon column. Scrolls when the workspace has more datasets than fit, without a visible bar. */
+  /**
+   * The icon column: the strip's one scroller (`scroll.y`). It scrolls on its own, by wheel, touch or
+   * the arrow keys, whenever the workspace has more datasets than fit. The strip around it is
+   * clipped, so neither scrolling it nor focusing a tile moves anything else.
+   *
+   * No scrollbar: at 3.5rem the strip has no room for one beside a 2.5rem tile (a thin bar pushed the
+   * tiles off-centre and clipped the section labels). The edge fades below say it scrolls instead,
+   * and they also show where a platform hides an idle scrollbar anyway.
+   */
   list: {
     minHeight: 0,
     flex: "1 1 0%",
-    overflowY: "auto",
-    overflowX: "hidden",
     scrollbarWidth: "none",
     display: "flex",
     flexDirection: "column",
@@ -31,6 +37,19 @@ export const styles = stylex.create({
     listStyle: "none",
     margin: 0,
     padding: 0,
+  },
+  /**
+   * The fade at an edge the column has more tiles past: the hint that it scrolls, for platforms that
+   * hide an idle scrollbar. A mask reads only alpha, so the opaque stop is any opaque ink.
+   */
+  moreBelow: {
+    maskImage: `linear-gradient(to bottom, ${colors.ink} calc(100% - ${space.s10}), transparent)`,
+  },
+  moreAbove: {
+    maskImage: `linear-gradient(to top, ${colors.ink} calc(100% - ${space.s10}), transparent)`,
+  },
+  moreBothWays: {
+    maskImage: `linear-gradient(to bottom, transparent, ${colors.ink} ${space.s10}, ${colors.ink} calc(100% - ${space.s10}), transparent)`,
   },
   item: {
     position: "relative",
