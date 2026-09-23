@@ -676,7 +676,7 @@ export function ScenarioWorldHost({
                     wantedTiles: wantedTiles(stats),
                     residentBytes: stats.residentBytes,
                     requiredPendingAssets: stats.requiredPendingAssets,
-                    missingInViewTiles: stats.coverage.city?.missingInViewTiles ?? 0,
+                    missingInViewTiles: stats.coverage?.city?.missingInViewTiles ?? 0,
                   };
                 },
                 completeMapLoad,
