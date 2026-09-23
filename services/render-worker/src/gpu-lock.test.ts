@@ -3,7 +3,7 @@ import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
-import { acquireGpuJobLock, clearStaleGpuLock, staleGpuLockReason } from './gpu-lock.js';
+import { acquireGpuJobLock, clearStaleGpuLock, gpuLockIdentity, staleGpuLockReason } from './gpu-lock.js';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
@@ -59,4 +59,46 @@ it('treats a lock whose holder stopped refreshing as stale, and a fresh legacy l
   await writeFile(path, JSON.stringify({ pid: 999999, jobId: 'usrj_legacy' }));
   expect(await staleGpuLockReason(path)).toBeNull();
   await expect(acquireGpuJobLock(path, 'usrj_x', { waitMs: 50, pollMs: 10 })).rejects.toThrow(/GPU is locked by job usrj_legacy/);
+});
+
+it('writes its container instance and process start time into the lock', async () => {
+  const path = await lockPath();
+  const lock = await acquireGpuJobLock(path, 'usrj_identity', { refreshMs: 60_000 });
+  const owner = JSON.parse(await readFile(path, 'utf8'));
+  const me = gpuLockIdentity();
+  expect(owner).toMatchObject({ instance: me.instance, processStartedAt: me.processStartedAt, pid: me.pid, jobId: 'usrj_identity' });
+  await lock.release();
+});
+
+it('does not honour a legacy lock for hours when it names this container\'s own pid', async () => {
+  const path = await lockPath();
+  // A pre-refresh worker (no token, never refreshed) in this container died as
+  // pid 51 and this worker is pid 51 too: its lock is certainly not live.
+  const me = gpuLockIdentity();
+  await writeFile(path, JSON.stringify({ pid: me.pid, host: me.host, jobId: 'usrj_legacy_same_pid', acquiredAt: new Date().toISOString() }));
+  expect(await staleGpuLockReason(path)).toMatch(/previous process with this identity/);
+  const lock = await acquireGpuJobLock(path, 'usrj_next', { waitMs: 200, pollMs: 10 });
+  expect(JSON.parse(await readFile(path, 'utf8')).jobId).toBe('usrj_next');
+  await lock.release();
+});
+
+it('treats a fresh lock from an earlier process lifetime in this container as stale, whatever its pid', async () => {
+  const path = await lockPath();
+  const me = gpuLockIdentity();
+  await writeFile(path, JSON.stringify({
+    pid: me.pid + 7, host: me.host, instance: me.instance, processStartedAt: me.processStartedAt - 60_000,
+    token: 'earlier', jobId: 'usrj_earlier', acquiredAt: new Date().toISOString(),
+  }));
+  expect(await staleGpuLockReason(path)).toMatch(/earlier process in this container/);
+});
+
+it('still honours a refreshed lock from another container, even at the same pid', async () => {
+  const path = await lockPath();
+  const me = gpuLockIdentity();
+  await writeFile(path, JSON.stringify({
+    pid: me.pid, host: `${me.host}-other`, instance: 'container:other', processStartedAt: me.processStartedAt,
+    token: 'other', jobId: 'usrj_other_container', acquiredAt: new Date().toISOString(),
+  }));
+  expect(await staleGpuLockReason(path)).toBeNull();
+  await expect(acquireGpuJobLock(path, 'usrj_x', { waitMs: 50, pollMs: 10 })).rejects.toThrow(/usrj_other_container/);
 });
