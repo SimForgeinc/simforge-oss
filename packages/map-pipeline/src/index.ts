@@ -19,6 +19,7 @@ import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSource
 import { withStageLock } from './stage-lock.js';
 import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
 import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } from '../scripts/sumo-network.mjs';
+import { buildGroundDerivative, GROUND_DERIVED_DIR, GROUND_FINGERPRINT } from './ground/index.js';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
 export { composeNativeTextureClosure } from './native-texture-closure.js';
 
@@ -32,6 +33,7 @@ export type { WebTierOptions, WebTierReport } from './web-tier.js';
 export { encodeKtx2, ktx2ToolFingerprint } from './ktx2.js';
 export type { Ktx2Options } from './ktx2.js';
 export { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+export * from './ground/index.js';
 export { buildSumoDerivative, inspectSumoDerivative, resolveSumoToolchain, sumoBuildKey, SumoBuildError, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVATIVE_REVISION, SUMO_VERSION } from '../scripts/sumo-network.mjs';
 export { clampPbrFactors } from './material-ranges.js';
 export type { MaterialRangeReport } from './material-ranges.js';
@@ -88,6 +90,14 @@ export interface RunMapPipelineOptions {
    * `runtimeDir` (or SIMFORGE_SUMO_RUNTIME_DIR) adds the headless gate.
    */
   sumo?: false | { runtimeDir?: string };
+  /**
+   * Ground-contact derivative (`derived/ground/*`, docs/engineering/ground-height.md):
+   * the rendered road/terrain surface every body is grounded on, validated
+   * against the OpenDRIVE. Built by default; a coverage gate failure fails
+   * the build. `false` (or SIMFORGE_MAP_GROUND=skip) builds a map that cannot
+   * be simulated or rendered with bodies.
+   */
+  ground?: false;
   /**
    * Producer of the ambient turn-verdict table (`derived/ambient/turn-verdicts.json`,
    * docs/engineering/engine-semver.md). Injected so this package does not
@@ -273,7 +283,9 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
   const sumo = options.sumo ?? (process.env['SIMFORGE_MAP_SUMO'] === 'skip' ? false : {});
   const sumoRuntimeDir = sumo === false ? undefined : sumo.runtimeDir ?? process.env['SIMFORGE_SUMO_RUNTIME_DIR'];
   const sumoKey = sumo === false || !source.xodrPath ? 'none' : `${SUMO_DERIVATIVE_FINGERPRINT}:${sumoRuntimeDir ? 'simulated' : 'structural'}`;
-  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}`);
+  const ground = options.ground ?? (process.env['SIMFORGE_MAP_GROUND'] === 'skip' ? false : undefined);
+  const groundKey = ground === false ? 'none' : GROUND_FINGERPRINT;
+  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}\0ground=${groundKey}`);
   const inputDigest = sha256(`${scene.closureDigest}\0${semanticDigest}`);
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'master', cacheKey);
@@ -302,6 +314,16 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
           simulate: Boolean(sumoRuntimeDir),
         });
       }
+    }
+    if (ground !== false) {
+      // Throws GroundBuildError (with its report) when drivable lanes have no
+      // rendered surface. OpenDRIVE disagreement only flags the map.
+      await buildGroundDerivative({
+        masterDir: contentDir,
+        ...(source.xodrPath ? { xodrPath: path.join(contentDir, 'map.xodr') } : {}),
+        mapId: options.name,
+        outputDir: path.join(contentDir, ...GROUND_DERIVED_DIR.split('/')),
+      });
     }
     await writeFile(path.join(contentDir, 'source-manifest.json'), `${canonicalJson({ schema: 'simforge.map-source-receipt.v1', name: options.name, sceneSourceDigest: sceneSource, semanticSourceDigest: semanticDigest, sceneClosureDigest: scene.closureDigest, donorDigest: donorKey, toolFingerprint })}\n`);
     const stage = await finishStage('master', outputDir, 'canonical', keys, { master: true, viewerOnly: !source.xodrPath });
