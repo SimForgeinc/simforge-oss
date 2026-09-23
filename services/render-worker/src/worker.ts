@@ -20,6 +20,8 @@ import {
   type RenderEngineAdapter,
   type RenderProgressRecord,
   WORKER_CONTROL_FEATURES_LABEL,
+  WORKER_PREWARM_FEATURES,
+  WORKER_PREWARM_FEATURES_LABEL,
   WORKER_CONTROL_FEATURES_V1,
   WORKER_INPUT_URLS_BATCH_V1,
   WORKER_INPUT_URLS_LABEL,
@@ -563,6 +565,8 @@ export async function runRenderWorker(
     ...config.labels,
     // Leases may then carry `controlFeatures`; without it the engine writes baseline outputs only.
     [WORKER_CONTROL_FEATURES_LABEL]: WORKER_CONTROL_FEATURES_V1,
+    // Prewarm manifests may then carry `derivativesSha256` (Prewarmer keys its member cache by it).
+    [WORKER_PREWARM_FEATURES_LABEL]: WORKER_PREWARM_FEATURES.join(','),
     ...(transport.inputUrls ? { [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 } : {}),
   };
   const registration = await withBoundedRetry('worker registration', config.retries, operationSignal, () => transport.register({

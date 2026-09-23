@@ -27,7 +27,7 @@ is the only producer. It is used by:
   tool fingerprint as `geometryLod=<fingerprint>`. `SIMFORGE_MAP_GEOMETRY_LOD=skip`
   (or `geometryLod: false`) builds a map without it and keeps the historical key;
 - `pnpm maps:geometry-lod -- --master DIR | --all [--check]` for installed maps;
-- SimCloud's `reconcile-geometry-lod-derivatives.ts` for published map versions.
+- SimCloud's `reconcile-map-derivatives.ts --derivative geometry-lod` for published map versions.
 
 ## Content address
 
@@ -93,6 +93,11 @@ previous level. Each primitive is classified:
   attribute seams kept), with an error cap per level of 1.5 %, 4 % and 10 % of
   the bounding radius. A level may stop above its ratio rather than collapse a
   branch into metre-scale error.
+
+A level whose error does not exceed the previous level's (the error is
+clamped to be non-decreasing) would have an empty selection range; the finer
+of the two is dropped (revision 4), so errors strictly increase and every
+level is drawn somewhere.
 
 The level error is the larger of meshoptimizer's error and a card-thinning
 term `0.125 * medianCardDiagonal * (1/sqrt(kept) - 1 + (scale - 1))`, whose gain
@@ -251,18 +256,22 @@ content-addressed, registers them as verified native blobs, and binds them in
 ```
 
 (`failed` with a reason, or a `lastFailure` beside a ready binding, otherwise.)
-`studio/app/lib/scenario/map-geometry-lod.ts` reads the binding; native render
+`studio/app/lib/scenario/map-derivatives.ts` reads the bindings (geometry LODs and the GPU texture tier, docs/engineering/map-texture-variants.md); native render
 intents declare its members as ordinary `map.resource.<sha256(path)>` map
 inputs, the lease resolves those the intent declared, and the worker prewarm
 lists and signs them with the set, the way `descriptor.ambientTurnVerdicts`
 rides along. Maps built by the new pipeline carry the members in the closure
 itself; closure members win over descriptor members of the same path.
 
-The worker caches a set's member list by closure digest (plus the bound
-turn-verdict table). Until the prewarm set carries a derivative digest (a
-control-plane field that needs a worker feature flag), a worker that cached
-a set before its backfill picks up the bound members through the job lease
-(the intent declares them) rather than through prewarm.
+The worker caches a set's member list by closure digest, the bound
+turn-verdict table and `derivativesSha256`: a digest of the ready descriptor
+bindings (kind, build key, manifest). The control plane sends
+`derivativesSha256` only to workers that registered `labels.prewarmFeatures`
+containing `prewarm.derivatives` (an rc.73 worker's strict schema would reject
+the field); it is in the manifest generation either way. So a worker that
+cached a map before its backfill re-lists and prewarms the new members; an
+older worker still gets them through the job lease (the intent declares
+them).
 
 The renderer reads the derivative through `SceneSpec.geometryLod` (the path of
 `manifest.json`; perf/gpu-deep): one entity per level per node with

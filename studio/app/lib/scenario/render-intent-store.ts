@@ -5,7 +5,7 @@ import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSO
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
-import { boundGeometryLod, geometryLodExtraMembers } from "./map-geometry-lod";
+import { boundMapDerivatives, MAP_DERIVATIVE_DESCRIPTOR_SQL, mapDerivativeExtraMembers } from "./map-derivatives";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
   ScenarioRenderIntentSchema,
@@ -91,21 +91,21 @@ function cameraAttributes(source: RenderSpecV3["sources"][number]) {
 }
 
 /**
- * `descriptor.geometryLod` members of a map version that its native closure
- * does not already carry, each backed by a verified native blob. A binding
- * whose blobs are missing is a broken backfill and fails the submission.
+ * Descriptor-bound derivative members of a map version (map-derivatives.ts)
+ * that its native closure does not already carry, each backed by a verified
+ * native blob. A binding whose blobs are missing is a broken backfill and
+ * fails the submission.
  */
-async function boundGeometryLodMembers(
+async function boundDerivativeMembers(
   tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
   mapVersionId: string,
   closurePaths: ReadonlySet<string>,
 ): Promise<NativeMapMemberRow[]> {
-  const [row] = await tx.queryRows<{ geometry_lod: unknown }>(
-    `SELECT descriptor->'geometryLod' AS geometry_lod FROM simforge.map_versions WHERE id = :map_version_id`,
+  const [row] = await tx.queryRows<{ derivatives: unknown }>(
+    `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives FROM simforge.map_versions mv WHERE mv.id = :map_version_id`,
     { map_version_id: mapVersionId },
   );
-  const raw = typeof row?.geometry_lod === "string" ? JSON.parse(row.geometry_lod) : row?.geometry_lod;
-  const extra = geometryLodExtraMembers(boundGeometryLod(raw), closurePaths);
+  const extra = mapDerivativeExtraMembers(boundMapDerivatives(row?.derivatives), closurePaths);
   if (extra.length === 0) return [];
   const blobs = await tx.queryRows<{ sha256: string; byte_length: number | string }>(
     `SELECT DISTINCT sha256, byte_length FROM simforge.native_map_asset_blobs
@@ -114,7 +114,7 @@ async function boundGeometryLodMembers(
   );
   const verified = new Set(blobs.map((blob) => `${blob.sha256}:${Number(blob.byte_length)}`));
   return extra.map((member) => {
-    if (!verified.has(`${member.sha256}:${member.byteLength}`)) throw new Error("geometry_lod_member_unavailable");
+    if (!verified.has(`${member.sha256}:${member.byteLength}`)) throw new Error("map_derivative_member_unavailable");
     return { relative_path: member.relativePath, sha256: member.sha256, byte_length: member.byteLength, object_count: 0 };
   });
 }
@@ -492,9 +492,9 @@ export async function createRenderIntentJob(
       if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
         throw new Error("native_map_master_unavailable");
       }
-      // Geometry derivatives a backfill bound to this map version ride with
-      // the closure as ordinary map members (map-geometry-lod.ts).
-      renderMembers.push(...await boundGeometryLodMembers(tx, lineage.map_revision_id, new Set(renderMembers.map((member) => member.relative_path))));
+      // Derivatives a backfill bound to this map version (geometry LODs, the
+      // GPU texture tier) ride with the closure as ordinary map members.
+      renderMembers.push(...await boundDerivativeMembers(tx, lineage.map_revision_id, new Set(renderMembers.map((member) => member.relative_path))));
       assertNativeMapMemberCapacity(renderMembers.length);
       nativeAssets = renderMembers.map((member) => ({
         assetId: member.relative_path === "master.gltf"

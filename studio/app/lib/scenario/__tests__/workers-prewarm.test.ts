@@ -26,7 +26,9 @@ import {
   listPrewarmSets,
   recordWorkerCacheStatus,
   signPrewarmBlobs,
+  workerPrewarmFeatures,
 } from "../workers-prewarm-store";
+import { CONTROL_FEATURE_PREWARM_DERIVATIVES, PrewarmManifestResponseSchema } from "@simforge-oss/render";
 
 process.env[LOCAL_HOST_TOKEN_ENV] = "test-local-host-token";
 
@@ -310,7 +312,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [verdictsSha])).downloads), [verdictsSha]);
 
   // Geometry derivatives a backfill bound by descriptor ride along the same way
-  // (map-geometry-lod.ts): listed once on the last page, signable, in the generation.
+  // (map-derivatives.ts): listed once on the last page, signable, in the generation.
   const lodManifestSha = DIGEST("5"), lodBinSha = DIGEST("6");
   for (const [id, sha, bytes] of [["usnblob_lod_manifest", lodManifestSha, 4096], ["usnblob_lod_bin", lodBinSha, 65536]] as const) {
     await execute(
@@ -332,6 +334,31 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   );
   const withLod = await listPrewarmSets();
   assert.notEqual(withLod.generation, bound.generation, "binding geometry derivatives changes the generation");
+  // The digest field is gated: an rc.73 worker's strict schema would reject it.
+  assert.equal("derivativesSha256" in withLod.sets[0]!, false, "not sent to a worker that did not declare prewarm.derivatives");
+  assert.doesNotThrow(() => PrewarmManifestResponseSchema.parse(withLod));
+  const withFeature = await listPrewarmSets(new Set([CONTROL_FEATURE_PREWARM_DERIVATIVES]));
+  assert.match(withFeature.sets[0]!.derivativesSha256 ?? "", /^[a-f0-9]{64}$/);
+  assert.equal(withFeature.generation, withLod.generation);
+  assert.doesNotThrow(() => PrewarmManifestResponseSchema.parse(withFeature));
+  // Binding a second kind (the GPU texture tier) changes the digest.
+  const bc7ManifestSha = DIGEST("8");
+  await execute(
+    `INSERT INTO simforge.native_map_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state)
+     VALUES ('usnblob_bc7_manifest', 'local-artifacts', :key, :sha256, 1024, 'application/json', 'verified')`,
+    { key: `blobs/sha256/88/${bc7ManifestSha}`, sha256: bc7ManifestSha },
+  );
+  await execute(
+    `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('texturesFullBc7', CAST(:bc7 AS jsonb)) WHERE id = 'usmapv_prewarm'`,
+    { bc7: JSON.stringify({ state: "ready", schema: "simforge.map-texture-variant.v1", buildKey: DIGEST("9"), manifestSha256: bc7ManifestSha,
+      members: [{ relativePath: "derived/textures-full-bc7/manifest.json", sha256: bc7ManifestSha, byteLength: 1024 }] }) },
+  );
+  const withBc7 = await listPrewarmSets(new Set([CONTROL_FEATURE_PREWARM_DERIVATIVES]));
+  assert.notEqual(withBc7.sets[0]!.derivativesSha256, withFeature.sets[0]!.derivativesSha256);
+  const bc7Pages = [await listPrewarmMembers("usnset_prewarm", null, 50)];
+  assert.ok(bc7Pages[0]!.members.some((member) => member.relativePath === "derived/textures-full-bc7/manifest.json"));
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'texturesFullBc7' WHERE id = 'usmapv_prewarm'`);
+
   const lodPage1 = await listPrewarmMembers("usnset_prewarm", null, 2);
   const lodPage2 = await listPrewarmMembers("usnset_prewarm", lodPage1.next, 2);
   assert.deepEqual([...lodPage1.members, ...lodPage2.members].filter((member) => member.relativePath.startsWith("derived/geometry-lod/")), [
@@ -432,7 +459,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
       schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
       engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod-broken",
     } as Parameters<typeof createRenderIntentJob>[1],
-  ), /geometry_lod_member_unavailable/);
+  ), /map_derivative_member_unavailable/);
   await execute(`UPDATE simforge.native_map_asset_blobs SET verification_state = 'verified' WHERE id = 'usnblob_lod_bin'`);
   // A native worker's lease carries the declared derivative members with their paths.
   const nativeEngine = await loadBuiltinRenderEngine("native", { engineVersion: SOURCE_REVISION, binary: "/nonexistent/native-render-service" });
@@ -441,8 +468,11 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   await approveRenderWorker("simforge-render-prewarm-native", { engine: nativeCapability, labels: { ...NATIVE_LABELS }, reason: "geometry-lod lease test" });
   const nativeRegistration = await registerRenderWorkerV2({
     workerId: "simforge-render-prewarm-native", instanceId: "prewarm-native-1", engine: nativeCapability,
-    labels: { ...NATIVE_LABELS, inputUrls: "batch-v1", controlFeatures: "v1" },
+    labels: { ...NATIVE_LABELS, inputUrls: "batch-v1", controlFeatures: "v1", prewarmFeatures: `${CONTROL_FEATURE_PREWARM_DERIVATIVES},something-newer` },
   });
+  // A worker declares at registration which newer prewarm fields it parses.
+  assert.ok((await workerPrewarmFeatures("simforge-render-prewarm-native")).has(CONTROL_FEATURE_PREWARM_DERIVATIVES));
+  assert.equal((await workerPrewarmFeatures(WORKER_NODE_ID)).has(CONTROL_FEATURE_PREWARM_DERIVATIVES), false);
   const nativeLease = await claimResponseV2(nativeRegistration.registrationId, "simforge-render-prewarm-native");
   if (nativeLease.type === "job.leased") {
     assert.equal(nativeLease.jobId, nativeJob.id);
