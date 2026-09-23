@@ -6,9 +6,13 @@
 //! [`crate::math::to_scene_xz`] or use [`scene_state`].
 //!
 //! Only `t ∈ [0, clipSeconds]` is recorded; the warm-up prologue is excluded
-//! by construction. Only the current format ([`TRACE_FORMAT_VERSION`]) is
-//! accepted: there is no read path for older envelopes and no channel
-//! backfill. A document missing a mandatory channel is rejected, not repaired.
+//! by construction. Writers emit only the current format
+//! ([`TRACE_FORMAT_VERSION`]). Readers accept every released format: older
+//! documents go through the in-memory upgrader chain ([`upgrade`]), which
+//! never rewrites stored bytes, keeps the stored document's digest as the
+//! trace's identity and lists every section the source never recorded
+//! ([`upgrade::TraceUpgrade::unrecorded`]) instead of inventing it. A current
+//! document missing a mandatory channel is rejected, not repaired.
 //!
 //! Sub-modules:
 //! - [`events`] — the discrete [`SimEvent`] stream.
@@ -29,6 +33,7 @@ pub mod plausibility;
 pub mod recorder;
 pub mod scene_state;
 pub mod timeline;
+pub mod upgrade;
 
 use std::collections::BTreeMap;
 
@@ -116,6 +121,17 @@ pub enum TraceError {
     StreamingCapture,
     #[error("trace JSON: {0}")]
     Json(String),
+    #[error(
+        "{section} was not recorded by this trace (stored as {source_shape}, traceVersion {source_version}); \
+         re-simulate it explicitly to evaluate it"
+    )]
+    Unrecorded {
+        section: String,
+        source_version: u32,
+        source_shape: String,
+    },
+    #[error("trace digest {computed} does not match its recorded identity {recorded}")]
+    IdentityMismatch { recorded: String, computed: String },
 }
 
 impl From<serde_json::Error> for TraceError {
@@ -596,14 +612,68 @@ pub struct SimTrace {
     pub metrics: EpisodeMetrics,
     /// Runtime-neutral behavioral evidence; every current trace includes it.
     pub semantic_ledger: SemanticLedger,
+    /// Present only on a trace read from an older stored format: what the
+    /// in-memory upgrade did, the stored document's digest (the identity)
+    /// and the sections the source never recorded. Never written by the
+    /// engine, so current trace bytes and digests are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrade: Option<upgrade::TraceUpgrade>,
 }
 
 impl SimTrace {
-    /// Parse and validate a current-format trace document.
+    /// Parse and validate a stored trace document of any released format.
+    /// Current documents deserialize directly; older ones are upgraded in
+    /// memory first ([`upgrade::upgrade_to_current`]).
     pub fn from_json_slice(bytes: &[u8]) -> Result<Self, TraceError> {
-        let trace: SimTrace = serde_json::from_slice(bytes)?;
+        let trace = match upgrade::stored_shape(bytes)? {
+            upgrade::StoredShape::Current => serde_json::from_slice::<SimTrace>(bytes)?,
+            upgrade::StoredShape::Legacy { .. } => {
+                let (doc, report) = upgrade::upgrade_to_current(serde_json::from_slice(bytes)?)?;
+                let mut trace: SimTrace = serde_json::from_value(doc)?;
+                trace.upgrade = Some(report);
+                trace
+            }
+        };
         trace.validate()?;
         Ok(trace)
+    }
+
+    /// Bind the identity recorded next to this trace's stored bytes (e.g.
+    /// `sim_results.trace_sha256`). The caller must have verified the stored
+    /// bytes against their own recorded sha256 first.
+    ///
+    /// A current-format trace recomputes its digest, and a disagreement is an
+    /// error (the recorded identity is wrong, or the bytes are not the trace
+    /// it names). An upgraded trace can't recompute its writer's digest, so
+    /// the recorded one becomes its identity.
+    pub fn bind_recorded_identity(&mut self, recorded: &str) -> Result<(), TraceError> {
+        match &mut self.upgrade {
+            Some(upgrade) => {
+                upgrade.recorded_digest = Some(recorded.to_owned());
+                Ok(())
+            }
+            None => {
+                let computed = self.digest().map_err(|e| TraceError::Json(e.to_string()))?;
+                if computed == recorded {
+                    Ok(())
+                } else {
+                    Err(TraceError::IdentityMismatch {
+                        recorded: recorded.to_owned(),
+                        computed,
+                    })
+                }
+            }
+        }
+    }
+
+    /// Fail when `section` is a placeholder from an in-memory upgrade (see
+    /// [`upgrade::TraceUpgrade::require_recorded`]). Always `Ok` for traces
+    /// read in the current format.
+    pub fn require_recorded(&self, section: &str) -> Result<(), TraceError> {
+        match &self.upgrade {
+            Some(upgrade) => upgrade.require_recorded(section),
+            None => Ok(()),
+        }
     }
 
     /// Reject anything that is not a complete current-format trace.
@@ -697,8 +767,13 @@ impl SimTrace {
 
     /// Content digest of the canonical trace bytes:
     /// `sha256(canonicalJson(quantized trace))`. The trace is quantised on a
-    /// clone, so the caller's copy is unchanged.
+    /// clone, so the caller's copy is unchanged. A trace upgraded from an
+    /// older stored format keeps the digest of the stored document, so its
+    /// identity survives every later format change.
     pub fn digest(&self) -> Result<String, crate::error::CoreError> {
+        if let Some(upgrade) = &self.upgrade {
+            return Ok(upgrade.identity().to_owned());
+        }
         let mut quantized = self.clone();
         quantized.quantize();
         crate::hash::content_hash_of(&quantized)
