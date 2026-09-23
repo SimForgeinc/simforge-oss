@@ -49,6 +49,26 @@ export interface VehicleTelemetry {
   readonly collisionImpulseNs: number;
 }
 
+/**
+ * The engine's ground contact for one body on one tick (engine 0.11,
+ * docs/engineering/ground-height.md): the same values a v5 trace records in
+ * its `contact` channels, published live.
+ */
+export interface TruthContact {
+  /**
+   * Ground-contact elevation at the footprint centre (the bottom of the
+   * body), metres. XODR-local z, which is the scene's y: the height a body is
+   * drawn at.
+   */
+  readonly z: number;
+  /** Road pitch under the body, radians. */
+  readonly pitchRad: number;
+  /** Road roll under the body, radians. */
+  readonly rollRad: number;
+  /** Per wheel `[FL, FR, RL, RR]`, contact minus body plane, metres. */
+  readonly wheelDropM: readonly [number, number, number, number];
+}
+
 /** Static actor identity carried beside the frozen scene-state.v1 frame. */
 export interface TruthActor {
   readonly id: string;
@@ -57,6 +77,16 @@ export interface TruthActor {
   /** XODR-local world-plane acceleration in m/s². */
   readonly accel: { readonly ax: number; readonly ay: number };
   readonly telemetry?: VehicleTelemetry;
+  /**
+   * Where the engine grounds this body. The scene frame is a ground-plane
+   * frame whose `position[1]` is always 0, so this is the only height a live
+   * client may draw the body at. Present exactly when the world simulates on
+   * a ground surface (a map version published with its ground derivative)
+   * and the actor is present; absent on a world without one, where the
+   * height is unknown to the engine and a client must say so rather than
+   * draw the body at 0.
+   */
+  readonly contact?: TruthContact;
 }
 
 /**
