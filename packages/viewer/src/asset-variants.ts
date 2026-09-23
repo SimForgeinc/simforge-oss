@@ -1,6 +1,6 @@
 import type { MapTextureTier, TierSelection } from './types';
 
-export type TextureVariantId = 'textures-256-uastc' | 'textures-512-uastc' | 'textures-512-bc7' | 'textures-512-astc';
+export type TextureVariantId = `textures-${256 | 512}-${'uastc' | 'bc7' | 'astc' | 'etc2'}`;
 export type CityAssetVariantPreference = 'auto' | 'original' | 'ktx2' | 'geometry-only' | TextureVariantId;
 export type CityAssetVariantId = Exclude<CityAssetVariantPreference, 'auto' | 'original'>;
 
@@ -77,14 +77,14 @@ export interface TextureTierImage {
   sourceHeight: number;
   levels: number;
   residentBytes: number;
-  codec: 'uastc' | 'bc7' | 'astc' | 'rgba';
+  codec: 'uastc' | 'bc7' | 'astc' | 'etc2' | 'rgba';
 }
 
 export interface TextureTierIndex {
   schemaVersion: 1;
   id: TextureVariantId;
   sourceManifestSha256: string;
-  codec: 'uastc' | 'bc7' | 'astc';
+  codec: 'uastc' | 'bc7' | 'astc' | 'etc2';
   longestEdgePx: 256 | 512;
   images: Record<string, TextureTierImage>;
   assets: Record<string, { images: string[] }>;
@@ -100,13 +100,14 @@ export interface TextureTierReference {
   bytes: number;
 }
 
-export interface TextureCapabilities { bc7: boolean; astc: boolean; maxTextureSize: number }
+export interface TextureCapabilities { bc7: boolean; astc: boolean; etc2?: boolean; maxTextureSize: number }
 
 /** Probe the context that will actually upload the textures; no platform guessing. */
 export function probeTextureCapabilities(gl: WebGLRenderingContext | WebGL2RenderingContext): TextureCapabilities {
   return {
     bc7: Boolean(gl.getExtension('EXT_texture_compression_bptc')),
     astc: Boolean(gl.getExtension('WEBGL_compressed_texture_astc')),
+    etc2: Boolean(gl.getExtension('WEBGL_compressed_texture_etc')),
     maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,
   };
 }
@@ -123,8 +124,11 @@ export function selectTextureTier(requested: MapTextureTier, capabilities: Textu
     actual = 'low';
     reasons.push('GPU MAX_TEXTURE_SIZE is below the Medium 512 px target');
   }
-  const codec = actual === 'low' ? 'uastc' : capabilities.bc7 ? 'bc7' : capabilities.astc ? 'astc' : 'uastc';
-  if (actual === 'medium' && codec === 'uastc') reasons.push('BC7 and ASTC unavailable on this WebGL context; using portable UASTC');
+  // Every tier is cooked at ingest for each GPU family; the client uploads
+  // the blocks its GPU samples natively and transcodes nothing. Only a context
+  // that exposes none of them transcodes the portable UASTC tier, and says so.
+  const codec = capabilities.bc7 ? 'bc7' : capabilities.astc ? 'astc' : capabilities.etc2 ? 'etc2' : 'uastc';
+  if (codec === 'uastc') reasons.push('BC7, ASTC and ETC2 unavailable on this WebGL context; transcoding portable UASTC');
   const longestEdgePx = actual === 'low' ? 256 : 512;
   return { requested, actual, codec, longestEdgePx, variantId: `textures-${longestEdgePx}-${codec}`, downgradeReason: reasons.join('; ') || null };
 }
