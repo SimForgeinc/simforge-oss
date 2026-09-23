@@ -1,0 +1,105 @@
+{
+  "id": "default-controller-no-avoidance",
+  "feature": "Default controller has no collision avoidance; CollisionCondition",
+  "osc": [
+    "CollisionCondition",
+    "default controller"
+  ],
+  "description": "Ego (20 m/s) drives at a stopped car 50.1 m ahead in its lane. When they collide another car speeds up.",
+  "clipSeconds": 5,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    },
+    {
+      "id": "parked",
+      "lane": -2,
+      "s": 100.1,
+      "speedMps": 0
+    },
+    {
+      "id": "other",
+      "lane": -3,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "other",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 25
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "when",
+        "condition": {
+          "kind": "collision",
+          "a": "ego",
+          "b": "parked"
+        },
+        "byLatest": 1000,
+        "ifNever": "fire"
+      }
+    }
+  ],
+  "compareUntilS": 2.26,
+  "oracle": {
+    "clauses": [
+      "7.4.1.1 Control strategy (default strategies: keep lane, keep current speed)",
+      "CollisionCondition (class reference)",
+      "6.3.4 Vehicle coordinate system (reference point; BoundingBox.Center offset)"
+    ],
+    "derivation": "OSC default strategy keeps speed: no braking. Boxes (4.8 m long) touch when 50.1-20t <= 4.8, i.e. t >= 2.265; first tick 2.28. Motion compared up to 2.26 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20
+      },
+      "parked": {
+        "x0": 100.1,
+        "y0": -5.25,
+        "v0": 0
+      },
+      "other": {
+        "x0": 50,
+        "y0": -8.75,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 2.28,
+            "to": 25,
+            "shape": "linear",
+            "durationS": 2
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 2.28,
+        "end": 4.28
+      }
+    },
+    "decisions": [
+      "D-06",
+      "D-14"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-09",
+    "esmini": "agrees"
+  }
+}

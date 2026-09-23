@@ -1,0 +1,77 @@
+{
+  "id": "speed-step",
+  "feature": "SpeedAction step",
+  "osc": [
+    "SpeedAction",
+    "TransitionDynamics.step"
+  ],
+  "description": "20 -> 10 m/s, step, at t=1 s.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "step",
+        "constraint": "time",
+        "value": 1
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SpeedAction / SpeedActionTarget (class reference)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)",
+      "DynamicsDimension (class reference: rate/time/distance)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)",
+      "8.4.2 Execution of an event"
+    ],
+    "derivation": "step \"does not consume simulation time\": v=10 m/s from t=1 s (D-01: applied over the step that starts at t=1); the action completes at t=1 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "step"
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0,
+        "end": 1.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-04"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-06",
+    "esmini": "agrees"
+  }
+}

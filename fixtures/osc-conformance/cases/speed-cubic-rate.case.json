@@ -1,0 +1,78 @@
+{
+  "id": "speed-cubic-rate",
+  "feature": "SpeedAction cubic / rate (ambiguous)",
+  "osc": [
+    "SpeedAction",
+    "TransitionDynamics.cubic.rate"
+  ],
+  "description": "20 -> 10 m/s, cubic at rate 2 m/s^2, at t=1 s.",
+  "clipSeconds": 10,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "cubic",
+        "constraint": "rate",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SpeedAction / SpeedActionTarget (class reference)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)",
+      "DynamicsDimension (class reference: rate/time/distance)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)",
+      "8.4.2 Execution of an event"
+    ],
+    "derivation": "The spec defines rate only as \"a predefined constant rate\"; for a non-linear shape it does not say mean or peak. D-03 adopts the peak: the cubic peak slope is 1.5\u00b7|\u0394|/T, so T = 1.5\u00b710/2 = 7.5 s (mean reading: 5 s). Ends t=8.5 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "cubic",
+            "durationS": 7.5
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0,
+        "end": 8.5
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-03"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-02",
+    "esmini": "agrees"
+  }
+}

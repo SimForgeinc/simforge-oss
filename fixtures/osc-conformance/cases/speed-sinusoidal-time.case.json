@@ -1,0 +1,77 @@
+{
+  "id": "speed-sinusoidal-time",
+  "feature": "SpeedAction sinusoidal / time",
+  "osc": [
+    "SpeedAction",
+    "TransitionDynamics.sinusoidal.time"
+  ],
+  "description": "20 -> 10 m/s, sinusoidal over 3 s, at t=1 s.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "sinusoidal",
+        "constraint": "time",
+        "value": 3
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SpeedAction / SpeedActionTarget (class reference)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)",
+      "DynamicsDimension (class reference: rate/time/distance)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)",
+      "8.4.2 Execution of an event"
+    ],
+    "derivation": "A\u00b7sin+B with zero gradient at both ends: v=20-10(1-cos \u03c0\u03c4)/2, \u03c4=(t-1)/3; ends t=4 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "sinusoidal",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0,
+        "end": 4.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-02",
+    "esmini": "agrees"
+  }
+}
