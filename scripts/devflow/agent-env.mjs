@@ -10,7 +10,7 @@
 //
 // Options for create: --base <ref>  --prod-build  --no-start  --no-wait  --reset-db
 import { spawn } from "node:child_process";
-import { closeSync, symlinkSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, readlinkSync, symlinkSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, relative, resolve } from "node:path";
 import { loadLayout, repoRoot } from "./lib/layout.mjs";
@@ -204,6 +204,39 @@ if (args.mode === "gc") {
   };
   const cutoff = Date.now() - args.olderThan * 86_400_000;
   say(`agent:env --gc ${args.dryRun ? "(dry run) " : ""}· idle threshold ${args.olderThan}d · free ${freeGb(primary).toFixed(0)}G`);
+  // Any process (a dev server, a watcher) running inside a tree protects it.
+  const busyDirs = new Set();
+  for (const pid of readdirSync("/proc").filter((d) => /^\d+$/.test(d))) {
+    try {
+      busyDirs.add(readlinkSync(`/proc/${pid}/cwd`));
+    } catch {}
+  }
+  const inUse = (dir) => [...busyDirs].some((d) => d === dir || d.startsWith(`${dir}/`));
+  const touched = (dir) =>
+    Math.max(
+      Number(trySh("git", ["log", "-1", "--format=%ct"], { cwd: dir }) ?? 0) * 1000,
+      ...["index", "HEAD"].map((f) => {
+        try {
+          return statSync(resolve(dir, trySh("git", ["rev-parse", "--git-path", f], { cwd: dir }))).mtimeMs;
+        } catch {
+          return 0;
+        }
+      }),
+    );
+  // Every worktree of this repository (agent envs or not): idle + no process
+  // inside -> its rebuildable outputs (target/, .next, ...) go.
+  const worktrees = (trySh("git", ["worktree", "list", "--porcelain"], { cwd: primary }) ?? "")
+    .split("\n")
+    .filter((l) => l.startsWith("worktree "))
+    .map((l) => l.slice(9))
+    .filter((w) => w !== primary);
+  for (const w of worktrees) {
+    if (!existsSync(w) || inUse(w) || touched(w) > cutoff) continue;
+    for (const rel of cfg.rebuildable ?? []) {
+      const p = join(w, rel);
+      if (existsSync(p)) act(`idle-tree output`, p);
+    }
+  }
   for (const s of allStates()) {
     if (!existsSync(s.worktree)) {
       say(`  env ${s.name}: worktree is gone, releasing db/ports/url`);
@@ -232,13 +265,20 @@ if (args.mode === "gc") {
   }
   // Machine-wide leftovers: Playwright/Chrome temp profiles older than a day.
   const tmp = process.env.TMPDIR || "/tmp";
+  const profiles = [];
   for (const entry of readdirSync(tmp)) {
     if (!/^(playwright[-_]|playwright_chromiumdev_profile-|puppeteer_dev_chrome_profile-|\.org\.chromium\.Chromium\.)/.test(entry)) continue;
     const p = join(tmp, entry);
     try {
-      if (statSync(p).mtimeMs < Date.now() - 86_400_000) act("browser profile", p);
+      if (statSync(p).mtimeMs < Date.now() - 86_400_000 && !inUse(p)) {
+        profiles.push(p);
+        const size = duBytes(p);
+        freed += size;
+        if (!args.dryRun) rmSync(p, { recursive: true, force: true });
+      }
     } catch {}
   }
+  if (profiles.length) say(`  ${args.dryRun ? "would remove" : "removed"} ${profiles.length} browser profiles older than a day in ${tmp}`);
   // Local turbo cache entries unused for 7 days.
   const turboDir = join(CACHE_ROOT, "turbo");
   if (existsSync(turboDir)) {
