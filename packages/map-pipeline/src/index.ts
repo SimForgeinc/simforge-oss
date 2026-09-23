@@ -34,6 +34,7 @@ export { encodeKtx2, ktx2ToolFingerprint } from './ktx2.js';
 export type { Ktx2Options } from './ktx2.js';
 export { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
 export * from './ground/index.js';
+export * from './elevation-refit/index.js';
 export { buildSumoDerivative, inspectSumoDerivative, resolveSumoToolchain, sumoBuildKey, SumoBuildError, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVATIVE_REVISION, SUMO_VERSION } from '../scripts/sumo-network.mjs';
 export { clampPbrFactors } from './material-ranges.js';
 export type { MaterialRangeReport } from './material-ranges.js';
