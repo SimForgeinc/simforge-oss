@@ -231,6 +231,11 @@ export interface LaneSurfaceSample {
   y: number;
   /** Full XODR surface z at the lane centre (elevation + superelevation + shape + laneHeight). */
   z: number;
+  /** Half the lane width, metres. */
+  halfWidth: number;
+  /** Unit left normal of the reference line at this sample. */
+  leftX: number;
+  leftY: number;
 }
 
 /** Lane-centre samples every `stepM` metres of road s on every lane at least `minWidthM` wide. */
@@ -258,6 +263,8 @@ export function sampleLaneCentres(roads: readonly XodrRoad[], stepM = 0.5, minWi
               road: road.id, junction: road.junction !== '-1', section: index, lane: lane.id, laneType: lane.type, s,
               x: ref.x - Math.sin(ref.hdg) * t, y: ref.y + Math.cos(ref.hdg) * t,
               z: road.surfaceZ(s, t) + height,
+              halfWidth: Math.abs(tOut - tIn) / 2,
+              leftX: -Math.sin(ref.hdg), leftY: Math.cos(ref.hdg),
             });
           }
         }
