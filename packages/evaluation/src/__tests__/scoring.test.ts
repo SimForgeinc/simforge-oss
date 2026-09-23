@@ -1,13 +1,16 @@
+import { canonicalJson, sha256 } from '@simforge-oss/engine';
 import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_SCORING_CONFIG,
+  EPISODE_TRACE_SCHEMA,
   collisionFromReward,
   goalFromReward,
   parseTraceJsonl,
   rewardViewFromStep,
   scoreEpisode,
   stepMinTtcS,
+  verifyEpisodeTrace,
   type ParsedTrace,
   type ScenarioScoringContext,
   type TraceObj,
@@ -88,6 +91,22 @@ describe('terminal reward classification (shared with eval-server)', () => {
     const plain = rewardViewFromStep(mkStep(3, { rw: 0.05, terms: [0.05, 0, 0] }));
     expect('collision' in plain.rewardTerms).toBe(false);
     expect('goal' in plain.rewardTerms).toBe(false);
+  });
+
+  it('does not mislabel explicit corridor or signal termination as contact', () => {
+    for (const terminal of ['offroad', 'redCrossing']) {
+      const step: TraceStepRecord = {
+        ...mkStep(0, { term: 1, rw: -10.051 }),
+        reward_terms: { progress: 0, comfort: 0, time: -0.001, stuck: -0.05, [terminal]: -10, queueWait: false },
+      };
+      const score = scoreEpisode(mkTrace([step]), CTX);
+      expect(score.terminal.collision).toBe(false);
+      expect(collisionFromReward(rewardViewFromStep(step))).toBe(false);
+      expect(goalFromReward(rewardViewFromStep(step))).toBe(false);
+    }
+    expect(collisionFromReward(rewardViewFromStep({
+      ...mkStep(0, { term: 1, rw: 0 }), reward_terms: { collision: 0 },
+    }))).toBe(true);
   });
 });
 
@@ -347,6 +366,42 @@ describe('score composition', () => {
 });
 
 describe('parseTraceJsonl', () => {
+  function kernelRows(): Record<string, unknown>[] {
+    const object = { id: 'car', rangeM: 10, bearingRad: 0, rangeRateMps: -5, lineOfSight: true };
+    const rows: Record<string, unknown>[] = [
+      { reset: { schema: EPISODE_TRACE_SCHEMA, seed: 1, t: 0, mode: 'offline-simtime', observation: { stateVector: mkStep(0, { routeS: 0 }).sv } } },
+      { ...mkStep(0, { routeS: 50, latOff: 4 }), phase: 'warmup', objs: [] },
+      { ...mkStep(1, { routeS: 60 }), phase: 'policy', objs: [object], dl: { lim: null, el: null, miss: 0, ap: 'policy' },
+        sig: [{ signalId: 'light', phase: 'red', stopLineS: 65 }] },
+    ];
+    let digest = '';
+    for (const row of rows) {
+      digest = sha256(digest + canonicalJson(row));
+      row['digest'] = digest;
+    }
+    rows.push({ episode_digest: digest, summary: { episodeDigest: digest, decisions: 1, mode: 'offline-simtime', status: 'succeeded', termReason: 'horizon', truncation: 'horizon', deadlineMisses: 0 } });
+    return rows;
+  }
+
+  it('scores only policy progress after kernel warm-up and preserves object evidence', () => {
+    const parsed = parseTraceJsonl(kernelRows().map((row) => JSON.stringify(row)).join('\n'));
+    const expected = mkTrace([{ ...mkStep(0, { routeS: 60, objs: [['car', 10, 0, -5, 1]] }), t: 0.2 }], 50);
+    expect(scoreEpisode(parsed, CTX)).toEqual(scoreEpisode(expected, CTX));
+    expect(scoreEpisode(parsed, CTX).routeCompletion).toBe(0.1);
+    expect(parsed.steps[0]?.sig).toBeUndefined();
+  });
+
+  it('rejects changed state or unsealed v2 evidence, but permits wall-clock timing changes', () => {
+    const rows = kernelRows();
+    const digest = verifyEpisodeTrace(rows);
+    rows[2]!['timing'] = { infer_ms: 900 };
+    (rows[2]!['dl'] as Record<string, unknown>)['el'] = 900;
+    expect(verifyEpisodeTrace(rows)).toBe(digest);
+    expect(() => verifyEpisodeTrace(rows.slice(0, -1))).toThrow(/not sealed/);
+    (rows[2]!['sv'] as number[])[4] = 17;
+    expect(() => verifyEpisodeTrace(rows)).toThrow(/digest mismatch/);
+  });
+
   it('separates reset, steps and summary; tolerates unknown keys and blank lines', () => {
     const text = [
       JSON.stringify({ reset: { seed: 7, t: 0, sv: [0, 0, 1, 0, 5, 0, 0, 0, 0, 1e6], objs: [] }, digest: 'x' }),

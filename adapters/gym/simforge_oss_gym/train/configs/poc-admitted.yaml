@@ -1,0 +1,21 @@
+schema: simforge.train/v1
+recipe: ppo-teacher
+train: ../../../../../qualification/training-splits/poc-v1/poc-v1-train.episodes.json
+val: ../../../../../qualification/training-splits/poc-v1/poc-v1-val.episodes.json
+splitManifests:
+  train: ../../../../../qualification/training-splits/poc-v1/train.split.json
+  val: ../../../../../qualification/training-splits/poc-v1/val.split.json
+out: ~/simforge-assets/runs/drive/training/ppo-teacher-admitted
+options:
+  device: cpu
+  seed: 42
+  num_envs: 32
+  threads: 8
+  torch_threads: 4
+  hidden: 1024
+  rollout_steps: 64
+  minibatch: 1024
+  epochs: 4
+  checkpoint_every: 20
+  max_env_steps: 30000000
+  hours: 6

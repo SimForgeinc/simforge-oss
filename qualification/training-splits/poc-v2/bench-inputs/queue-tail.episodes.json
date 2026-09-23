@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "scenarioId": "poc-v2-queue-tail",
+  "episode": {
+    "decisionHz": 10
+  },
+  "instances": [
+    {
+      "input": {
+        "schemaVersion": 1,
+        "mapId": "easterbrook-discovery-school",
+        "clipSeconds": 13,
+        "warmupSeconds": 0,
+        "dt": 0.02,
+        "seed": "200",
+        "physics": {
+          "mode": "dynamic-v1"
+        },
+        "operationalConditions": {
+          "weather": "clear",
+          "timeOfDay": "day",
+          "traffic": "moderate",
+          "visibility": "unrestricted",
+          "effects": {
+            "visibilityRangeM": 1000,
+            "frictionScale": 1,
+            "trafficSpeedFactor": 1
+          }
+        },
+        "actors": [
+          {
+            "id": "ego",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "11:0:-2",
+                "s": 4.999974848371119,
+                "tFrac": 0
+              },
+              "pose": {
+                "x": 52.001532080862134,
+                "z": 330.32307268996664,
+                "headingRad": -0.09528671802045226
+              },
+              "speedMps": 11.11111111111111
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": false,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "11:0:-2",
+                  "61527:0:-2",
+                  "12:0:-2",
+                  "62065:0:-1",
+                  "13:0:-1",
+                  "11115:0:-1",
+                  "20:0:-1",
+                  "61537:0:-1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              },
+              "cruiseSpeedMps": 11.11111111111111
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:ego",
+              "class:car",
+              "driver-profile:lawful",
+              "binding:on_reference",
+              "catalog:vehicle.sedan"
+            ]
+          },
+          {
+            "id": "preview-van",
+            "kind": "van",
+            "dims": {
+              "l": 5.3,
+              "w": 2,
+              "h": 2.4
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "11:0:-2",
+                "s": 20.999942383306927,
+                "tFrac": 0
+              },
+              "pose": {
+                "x": 67.92964714515823,
+                "z": 331.8375821335366,
+                "headingRad": -0.09032394982834982
+              },
+              "speedMps": 11.11111111111111
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": false,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "11:0:-2",
+                  "61527:0:-2",
+                  "12:0:-2",
+                  "62065:0:-1",
+                  "13:0:-1",
+                  "11115:0:-1",
+                  "20:0:-1",
+                  "61537:0:-1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              },
+              "cruiseSpeedMps": 11.11111111111111
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:preview-van",
+              "class:van",
+              "driver-profile:lawful",
+              "binding:relative_to",
+              "catalog:vehicle.van"
+            ]
+          },
+          {
+            "id": "queue-lead",
+            "kind": "car",
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "62065:0:-1",
+                "s": 11.08696582885463,
+                "tFrac": 0
+              },
+              "pose": {
+                "x": 121.84698164610707,
+                "z": 336.8112554066007,
+                "headingRad": -0.1005913099162021
+              },
+              "speedMps": 0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "11:0:-2",
+                  "61527:0:-2",
+                  "12:0:-2",
+                  "62065:0:-1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              }
+            },
+            "presentAtStart": true,
+            "static": true,
+            "tags": [
+              "role:queue-lead",
+              "class:car",
+              "driver-profile:lawful",
+              "binding:relative_to",
+              "catalog:vehicle.suv"
+            ]
+          },
+          {
+            "id": "queue-tail",
+            "kind": "van",
+            "dims": {
+              "l": 5.3,
+              "w": 2,
+              "h": 2.4
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "62065:0:-1",
+                "s": 0.2116511589051413,
+                "tFrac": 0
+              },
+              "pose": {
+                "x": 111.02419524444619,
+                "z": 335.744202761507,
+                "headingRad": -0.09093252360118456
+              },
+              "speedMps": 0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "11:0:-2",
+                  "61527:0:-2",
+                  "12:0:-2",
+                  "62065:0:-1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              }
+            },
+            "presentAtStart": true,
+            "static": true,
+            "tags": [
+              "role:queue-tail",
+              "class:van",
+              "driver-profile:lawful",
+              "binding:relative_to",
+              "catalog:vehicle.van"
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "id": "ego-brakes-after-reveal",
+            "actorId": "ego",
+            "trigger": {
+              "kind": "at",
+              "t": 3.163484376652546
+            },
+            "verb": "speed",
+            "target": {
+              "mode": "stop"
+            },
+            "dynamics": {
+              "shape": "linear",
+              "constraint": "rate",
+              "value": 6
+            }
+          },
+          {
+            "id": "van-pulls-aside",
+            "actorId": "preview-van",
+            "trigger": {
+              "kind": "at",
+              "t": 0
+            },
+            "verb": "changeLane",
+            "target": {
+              "mode": "left",
+              "count": 1
+            },
+            "dynamics": {
+              "shape": "sinusoidal",
+              "constraint": "rate",
+              "value": 2
+            }
+          },
+          {
+            "id": "van-stops-alongside",
+            "actorId": "preview-van",
+            "trigger": {
+              "kind": "at",
+              "t": 4
+            },
+            "verb": "speed",
+            "target": {
+              "mode": "stop"
+            },
+            "dynamics": {
+              "shape": "linear",
+              "constraint": "rate",
+              "value": 4
+            }
+          }
+        ],
+        "signalPrograms": [],
+        "roadControls": [],
+        "surfacePatches": [],
+        "props": [],
+        "occluders": [],
+        "occlusionPairs": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "occluderId": "actor:preview-van"
+          }
+        ],
+        "nearMissCriteria": []
+      },
+      "provenance": {
+        "map": "easterbrook-discovery-school",
+        "family": "mechanisms/corridor/queue-tail",
+        "site": "3442a731d82eb05a",
+        "seed": 200,
+        "drawIndex": 200,
+        "inputSha256": "18001a34f795338ed133de8823c803137da89a13de089baccab3ce753fcd033d"
+      }
+    }
+  ]
+}

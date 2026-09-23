@@ -1,0 +1,276 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v2-test",
+  "purpose": "test",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "belmont-research-center",
+      "site": "14577d1a82cdf0a9",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "belmont-research-center",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "belmont-research-center",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "easterbrook-discovery-school",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "easterbrook-discovery-school",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@3.4197880409780024",
+        "siteKey": "belmont-research-center/seg_5a5e3e7f61d02e97",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-000.admission.json",
+          "sha256": "ea061d69ea0b6f7fa431f668ae86358b0ac739d83215b16651f146cef92d27e1"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_069115ab2064cfcc",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-001.admission.json",
+          "sha256": "1ac53f0bd1d3103312b338623996f0e56dbe7cf28b3e2a738156316212975eb7"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-002.admission.json",
+          "sha256": "7288b344f4552b969d560d009b1501341322b4fa8d42863b51b6bc6d4c0a3225"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_8815e2cf7fcb16fe",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-003.admission.json",
+          "sha256": "a4e6fa9d4787dd620f4b7cff0187ee82790f7081488e38e5f73eeacdb8a35a65"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 147/147 sites), corridor.runwayDownstreamM (failed at 57/147 sites), corridor.curvatureDegPer10m (failed at 40/147 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-004.admission.json",
+          "sha256": "cb946dca845f0c14973e253198237a5def143da34afd021e81b5ca5741a6cf16"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-005.admission.json",
+          "sha256": "2d38b2dd9d25ee5a37ceccad0b811647027a7425c19fe17f99c87d759a66e6b0"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_d7ae5793360bc21f",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-006.admission.json",
+          "sha256": "1062c86b30a91f5bee2184f5c44c08150a4756ca29be7c864dc2aeb15138280d"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_120bd635fc5b4a32",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-007.admission.json",
+          "sha256": "31862d594385a0b0cd8605297b9052251dfcfa91934e41b8a550ee7f8c530efa"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-008.admission.json",
+          "sha256": "e9f72e8be14b0563c24652e345e3c2e8f34ce9f488dfc7e38b36760b8320d9fc"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ball (failed at 35/72 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-009.admission.json",
+          "sha256": "141fc70912adb35c11ff49dcba503ed615acfe459c59b474fdc35ed58becbee3"
+        }
+      },
+      {
+        "cell": 10,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have re",
+        "receipt": {
+          "path": "receipts/poc-v2-test/cell-010.admission.json",
+          "sha256": "4dd0e2aae42e4dd5745f33e95e4a0bc3dbc219746ec09598cb43e7aaa34ed231"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T14:52:53.754Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v2-test.episodes.json",
+      "sha256": "31d792622a683410abd6417dfbaac7ba2063f31deafc35e74c6941cf6b387652"
+    },
+    "count": 120
+  },
+  "digest": "dfabe4e5f8577c8e467fe78730279f1ff22b18d821a83630f6f8d03b5e8db178"
+}

@@ -1,9 +1,9 @@
 //! `@simforge-oss/native-runtime` — Node N-API binding of the SimForge runtime.
 //!
-//! Typed arrays returned to JS are fresh copies owned by the caller; JSON
-//! strings carry per-call metadata. Long calls (`runSimulation`, batch
-//! stepping) are synchronous by design: the consumer decides threading
-//! (worker_threads) and the engine never holds JS objects across a call.
+//! State typed arrays are owned copies; camera FrameRef.buffer() instead leases
+//! renderer-ring memory until explicit release. JSON strings carry metadata.
+//! Long stepping calls are synchronous; reset callbacks run at kernel-owned
+//! warmup barriers and never advance the world themselves.
 
 #![deny(clippy::all)]
 
@@ -11,7 +11,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 use simforge_bindings_common::runtime::{
-    self as rt, Batch, Compiled, Env, Handoff, MapAsset, Policy, PolicyOutcome, RouteHandle,
+    self as rt, Batch, Compiled, Handoff, MapAsset, Policy, PolicyOutcome, RouteHandle,
     Scenario, Sim, Site, StepView, Trace, World,
 };
 use simforge_bindings_common::{action, BindingError, ErrorKind};
@@ -824,10 +824,14 @@ pub struct JsStepResult {
     pub object_ids: Vec<String>,
     /// `Float32Array(height * width * channels)` when BEV is configured.
     pub bev: Option<Float32Array>,
-    /// `[progress, proximity, comfort]`.
+    /// Eleven contributions: progress, proximity, comfort (accel), jerk,
+    /// lateral_accel, time, stuck, collision, offroad, red_crossing, goal.
     pub reward_terms: Float64Array,
     /// JSON `{events, minima, causal}`.
     pub info_json: String,
+    /// Opt-in approach-level signal observations, JSON array.
+    pub signals_json: Option<String>,
+    pub term_reason: Option<String>,
 }
 
 fn step_result(view: &StepView<'_>) -> Result<JsStepResult> {
@@ -843,6 +847,8 @@ fn step_result(view: &StepView<'_>) -> Result<JsStepResult> {
         bev: view.bev().map(|(_, data)| Float32Array::new(data.to_vec())),
         reward_terms: Float64Array::new(view.reward_terms().to_vec()),
         info_json: view.info_json().js()?,
+        signals_json: view.signals_json().js()?,
+        term_reason: view.term_reason().map(str::to_owned),
     })
 }
 
@@ -863,7 +869,7 @@ fn bev_shape(shape: Option<(usize, usize, usize)>) -> Option<BevShape> {
 
 #[napi(js_name = "EnvSession")]
 pub struct JsEnvSession {
-    inner: Env,
+    inner: rt::Env,
 }
 
 #[napi]
@@ -879,7 +885,7 @@ impl JsEnvSession {
             m as usize
         });
         Ok(Self {
-            inner: Env::new(
+            inner: rt::Env::new(
                 &input.inner,
                 &graph.inner,
                 episode_json.as_deref(),
@@ -1002,7 +1008,7 @@ pub struct JsBatchResult {
     /// `(N, maxObjects, OBJECT_FEATURES)` row-major.
     pub objects: Float32Array,
     pub object_count: Uint32Array,
-    /// `(N, 3)` row-major.
+    /// `(N, 11)` row-major, same column order as `StepResult.rewardTerms`.
     pub reward_terms: Float64Array,
     /// `(N, height, width, channels)` row-major when BEV is configured.
     pub bev: Option<Float32Array>,
@@ -1617,7 +1623,7 @@ fn policy_result(outcome: &PolicyOutcome<'_>) -> Result<JsPolicyStepResult> {
 /// Deadline-accounted policy executor owning its `EnvSession`.
 #[napi(js_name = "PolicySession")]
 pub struct JsPolicySession {
-    env: Env,
+    env: rt::Env,
     policy: Policy,
 }
 
@@ -1637,7 +1643,7 @@ impl JsPolicySession {
             m as usize
         });
         Ok(Self {
-            env: Env::new(
+            env: rt::Env::new(
                 &input.inner,
                 &graph.inner,
                 episode_json.as_deref(),
@@ -1707,4 +1713,67 @@ impl JsPolicySession {
     pub fn ego_pose(&self) -> Result<Float64Array> {
         Ok(Float64Array::new(self.env.ego_pose().js()?.to_vec()))
     }
+}
+
+/// Zero-copy renderer-ring lease. Buffers are invalid after release().
+#[napi(js_name = "FrameRef")]
+pub struct JsFrameRef {
+    inner: rt::FrameRef,
+}
+
+#[napi]
+impl JsFrameRef {
+    #[napi(getter)]
+    pub fn id(&self) -> u32 { self.inner.descriptor.id }
+    #[napi(getter)]
+    pub fn released(&self) -> bool { self.inner.released() }
+    #[napi]
+    pub fn release(&self) { self.inner.release(); }
+    #[napi]
+    pub fn buffer(&self, env: Env) -> Result<BufferSlice<'_>> {
+        let (ptr, len) = self.inner.raw_parts().map_err(BindingError::from).js()?;
+        // The finalizer retains the mapping even if the Episode is closed.
+        unsafe { BufferSlice::from_external(&env, ptr, len, self.inner.clone(), |_, lease| drop(lease)) }
+    }
+}
+
+/// Kernel-owned closed-loop episode; JSON shapes are identical to PyO3.
+#[napi(js_name = "Episode")]
+pub struct JsEpisode {
+    inner: rt::Episode,
+}
+
+#[napi]
+impl JsEpisode {
+    #[napi(constructor)]
+    pub fn new(spec_json: String, graph: &JsLaneGraph) -> Result<Self> {
+        Ok(Self { inner: rt::Episode::new(&spec_json, &graph.inner).js()? })
+    }
+    #[napi]
+    pub fn reset(&mut self, on_frame: Option<Function<'_, FnArgs<(String, Vec<JsFrameRef>)>, ()>>) -> Result<String> {
+        if let Some(callback) = on_frame {
+            self.inner.reset_with(|payload, frames| callback.call((payload,
+                frames.into_iter().map(|inner| JsFrameRef { inner }).collect()).into()).map_err(|e| e.to_string())).js()
+        } else { self.inner.reset().js() }
+    }
+    #[napi]
+    pub fn step(&mut self, action_json: String) -> Result<String> { self.inner.step(&action_json).js() }
+    #[napi]
+    pub fn snapshot(&self) -> Result<String> { self.inner.snapshot().js() }
+    #[napi]
+    pub fn trace_json(&self) -> String { self.inner.trace_json().to_owned() }
+    #[napi]
+    pub fn trace_digest(&self) -> String { self.inner.trace_digest().to_owned() }
+    #[napi]
+    pub fn finish(&mut self) -> Result<String> { self.inner.finish().js() }
+    #[napi(getter)]
+    pub fn ego(&self) -> String { self.inner.ego().to_owned() }
+    #[napi(getter)]
+    pub fn ended(&self) -> bool { self.inner.ended() }
+    #[napi]
+    pub fn frame(&self, id: u32) -> Result<JsFrameRef> { Ok(JsFrameRef { inner: self.inner.frame(id).js()? }) }
+    #[napi]
+    pub fn scene_state_json(&self) -> Option<String> { self.inner.scene_state_json().map(str::to_owned) }
+    #[napi]
+    pub fn close(&mut self) { self.inner.close(); }
 }

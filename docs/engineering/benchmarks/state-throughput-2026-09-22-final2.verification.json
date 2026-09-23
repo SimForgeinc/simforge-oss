@@ -1,0 +1,150 @@
+{
+  "schema": "simforge.episode-final2-verification/v1",
+  "reason": "W1 EpisodeBatch + W3 appliedControl, then ECMAScript Ryu midpoint canonicalization fix",
+  "binaries": {
+    "python": {
+      "path": "/tmp/simforge-episode-final2/python/simforge_oss_gym/_native.abi3.so",
+      "sha256": "0b13075278adc5427b61cf69ae41f7d8890b57a86ee25d26825140a7da87b48d"
+    },
+    "node": {
+      "path": "/tmp/simforge-episode-final2/node/simforge-native-runtime.linux-x64-gnu.node",
+      "sha256": "cd01e652514cf2af8ca3413dd58314365ee430b3f8030ec48c77bcf5024e3bd5"
+    }
+  },
+  "verification": {
+    "hashContractsPassed": 5,
+    "nativeBatchContractsPassed": 3,
+    "appliedControlRegressionPassed": true,
+    "gym": {
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 21,
+      "junit": "/tmp/simforge-episode-final2/gym-tests.xml"
+    },
+    "N8ParallelSequentialParity": true,
+    "thirtySecondParity": {
+      "decisions": 300,
+      "previous": "75ddcff71ddc7364ab02ddee7c4365dad367b37157f15b87b3b97ab88ff7a9f2",
+      "final2": "75ddcff71ddc7364ab02ddee7c4365dad367b37157f15b87b3b97ab88ff7a9f2",
+      "bindings": [
+        "PyO3",
+        "NAPI",
+        "EnvSession"
+      ]
+    },
+    "midpointRegression": {
+      "input": -1.7919387817382812,
+      "oldRust": "-1.7919387817382813",
+      "ECMAScript": "-1.7919387817382812",
+      "oldFailedRun": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/failed-midpoint-rollout",
+      "same200DecisionStateActionActuatorRewardStream": true
+    }
+  },
+  "throughput": {
+    "report": "docs/engineering/benchmarks/state-throughput-2026-09-22-final2.json",
+    "gate": {
+      "minimum_64_env_decisions_per_s": 5000,
+      "passed": true,
+      "failures": []
+    },
+    "rows64": [
+      {
+        "workload": "corridor",
+        "num_envs": 64,
+        "threads": 8,
+        "median_env_steps_per_s": 42886.7545202222,
+        "samples": [
+          {
+            "decisions": 214464,
+            "seconds": 5.000704818987288,
+            "env_steps_per_s": 42886.7545202222,
+            "batch_calls": 3367,
+            "autoreset_only_rows": 1024
+          },
+          {
+            "decisions": 205888,
+            "seconds": 5.001110216951929,
+            "env_steps_per_s": 41168.45881582757,
+            "batch_calls": 3233,
+            "autoreset_only_rows": 1024
+          },
+          {
+            "decisions": 237760,
+            "seconds": 5.000876744976267,
+            "env_steps_per_s": 47543.66326641557,
+            "batch_calls": 3733,
+            "autoreset_only_rows": 1152
+          }
+        ],
+        "session_batch_baseline_decisions_per_s": 40142.20261754677,
+        "versus_session_batch_percent": 6.837073512941094
+      },
+      {
+        "workload": "cpnco-dartout",
+        "num_envs": 64,
+        "threads": 8,
+        "median_env_steps_per_s": 41619.10706074332,
+        "samples": [
+          {
+            "decisions": 217984,
+            "seconds": 5.001259312033653,
+            "env_steps_per_s": 43585.82236987859,
+            "batch_calls": 3427,
+            "autoreset_only_rows": 1344
+          },
+          {
+            "decisions": 208128,
+            "seconds": 5.0007800430757925,
+            "env_steps_per_s": 41619.10706074332,
+            "batch_calls": 3272,
+            "autoreset_only_rows": 1280
+          },
+          {
+            "decisions": 188160,
+            "seconds": 5.0007230039918795,
+            "env_steps_per_s": 37626.559169503955,
+            "batch_calls": 2958,
+            "autoreset_only_rows": 1152
+          }
+        ],
+        "session_batch_baseline_decisions_per_s": 32100.96562500896,
+        "versus_session_batch_percent": 29.650639008563175
+      }
+    ]
+  },
+  "renderedTeacher": {
+    "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42",
+    "status": "succeeded",
+    "decisions": 200,
+    "frames": 402,
+    "protocol": "simforge.policy-endpoint/v3",
+    "health": {
+      "decisions": 200,
+      "genuinePlans": 200,
+      "warmupSteps": 1,
+      "fallbacks": {
+        "prologue": 0,
+        "closedLoop": 0
+      },
+      "invalidPlans": 0,
+      "timeouts": 0,
+      "latencyMs": {
+        "p50": 1.6120909999990545,
+        "p95": 2.0739729999986594
+      },
+      "deadlineMisses": 0,
+      "maxPlanAgeS": 0
+    },
+    "qualificationRecorded": true,
+    "resultSha256": "9d5eccab969892038e7a8f4f84dc97c96d8b4ec1e07827b04a3e79bdeecbf9d7",
+    "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42/drive.mp4"
+  },
+  "scope": {
+    "installedWheelReplaced": false,
+    "cameraPixelDeterminismClaimed": false,
+    "projectWideTestsRun": false,
+    "renderedThroughputRebenchmark": false
+  }
+}

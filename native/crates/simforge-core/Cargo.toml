@@ -16,3 +16,4 @@ thiserror = { workspace = true }
 sha2 = { workspace = true }
 flate2 = { workspace = true }
 rmp-serde = { workspace = true }
+ryu-js = "=1.0.3"

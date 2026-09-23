@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v2-control",
+  "cell": 5,
+  "templateSha256": "5eb1dfd648a55f31550642acb4a003fb4863e29abdc4ddc78dd4c68488e6af7c",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "belmont-research-center",
+    "topologySha256": "10ef077f8ccd2dc9b42e5e33f0f569f52874c39248edcbfb7e442142e57a5f97",
+    "engineGraphDigest": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+    "matcherIndexDigest": "f11d400ccbaee606c1fe176e05273b45ef1c4a632183e3bdec6eb476bf0975f0"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+}

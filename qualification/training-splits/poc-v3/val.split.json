@@ -1,0 +1,241 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v3-val",
+  "purpose": "val",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "yale-street",
+      "site": "10c704c2e6d9a73d",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "yale-street",
+      "site": "601e1cdbe60d85fb",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-0cd63b311efb.json",
+      "map": "yale-street",
+      "site": "0822313025c18262",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-0cd63b311efb.json",
+      "map": "yale-street",
+      "site": "13b93c58ef454765",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-42b299c1b401.json",
+      "map": "yale-street",
+      "site": "0c610c1df3a5f6a5",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "el-camino-road",
+      "site": "11faed4be36354f4",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "el-camino-road",
+      "site": "1ec1dbe130b57cd9",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-0cd63b311efb.json",
+      "map": "el-camino-road",
+      "site": "369c9b29af604018",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-42b299c1b401.json",
+      "map": "el-camino-road",
+      "site": "05945784aee36152",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 100: bench-scripted/prologue63+reaction30: collision at 7.3s; requires >=9.3s",
+        "siteKey": "yale-street/seg_5da50ba7b864b4b2",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-000.admission.json",
+          "sha256": "f2fa165d9eaec8ff908b17819465271fe576584279b0153aa01222cf6d72cd2b"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_c9b60fb3c1983bc2",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-001.admission.json",
+          "sha256": "8f56134384d47d6d297c19c1d8840519fe2d5692be1323527d1bf00958eacf45"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "arrival_unconverged at interactions.ped-reaches-the-lane.trigger.arrival: required arrival interaction \"ped-reaches-the-lane\" cannot be resolved",
+        "siteKey": "yale-street/seg_efb7295cfdf55084",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-002.admission.json",
+          "sha256": "401300033ee630165795d697a4ab92057a61e1170e07e820680203f0e407d384"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_60e63bb16d5d26f2",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-003.admission.json",
+          "sha256": "d7366a66db403979f8c8937cf86f76c8a9f45cb729b82078623243861ed1b55c"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_2ca0e80ae4072c94",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-004.admission.json",
+          "sha256": "07e1efb69d72ad5d460c226eb458a5dfbfa956eb00756af264048ac439538e42"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 100: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.279013932141496; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+        "siteKey": "el-camino-road/seg_343a557c98e7a4b3",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-005.admission.json",
+          "sha256": "eadbc7d12e908205d9e850cb962113eb82c751586e78937dbf2cfc511720c61b"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_08afec57399b12cd",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-006.admission.json",
+          "sha256": "f7091e34fcdece7b773caefecfad27a6620cffddd70bc01e58e474bff06c087e"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_56a6e7773c4621ae",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-007.admission.json",
+          "sha256": "60ae025cba113086417b755c3e399b572f5de87ac08b91669c80db5ea04226ce"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "receipt": {
+          "path": "receipts/poc-v3-val/cell-008.admission.json",
+          "sha256": "3ce1db4288f4f330458dae286ff99ed13b620b0b237b61b745698aad45352ab1"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T17:09:10.103Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v3-val.episodes.json",
+      "sha256": "8e3b95cbfcb062a2b990bd8dcb3645f5c2e8937cdbf29d1bc6bd76298cf70b21"
+    },
+    "count": 120
+  },
+  "digest": "885d1a20f883c0b5f8d601994cf7de4ac49e711a1d318580d746c4fe06a652c8"
+}

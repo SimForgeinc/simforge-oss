@@ -124,68 +124,10 @@ pub fn cmp_locale(a: &str, b: &str) -> Ordering {
 
 /// ECMAScript `Number::toString(10)` for a finite double.
 ///
-/// Uses Rust's shortest round-trip digit generation (the same digit string
-/// JavaScript engines produce) and applies the spec's fixed/exponent layout
-/// rules: fixed notation for decimal exponents in `[-6, 21)`, otherwise
-/// `d.ddde±x`.
+/// Ryu's ECMAScript formatter also implements the decimal midpoint tie rule;
+/// Rust's LowerExp rounds those ties differently (e.g. float32 policy outputs).
 pub fn js_number_to_string(v: f64) -> String {
-    if v == 0.0 {
-        return "0".to_owned();
-    }
-    if v.is_nan() {
-        return "NaN".to_owned();
-    }
-    if v.is_infinite() {
-        return if v > 0.0 {
-            "Infinity".to_owned()
-        } else {
-            "-Infinity".to_owned()
-        };
-    }
-    let sci = format!("{:e}", v.abs());
-    let (mant, exp) = sci
-        .split_once('e')
-        .expect("LowerExp always emits an exponent");
-    let e: i32 = exp.parse().expect("LowerExp exponent is an integer");
-    let digits: Vec<u8> = mant.bytes().filter(|b| *b != b'.').collect();
-    let k = digits.len() as i32;
-    let n = e + 1;
-    let mut out = String::with_capacity(digits.len() + 8);
-    if v < 0.0 {
-        out.push('-');
-    }
-    let push_digits = |out: &mut String, range: std::ops::Range<usize>| {
-        for d in &digits[range] {
-            out.push(char::from(*d));
-        }
-    };
-    if k <= n && n <= 21 {
-        push_digits(&mut out, 0..digits.len());
-        for _ in 0..(n - k) {
-            out.push('0');
-        }
-    } else if 0 < n && n <= 21 {
-        push_digits(&mut out, 0..n as usize);
-        out.push('.');
-        push_digits(&mut out, n as usize..digits.len());
-    } else if -6 < n && n <= 0 {
-        out.push_str("0.");
-        for _ in 0..(-n) {
-            out.push('0');
-        }
-        push_digits(&mut out, 0..digits.len());
-    } else {
-        out.push(char::from(digits[0]));
-        if k > 1 {
-            out.push('.');
-            push_digits(&mut out, 1..digits.len());
-        }
-        out.push('e');
-        let exp10 = n - 1;
-        out.push(if exp10 < 0 { '-' } else { '+' });
-        let _ = write!(out, "{}", exp10.abs());
-    }
-    out
+    ryu_js::Buffer::new().format(v).to_owned()
 }
 
 fn write_canonical(value: &Value, out: &mut String) -> Result<(), CoreError> {
@@ -204,7 +146,7 @@ fn write_canonical(value: &Value, out: &mut String) -> Result<(), CoreError> {
                 if !f.is_finite() {
                     return Err(CoreError::Canonical(format!("non-finite number {f}")));
                 }
-                out.push_str(&js_number_to_string(f));
+                out.push_str(ryu_js::Buffer::new().format_finite(f));
             }
         }
         Value::String(s) => {
@@ -296,6 +238,10 @@ mod tests {
         assert_eq!(js_number_to_string(1.5e-7), "1.5e-7");
         assert_eq!(js_number_to_string(0.1 + 0.2), "0.30000000000000004");
         assert_eq!(js_number_to_string(-2.5), "-2.5");
+        // Exact binary midpoints emitted by the PPO actor. Node rounds the
+        // shortest decimal to even; LowerExp used to break native/TS traces.
+        assert_eq!(js_number_to_string(-1.79193878173828125), "-1.7919387817382812");
+        assert_eq!(js_number_to_string(-1.79334259033203125), "-1.7933425903320312");
     }
 
     #[test]

@@ -16,6 +16,8 @@ const configuredDevOrigins = (process.env.SIMFORGE_ALLOWED_DEV_ORIGINS ?? "")
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // Isolated local hosts must not race over the same Next development cache.
+  distDir: process.env.SIMFORGE_NEXT_DIST_DIR || ".next",
   // The desktop stage (`desktop/stage.mjs`) serves the traced standalone
   // server from the installed artifact; the browser edition keeps `next start`.
   ...(process.env.SIMFORGE_DESKTOP_BUILD === "1" ? { output: "standalone" as const } : {}),

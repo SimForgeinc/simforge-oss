@@ -220,21 +220,135 @@ bytes. The server never inspects it and it never affects stepping.
 ## Reference runner
 
 `adapters/gym` (`python -m simforge_oss_gym.tools.policy_runner`, console
-script `simforge-oss-policy-runner`) is the canonical client: it drives seeded
-episodes with the scripted control, scripted-trajectory and torch-mlp
-reference policies or a real model endpoint (`--policy endpoint`, the
-`simforge.policy-endpoint/v2` MessagePack socket), records per-step inference
-timing and deadline verdicts, and writes an episode trace as JSONL. Each record
-carries the deterministic step fields
-— including the wire action, the policy's per-act `reasoning` text and the
-`ex` executor telemetry — plus a `digest`: a SHA-256 chained over the
-canonical JSON of every deterministic record so far (wall-clock timing is
-excluded). The final line holds the chained episode digest — two runs with
-the same seed and policy must match digests exactly.
+script `simforge-oss-policy-runner`) dispatches reference policies and the real
+`simforge.policy-endpoint/v2` MessagePack endpoint through native **Episode**.
+It no longer implements the world loop, latency verdict or replay envelope.
+The endpoint wire remains unchanged; its camera observations now come from
+the kernel Cameras channel, not a host-side scene renderer or prerecorded
+directory.
 
-A run declares one timing mode. In `offline-simtime` the runner passes no
-`elapsedMs`, so no deadline is enforced anywhere and the loop itself is the
-inference barrier; in `realtime` it reports the measured latency against an
-explicit `deadlineMs` and the fallback applies on a miss. The trace's `reset`
-record carries `mode` and `deadline_ms` so a reader can never mistake one for
-the other.
+Each run retains `trace.episode-v2.jsonl`: the sealed kernel trace and result
+core, including warm-up and camera evidence. `trace.jsonl` is the verified
+legacy-scorer conversion, with policy `reasoning`/replan telemetry added as
+adapter evidence. That conversion has its own digest and explicitly links
+`source_schema` and `source_episode_digest`; neither chain is relabelled as the
+other. See [the v2 trace contract](world-session.md#trace-v2-and-legacy-conversion).
+
+In `offline-simtime`, Episode owns the inference barrier and no deadline
+exists. In `realtime`, Episode measures from observation delivery to the next
+step, including rendering, and applies its configured fallback. The runner's
+`--force-miss-at` delays the real barrier beyond the deadline rather than
+reporting a fabricated latency. The reset record identifies the mode and
+deadline so offline evidence can never be mistaken for a real-time result.
+
+## Native observation channels (W0, 2026-09-22)
+
+These are additive native-session/Episode fields, not a redefinition of the
+historical compact `sv`/`objs` layout or the v1 socket handshake. Native
+`EpisodeSpec.observation.channels` uses tagged objects: `{kind:"state"}`,
+`{kind:"objects"}`, `{kind:"visible"}`, `{kind:"signals"}`, or
+`{kind:"bev",h:200,w:160,resolutionM:0.25}`. `visible` includes LOS-gated
+state/objects and infrastructure signals; it is not mixed with privileged
+state/objects/BEV in an Episode. The legacy `EnvSession` equivalents are
+`observation.visible` and `observation.signals` (both default **false**).
+
+### Visible versus privileged
+
+`visible` removes every `los=false` object row, absent actors, and actors
+outside the configured range/sensor aperture. `sv[9]` is the range to the
+nearest remaining object, or **1,000,000 metres** when none is observed.
+Range-rate memory resets across an unobserved interval: first reacquisition
+has rate zero rather than a finite difference through hidden truth.
+When a native EnvSession additionally enables BEV, its actor-occupancy
+channel follows the same visibility gate. Lane/map raster channels are not
+camera measurements. Ground-truth actor snapshots, causal frames, pair
+minima and reward diagnostics remain separate adapter/critic surfaces;
+policies must not join those into a visible observation.
+
+The existing privileged mode deliberately still includes LOS-false rows and
+its original all-actor nearest range. With both new switches false, the
+serialized observation is unchanged (the new signal field is **omitted**).
+Visible/signal checkpoints record their observation configuration and reject
+cross-channel restore, including restoring a privileged checkpoint into a
+visible session.
+
+### Signal schema
+
+With signals enabled, `Observation.signals` is an array in canonical
+signal-id/lane/stop-position order, one row per authored or repaired controlled
+approach:
+
+```json
+{
+  "signalId": "junction",
+  "laneRsl": "1:0:-1",
+  "stopLineS": 90.0,
+  "connectingLaneRsls": [],
+  "phase": "red",
+  "source": "program",
+  "timingSource": "authored",
+  "timeToChangeS": 1.0
+}
+```
+
+`stopLineS` is metres in the lane's **storage** direction, not ego-relative
+distance. Empty `connectingLaneRsls` means all movements from that approach;
+otherwise it names the controlled connecting lanes. `phase` is the engine's
+`ControlIndication`: `green`, `yellow`, `red`, `flashing_yellow`,
+`flashing_red`, `off`, `green_arrow`, `yellow_arrow`, `red_x`, `proceed`,
+`stop`, `flashing_yellow_arrow`, or `flashing_red_arrow`.
+`source` is `program` or `override`; `timingSource` preserves the native
+program's timing provenance. `timeToChangeS` is seconds until the next
+scheduled phase boundary, computed from the same 50 Hz signal authority
+as simulation. It is **null**, not zero, for overrides and indefinite/clamped
+phases (including a non-looping program's held final phase).
+
+This is explicitly infrastructure/SPaT-style state, **not** a claim that an
+occluded traffic-light head was perceived. No future actor truth is exposed.
+An enabled channel with no controls returns `[]`; a disabled channel is
+omitted. PyO3 `StepView.signals_json()` / `BatchView.signals_json(world)` return
+the array JSON or `None`; Gym exposes decoded rows in `info["signals"]`
+(also when `info_channel=False`). N-API returns optional `signalsJson`;
+the TypeScript session decodes it as `observation.signals`.
+
+The drive adapter passes these rows through `nativeObservation.signals`.
+Jev receives them as optional `scene-observation/v2.signals` in its existing
+decision state. AutoE2E receives the phase/timing rows and lane-graph-sampled
+approach markers/stop lines: the latter populate its checkpoint's existing
+**binary static** signal/stop-line raster channels. No untrained numeric phase
+encoding is invented; full phase/timing metadata is retained as `signalState`.
+These additions do not claim red-light reward/enforcement or qualify a model.
+
+### Contact and ego contracts
+
+Actual ego contacts with pedestrians, bicycles and collidable static props
+terminate as `collision`, not truncation. Native `info.collision` contains
+`{partnerId, partnerKind}` from the contact event and semantic actor catalog,
+not the nearest perceived object. Props/map colliders have `partnerKind:
+"static_object"` and their namespaced `prop:`/`map:` identity. The current
+pre-W0 kernel already passed all three real-contact cases; tests preserve the
+contract implicated in the historical invalid PPO run rather than claiming
+a new collision-physics fix.
+
+Ego resolution is `metricSubject`, then the canonical lowest-id `role:ego`
+actor, then the canonical lowest-id road-vehicle kind (car, van, truck, bus,
+motorcycle, bicycle, scooter or generic vehicle). This intentionally fixes
+concrete compiled kinds; old inputs that explicitly name their metric subject
+keep their actor identity.
+
+### Reproduction evidence
+
+`cargo test -p simforge-session --test observation_contract -- --nocapture`
+uses the existing `adapters/gym/tests/fixtures/synthetic-episode-trajectory.json`,
+seed 42, default 10 Hz, reset plus 40 scripted decisions. SHA-256 over the
+serialized StepResult array, **before and after** the changes:
+`2243af51a91457ca8e2d57745773f3bfd757aafba562d32e2a6a769bbe9c0492`.
+
+The new **visible-v1** contract fixture adds the documented test occluder,
+enables visible/signals and 1 m BEV cells, and repeats the same seed/actions:
+`1bfc56014c1eb6af25e63de72d50bc503d9ec15e50c10b8bf4409591f356f075`.
+That digest is a new channel identity, not expected to equal privileged.
+These are observation/step-byte regression receipts, not a claim of legacy
+CLI/gym trace-chain parity. Collision partner metadata is additive on contact
+steps; new APIs ship in a versioned wheel rather than replacing a live rc61
+installation.

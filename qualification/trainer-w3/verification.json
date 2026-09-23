@@ -1,0 +1,434 @@
+{
+  "schema": "simforge.trainer-w3-verification/v1",
+  "evidenceRoot": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922",
+  "teacher": {
+    "command": "simforge train --recipe ppo-teacher --config adapters/gym/simforge_oss_gym/train/configs/poc.yaml --max-decisions 200000 --out /home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher",
+    "exitCode": 0,
+    "requestedDecisionCap": 200000,
+    "actualDecisions": 198976,
+    "updates": 98,
+    "wallSeconds": 114.97926085197832,
+    "checkpointRef": "teacher/update-000098",
+    "checkpointSha256": "2644a3e6dce645c57fa8b31ee6c724dd15a1dfbc18730568a075cf39fbdb165c",
+    "scenarioScope": "historical recorded overnight episodes; no new admission claim"
+  },
+  "admittedSplitSmoke": {
+    "decisions": 2048,
+    "ref": "admitted-smoke/update-000001",
+    "sha256": "e5eb425cbecb093cbc9cf61ff52af436142cafac824bb685b5b3c6d8cc2aeac1",
+    "provenance": {
+      "splits": {
+        "train": {
+          "episodes": "/home/path/simforge-oss/qualification/training-splits/poc-v1/poc-v1-train.episodes.json",
+          "episodesSha256": "622477b64353e16271b321ee7122c02954c71e3833ea3544f0e0746bb10a1ad2",
+          "splitDigest": "0233a368c32e64c4c886583c59c809d8a683e06332d1bf63ce6c0a0a7492af67",
+          "manifest": "/home/path/simforge-oss/qualification/training-splits/poc-v1/train.split.json",
+          "manifestSha256": "440f795dd565dc21cf22a0f1763b8fef9eb32bd0c61c608a17a054bcaa55729e"
+        },
+        "val": {
+          "episodes": "/home/path/simforge-oss/qualification/training-splits/poc-v1/poc-v1-val.episodes.json",
+          "episodesSha256": "9c078e3025dbbf58faef71191aea761c2dc5600a7ef9af62faf4d299a5ba4905",
+          "splitDigest": "230204fe880d95912e7d84025aa96143f1748ea425af4bd1c21872c2d48e0d56",
+          "manifest": "/home/path/simforge-oss/qualification/training-splits/poc-v1/val.split.json",
+          "manifestSha256": "6be82930e5e377c00b2c42d6f94ba975bc9be167280cc3ffd4b8362bff4beab4"
+        }
+      },
+      "kernelVersion": "0.7.0",
+      "gitSha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f"
+    },
+    "validationCollisionRate": 1.0,
+    "scope": "one-update pipeline/provenance proof, not trained quality"
+  },
+  "student": {
+    "command": "simforge train --recipe distill-student --config /home/path/simforge-assets/runs/drive/training/w3-proof-20260922/student.yaml",
+    "exitCode": 0,
+    "frames": 200,
+    "metrics": [
+      {
+        "update": 1,
+        "frames": 200,
+        "loss": 0.002171544999873731,
+        "parameters": 11782210
+      }
+    ],
+    "checkpoint": {
+      "schema": "simforge.policy-checkpoint/v1",
+      "family": "simforge-policy",
+      "revision": "student/update-000001",
+      "sha256": "8305a91da74d1d4024ba5abb3e47acbb5a94abff087c26bfca951ef0c57c2236",
+      "obsPreset": "cams:student-front",
+      "actionHead": "control",
+      "trainer": {
+        "recipe": "distill-student",
+        "configDigest": "ea5c0bd2cf3b4dec09d5ae0b3cc9b1fb3d9587e0e44a8d4e4954f6f6bee53353"
+      },
+      "provenance": {
+        "splits": {},
+        "kernelVersion": "0.7.0",
+        "gitSha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f",
+        "dataset": [
+          {
+            "run": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42",
+            "resultSha256": "9d5eccab969892038e7a8f4f84dc97c96d8b4ec1e07827b04a3e79bdeecbf9d7",
+            "stepsSha256": "27763dea03cf85c297c36602c54df0502d3480c7de16a3faceafdf7264011c6c",
+            "traceSha256": "1e268dd27f5d856c819b5fc3cb210705a2f75a55167adcd1343901149d796770",
+            "frames": 200
+          }
+        ],
+        "teacherSha256": "2644a3e6dce645c57fa8b31ee6c724dd15a1dfbc18730568a075cf39fbdb165c",
+        "initialization": "ResNet18_Weights.IMAGENET1K_V1"
+      },
+      "checkpoint": "checkpoint.pt",
+      "promoted": false
+    },
+    "dataset": [
+      {
+        "run": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42",
+        "resultSha256": "9d5eccab969892038e7a8f4f84dc97c96d8b4ec1e07827b04a3e79bdeecbf9d7",
+        "stepsSha256": "27763dea03cf85c297c36602c54df0502d3480c7de16a3faceafdf7264011c6c",
+        "traceSha256": "1e268dd27f5d856c819b5fc3cb210705a2f75a55167adcd1343901149d796770",
+        "frames": 200
+      }
+    ],
+    "inputResize": "bilinear to640x360; ImageNet ResNet18 initialization",
+    "DAggerImplemented": false
+  },
+  "runs": {
+    "teacher": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42",
+      "status": "succeeded",
+      "decisions": 200,
+      "frames": 402,
+      "protocol": "simforge.policy-endpoint/v3",
+      "health": {
+        "decisions": 200,
+        "genuinePlans": 200,
+        "warmupSteps": 1,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 1.6120909999990545,
+          "p95": 2.0739729999986594
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0
+      },
+      "qualificationRecorded": true,
+      "resultSha256": "9d5eccab969892038e7a8f4f84dc97c96d8b4ec1e07827b04a3e79bdeecbf9d7",
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-rollout/drive-corridor__torch__seed42/drive.mp4"
+    },
+    "student": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/student-rollout/drive-corridor__torch__seed42",
+      "status": "succeeded",
+      "decisions": 10,
+      "frames": 36,
+      "protocol": "simforge.policy-endpoint/v3",
+      "health": {
+        "decisions": 10,
+        "genuinePlans": 10,
+        "warmupSteps": 2,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 75.43267899999955,
+          "p95": 77.09468299999935
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0
+      },
+      "qualificationRecorded": false,
+      "resultSha256": "331243a0bc5ee2ccfbb2d749daf2275b5548d33fe919fad3ee85651ef023dd0e",
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/student-rollout/drive-corridor__torch__seed42/drive.mp4"
+    },
+    "torchV2": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/drive-corridor__torch__seed42",
+      "status": "succeeded",
+      "decisions": 20,
+      "frames": 42,
+      "protocol": "simforge.policy-endpoint/v2",
+      "health": {
+        "decisions": 20,
+        "genuinePlans": 0,
+        "warmupSteps": 1,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 1.4864239999988058,
+          "p95": 2.4135090000017954
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0
+      },
+      "qualificationRecorded": false,
+      "resultSha256": "e222a65bba484d67d438cb2d0536a1896fb1cb491912683f9628051a918e19e6",
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/drive-corridor__torch__seed42/drive.mp4"
+    },
+    "autoV3": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/drive-corridor__auto-e2e__seed42",
+      "status": "succeeded",
+      "decisions": 20,
+      "frames": 588,
+      "protocol": "simforge.policy-endpoint/v3",
+      "health": {
+        "decisions": 20,
+        "genuinePlans": 20,
+        "warmupSteps": 64,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 1227.4773060000007,
+          "p95": 1256.4491510000007
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0
+      },
+      "qualificationRecorded": true,
+      "resultSha256": "ae23497182e4226778afcbd59038eabe252077dded60bdf957d6fe755b2f68f8",
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/drive-corridor__auto-e2e__seed42/drive.mp4"
+    },
+    "jevV3": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/jev-rollout/drive-corridor__jev__seed42",
+      "status": "succeeded",
+      "decisions": 10,
+      "frames": 148,
+      "protocol": "simforge.policy-endpoint/v3",
+      "health": {
+        "decisions": 10,
+        "genuinePlans": 3,
+        "warmupSteps": 64,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 0,
+          "p95": 285.2903750000005
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0.3000000000000007
+      },
+      "qualificationRecorded": false,
+      "resultSha256": "3e52888c080dd3bd8e97604c66c46b42bb3ee6ad0521182d8445b78e198f1e11",
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/jev-rollout/drive-corridor__jev__seed42/drive.mp4"
+    },
+    "teacherVisible": {
+      "runDir": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher-visible/ppo-val-di-rosa-queue-seed100__torch__seed100",
+      "status": "succeeded",
+      "decisions": 10,
+      "frames": 22,
+      "protocol": "simforge.policy-endpoint/v3",
+      "health": {
+        "decisions": 10,
+        "genuinePlans": 10,
+        "warmupSteps": 1,
+        "fallbacks": {
+          "prologue": 0,
+          "closedLoop": 0
+        },
+        "invalidPlans": 0,
+        "timeouts": 0,
+        "latencyMs": {
+          "p50": 1.7809459999989485,
+          "p95": 3.048456000000442
+        },
+        "deadlineMisses": 0,
+        "maxPlanAgeS": 0
+      },
+      "channels": [
+        {
+          "kind": "visible"
+        },
+        {
+          "backend": {
+            "kind": "service"
+          },
+          "kind": "cameras",
+          "passes": [
+            "rgb"
+          ],
+          "rig": {
+            "cameras": [
+              {
+                "cameraId": 1,
+                "fwd": 2.05,
+                "height": 384,
+                "hfov": 120,
+                "left": 0,
+                "pitchDeg": 0,
+                "sensorId": "camera_front_wide_120fov",
+                "up": 1.5,
+                "width": 512,
+                "yawDeg": 0
+              },
+              {
+                "cameraId": 6,
+                "fwd": 2.08,
+                "height": 384,
+                "hfov": 30,
+                "left": 0,
+                "pitchDeg": 0,
+                "sensorId": "camera_front_tele_30fov",
+                "up": 1.52,
+                "width": 512,
+                "yawDeg": 0
+              }
+            ]
+          }
+        }
+      ],
+      "resultSha256": "01fcfa90a28556820b6214ea962f9510d5358a1f95e0f89a28c043c401090c18"
+    }
+  },
+  "qualifications": {
+    "torch": {
+      "qualified": true,
+      "latencyMs": {
+        "p50": 1.1843210086226463,
+        "p95": 2.044408000074327,
+        "max": 2.044408000074327,
+        "samples": 8
+      },
+      "peakRssMiB": 590.2265625,
+      "checks": {
+        "pinnedDependencies": true,
+        "readOnlyRoot": true,
+        "offline": true,
+        "boundedScratch": true,
+        "concurrentSessionIsolation": true,
+        "restart": true,
+        "readiness": true,
+        "latency": true,
+        "memory": true
+      },
+      "cleanup": {
+        "container": "simforge-policy-qualify-3434946-909522722916034",
+        "removed": true
+      },
+      "path": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/torch-qualification-final.json"
+    },
+    "auto": {
+      "qualified": true,
+      "latencyMs": {
+        "p50": 1427.8016260359436,
+        "p95": 3485.780607908964,
+        "max": 3485.780607908964,
+        "samples": 8
+      },
+      "peakRssMiB": 1501.72265625,
+      "checks": {
+        "pinnedDependencies": true,
+        "readOnlyRoot": true,
+        "offline": true,
+        "boundedScratch": true,
+        "concurrentSessionIsolation": true,
+        "restart": true,
+        "readiness": true,
+        "latency": true,
+        "memory": true
+      },
+      "cleanup": {
+        "container": "simforge-policy-qualify-3434942-909522624685736",
+        "removed": true
+      },
+      "path": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/auto-qualification-final.json"
+    }
+  },
+  "qualificationTimeoutRegression": {
+    "schema": "simforge.policy-qualification/v1",
+    "qualified": false,
+    "error": "qualification totalTimeoutS exceeded; owned container removed",
+    "checks": {},
+    "configSha256": "d7298cfdaae39a0764eb13bacb2f842825097a699ea180680751690db642a699",
+    "command": [
+      "/home/path/simforge-oss/adapters/gym/.venv/bin/python",
+      "-m",
+      "simforge_oss_gym.train.serve",
+      "--checkpoint",
+      "teacher/update-000098",
+      "--socket",
+      "{socket}",
+      "--threads",
+      "2"
+    ],
+    "createdAt": "2026-09-22T12:24:49Z",
+    "cleanup": {
+      "container": "simforge-policy-qualify-3434958-909522811463011",
+      "removed": false
+    }
+  },
+  "mixedHeat": {
+    "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/heat.mp4",
+    "report": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/report.json",
+    "synchronizedPolicyTicks": 20,
+    "protocols": [
+      "simforge.policy-endpoint/v2",
+      "simforge.policy-endpoint/v3"
+    ],
+    "v2Server": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/torch-v2-server.py",
+    "scope": "real checkpoint inference through frozen PoC v2 behavior and real AutoE2E v3; different prologues, not a policy-quality comparison"
+  },
+  "storeIntegrity": {
+    "teacherAndStudentRefsResolved": true,
+    "listed": true,
+    "tamperedBytesRejected": true,
+    "traversalRejected": true
+  },
+  "adapterImports": [
+    {
+      "module": "simforge_alpamayo.server",
+      "exitCode": 0,
+      "stdout": "simforge_alpamayo.server imported\n",
+      "stderr": ""
+    },
+    {
+      "module": "simforge_qwen_drive.server",
+      "exitCode": 0,
+      "stdout": "simforge_qwen_drive.server imported\n",
+      "stderr": ""
+    }
+  ],
+  "typechecks": [
+    "packages/cli/tsconfig.json",
+    "packages/model-store/tsconfig.json"
+  ],
+  "nativeVerification": "docs/engineering/benchmarks/state-throughput-2026-09-22-final2.verification.json",
+  "limitations": [
+    "No full PoC training or promotion",
+    "The proposed W2 grid failed admission; admitted subset only",
+    "Alpamayo and Qwen additive imports checked, not live VLA inference rerun",
+    "Docker qualification uses trusted host runtime mounted read-only, not an untrusted-code security boundary",
+    "Archival qualification/policy-eval-runner intentionally retains its external sv+BEV checkpoint contract"
+  ],
+  "visualInspection": {
+    "studentFrame": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/student-rollout/drive-corridor__torch__seed42/frames/camera_student_front/2.png",
+    "observed": "real640x360 Bevy road/lane/tree frame",
+    "mixedHeat": {
+      "video": "/home/path/simforge-assets/runs/drive/training/w3-proof-20260922/mixed-heat/heat.mp4",
+      "durationS": 2,
+      "width": 1024,
+      "height": 384,
+      "fps": 10,
+      "codec": "h264",
+      "inspectedTS": 1,
+      "observed": "both native camera panes and policy HUDs; different absolute simulation times explicitly visible"
+    }
+  }
+}

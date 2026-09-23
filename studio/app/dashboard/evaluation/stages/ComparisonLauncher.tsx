@@ -376,7 +376,7 @@ export function ComparisonLauncher({
             <span {...stylex.props(styles.frameSource)}>Frame source</span>
             <input
               {...stylex.props(styles.inputMonoSm2)}
-              placeholder="dir:/path/to/frames or bevy:/path/to/rig.json"
+              placeholder="bevy:/path/to/rig.json"
               value={frameSource}
               onChange={(event) => setFrameSource(event.target.value)}
             />

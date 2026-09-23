@@ -264,6 +264,19 @@ pub struct SignalSnapshot {
     pub failure_state: Option<SignalFailureState>,
 }
 
+/// Allocation-free phase timing shared by snapshots and policy observations.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SignalTiming {
+    pub state: SignalState,
+    pub phase_start_tick: Option<i64>,
+    pub phase_end_tick: Option<i64>,
+    pub remaining_ticks: Option<i64>,
+    pub next_phase: Option<ControlIndication>,
+    pub cycle_length_ticks: i64,
+    /// No countdown for an override, clamped endpoint, or final held phase.
+    pub time_to_change_s: Option<f64>,
+}
+
 fn failure_state_of(phase: ControlIndication) -> Option<SignalFailureState> {
     match phase {
         ControlIndication::Off => Some(SignalFailureState::Off),
@@ -588,8 +601,7 @@ impl SignalBook {
     ) -> Option<SignalSnapshot> {
         let index = self.program_index(signal_id)?;
         let p = &self.programs[index as usize];
-        let hz = 1.0 / dt_s.unwrap_or(1.0 / SIGNAL_SNAPSHOT_TICK_HZ);
-        let cycle_s = self.cycle_length[index as usize];
+        let timing = self.timing_at_index(index, t, dt_s);
         let mut head_ids: Vec<String> = match &p.map_binding {
             Some(b) => b.head_ids.clone(),
             None => p.stop_lines.iter().map(|sl| sl.rsl.clone()).collect(),
@@ -603,28 +615,45 @@ impl SignalBook {
             .as_ref()
             .and_then(|b| b.controller_ids.first().cloned());
         let junction_id = p.map_binding.as_ref().map(|b| b.junction_id.clone());
-        let timing_source = p
-            .map_binding
-            .as_ref()
-            .map_or(TimingSource::Authored, |b| b.timing_source);
-        let cycle_length_ticks = Some(js_round(cycle_s * hz) as i64);
-        let base = |phase: ControlIndication, source: PhaseSource| SignalSnapshot {
+        Some(SignalSnapshot {
             signal_id: signal_id.to_owned(),
-            head_ids: head_ids.clone(),
-            controller_id: controller_id.clone(),
-            junction_id: junction_id.clone(),
-            phase,
-            source,
-            timing_source,
+            head_ids,
+            controller_id,
+            junction_id,
+            phase: timing.state.phase,
+            source: timing.state.source,
+            timing_source: timing.state.timing_source,
+            phase_start_tick: timing.phase_start_tick,
+            phase_end_tick: timing.phase_end_tick,
+            remaining_ticks: timing.remaining_ticks,
+            next_phase: timing.next_phase,
+            cycle_length_ticks: Some(timing.cycle_length_ticks),
+            failure_state: failure_state_of(timing.state.phase),
+        })
+    }
+
+    /// Current phase and tick timing without allocating identity strings.
+    pub fn timing_at_index(&self, index: u32, t: f64, dt_s: Option<f64>) -> SignalTiming {
+        let p = &self.programs[index as usize];
+        let hz = 1.0 / dt_s.unwrap_or(1.0 / SIGNAL_SNAPSHOT_TICK_HZ);
+        let cycle_s = self.cycle_length[index as usize];
+        let mut timing = SignalTiming {
+            state: SignalState {
+                phase: p.phases[0].phase,
+                source: PhaseSource::Program,
+                timing_source: p.map_binding.as_ref().map_or(TimingSource::Authored, |b| b.timing_source),
+            },
             phase_start_tick: None,
             phase_end_tick: None,
             remaining_ticks: None,
             next_phase: None,
-            cycle_length_ticks,
-            failure_state: failure_state_of(phase),
+            cycle_length_ticks: js_round(cycle_s * hz) as i64,
+            time_to_change_s: None,
         };
-        if let Some(forced) = self.overrides[index as usize] {
-            return Some(base(forced, PhaseSource::Override));
+        if let Some(phase) = self.overrides[index as usize] {
+            timing.state.phase = phase;
+            timing.state.source = PhaseSource::Override;
+            return timing;
         }
         let elapsed_abs = t + self.warmup_seconds + p.offset_s;
         let mut idx = p.phases.len() - 1;
@@ -659,9 +688,9 @@ impl SignalBook {
                 }
             }
         }
-        let phase = p.phases[idx].phase;
+        timing.state.phase = p.phases[idx].phase;
         if clamped {
-            return Some(base(phase, PhaseSource::Program));
+            return timing;
         }
         let end_base_s = end_cyc_s - self.warmup_seconds - p.offset_s;
         let k = ((t - end_base_s) / cycle_s - SNAPSHOT_EPS_S).ceil();
@@ -670,12 +699,14 @@ impl SignalBook {
         let next_phase = p.phases[(idx + 1) % p.phases.len()].phase;
         let phase_start_tick = js_round(phase_start_t * hz) as i64;
         let phase_end_tick = js_round(phase_end_t * hz) as i64;
-        let mut snapshot = base(phase, PhaseSource::Program);
-        snapshot.phase_start_tick = Some(phase_start_tick);
-        snapshot.phase_end_tick = Some(phase_end_tick);
-        snapshot.remaining_ticks = Some((phase_end_tick - js_round(t * hz) as i64).max(0));
-        snapshot.next_phase = Some(next_phase);
-        Some(snapshot)
+        timing.phase_start_tick = Some(phase_start_tick);
+        timing.phase_end_tick = Some(phase_end_tick);
+        timing.remaining_ticks = Some((phase_end_tick - js_round(t * hz) as i64).max(0));
+        timing.next_phase = Some(next_phase);
+        if p.loop_ || idx + 1 < p.phases.len() {
+            timing.time_to_change_s = timing.remaining_ticks.map(|ticks| ticks as f64 / hz);
+        }
+        timing
     }
 
     /// Snapshots for every program, in sorted signal-id order.

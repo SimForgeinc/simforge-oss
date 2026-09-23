@@ -1,0 +1,680 @@
+[
+  {
+    "purpose": "val",
+    "map": "yale-street",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "0699c1a4a99fa953",
+        "siteKey": "yale-street/seg_086de21f6da8c618",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          6.000246564778763,
+          6.1965475844663604
+        ],
+        "revealToConflictS": [
+          2.7655241475698786,
+          4.062687247751342
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "yale-street",
+    "family": "cpnco-parked-row",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "0822313025c18262",
+        "siteKey": "yale-street/seg_efb7295cfdf55084",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "yale-street",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "0c610c1df3a5f6a5",
+        "siteKey": "yale-street/seg_2ca0e80ae4072c94",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "yale-street",
+    "family": "school-dartout",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "val",
+    "map": "yale-street",
+    "family": "bus-stop-emergence",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  },
+  {
+    "purpose": "val",
+    "map": "el-camino-road",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "026594372b5c1c71",
+        "siteKey": "el-camino-road/seg_5418b348ef252b45",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.990342740825351,
+          6.18690701422646
+        ],
+        "revealToConflictS": [
+          2.70434605246938,
+          4.0004134672514695
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "el-camino-road",
+    "family": "cpnco-parked-row",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "213b84a3f67533ad",
+        "siteKey": "el-camino-road/seg_4e3aada26a5661c4",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "el-camino-road",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "04412a97fa01b6c0",
+        "siteKey": "el-camino-road/seg_38433d5885f3d6b8",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "val",
+    "map": "el-camino-road",
+    "family": "school-dartout",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "val",
+    "map": "el-camino-road",
+    "family": "bus-stop-emergence",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  },
+  {
+    "purpose": "train",
+    "map": "yale-street",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "19f890a500277be9",
+        "siteKey": "yale-street/seg_0987c9068d8e224e",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.8397211816509262"
+        ],
+        "stopGapM": [
+          6.4769625609497545,
+          6.4769625609497545
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "2eeee5c165bbb161",
+        "siteKey": "yale-street/seg_aff2a2637b1dbfa4",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.8396217679262636"
+        ],
+        "stopGapM": [
+          6.149804869590895,
+          6.149804869590895
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "42e06b365815aa3e",
+        "siteKey": "yale-street/seg_334a19adf000cf35",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.839624294568282"
+        ],
+        "stopGapM": [
+          6.149744714704173,
+          6.149744714704173
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "5dae8f1eeb790ff4",
+        "siteKey": "yale-street/seg_7f78a668276cdc39",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.977551060748217,
+          6.19266816455896
+        ],
+        "revealToConflictS": [
+          2.6857032493953326,
+          4.113393662125498
+        ]
+      },
+      {
+        "site": "601e1cdbe60d85fb",
+        "siteKey": "yale-street/seg_c9b60fb3c1983bc2",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.979087222853307,
+          6.1938808014848
+        ],
+        "revealToConflictS": [
+          2.7054385989185548,
+          4.197358203176952
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "yale-street",
+    "family": "cpnco-parked-row",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "13b93c58ef454765",
+        "siteKey": "yale-street/seg_60e63bb16d5d26f2",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      },
+      {
+        "site": "243fecf9699bf0d4",
+        "siteKey": "yale-street/seg_9cc55c23ccb392bf",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "yale-street",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "15abeb1a6daedbdb",
+        "siteKey": "yale-street/seg_b697850af2e25b2e",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      },
+      {
+        "site": "2fa8977509047735",
+        "siteKey": "yale-street/seg_3ec6e96a447ce2da",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "yale-street",
+    "family": "school-dartout",
+    "quota": 2,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "train",
+    "map": "yale-street",
+    "family": "bus-stop-emergence",
+    "quota": 2,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  },
+  {
+    "purpose": "train",
+    "map": "el-camino-road",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "0734dced5a052ceb",
+        "siteKey": "el-camino-road/seg_925834df2b04fdea",
+        "failedSeed": 0,
+        "failures": [
+          "site.frame.referencePath: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.ego.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.queue-tail.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.queue-lead.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.preview-van.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)"
+        ],
+        "stopGapM": null,
+        "revealToConflictS": null
+      },
+      {
+        "site": "19f9c4222ca68815",
+        "siteKey": "el-camino-road/seg_661c58b93753e2d7",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.8396768022284906"
+        ],
+        "stopGapM": [
+          6.214956960414257,
+          6.214956960414257
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "257d0311f226ca1e",
+        "siteKey": "el-camino-road/seg_e80bb4d4e2c8fa7c",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.9797573039224883"
+        ],
+        "stopGapM": [
+          8.633834496559029,
+          8.633834496559029
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "394a825c079b4c9f",
+        "siteKey": "el-camino-road/seg_176740f3b1d01cce",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.8397965731290973"
+        ],
+        "stopGapM": [
+          6.538233784710945,
+          6.538233784710945
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "4dcb6ccfe6d569d6",
+        "siteKey": "el-camino-road/seg_74596f306bc794df",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.977788108329838,
+          6.192457104068831
+        ],
+        "revealToConflictS": [
+          2.7640186669817735,
+          4.31504366199335
+        ]
+      },
+      {
+        "site": "69e68cba69a080af",
+        "siteKey": "el-camino-road/seg_d0747806f1b8ce38",
+        "failedSeed": 0,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@2.8396048790068953"
+        ],
+        "stopGapM": [
+          6.149723173804272,
+          6.149723173804272
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "857b12a6c425b396",
+        "siteKey": "el-camino-road/seg_ee0a0b496dbb37cb",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.9785738760955685,
+          6.193359899226786
+        ],
+        "revealToConflictS": [
+          2.7655247833216436,
+          4.257286686972645
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "el-camino-road",
+    "family": "cpnco-parked-row",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "369c9b29af604018",
+        "siteKey": "el-camino-road/seg_56a6e7773c4621ae",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      },
+      {
+        "site": "3d7b1feeaec1f9f3",
+        "siteKey": "el-camino-road/seg_007b2f0ac43d4862",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "el-camino-road",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 2,
+    "admitted": 2,
+    "attempts": [
+      {
+        "site": "05945784aee36152",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      },
+      {
+        "site": "70d0f71b7d8ae710",
+        "siteKey": "el-camino-road/seg_a0e83832a080cffa",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "train",
+    "map": "el-camino-road",
+    "family": "school-dartout",
+    "quota": 2,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "train",
+    "map": "el-camino-road",
+    "family": "bus-stop-emergence",
+    "quota": 2,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  },
+  {
+    "purpose": "test",
+    "map": "belmont-research-center",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "14577d1a82cdf0a9",
+        "siteKey": "belmont-research-center/seg_5a5e3e7f61d02e97",
+        "failedSeed": 200,
+        "failures": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict",
+          "scripted rehearsal collision: preview-van/queue-tail@3.4197880409780024"
+        ],
+        "stopGapM": [
+          6.013891121472954,
+          6.013891121472954
+        ],
+        "revealToConflictS": [
+          0,
+          0
+        ]
+      },
+      {
+        "site": "882011686a0bd99e",
+        "siteKey": "belmont-research-center/seg_069115ab2064cfcc",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.951748682349917,
+          6.188873485734465
+        ],
+        "revealToConflictS": [
+          2.7534742822020184,
+          4.135685202521815
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "belmont-research-center",
+    "family": "cpnco-parked-row",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "0d172b3a2aa557a0",
+        "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "belmont-research-center",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "2c117f5abcb76512",
+        "siteKey": "belmont-research-center/seg_8815e2cf7fcb16fe",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "belmont-research-center",
+    "family": "school-dartout",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 147/147 sites), corridor.runwayDownstreamM (failed at 57/147 sites), corridor.curvatureDegPer10m (failed at 40/147 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "test",
+    "map": "belmont-research-center",
+    "family": "bus-stop-emergence",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  },
+  {
+    "purpose": "test",
+    "map": "easterbrook-discovery-school",
+    "family": "mechanisms/corridor/queue-tail",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "3442a731d82eb05a",
+        "siteKey": "easterbrook-discovery-school/seg_d7ae5793360bc21f",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": [
+          5.989630919203245,
+          6.190962152235253
+        ],
+        "revealToConflictS": [
+          2.6758996034643006,
+          4.094755355351994
+        ]
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "easterbrook-discovery-school",
+    "family": "cpnco-parked-row",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "8a25131d0d5108e9",
+        "siteKey": "easterbrook-discovery-school/seg_120bd635fc5b4a32",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "easterbrook-discovery-school",
+    "family": "mechanisms/corridor/cut-in-brake",
+    "quota": 1,
+    "admitted": 1,
+    "attempts": [
+      {
+        "site": "4cd0226330f69d93",
+        "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+        "failedSeed": null,
+        "failures": [],
+        "stopGapM": null,
+        "revealToConflictS": null
+      }
+    ],
+    "failure": ""
+  },
+  {
+    "purpose": "test",
+    "map": "easterbrook-discovery-school",
+    "family": "school-dartout",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ball (failed at 35/72 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+  },
+  {
+    "purpose": "test",
+    "map": "easterbrook-discovery-school",
+    "family": "bus-stop-emergence",
+    "quota": 1,
+    "admitted": 0,
+    "attempts": [],
+    "failure": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+  }
+]

@@ -121,22 +121,23 @@ export async function verifyFile(path: string, file: ModelLockFile): Promise<Fil
 }
 
 /**
- * Checkpoint identity: sha256 over the ordered `"<shard> <sha256>"` lines of
- * the weight shards, matching `gen-models-lock.mjs` and
- * `simforge_alpamayo.families.checkpoint_digest`. Computed from the lock, so
- * naming the checkpoint that produced a result never re-hashes 22-72 GB.
- *
- * Bare 64-hex, no `sha256:` prefix: this is the value
- * `simforge.model_versions.checkpoint_digest` stores and the value the engine
- * reports on `hello` / `GET /healthz`, so the worker's identity check is a
- * string equality with nothing to normalise.
+ * Checkpoint identity from the lock. HF sharded families derive a digest over
+ * ordered `"<shard> <sha256>"` lines (matching `gen-models-lock.mjs` and the
+ * adapters' `checkpoint_digest`); single-file local exports (AutoE2E's
+ * `Best_Model.pt`) already carry the checkpoint sha256 and use it directly.
+ * Bare 64-hex, no `sha256:` prefix: the exact string `model_versions.
+ * checkpoint_digest` stores and the engine reports on `hello`.
  */
 export function checkpointDigestFromLock(files: readonly ModelLockFile[]): string {
   const shards = [...files]
     .filter((file) => file.path.endsWith(".safetensors"))
     .sort((left, right) => (left.path < right.path ? -1 : 1));
-  if (!shards.length) throw new Error("no safetensors shards to digest");
-  const hasher = createHash("sha256");
-  for (const shard of shards) hasher.update(`${shard.path} ${shard.sha256}\n`);
-  return hasher.digest("hex");
+  if (shards.length) {
+    const hasher = createHash("sha256");
+    for (const shard of shards) hasher.update(`${shard.path} ${shard.sha256}\n`);
+    return hasher.digest("hex");
+  }
+  const single = files.find((file) => file.sha256 && /\.(pt|pth|bin)$/.test(file.path));
+  if (single?.sha256) return single.sha256;
+  throw new Error("no safetensors shards or single-file checkpoint to digest");
 }

@@ -1,0 +1,324 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v1-train",
+  "purpose": "train",
+  "cells": [
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-2",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-2",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "0c610c1df3a5f6a5",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "15abeb1a6daedbdb",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-2",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "el-camino-road",
+      "site": "e394f47b39a9d5d2",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "el-camino-road",
+      "site": "31640feb69f0a8c9",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "el-camino-road",
+      "site": "6a48f58d8caa1760",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "04412a97fa01b6c0",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "70d0f71b7d8ae710",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 90/90 sites), corridor.runwayDownstreamM (failed at 33/90 sites), corridor.throughLanesSameDir (failed at 27/90 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 3 at s=80 m, wanted [1, 2]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-000.admission.json",
+          "sha256": "b545d8227cd87c9932435191fcb8bf9437841a1a527abc1d4cd5ad8fb8057b6b"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 90/90 sites), corridor.runwayDownstreamM (failed at 33/90 sites), corridor.throughLanesSameDir (failed at 27/90 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 3 at s=80 m, wanted [1, 2]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-001.admission.json",
+          "sha256": "97b91cb1e519e1d7ebaf10f96d09578521838bc919ae7a6bb2035609c86eadbc"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: roles.queue-tail (failed at 115/118 sites), roles.queue-lead (failed at 63/118 sites), corridor.runwayDownstreamM (failed at 46/118 sites). Example: Infeasible at this site. only 133.59 m of runway, 220 m needed (short by 86.41 m). roles.queue-tail could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 133.59 m available. Would have required relaxing a required clause: queue-tail could not be bound and is not",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-002.admission.json",
+          "sha256": "e7f33ecd5a84c7eaa342c2f5cd8dc17d6065cf3b8b18ef8a1491ff9c3d5bbc1d"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: roles.queue-tail (failed at 115/118 sites), roles.queue-lead (failed at 63/118 sites), corridor.runwayDownstreamM (failed at 46/118 sites). Example: Infeasible at this site. only 133.59 m of runway, 220 m needed (short by 86.41 m). roles.queue-tail could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 133.59 m available. Would have required relaxing a required clause: queue-tail could not be bound and is not",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-003.admission.json",
+          "sha256": "a822006fa6c6b66c070e694a2fb12100f250a008b80855d73f31805448dc540b"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_2ca0e80ae4072c94",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-004.admission.json",
+          "sha256": "2655e28e58ef1b771b768451140ee836d32f40e809f36c709e688e0adae307d9"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_b697850af2e25b2e",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-005.admission.json",
+          "sha256": "b7cabf6a6aba008391816c175c8f28ed22258947a03e8ed341b7d83df04ba723"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 108/108 sites), corridor.runwayDownstreamM (failed at 45/108 sites), corridor.curvatureDegPer10m (failed at 32/108 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 15.99 at s=0 m, wanted [0, 4]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-006.admission.json",
+          "sha256": "35c81c04a73e303db51f0a6c3d22d7b0af8d0737645f419090267439a6754408"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 108/108 sites), corridor.runwayDownstreamM (failed at 45/108 sites), corridor.curvatureDegPer10m (failed at 32/108 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 15.99 at s=0 m, wanted [0, 4]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-007.admission.json",
+          "sha256": "59277246e7164c090e725b891e4cc26aae07bb0c44f74460939d9c30463254d8"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 52: scripted rehearsal collision: ego/queue-tail@3.7962459841612883; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-008.admission.json",
+          "sha256": "2626cd2e6a539c26f894d045a20d8ad6a8378b064d2e95f68ab895cf541919ce"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/inside-curve-screen: blocked_at_conflict",
+        "siteKey": "el-camino-road/seg_44a085c3be224d78",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-009.admission.json",
+          "sha256": "b7f951b122cb07fb697ca3bb13dd0f0074e46aa096a42f43df7733d1f4267d27"
+        }
+      },
+      {
+        "cell": 10,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719431903211124; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "el-camino-road/seg_36e0b9736f5e7bb3",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-010.admission.json",
+          "sha256": "b16d87eb6afa90ef8817860de76c3fb50f2dc8b4a399f917c43722136ed7318e"
+        }
+      },
+      {
+        "cell": 11,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_38433d5885f3d6b8",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-011.admission.json",
+          "sha256": "5caffd5c04448f5e840374e2cd29f6d9aaf3964f7bd12589de8050a746e79045"
+        }
+      },
+      {
+        "cell": 12,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a0e83832a080cffa",
+        "receipt": {
+          "path": "receipts/poc-v1-train/cell-012.admission.json",
+          "sha256": "01db17194763f05578e7315f1f438eeaaacdbc38111abe0c901879d342775ab2"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T11:29:46.671Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v1-train.episodes.json",
+      "sha256": "622477b64353e16271b321ee7122c02954c71e3833ea3544f0e0746bb10a1ad2"
+    },
+    "count": 400
+  },
+  "digest": "0233a368c32e64c4c886583c59c809d8a683e06332d1bf63ce6c0a0a7492af67"
+}

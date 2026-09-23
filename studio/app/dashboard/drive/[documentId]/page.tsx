@@ -5,14 +5,7 @@ import { getScenarioDocument } from "@/app/lib/scenario/document-store";
 import { resolveDriverRole } from "@/app/lib/scenario/driver-in-the-loop";
 import { DriverInTheLoopDrive } from "./DriverInTheLoopDrive";
 
-/**
- * The Driver in the Loop drive: one scenario, one actor, one clip.
- *
- * The document is already the variation the list created, so this page only
- * resolves which actor the human takes over and hands the drive the content it
- * needs. Driving happens on its own route because the session owns the whole
- * screen and its own viewer.
- */
+/** Resolve the authored policy subject; the bench executes it without mutating the document. */
 export default async function DriverInTheLoopPage({
   params,
   searchParams,
@@ -34,8 +27,6 @@ export default async function DriverInTheLoopPage({
     <DriverInTheLoopDrive
       content={document.content}
       datasetId={document.datasetId}
-      documentId={document.id}
-      draftVersion={document.draftVersion}
       mapVersionId={document.mapVersionId}
       mapSourceMapId={document.mapSourceMapId}
       mapXodrSha256={document.mapXodrSha256}

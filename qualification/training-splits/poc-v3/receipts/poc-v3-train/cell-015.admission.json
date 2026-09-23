@@ -1,0 +1,502 @@
+{
+  "schema": "simforge.scenario-admission/v2",
+  "splitId": "poc-v3-train",
+  "cell": 15,
+  "templateSha256": "0cd63b311efb53869baf7c759607d2b2f1806e94a3867aace3c2a481ffc9fe53",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability",
+    "bench-window"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "10059098c2e868c26bbbc8be4571e3e9206763b6df4db4aa5592575f777b3f21",
+      "paramsSha256": "7b03373baeed23bbb5508eaa276738f4e737ddb63147d8f2d5a0158d7481225f",
+      "policy": "native-authored-scripted/v2",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "failed",
+        "required": true,
+        "findings": [
+          "ego->ped/parked-row: never_blocked_before_conflict"
+        ],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3",
+              "parked-row-4"
+            ],
+            "status": "never_blocked_before_conflict",
+            "firstBlockedT": null,
+            "losOpenT": null,
+            "conflictT": 0.78,
+            "revealToConflictS": null
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 24,
+        "finalTS": 24,
+        "ticksSimulated": 1201,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 5.7125129999999995,
+            "simulationS": 24,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 240,
+          "deadlineMisses": 0,
+          "episodeDigest": "ae040461860cc6a9b07be988dea332f76f6d486bf2992c6fb9402d25f76a43f5",
+          "modelHealth": null
+        }
+      },
+      "benchWindow": {
+        "schema": "simforge.bench-window-admission/v1",
+        "status": "failed",
+        "minimumS": 9.3,
+        "prologueS": 6.3,
+        "reactionMarginS": 3,
+        "hazardOnsets": [
+          {
+            "kind": "occlusion-reveal",
+            "subject": "ego->ped/parked-row",
+            "tS": null
+          }
+        ],
+        "authoredDefaultGoals": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "goal",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 2.212271,
+            "simulationS": 2.1,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 21,
+          "deadlineMisses": 0,
+          "episodeDigest": "965a5a9d730657848b2d5d459be8e2cbc9895afd6cc4feba48196952f1791fc5",
+          "modelHealth": null
+        },
+        "benchContinuation": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "goal",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 2.258445,
+            "simulationS": 2.1,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 21,
+          "deadlineMisses": 0,
+          "episodeDigest": "b542b851acd16a2ce3dfeda5bec668e9f391ac3cdd33d7d37cae54c60797d247",
+          "modelHealth": null
+        },
+        "findings": [
+          "ego->ped/parked-row: occlusion-reveal at never; requires >=9.3s",
+          "native-authored/default-goals: goal at 2.1s; requires >=9.3s",
+          "bench-scripted/prologue63+reaction30: goal at 2.1s; requires >=9.3s"
+        ]
+      },
+      "rehearsalDigest": "4c67c55305a526c396ae13e9722e410cf0fe24db70884cb942acce31f04099d3"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/poc-v3-train/cell-015-seed-0.trace.json.gz",
+      "sha256": "b286b39ab36395ad3a768b21130b4218ec32a20543cba33585b910b3135ef87b"
+    },
+    {
+      "path": "receipts/poc-v3-train/cell-015-seed-0.episode.jsonl.gz",
+      "sha256": "ee1a3b02bf4f18237a4ff2dcc58d5167c7801cb1cdb9908877c7f072efc0f32f"
+    },
+    {
+      "path": "receipts/poc-v3-train/cell-015-seed-0.default-goals.episode.jsonl.gz",
+      "sha256": "68164f60eccccf7826ef6564e975bf95732093a24bd4d42d4b5a662c0f8b8676"
+    },
+    {
+      "path": "receipts/poc-v3-train/cell-015-seed-0.bench-window.episode.jsonl.gz",
+      "sha256": "32b2c27c9e811935e0ed7e7a70df4a399b2e83aa3954945268bc017b83589846"
+    }
+  ],
+  "match": {
+    "candidateCount": 9,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "4679411a261bd676",
+      "mapId": "el-camino-road",
+      "topologyDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "cpnco-parked-row",
+      "score": 0.5238,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "parked-vehicle-zone",
+          "kind": "corridor",
+          "mapFeatureId": "seg_a8648cec49490478"
+        },
+        "entryLaneRsl": "95:0:1",
+        "referencePath": [
+          {
+            "laneRsl": "95:0:1",
+            "sStart": 0,
+            "sEnd": 38.18432921096954,
+            "lengthM": 38.18432921096954,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "315:0:1",
+            "sStart": 38.18432921096954,
+            "sEnd": 54.5686124897312,
+            "lengthM": 16.384283278761664,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "51:0:1",
+            "sStart": 54.5686124897312,
+            "sEnd": 58.48481793328891,
+            "lengthM": 3.916205443557706,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "578:0:1",
+            "sStart": 58.48481793328891,
+            "sEnd": 75.99185830208407,
+            "lengthM": 17.507040368795156,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "50:0:1",
+            "sStart": 75.99185830208407,
+            "sEnd": 79.27556182120645,
+            "lengthM": 3.283703519122374,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "418:0:1",
+            "sStart": 79.27556182120645,
+            "sEnd": 94.63474090130491,
+            "lengthM": 15.359179080098462,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "49:0:1",
+            "sStart": 94.63474090130491,
+            "sEnd": 97.78474194802396,
+            "lengthM": 3.150001046719049,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "393:0:1",
+            "sStart": 97.78474194802396,
+            "sEnd": 114.85858539256546,
+            "lengthM": 17.073843444541502,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "32:0:-1",
+            "sStart": 114.85858539256546,
+            "sEnd": 150.29774692158009,
+            "lengthM": 35.43916152901462,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "805:0:-1",
+            "sStart": 150.29774692158009,
+            "sEnd": 166.49219300537558,
+            "lengthM": 16.19444608379551,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "99:0:-1",
+            "sStart": 166.49219300537558,
+            "sEnd": 172.63619507486334,
+            "lengthM": 6.144002069487743,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "741:0:-1",
+            "sStart": 172.63619507486334,
+            "sEnd": 188.2514649212759,
+            "lengthM": 15.615269846412566,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "80:0:1",
+            "sStart": 188.2514649212759,
+            "sEnd": 224.53994260515194,
+            "lengthM": 36.28847768387603,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "315:0:1": 38.18432921096954,
+          "32:0:-1": 114.85858539256546,
+          "393:0:1": 97.78474194802396,
+          "418:0:1": 79.27556182120645,
+          "49:0:1": 94.63474090130491,
+          "50:0:1": 75.99185830208407,
+          "51:0:1": 54.5686124897312,
+          "578:0:1": 58.48481793328891,
+          "741:0:-1": 172.63619507486334,
+          "805:0:-1": 150.29774692158009,
+          "80:0:1": 188.2514649212759,
+          "95:0:1": 0,
+          "99:0:-1": 166.49219300537558
+        },
+        "sRange": [
+          0,
+          224.53994260515194
+        ],
+        "lateralLanes": {
+          "0": "95:0:1"
+        },
+        "opposingLanes": [
+          "95:0:-1"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 224.5356133941824
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "required",
+          "required": [
+            0,
+            4
+          ],
+          "actual": 1.4477884910021928e-11,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.curvatureDegPer10m holds over the whole interval (worst 0)"
+        },
+        {
+          "path": "corridor.requiresAdjacent",
+          "essentiality": "preferred",
+          "required": [
+            "sidewalk"
+          ],
+          "actual": [
+            "opposing"
+          ],
+          "score": 0,
+          "slack": 1,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "missing adjacency at s=0 m (found opposing)"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 224.54,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "224.54 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            25,
+            65
+          ],
+          "actual": 24,
+          "score": 0.9,
+          "slack": 1,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph worst value 24 at s=0 m, wanted [25, 65]"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            2
+          ],
+          "actual": 1,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+        },
+        {
+          "path": "features.parked-vehicle-zone.atM",
+          "essentiality": "required",
+          "required": [
+            -200,
+            200
+          ],
+          "actual": 168.07,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 168.0666223344924,
+          "reason": "occlusion_zone loc_ab7bb7831cd9347ed6305d42 at s=168.07 m (same-road station, 10.43 m lateral)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 0,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "95:0:1",
+          "routeLaneChain": [
+            "95:0:1",
+            "315:0:1",
+            "51:0:1",
+            "578:0:1",
+            "50:0:1",
+            "418:0:1",
+            "49:0:1",
+            "393:0:1",
+            "32:0:-1",
+            "805:0:-1",
+            "99:0:-1",
+            "741:0:-1",
+            "80:0:1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "ped",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 0,
+            "tFrac": -1,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "95:0:1",
+          "routeLaneChain": [
+            "95:0:1",
+            "315:0:1",
+            "51:0:1",
+            "578:0:1",
+            "50:0:1",
+            "418:0:1",
+            "49:0:1",
+            "393:0:1",
+            "32:0:-1",
+            "805:0:-1",
+            "99:0:-1",
+            "741:0:-1",
+            "80:0:1"
+          ],
+          "notes": []
+        }
+      ],
+      "featureMatches": {
+        "parked-vehicle-zone": {
+          "mapFeatureId": "loc_ab7bb7831cd9347ed6305d42",
+          "s": 168.0666223344924,
+          "kind": "occlusion_zone"
+        }
+      },
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.5238,
+        "repairs": [
+          {
+            "kind": "speed_clamp",
+            "path": "corridor.speedLimitKph",
+            "requestedKph": [
+              25,
+              65
+            ],
+            "appliedKph": 24,
+            "touchesRequired": false,
+            "note": "speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter)"
+          }
+        ],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.52). speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter). missing adjacency at s=0 m (found opposing). corridor.speedLimitKph worst value 24 at s=0 m, wanted [25, 65]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0)",
+        "224.54 m of runway available, 220 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)",
+        "occlusion_zone loc_ab7bb7831cd9347ed6305d42 at s=168.07 m (same-road station, 10.43 m lateral)"
+      ],
+      "alternateFrames": 0
+    }
+  },
+  "map": {
+    "id": "el-camino-road",
+    "topologySha256": "c396b62ce23c5f428aaff2294a8e4f5ae684dd8c5d5e90a34d4ae020e6430c97",
+    "engineGraphDigest": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+    "matcherIndexDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411"
+  },
+  "siteKey": "el-camino-road/seg_a8648cec49490478",
+  "status": "excluded",
+  "reason": "seed 0: ego->ped/parked-row: never_blocked_before_conflict; ego->ped/parked-row: occlusion-reveal at never; requires >=9.3s; native-authored/default-goals: goal at 2.1s; requires >=9.3s; bench-scripted/prologue63+reaction30: goal at 2.1s; requires >=9.3s"
+}

@@ -1,0 +1,366 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v2-train",
+  "cell": 11,
+  "templateSha256": "7b553f926394cfaa7f8c9c43fa886b0a69aa2e24b57b91a7740b36b512e42306",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "95e166fec40f6ff0b30a7f6dc522af68a607105f65cf06134a55f1969e795908",
+      "geometry": {
+        "status": "failed",
+        "findings": [
+          "site.frame.referencePath: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.ego.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.queue-tail.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.queue-lead.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)",
+          "roles.preview-van.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)"
+        ]
+      },
+      "occlusion": {
+        "status": "not-run"
+      },
+      "solvability": {
+        "status": "not-run"
+      }
+    }
+  ],
+  "evidence": [],
+  "match": {
+    "candidateCount": 15,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "0734dced5a052ceb",
+      "mapId": "el-camino-road",
+      "topologyDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 1,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_925834df2b04fdea"
+        },
+        "entryLaneRsl": "119:0:-4",
+        "referencePath": [
+          {
+            "laneRsl": "119:0:-4",
+            "sStart": 0,
+            "sEnd": 17.172680760086983,
+            "lengthM": 17.172680760086983,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "119:1:-4",
+            "sStart": 17.172680760086983,
+            "sEnd": 78.97341997049756,
+            "lengthM": 61.800739210410576,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "710:0:-1",
+            "sStart": 78.97341997049756,
+            "sEnd": 108.64583539277581,
+            "lengthM": 29.67241542227825,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "72:0:-6",
+            "sStart": 108.64583539277581,
+            "sEnd": 176.85309523996742,
+            "lengthM": 68.2072598471916,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "304:0:-1",
+            "sStart": 176.85309523996742,
+            "sEnd": 201.1395322319394,
+            "lengthM": 24.286436991971982,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "34:0:-2",
+            "sStart": 201.1395322319394,
+            "sEnd": 207.66748925585594,
+            "lengthM": 6.527957023916528,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "34:1:-1",
+            "sStart": 207.66748925585594,
+            "sEnd": 209.59114963155577,
+            "lengthM": 1.9236603756998376,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "34:2:-1",
+            "sStart": 209.59114963155577,
+            "sEnd": 215.94350290191448,
+            "lengthM": 6.352353270358725,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "34:3:-1",
+            "sStart": 215.94350290191448,
+            "sEnd": 222.81471539749523,
+            "lengthM": 6.871212495580751,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "119:0:-4": 0,
+          "119:1:-4": 17.172680760086983,
+          "304:0:-1": 176.85309523996742,
+          "34:0:-2": 201.1395322319394,
+          "34:1:-1": 207.66748925585594,
+          "34:2:-1": 209.59114963155577,
+          "34:3:-1": 215.94350290191448,
+          "710:0:-1": 78.97341997049756,
+          "72:0:-6": 108.64583539277581
+        },
+        "sRange": [
+          0,
+          222.81471539749523
+        ],
+        "lateralLanes": {
+          "0": "119:0:-4",
+          "1": "119:0:-3",
+          "2": "119:1:-2"
+        },
+        "opposingLanes": [
+          "109:1:-1",
+          "109:0:-1",
+          "109:1:-2",
+          "109:0:-2",
+          "109:1:-3",
+          "109:0:-3"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 222.81
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "required",
+          "required": [
+            0,
+            4
+          ],
+          "actual": 0.307736737484601,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.curvatureDegPer10m holds over the whole interval (worst 0.31)"
+        },
+        {
+          "path": "corridor.laneChangeLegal",
+          "essentiality": "required",
+          "required": "left lane change legal over s∈[10, 55]",
+          "actual": "allowed",
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 10,
+          "reason": "lane-change legality worst case \"allowed\" at s=10 m"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 120,
+          "actual": 222.81,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "222.81 m of runway available, 120 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 56,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 56)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            2,
+            8
+          ],
+          "actual": 3,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 5,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "119:0:-4",
+          "routeLaneChain": [
+            "119:0:-4",
+            "119:1:-4",
+            "710:0:-1",
+            "72:0:-6",
+            "304:0:-1",
+            "34:0:-2",
+            "34:1:-1",
+            "34:2:-1",
+            "34:3:-1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 60,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "119:0:-4",
+          "routeLaneChain": [
+            "119:0:-4",
+            "119:1:-4",
+            "710:0:-1",
+            "72:0:-6",
+            "304:0:-1",
+            "34:0:-2",
+            "34:1:-1",
+            "34:2:-1",
+            "34:3:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 68,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "119:0:-4",
+          "routeLaneChain": [
+            "119:0:-4",
+            "119:1:-4",
+            "710:0:-1",
+            "72:0:-6",
+            "304:0:-1",
+            "34:0:-2",
+            "34:1:-1",
+            "34:2:-1",
+            "34:3:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "preview-van",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 21,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "119:0:-4",
+          "routeLaneChain": [
+            "119:0:-4",
+            "119:1:-4",
+            "710:0:-1",
+            "72:0:-6",
+            "304:0:-1",
+            "34:0:-2",
+            "34:1:-1",
+            "34:2:-1",
+            "34:3:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "exact",
+        "score": 1,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Exact match: every clause and role bound without relaxation.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.31)",
+        "lane-change legality worst case \"allowed\" at s=10 m",
+        "222.81 m of runway available, 120 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 56)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "el-camino-road",
+    "topologySha256": "c396b62ce23c5f428aaff2294a8e4f5ae684dd8c5d5e90a34d4ae020e6430c97",
+    "engineGraphDigest": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+    "matcherIndexDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411"
+  },
+  "siteKey": "el-camino-road/seg_925834df2b04fdea",
+  "status": "excluded",
+  "reason": "seed 0: site.frame.referencePath: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.ego.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-tail.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-lead.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.preview-van.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes)"
+}

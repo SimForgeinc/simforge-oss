@@ -1,0 +1,590 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "overnight-v2-train",
+  "cell": 7,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "9148854df3c7880a2de77b78d1eebce6518a419bf151638112f8f3f878235584",
+      "paramsSha256": "c4becdb20c3749f84b5dfc19fae9b6b6589ef8563622e12cf0359324d605b042",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.18,
+            "conflictT": 4.107305879503347,
+            "revealToConflictS": 1.9273058795033466
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 10.565454,
+            "simulationS": 13,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 130,
+          "deadlineMisses": 0,
+          "episodeDigest": "ccc772bd09e2d1e90f5879d67568c46cc42800ae2a4e88050e2ae0def79a3e8b",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "66bdebbc8781244de97669108adaa60e305f671a1c94740c6534ad75733a2221"
+    },
+    {
+      "seed": 1,
+      "drawIndex": 1,
+      "inputSha256": "867d8fd03f188748760577a4441713cc66cd58b9a1a8ed1c54555d7a4345d87e",
+      "paramsSha256": "93f2535131316daa03cf5a3a6c853365c427b3c8b93f076fbd56091f8511e1e6",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.14,
+            "conflictT": 4.079606059591676,
+            "revealToConflictS": 1.9396060595916755
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 10.373471,
+            "simulationS": 13,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 130,
+          "deadlineMisses": 0,
+          "episodeDigest": "6fc639252e31d8a409152843c44c2703be9cec4478c2b3a0a33e8a3bd289b5e5",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "aa7d1bc9c4bf4fce2f403003864745d23a6dd26ba092132384e0bbb23d37ab3e"
+    },
+    {
+      "seed": 2,
+      "drawIndex": 2,
+      "inputSha256": "86fa866a0bd2a6c154e89fd14f7f9205d325591d6e574f177850629dcb2e3fe4",
+      "paramsSha256": "7b262777786f74f253b1ba2e5a85d8ba407034df77bbbebb694bce296be1910d",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.12,
+            "conflictT": 3.58,
+            "revealToConflictS": 1.46
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: ego/queue-tail@3.578369100223142",
+          "kernel scripted completion: collision at 3.6/13s"
+        ],
+        "collisions": [
+          {
+            "t": 3.578369100223142,
+            "a": "ego",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "collision",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 4.402685,
+            "simulationS": 3.6,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 36,
+          "deadlineMisses": 0,
+          "episodeDigest": "5eea24c6facfb127090890ff8454c9365e26f6981ab0e8429976dacfa82ba68b",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "0711f092ed6bfabce59de2fa1549ec22c611b99fb48beaeaa5d6316eaa7c48db"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/overnight-v2-train/cell-007-seed-0.trace.json.gz",
+      "sha256": "5042d797259cbb77e44f09065177cb2b5029ce9623f51d8046b60e707c9685f7"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-007-seed-0.episode.jsonl.gz",
+      "sha256": "a72213e9e82472d28ca4acf6276fe5e137ece931efad425299ad6dcbf2a0fce5"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-007-seed-2.trace.json.gz",
+      "sha256": "df20b539b2d8f01846c30577b726da6c0edd4c640f81342fb560c3006e80e7a0"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-007-seed-2.episode.jsonl.gz",
+      "sha256": "0ac55a6c9107f383ec39388b319879ba8eb3f2fddf1a4a9538d9459d663c0331"
+    }
+  ],
+  "match": {
+    "candidateCount": 12,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "7692386a39705588",
+      "mapId": "san-ramon-25-p2",
+      "topologyDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.8525247271659007,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_a7fcce200fc4ad88"
+        },
+        "entryLaneRsl": "15:0:-2",
+        "referencePath": [
+          {
+            "laneRsl": "15:0:-2",
+            "sStart": 0,
+            "sEnd": 90.1302782356147,
+            "lengthM": 90.1302782356147,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2283:0:-1",
+            "sStart": 90.1302782356147,
+            "sEnd": 102.0039295828361,
+            "lengthM": 11.873651347221394,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "19:0:1",
+            "sStart": 102.0039295828361,
+            "sEnd": 102.22392960034753,
+            "lengthM": 0.22000001751144832,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "1093:0:1",
+            "sStart": 102.22392960034753,
+            "sEnd": 122.46052574808499,
+            "lengthM": 20.236596147737455,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "31:0:-1",
+            "sStart": 122.46052574808499,
+            "sEnd": 124.46052574808499,
+            "lengthM": 1.9999999999999938,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2917:0:-1",
+            "sStart": 124.46052574808499,
+            "sEnd": 141.7859843086709,
+            "lengthM": 17.325458560585894,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "127:0:-1",
+            "sStart": 141.7859843086709,
+            "sEnd": 143.3459844007407,
+            "lengthM": 1.5600000920698143,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "19210:0:-1",
+            "sStart": 143.3459844007407,
+            "sEnd": 157.27599545503062,
+            "lengthM": 13.930011054289944,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "128:0:-1",
+            "sStart": 157.27599545503062,
+            "sEnd": 159.98600085996912,
+            "lengthM": 2.710005404938483,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "19791:0:-1",
+            "sStart": 159.98600085996912,
+            "sEnd": 172.03604093006084,
+            "lengthM": 12.050040070091708,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "129:0:-1",
+            "sStart": 172.03604093006084,
+            "sEnd": 177.4060670853264,
+            "lengthM": 5.370026155265573,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "1348:0:-1",
+            "sStart": 177.4060670853264,
+            "sEnd": 189.95614425521183,
+            "lengthM": 12.55007716988541,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "130:0:-1",
+            "sStart": 189.95614425521183,
+            "sEnd": 197.18619531448437,
+            "lengthM": 7.230051059272543,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2205:0:-1",
+            "sStart": 197.18619531448437,
+            "sEnd": 209.3962831814457,
+            "lengthM": 12.210087866961334,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "131:0:-1",
+            "sStart": 209.3962831814457,
+            "sEnd": 214.01631455861903,
+            "lengthM": 4.620031377173333,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "17936:0:-1",
+            "sStart": 214.01631455861903,
+            "sEnd": 226.976389287118,
+            "lengthM": 12.960074728498958,
+            "isJunction": true,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "1093:0:1": 102.22392960034753,
+          "127:0:-1": 141.7859843086709,
+          "128:0:-1": 157.27599545503062,
+          "129:0:-1": 172.03604093006084,
+          "130:0:-1": 189.95614425521183,
+          "131:0:-1": 209.3962831814457,
+          "1348:0:-1": 177.4060670853264,
+          "15:0:-2": 0,
+          "17936:0:-1": 214.01631455861903,
+          "19210:0:-1": 143.3459844007407,
+          "19791:0:-1": 159.98600085996912,
+          "19:0:1": 102.0039295828361,
+          "2205:0:-1": 197.18619531448437,
+          "2283:0:-1": 90.1302782356147,
+          "2917:0:-1": 124.46052574808499,
+          "31:0:-1": 122.46052574808499
+        },
+        "sRange": [
+          0,
+          226.976389287118
+        ],
+        "lateralLanes": {
+          "0": "15:0:-2",
+          "1": "15:0:-1"
+        },
+        "opposingLanes": [],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 226.9761110515033
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0.008415757219668847,
+          "score": 0.7542078786098344,
+          "slack": 0.49158424278033114,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 190,
+          "reason": "corridor.curvatureDegPer10m worst value 0.01 at s=190 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 226.98,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "226.98 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 2,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "15:0:-2",
+          "routeLaneChain": [
+            "15:0:-2",
+            "2283:0:-1",
+            "19:0:1",
+            "1093:0:1",
+            "31:0:-1",
+            "2917:0:-1",
+            "127:0:-1",
+            "19210:0:-1",
+            "128:0:-1",
+            "19791:0:-1",
+            "129:0:-1",
+            "1348:0:-1",
+            "130:0:-1",
+            "2205:0:-1",
+            "131:0:-1",
+            "17936:0:-1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "15:0:-2",
+          "routeLaneChain": [
+            "15:0:-2",
+            "2283:0:-1",
+            "19:0:1",
+            "1093:0:1",
+            "31:0:-1",
+            "2917:0:-1",
+            "127:0:-1",
+            "19210:0:-1",
+            "128:0:-1",
+            "19791:0:-1",
+            "129:0:-1",
+            "1348:0:-1",
+            "130:0:-1",
+            "2205:0:-1",
+            "131:0:-1",
+            "17936:0:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "15:0:-2",
+          "routeLaneChain": [
+            "15:0:-2",
+            "2283:0:-1",
+            "19:0:1",
+            "1093:0:1",
+            "31:0:-1",
+            "2917:0:-1",
+            "127:0:-1",
+            "19210:0:-1",
+            "128:0:-1",
+            "19791:0:-1",
+            "129:0:-1",
+            "1348:0:-1",
+            "130:0:-1",
+            "2205:0:-1",
+            "131:0:-1",
+            "17936:0:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.8525247271659007,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0.01 at s=190 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "226.98 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "san-ramon-25-p2",
+    "topologySha256": "1105af5b2a389ef77ec71f4a44a05f378e110f6a658715adc9cbd50a77673283",
+    "engineGraphDigest": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
+    "matcherIndexDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb"
+  },
+  "siteKey": "san-ramon-25-p2/seg_a7fcce200fc4ad88",
+  "status": "excluded",
+  "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.578369100223142; kernel scripted completion: collision at 3.6/13s"
+}

@@ -1,9 +1,9 @@
 """Type surface of the native extension ``simforge_oss_gym._native``.
 
 The extension is the SimForge Rust runtime (``native/crates/simforge-bindings-python``)
-compiled by maturin. Every array returned here is a fresh NumPy array the
-caller owns; the runtime never aliases its internal state into Python, so
-retained observations cannot be mutated by later steps.
+compiled by maturin. State arrays are owned copies. Episode FrameRef.buffer()
+is a read-only zero-copy NumPy view into the renderer ring; release the frame
+before stepping again and never access a released view.
 
 Actions are flat ``float64[ACTION_WIDTH]`` rows (``NaN`` = field unset);
 see :data:`ACTION_FIELDS` for slot order. Metadata (scenario documents,
@@ -24,6 +24,8 @@ OBJECT_FEATURES: int
 ACTION_WIDTH: int
 #: Slot names in flat action order.
 ACTION_FIELDS: tuple[str, ...]
+REWARD_TERM_NAMES: tuple[str, ...]
+DEFAULT_REWARD_CONFIG_JSON: str
 #: Engine identity string (``simforge_core::ENGINE_VERSION``).
 ENGINE_VERSION: str
 DEFAULT_MAX_OBJECTS: int
@@ -129,6 +131,9 @@ class ScenarioInput:
     def dt(self) -> float: ...
     @property
     def metric_subject(self) -> str | None: ...
+    @property
+    def ego_id(self) -> str:
+        """Native resolution: metric subject, role:ego, then canonical road-vehicle id."""
     @property
     def actor_ids(self) -> list[str]: ...
     @property
@@ -292,10 +297,16 @@ class StepView:
 
     @property
     def reward_terms(self) -> NDArray[np.float64]:
-        """``[progress, proximity, comfort]``."""
+        """Eleven contributions in ``REWARD_TERM_NAMES`` order, summing to reward."""
 
     def info_json(self) -> str:
-        """JSON ``{events, minima, causal}`` for this decision."""
+        """JSON ``{events, minima, causal, collision?}``; collision is the actual ``{partnerId, partnerKind}``."""
+
+    def signals_json(self) -> str | None:
+        """Opt-in JSON ``ObservedSignal[]`` (docs/policy-step.md); ``None`` when disabled."""
+    @property
+    def term_reason(self) -> str | None:
+        """``collision`` | ``goal`` | ``horizon``, or ``None`` before completion."""
 
 class EnvSession:
     """Finite Gymnasium-semantics episode over one world."""
@@ -376,7 +387,7 @@ class BatchView:
     def object_count(self) -> NDArray[np.uint32]: ...
     @property
     def reward_terms(self) -> NDArray[np.float64]:
-        """``(N, 3)``."""
+        """``(N, 11)``; columns follow ``REWARD_TERM_NAMES`` and sum to reward."""
 
     @property
     def bev(self) -> NDArray[np.float32] | None:
@@ -384,6 +395,47 @@ class BatchView:
 
     def object_ids(self, world: int) -> list[str]: ...
     def info_json(self, world: int) -> str: ...
+    def signals_json(self, world: int) -> str | None:
+        """Opt-in approach-level signal rows for this world."""
+
+class EpisodeBatchView(BatchView):
+    @property
+    def collision(self) -> NDArray[np.bool_]: ...
+    @property
+    def goal(self) -> NDArray[np.bool_]: ...
+    @property
+    def autoreset(self) -> NDArray[np.bool_]:
+        """True only for reset-only rows, which are not decisions."""
+    @property
+    def term_reasons(self) -> list[str | None]: ...
+
+class EpisodeBatch:
+    """N kernel Episodes, one CPU-parallel call with native NEXT_STEP reset."""
+
+    def __init__(
+        self, specs: Sequence[str], graphs: Sequence[LaneGraph],
+        threads: int | None = None, max_objects: int = 64, info_channel: bool = False,
+    ) -> None: ...
+    @property
+    def size(self) -> int: ...
+    @property
+    def egos(self) -> list[str]: ...
+    @property
+    def decision_hz(self) -> int: ...
+    @property
+    def max_objects(self) -> int: ...
+    @property
+    def bev_shape(self) -> tuple[int, int, int] | None: ...
+    def reset_all(self, seeds: int | Sequence[int | float | str] | None = None) -> EpisodeBatchView:
+        """An unsigned scalar expands to seed+i; None replays current seeds."""
+    def step_all(self, actions: NDArray[np.float64]) -> EpisodeBatchView:
+        """(N,2) setpoints or (N,3) controls. Completed rows reset, ignoring action."""
+    def step_all_json(self, actions_json: str) -> EpisodeBatchView:
+        """Array of compact Episode actions, including trajectories."""
+    def checkpoint(self) -> bytes: ...
+    def restore(self, checkpoint: bytes) -> EpisodeBatchView: ...
+    def trace_digests(self) -> list[str]: ...
+    def trace_json(self, world: int) -> str: ...
 
 class SessionBatch:
     """N independent ``EnvSession`` worlds stepped together; CPU parallel over worlds."""
@@ -435,7 +487,7 @@ class WorldSnapshot:
     def lane_rsls(self) -> list[str | None]: ...
     @property
     def pose(self) -> NDArray[np.float64]:
-        """``(N, 5)`` rows ``[x, z, heading_rad, speed_mps, s]`` in the scene frame."""
+        """``(N, 6)`` rows ``[x, z, heading_rad, speed_mps, s, longitudinal_speed_mps]`` in the scene frame."""
 
     def to_json(self) -> str: ...
 
@@ -608,3 +660,47 @@ class Trace:
 def canonical_json(document: str) -> str: ...
 def content_hash(document: str) -> str: ...
 def sha256_hex(data: bytes) -> str: ...
+
+
+class FrameRef:
+    """Renderer-ring lease. Pixels are invalid after release, even if a view survives."""
+    @property
+    def id(self) -> int: ...
+    @property
+    def released(self) -> bool: ...
+    def buffer(self) -> NDArray[np.uint8]:
+        """Read-only NumPy view of the complete row-padded payload."""
+    def release(self) -> None: ...
+
+class Episode:
+    """Kernel-owned closed-loop episode, additive to binding ABI 3.
+
+    JSON spec is ``{scenario, seed, decisionHz, mode, warmupDecisions,
+    maxDecisions?, observation:{channels:[{kind:...}]}, replayContext?}``.
+    Graph is the existing resolved topology/map handle. JSON outputs have
+    identical shapes and trace digests in N-API. See docs/world-session.md.
+    """
+
+    def __init__(self, spec_json: str, graph: LaneGraph) -> None: ...
+    def reset(self, on_frame: Callable[[str, list[FrameRef]], None] | None = None) -> str:
+        """Selected observation JSON after warm-up. Callback receives
+        {phase,observation,snapshot} JSON and leases on initial/every warmup tick."""
+    def step(self, action_json: str) -> str:
+        """Step JSON: obs, reward, rewardTerms, terminated/truncated,
+        termReason, events, dl, ex, envelope. Action is policy-step compact
+        control/trajectory, or ``{k:"s",speedMps?,accelerationMps2?}``."""
+    def snapshot(self) -> str:
+        """Adapter/ground-truth JSON, never a policy observation."""
+    def trace_json(self) -> str: ...
+    def trace_digest(self) -> str: ...
+    def finish(self) -> str:
+        """Seal evidence and return ResultCore JSON; early finish is partial."""
+    def frame(self, id: int) -> FrameRef: ...
+    def scene_state_json(self) -> str | None:
+        """Last kernel-authored scene-state document; absent without cameras."""
+    def close(self) -> None:
+        """Close renderer transport; does not seal evidence (use finish())."""
+    @property
+    def ego(self) -> str: ...
+    @property
+    def ended(self) -> bool: ...

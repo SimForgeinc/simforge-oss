@@ -1,0 +1,185 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v1-test",
+  "purpose": "test",
+  "cells": [
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "belmont-research-center",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "belmont-research-center",
+      "site": "cc2c91af8fa2d41a",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "belmont-research-center",
+      "site": "a4cccaa6443fec58",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "easterbrook-discovery-school",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "easterbrook-discovery-school",
+      "site": "f681133c7b86f906",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 146/146 sites), corridor.runwayDownstreamM (failed at 57/146 sites), corridor.curvatureDegPer10m (failed at 49/146 sites). Example: Infeasible at this site. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-000.admission.json",
+          "sha256": "296c906db1fc048cf1f19e133fa58c01783be5ac733b91678b2d25e7a8e65607"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/inside-curve-screen: blocked_at_conflict",
+        "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-001.admission.json",
+          "sha256": "a55e5ab328d1d43bb72d59a7056db4ee864475cb77ecade1850c8d773256946e"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/inside-curve-screen: blocked_at_conflict",
+        "siteKey": "belmont-research-center/seg_9dc346bb0b5c9fd6",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-002.admission.json",
+          "sha256": "9b71d8f8b8c9abe400ca430f6fa7fdaec81b52cf7629d718dade09ead0511a3c"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_8815e2cf7fcb16fe",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-003.admission.json",
+          "sha256": "30c437954ec577cca83084f51e38f9e63ec42de7f9b477d0563bf238964aa0e5"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ped (failed at 28/72 sites). Example: Infeasible at this site. only 47.35 m of runway, 210 m needed (short by 162.65 m). this map index carries no occlusion_zone layer. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 47.35 m available. Would have required relaxing a required cla",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-004.admission.json",
+          "sha256": "8791ce98cff040c90b094f6fcbed6fd61016be792884acad224bc186ea3d5826"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_875ed7ddd8642925",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-005.admission.json",
+          "sha256": "81994b62bcd8755b20aa9b090fbb4a20013e1eaf4381ed5438705d2f9091af3d"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+        "receipt": {
+          "path": "receipts/poc-v1-test/cell-006.admission.json",
+          "sha256": "149b753047e753bbb05a36a7e5f3be098263a2afdde70797dccc72781a0201c2"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T11:30:17.857Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v1-test.episodes.json",
+      "sha256": "5649462970b61eeaa2de5fd4d011c2a201ce474cdd9c3cc7c23095a4ea33b2c6"
+    },
+    "count": 60
+  },
+  "digest": "d8b3f512d63000f45e4aad7d46d736fcade5a326a0505748784c77611d26f87c"
+}

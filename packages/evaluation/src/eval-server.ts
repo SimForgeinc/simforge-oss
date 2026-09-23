@@ -148,7 +148,7 @@ class PolicyEvalServer {
       }
       throw error;
     }
-    const view = { terminated: result.terminated, reward: result.reward, rewardTerms: result.info.rewardTerms };
+    const view = { terminated: result.terminated, reward: result.reward, rewardTerms: result.info.rewardTerms, authoritativeTerms: true };
     this.lastCollision[i] = collisionFromReward(view);
     this.lastGoal[i] = goalFromReward(view);
     const doc = {

@@ -1,0 +1,54 @@
+{
+  "schema": "simforge.throughput-suite/v1",
+  "mapId": "garching-phase-1-2",
+  "topologySha256": "00652aeac46bbe94a0948a18b0f3e95c1f5440e13618ea7b805700fafd1e91f7",
+  "stateMethod": "adapters/gym/simforge_oss_gym/train/benchmark.py",
+  "seconds": 5,
+  "repeats": 3,
+  "threads": 8,
+  "warmupBatchCalls": 30,
+  "numEnvs": [
+    1,
+    8,
+    32,
+    64
+  ],
+  "floors": {
+    "state64DecisionsPerSecond": 5000,
+    "alpamayo2camTicksPerSecond": 5
+  },
+  "scenarios": [
+    {
+      "id": "corridor",
+      "family": "benign-corridor",
+      "spec": "fixtures/corridor.episodes.json",
+      "sha256": "a14ae4698612981777624bae1bcfe749f66629da9fc72464038dd8d4b2930993",
+      "provenance": {
+        "source": "2026-09-22 drive-corridor.episodes.json baseline",
+        "lane": "160:0:-3",
+        "routeStartM": 100
+      }
+    },
+    {
+      "id": "cpnco-dartout",
+      "family": "cpnco-dartout",
+      "spec": "fixtures/cpnco-dartout.episodes.json",
+      "sha256": "c9d7fbb68ca856921f5aadc2aadfbc509a48df4af746baad254fec5fe84b3cea",
+      "provenance": {
+        "template": "examples/cpnco-dartout.template.json",
+        "templateSha256": "54ef2724cadfc7631b8370016b5292e92b574b4d7ff7dd0fcc7177f65dd2a818",
+        "site": "a0a911eec6f6af6f",
+        "seed": 42,
+        "engineVersion": "0.7.0",
+        "initialFeasibility": [],
+        "admission": "native site match + compiler + initial feasibility; not a solvability or contact qualification"
+      }
+    }
+  ],
+  "renderProfiles": [
+    "alpamayo-2cam",
+    "qwen-drive-3cam",
+    "auto-e2e-6view"
+  ],
+  "renderWarmupTicks": 20
+}

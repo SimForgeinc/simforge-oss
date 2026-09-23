@@ -1,0 +1,48 @@
+{
+  "name": "@simforge-oss/auto-e2e-runtime",
+  "description": "Strict-loaded Autoware Foundation AutoE2E Best_Model.pt endpoint for the SimForge drive bench.",
+  "family": "auto-e2e",
+  "checkpoint": {
+    "filename": "Best_Model.pt",
+    "source": "authorized model-host export",
+    "epoch": 28,
+    "sha256": "6b84fd94af47aa20c8e9005663be6eb2c5c13a61b453b02d731f298ed0572c0c",
+    "params": 75180000,
+    "load": "strict=True after name-and-shape probe"
+  },
+  "inference_code": {
+    "repo": "https://github.com/autowarefoundation/auto_e2e",
+    "commit": "31b83bf051564816739805c8295da4fb1e5ee287",
+    "license": "Apache-2.0",
+    "vendor": "vendor/auto_e2e/Model"
+  },
+  "inputs": {
+    "cameraProfile": "auto-e2e-6view",
+    "views": ["front_center", "front_left", "front_right", "rear", "rear_left", "rear_right"],
+    "modelResolution": [256, 256],
+    "rendererResolution": [512, 384],
+    "imageNormalization": "ImageNet mean/std",
+    "mapContext": {"channels": 14, "size": [256, 256], "geometry": "kitscenes-v3-bev-1m-v1", "validGate": "map_valid"},
+    "routeMask": {"channels": 2, "size": [256, 256], "corridorWidthM": 6, "destinationRadiusM": 4, "validGate": "route_valid"},
+    "egomotion": {"shape": [64, 4], "signals": ["speed", "acceleration", "yaw_rate", "curvature"], "hz": 10, "historySeconds": 6.4},
+    "visualHistory": {"shape": [896], "source": "dead checkpoint branch", "value": "zeros"}
+  },
+  "outputs": {
+    "controls": "64x(acceleration_mps2, curvature_inv_m)",
+    "integrator": "unicycle, dt=0.1s, v=max(0,v+a*dt), heading+=kappa*v*dt",
+    "trajectory": "derived ego-frame path for shared follower",
+    "reasoning": {"kind": "none"}
+  },
+  "rasterChannels": {
+    "filled": ["drivable area", "lane boundaries", "lane centerlines", "junction/intersection", "direction sin/cos/valid", "known map area", "road-level valid"],
+    "filledWhenNativeSignalsPresent": ["stop line", "traffic signal (binary approach marker; phase/timing retained as metadata)"],
+    "zeroBecauseNativeGraphLacksFields": ["crosswalk", "overlap"],
+    "validity": "map_valid=1 only when real lane graph produces drivable pixels; route_valid=1 only with >=2 real route points"
+  },
+  "runtime": {
+    "wire": "uint32-le length-prefixed MessagePack over Unix socket",
+    "entrypoint": "scripts/run_server.sh",
+    "socket": "/tmp/simforge-auto-e2e.sock",
+    "localGpu": "fp32, measured target <1 GiB model allocation beside Bevy renderer"
+  }
+}

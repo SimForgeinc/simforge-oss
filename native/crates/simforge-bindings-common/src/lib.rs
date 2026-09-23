@@ -18,6 +18,7 @@ pub mod error;
 pub mod runtime;
 
 pub use error::{BindingError, ErrorKind, Result};
+pub use simforge_session::{RewardConfig, REWARD_TERM_COUNT, REWARD_TERM_NAMES};
 
 /// Fixed-step engine rate exposed to hosts.
 pub const ENGINE_HZ: u32 = simforge_session::episode::ENGINE_HZ;
@@ -33,5 +34,6 @@ pub const DEFAULT_MAX_OBJECTS: usize = 64;
 /// layouts (action row, actor row, batch buffers) or JSON metadata shapes.
 ///
 /// History: 2 added `TrafficHandoff` and its actor/body row layouts; 3 widened
-/// world snapshot pose rows to `(N, 6)` with `longitudinalSpeedMps`.
-pub const ABI_VERSION: u32 = 3;
+/// world snapshot pose rows to `(N, 6)` with `longitudinalSpeedMps`; 4 exposes
+/// the complete eleven-column kernel reward breakdown.
+pub const ABI_VERSION: u32 = 4;

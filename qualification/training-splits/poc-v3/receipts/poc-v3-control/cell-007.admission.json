@@ -1,0 +1,285 @@
+{
+  "schema": "simforge.scenario-admission/v2",
+  "splitId": "poc-v3-control",
+  "cell": 7,
+  "templateSha256": "ce5cbf6c8bf6a5d110749b4179603ab7b11e11f830c2744529ec3b98903a7834",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability",
+    "bench-window"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 7,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "704fbb100d19e7b4",
+      "mapId": "easterbrook-discovery-school",
+      "topologyDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 1,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_276e4ec3c5072cee"
+        },
+        "entryLaneRsl": "40:0:-2",
+        "referencePath": [
+          {
+            "laneRsl": "40:0:-2",
+            "sStart": 0,
+            "sEnd": 119.9733884369375,
+            "lengthM": 119.9733884369375,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "40:1:-2",
+            "sStart": 119.9733884369375,
+            "sEnd": 122.46648467448414,
+            "lengthM": 2.4930962375466414,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "11177:0:-1",
+            "sStart": 122.46648467448414,
+            "sEnd": 170.60248465165947,
+            "lengthM": 48.135999977175324,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "10:0:2",
+            "sStart": 170.60248465165947,
+            "sEnd": 231.8786107385851,
+            "lengthM": 61.27612608692566,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "42475:0:1",
+            "sStart": 231.8786107385851,
+            "sEnd": 415.82381332745416,
+            "lengthM": 183.94520258886902,
+            "isJunction": true,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "10:0:2": 170.60248465165947,
+          "11177:0:-1": 122.46648467448414,
+          "40:0:-2": 0,
+          "40:1:-2": 119.9733884369375,
+          "42475:0:1": 231.8786107385851
+        },
+        "sRange": [
+          0,
+          415.82381332745416
+        ],
+        "lateralLanes": {
+          "0": "40:0:-2",
+          "1": "40:0:-1"
+        },
+        "opposingLanes": [],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 415.8213286757947
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "required",
+          "required": [
+            0,
+            4
+          ],
+          "actual": 0.025822535930809014,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.curvatureDegPer10m holds over the whole interval (worst 0.03)"
+        },
+        {
+          "path": "corridor.laneChangeLegal",
+          "essentiality": "required",
+          "required": "left lane change legal over s∈[125, 214]",
+          "actual": "allowed",
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 180,
+          "reason": "lane-change legality worst case \"allowed\" at s=180 m"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 241,
+          "actual": 415.82,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "415.82 m of runway available, 241 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            2,
+            8
+          ],
+          "actual": 2,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 50,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "40:0:-2",
+          "routeLaneChain": [
+            "40:0:-2",
+            "40:1:-2",
+            "11177:0:-1",
+            "10:0:2",
+            "42475:0:1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 50,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "40:0:-2",
+          "routeLaneChain": [
+            "40:0:-2",
+            "40:1:-2",
+            "11177:0:-1",
+            "10:0:2",
+            "42475:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 58,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "40:0:-2",
+          "routeLaneChain": [
+            "40:0:-2",
+            "40:1:-2",
+            "11177:0:-1",
+            "10:0:2",
+            "42475:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "preview-van",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 66,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "40:0:-2",
+          "routeLaneChain": [
+            "40:0:-2",
+            "40:1:-2",
+            "11177:0:-1",
+            "10:0:2",
+            "42475:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "exact",
+        "score": 1,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Exact match: every clause and role bound without relaxation.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.03)",
+        "lane-change legality worst case \"allowed\" at s=180 m",
+        "415.82 m of runway available, 241 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+      ],
+      "alternateFrames": 0
+    }
+  },
+  "map": {
+    "id": "easterbrook-discovery-school",
+    "topologySha256": "84e00c3a05d8e40b59ddc9ae7724e9664d7bc0c3e46f8e0a54d1c0d30ed9e70d",
+    "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+    "matcherIndexDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58"
+  },
+  "siteKey": "easterbrook-discovery-school/seg_276e4ec3c5072cee",
+  "status": "excluded",
+  "reason": "paired test cell was excluded; no unpaired control admitted"
+}

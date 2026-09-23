@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-test",
+  "cell": 0,
+  "templateSha256": "718ae1a41d0985609e6313265901bb50532a387bc3323f005f83a7dd01c77e69",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 146/146 sites), corridor.runwayDownstreamM (failed at 57/146 sites), corridor.curvatureDegPer10m (failed at 49/146 sites). Example: Infeasible at this site. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "belmont-research-center",
+    "topologySha256": "10ef077f8ccd2dc9b42e5e33f0f569f52874c39248edcbfb7e442142e57a5f97",
+    "engineGraphDigest": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+    "matcherIndexDigest": "f11d400ccbaee606c1fe176e05273b45ef1c4a632183e3bdec6eb476bf0975f0"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 146/146 sites), corridor.runwayDownstreamM (failed at 57/146 sites), corridor.curvatureDegPer10m (failed at 49/146 sites). Example: Infeasible at this site. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM."
+}

@@ -184,6 +184,10 @@ export interface MapGeojsonProperties {
   TravelDir?: string;
   /** `[lng, lat, elevation]` on `Type=ParkingSpace`. */
   EntryPosition?: [number, number, number];
+  /** OpenDRIVE object placement (heading already in the local map frame). */
+  hdg?: number;
+  length?: string | number;
+  width?: string | number;
 }
 
 /** `enrichment/overlay-payload.json` — 15 Overture layers. */

@@ -2,6 +2,7 @@ import type { AppContext } from "../db/app-context";
 import { queryOne, queryRows, withTransaction, type Transaction } from "../db/data-api";
 import { modelRunAttemptId, modelRunEventId, modelRunId } from "../db/ids";
 import {
+  MODEL_RUN_KINDS,
   ModelEndpointDescriptorSchema,
   type CreateModelRunInput,
   type ModelEndpointDescriptor,
@@ -15,8 +16,8 @@ import { endpointDescriptorOfRow } from "./model-registry-store";
 type RunRow = {
   id: string;
   workspace_id: string;
-  model_version_id: string;
-  endpoint_id: string;
+  model_version_id: string | null;
+  endpoint_id: string | null;
   kind: ModelRunKind;
   status: "queued" | "running" | "succeeded" | "failed";
   params_json: Record<string, unknown>;
@@ -127,17 +128,19 @@ export async function createModelRun(
 ): Promise<{ kind: "created"; run: ModelRunRecord } | { kind: "endpoint_not_found" }> {
   const id = modelRunId();
   return withTransaction(async (tx) => {
-    const endpoint = await tx.queryOne<{ id: string }>(
-      `SELECT id FROM simforge.model_endpoints
-       WHERE id = :id AND workspace_id = :workspace_id
-         AND model_version_id = :model_version_id AND enabled`,
-      {
-        id: input.endpointId,
-        workspace_id: context.workspaceId,
-        model_version_id: input.modelVersionId,
-      },
-    );
-    if (!endpoint) return { kind: "endpoint_not_found" as const };
+    if (input.kind !== "drive_bench") {
+      const endpoint = await tx.queryOne<{ id: string }>(
+        `SELECT id FROM simforge.model_endpoints
+         WHERE id = :id AND workspace_id = :workspace_id
+           AND model_version_id = :model_version_id AND enabled`,
+        {
+          id: input.endpointId,
+          workspace_id: context.workspaceId,
+          model_version_id: input.modelVersionId,
+        },
+      );
+      if (!endpoint) return { kind: "endpoint_not_found" as const };
+    }
     const row = await tx.queryOne<RunRow>(
       `INSERT INTO simforge.model_runs
          (id, workspace_id, model_version_id, endpoint_id, kind, params_json, seed, max_attempts)
@@ -233,9 +236,9 @@ export type LeasedModelRun = {
    * `checkpoint_digest`). The executor refuses an engine that reports a
    * different identity, so results are never attributed to the wrong model.
    */
-  modelIdentity: { family: string; quant: string; checkpointDigest: string };
+  modelIdentity: { family: string; quant: string; checkpointDigest: string } | null;
   /** Snapshot taken at FIRST lease; identical for every retry of the run. */
-  resolvedDescriptor: ModelEndpointDescriptor;
+  resolvedDescriptor: ModelEndpointDescriptor | null;
 };
 
 /**
@@ -249,33 +252,34 @@ export async function leaseNextModelRun(input: {
   workerId: string;
   kinds: readonly ModelRunKind[];
 }): Promise<LeasedModelRun | null> {
-  const kinds = input.kinds.filter((kind) =>
-    ["openloop", "policy_episode", "artifact"].includes(kind));
+  const kinds = input.kinds.filter((kind) => MODEL_RUN_KINDS.includes(kind));
   if (kinds.length === 0) return null;
   const kindList = kinds.map((kind) => `'${kind}'`).join(", ");
   return withTransaction(async (tx) => {
     const candidate = await tx.queryOne<
-      RunRow & { ep_row_id: string; mv_family: string; mv_quant: string; mv_checkpoint_digest: string }
+      RunRow & { ep_row_id: string | null; mv_family: string; mv_quant: string; mv_checkpoint_digest: string }
     >(
       `SELECT r.*, e.id AS ep_row_id,
               v.family AS mv_family, v.quant AS mv_quant, v.checkpoint_digest AS mv_checkpoint_digest
        FROM simforge.model_runs r
-       JOIN simforge.model_endpoints e ON e.id = r.endpoint_id
-       JOIN simforge.model_versions v ON v.id = r.model_version_id
+       LEFT JOIN simforge.model_endpoints e ON e.id = r.endpoint_id
+       LEFT JOIN simforge.model_versions v ON v.id = r.model_version_id
        WHERE r.status = 'queued' AND r.kind IN (${kindList})
        ORDER BY r.created_at, r.id
        LIMIT 1`,
     );
     if (!candidate) return null;
-    let descriptor: ModelEndpointDescriptor;
-    if (candidate.resolved_descriptor_json) {
-      descriptor = ModelEndpointDescriptorSchema.parse(candidate.resolved_descriptor_json);
-    } else {
-      const endpointRow = await tx.queryOne<Parameters<typeof endpointDescriptorOfRow>[0]>(
-        `SELECT * FROM simforge.model_endpoints WHERE id = :id`,
-        { id: candidate.endpoint_id },
-      );
-      descriptor = endpointDescriptorOfRow(endpointRow!);
+    let descriptor: ModelEndpointDescriptor | null = null;
+    if (candidate.kind !== "drive_bench") {
+      if (candidate.resolved_descriptor_json) {
+        descriptor = ModelEndpointDescriptorSchema.parse(candidate.resolved_descriptor_json);
+      } else {
+        const endpointRow = await tx.queryOne<Parameters<typeof endpointDescriptorOfRow>[0]>(
+          `SELECT * FROM simforge.model_endpoints WHERE id = :id`,
+          { id: candidate.endpoint_id },
+        );
+        descriptor = endpointDescriptorOfRow(endpointRow!);
+      }
     }
     const attemptNumber = candidate.attempt_count + 1;
     const updated = await tx.queryOne<{ id: string }>(
@@ -320,7 +324,7 @@ export async function leaseNextModelRun(input: {
       attemptId,
       attemptNumber,
       maxAttempts: candidate.max_attempts,
-      modelIdentity: {
+      modelIdentity: candidate.kind === "drive_bench" ? null : {
         family: candidate.mv_family,
         quant: candidate.mv_quant,
         checkpointDigest: candidate.mv_checkpoint_digest,

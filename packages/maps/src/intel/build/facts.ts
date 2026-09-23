@@ -383,6 +383,48 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     description: 'Bay long axis is within 30° of the adjacent lane heading.',
   },
 
+  // --- parked-row occlusion potential ---
+  {
+    key: 'parking_bay_count', type: 'number', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Source parking footprints grouped into this roadside row.',
+  },
+  {
+    key: 'parking_length_m', type: 'number', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Projected along-road extent of the parking row, metres.',
+  },
+  {
+    key: 'row_start_s_m', type: 'number', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Upstream row extent in the source lane travel frame, metres.',
+  },
+  {
+    key: 'row_end_s_m', type: 'number', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Downstream row extent in the source lane travel frame, metres.',
+  },
+  {
+    key: 'sightline_blocked', type: 'boolean', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'An upstream observer sight segment crosses a source parking footprint.',
+  },
+  {
+    key: 'row_exit_sightline_clear', type: 'boolean', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'The downstream exit sight segment crosses none of the row footprints.',
+  },
+  {
+    key: 'occupancy_required', type: 'boolean', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Parking footprints require actual occupied occluders and native LOS admission.',
+  },
+  {
+    key: 'source_parking_ids', type: 'string[]', scope: 'conditional',
+    producedBy: 'densify/occlusion-zones',
+    description: 'Sorted source object identities used to derive this parking row.',
+  },
+
   // --- school_zone ---
   {
     key: 'school_sign_count',

@@ -1,0 +1,328 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-train",
+  "cell": 10,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "1adc89cbfe32bc49429bd5f55219d77da3f9a923b05aea73f652d8f71f1af8a6",
+      "paramsSha256": "c4becdb20c3749f84b5dfc19fae9b6b6589ef8563622e12cf0359324d605b042",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.16,
+            "conflictT": 3.72,
+            "revealToConflictS": 1.56
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: ego/queue-tail@3.719431903211124",
+          "kernel scripted completion: collision at 3.8000000000000003/13s"
+        ],
+        "collisions": [
+          {
+            "t": 3.719431903211124,
+            "a": "ego",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "collision",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 3.8583250000000002,
+            "simulationS": 3.8000000000000003,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 38,
+          "deadlineMisses": 0,
+          "episodeDigest": "32d395f50dcf7b7ccb9661bf12ef26f33c3ea12c22f39c79120a825e26daaa5f",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "fd867b7689ea90872dff4acbd357d9a95a256a07537db4b4ddc2138d4854f927"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/poc-v1-train/cell-010-seed-0.trace.json.gz",
+      "sha256": "819183d46d221cd05aa78bd7bc390ae1b79741d04d39f91fbe20d1ea7090f7b6"
+    },
+    {
+      "path": "receipts/poc-v1-train/cell-010-seed-0.episode.jsonl.gz",
+      "sha256": "f967c4c60ae4afc3a62e55e2a46442f3c64309159d682624e4a98f61957ea8e0"
+    }
+  ],
+  "match": {
+    "candidateCount": 3,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "6a48f58d8caa1760",
+      "mapId": "el-camino-road",
+      "topologyDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.5917,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_36e0b9736f5e7bb3"
+        },
+        "entryLaneRsl": "107:1:1",
+        "referencePath": [
+          {
+            "laneRsl": "107:1:1",
+            "sStart": 0,
+            "sEnd": 92.19764957942425,
+            "lengthM": 92.19764957942425,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "107:0:1",
+            "sStart": 92.19764957942425,
+            "sEnd": 106.89853985934288,
+            "lengthM": 14.70089027991863,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "526:0:1",
+            "sStart": 106.89853985934288,
+            "sEnd": 149.23955428091747,
+            "lengthM": 42.34101442157459,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "38:0:-2",
+            "sStart": 149.23955428091747,
+            "sEnd": 221.53914119391388,
+            "lengthM": 72.2995869129964,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "107:0:1": 92.19764957942425,
+          "107:1:1": 0,
+          "38:0:-2": 149.23955428091747,
+          "526:0:1": 106.89853985934288
+        },
+        "sRange": [
+          0,
+          221.53914119391388
+        ],
+        "lateralLanes": {
+          "0": "107:1:1"
+        },
+        "opposingLanes": [
+          "107:1:-1"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 221.54
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0,
+          "score": 0.75,
+          "slack": 0.5,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 170,
+          "reason": "corridor.curvatureDegPer10m worst value 0 at s=170 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 221.54,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "221.54 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 24,
+          "score": 0.4,
+          "slack": 6,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 150,
+          "reason": "corridor.speedLimitKph worst value 24 at s=150 m, wanted [30, 70]"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 1,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "107:1:1",
+          "routeLaneChain": [
+            "107:1:1",
+            "107:0:1",
+            "526:0:1",
+            "38:0:-2"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "107:1:1",
+          "routeLaneChain": [
+            "107:1:1",
+            "107:0:1",
+            "526:0:1",
+            "38:0:-2"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "107:1:1",
+          "routeLaneChain": [
+            "107:1:1",
+            "107:0:1",
+            "526:0:1",
+            "38:0:-2"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.5917,
+        "repairs": [
+          {
+            "kind": "speed_clamp",
+            "path": "corridor.speedLimitKph",
+            "requestedKph": [
+              30,
+              70
+            ],
+            "appliedKph": 24,
+            "touchesRequired": false,
+            "note": "speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter)"
+          }
+        ],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.59). speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter). corridor.curvatureDegPer10m worst value 0 at s=170 m, wanted [0.5, 8]. corridor.speedLimitKph worst value 24 at s=150 m, wanted [30, 70]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "221.54 m of runway available, 220 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "el-camino-road",
+    "topologySha256": "c396b62ce23c5f428aaff2294a8e4f5ae684dd8c5d5e90a34d4ae020e6430c97",
+    "engineGraphDigest": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+    "matcherIndexDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411"
+  },
+  "siteKey": "el-camino-road/seg_36e0b9736f5e7bb3",
+  "status": "excluded",
+  "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719431903211124; kernel scripted completion: collision at 3.8000000000000003/13s"
+}

@@ -18,7 +18,7 @@ except ImportError as error:  # pragma: no cover - installation failure path
     ) from error
 
 #: Binding ABI this package is written against; a mismatched extension is refused.
-ABI_VERSION = 2
+ABI_VERSION = 4
 if getattr(_native, "ABI_VERSION", None) != ABI_VERSION:
     raise ImportError(
         f"simforge_oss_gym._native has binding ABI {getattr(_native, 'ABI_VERSION', None)!r} but this package requires "
@@ -32,6 +32,8 @@ ACTION_WIDTH: int = _native.ACTION_WIDTH
 ACTION_FIELDS: tuple[str, ...] = tuple(_native.ACTION_FIELDS)
 ENGINE_VERSION: str = _native.ENGINE_VERSION
 ACTOR_ROW: int = _native.ACTOR_ROW
+REWARD_TERM_NAMES: tuple[str, ...] = tuple(_native.REWARD_TERM_NAMES)
+DEFAULT_REWARD_CONFIG_JSON: str = _native.DEFAULT_REWARD_CONFIG_JSON
 
 NativeError = _native.NativeError
 SchemaError = _native.SchemaError
@@ -44,6 +46,10 @@ ScenarioInput = _native.ScenarioInput
 MapBundle = _native.MapBundle
 CompileResult = _native.CompileResult
 EnvSession = _native.EnvSession
+Episode = _native.Episode
+EpisodeBatch = _native.EpisodeBatch
+EpisodeBatchView = _native.EpisodeBatchView
+FrameRef = _native.FrameRef
 SessionBatch = _native.SessionBatch
 StepView = _native.StepView
 BatchView = _native.BatchView
@@ -88,6 +94,10 @@ __all__ = [
     "ENGINE_VERSION",
     "EngineError",
     "EnvSession",
+    "Episode",
+    "EpisodeBatch",
+    "EpisodeBatchView",
+    "FrameRef",
     "LaneGraph",
     "MapBundle",
     "NativeError",

@@ -1,0 +1,301 @@
+{
+  "schema": "simforge.state-throughput/v1",
+  "measured_at": "2026-09-22T09:51:50.083025+00:00",
+  "git_sha": "76f5f76002d83f7bbded9e29ec1899872b876d95",
+  "hardware": {
+    "host": "path-pc",
+    "cpu": "Intel(R) Core(TM) Ultra 9 285K",
+    "logical_cpus": 24,
+    "affinity_cpus": 24,
+    "os": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "architecture": "x86_64",
+    "runner_class": "gpu-rtx5080",
+    "load_average_at_start": [
+      2.59521484375,
+      2.83837890625,
+      2.9111328125
+    ]
+  },
+  "python": "3.12.14 (main, Aug 14 2026, 15:34:45) [Clang 22.1.3 ]",
+  "suite_sha256": "94dad8345bf62cbbbdbe1c8a31a20ccb1ee5ff7ce414dd44338b3c09225c0b2e",
+  "map_id": "garching-phase-1-2",
+  "topology_sha256": "00652aeac46bbe94a0948a18b0f3e95c1f5440e13618ea7b805700fafd1e91f7",
+  "native_extension_sha256": "a5b3e2c8309d4e0e87f25501c55feea31ac0aab7cf2478d321d4689d00deaacc",
+  "benchmark_source_sha256": "211d4406430623471feac082ccad7c0d52fae1eb78cb366fc471b0fc62ba8ef1",
+  "method": "env-throughput.md#measured-results",
+  "workloads": [
+    {
+      "id": "corridor",
+      "family": "benign-corridor",
+      "host": "path-pc",
+      "cpu": "x86_64",
+      "logical_cpus": 24,
+      "engine_version": "0.7.0",
+      "binding_abi": 3,
+      "observation": "native state(10)+objects(64,5), BEV disabled",
+      "decision_hz": 10,
+      "physics_hz": 50,
+      "action": [
+        6.0,
+        0.0
+      ],
+      "mode": "setpoint",
+      "info_channel": false,
+      "spec": "/home/path/simforge-oss/scripts/bench/closed-loop/fixtures/corridor.episodes.json",
+      "spec_sha256": "a14ae4698612981777624bae1bcfe749f66629da9fc72464038dd8d4b2930993",
+      "rows": [
+        {
+          "num_envs": 1,
+          "threads": 1,
+          "median_env_steps_per_s": 11501.839068363022,
+          "samples": [
+            {
+              "decisions": 57473,
+              "seconds": 5.000025725108571,
+              "env_steps_per_s": 11494.540860337678,
+              "batch_calls": 57760,
+              "autoreset_only_rows": 287
+            },
+            {
+              "decisions": 57510,
+              "seconds": 5.00006995908916,
+              "env_steps_per_s": 11501.839068363022,
+              "batch_calls": 57797,
+              "autoreset_only_rows": 287
+            },
+            {
+              "decisions": 57552,
+              "seconds": 5.000001266016625,
+              "env_steps_per_s": 11510.397085529186,
+              "batch_calls": 57839,
+              "autoreset_only_rows": 287
+            }
+          ]
+        },
+        {
+          "num_envs": 8,
+          "threads": 8,
+          "median_env_steps_per_s": 21298.16449172173,
+          "samples": [
+            {
+              "decisions": 101600,
+              "seconds": 5.000046531087719,
+              "env_steps_per_s": 20319.81089941932,
+              "batch_calls": 12763,
+              "autoreset_only_rows": 504
+            },
+            {
+              "decisions": 106496,
+              "seconds": 5.000243098009378,
+              "env_steps_per_s": 21298.16449172173,
+              "batch_calls": 13378,
+              "autoreset_only_rows": 528
+            },
+            {
+              "decisions": 106824,
+              "seconds": 5.000199674977921,
+              "env_steps_per_s": 21363.94683087765,
+              "batch_calls": 13419,
+              "autoreset_only_rows": 528
+            }
+          ]
+        },
+        {
+          "num_envs": 32,
+          "threads": 8,
+          "median_env_steps_per_s": 24811.612764243233,
+          "samples": [
+            {
+              "decisions": 125376,
+              "seconds": 5.000792492064647,
+              "env_steps_per_s": 25071.22625042911,
+              "batch_calls": 3937,
+              "autoreset_only_rows": 608
+            },
+            {
+              "decisions": 124032,
+              "seconds": 5.000798141001724,
+              "env_steps_per_s": 24802.440831005988,
+              "batch_calls": 3895,
+              "autoreset_only_rows": 608
+            },
+            {
+              "decisions": 124064,
+              "seconds": 5.00023925001733,
+              "env_steps_per_s": 24811.612764243233,
+              "batch_calls": 3896,
+              "autoreset_only_rows": 608
+            }
+          ]
+        },
+        {
+          "num_envs": 64,
+          "threads": 8,
+          "median_env_steps_per_s": 26075.576168726093,
+          "samples": [
+            {
+              "decisions": 129280,
+              "seconds": 5.000133146066219,
+              "env_steps_per_s": 25855.31149339676,
+              "batch_calls": 2030,
+              "autoreset_only_rows": 640
+            },
+            {
+              "decisions": 131456,
+              "seconds": 5.00049503298942,
+              "env_steps_per_s": 26288.5972554226,
+              "batch_calls": 2064,
+              "autoreset_only_rows": 640
+            },
+            {
+              "decisions": 130432,
+              "seconds": 5.002075473079458,
+              "env_steps_per_s": 26075.576168726093,
+              "batch_calls": 2048,
+              "autoreset_only_rows": 640
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cpnco-dartout",
+      "family": "cpnco-dartout",
+      "host": "path-pc",
+      "cpu": "x86_64",
+      "logical_cpus": 24,
+      "engine_version": "0.7.0",
+      "binding_abi": 3,
+      "observation": "native state(10)+objects(64,5), BEV disabled",
+      "decision_hz": 10,
+      "physics_hz": 50,
+      "action": [
+        6.0,
+        0.0
+      ],
+      "mode": "setpoint",
+      "info_channel": false,
+      "spec": "/home/path/simforge-oss/scripts/bench/closed-loop/fixtures/cpnco-dartout.episodes.json",
+      "spec_sha256": "c9d7fbb68ca856921f5aadc2aadfbc509a48df4af746baad254fec5fe84b3cea",
+      "rows": [
+        {
+          "num_envs": 1,
+          "threads": 1,
+          "median_env_steps_per_s": 11207.666713863662,
+          "samples": [
+            {
+              "decisions": 56851,
+              "seconds": 5.000010636053048,
+              "env_steps_per_s": 11370.175813241376,
+              "batch_calls": 57206,
+              "autoreset_only_rows": 355
+            },
+            {
+              "decisions": 56039,
+              "seconds": 5.000059462036006,
+              "env_steps_per_s": 11207.666713863662,
+              "batch_calls": 56389,
+              "autoreset_only_rows": 350
+            },
+            {
+              "decisions": 55291,
+              "seconds": 5.0000287930015475,
+              "env_steps_per_s": 11058.136320612763,
+              "batch_calls": 55636,
+              "autoreset_only_rows": 345
+            }
+          ]
+        },
+        {
+          "num_envs": 8,
+          "threads": 8,
+          "median_env_steps_per_s": 22536.574443898764,
+          "samples": [
+            {
+              "decisions": 116240,
+              "seconds": 5.00722290109843,
+              "env_steps_per_s": 23214.464843276804,
+              "batch_calls": 14621,
+              "autoreset_only_rows": 728
+            },
+            {
+              "decisions": 111176,
+              "seconds": 5.000297808088362,
+              "env_steps_per_s": 22233.875714395323,
+              "batch_calls": 13984,
+              "autoreset_only_rows": 696
+            },
+            {
+              "decisions": 112696,
+              "seconds": 5.000582510023378,
+              "env_steps_per_s": 22536.574443898764,
+              "batch_calls": 14175,
+              "autoreset_only_rows": 704
+            }
+          ]
+        },
+        {
+          "num_envs": 32,
+          "threads": 8,
+          "median_env_steps_per_s": 25679.5109173459,
+          "samples": [
+            {
+              "decisions": 126112,
+              "seconds": 5.000044754007831,
+              "env_steps_per_s": 25222.174241323297,
+              "batch_calls": 3965,
+              "autoreset_only_rows": 768
+            },
+            {
+              "decisions": 128416,
+              "seconds": 5.000718293013051,
+              "env_steps_per_s": 25679.5109173459,
+              "batch_calls": 4038,
+              "autoreset_only_rows": 800
+            },
+            {
+              "decisions": 132160,
+              "seconds": 5.049577425001189,
+              "env_steps_per_s": 26172.487096773028,
+              "batch_calls": 4156,
+              "autoreset_only_rows": 832
+            }
+          ]
+        },
+        {
+          "num_envs": 64,
+          "threads": 8,
+          "median_env_steps_per_s": 27959.851048324403,
+          "samples": [
+            {
+              "decisions": 141440,
+              "seconds": 5.058682170929387,
+              "env_steps_per_s": 27959.851048324403,
+              "batch_calls": 2224,
+              "autoreset_only_rows": 896
+            },
+            {
+              "decisions": 138816,
+              "seconds": 5.000392532092519,
+              "env_steps_per_s": 27761.02058170012,
+              "batch_calls": 2182,
+              "autoreset_only_rows": 832
+            },
+            {
+              "decisions": 141440,
+              "seconds": 5.041379371075891,
+              "env_steps_per_s": 28055.813615513525,
+              "batch_calls": 2224,
+              "autoreset_only_rows": 896
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "gate": {
+    "minimum_64_env_decisions_per_s": 5000,
+    "passed": true,
+    "failures": []
+  }
+}

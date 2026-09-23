@@ -1,0 +1,160 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v1-val",
+  "purpose": "val",
+  "cells": [
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "2fa8977509047735",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "el-camino-road",
+      "site": "e394f47b39a9d5d2",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "05945784aee36152",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 90/90 sites), corridor.runwayDownstreamM (failed at 33/90 sites), corridor.throughLanesSameDir (failed at 27/90 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 3 at s=80 m, wanted [1, 2]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-000.admission.json",
+          "sha256": "0621fd65d8b0bf1599346df8fad23c0ef6479618c3a42a6d0035267a18ad3383"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: roles.queue-tail (failed at 115/118 sites), roles.queue-lead (failed at 63/118 sites), corridor.runwayDownstreamM (failed at 46/118 sites). Example: Infeasible at this site. only 133.59 m of runway, 220 m needed (short by 86.41 m). roles.queue-tail could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 133.59 m available. Would have required relaxing a required clause: queue-tail could not be bound and is not",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-001.admission.json",
+          "sha256": "1951850c9aaa9d86739f55c32b878edd0ab9b84c06eceeef0207d0b6ba3de1f9"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_3ec6e96a447ce2da",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-002.admission.json",
+          "sha256": "2781e055cee8b9cca0b1228c1caa30751b2af82b9a3f8f5689694433ff3f4afd"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 108/108 sites), corridor.runwayDownstreamM (failed at 45/108 sites), corridor.curvatureDegPer10m (failed at 32/108 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 15.99 at s=0 m, wanted [0, 4]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-003.admission.json",
+          "sha256": "7d4ba3765d0f0b0ff645d246427c431beab223e4467f7a8a28b0c478187bfa5c"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-004.admission.json",
+          "sha256": "852a0e2ed55f41ca4ed062ee615935b2c4814a9c2533b534f080ad7b22f34888"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "receipt": {
+          "path": "receipts/poc-v1-val/cell-005.admission.json",
+          "sha256": "16f9ab2a713ef44fdd3599dffed43074c2d14943454d33fd3abd38e8d24a2dc7"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T11:30:06.529Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v1-val.episodes.json",
+      "sha256": "9c078e3025dbbf58faef71191aea761c2dc5600a7ef9af62faf4d299a5ba4905"
+    },
+    "count": 60
+  },
+  "digest": "230204fe880d95912e7d84025aa96143f1748ea425af4bd1c21872c2d48e0d56"
+}

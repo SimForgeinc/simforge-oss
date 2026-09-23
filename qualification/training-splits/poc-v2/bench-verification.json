@@ -1,0 +1,75 @@
+{
+  "schema": "simforge.supply-bench-verification/v1",
+  "policy": "torch:teacher/update-000098",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "runs": [
+    {
+      "verification": {
+        "ok": true,
+        "runDir": "/home/path/simforge-assets/runs/drive/supply-poc-v2/poc-v2-cpnco__torch__seed200",
+        "runId": "poc-v2-cpnco__torch__seed200",
+        "steps": 140,
+        "framesPerSensor": {
+          "camera_front_wide_120fov": 141,
+          "camera_front_tele_30fov": 141
+        },
+        "expectedFrames": 141,
+        "frameDigestsVerified": 282,
+        "traceDigest": "c6c220703c3279961930df36778dc69c5c9b125fee7f3100764862b7a8061da7",
+        "modelHealth": {
+          "healthy": true,
+          "reasons": []
+        },
+        "manifestValid": true
+      },
+      "resultSha256": "266e82defd37cfd65091db276249fb54329efd506d18e451d3c691c5ad3d832b",
+      "metricVersion": "simforge.offroad/v3",
+      "alpasimStyleScore": {
+        "name": "alpasim-style-score",
+        "version": "simforge.alpasim-style-score/v1",
+        "label": "not an AlpaSim result",
+        "value": 0.23701580006054482,
+        "progress": 0.18961264004843587,
+        "hardFailures": [],
+        "unavailable": [],
+        "maxLateralM": 0.39178154254570496
+      }
+    },
+    {
+      "verification": {
+        "ok": true,
+        "runDir": "/home/path/simforge-assets/runs/drive/supply-poc-v2/poc-v2-queue-tail__torch__seed200",
+        "runId": "poc-v2-queue-tail__torch__seed200",
+        "steps": 130,
+        "framesPerSensor": {
+          "camera_front_tele_30fov": 131,
+          "camera_front_wide_120fov": 131
+        },
+        "expectedFrames": 131,
+        "frameDigestsVerified": 262,
+        "traceDigest": "556094268dcabad8e0cc6127352dace5cc91cad5d6257c92dab370bd547aeaac",
+        "modelHealth": {
+          "healthy": true,
+          "reasons": []
+        },
+        "manifestValid": true
+      },
+      "resultSha256": "d7de9539492d17efc8f1434423a3b7fc1160ed8256d29e0fbcf38a7db9881e64",
+      "metricVersion": "simforge.offroad/v3",
+      "alpasimStyleScore": {
+        "name": "alpasim-style-score",
+        "version": "simforge.alpasim-style-score/v1",
+        "label": "not an AlpaSim result",
+        "value": 0.18860465473018742,
+        "progress": 0.15088372378414994,
+        "hardFailures": [],
+        "unavailable": [],
+        "maxLateralM": 0.006842145439743461
+      }
+    }
+  ],
+  "visualInspection": {
+    "cpnco": "Bevy front view at6s: campus buildings, dark road and light actor geometry; not a rendered-mesh/perception-quality qualification.",
+    "queueTail": "Bevy front view at3s: road markings, roadside houses/trees and ahead actor geometry; not a policy-quality qualification."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema": "simforge.rendered-throughput-verification/v1",
+  "git_sha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f",
+  "command": "NODE_OPTIONS=--conditions=development SIMFORGE_SKY_ASSETS=$HOME/.local/share/simforge/native-runtime/share/sky SIMFORGE_NATIVE_RUNTIME_ADDON=/tmp/simforge-episode-final/node/simforge-native-runtime.linux-x64-gnu.node pnpm exec tsx --tsconfig tsconfig.base.json scripts/bench/closed-loop/rendered.mts --out docs/engineering/benchmarks/rendered-throughput-2026-09-22-final.json --runner-class gpu-rtx5080",
+  "exit_code": 0,
+  "native_binding": {
+    "abi": 3,
+    "engine_version": "0.7.0",
+    "sha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "renderer_binary_sha256": "51e628219018b2473f29657f99dbfbf69dc5e27e97b02b186e36d55baea73825",
+  "benchmark_source_sha256": "4c282a3fc17397032338fd425de7eaebd9d144fff19a556fbf8702fd397302df",
+  "loop_owner": "native Episode",
+  "camera_provider": "protocol-5 resident native service; startup helper hands dedicated socket to Episode",
+  "observation": "only exact profile cameras; no adapter actor snapshot supplied to a policy",
+  "warmup": "20 decisions per reset owned by kernel, outside timing",
+  "samples_per_profile": 3,
+  "minimum_window_seconds": 5,
+  "profiles": {
+    "alpamayo-2cam": 13.010499324319632,
+    "qwen-drive-3cam": 8.776895416135154,
+    "auto-e2e-6view": 5.304138294807188
+  },
+  "gate": {
+    "profile": "alpamayo-2cam",
+    "minimum_ticks_per_s": 5,
+    "passed": true
+  },
+  "frame_verification": {
+    "sampled_frames": 33,
+    "padded_payload_crc32": "matches kernel metadata",
+    "padded_payload_sha256": "matches kernel metadata",
+    "rgba_sha256": "recorded in per-window JSON"
+  },
+  "lease_lifetime": "borrowed FrameRef buffers released before next step/reset; no deferred consumer uses released memory",
+  "scoped_typescript": {
+    "exit_code": 0,
+    "command": "node_modules/.bin/tsc --project /tmp/simforge-camera-benchmark-qa-5xsqegvn/tsconfig.json",
+    "scope": "rendered.mts and imports; noEmit + repository Node types; config removed after validation"
+  },
+  "shared_service_change": "NativeServiceSession.socket exposes validated ready.endpoint; service connection explicitly closed before Episode handoff",
+  "processes": "all benchmark renderer children closed by service.close(); scratch directories removed",
+  "installed_wheels_modified": false,
+  "ci_dispatch": "not performed; workflow typecheck receipt in throughput-verification-2026-09-22.json"
+}

@@ -12,6 +12,7 @@ import { lockEntry } from "./lock";
 import { readRuntimeRecord, type RuntimeRecord } from "./prepare";
 import { endpointCommand, installLayout } from "./paths";
 import { observeHost, qualify, type ObservedHost } from "./preflight";
+import { policyCheckpoints, type PolicyCheckpoint } from "./policies";
 
 /**
  * The desktop model store, assembled for one request.
@@ -66,6 +67,7 @@ export type ModelStoreView = {
   readonly runtimes: readonly ModelRuntimeState[];
   readonly vault: VaultStatus;
   readonly reviewGates: readonly ModelReviewGate[];
+  readonly policies: readonly PolicyCheckpoint[];
 };
 
 export async function modelStoreView(): Promise<ModelStoreView> {
@@ -110,6 +112,7 @@ export async function modelStoreView(): Promise<ModelStoreView> {
 
   return {
     schema: MODEL_STORE_VIEW_SCHEMA,
+    policies: await policyCheckpoints(),
     generation: stateGeneration(),
     runtimes,
     catalog: MODEL_FAMILIES.map((family) => MODEL_CATALOG[family]),
@@ -241,3 +244,4 @@ export {
   type PrepareStep,
   type RuntimeRecord,
 } from "./prepare";
+export { POLICY_FAMILY, PolicyCheckpointSchema, policyCheckpoints, resolvePolicyCheckpoint, recordPolicyPromotion, type PolicyCheckpoint } from "./policies";

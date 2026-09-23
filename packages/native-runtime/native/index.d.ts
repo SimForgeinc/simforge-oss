@@ -39,6 +39,32 @@ export declare class EnvSession {
 }
 export type JsEnvSession = EnvSession
 
+/** Kernel-owned closed-loop episode; JSON shapes are identical to PyO3. */
+export declare class Episode {
+  constructor(specJson: string, graph: LaneGraph)
+  reset(onFrame?: ((arg0: string, arg1: Array<FrameRef>) => void) | undefined | null): string
+  step(actionJson: string): string
+  snapshot(): string
+  traceJson(): string
+  traceDigest(): string
+  finish(): string
+  get ego(): string
+  get ended(): boolean
+  frame(id: number): FrameRef
+  sceneStateJson(): string | null
+  close(): void
+}
+export type JsEpisode = Episode
+
+/** Zero-copy renderer-ring lease. Buffers are invalid after release(). */
+export declare class FrameRef {
+  get id(): number
+  get released(): boolean
+  release(): void
+  buffer(): Buffer
+}
+export type JsFrameRef = FrameRef
+
 export declare class LaneGraph {
   static fromTopology(data: Uint8Array): LaneGraph
   get digest(): string
@@ -349,7 +375,7 @@ export interface BatchResult {
   /** `(N, maxObjects, OBJECT_FEATURES)` row-major. */
   objects: Float32Array
   objectCount: Uint32Array
-  /** `(N, 3)` row-major. */
+  /** `(N, 11)` row-major, same column order as `StepResult.rewardTerms`. */
   rewardTerms: Float64Array
   /** `(N, height, width, channels)` row-major when BEV is configured. */
   bev?: Float32Array
@@ -463,10 +489,16 @@ export interface StepResult {
   objectIds: Array<string>
   /** `Float32Array(height * width * channels)` when BEV is configured. */
   bev?: Float32Array
-  /** `[progress, proximity, comfort]`. */
+  /**
+   * Eleven contributions: progress, proximity, comfort (accel), jerk,
+   * lateral_accel, time, stuck, collision, offroad, red_crossing, goal.
+   */
   rewardTerms: Float64Array
   /** JSON `{events, minima, causal}`. */
   infoJson: string
+  /** Opt-in approach-level signal observations, JSON array. */
+  signalsJson?: string
+  termReason?: string
 }
 
 /** `{templateId, paramsVersion}`: the replay-key identity of a template. */

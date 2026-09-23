@@ -13,6 +13,15 @@ export async function register(): Promise<void> {
     // Keep the import inside the positive guard: Next's development edge
     // compiler does not prune imports after an early return.
     const { expireCpuAttempts } = await import("./app/lib/scenario/jobs/cpu-control-store");
+    // The local host owns the database; the existing model-run worker leases
+    // bench jobs here and launches the CLI in a child process, never in React.
+    const { runModelRunLoop } = await import("./worker/model-run");
+    const state = globalThis as typeof globalThis & { studioDriveWorker?: AbortController };
+    if (!state.studioDriveWorker) {
+      state.studioDriveWorker = new AbortController();
+      void runModelRunLoop({ signal: state.studioDriveWorker.signal, kinds: ["drive_bench"] })
+        .catch((error: unknown) => process.stderr.write(`Studio drive worker stopped: ${String(error)}\n`));
+    }
     const intervalMs = 30_000;
     let sweeping = false;
     const sweep = async () => {

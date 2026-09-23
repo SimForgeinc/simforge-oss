@@ -1,0 +1,191 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v1-control",
+  "purpose": "control",
+  "cells": [
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "belmont-research-center",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "belmont-research-center",
+      "site": "cc2c91af8fa2d41a",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "belmont-research-center",
+      "site": "a4cccaa6443fec58",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "easterbrook-discovery-school",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "easterbrook-discovery-school",
+      "site": "f681133c7b86f906",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    }
+  ],
+  "pairedWith": {
+    "splitId": "poc-v1-test",
+    "digest": "d8b3f512d63000f45e4aad7d46d736fcade5a326a0505748784c77611d26f87c",
+    "manifest": "test.split.json",
+    "intervention": "remove-hazards"
+  },
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 146/146 sites), corridor.runwayDownstreamM (failed at 57/146 sites), corridor.curvatureDegPer10m (failed at 49/146 sites). Example: Infeasible at this site. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-000.admission.json",
+          "sha256": "eb8b715fc745efdece9c6ded7817708dd3ea838f5261c5d3758952e979ebefd5"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "paired test cell was excluded; no unpaired control admitted",
+        "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-001.admission.json",
+          "sha256": "e40e9e7a109d32263a0a3fb6bac5b6db12fac5c6c0a01dc108aedf1488c95e3c"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "paired test cell was excluded; no unpaired control admitted",
+        "siteKey": "belmont-research-center/seg_9dc346bb0b5c9fd6",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-002.admission.json",
+          "sha256": "d2ad752760e1ab7234bdfb7f1349d573c93bd27dbacfa26067ea2d91c8a885de"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_8815e2cf7fcb16fe",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-003.admission.json",
+          "sha256": "16e4a985e0a51fd9e332a6459ed256a80f40c6ef4c334d1a1986a9ae7668cdb9"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ped (failed at 28/72 sites). Example: Infeasible at this site. only 47.35 m of runway, 210 m needed (short by 162.65 m). this map index carries no occlusion_zone layer. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 47.35 m available. Would have required relaxing a required cla",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-004.admission.json",
+          "sha256": "71310d48e35237fa75071f21b5f8f497adce5538e2ba3536a6e10b7c77ebb4c8"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_875ed7ddd8642925",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-005.admission.json",
+          "sha256": "c05627a6e23361889cbc248db57939ceb134babdb9815b2806ef51425de39b9e"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+        "receipt": {
+          "path": "receipts/poc-v1-control/cell-006.admission.json",
+          "sha256": "699dbfb25b5f0fe893a6e58f1b2d778346b9c32027fd8735e316950dab11f3c1"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T11:34:01.876Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v1-control.episodes.json",
+      "sha256": "ba4af18bc945dce16247b8088555158b7616ce99a03dbe8ee07517d1a8d3e7b5"
+    },
+    "count": 60
+  },
+  "digest": "f65a583aab38552e57222b590746b7a0a1ba50e93b941e3284ecfdd1a65da2e5"
+}

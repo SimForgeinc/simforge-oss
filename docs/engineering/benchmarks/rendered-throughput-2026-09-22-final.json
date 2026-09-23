@@ -1,0 +1,587 @@
+{
+  "schema": "simforge.rendered-throughput/v2",
+  "measured_at": "2026-09-22T10:53:58.761Z",
+  "git_sha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f",
+  "hardware": {
+    "host": "path-pc",
+    "cpu": "Intel(R) Core(TM) Ultra 9 285K",
+    "logical_cpus": 24,
+    "os": "Linux 7.0.0-31-generic",
+    "architecture": "x64",
+    "gpu": "NVIDIA GeForce RTX 5080, 16303 MiB, 595.84, 00000000:02:00.0",
+    "runner_class": "gpu-rtx5080",
+    "load_average_at_start": [
+      1.46,
+      2.28,
+      2.95
+    ]
+  },
+  "suite_sha256": "94dad8345bf62cbbbdbe1c8a31a20ccb1ee5ff7ce414dd44338b3c09225c0b2e",
+  "map_id": "garching-phase-1-2",
+  "topology_sha256": "00652aeac46bbe94a0948a18b0f3e95c1f5440e13618ea7b805700fafd1e91f7",
+  "scenario_sha256": "a14ae4698612981777624bae1bcfe749f66629da9fc72464038dd8d4b2930993",
+  "meshes": [
+    {
+      "name": "4cdde586208d54b241a616d2165b2629763607f8933c1b214de8fa6aa1ed17e8-road.glb",
+      "sha256": "6966cf486cd93c2d658b1572e7b83d215cdfb4b006141a1203c4c01c114f3cbf"
+    },
+    {
+      "name": "f982d14ded56c4e8e9953c8117077bb6441abb2f0256ed2a45250c0f0f98e672-tile_9_23.lod0.glb",
+      "sha256": "96b2079e7340a6620d17b9be9ff7555bdd7a2189792422df8e18762d853e17ed"
+    },
+    {
+      "name": "05f50084114a96e038db3bed3371dc8dbb3368253a7c2e663c874e59142056ad-tile_9_24.lod0.glb",
+      "sha256": "3a2c926a96ed568b02d13060cd207a976afa5f318ea71ddde07d89ea92c42827"
+    },
+    {
+      "name": "f3b884fbaea95e9c5266035d342d79f1a218ccbe80ef2c9b133926d7badb36b6-tile_9_25.lod0.glb",
+      "sha256": "79b5e8f451a201abca9536ad2b67fcb4a47ff07cd1c3beab3c6336e9d1297112"
+    },
+    {
+      "name": "383d64c3922c1ec35517c6585348d3609a2de4d1edf4ebd401d02376cc751fc0-tile_10_21.lod0.glb",
+      "sha256": "e777dade4ee05301e85017babdd185d45fb04a736c40e26a75ecaa05fabbee4e"
+    },
+    {
+      "name": "05d0f1a610f29e80a590be51468f0be0b227066fe5db1ba33362285c920d6f5a-tile_10_22.lod0.glb",
+      "sha256": "db9a99255e5c41e4344b3bb2c0aa29120254cbcb11d67fbc34ba34890ac6d4ee"
+    },
+    {
+      "name": "0545281114577eae7d2c2f55f34f1e95eaa61e00dabd6a43a79aecd40e9bc0ba-tile_10_23.lod0.glb",
+      "sha256": "7cf1151c9002a3796c6aead72b00515c87a671bedb6ae7718de50b6d24fba1d2"
+    },
+    {
+      "name": "0f9b191651ef524fffbb943a08b92c8107f877f32e365934f2cd97f599c37884-tile_10_24.lod0.glb",
+      "sha256": "7132820398306ab504e895fdbdb25183eaa0e602bbc26bf88823fa38c158c71b"
+    },
+    {
+      "name": "719efac4bf3d90a2ee316d38760b7084fe4991defbb2fe68a2290193599d9a3d-tile_10_25.lod0.glb",
+      "sha256": "5716cfb71b3309177f5dbb0002ccabb43a67d534d3a50732991ba1016e07b890"
+    },
+    {
+      "name": "3639aff388c8125ef8c67c3f5fd3e4f7034e23b0ce2adbb6a34571d8c8fda820-tile_11_21.lod0.glb",
+      "sha256": "5ee416d5b467178f6e5d5c39c8f46fa4ca67ec2cabf2a962948f88a0482de707"
+    },
+    {
+      "name": "2e5a0416fdc185b066a5353afabc6a2aa3b9569d1b573a8d9f011f7a27247283-tile_11_22.lod0.glb",
+      "sha256": "6a6b7ef7d94420ab2c90768b7fae06b35fef835e49bedf95d86ed328689f606e"
+    },
+    {
+      "name": "7a4f27d9d368940cb2b49e50cc8cf06e057a755593e944e6bfba1e54391eb62c-tile_11_23.lod0.glb",
+      "sha256": "e830ece46f78968eeb7e3e26cabde0f927aa8dd76c39a9bbc2083885de39d66b"
+    },
+    {
+      "name": "5c52eb3bfefd7d0af2636d4bba0c6374c7681545ede580adab2e385a0f15a4a5-veg_9_22.lod0.glb",
+      "sha256": "53282bb1241b545662fddfdbd043a799d6cbeb6727a5212c0c3b708834de188d"
+    },
+    {
+      "name": "ae2d00efd2591903483a486c9bed17c9f45a9b7e721d51ab4dbb35bd1503439d-veg_9_24.lod0.glb",
+      "sha256": "83c50169c2da828e7fcfd2605a91f3385e4f484241ddbeb44cd3484ca779361e"
+    },
+    {
+      "name": "0801fd48faae22561406ec585790aaed26419be484f3da6db4d0a0aece512bb2-veg_9_25.lod0.glb",
+      "sha256": "529fffad7593d712a86a1c45b30f3468593a1b90321f1fa2493ab19814e360f8"
+    },
+    {
+      "name": "c83f00ca04b637684cfb7956e0c01d776f83f096c7fa1f735d107218f064325c-veg_10_21.lod0.glb",
+      "sha256": "3cf2f97be9b69f09b7a038b9bb0ea8047b43c51980a60a6aadbcc9f2a90db8ee"
+    },
+    {
+      "name": "50fa4a5b4386ee2d2d8c6e312cceb0be6e2a8bc74d228c5cf58b7f43dd5f550a-veg_10_22.lod0.glb",
+      "sha256": "efc19ea845157201606773b9410b89643246592b80189a19df41a7ca282c46e2"
+    },
+    {
+      "name": "062f5cd0285ca110bb8bd0259fa8c32c205c4dadc0991da1413828566201af22-veg_10_23.lod0.glb",
+      "sha256": "d0d8aa1ed7aab758e0d45f7c42ed9b1dfdbbcd09ab43a2b78281395645cd0e72"
+    },
+    {
+      "name": "d8bd62c63d11454afce816ab17ea29a1bde15bba5cbecfe4684f60fb5e15139c-veg_10_24.lod0.glb",
+      "sha256": "11584fd4ccee26e97451c9a9dcee3d9dbaaa613e16fb0ea9c063dcbbdb3c6149"
+    },
+    {
+      "name": "79bfefe0b9dc155853f26f9f4ad2b34e234904c2684720777acac3259f4c5f46-veg_10_25.lod0.glb",
+      "sha256": "2d6283766c440b5b04a7671a5984960f31b748270dd6733e34edb73a16608120"
+    },
+    {
+      "name": "62e73d454abc33bfab75fc120669485d322efee61c446cee4fba5f982667675f-veg_11_21.lod0.glb",
+      "sha256": "cd2216ea623f4d677311c0bc96f0895cd502609c5abf8b912935196c3c14b936"
+    },
+    {
+      "name": "1db762a0c137d2fcb7322a35c30543b698377ca0082d83e22a485df803ed196c-veg_11_22.lod0.glb",
+      "sha256": "93ebf011fcd25314314a8a3997fa366b7d6027dc7c58b7029dbf9ae3ee5357ee"
+    },
+    {
+      "name": "541187361fef04d17d81c943271cd67a05f6ac5dc8426d22f2e76a13a2eaf156-veg_11_23.lod0.glb",
+      "sha256": "5b16d72ccc9495e3a41241da9c65c7bb32293be1aa96bc2dd88e27ff60526d74"
+    },
+    {
+      "name": "20af3fad93584da1552eacab566d8998758d60edf4173fc645c23449f08817b7-veg_11_24.lod0.glb",
+      "sha256": "30d9d7726f13f3fb0e95c00dc700240b225e82d4c8ea2fbfc1b146e8796f429f"
+    }
+  ],
+  "native_binding": {
+    "abi": 3,
+    "engine_version": "0.7.0",
+    "sha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "renderer_binary_sha256": "51e628219018b2473f29657f99dbfbf69dc5e27e97b02b186e36d55baea73825",
+  "benchmark_source_sha256": "4c282a3fc17397032338fd425de7eaebd9d144fff19a556fbf8702fd397302df",
+  "method": {
+    "seconds": 5,
+    "repeats": 3,
+    "warmup_ticks_per_window": 20,
+    "decision_hz": 10,
+    "seed": 42,
+    "model": null,
+    "lighting_profile": "cinematic",
+    "texture_tier": "textures-512-bc7",
+    "action": {
+      "k": "s",
+      "speedMps": 6,
+      "accelerationMps2": 0
+    },
+    "loop_owner": "native Episode",
+    "includes": [
+      "native Episode step/reset and trace",
+      "kernel camera service RPC",
+      "GPU RGB readback",
+      "zero-copy FrameRef access",
+      "RGBA padding removal"
+    ],
+    "excludes": [
+      "service/asset startup",
+      "warm-up",
+      "PNG/video/HUD encoding",
+      "model inference",
+      "post-window frame hashing"
+    ],
+    "exact_profile_only": true
+  },
+  "rows": [
+    {
+      "profile": "alpamayo-2cam",
+      "cameras": [
+        {
+          "sensor_id": "camera_front_wide_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_front_tele_30fov",
+          "width": 512,
+          "height": 384
+        }
+      ],
+      "median_ticks_per_s": 13.010499324319632,
+      "samples": [
+        {
+          "ticks": 66,
+          "seconds": 5.072826057999999,
+          "ticks_per_s": 13.010499324319632,
+          "rgb_bytes": 103809024,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "e03286efd3acf15490c513d98a348fe496cacb2231c285d33d21d25786aea0ff",
+              "crc32": "4288406d"
+            },
+            {
+              "sensor_id": "camera_front_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "336af553ebf2d2b740b43ff77df230606edeb427aae74cc85451ed7252ca4cc4",
+              "crc32": "08657b85"
+            }
+          ]
+        },
+        {
+          "ticks": 65,
+          "seconds": 5.059436570999998,
+          "ticks_per_s": 12.847280341959646,
+          "rgb_bytes": 102236160,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "ff27ff4581de1037f9b2a16b9a95776e445592b902a68c7f88aad1116d19a54e",
+              "crc32": "935644d1"
+            },
+            {
+              "sensor_id": "camera_front_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "2e886d90bce958a17036d3fb017fc507811209c3e590af4933bfed936cbe63de",
+              "crc32": "07135d95"
+            }
+          ]
+        },
+        {
+          "ticks": 67,
+          "seconds": 5.047861568,
+          "ticks_per_s": 13.272947187128567,
+          "rgb_bytes": 105381888,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "8d49807de485cd541a1235ef36cc8d31dc3fe7ecc150c6502a5da66a58f16190",
+              "crc32": "5d79b4cb"
+            },
+            {
+              "sensor_id": "camera_front_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "8ff0bf7678078b35af773147709c293609b1806f1eb0bfcf3bcdcc9ba9f302de",
+              "crc32": "d928eab1"
+            }
+          ]
+        }
+      ],
+      "renderer_hello": {
+        "i": 2,
+        "op": "hello",
+        "ok": true,
+        "protocol": 5,
+        "profile": "cinematic",
+        "legend_entries": 2549,
+        "shm": {
+          "path": "/tmp/simforge-render-bench-Clunts/alpamayo-2cam/native-render.shm",
+          "size_bytes": 536870912,
+          "meta_bytes": 4096
+        }
+      }
+    },
+    {
+      "profile": "qwen-drive-3cam",
+      "cameras": [
+        {
+          "sensor_id": "camera_front_wide_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_cross_left_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_cross_right_120fov",
+          "width": 512,
+          "height": 384
+        }
+      ],
+      "median_ticks_per_s": 8.776895416135154,
+      "samples": [
+        {
+          "ticks": 48,
+          "seconds": 5.092202364000005,
+          "ticks_per_s": 9.426176842330996,
+          "rgb_bytes": 113246208,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "78777a6bad3dee884ca6c58786d408c47d962a45ae577e854f7dc73719dbd3ed",
+              "crc32": "ee3c1e19"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "f129a326801e87da2513ee0150a1632a7aef7125035052ae09f4aec2fab06d18",
+              "crc32": "17533523"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "3a959b026548771d61cde347856a44a8b5e56aeb0a8f702b561403ffbea519ca",
+              "crc32": "15ac11cc"
+            }
+          ]
+        },
+        {
+          "ticks": 44,
+          "seconds": 5.013162162,
+          "ticks_per_s": 8.776895416135154,
+          "rgb_bytes": 103809024,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "475d5db168c58e5633b419582b28612dd90e78d879ce74e6a36b1d5372c9936a",
+              "crc32": "3ef8f74b"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "e3796bc465a4eb182b631e9be66c4c6e8fa1ba87be00926770276a084c177af1",
+              "crc32": "5e6d17b7"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "037cfc4e45e4288930a03a296dbb5e1c5b473fbfa4dc557310ab854d7915ae3e",
+              "crc32": "60efcd9b"
+            }
+          ]
+        },
+        {
+          "ticks": 43,
+          "seconds": 5.090976703,
+          "ticks_per_s": 8.446316396352993,
+          "rgb_bytes": 101449728,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "f2a5655afae7425259854614a701bbef4d419cde7e44252c9e66ca2dea21839d",
+              "crc32": "d68176dc"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "163724b591d0839eae14eab3aa50ebc31c4b7ab0d80ec6b3a9dbf34d117f50a6",
+              "crc32": "e5c03e3c"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "88e4b313626e89e697a5c26361eedd8eec79bfe2991f6bedbc2fc71a1bb763ab",
+              "crc32": "7988a49a"
+            }
+          ]
+        }
+      ],
+      "renderer_hello": {
+        "i": 2,
+        "op": "hello",
+        "ok": true,
+        "protocol": 5,
+        "profile": "cinematic",
+        "legend_entries": 2549,
+        "shm": {
+          "path": "/tmp/simforge-render-bench-Clunts/qwen-drive-3cam/native-render.shm",
+          "size_bytes": 536870912,
+          "meta_bytes": 4096
+        }
+      }
+    },
+    {
+      "profile": "auto-e2e-6view",
+      "cameras": [
+        {
+          "sensor_id": "camera_front_wide_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_cross_left_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_cross_right_120fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_rear_tele_30fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_rear_left_70fov",
+          "width": 512,
+          "height": 384
+        },
+        {
+          "sensor_id": "camera_rear_right_70fov",
+          "width": 512,
+          "height": 384
+        }
+      ],
+      "median_ticks_per_s": 5.304138294807188,
+      "samples": [
+        {
+          "ticks": 29,
+          "seconds": 5.159992031000002,
+          "ticks_per_s": 5.620163718427261,
+          "rgb_bytes": 136839168,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "f80367177ccdcfe8bc1b1eb6e252c00b1096ed95152a80ce369e1b5644558e01",
+              "crc32": "bba3da28"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "346e98b846128acc54cf24625c8525d6466bfb4367eb3dbf1174f47e6338a800",
+              "crc32": "5976f286"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "13e787e4391e854a463494aded610d805d7b8537944c4e849ad340918f115bbf",
+              "crc32": "4619f3fa"
+            },
+            {
+              "sensor_id": "camera_rear_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "ef651659c407ec74c7540ac852c17de46d6cf565ad06f5179f9696e0db70e6d1",
+              "crc32": "628983a0"
+            },
+            {
+              "sensor_id": "camera_rear_left_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "78faa02113a5ba862cc6040c8a3eb6caa3f2c92fff3c62d020c57711bf01117d",
+              "crc32": "b094cbd2"
+            },
+            {
+              "sensor_id": "camera_rear_right_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "fe28d1ab4c2a8d96576049a64fa0cccb4b5a7a5b26299df1dc684953f090e353",
+              "crc32": "ffe48574"
+            }
+          ]
+        },
+        {
+          "ticks": 27,
+          "seconds": 5.168125069999995,
+          "ticks_per_s": 5.2243317710575505,
+          "rgb_bytes": 127401984,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "756eb7b6dd247f706244cac1e41a1a3d7b9668fb5c886103dd1a5f86a4610de1",
+              "crc32": "169dd194"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "fe6c512545d6e577c5c4c1637ccfb8655c22a2c480f2d7236455122274cf42b9",
+              "crc32": "68beeac7"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "5517f749e0d2e2c6bbe7d30a10688672f0ef9b1187c988f82cc16bcb5c35c406",
+              "crc32": "4ca69002"
+            },
+            {
+              "sensor_id": "camera_rear_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "cf78372e706cd8f375bbb769e3a8c69f6a0f9d3c4771112a827f09f93d9501e5",
+              "crc32": "2c721bca"
+            },
+            {
+              "sensor_id": "camera_rear_left_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "0e40417237c6e12588c58bd9f51de533bf054a24cd8adf85b21c239139f0ec3c",
+              "crc32": "a17f565e"
+            },
+            {
+              "sensor_id": "camera_rear_right_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "b1b0097510ab86c83e4ee25d72367dbe8716744d84636952da1039658eee331b",
+              "crc32": "fa91d58b"
+            }
+          ]
+        },
+        {
+          "ticks": 27,
+          "seconds": 5.090365013000002,
+          "ticks_per_s": 5.304138294807188,
+          "rgb_bytes": 127401984,
+          "last_frames": [
+            {
+              "sensor_id": "camera_front_wide_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "5a393c776fe6e59cb3a31b9095b53e736fcbf3833b2192eee0955a54ea9b86b9",
+              "crc32": "f7e15fec"
+            },
+            {
+              "sensor_id": "camera_cross_left_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "5de406a84b5ab587539ee2ea787a5806a8e0ee47575d1780444bb86c239581e7",
+              "crc32": "0017f140"
+            },
+            {
+              "sensor_id": "camera_cross_right_120fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "0f11c0ac662b0c15f535646b4f6cd5ef47212d17980d8871f2b7835ee153d930",
+              "crc32": "c4e496d3"
+            },
+            {
+              "sensor_id": "camera_rear_tele_30fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "e7da958c43e27a9c6ebaf2d64837c4a6d94fc61e6bfb27e8d9d9330781e44a19",
+              "crc32": "4527ae16"
+            },
+            {
+              "sensor_id": "camera_rear_left_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "d0f2561a33d8df73c8c49f2354b69604c6a9c5a86848149a5c27f36723f59dce",
+              "crc32": "c201a540"
+            },
+            {
+              "sensor_id": "camera_rear_right_70fov",
+              "width": 512,
+              "height": 384,
+              "sha256": "81ca7d3d6eeda4406ee74689f943db0061f973e0cd89f281110e849ef0adf19f",
+              "crc32": "853d44e1"
+            }
+          ]
+        }
+      ],
+      "renderer_hello": {
+        "i": 2,
+        "op": "hello",
+        "ok": true,
+        "protocol": 5,
+        "profile": "cinematic",
+        "legend_entries": 2549,
+        "shm": {
+          "path": "/tmp/simforge-render-bench-Clunts/auto-e2e-6view/native-render.shm",
+          "size_bytes": 536870912,
+          "meta_bytes": 4096
+        }
+      }
+    }
+  ],
+  "gate": {
+    "profile": "alpamayo-2cam",
+    "minimum_ticks_per_s": 5,
+    "passed": true
+  }
+}

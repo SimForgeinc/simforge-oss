@@ -109,19 +109,7 @@ class EpisodeSpec:
 
     @property
     def egos(self) -> tuple[str, ...]:
-        return tuple(_ego_of(ep.input) for ep in self.episodes)
-
-
-def _ego_of(input: ScenarioInput) -> str:
-    # Mirrors the session's metric-subject rule; the native EnvSession is the
-    # authority and re-derives it, this is only for spec-level bookkeeping.
-    subject = input.metric_subject
-    if subject:
-        return subject
-    ids = sorted(input.actor_ids)
-    if not ids:
-        raise ValueError("scenario has no actors")
-    return ids[0]
+        return tuple(ep.input.ego_id for ep in self.episodes)
 
 
 class _GraphCache:
@@ -237,6 +225,38 @@ def load_episode_spec(spec_path: str | Path, *, maps_dir: str | Path | None = No
     return EpisodeSpec(tuple(episodes), dict(config))
 
 
+def camera_profile(profile: str) -> list[dict[str, Any]]:
+    """Load the calibration registry shared with the TypeScript drive bench."""
+    from importlib.resources import files
+
+    profiles = json.loads(files("simforge_oss_gym").joinpath("camera_profiles.json").read_text())["profiles"]
+    if profile not in profiles or not profiles[profile]:
+        raise ValueError(f"unknown camera profile {profile!r}; expected one of {sorted(name for name in profiles if profiles[name])}")
+    return profiles[profile]
+
+
+def observation_channels(
+    preset: str, *, backend: Mapping[str, Any] | None = None,
+    passes: Sequence[str] = ("rgb",),
+) -> list[dict[str, Any]]:
+    """Resolve a preset to valid kernel channels; cameras require render assets."""
+    if preset == "state":
+        return [{"kind": "state"}, {"kind": "objects"}]
+    if preset == "state+bev":
+        return [{"kind": "state"}, {"kind": "objects"}, {"kind": "bev", "h": 200, "w": 160}]
+    if preset == "visible":
+        return [{"kind": "visible"}]
+    if preset == "visible+signals":
+        return [{"kind": "visible"}, {"kind": "signals"}]
+    if preset.startswith("cams:") and preset[5:]:
+        cameras = camera_profile(preset[5:])
+        if backend is None:
+            raise ValueError("camera presets require an explicit Episode renderer backend")
+        return [{"kind": "state"}, {"kind": "cameras", "rig": {"cameras": cameras},
+                                   "passes": list(passes), "backend": dict(backend)}]
+    raise ValueError(f"unknown observation preset {preset!r}; expected state, state+bev, visible, visible+signals or cams:<profile>")
+
+
 def episode_config(
     base: Mapping[str, Any],
     *,
@@ -244,6 +264,7 @@ def episode_config(
     clip_seconds: float | None = None,
     max_decisions: int | None = None,
     bev: Mapping[str, Any] | bool | None = None,
+    observation_preset: str | None = None,
 ) -> dict[str, Any]:
     """Merge caller overrides over a spec-level ``EpisodeConfig`` (camelCase)."""
     config = dict(base)
@@ -253,6 +274,22 @@ def episode_config(
         config["clipSeconds"] = float(clip_seconds)
     if max_decisions is not None:
         config["maxDecisions"] = int(max_decisions)
+    if observation_preset is not None:
+        if observation_preset.startswith("cams:"):
+            from .profiles import ProfileUnavailableError
+            raise ProfileUnavailableError(
+                "SimForgeEnv/SimForgeVectorEnv are state-only fast environments; "
+                "use native.Episode with observation_channels('cams:<profile>', backend=...) or the endpoint runner"
+            )
+        observation_channels(observation_preset)
+        observation = dict(config.get("observation") or {})
+        observation.update(
+            stateVector=True,
+            visible=observation_preset in ("visible", "visible+signals"),
+            signals=observation_preset in ("visible", "visible+signals"),
+            bev={} if observation_preset == "state+bev" else None,
+        )
+        config["observation"] = observation
     if bev is not None:
         observation = dict(config.get("observation") or {})
         observation["bev"] = {} if bev is True else (None if bev is False else dict(bev))
@@ -264,12 +301,51 @@ def episode_config_json(config: Mapping[str, Any]) -> str | None:
     return json.dumps(config) if config else None
 
 
+def kernel_episode_spec(episode: LoadedEpisode, config: Mapping[str, Any]) -> str:
+    """Resolve the existing episodes.json config to the shared Episode wire.
+
+    Only configuration is adapted here. Warm-up, observation construction,
+    reward, termination, evidence and NEXT_STEP reset all execute in Rust.
+    """
+    options = dict(config)
+    scenario = json.loads(episode.input.to_json())
+    clip = options.pop("clipSeconds", None)
+    if clip is not None:
+        scenario["clipSeconds"] = clip
+    if not options.pop("warmupExcluded", True):
+        raise ValueError("kernel Episode always consumes the authored prologue")
+    observation = dict(options.pop("observation", {}) or {})
+    if "channels" not in observation:
+        visible = observation.pop("visible", False)
+        state = observation.pop("stateVector", True)
+        signals = observation.pop("signals", False)
+        bev = observation.pop("bev", None)
+        channels = [{"kind": "visible"}] if visible else (
+            ([{"kind": "state"}] if state else []) + [{"kind": "objects"}]
+        )
+        if signals and not visible:
+            channels.append({"kind": "signals"})
+        if bev is not None:
+            geometry = {"resolutionM": 0.25, "forwardM": 40.0, "backwardM": 10.0,
+                        "halfWidthM": 20.0, "laneHalfWidthM": 1.75, **bev}
+            if geometry["forwardM"] != 4 * geometry["backwardM"] or geometry["laneHalfWidthM"] != 1.75:
+                raise ValueError("Episode BEV requires 80% forward / 20% backward and native lane width")
+            resolution = geometry["resolutionM"]
+            channels.append({"kind": "bev", "h": round((geometry["forwardM"] + geometry["backwardM"]) / resolution),
+                             "w": round(2 * geometry["halfWidthM"] / resolution), "resolutionM": resolution})
+        observation["channels"] = channels
+    options["observation"] = observation
+    options.setdefault("seed", scenario["seed"])
+    return json.dumps({"scenario": scenario, **options})
+
+
 __all__: Sequence[str] = [
     "EpisodeSpec",
     "LoadedEpisode",
     "available_maps",
     "episode_config",
     "episode_config_json",
+    "observation_channels",
     "load_episode_spec",
     "map_dir",
     "maps_root",

@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "scenarioId": "drive-corridor",
+  "instances": [
+    {
+      "input": {
+        "schemaVersion": 1,
+        "mapId": "garching-phase-1-2",
+        "clipSeconds": 20.0,
+        "warmupSeconds": 0.0,
+        "dt": 0.02,
+        "seed": "jev-multidriver-1",
+        "physics": {
+          "mode": "dynamic-v1"
+        },
+        "operationalConditions": {
+          "weather": "clear",
+          "timeOfDay": "day",
+          "traffic": "moderate",
+          "visibility": "unrestricted",
+          "effects": {
+            "visibilityRangeM": 1000.0,
+            "frictionScale": 1.0,
+            "trafficSpeedFactor": 1.0
+          }
+        },
+        "metricSubject": "alpha",
+        "actors": [
+          {
+            "id": "alpha",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "160:0:-3",
+                "s": 100.0,
+                "tFrac": 0.0
+              },
+              "pose": {
+                "x": -828.9664502559856,
+                "z": 1221.8868634544094,
+                "headingRad": 1.2462287940840182
+              },
+              "speedMps": 6.0
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "160:0:-3"
+                ]
+              },
+              "cruiseSpeedMps": 6.0
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "catalog:vehicle.sedan",
+              "persona:cooperative",
+              "controlled:jev"
+            ]
+          }
+        ],
+        "interactions": [],
+        "signalPrograms": [],
+        "roadControls": [],
+        "surfacePatches": [],
+        "props": [],
+        "occluders": [],
+        "occlusionPairs": []
+      }
+    }
+  ]
+}

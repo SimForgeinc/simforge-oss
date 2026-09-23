@@ -29,7 +29,6 @@
     "verify:native-texture-tiers": "tsx scripts/verify-native-texture-tiers.ts",
     "verify:ml-texture-tiers": "tsx scripts/verify-native-texture-tiers.ts --profile=ml",
     "verify:viewer-context-lifetime": "tsx scripts/verify-viewer-context-lifetime.ts",
-    "verify:drive-activity": "tsx scripts/verify-drive-activity.ts",
     "verify:world-retention": "tsx scripts/verify-world-retention.ts",
     "verify:frame-readability": "tsx scripts/verify-frame-readability.ts",
     "verify:all-texture-tiers": "tsx scripts/verify-all-texture-tiers.ts",

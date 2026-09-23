@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-train",
+  "cell": 2,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: roles.queue-tail (failed at 115/118 sites), roles.queue-lead (failed at 63/118 sites), corridor.runwayDownstreamM (failed at 46/118 sites). Example: Infeasible at this site. only 133.59 m of runway, 220 m needed (short by 86.41 m). roles.queue-tail could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 133.59 m available. Would have required relaxing a required clause: queue-tail could not be bound and is not cosmetic.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "yale-street",
+    "topologySha256": "74180bfff0d3683206b1935cf3ea39598c5b8e1f357deb996f53f568a9f47d22",
+    "engineGraphDigest": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
+    "matcherIndexDigest": "8685dc014ca22da2d5adf47e022d5ec71793feb455254d93a9d419c4a746d62f"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: roles.queue-tail (failed at 115/118 sites), roles.queue-lead (failed at 63/118 sites), corridor.runwayDownstreamM (failed at 46/118 sites). Example: Infeasible at this site. only 133.59 m of runway, 220 m needed (short by 86.41 m). roles.queue-tail could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 133.59 m available. Would have required relaxing a required clause: queue-tail could not be bound and is not cosmetic."
+}

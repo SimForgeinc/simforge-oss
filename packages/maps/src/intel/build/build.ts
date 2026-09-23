@@ -37,13 +37,14 @@ import { densifyBuildingEntrances } from './densify/building-entrances.js';
 import { densifyJunctionMovements } from './densify/junction-movements.js';
 import { densifyMidblockSegments } from './densify/midblock-segments.js';
 import { densifyParkingSpaces } from './densify/parking-spaces.js';
+import { densifyOcclusionZones } from './densify/occlusion-zones.js';
 import { densifySchoolZones } from './densify/school-zones.js';
 import { densifyWorkZones } from './densify/work-zones.js';
 import type { LocationDraft } from './draft.js';
 import { assertDeclaredFactsProduced, type FactKeyAudit } from './facts.js';
 import { buildFactIndex } from './fact-index.js';
 import { assignHandles } from './handles.js';
-import { makeLocationIdString, revisionOf } from './hash.js';
+import { makeLocationIdString, revisionOf, sha256 } from './hash.js';
 import { buildJunctionDescriptors, junctionLocationId } from './junctions.js';
 import { buildRelations } from './relations.js';
 import { buildSegments } from './segments.js';
@@ -97,6 +98,7 @@ export function buildMapIntel(sources: MapSources): MapIntelBuild {
   drafts.push(...densifyJunctionMovements(ctx, descriptors));
   drafts.push(...densifyMidblockSegments(ctx, segments));
   drafts.push(...densifyParkingSpaces(ctx));
+  drafts.push(...densifyOcclusionZones(ctx));
   drafts.push(...densifySchoolZones(ctx));
   drafts.push(...densifyWorkZones(ctx, segments));
   drafts.push(...densifyBuildingEntrances(ctx));
@@ -145,16 +147,16 @@ export function buildMapIntel(sources: MapSources): MapIntelBuild {
   // 8 — index + audit.
   const factIndex = buildFactIndex(locations, segments, descriptors);
   const audit = assertDeclaredFactsProduced(mapId, locations);
-
-  const catalogRevision = revisionOf(sources.sourceHashes);
+  const sourceHashes = { ...sources.sourceHashes, 'map-intel-recipe': sha256('parked-row-sightlines/v1') };
+  const catalogRevision = revisionOf(sourceHashes);
   const builtAt = new Date(0).toISOString(); // fixed: build time must not reach the artifact
 
   const catalog: LocationCatalog = {
     catalogVersion: CATALOG_VERSION,
     catalogRevision,
     mapId: sources.mapId,
+    sourceHashes: Object.fromEntries(Object.entries(sourceHashes).sort()),
     mapAssetId: sources.mapAssetId,
-    sourceHashes: Object.fromEntries(Object.entries(sources.sourceHashes).sort()),
     builtAt,
     locations,
     relations,

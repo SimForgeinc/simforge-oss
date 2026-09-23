@@ -20,7 +20,7 @@ import numpy as np
 from gymnasium import spaces
 
 from .episodes import EpisodeSpec, LoadedEpisode, episode_config, episode_config_json, load_episode_spec
-from .native import ACTION_FIELDS, ACTION_WIDTH, ENGINE_HZ, OBJECT_FEATURES, STATE_VECTOR_SIZE, EnvSession, StepView
+from .native import ACTION_FIELDS, ACTION_WIDTH, ENGINE_HZ, OBJECT_FEATURES, STATE_VECTOR_SIZE, REWARD_TERM_NAMES, EnvSession, StepView
 
 ActionMode = Literal["setpoint", "control"]
 
@@ -68,6 +68,16 @@ def encode_action(mode: ActionMode, action: Any, out: np.ndarray) -> np.ndarray:
     return out
 
 
+def action_matrix(mode: ActionMode, actions: Any, num_envs: int) -> np.ndarray:
+    """One contiguous dense matrix for EpisodeBatch's typed action fast path."""
+    width = 2 if mode == "setpoint" else 3
+    rows = np.ascontiguousarray(actions, dtype=np.float64)
+    if rows.shape != (num_envs, width):
+        raise ValueError(f"{mode} actions must have shape ({num_envs}, {width}), got {rows.shape}")
+    # The kernel validates all rows before advancing any Episode.
+    return rows
+
+
 def observation_space_for(max_objects: int, bev_shape: tuple[int, int, int] | None) -> spaces.Dict:
     members: dict[str, spaces.Space] = {
         "state_vector": spaces.Box(-np.inf, np.inf, (STATE_VECTOR_SIZE,), np.float64),
@@ -92,13 +102,17 @@ def observation_of(view: StepView) -> dict[str, np.ndarray]:
 
 
 def info_of(view: StepView, ego: str, *, channel: bool) -> dict[str, Any]:
-    progress, proximity, comfort = view.reward_terms
     info: dict[str, Any] = {
         "t_s": view.t_s,
         "ego": ego,
         "object_ids": view.object_ids,
-        "reward_terms": {"progress": float(progress), "proximity": float(proximity), "comfort": float(comfort)},
+        "reward_terms": dict(zip(REWARD_TERM_NAMES, map(float, view.reward_terms), strict=True)),
     }
+    signals = view.signals_json()
+    if signals is not None:
+        info["signals"] = json.loads(signals)
+    if view.term_reason is not None:
+        info["term_reason"] = view.term_reason
     if channel:
         info.update(json.loads(view.info_json()))
     return info
@@ -140,6 +154,7 @@ class SimForgeEnv(gym.Env[dict[str, np.ndarray], np.ndarray]):
         clip_seconds: float | None = None,
         max_decisions: int | None = None,
         bev: Mapping[str, Any] | bool | None = None,
+        observation_preset: str | None = None,
         episode_config_overrides: Mapping[str, Any] | None = None,
         seed: int | float | str | None = None,
         info_channel: bool = True,
@@ -156,7 +171,7 @@ class SimForgeEnv(gym.Env[dict[str, np.ndarray], np.ndarray]):
             episode = spec.episodes[session]
             base_config = spec.episode_config
         assert episode is not None
-        config = episode_config(base_config, decision_hz=decision_hz, clip_seconds=clip_seconds, max_decisions=max_decisions, bev=bev)
+        config = episode_config(base_config, decision_hz=decision_hz, clip_seconds=clip_seconds, max_decisions=max_decisions, bev=bev, observation_preset=observation_preset)
         if episode_config_overrides:
             config.update(episode_config_overrides)
 

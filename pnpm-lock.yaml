@@ -31,7 +31,7 @@ importers:
         version: 0.34.5
       tsup:
         specifier: ^8.5.0
-        version: 8.5.1(jiti@1.21.7)(postcss@8.5.26)(supports-color@7.2.0)(tsx@4.23.12)(typescript@5.9.3)
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@7.2.0)(tsx@4.23.12)(typescript@5.9.3)
       tsx:
         specifier: ^4.20.0
         version: 4.23.12
@@ -314,6 +314,9 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../engine
+      '@simforge-oss/maps':
+        specifier: workspace:*
+        version: link:../maps
       '@simforge-oss/model-store':
         specifier: workspace:*
         version: link:../model-store
@@ -410,6 +413,9 @@ importers:
 
   packages/maps:
     dependencies:
+      polygon-clipping:
+        specifier: ^0.15.7
+        version: 0.15.7
       proj4:
         specifier: ^2.15.0
         version: 2.21.0
@@ -11736,34 +11742,6 @@ snapshots:
   ts-interface-checker@0.1.13: {}
 
   tslib@2.8.1: {}
-
-  tsup@8.5.1(jiti@1.21.7)(postcss@8.5.26)(supports-color@7.2.0)(tsx@4.23.12)(typescript@5.9.3):
-    dependencies:
-      bundle-require: 5.1.0(esbuild@0.27.7)
-      cac: 6.7.14
-      chokidar: 4.0.3
-      consola: 3.4.2
-      debug: 4.4.3(supports-color@7.2.0)
-      esbuild: 0.27.7
-      fix-dts-default-cjs-exports: 1.0.1
-      joycon: 3.1.1
-      picocolors: 1.1.1
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.26)(tsx@4.23.12)
-      resolve-from: 5.0.0
-      rollup: 4.62.5
-      source-map: 0.7.6
-      sucrase: 3.35.1
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.17
-      tree-kill: 1.2.2
-    optionalDependencies:
-      postcss: 8.5.26
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - jiti
-      - supports-color
-      - tsx
-      - yaml
 
   tsup@8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@7.2.0)(tsx@4.23.12)(typescript@5.9.3):
     dependencies:

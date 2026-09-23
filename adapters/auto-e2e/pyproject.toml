@@ -12,7 +12,10 @@ license = { text = "Apache-2.0" }
 # torch and the upstream auto_e2e package come from the family's own isolated
 # environment, exactly as for the Alpamayo families. Upstream pins its own
 # requirements.txt at the pinned commit; nothing is resolved across families.
-dependencies = ["numpy>=1.24"]
+dependencies = ["numpy>=1.24", "msgpack>=1.0", "Pillow>=10.0", "simforge-policy-endpoint==0.1.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simforge_auto_e2e"]
+
+[tool.uv.sources]
+simforge-policy-endpoint = { path = "../policy-endpoint" }

@@ -65,6 +65,7 @@ import {
   leaseNextModelRun,
   type LeasedModelRun,
 } from "../app/lib/models/model-run-store.js";
+import { executeDriveBenchRun } from "./drive-bench.js";
 
 /** stdio: ["ignore", "pipe", "pipe"] — no stdin, captured stdout/stderr. */
 type EndpointChild = ChildProcessByStdio<null, Readable, Readable>;
@@ -101,7 +102,7 @@ export async function runModelRunLoop(options: ModelRunWorkerOptions): Promise<v
   const workerId = options.workerId
     ?? `model-${hostname().replace(/[^A-Za-z0-9._:-]/g, "-")}-${process.pid}`;
   const pollMs = options.pollMs ?? 1_000;
-  const kinds = options.kinds ?? (["openloop", "policy_episode"] as const);
+  const kinds = options.kinds ?? (["openloop", "policy_episode", "drive_bench"] as const);
   const runsRoot = options.runsRoot
     ?? process.env.SIMFORGE_RUNS_ROOT?.trim()
     ?? join(homedir(), "simforge-assets", "runs");
@@ -123,9 +124,11 @@ export async function runModelRunLoop(options: ModelRunWorkerOptions): Promise<v
     }
     log("attempt.started", { runId: lease.runId, attempt: lease.attemptNumber });
     try {
-      const result = lease.kind === "policy_episode"
-        ? await executePolicyEpisodeRun(lease, { runsRoot, signal })
-        : await executeOpenloopRun(lease, { runsRoot, signal });
+      const result = lease.kind === "drive_bench"
+        ? await executeDriveBenchRun(lease, { runsRoot, signal })
+        : lease.kind === "policy_episode"
+          ? await executePolicyEpisodeRun(lease, { runsRoot, signal })
+          : await executeOpenloopRun(lease, { runsRoot, signal });
       await completeModelRun(lease, result);
       log("run.succeeded", { runId: lease.runId, attempt: lease.attemptNumber, metrics: result.metrics });
     } catch (error) {
@@ -335,6 +338,7 @@ export async function executeOpenloopRun(
     );
   }
   const descriptor = lease.resolvedDescriptor;
+  if (!descriptor) throw new ModelRunFailure("endpoint_missing", "Registered endpoint required");
   if (descriptor.invoke.kind !== "http-json") {
     throw new ModelRunFailure(
       "endpoint_transport_unsupported",
@@ -440,6 +444,7 @@ export async function executePolicyEpisodeRun(
   }
   const params = parsed.data;
   const descriptor = lease.resolvedDescriptor;
+  if (!descriptor) throw new ModelRunFailure("endpoint_missing", "Registered endpoint required");
   const runDir = join(options.runsRoot, lease.runId);
   await mkdir(runDir, { recursive: true });
   const startedAt = new Date().toISOString();

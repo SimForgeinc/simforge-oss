@@ -7,7 +7,7 @@
 
 use simforge_core::engine::ActionOverride;
 use simforge_core::rng::Seed;
-use simforge_session::{EnvSession, FlatBatch, SessionBatch};
+use simforge_session::{EnvSession, FlatBatch, SessionBatch, REWARD_TERM_COUNT};
 
 use super::{decode_checkpoint, encode_checkpoint, episode_config_from_json, Graph, Scenario};
 use crate::action::decode_action_rows;
@@ -65,7 +65,7 @@ impl Batch {
             actions: vec![None; n],
             decoded: Vec::with_capacity(n),
             objects_f32: vec![0.0; n * max_objects * OBJECT_FEATURES],
-            reward_terms: vec![0.0; n * 3],
+            reward_terms: vec![0.0; n * REWARD_TERM_COUNT],
             max_objects,
         })
     }
@@ -102,6 +102,9 @@ impl Batch {
     pub fn state_vector_enabled(&self) -> bool {
         self.batch.config().observation.state_vector
     }
+    pub fn signals_enabled(&self) -> bool {
+        self.batch.config().observation.signals
+    }
 
     /// Flat N-major buffers of the last call (`state`, `bev`, `rewards`,
     /// `terminated`, `truncated`, `t_s`, `object_counts`).
@@ -114,7 +117,7 @@ impl Batch {
     pub fn objects_f32(&self) -> &[f32] {
         &self.objects_f32
     }
-    /// `(N, 3)` `[progress, proximity, comfort]`.
+    /// `(N, REWARD_TERM_COUNT)` in `simforge_session::REWARD_TERM_NAMES` order.
     #[inline]
     pub fn reward_terms(&self) -> &[f64] {
         &self.reward_terms
@@ -129,6 +132,11 @@ impl Batch {
             .take(self.max_objects)
             .map(|o| s.actor_id(o.actor).map(str::to_owned).unwrap_or_default())
             .collect())
+    }
+
+    pub fn signals_json(&self, world: usize) -> Result<Option<String>> {
+        self.session(world)?.last_result().observation.signals.as_ref()
+            .map(serde_json::to_string).transpose().map_err(Into::into)
     }
 
     pub fn info_json(&self, world: usize) -> Result<String> {
@@ -148,9 +156,11 @@ impl Batch {
                 })
             })
             .collect();
-        Ok(serde_json::to_string(
-            &serde_json::json!({"events": info.events, "minima": minima, "causal": info.causal}),
-        )?)
+        let mut value = serde_json::json!({"events": info.events, "minima": minima, "causal": info.causal});
+        if let Some(collision) = &info.collision {
+            value["collision"] = serde_json::to_value(collision)?;
+        }
+        Ok(serde_json::to_string(&value)?)
     }
 
     pub fn reset_all(&mut self, seeds: Option<&[Seed]>) -> Result<()> {
@@ -244,9 +254,8 @@ impl Batch {
         }
         for (i, s) in self.batch.sessions().iter().enumerate() {
             let t = &s.last_result().info.reward_terms;
-            self.reward_terms[i * 3] = t.progress;
-            self.reward_terms[i * 3 + 1] = t.proximity;
-            self.reward_terms[i * 3 + 2] = t.comfort;
+            self.reward_terms[i * REWARD_TERM_COUNT..(i + 1) * REWARD_TERM_COUNT]
+                .copy_from_slice(&t.values());
         }
     }
 }

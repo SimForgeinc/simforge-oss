@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-train",
+  "cell": 1,
+  "templateSha256": "718ae1a41d0985609e6313265901bb50532a387bc3323f005f83a7dd01c77e69",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 90/90 sites), corridor.runwayDownstreamM (failed at 33/90 sites), corridor.throughLanesSameDir (failed at 27/90 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 3 at s=80 m, wanted [1, 2]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "yale-street",
+    "topologySha256": "74180bfff0d3683206b1935cf3ea39598c5b8e1f357deb996f53f568a9f47d22",
+    "engineGraphDigest": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
+    "matcherIndexDigest": "8685dc014ca22da2d5adf47e022d5ec71793feb455254d93a9d419c4a746d62f"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 90/90 sites), corridor.runwayDownstreamM (failed at 33/90 sites), corridor.throughLanesSameDir (failed at 27/90 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 3 at s=80 m, wanted [1, 2]. this map index carries no occlusion_zone layer. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM."
+}

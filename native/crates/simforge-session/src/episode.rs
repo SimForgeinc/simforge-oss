@@ -28,17 +28,47 @@ pub struct RewardConfig {
     pub proximity_range_m: f64,
     /// Per-decision penalty weight on absolute longitudinal acceleration.
     pub comfort_accel_weight: f64,
+    pub comfort_jerk_weight: f64,
+    pub comfort_lateral_weight: f64,
+    pub jerk_cap_mps3: f64,
+    pub lateral_accel_cap_mps2: f64,
+    pub time_weight: f64,
+    pub stuck_weight: f64,
+    pub stopped_speed_mps: f64,
+    /// Maximum bumper gap to a stopped lead vehicle that excuses waiting.
+    pub queue_gap_m: f64,
+    pub queue_goal_min_gap_m: f64,
+    pub queue_goal_max_gap_m: f64,
+    pub queue_goal_hold_s: f64,
+    pub offroad_penalty: f64,
+    pub red_crossing_penalty: f64,
+    /// Centre-to-route corridor margin beyond half the authored lane width.
+    pub corridor_margin_m: f64,
 }
 
 impl Default for RewardConfig {
     fn default() -> Self {
         Self {
-            collision_penalty: -10.0,
-            goal_bonus: 10.0,
+            collision_penalty: -20.0,
+            goal_bonus: 5.0,
             progress_weight: 0.05,
-            proximity_weight: 0.02,
+            proximity_weight: 0.0,
             proximity_range_m: 15.0,
             comfort_accel_weight: 0.005,
+            comfort_jerk_weight: 0.001,
+            comfort_lateral_weight: 0.005,
+            jerk_cap_mps3: 8.0,
+            lateral_accel_cap_mps2: 3.0,
+            time_weight: 0.01,
+            stuck_weight: 0.5,
+            stopped_speed_mps: 0.3,
+            queue_gap_m: 10.0,
+            queue_goal_min_gap_m: 4.5,
+            queue_goal_max_gap_m: 6.5,
+            queue_goal_hold_s: 1.0,
+            offroad_penalty: -10.0,
+            red_crossing_penalty: -5.0,
+            corridor_margin_m: 0.5,
         }
     }
 }
@@ -92,6 +122,13 @@ pub struct ObservationConfig {
     pub object_list_range_m: f64,
     /// `None` disables the BEV raster.
     pub bev: Option<BevConfig>,
+    /// LOS-gated state range, object rows and BEV actor occupancy. Opt-in:
+    /// historical privileged observations retain their exact bytes.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub visible: bool,
+    /// Current signal indication and timing for each controlled approach.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub signals: bool,
 }
 
 impl Default for ObservationConfig {
@@ -100,13 +137,14 @@ impl Default for ObservationConfig {
             state_vector: true,
             object_list_range_m: 60.0,
             bev: None,
+            visible: false,
+            signals: false,
         }
     }
 }
 
-/// Goal definition for the completion bonus / `terminated` flag: a trigger
-/// with this interaction id firing, and/or the ego running out of route.
-/// Both set = both required.
+/// A trigger (if specified) gates either geometric route end or the authored
+/// queue safe-stop goal. With neither geometric goal, the trigger alone wins.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GoalSpec {
@@ -114,6 +152,10 @@ pub struct GoalSpec {
     pub interaction_id: Option<String>,
     #[serde(default)]
     pub route_end: bool,
+    /// Safe stop behind the authored `role:queue-tail`, using reward gap/dwell
+    /// settings. Never awards a goal for stopping behind an arbitrary actor.
+    #[serde(default)]
+    pub queue_stop: bool,
 }
 
 /// Episode timing and termination policy as supplied by the caller.
@@ -130,7 +172,6 @@ pub struct EpisodeConfig {
     /// Truncate after this many decisions even if clip time remains.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_decisions: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub goal: Option<GoalSpec>,
     pub reward: RewardConfig,
     pub observation: ObservationConfig,
@@ -143,7 +184,7 @@ impl Default for EpisodeConfig {
             clip_seconds: None,
             warmup_excluded: true,
             max_decisions: None,
-            goal: None,
+            goal: Some(GoalSpec { interaction_id: None, route_end: true, queue_stop: true }),
             reward: RewardConfig::default(),
             observation: ObservationConfig::default(),
         }
@@ -228,3 +269,23 @@ mod tests {
         assert_eq!(r.clip_seconds, 20.0);
     }
 }
+
+mod camera_types;
+#[cfg(not(target_arch = "wasm32"))]
+mod cameras;
+#[cfg(target_arch = "wasm32")]
+#[path = "episode/cameras_unavailable.rs"]
+mod cameras;
+pub use camera_types::{CameraBackend, CameraEnhance, CameraObservation, CameraPass, CameraSpec, FrameDescriptor, ResidentCameraRig};
+pub use cameras::FrameRef;
+mod closed_loop;
+pub use closed_loop::{
+    EnvelopeMeasurement, Episode, EpisodeAction, EpisodeDeadline, EpisodeFallback,
+    EpisodeBatch, EpisodeBatchCheckpoint,
+    EpisodeMode, EpisodeObservation, EpisodeObservationConfig, EpisodeOptions,
+    EpisodeReplayContext, EpisodeSpec, EpisodeStep, EpisodeTiming, ObservationChannel,
+    ResultCore, EPISODE_TRACE_SCHEMA,
+};
+
+#[cfg(all(test, unix))]
+mod camera_tests;

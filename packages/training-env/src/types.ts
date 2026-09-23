@@ -29,15 +29,43 @@ export interface RewardConfig {
   proximityRangeM: number;
   /** Per-decision penalty weight on absolute longitudinal acceleration. */
   comfortAccelWeight: number;
+  comfortJerkWeight: number;
+  comfortLateralWeight: number;
+  jerkCapMps3: number;
+  lateralAccelCapMps2: number;
+  timeWeight: number;
+  stuckWeight: number;
+  stoppedSpeedMps: number;
+  queueGapM: number;
+  queueGoalMinGapM: number;
+  queueGoalMaxGapM: number;
+  queueGoalHoldS: number;
+  offroadPenalty: number;
+  redCrossingPenalty: number;
+  corridorMarginM: number;
 }
 
 export const DEFAULT_REWARD_CONFIG: RewardConfig = {
-  collisionPenalty: -10,
-  goalBonus: 10,
+  collisionPenalty: -20,
+  goalBonus: 5,
   progressWeight: 0.05,
-  proximityWeight: 0.02,
+  proximityWeight: 0,
   proximityRangeM: 15,
   comfortAccelWeight: 0.005,
+  comfortJerkWeight: 0.001,
+  comfortLateralWeight: 0.005,
+  jerkCapMps3: 8,
+  lateralAccelCapMps2: 3,
+  timeWeight: 0.01,
+  stuckWeight: 0.5,
+  stoppedSpeedMps: 0.3,
+  queueGapM: 10,
+  queueGoalMinGapM: 4.5,
+  queueGoalMaxGapM: 6.5,
+  queueGoalHoldS: 1,
+  offroadPenalty: -10,
+  redCrossingPenalty: -5,
+  corridorMarginM: 0.5,
 };
 
 /** Ego-centric BEV raster geometry. */
@@ -71,6 +99,10 @@ export interface ObservationConfig {
   /** Object-list gating range when an actor declares no sensors. */
   objectListRangeM: number;
   bev: Partial<BevConfig> | null;
+  /** Opt-in LOS-only objects/nearest range (and actor occupancy when BEV is also enabled). */
+  visible?: boolean;
+  /** Opt-in infrastructure state for every signal-controlled lane/approach. */
+  signals?: boolean;
 }
 export const DEFAULT_OBSERVATION_CONFIG: ObservationConfig = {
   stateVector: true,
@@ -97,7 +129,7 @@ export interface EpisodeConfig {
    * Goal definition for the completion bonus / `terminated` flag: a trigger
    * with this interaction id firing, and/or the ego running out of route.
    */
-  goal?: { interactionId?: string; routeEnd?: boolean };
+  goal?: { interactionId?: string; routeEnd?: boolean; queueStop?: boolean } | null;
   reward?: Partial<RewardConfig>;
   observation?: Partial<ObservationConfig>;
 }
@@ -110,6 +142,18 @@ export interface BevRaster {
   readonly data: Float32Array;
 }
 
+/** Current native signal authority; not a camera detection. */
+export interface ObservedSignal {
+  readonly signalId: string;
+  readonly laneRsl: string;
+  readonly stopLineS: number;
+  readonly connectingLaneRsls: readonly string[];
+  readonly phase: string;
+  readonly source: 'program' | 'override';
+  readonly timingSource: string;
+  readonly timeToChangeS: number | null;
+}
+
 /** Version 1 observation bundle. Every field is optional by config, never by surprise. */
 export interface Observation {
   readonly tS: number;
@@ -117,6 +161,7 @@ export interface Observation {
   /** Perception-gated object entries, sorted by range then id. */
   readonly objects: readonly PerceivedObject[];
   readonly bev: BevRaster | null;
+  readonly signals?: readonly ObservedSignal[];
 }
 
 /** Running episode minima for one monitored pair, as of the decision. */
@@ -129,11 +174,20 @@ export interface PairMinima {
   readonly minPetS: number | null;
 }
 
-/** `[progress, proximity, comfort]` contributions of one decision. */
+/** Named native contributions; terminal terms are present only when they fire. */
 export interface RewardTerms {
   readonly progress: number;
   readonly proximity: number;
   readonly comfort: number;
+  readonly jerk: number;
+  readonly lateralAccel: number;
+  readonly time: number;
+  readonly stuck: number;
+  readonly collision?: number;
+  readonly offroad?: number;
+  readonly redCrossing?: number;
+  readonly goal?: number;
+  readonly queueWait: boolean;
 }
 
 /** Per-decision facts beside the observation. */
@@ -145,6 +199,7 @@ export interface StepInfo {
   /** This decision's causal frame; all frames accumulate into the channel. */
   readonly causal: CausalFrame;
   readonly rewardTerms: RewardTerms;
+  readonly collision?: { readonly partnerId: string; readonly partnerKind: string };
 }
 
 export interface StepResult {
@@ -152,5 +207,6 @@ export interface StepResult {
   readonly reward: number;
   readonly terminated: boolean;
   readonly truncated: boolean;
+  readonly termReason?: string;
   readonly info: StepInfo;
 }

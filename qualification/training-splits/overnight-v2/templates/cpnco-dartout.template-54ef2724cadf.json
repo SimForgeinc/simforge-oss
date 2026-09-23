@@ -1,0 +1,339 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "CPNCO \u2014 pedestrian dart-out from behind a parked row",
+    "description": "Crossing Pedestrian, Not at Crossing, Obscured. Ego drives a corridor with a parking lane beside it; a row of parked vehicles sits between ego and the kerb. A pedestrian walks along the pavement behind that row and steps into the carriageway. The pedestrian's start is back-solved so that it reaches ego's lane `arrivalTtc` seconds before ego does, and it does not stop for traffic \u2014 `rules.collisionAvoidance: false` is what makes a dart-out a dart-out instead of a pedestrian who politely waits. The metric that matters is reveal-to-conflict: how long ego has line of sight before the conflict.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "C5.cpnco-dartout",
+    "tags": [
+      "vru",
+      "occlusion",
+      "midblock",
+      "parked-row"
+    ],
+    "author": "human",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      {
+        "id": "arrivalTtc",
+        "type": "continuous",
+        "description": "Seconds between the pedestrian reaching ego's lane and ego reaching the same point. Below ~1.5 s no production AEB stops in time.",
+        "unit": "s",
+        "tier": 1,
+        "range": [
+          1.2,
+          2.5
+        ],
+        "default": 1.8,
+        "distribution": "uniform"
+      }
+    ],
+    "constraints": []
+  },
+  "environment": {
+    "weather": "clear",
+    "timeOfDay": "afternoon"
+  },
+  "anchor": {
+    "id": "cpnco-dartout",
+    "corridor": {
+      "throughLanesSameDir": {
+        "value": [
+          1,
+          2
+        ],
+        "essentiality": "required"
+      },
+      "speedLimitKph": {
+        "value": [
+          25,
+          65
+        ],
+        "essentiality": "preferred",
+        "weight": 2
+      },
+      "requiresAdjacent": {
+        "value": [
+          "parking"
+        ],
+        "essentiality": "required"
+      },
+      "curvatureDegPer10m": {
+        "value": [
+          0,
+          12
+        ],
+        "essentiality": "preferred"
+      },
+      "runwayDownstreamM": {
+        "value": [
+          150,
+          null
+        ],
+        "essentiality": "required"
+      }
+    },
+    "features": [
+      {
+        "id": "pz",
+        "kind": "parking_zone",
+        "label": "the parking row the pedestrian emerges from",
+        "essentiality": "preferred",
+        "weight": 2,
+        "atM": {
+          "value": [
+            50,
+            150
+          ],
+          "essentiality": "preferred"
+        },
+        "side": {
+          "value": "right",
+          "essentiality": "cosmetic"
+        }
+      }
+    ],
+    "policy": {
+      "allowMirror": false,
+      "maxSitesPerMap": 10,
+      "diversity": "moderate",
+      "minScore": 0.55
+    }
+  },
+  "roles": [
+    {
+      "id": "ego",
+      "kind": "on_reference",
+      "label": "the vehicle under test",
+      "actor": {
+        "class": "car",
+        "catalogId": "vehicle.sedan"
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": "125 - (0.8 * lane.speedLimitKph / 3.6) * 8",
+        "tFrac": 0,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 22, 50)"
+    },
+    {
+      "id": "ped",
+      "kind": "on_reference",
+      "label": "the pedestrian that steps out from behind the parked row",
+      "actor": {
+        "class": "pedestrian"
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": 105,
+        "tFrac": -1,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": 5.4
+    }
+  ],
+  "props": [
+    {
+      "id": "parked-row",
+      "catalogId": "vehicle.suv",
+      "label": "the occluding row of parked vehicles, ending 5 m upstream of the dart point",
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": 101,
+        "tFrac": -0.85,
+        "headingOffsetRad": 0
+      },
+      "headingOffsetRad": 0,
+      "scale": 1,
+      "repeat": {
+        "count": 4,
+        "spacingM": 6.4,
+        "tFracStep": 0
+      },
+      "occludes": {
+        "observer": "ego",
+        "target": "ped"
+      },
+      "targetRevealToConflictS": 0.9
+    }
+  ],
+  "choreography": {
+    "clipSeconds": 16,
+    "warmupSeconds": 1,
+    "interactions": [
+      {
+        "id": "ped-commits",
+        "label": "the pedestrian does not look \u2014 the defining property of a dart-out",
+        "actor": "ped",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "ped-ignores-traffic",
+        "actor": "ped",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.yieldToVehicles",
+          "value": false
+        }
+      },
+      {
+        "id": "ped-walks-out",
+        "label": "along the pavement behind the parked row, then straight into the carriageway",
+        "actor": "ped",
+        "verb": "route",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "mode": "polyline",
+          "points": [
+            {
+              "laneOffset": 0,
+              "s": 105,
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": 123,
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": 126,
+              "tFrac": 1,
+              "headingOffsetRad": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ped-reaches-the-lane",
+        "label": "the arrival relation that makes the clip critical rather than incidental",
+        "actor": "ped",
+        "verb": "speed",
+        "trigger": {
+          "kind": "arrival",
+          "of": "ped",
+          "at": {
+            "pose": {
+              "laneOffset": 0,
+              "s": 125,
+              "tFrac": 0,
+              "headingOffsetRad": 0
+            }
+          },
+          "syncWith": "ego",
+          "ttc": "param.arrivalTtc"
+        },
+        "target": {
+          "mode": "absolute",
+          "valueKph": 5.4
+        },
+        "dynamics": {
+          "shape": "step",
+          "constraint": "time",
+          "value": 0.1
+        }
+      }
+    ]
+  },
+  "invariants": [
+    {
+      "id": "criticality",
+      "kind": "pet",
+      "label": "ego must actually be threatened",
+      "essentiality": "required",
+      "of": "ego",
+      "to": "ped",
+      "range": [
+        0.2,
+        3.0
+      ]
+    },
+    {
+      "id": "arrival-band",
+      "kind": "arrival",
+      "essentiality": "required",
+      "of": "ped",
+      "at": {
+        "pose": {
+          "laneOffset": 0,
+          "s": 125,
+          "tFrac": 0,
+          "headingOffsetRad": 0
+        }
+      },
+      "syncWith": "ego",
+      "deltaTRange": [
+        -2.7,
+        -1.0
+      ]
+    },
+    {
+      "id": "ego-decel-budget",
+      "kind": "decel_budget",
+      "label": "beyond a hard stop the conflict was unavoidable, which is a different finding",
+      "essentiality": "preferred",
+      "of": "ego",
+      "maxMps2": 8.0
+    }
+  ],
+  "variants": [
+    {
+      "id": "ego-does-not-brake",
+      "label": "the negative rendition: ego's own collision avoidance is disabled, so the clip records the unmitigated outcome",
+      "when": [
+        {
+          "left": "param.arrivalTtc",
+          "op": "<=",
+          "right": 1.5
+        }
+      ],
+      "overrides": [
+        {
+          "path": "choreography.interactions",
+          "op": "set",
+          "value": [
+            {
+              "id": "ego-no-avoidance",
+              "actor": "ego",
+              "verb": "set",
+              "trigger": {
+                "kind": "at",
+                "t": 0
+              },
+              "target": {
+                "key": "rules.collisionAvoidance",
+                "value": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metricSubject": "ego"
+}

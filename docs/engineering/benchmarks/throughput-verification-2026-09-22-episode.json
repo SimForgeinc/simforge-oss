@@ -1,0 +1,54 @@
+{
+  "schema": "simforge.throughput-verification/v1",
+  "git_sha": "76f5f76002d83f7bbded9e29ec1899872b876d95",
+  "native_scope": "Isolated release after Episode/contact/visibility/checkpoint changes; before later disabled-signal allocation optimization. Binaries not replaced during measurement.",
+  "runtime_probe": {
+    "extension": "/tmp/simforge-episode-parity/python/simforge_oss_gym/_native.abi3.so",
+    "benchmark": "/tmp/simforge-episode-parity/python/simforge_oss_gym/train/benchmark.py",
+    "abi": 3,
+    "engine": "0.7.0",
+    "episode": true
+  },
+  "python_extension_sha256": "a5b3e2c8309d4e0e87f25501c55feea31ac0aab7cf2478d321d4689d00deaacc",
+  "napi_sha256": "7d3f3975cbd5e31bfb81eb2bdbd40f55438490dfcdd7e164d80ec06fdc023181",
+  "state": {
+    "command": "PYTHONPATH=/tmp/simforge-episode-parity/python CUDA_VISIBLE_DEVICES= adapters/gym/.venv/bin/python scripts/bench/closed-loop/state.py --out docs/engineering/benchmarks/state-throughput-2026-09-22-episode.json --runner-class gpu-rtx5080",
+    "exit_code": 0,
+    "gate": {
+      "minimum_64_env_decisions_per_s": 5000,
+      "passed": true,
+      "failures": []
+    },
+    "workloads": {
+      "corridor": {
+        "1": 11501.839068363022,
+        "8": 21298.16449172173,
+        "32": 24811.612764243233,
+        "64": 26075.576168726093
+      },
+      "cpnco-dartout": {
+        "1": 11207.666713863662,
+        "8": 22536.574443898764,
+        "32": 25679.5109173459,
+        "64": 27959.851048324403
+      }
+    }
+  },
+  "rendered": {
+    "command": "NODE_OPTIONS=--conditions=development SIMFORGE_SKY_ASSETS=$HOME/.local/share/simforge/native-runtime/share/sky SIMFORGE_NATIVE_RUNTIME_ADDON=/tmp/simforge-episode-parity/node/simforge-native-runtime.linux-x64-gnu.node pnpm exec tsx --tsconfig tsconfig.base.json scripts/bench/closed-loop/rendered.mts --out docs/engineering/benchmarks/rendered-throughput-2026-09-22-episode.json --runner-class gpu-rtx5080",
+    "exit_code": 0,
+    "gate": {
+      "profile": "alpamayo-2cam",
+      "minimum_ticks_per_s": 5,
+      "passed": true
+    },
+    "profiles": {
+      "alpamayo-2cam": 12.292213937261655,
+      "qwen-drive-3cam": 8.470467818845506,
+      "auto-e2e-6view": 5.034944236501458
+    }
+  },
+  "unchanged_script_workflow_and_scene_checks": "throughput-verification-2026-09-22.json",
+  "installed_wheel_replaced": false,
+  "ci_dispatch": "not performed"
+}

@@ -8,8 +8,9 @@
  * asserted.
  *
  * Every value was read from the Hugging Face and GitHub APIs at pin time and
- * is mirrored by `adapters/alpamayo/src/simforge_alpamayo/families.py`
- * (Python) and `packages/model-store/models.lock.json` (per-file digests).
+ * is mirrored by each adapter's pin module (`simforge_alpamayo.families`,
+ * `simforge_qwen_drive.families`, `simforge_auto_e2e.contract`) and by
+ * `packages/model-store/models.lock.json` (per-file digests).
  * The lock's zod schema cross-checks this file, so drift is a validation
  * failure rather than a silent product lie.
  *
@@ -24,10 +25,16 @@
  *   4 rear-tele-30    5 rear-right-70   6 front-tele-30
  */
 
-export type ModelFamilyId = 'alpamayo-1' | 'alpamayo-1.5' | 'alpamayo-2-super';
+export type ModelFamilyId =
+  | 'alpamayo-1'
+  | 'alpamayo-1.5'
+  | 'alpamayo-2-super'
+  | 'qwen-drive-1.0'
+  | 'auto-e2e';
 
-/** Quantization modes the engines implement. No int8/gptq/awq path exists. */
-export type ModelQuant = 'bf16' | 'nf4' | 'fp8';
+/** Quantization/precision modes implemented by one or more model runtimes. */
+export type ModelQuant = 'fp32' | 'bf16' | 'nf4' | 'fp8';
+
 
 /**
  * `supported` means a measured or vendor-published envelope exists.
@@ -86,8 +93,8 @@ export type ModelSidecar = {
 
 export type ModelLicense = {
   readonly id: string;
-  /** git blob sha of the LICENSE file, identical on all three weight repos. */
-  readonly blobSha: string;
+  /** git blob sha of the LICENSE file, or null when the upstream repo has no LICENSE file. */
+  readonly blobSha: string | null;
   /**
    * True when the model card's prose claims non-commercial use while the
    * LICENSE blob is OpenMDW-1.1. This is an unresolved review gate, not a
@@ -522,22 +529,143 @@ const ALPAMAYO_2_SUPER: ModelCatalogEntry = {
   paper: null,
 };
 
+const QWEN_DRIVE_WEIGHTS_BYTES = 13_238_109_612;
+
+const QWEN_DRIVE: ModelCatalogEntry = {
+  family: 'qwen-drive-1.0',
+  displayName: 'Qwen-Drive 1.0 (4B)',
+  vendor: 'Qwen',
+  weightsRepo: 'Qwen/Qwen-Drive-1.0-4B',
+  weightsRevision: '28484089a7cc8c335cf5089fb0745cf7c49b6eaa',
+  codeRepo: 'https://github.com/QwenLM/Qwen-Drive-1.0',
+  codeRevision: '28091c1532e869bc7aee91fc0aef6b3e6fd0b2e0',
+  codeLicense: 'Apache-2.0',
+  pythonPackage: 'qwen_drive',
+  approxWeightsBytes: QWEN_DRIVE_WEIGHTS_BYTES,
+  approxDiskBytes: QWEN_DRIVE_WEIGHTS_BYTES + RUNTIME_BYTES,
+  license: {
+    id: 'Apache-2.0',
+    blobSha: null,
+    commercialUseReviewRequired: false,
+    cardConflictNote: null,
+  },
+  // The VLM and both planning heads are one HF repository. Head files are
+  // pinned in the lock's weights list under planner-sft/ and planner-rl/.
+  sidecars: [],
+  requiresUserHfToken: false,
+  cameras: { required: [1, 0, 2], variable: false, default: [1, 0, 2], vqa: null, max: 3 },
+  capabilities: {
+    trajectory: true,
+    vqa: true,
+    nav: true,
+    metaActions: false,
+    autolabel: false,
+    grounding: false,
+  },
+  textTasks: ['vqa'],
+  quants: [
+    {
+      quant: 'bf16',
+      status: 'qualification-pending',
+      minVramGiB: null,
+      evidence: 'unmeasured',
+      note:
+        'Qwen recommends a 24 GiB GPU. The 13.24 GB checkpoint plus native Bevy ' +
+        'renderer has not yet been qualified on the local 16 GiB RTX 5080.',
+    },
+    {
+      quant: 'nf4',
+      status: 'supported',
+      minVramGiB: 8,
+      evidence: 'measured-here',
+      note:
+        'MEASURED on this RTX 5080 (15,833 MiB): Qwen VLM NF4 plus bf16 planning ' +
+        'expert used 5,549 MiB peak model allocation / 7,590 MiB device total while ' +
+        'the native Bevy renderer used approximately 2.4 GiB; reasoning act was 2.29 s ' +
+        'for 3 cameras, 4 real frames per camera and one (50,3) sample. The planning ' +
+        'expert and lm_head are intentionally kept bf16 because bitsandbytes 4-bit ' +
+        'wrappers are not valid for those modules.',
+    },
+  ],
+  platforms: ['linux-x64'],
+  localExecution: 'supported',
+  vendorTestedGpus: ['A100 40GB'],
+  remoteOnly: false,
+  paper: 'https://arxiv.org/abs/2609.00111',
+};
+
+const AUTO_E2E_WEIGHTS_BYTES = 300_928_585;
+
+const AUTO_E2E: ModelCatalogEntry = {
+  family: 'auto-e2e',
+  displayName: 'Autoware AutoE2E Best_Model.pt',
+  vendor: 'Autoware Foundation',
+  weightsRepo: 'local/autoware-e2e',
+  weightsRevision: '31b83bf051564816739805c8295da4fb1e5ee287',
+  codeRepo: 'https://github.com/autowarefoundation/auto_e2e',
+  codeRevision: '31b83bf051564816739805c8295da4fb1e5ee287',
+  codeLicense: 'Apache-2.0',
+  pythonPackage: 'simforge_auto_e2e',
+  approxWeightsBytes: AUTO_E2E_WEIGHTS_BYTES,
+  approxDiskBytes: AUTO_E2E_WEIGHTS_BYTES + RUNTIME_BYTES,
+  license: {
+    id: 'Apache-2.0',
+    blobSha: null,
+    commercialUseReviewRequired: false,
+    cardConflictNote: null,
+  },
+  sidecars: [],
+  requiresUserHfToken: false,
+  cameras: { required: [1, 0, 2, 4, 3, 5], variable: false, default: [1, 0, 2, 4, 3, 5], vqa: null, max: 6 },
+  capabilities: {
+    trajectory: true,
+    vqa: false,
+    nav: true,
+    metaActions: false,
+    autolabel: false,
+    grounding: false,
+  },
+  textTasks: [],
+  quants: [
+    {
+      quant: 'fp32',
+      status: 'supported',
+      minVramGiB: 1,
+      evidence: 'measured-here',
+      note:
+        'Measured on RTX 5080 with the native renderer absent: 0.42 GiB peak model allocation, ' +
+        'approximately 10.3 ms p50 / 10.4 ms p95 per six-view act. Renderer-co-resident run must qualify separately.',
+    },
+  ],
+  platforms: ['linux-x64'],
+  localExecution: 'supported',
+  vendorTestedGpus: ['RTX 5080', 'A100 40GB'],
+  remoteOnly: false,
+  paper: null,
+};
+
 export const MODEL_FAMILIES: readonly ModelFamilyId[] = [
   'alpamayo-1',
   'alpamayo-1.5',
   'alpamayo-2-super',
+  'qwen-drive-1.0',
+  'auto-e2e',
 ];
 
 export const MODEL_CATALOG: Readonly<Record<ModelFamilyId, ModelCatalogEntry>> = {
   'alpamayo-1': ALPAMAYO_1,
   'alpamayo-1.5': ALPAMAYO_1_5,
   'alpamayo-2-super': ALPAMAYO_2_SUPER,
+  'qwen-drive-1.0': QWEN_DRIVE,
+  'auto-e2e': AUTO_E2E,
 };
 
 export const MODEL_QUANTS_BY_FAMILY: Readonly<Record<ModelFamilyId, readonly ModelQuant[]>> = {
   'alpamayo-1': ['bf16', 'nf4', 'fp8'],
   'alpamayo-1.5': ['bf16', 'nf4', 'fp8'],
   'alpamayo-2-super': ['bf16', 'nf4'],
+  'qwen-drive-1.0': ['bf16', 'nf4'],
+  'auto-e2e': ['fp32'],
 };
 
 /** Rig presets, mirroring `packages/scenario` sensor-rig ids. */
@@ -546,6 +674,7 @@ export const MODEL_RIG_PRESETS: Readonly<Record<string, readonly number[]>> = {
   'alpamayo-4cam': [0, 1, 2, 6],
   'alpamayo-6cam': [0, 1, 2, 3, 5, 6],
   'alpamayo-6cam-vqa': [0, 1, 2, 3, 4, 5],
+  'auto-e2e-6view': [0, 1, 2, 3, 4, 5],
 };
 
 export function isModelFamilyId(value: string): value is ModelFamilyId {

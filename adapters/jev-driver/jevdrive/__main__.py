@@ -23,6 +23,7 @@ def main():
     contract.add_argument("--out")
     service = sub.add_parser("serve")
     service.add_argument("--port", type=int, default=8766)
+    service.add_argument("--socket", help="Unix MessagePack hello/act endpoint; otherwise serve loopback HTTP")
     args = parser.parse_args()
     if args.command == "run":
         run(args.spec, args.out, seconds=args.seconds, seed=args.seed, actor_ids=args.actor)
@@ -30,7 +31,7 @@ def main():
         author(args.out, args.bad_actor)
     elif args.command == "serve":
         from .serve import serve
-        serve(args.port)
+        serve(args.port, socket_path=args.socket)
     else:
         text = json.dumps(browser_contract(), indent=2)
         if args.out:

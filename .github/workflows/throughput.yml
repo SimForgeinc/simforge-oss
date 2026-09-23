@@ -1,0 +1,112 @@
+name: closed-loop-throughput
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '15 23 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'renderer/**'
+      - 'adapters/gym/**'
+      - 'packages/native-runtime/**'
+      - 'packages/training-env/**'
+      - 'packages/render/**'
+      - 'packages/cli/src/commands/drive/**'
+      - 'scripts/bench/closed-loop/**'
+      - '.github/workflows/throughput.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Share the existing golden workflow's lock on this raster GPU.
+  group: native-golden-gpu
+  cancel-in-progress: false
+
+jobs:
+  throughput:
+    name: SessionBatch and camera profiles (RTX 5080 workstation class)
+    # No untrusted PR code runs on the persistent GPU host. Until the existing
+    # runner is registered, automated runs skip instead of queuing forever;
+    # workflow_dispatch is the explicit provisioning/qualification probe.
+    if: github.event_name == 'workflow_dispatch' || vars.E2E_GPU_RUNNER_READY == 'true'
+    runs-on: [self-hosted, Linux, X64, gpu-rtx5080]
+    timeout-minutes: 90
+    env:
+      NODE_OPTIONS: --conditions=development
+      SIMFORGE_MAPS_CACHE_ROOT: ${{ vars.SIMFORGE_MAPS_CACHE_ROOT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            native/target
+            renderer/target
+          key: throughput-${{ runner.os }}-${{ hashFiles('native/Cargo.lock', 'renderer/Cargo.lock') }}
+      - name: Resolve pre-provisioned map cache and GPU
+        shell: bash
+        run: |
+          if [ -z "$SIMFORGE_MAPS_CACHE_ROOT" ]; then
+            echo "SIMFORGE_MAPS_CACHE_ROOT=${XDG_DATA_HOME:-$HOME/.local/share}/simforge/maps" >> "$GITHUB_ENV"
+          fi
+          nvidia-smi --query-gpu=name,driver_version,memory.used --format=csv
+          command -v ffmpeg
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build the Python binding in an isolated environment
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/throughput-venv"
+          "$RUNNER_TEMP/throughput-venv/bin/python" -m pip install ./adapters/gym Pillow
+          echo "BENCH_PYTHON=$RUNNER_TEMP/throughput-venv/bin/python" >> "$GITHUB_ENV"
+      - name: Build the N-API binding
+        run: pnpm --filter @simforge-oss/native-runtime build:node
+      - name: Prepare pinned sky plates
+        run: node scripts/native-runtime/prepare-sky.mjs --python "$BENCH_PYTHON"
+      - name: Build the renderer service
+        working-directory: renderer
+        run: cargo build --release -p service --bin native-render-service
+      - name: Gate state throughput for both frozen scenarios
+        id: state
+        env:
+          CUDA_VISIBLE_DEVICES: ''
+        run: >-
+          "$BENCH_PYTHON" scripts/bench/closed-loop/state.py
+          --out docs/engineering/benchmarks/ci-state-throughput.json
+          --runner-class gpu-rtx5080
+      - name: Gate exact-rig rendered throughput without a model
+        if: success() || (failure() && steps.state.outcome == 'failure')
+        run: >-
+          pnpm exec tsx --tsconfig tsconfig.base.json scripts/bench/closed-loop/rendered.mts
+          --out docs/engineering/benchmarks/ci-rendered-throughput.json
+          --runner-class gpu-rtx5080
+      - name: Publish the measured tables
+        if: always()
+        shell: bash
+        run: |
+          for report in docs/engineering/benchmarks/ci-*-throughput.md; do
+            if [ -f "$report" ]; then
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: closed-loop-throughput-${{ github.sha }}
+          path: docs/engineering/benchmarks/ci-*-throughput.*
+          if-no-files-found: warn
+          retention-days: 90

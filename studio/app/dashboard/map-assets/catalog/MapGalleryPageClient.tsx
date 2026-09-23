@@ -94,7 +94,7 @@ function MapGalleryWorld({
   installedMaps: readonly LocalMapDescriptor[];
   sumoEnabled: boolean;
   touring: boolean;
-  /** The map being driven over this world, or null while the gallery browses. */
+  /** Map whose authored scratch input is being prepared for the bench. */
   drive: ScenarioMapDescriptorDto | null;
   onExitDrive: () => void;
   onSumoStatusChange: (status: SumoTrafficStatus) => void;
@@ -164,7 +164,6 @@ function MapGalleryWorld({
           map={drive}
           mapLoaded={worldState.loadedMapVersionId === drive.mapVersionId}
           onExit={onExitDrive}
-          quality={quality}
           viewer={viewer}
         />
       ) : null}
@@ -546,10 +545,10 @@ export function MapGalleryPageClient({
                       variant="outline"
                       onClick={enterDriveMode}
                       disabled={creating || !previewable}
-                      title={locked ? "Connect to SimCloud to drive this map." : !entry.map.ready.browser ? unpreparedHint : "Drive this map with no scenario and no timer."}
+                      title={locked ? "Connect to SimCloud to run this map." : !entry.map.ready.browser ? unpreparedHint : "Launch a policy bench run and view recorded results."}
                     >
                       <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
-                      <span>Enter Drive mode</span>
+                      <span>Run driving policy</span>
                     </Button>
                   </div>
                 </div>

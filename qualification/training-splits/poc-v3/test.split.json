@@ -1,0 +1,291 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v3-test",
+  "purpose": "test",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-0cd63b311efb.json",
+      "map": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-42b299c1b401.json",
+      "map": "belmont-research-center",
+      "site": "35d66220e8aaec6f",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-42b299c1b401.json",
+      "map": "belmont-research-center",
+      "site": "4ec277e34637b24b",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "easterbrook-discovery-school",
+      "site": "3a0ea117c3174c9a",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "easterbrook-discovery-school",
+      "site": "420daf9e92cf6011",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "easterbrook-discovery-school",
+      "site": "4b7849f0aad68cb3",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "easterbrook-discovery-school",
+      "site": "704fbb100d19e7b4",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-ce5cbf6c8bf6.json",
+      "map": "easterbrook-discovery-school",
+      "site": "9ab46274852bfdbc",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-0cd63b311efb.json",
+      "map": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-42b299c1b401.json",
+      "map": "easterbrook-discovery-school",
+      "site": "1fc62acf30d56197",
+      "seeds": {
+        "from": 200,
+        "to": 219
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_069115ab2064cfcc",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-000.admission.json",
+          "sha256": "a0d96bd4ef63c462429e029c0b37c655364a51ec112582f03482fce10b2e4219"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-001.admission.json",
+          "sha256": "b2397006d6788da8cc05c9c2faa98ab50f18a3a65092ab884f4cde8088b55af7"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "role_semantic_projection_failed at roles.cut-in.pose.s: constrained role \"cut-in\" cannot reach its matcher-selected local lane within 12.00 m",
+        "siteKey": "belmont-research-center/seg_b1fe5d04bc07cce0",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-002.admission.json",
+          "sha256": "3894cb2c0103bdf4879499754cb6f8c99fa3960848c3cb5400b5126c21b155ac"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "belmont-research-center/seg_20ad0d96b4977422",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-003.admission.json",
+          "sha256": "99db0db3d426efb3543fb6f3040225e7880a8bfb369933bfae7647cd66081e09"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.219632986719454; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+        "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-004.admission.json",
+          "sha256": "773a1307619cdde5cc4b3c48cc4a1bfd2107b14ee4e9cfd73088f06ad4a9807c"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@12.819801800214512; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+        "siteKey": "easterbrook-discovery-school/seg_9ffc12fa8dac7943",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-005.admission.json",
+          "sha256": "666ed9a12d90e9ba4086d69bd78832adaf2c0559c91cde53355d23472cdd39f4"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 209: scripted rehearsal collision: preview-van/queue-tail@19.116254980602523",
+        "siteKey": "easterbrook-discovery-school/seg_ed0f00fc87733c87",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-006.admission.json",
+          "sha256": "c18d3217e30923254b11180b95f16cc2939f1e9b80138525db5793db760fa715"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "excluded",
+        "reason": "seed 200: ego->queue-tail/actor:preview-van: occlusion-reveal at 7.9; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s; bench-scripted/prologue63+reaction30: collision at 7.7s; requires >=9.3s",
+        "siteKey": "easterbrook-discovery-school/seg_276e4ec3c5072cee",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-007.admission.json",
+          "sha256": "91c9a1076ee9b1049aa3c203f200d5ff7413e82889f48e9de0c5acc380c92bcb"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_8d1cb6d3fe5cd1ee",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-008.admission.json",
+          "sha256": "e3a4e0250f5a20b868a19c12387e99f4cd8b4fdb3298cc3c91debb059cb05858"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_120bd635fc5b4a32",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-009.admission.json",
+          "sha256": "b3d0861b2deb3b135f2b5f61d8144d69fd99d59f9342cecb4c2a0de6942ae26b"
+        }
+      },
+      {
+        "cell": 10,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability",
+          "bench-window"
+        ],
+        "status": "admitted",
+        "siteKey": "easterbrook-discovery-school/seg_0748535da9266a6f",
+        "receipt": {
+          "path": "receipts/poc-v3-test/cell-010.admission.json",
+          "sha256": "d0bef0f28d5efb1e54e81883b7bfaf036fa35cc03130f03708133815437ee512"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T17:09:08.371Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v3-test.episodes.json",
+      "sha256": "c28d023f51246284d8a4a0eb3d7523a296091482a80e6e41a7bade2a97385461"
+    },
+    "count": 120
+  },
+  "digest": "202c0e3bbe59f68cca5e811bade6ed6cdf02fdbc636aed50ab0ea2589d3dbb98"
+}

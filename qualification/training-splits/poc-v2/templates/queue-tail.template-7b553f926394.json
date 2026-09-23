@@ -1,0 +1,96 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Stopped queue tail revealed by a preceding van",
+    "description": "Ego approaches a two-vehicle stopped queue behind a delivery van. The van physically pulls into the adjacent lane to expose the queue tail; it is a collidable actor, not an in-lane noncollidable screen. The scripted witness waits for the reveal interval, then uses a speed-dependent braking envelope to stop at a 4.5–6.5 m bumper gap. The queue follows the continuous native route across OpenDRIVE section boundaries; every admitted draw must still prove real blocking, reveal before conflict and zero contacts.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-09-22T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "longitudinal.queue-tail",
+    "tags": ["corridor", "longitudinal", "stopped-queue", "limited-preview", "cut-out-reveal"],
+    "author": "agent/corridor-mechanisms",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      { "id": "previewDistanceM", "type": "continuous", "unit": "m", "tier": 1, "range": [48, 65], "default": 55, "distribution": "uniform" },
+      { "id": "queueSpacingM", "type": "continuous", "unit": "m", "tier": 1, "range": [6, 11], "default": 8, "distribution": "uniform" },
+      { "id": "approachSpeedFrac", "type": "continuous", "tier": 1, "range": [0.7, 0.95], "default": 0.82, "distribution": "uniform" }
+    ],
+    "constraints": []
+  },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "queue-tail",
+    "corridor": {
+      "throughLanesSameDir": { "value": [2, 8], "essentiality": "required" },
+      "speedLimitKph": { "value": [30, 70], "essentiality": "preferred", "weight": 2 },
+      "curvatureDegPer10m": { "value": [0, 4], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [120, null], "essentiality": "required" },
+      "laneChangeLegal": { "value": { "side": "left", "sRange": [10, 55] }, "essentiality": "required" }
+    },
+    "features": [],
+    "policy": { "allowMirror": true, "maxSitesPerMap": 32, "diversity": "moderate", "minScore": 0.45 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "approaching vehicle under test",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": 5, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40)"
+    },
+    {
+      "id": "queue-tail", "kind": "relative_to", "label": "nearest stopped vehicle in the queue",
+      "actor": { "class": "van", "catalogId": "vehicle.van", "static": true },
+      "requiredHeadingRelation": { "role": "ego", "relation": "parallel", "maxErrorDeg": 10 },
+      "ref": "ego", "dLane": 0, "dsM": "param.previewDistanceM", "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": 0
+    },
+    {
+      "id": "queue-lead", "kind": "relative_to", "label": "second stopped vehicle establishing a queue",
+      "actor": { "class": "car", "catalogId": "vehicle.suv", "static": true },
+      "requiredHeadingRelation": { "role": "queue-tail", "relation": "parallel", "maxErrorDeg": 10 },
+      "ref": "queue-tail", "dLane": 0, "dsM": "param.queueSpacingM", "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": 0
+    },
+    {
+      "id": "preview-van", "kind": "relative_to", "label": "preceding delivery van that pulls aside to reveal the queue",
+      "actor": { "class": "van", "catalogId": "vehicle.van" },
+      "ref": "ego", "dLane": 0, "dsM": 16, "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": "clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40)",
+      "extensions": { "occludes": { "observer": "ego", "target": "queue-tail" } }
+    }
+  ],
+  "props": [],
+  "choreography": {
+    "clipSeconds": 13,
+    "warmupSeconds": 0,
+    "interactions": [
+      { "id": "ego-cannot-react-before-reveal", "actor": "ego", "verb": "set", "trigger": { "kind": "at", "t": 0 }, "target": { "key": "rules.collisionAvoidance", "value": false } },
+      { "id": "van-commits-to-clear", "actor": "preview-van", "verb": "set", "trigger": { "kind": "at", "t": 0 }, "target": { "key": "rules.collisionAvoidance", "value": false } },
+      {
+        "id": "van-pulls-aside", "actor": "preview-van", "verb": "changeLane",
+        "trigger": { "kind": "at", "t": 0 }, "target": { "mode": "relative", "dk": 1 },
+        "dynamics": { "shape": "sinusoidal", "constraint": "rate", "value": 2 }
+      },
+      {
+        "id": "ego-brakes-after-reveal", "actor": "ego", "verb": "speed",
+        "trigger": { "kind": "at", "t": "max(1.8, (param.previewDistanceM - 10.5 - 0.3 * (clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40) / 3.6) - (clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40) / 3.6) * (clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40) / 3.6) / 12) / (clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 40) / 3.6))" },
+        "target": { "mode": "stop" }, "dynamics": { "shape": "linear", "constraint": "rate", "value": 6 }
+      },
+      {
+        "id": "van-stops-alongside", "actor": "preview-van", "verb": "speed",
+        "trigger": { "kind": "at", "t": 4 }, "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "rate", "value": 4 }
+      }
+    ]
+  },
+  "invariants": [
+    { "id": "queue-spacing", "kind": "gap", "of": "queue-tail", "to": "queue-lead", "unit": "distance", "range": [6, 11], "window": [0, 10], "essentiality": "required" },
+    { "id": "queue-approach-speed", "kind": "closing_speed", "of": "ego", "to": "queue-tail", "rangeKph": [20, 60], "window": [0, 8], "essentiality": "required" },
+    { "id": "queue-criticality", "kind": "ttc", "of": "ego", "to": "queue-tail", "range": [0.8, 3.5], "mode": "min", "essentiality": "required" },
+    { "id": "queue-clearance", "kind": "gap", "of": "ego", "to": "queue-tail", "unit": "distance", "range": [4.5, null], "essentiality": "required" },
+    { "id": "braking-budget", "kind": "decel_budget", "of": "ego", "maxMps2": 8, "essentiality": "required" }
+  ],
+  "variants": []
+}

@@ -36,6 +36,9 @@ pub enum SessionError {
     /// command outcome, which is data).
     #[error("world session: {0}")]
     World(String),
+    /// Renderer transport, capability or frame-lifetime failure.
+    #[error("episode camera: {0}")]
+    Camera(String),
 }
 
 pub type Result<T, E = SessionError> = std::result::Result<T, E>;

@@ -55,6 +55,8 @@ interface RawInfo {
   readonly events: StepInfo['events'];
   readonly minima: readonly PairMinima[];
   readonly causal: StepInfo['causal'];
+  readonly collision?: StepInfo['collision'];
+  readonly rewardTerms: RewardTerms;
 }
 
 /** Decode one native decision into the documented `StepResult`. */
@@ -63,19 +65,21 @@ export function decodeStepResult(raw: NativeStepResult, bevShape: { height: numb
   const bev: BevRaster | null = raw.bev && bevShape
     ? { width: bevShape.width, height: bevShape.height, channels: bevShape.channels, data: raw.bev }
     : null;
-  const rewardTerms: RewardTerms = { progress: raw.rewardTerms[0]!, proximity: raw.rewardTerms[1]!, comfort: raw.rewardTerms[2]! };
+  const rewardTerms = info.rewardTerms;
   const observation: Observation = {
     tS: raw.tS,
     stateVector: raw.stateVector.length === 0 ? null : raw.stateVector,
     objects: decodeObjects(raw.objects, raw.objectIds),
     bev,
+    ...(raw.signalsJson === undefined ? {} : { signals: JSON.parse(raw.signalsJson) as NonNullable<Observation['signals']> }),
   };
   return {
     observation,
     reward: raw.reward,
     terminated: raw.terminated,
     truncated: raw.truncated,
-    info: { tS: raw.tS, events: info.events, minima: info.minima, causal: info.causal, rewardTerms },
+    ...(raw.termReason === undefined ? {} : { termReason: raw.termReason }),
+    info: { tS: raw.tS, events: info.events, minima: info.minima, causal: info.causal, rewardTerms, ...(info.collision ? { collision: info.collision } : {}) },
   };
 }
 

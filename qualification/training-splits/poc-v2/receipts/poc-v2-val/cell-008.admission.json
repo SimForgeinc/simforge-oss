@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v2-val",
+  "cell": 8,
+  "templateSha256": "c2536e7b0ea118ea1109872f902695c56652967eb44b97c9a488831cbc101f1e",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "el-camino-road",
+    "topologySha256": "c396b62ce23c5f428aaff2294a8e4f5ae684dd8c5d5e90a34d4ae020e6430c97",
+    "engineGraphDigest": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+    "matcherIndexDigest": "329b652ed68871ac32cbe1d1798adb9944468ca1503aa8e3008a04f68ea69411"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM."
+}

@@ -5,7 +5,7 @@
 //!   no policy-visible tick is ever negative.
 //! - `step(action)` holds the action for `ENGINE_HZ / decision_hz` engine ticks
 //!   (zero-order hold through the engine's fixed action set), then returns
-//!   observation, reward, `terminated` (collision or goal), `truncated`
+//!   observation, reward, `terminated` (safety violation or clean goal), `truncated`
 //!   (horizon or clip end), and an info bag with the drained engine events,
 //!   running metric minima, and this decision's causal ground-truth frame.
 //!
@@ -20,18 +20,29 @@ use simforge_core::engine::{
     SimulationCheckpoint, SimulationSnapshot,
 };
 use simforge_core::hash::cmp_utf16;
+use simforge_core::map::{Route, RouteSnapshot};
 use simforge_core::rng::Seed;
 use simforge_core::trace::events::SimEvent;
 use simforge_core::types::{ActorKind, Dims, SimScenarioInput};
 
 use crate::causal::{CausalChannel, CausalChannelCollector, CausalFrame};
-use crate::episode::{EpisodeConfig, ResolvedEpisode};
+use crate::episode::{EpisodeConfig, ObservationConfig, ResolvedEpisode};
 use crate::error::{Result, SessionError};
 use crate::observation::{Observation, ObservationBuilders, ObservationContext};
-use crate::reward::{assemble_reward, RewardContext, RewardTerms};
+use crate::reward::{assemble_reward, RewardContext, RewardState, RewardTerms};
 use crate::trajectory::TrackedPose;
 
 const EPS_S: f64 = 1e-9;
+
+/// The actual first ego contact, independent of policy perception/range limits.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollisionInfo {
+    pub partner_id: String,
+    pub partner_kind: ActorKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side: Option<simforge_core::trace::events::ContactSide>,
+}
 
 /// Per-decision facts beside the observation.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -45,6 +56,8 @@ pub struct StepInfo {
     /// This decision's causal frame; all frames accumulate into the channel.
     pub causal: CausalFrame,
     pub reward_terms: RewardTerms,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub collision: Option<CollisionInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -55,6 +68,24 @@ pub struct StepResult {
     pub terminated: bool,
     pub truncated: bool,
     pub info: StepInfo,
+}
+
+impl StepResult {
+    pub fn term_reason(&self) -> Option<&'static str> {
+        if self.info.reward_terms.collision.is_some() {
+            Some("collision")
+        } else if self.info.reward_terms.offroad.is_some() {
+            Some("offroad")
+        } else if self.info.reward_terms.red_crossing.is_some() {
+            Some("red_crossing")
+        } else if self.info.reward_terms.goal.is_some() {
+            Some("goal")
+        } else if self.truncated {
+            Some("horizon")
+        } else {
+            None
+        }
+    }
 }
 
 /// Complete continuation state of one episode: the engine checkpoint plus
@@ -70,21 +101,33 @@ pub struct EnvCheckpoint {
     pub causal: CausalChannelCollector,
     pub range_memory: Vec<f64>,
     pub decision_count: u32,
-    pub prev_ego_s: Option<f64>,
+    pub reward_state: RewardState,
+    pub reward_config: crate::episode::RewardConfig,
+    pub reward_route: RouteSnapshot,
+    pub reward_route_ref: u32,
     pub ended: bool,
     pub last_result: StepResult,
+    /// Observation privilege boundary, validated alongside reward configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observation_config: Option<ObservationConfig>,
 }
 
-/// The metric-subject actor all actions apply to: `metricSubject`, else the
-/// lowest-id actor of kind `vehicle`.
+/// Resolve explicit metric subject, then `role:ego`, then the canonical
+/// lowest-id road vehicle (including concrete car/van/bicycle kinds).
 pub fn resolve_ego_id(input: &SimScenarioInput) -> Result<String> {
     if let Some(subject) = &input.metric_subject {
         return Ok(subject.clone());
     }
+    if let Some(actor) = input.actors.iter()
+        .filter(|a| a.has_tag("role:ego"))
+        .min_by(|a, b| cmp_utf16(&a.id, &b.id))
+    {
+        return Ok(actor.id.clone());
+    }
     input
         .actors
         .iter()
-        .filter(|a| a.kind == ActorKind::Vehicle)
+        .filter(|a| a.kind.is_road_actor())
         .map(|a| a.id.as_str())
         .min_by(|a, b| cmp_utf16(a, b))
         .map(str::to_owned)
@@ -109,7 +152,10 @@ pub struct EnvSession {
     actions: [ActorAction; 1],
     result: StepResult,
     decision_count: u32,
-    prev_ego_s: Option<f64>,
+    reward_state: RewardState,
+    reward_route: Option<Route>,
+    reward_route_ref: u32,
+    queue_target: Option<ActorIndex>,
     ended: bool,
 }
 
@@ -160,7 +206,10 @@ impl EnvSession {
             }],
             result,
             decision_count: 0,
-            prev_ego_s: None,
+            reward_state: RewardState::default(),
+            reward_route: None,
+            reward_route_ref: 0,
+            queue_target: None,
             ended: false,
         })
     }
@@ -245,7 +294,6 @@ impl EnvSession {
             &self.sim.as_ref().expect("installed").input().interactions,
         ));
         self.decision_count = 0;
-        self.prev_ego_s = None;
         self.ended = false;
 
         // The engine records state *at* t before stepping, so consuming exactly
@@ -259,6 +307,14 @@ impl EnvSession {
         self.refresh_snapshot();
         let ctx = self.ctx.as_ref().expect("installed");
         let snap = &self.snapshot;
+        let ego = ctx.actor(&snap.actors, ctx.ego);
+        let route_s = if self.sim.as_ref().expect("installed").actor_route(ctx.ego).1 == self.reward_route_ref {
+            ego.s
+        } else {
+            self.reward_route.as_ref().expect("installed")
+                .project_point(simforge_core::math::Vec2 { x: ego.x, y: ego.y }).s
+        };
+        self.reward_state = RewardState { route_s, accel_mps2: ego.accel_mps2, queue_stop_s: 0.0 };
         self.builders.observe(
             ctx,
             &snap.actors,
@@ -266,6 +322,8 @@ impl EnvSession {
             0.0,
             &mut self.result.observation,
         )?;
+        let sim = self.sim.as_ref().expect("installed");
+        self.result.observation.update_signals(sim.signal_book(), sim.dt_s());
         self.result.reward = 0.0;
         self.result.terminated = false;
         self.result.truncated = false;
@@ -278,6 +336,7 @@ impl EnvSession {
             ..CausalFrame::default()
         };
         self.result.info.reward_terms = RewardTerms::default();
+        self.result.info.collision = None;
         Ok(&self.result)
     }
 
@@ -288,6 +347,12 @@ impl EnvSession {
             .actor_index(&self.ego_id)
             .ok_or_else(|| SessionError::MissingEgo(self.ego_id.clone()))?;
         self.snapshot = sim.peek();
+        let (route, route_ref) = sim.actor_route(ego);
+        self.reward_route = Some(route.clone());
+        self.reward_route_ref = route_ref;
+        self.queue_target = sim.input().actors.iter()
+            .find(|a| a.has_tag("role:queue-tail") && a.kind.is_road_actor())
+            .and_then(|a| sim.actor_index(&a.id));
         let input = sim.input();
         let sorted: Vec<ActorIndex> = self.snapshot.actors.iter().map(|a| a.index).collect();
         let handles = sorted.iter().map(|i| i.index() + 1).max().unwrap_or(0);
@@ -330,6 +395,7 @@ impl EnvSession {
         };
         self.actions[0].actor = ego;
         self.builders.reset(handles);
+        self.result.observation.configure_signals(sim.signal_book());
         self.ctx = Some(ctx);
         self.sim = Some(sim);
         Ok(())
@@ -400,15 +466,18 @@ impl EnvSession {
             ego: ctx.ego,
             ego_id: &self.ego_id,
             actors: &snap.actors,
-            sorted: &ctx.sorted,
+            sim: self.sim.as_ref().expect("checked"),
+            route: self.reward_route.as_ref().expect("installed"),
+            route_ref: self.reward_route_ref,
+            queue_target: self.queue_target,
             slots: &ctx.slots,
             events: &self.result.info.events,
             goal: self.episode.goal.as_ref(),
             dt_s,
-            prev_ego_s: self.prev_ego_s,
+            t_s: snap.t_s,
+            previous: self.reward_state,
         });
-        // Stored only after assembly: progress is measured against the previous decision.
-        self.prev_ego_s = Some(ctx.actor(&snap.actors, ctx.ego).s);
+        self.reward_state = reward.state;
 
         let sim = self.sim.as_ref().expect("checked");
         let causal = self.causal.as_mut().expect("checked");
@@ -421,7 +490,7 @@ impl EnvSession {
         );
         self.result.info.causal = causal.last_frame().cloned().unwrap_or_default();
 
-        let terminated = reward.collision || reward.goal;
+        let terminated = reward.terminated;
         let clip_over = snap.t_s >= self.episode.clip_seconds - EPS_S;
         let horizon_over = self
             .episode
@@ -437,6 +506,16 @@ impl EnvSession {
         self.result.info.minima.clear();
         self.result.info.minima.extend_from_slice(&snap.minima);
         self.result.info.reward_terms = reward.terms;
+        self.result.info.collision = self.result.info.events.iter().find_map(|event| {
+            let SimEvent::Collision { a, b, contact_sides, .. } = event else { return None };
+            let partner = if a == &self.ego_id { b } else if b == &self.ego_id { a } else { return None };
+            Some(CollisionInfo {
+                partner_id: partner.clone(),
+                partner_kind: sim.actor_index(partner).map_or(ActorKind::StaticObject, |idx| sim.actor_kind(idx)),
+                side: contact_sides.map(|sides| sides[usize::from(b == &self.ego_id)]),
+            })
+        });
+        self.result.observation.update_signals(sim.signal_book(), sim.dt_s());
         Ok(&self.result)
     }
 
@@ -492,9 +571,14 @@ impl EnvSession {
             causal: causal.clone(),
             range_memory: self.builders.range_memory().to_vec(),
             decision_count: self.decision_count,
-            prev_ego_s: self.prev_ego_s,
+            reward_state: self.reward_state,
+            reward_config: self.config.reward,
+            reward_route: self.reward_route.as_ref().expect("installed").snapshot(),
+            reward_route_ref: self.reward_route_ref,
             ended: self.ended,
             last_result: self.result.clone(),
+            observation_config: (self.config.observation.visible || self.config.observation.signals)
+                .then_some(self.config.observation),
         })
     }
 
@@ -508,18 +592,31 @@ impl EnvSession {
                 checkpoint.base_input_hash, self.base_input_hash
             )));
         }
-        if checkpoint.episode != self.episode {
+        if checkpoint.episode != self.episode || checkpoint.reward_config != self.config.reward {
             return Err(SessionError::Checkpoint(
                 "episode configuration differs from the checkpoint's".into(),
             ));
         }
+        let observations_match = match &checkpoint.observation_config {
+            Some(config) => config == &self.config.observation,
+            None => !self.config.observation.visible && !self.config.observation.signals,
+        };
+        if !observations_match {
+            return Err(SessionError::Checkpoint(
+                "observation channels differ from the checkpoint's".into(),
+            ));
+        }
+        let reward_route = Route::restore(&self.run_options.graph, &checkpoint.reward_route)
+            .map_err(|e| SessionError::Checkpoint(e.to_string()))?;
         let sim = Simulation::restore(&checkpoint.simulation, self.run_options.clone())?;
         self.ego_id = checkpoint.ego_id.clone();
         self.install(sim)?;
         self.builders.restore_range_memory(&checkpoint.range_memory);
         self.causal = Some(checkpoint.causal.clone());
         self.decision_count = checkpoint.decision_count;
-        self.prev_ego_s = checkpoint.prev_ego_s;
+        self.reward_state = checkpoint.reward_state;
+        self.reward_route = Some(reward_route);
+        self.reward_route_ref = checkpoint.reward_route_ref;
         self.ended = checkpoint.ended;
         self.result = checkpoint.last_result.clone();
         Ok(&self.result)

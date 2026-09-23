@@ -84,7 +84,7 @@ const request = (
   decisionHz: 10,
   mode: "offline-simtime",
   deadlineMs: null,
-  frameSource: "dir:/tmp/frames",
+  frameSource: "bevy:/tmp/rig.json",
   cloudInputs: [{ role: "scenario", artifactId: "art-scenario-1" }],
   columns: [
     { modelVersionId: installedVersionId, target: "local", rigProfile: "alpamayo-4cam", quant: "nf4" },
@@ -373,7 +373,7 @@ test("the comparison record round-trips, and a path-shaped id cannot escape the 
       decisionHz: 10,
       mode: "offline-simtime" as const,
       deadlineMs: null,
-      frameSource: "dir:/tmp/frames",
+      frameSource: "bevy:/tmp/rig.json",
       cloudInputs: [{ role: "scenario", artifactId: "art-scenario-1" }],
     },
     columns: [

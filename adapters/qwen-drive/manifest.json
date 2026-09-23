@@ -1,0 +1,44 @@
+{
+  "name": "@simforge-oss/qwen-drive-runtime",
+  "description": "Qwen-Drive-1.0-4B closed-loop planning service over the SimForge length-prefixed MessagePack unix-socket wire.",
+  "upstream": {
+    "repository": "https://github.com/QwenLM/Qwen-Drive-1.0",
+    "revision": "28091c1532e869bc7aee91fc0aef6b3e6fd0b2e0",
+    "license": "Apache-2.0",
+    "modelRepository": "Qwen/Qwen-Drive-1.0-4B",
+    "modelRevision": "28484089a7cc8c335cf5089fb0745cf7c49b6eaa",
+    "modelLicense": "Apache-2.0"
+  },
+  "package": "qwen_drive",
+  "families": {
+    "qwen-drive-1.0": {
+      "model": "Qwen-Drive-1.0-4B",
+      "heads": {
+        "planner-sft": "planner-sft",
+        "planner-rl": "planner-rl"
+      },
+      "modes": ["direct", "reasoning"],
+      "trajectory": {"shape": ["N", 50, 3], "channels": ["x", "y", "heading"], "horizonSeconds": 5, "hz": 10},
+      "cameras": {
+        "required": ["camera_front_wide_120fov", "camera_cross_left_120fov", "camera_cross_right_120fov"],
+        "framesPerCamera": 4,
+        "timestampsSeconds": [-1.5, -1.0, -0.5, 0]
+      },
+      "egoHistory": {"points": 16, "hz": 10, "fields": ["x", "y", "heading"]},
+      "precision": {
+        "bf16": {"status": "qualification-pending", "minVramGiB": null},
+        "nf4": {
+          "status": "supported",
+          "minVramGiB": 8,
+          "note": "RTX 5080 16 GiB: 5.55 GiB model peak / 7.59 GiB device total with native renderer; 2.29 s reasoning act."
+        }
+      },
+      "localExecution": "supported",
+      "remoteSocketForwarding": "supported"
+    }
+  },
+  "assets": {
+    "root": "${SIMFORGE_ASSETS_ROOT:-~/simforge-assets}/models/qwen-drive/28484089a7cc8c335cf5089fb0745cf7c49b6eaa",
+    "policy": "No model weights are committed to this repository; install or rsync the digest-pinned files into the asset root."
+  }
+}

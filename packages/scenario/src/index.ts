@@ -273,3 +273,22 @@ export {
   type StorageLike,
   type WebScenarioFileStoreOptions,
 } from './stores/web.js';
+
+export {
+  SCENARIO_SPLIT_SCHEMA,
+  ScenarioSplitCellSchema,
+  ScenarioSplitRequestSchema,
+  ScenarioSplitSchema,
+  ScenarioSplitProofSchema,
+  parseScenarioSplit,
+  scenarioSplitDigest,
+  splitSeeds,
+  splitDrawIndex,
+  splitGeography,
+  verifyScenarioSplits,
+  type ScenarioSplit,
+  type ScenarioSplitRequest,
+  type ScenarioSplitCell,
+  type ScenarioSplitProof,
+  type SplitArtifact,
+} from './scenario-split.js';

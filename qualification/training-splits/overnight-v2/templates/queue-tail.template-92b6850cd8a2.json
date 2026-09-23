@@ -1,0 +1,90 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Stopped queue tail at constrained preview distance",
+    "description": "Ego approaches a two-vehicle stopped queue. A tall roadside vehicle and mild corridor curvature form an explicit sight restriction for the queue tail.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "longitudinal.queue-tail",
+    "tags": ["corridor", "longitudinal", "stopped-queue", "limited-preview"],
+    "author": "agent/corridor-mechanisms",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      { "id": "previewDistanceM", "type": "continuous", "unit": "m", "tier": 1, "range": [48, 65], "default": 55, "distribution": "uniform" },
+      { "id": "queueSpacingM", "type": "continuous", "unit": "m", "tier": 1, "range": [6, 11], "default": 8, "distribution": "uniform" },
+      { "id": "approachSpeedFrac", "type": "continuous", "tier": 1, "range": [0.7, 0.95], "default": 0.82, "distribution": "uniform" }
+    ],
+    "constraints": []
+  },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "queue-tail",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 8], "essentiality": "required" },
+      "speedLimitKph": { "value": [30, 70], "essentiality": "preferred", "weight": 2 },
+      "curvatureDegPer10m": { "value": [0.5, 8], "essentiality": "preferred", "weight": 3 },
+      "runwayDownstreamM": { "value": [220, null], "essentiality": "required" }
+    },
+    "features": [],
+    "policy": { "allowMirror": true, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.45 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "approaching vehicle under test",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": 25, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(param.approachSpeedFrac * lane.speedLimitKph, 25, 55)"
+    },
+    {
+      "id": "queue-tail", "kind": "relative_to", "label": "nearest stopped vehicle in the queue",
+      "actor": { "class": "van", "catalogId": "vehicle.van", "static": true },
+      "requiredSameRoadSectionAs": "ego",
+      "requiredHeadingRelation": { "role": "ego", "relation": "parallel", "maxErrorDeg": 10 },
+      "ref": "ego", "dLane": 0, "dsM": "param.previewDistanceM", "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": 0
+    },
+    {
+      "id": "queue-lead", "kind": "relative_to", "label": "second stopped vehicle establishing a queue",
+      "actor": { "class": "car", "catalogId": "vehicle.suv", "static": true },
+      "requiredSameRoadSectionAs": "queue-tail",
+      "requiredHeadingRelation": { "role": "queue-tail", "relation": "parallel", "maxErrorDeg": 10 },
+      "ref": "queue-tail", "dLane": 0, "dsM": "param.queueSpacingM", "tFrac": 0, "headingOffsetRad": 0,
+      "initialSpeedKph": 0
+    }
+  ],
+  "props": [
+    {
+      "id": "inside-curve-screen", "catalogId": "vehicle.box_truck",
+      "label": "tall roadside vehicle on the inside of the curve that limits preview",
+      "pose": { "laneOffset": 0, "s": "25 + 0.55 * param.previewDistanceM", "tFrac": 0, "headingOffsetRad": 0 },
+      "headingOffsetRad": 0, "scale": 1,
+      "occludes": { "observer": "ego", "target": "queue-tail" },
+      "targetRevealToConflictS": 1.3,
+      "essentiality": "required"
+    }
+  ],
+  "choreography": {
+    "clipSeconds": 13,
+    "warmupSeconds": 0,
+    "interactions": [
+      { "id": "ego-cannot-react-before-reveal", "actor": "ego", "verb": "set", "trigger": { "kind": "at", "t": 0 }, "target": { "key": "rules.collisionAvoidance", "value": false } },
+      {
+        "id": "ego-brakes-on-reveal", "actor": "ego", "verb": "speed",
+        "trigger": { "kind": "when", "condition": { "kind": "distance", "from": "ego", "to": { "role": "queue-tail" }, "measure": "euclidean", "op": "<=", "valueM": "0.4 * param.previewDistanceM" }, "byLatest": 8, "ifNever": "skip" },
+        "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "rate", "value": 8 }
+      }
+    ]
+  },
+  "invariants": [
+    { "id": "queue-spacing", "kind": "gap", "of": "queue-tail", "to": "queue-lead", "unit": "distance", "range": [6, 11], "window": [0, 10], "essentiality": "required" },
+    { "id": "queue-approach-speed", "kind": "closing_speed", "of": "ego", "to": "queue-tail", "rangeKph": [20, 60], "window": [0, 8], "essentiality": "required" },
+    { "id": "queue-criticality", "kind": "ttc", "of": "ego", "to": "queue-tail", "range": [0.8, 3.5], "mode": "min", "essentiality": "required" },
+    { "id": "queue-clearance", "kind": "gap", "of": "ego", "to": "queue-tail", "unit": "distance", "range": [4.5, null], "essentiality": "required" },
+    { "id": "braking-budget", "kind": "decel_budget", "of": "ego", "maxMps2": 8, "essentiality": "required" }
+  ],
+  "variants": []
+}

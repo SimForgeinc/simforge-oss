@@ -1,0 +1,189 @@
+{
+  "schema": "simforge.state-throughput-profile/v1",
+  "workload": "corridor, 64 worlds, 8 workers; same Python snapshot for both artifacts",
+  "comparison": {
+    "schema": "simforge.state-throughput-comparison/v1",
+    "artifacts": {
+      "prior": "a5b3e2c8309d4e0e87f25501c55feea31ac0aab7cf2478d321d4689d00deaacc",
+      "pre": "d8f0e7525f9cdd5ec8090620f26870a5643f1c4786c9af7947d58639a03cd8bc"
+    },
+    "method": "identical Python source; 64 worlds; 8 workers; 30 warmup calls; 3 alternating 5-second windows per workload/build; no CPU affinity",
+    "rows": [
+      {
+        "scenario": "corridor",
+        "repeat": 0,
+        "build": "prior",
+        "decisions": 133504,
+        "seconds": 5.000704495003447,
+        "decisions_per_s": 26697.038413966107,
+        "batch_calls": 2096
+      },
+      {
+        "scenario": "corridor",
+        "repeat": 0,
+        "build": "pre",
+        "decisions": 208000,
+        "seconds": 5.000040521030314,
+        "decisions_per_s": 41599.66286775997,
+        "batch_calls": 3266
+      },
+      {
+        "scenario": "corridor",
+        "repeat": 1,
+        "build": "pre",
+        "decisions": 206656,
+        "seconds": 5.001054546912201,
+        "decisions_per_s": 41322.48470027097,
+        "batch_calls": 3245
+      },
+      {
+        "scenario": "corridor",
+        "repeat": 1,
+        "build": "prior",
+        "decisions": 133824,
+        "seconds": 5.000878166989423,
+        "decisions_per_s": 26760.10003270352,
+        "batch_calls": 2101
+      },
+      {
+        "scenario": "corridor",
+        "repeat": 2,
+        "build": "prior",
+        "decisions": 132480,
+        "seconds": 5.001718117040582,
+        "decisions_per_s": 26486.898481673295,
+        "batch_calls": 2080
+      },
+      {
+        "scenario": "corridor",
+        "repeat": 2,
+        "build": "pre",
+        "decisions": 207808,
+        "seconds": 5.001572423032485,
+        "decisions_per_s": 41548.53362575218,
+        "batch_calls": 3263
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 0,
+        "build": "prior",
+        "decisions": 140416,
+        "seconds": 5.00075956096407,
+        "decisions_per_s": 28078.93446749316,
+        "batch_calls": 2207
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 0,
+        "build": "pre",
+        "decisions": 161920,
+        "seconds": 5.028889540000819,
+        "decisions_per_s": 32197.96313123506,
+        "batch_calls": 2546
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 1,
+        "build": "pre",
+        "decisions": 161920,
+        "seconds": 5.024231807910837,
+        "decisions_per_s": 32227.81236826116,
+        "batch_calls": 2546
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 1,
+        "build": "prior",
+        "decisions": 141440,
+        "seconds": 5.069987478898838,
+        "decisions_per_s": 27897.504794374694,
+        "batch_calls": 2224
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 2,
+        "build": "prior",
+        "decisions": 141440,
+        "seconds": 5.028765680035576,
+        "decisions_per_s": 28126.186225284488,
+        "batch_calls": 2224
+      },
+      {
+        "scenario": "cpnco-dartout",
+        "repeat": 2,
+        "build": "pre",
+        "decisions": 163712,
+        "seconds": 5.000322034931742,
+        "decisions_per_s": 32740.291296505424,
+        "batch_calls": 2574
+      }
+    ],
+    "summary": {
+      "corridor": {
+        "prior": 26697.038413966107,
+        "pre": 41548.53362575218
+      },
+      "cpnco-dartout": {
+        "prior": 28078.93446749316,
+        "pre": 32227.81236826116
+      }
+    }
+  },
+  "sampling": {
+    "event": "cpu-clock:u",
+    "frequencyHz": 199,
+    "windowSeconds": 20,
+    "callGraph": "dwarf,8192",
+    "lostSamples": 0,
+    "prior": {
+      "samples": 22706,
+      "decisions": 527232,
+      "decisionsPerSecond": 26359.83447895142,
+      "polylineSamplePercent": 39.21
+    },
+    "freshBeforeExperiment": {
+      "samples": 20826,
+      "decisions": 820032,
+      "decisionsPerSecond": 40999.815454170544,
+      "polylineSamplePercent": 14.26,
+      "geometrySelfPercent": 83.04
+    }
+  },
+  "machineCode": {
+    "symbols": {
+      "prior": [
+        "0000000000b96e60 00000000000001ce t <simforge_core::map::lane_graph::Polyline>::sample"
+      ],
+      "current": [
+        "0000000000b973c0 00000000000001ce t <simforge_core::map::lane_graph::Polyline>::sample"
+      ]
+    },
+    "identical_instructions_modulo_relocations": true,
+    "normalized_sha256": {
+      "prior": "fd9cf97656a4f0fb2aaad04056bc7a6541fe546b6dbe04f96c4cf024db50b95d",
+      "current": "fd9cf97656a4f0fb2aaad04056bc7a6541fe546b6dbe04f96c4cf024db50b95d"
+    },
+    "old_e_core_branch_miss_rate": 0.026246338606846942,
+    "fresh_e_core_branch_miss_rate": 0.0012768976237443846
+  },
+  "diagnosis": "Artifact-dependent branch-prediction/layout sensitivity in the data-dependent Polyline segment search; not a measured cost of disabled-channel allocations. Exact microarchitectural aliasing mechanism is an inference, not established by counters.",
+  "rejectedExperiment": {
+    "change": "Search interior cumulative-length vertices with slice::partition_point; compiled probe uses cmovb instead of a direction branch.",
+    "rustflags": "-C llvm-args=--align-all-functions=6",
+    "nativeExtensionSha256": "41b990ae35d9cb63760fc3ed636d678bfcf997b3ac5391565a4935c5827e0b47",
+    "corridor64MedianDecisionsPerSecond": 30280.952992425635,
+    "cpncoDartout64MedianDecisionsPerSecond": 26186.951735261347,
+    "corridorWindowRates": [30468.635514729875, 30280.952992425635, 29935.989149389443],
+    "cpncoDartoutWindowRates": [25995.989569502715, 26796.291851505026, 26186.951735261347],
+    "geometrySamples": 195939,
+    "geometrySha256BeforeAndAfter": "d8a0f836c94632c17a7b955c226c29def3728d3c190ed79baea38fb6775ac0e9",
+    "retainedBatchViews": 41,
+    "batchViewSha256BeforeAndAfter": "a64df1944a2a0081dd40b39da7739ca75ff4e4fac5a2821b4170d8d7b8ca47fa",
+    "outcome": "Rejected and fully reverted before final build. Bytes matched, but alternate-layout throughput remained more than 10% below the old baseline. The alignment option affects all functions, so these data do not isolate a performance cost of partition_point alone.",
+    "rawEvidence": "/tmp/simforge-throughput-final/aligned/state-throughput.json"
+  },
+  "evidenceDirectory": "/tmp/simforge-throughput-final",
+  "profilingCommand": "sudo -n perf record -e cpu-clock:u -F 199 --call-graph dwarf,8192 -- env HOME=/home/path PYTHONPATH=<isolated-python> CUDA_VISIBLE_DEVICES= adapters/gym/.venv/bin/python <64-world-driver> --spec scripts/bench/closed-loop/fixtures/corridor.episodes.json --seconds 20",
+  "counterCommand": "sudo -n perf stat -x, -e cycles:u,instructions:u,branches:u,branch-misses:u -- <same 64-world driver, 10 seconds>",
+  "scope": "This profiles SessionBatch state+objects, not Episode JSON trace or camera rendering. No installed wheel is modified."
+}

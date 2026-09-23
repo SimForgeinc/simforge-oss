@@ -53,7 +53,7 @@ def test_step_info_contract(env: SimForgeEnv) -> None:
     obs, reward, terminated, truncated, info = env.step(np.array([9.0, 0.0]))
     assert isinstance(reward, float)
     assert info["t_s"] == pytest.approx(0.1)
-    assert set(info["reward_terms"]) == {"progress", "proximity", "comfort"}
+    assert sum(info["reward_terms"].values()) == pytest.approx(reward)
     assert obs["state_vector"][0] > 0
 
 

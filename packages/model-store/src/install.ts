@@ -43,7 +43,7 @@ export type InstallRecord = {
   checkpointDigest: string;
   steps: Partial<Record<ModelInstallStep, { completedAt: string; detail?: unknown }>>;
   licenses: {
-    weights: { id: string; blobSha: string; acceptedAt: string | null };
+    weights: { id: string; blobSha: string | null; acceptedAt: string | null };
     sidecars: { repo: string; license: string | null; gated: boolean | "auto"; acceptedAt: string | null }[];
   };
   /** Hugging Face account NAME only. The token never enters this file. */
@@ -94,7 +94,7 @@ export class TokenRequired extends Error {
 
 export class LicenseAcceptanceRequired extends Error {
   readonly code = "license_acceptance_required";
-  constructor(readonly detail: { license: string; blobSha: string }) {
+  constructor(readonly detail: { license: string; blobSha: string | null }) {
     super(`the ${detail.license} licence must be accepted before installing`);
   }
 }

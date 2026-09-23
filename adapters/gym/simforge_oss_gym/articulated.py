@@ -27,7 +27,7 @@ except ImportError as error:  # pragma: no cover - extras guard
     ) from error
 
 if TYPE_CHECKING:
-    from .bevy_sensors import BevySensorRig
+    from simforge_native.embedded_sensors import ExternalSensorRig
 
 PROFILE_ID: str = physics.PROFILE_ID
 
@@ -79,7 +79,7 @@ class ArticulatedEnv(gym.Env[np.ndarray, np.ndarray]):
         #: Next MuJoCo tick to hand to the renderer (`None` = nothing rendered since reset/restore;
         #: the first export starts at the recorder's first frame so the segment opens with spawns).
         self._next_render_tick: int | None = None
-        self.sensors: BevySensorRig | None = None
+        self.sensors: ExternalSensorRig | None = None
         if sensors is not None:
             if sensors != "bevy":
                 raise ValueError(f"unknown sensor backend {sensors!r}; the articulated profile supports 'bevy'")
@@ -87,12 +87,12 @@ class ArticulatedEnv(gym.Env[np.ndarray, np.ndarray]):
                 raise ValueError("sensors='bevy' needs at least one camera document")
             from simforge_oss_physics.course_asset import render_scene_spec, write_course_resources
 
-            from .bevy_sensors import BevySensorRig
+            from simforge_native.embedded_sensors import ExternalSensorRig
 
             directory = Path(resource_dir) if resource_dir is not None else Path(tempfile.mkdtemp(prefix="simforge-course-"))
             manifest = write_course_resources(self.workload, directory)
             self.render_scene = render_scene_spec(manifest, directory)
-            self.sensors = BevySensorRig(self.render_scene, cameras, self._scene_state_since_render, **dict(sensor_options or {}))
+            self.sensors = ExternalSensorRig(self.render_scene, cameras, self._scene_state_since_render, **dict(sensor_options or {}))
 
     def reset(self, *, seed: int | None = None, options: Mapping[str, Any] | None = None) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)

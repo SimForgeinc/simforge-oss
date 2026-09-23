@@ -81,7 +81,7 @@ use render_core::products::{ConsumerSpec, OutputMode, PointEncoding};
 
 #[derive(clap::Parser, Debug, Clone, serde::Serialize)]
 #[command(about="Qualified batched sensor capture: --profile training|showcase",
-    after_help="This batch engine uses proxy actors and the qualified shared-shadow/readback-ring sensor path. scen-play and native-render-service use SceneApp/model catalogs instead; their look and latency are not interchangeable. Closed-loop policies: python -m simforge_native.closed_loop --help (same native-render-service socket, no job queue).")]
+    after_help="This batch engine uses proxy actors and the qualified shared-shadow/readback-ring sensor path. scen-play and native-render-service use SceneApp/model catalogs instead; their look and latency are not interchangeable. Closed-loop policies: python -m simforge_oss_gym.tools.policy_runner --help (kernel Episode owns world time and camera barriers).")]
 pub struct CaptureArgs {
     /// Profiles change cadence/products and approved resolution defaults,
     /// never silently disable postprocessing or alter lighting/codec quality.

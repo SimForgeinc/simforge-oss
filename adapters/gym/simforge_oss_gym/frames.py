@@ -1,43 +1,20 @@
-"""Camera frame sources and the observation assembler for endpoint policies.
+"""Endpoint history assembly from the kernel Episode's real camera frames.
 
-A driving policy endpoint (Alpamayo family) needs a *real* multi-camera
-history at every decision. This module supplies frames from sources that
-actually rendered or recorded them and refuses to invent any:
+``bevy:<rig.json>`` selects the Episode Cameras channel. The rig supplies
+``cameras`` (ego-relative mounts), ``passes`` and ``backend``; an embedded
+backend also supplies its real scene document. The kernel alone creates the
+post-step scene and renders it. This module only packs RGB bytes for the
+existing endpoint MessagePack wire and releases native frame leases.
 
-- ``dir:<root>`` — frames a renderer already produced on disk, one directory
-  per sensor id, one file per decision step
-  (``<root>/<sensorId>/<step:06d>.{raw,png,jpg,jpeg}``). ``raw`` needs a
-  ``<root>/<sensorId>/meta.json`` (``{width, height, format: "rgba8"}``);
-  encoded files are passed to the endpoint untouched (the model server
-  decodes) and their dimensions are read from the file header, so this path
-  needs no image library and no GPU. This is the source used by
-  reconstructed replay-context bundles and by render-then-evaluate offline
-  pipelines.
-- ``bevy:<rig.json>`` — the resident Bevy renderer
-  (:class:`~simforge_oss_gym.bevy_sensors.BevySensorRig`). The rig document
-  supplies the render scene (map tiles, lighting) and the renderer camera
-  descriptors: ``{"scene": <doc|path>, "cameras": [...], "passes": ["rgb"]}``.
-  Scene state — what is rendered — comes by DEFAULT from the live episode via
-  :class:`~simforge_oss_gym.scene_state.EnvSceneStateExporter`, which publishes
-  the world as it is after the last applied action, so each rendered frame
-  reflects what the policy just did (closed-loop feedback, not replay). A rig
-  may add ``"sceneState": {"options": {...}}`` to tune that exporter (map id,
-  ground height, weather, catalog overrides), or
-  ``{"module", "factory", "options"}`` to hand rendering to another world
-  owner such as a reconstruction renderer; a named binding that cannot be
-  imported is a typed ``frame_source_unavailable`` failure, never a synthetic
-  frame.
-
-There is deliberately no "synthetic" source. An episode that cannot get real
-camera frames fails with ``frame_source_required``; fabricating views would
-turn an infrastructure gap into a fake scientific result.
+Prerecorded ``dir:`` images are not a closed-loop source: they cannot reflect
+the state after a policy diverges. Recorded observations belong to open-loop
+evaluation, not this adapter.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import struct
 from collections import deque
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Protocol, Sequence
@@ -48,8 +25,6 @@ import numpy as np
 NUM_FRAMES_PER_CAMERA = 4
 #: Ego-history steps in the Alpamayo observation window.
 NUM_HISTORY_STEPS = 16
-
-ENCODED_SUFFIXES = {".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg"}
 
 
 class FrameSourceError(RuntimeError):
@@ -78,35 +53,6 @@ class FrameSource(Protocol):
     def close(self) -> None: ...
 
 
-def _png_size(header: bytes) -> tuple[int, int]:
-    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
-        raise FrameSourceError("frame_decode_failed", "not a PNG file")
-    width, height = struct.unpack(">II", header[16:24])
-    return int(width), int(height)
-
-
-def _jpeg_size(data: bytes) -> tuple[int, int]:
-    """Read SOFn dimensions without decoding pixels."""
-    if data[:2] != b"\xff\xd8":
-        raise FrameSourceError("frame_decode_failed", "not a JPEG file")
-    offset = 2
-    end = len(data)
-    while offset + 9 < end:
-        if data[offset] != 0xFF:
-            offset += 1
-            continue
-        marker = data[offset + 1]
-        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
-            offset += 2
-            continue
-        length = struct.unpack(">H", data[offset + 2 : offset + 4])[0]
-        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
-            height, width = struct.unpack(">HH", data[offset + 5 : offset + 9])
-            return int(width), int(height)
-        offset += 2 + length
-    raise FrameSourceError("frame_decode_failed", "no JPEG SOF marker found")
-
-
 def rgba_to_rgb_bytes(view: np.ndarray) -> tuple[bytes, int, int]:
     """Pack one ``(H, W, 4)`` RGBA array into contiguous ``H*W*3`` RGB bytes."""
     array = np.asarray(view)
@@ -116,220 +62,104 @@ def rgba_to_rgb_bytes(view: np.ndarray) -> tuple[bytes, int, int]:
     return np.ascontiguousarray(array[:, :, :3]).tobytes(), width, height
 
 
-class DirectoryFrameSource:
-    """Frames a renderer already wrote to disk, one file per decision step."""
+class EpisodeFrameSource:
+    """Borrow each kernel camera frame only long enough to pack the wire RGB."""
 
-    def __init__(self, root: str | Path, *, sensor_ids: Sequence[str] | None = None) -> None:
-        self.root = Path(root).expanduser()
-        if not self.root.is_dir():
-            raise FrameSourceError("frame_source_unavailable", f"frame directory {self.root} does not exist")
-        discovered = sorted(p.name for p in self.root.iterdir() if p.is_dir())
-        wanted = list(sensor_ids) if sensor_ids else discovered
-        missing = [s for s in wanted if s not in discovered]
-        if missing:
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                f"frame directory {self.root} has no frames for {missing}",
-                {"available": discovered, "missing": missing},
-            )
-        if not wanted:
-            raise FrameSourceError("frame_source_unavailable", f"frame directory {self.root} is empty")
-        self._sensor_ids = tuple(wanted)
-        self._meta: dict[str, dict[str, Any]] = {}
-        for sensor_id in self._sensor_ids:
-            meta_path = self.root / sensor_id / "meta.json"
-            if meta_path.is_file():
-                self._meta[sensor_id] = json.loads(meta_path.read_text())
+    def __init__(self, channel: Mapping[str, Any]) -> None:
+        self.channel = dict(channel)
+        self._sensor_ids = tuple(str(camera["sensorId"]) for camera in channel["rig"]["cameras"])
+        self.episode: Any = None
+        self.observation: Mapping[str, Any] = {}
+        self._frames: Sequence[Any] | None = None
 
     @property
     def sensor_ids(self) -> tuple[str, ...]:
         return self._sensor_ids
 
-    def capture(self, *, step: int, tick: int, t_s: float) -> dict[str, tuple[bytes, str, int, int]]:
-        del tick, t_s
-        out: dict[str, tuple[bytes, str, int, int]] = {}
-        for sensor_id in self._sensor_ids:
-            directory = self.root / sensor_id
-            candidates = [directory / f"{step:06d}{suffix}" for suffix in (".raw", *ENCODED_SUFFIXES)]
-            path = next((p for p in candidates if p.is_file()), None)
-            if path is None:
-                raise FrameSourceError(
-                    "frame_missing",
-                    f"{sensor_id}: no frame for decision step {step} in {directory}",
-                    {"sensorId": sensor_id, "step": step},
-                )
-            payload = path.read_bytes()
-            if path.suffix == ".raw":
-                meta = self._meta.get(sensor_id)
-                if not meta:
-                    raise FrameSourceError(
-                        "frame_source_unavailable",
-                        f"{sensor_id}: raw frames need meta.json with width/height/format",
-                        {"sensorId": sensor_id},
-                    )
-                width, height = int(meta["width"]), int(meta["height"])
-                fmt = str(meta.get("format", "rgba8"))
-                if fmt == "rgba8":
-                    array = np.frombuffer(payload, dtype=np.uint8).reshape(height, width, 4)
-                    packed, width, height = rgba_to_rgb_bytes(array)
-                elif fmt == "rgb8":
-                    if len(payload) != width * height * 3:
-                        raise FrameSourceError(
-                            "frame_decode_failed",
-                            f"{sensor_id}: rgb8 frame is {len(payload)} B, expected {width * height * 3} B",
-                        )
-                    packed = payload
-                else:
-                    raise FrameSourceError("frame_decode_failed", f"{sensor_id}: unsupported raw format {fmt!r}")
-                out[sensor_id] = (packed, "raw", width, height)
-                continue
-            encoding = ENCODED_SUFFIXES[path.suffix]
-            width, height = _png_size(payload[:24]) if encoding == "png" else _jpeg_size(payload)
-            out[sensor_id] = (payload, encoding, width, height)
-        return out
+    def bind(self, episode: Any) -> None:
+        self.episode = episode
 
-    def close(self) -> None:  # nothing owned
-        return None
-
-
-class BevyFrameSource:
-    """Cameras rendered by the resident Bevy renderer for the live episode."""
-
-    def __init__(self, rig: Mapping[str, Any], env: Any, rig_dir: Path | None = None) -> None:
-        cameras = list(rig.get("cameras") or ())
-        if not cameras:
-            raise FrameSourceError("frame_source_unavailable", "bevy rig document declares no cameras")
-        scene = self._resolve_scene(rig.get("scene"), rig_dir)
-        provider = self._resolve_provider(rig.get("sceneState"), env)
-        try:
-            from .bevy_sensors import BevySensorRig
-        except ImportError as error:
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                f"the resident Bevy renderer is not installed: {error}",
-            ) from error
-        self._rig = BevySensorRig(scene, cameras, provider, passes=tuple(rig.get("passes") or ("rgb",)), device=False)
-        self._sensor_ids = tuple(str(camera["sensorId"]) for camera in cameras)
-
-    @staticmethod
-    def _resolve_scene(scene: Any, rig_dir: Path | None) -> Any:
-        """The render scene document, or a path to it.
-
-        A rig may embed the scene inline or name a file. A relative path is
-        resolved against ``SIMFORGE_SCENE_ROOT`` when set (the directory a
-        cloud worker downloaded the tenant-scoped, digest-verified map bundle
-        into), else against the rig document's own directory. That indirection
-        is what lets one rig document ship in a worker image while the map
-        bundle it renders arrives per job.
-        """
-        if scene is None:
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                "bevy rig document has no `scene`; the renderer needs the map/tile scene and never synthesizes one",
-            )
-        if not isinstance(scene, str):
-            return scene
-        candidate = Path(scene).expanduser()
-        if not candidate.is_absolute():
-            root = os.environ.get("SIMFORGE_SCENE_ROOT")
-            base = Path(root).expanduser() if root else (rig_dir or Path.cwd())
-            candidate = base / candidate
-        if not candidate.exists():
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                f"rig scene {candidate} does not exist (set SIMFORGE_SCENE_ROOT to the delivered map bundle)",
-                {"scene": str(candidate)},
-            )
-        return str(candidate)
-
-    @staticmethod
-    def _resolve_provider(binding: Mapping[str, Any] | None, env: Any) -> Any:
-        """The scene-state source the renderer renders from.
-
-        Default: the live episode itself
-        (:class:`~simforge_oss_gym.scene_state.EnvSceneStateExporter`), which
-        publishes the world as it is after the last applied action — so the
-        rendered cameras react to what the policy did. A rig may name a
-        different provider (`sceneState: {module, factory, options}`) when
-        another component owns the world, e.g. a reconstruction renderer.
-        """
-        if env is None:
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                "a bevy rig needs the live environment to render from; none was passed",
-            )
-        if not binding:
-            from .scene_state import make_env_scene_state_provider
-
-            return make_env_scene_state_provider(env)
-        if binding.get("module") is None and binding.get("factory") is None:
-            from .scene_state import make_env_scene_state_provider
-
-            # Options-only binding: tune the built-in exporter (map id, ground
-            # height, weather, catalog overrides) without replacing it.
-            return make_env_scene_state_provider(env, **dict(binding.get("options") or {}))
-        import importlib
-
-        module_name = str(binding.get("module") or "")
-        factory_name = str(binding.get("factory") or "")
-        if not module_name or not factory_name:
-            raise FrameSourceError("frame_source_unavailable", "`sceneState` needs both `module` and `factory`")
-        try:
-            module = importlib.import_module(module_name)
-            factory = getattr(module, factory_name)
-        except (ImportError, AttributeError) as error:
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                f"scene-state provider {module_name}.{factory_name} is unavailable: {error}",
-                {"module": module_name, "factory": factory_name},
-            ) from error
-        provider = factory(env, **dict(binding.get("options") or {}))
-        if not callable(provider):
-            raise FrameSourceError(
-                "frame_source_unavailable",
-                f"{module_name}.{factory_name} returned {type(provider).__name__}, not a callable provider",
-            )
-        return provider
-
-    @property
-    def sensor_ids(self) -> tuple[str, ...]:
-        return self._sensor_ids
+    def observe(self, observation: Mapping[str, Any], frames: Sequence[Any] | None = None) -> None:
+        self.observation = observation
+        self._frames = frames
 
     def capture(self, *, step: int, tick: int, t_s: float) -> dict[str, tuple[bytes, str, int, int]]:
-        del step, t_s
-        frames = self._rig.render(tick)
-        if isinstance(frames, dict):  # device leases are not a host path
-            raise FrameSourceError("frame_source_unavailable", "device-mode Bevy rig cannot feed the wire observation")
+        del step, tick
+        if self.episode is None or self.observation.get("tS") != t_s:
+            raise FrameSourceError("frame_missing", "no kernel camera observation at this decision barrier")
+        rows = self.observation.get("cameras") or []
+        refs = list(self._frames) if self._frames is not None else []
         out: dict[str, tuple[bytes, str, int, int]] = {}
-        for frame in frames:
-            if frame.pass_name != "rgb":
-                continue
-            payload, width, height = rgba_to_rgb_bytes(frame.array)
-            out[frame.sensor_id] = (payload, "raw", width, height)
-        missing = [s for s in self._sensor_ids if s not in out]
+        try:
+            for index, row in enumerate(rows):
+                ref = refs[index] if self._frames is not None else self.episode.frame(row["frame"]["id"])
+                if self._frames is None:
+                    refs.append(ref)
+                if row["pass"] != "rgb":
+                    continue
+                width, height = int(row["width"]), int(row["height"])
+                stride = int(row["frame"]["rowStride"])
+                if row["frame"]["format"] != "rgba8":
+                    raise FrameSourceError("frame_decode_failed", f"unsupported RGB frame format {row['frame']['format']!r}")
+                pixels = np.ndarray((height, width, 4), dtype=np.uint8, buffer=ref.buffer(), strides=(stride, 4, 1))
+                payload, width, height = rgba_to_rgb_bytes(pixels)
+                del pixels
+                out[str(row["sensorId"])] = (payload, "raw", width, height)
+        finally:
+            for ref in refs:
+                ref.release()
+            self._frames = None
+        missing = [sensor for sensor in self.sensor_ids if sensor not in out]
         if missing:
-            raise FrameSourceError("frame_missing", f"renderer returned no rgb pass for {missing}", {"missing": missing})
+            raise FrameSourceError("frame_missing", f"kernel returned no RGB frames for {missing}")
         return out
 
     def close(self) -> None:
-        self._rig.close()
+        if self._frames is not None:
+            for frame in self._frames:
+                frame.release()
+            self._frames = None
+        self.episode = None
 
 
-def make_frame_source(spec: str | None, env: Any = None, *, sensor_ids: Sequence[str] | None = None) -> FrameSource | None:
-    """Build the source named by ``spec`` (``dir:<path>`` | ``bevy:<rig.json>``)."""
-    if spec is None or spec == "" or spec == "none":
+def make_frame_source(spec: str | None, *, profile: str | None = None, sensor_ids: Sequence[str] | None = None) -> EpisodeFrameSource | None:
+    """Resolve render assets, never construct a second renderer or world owner."""
+    if not spec or spec == "none":
         return None
     scheme, _, target = spec.partition(":")
-    if not target:
-        raise FrameSourceError("frame_source_unavailable", f"frame source {spec!r} needs a target (`dir:<path>`)")
-    if scheme == "dir":
-        return DirectoryFrameSource(target, sensor_ids=sensor_ids)
-    if scheme == "bevy":
-        rig_path = Path(target).expanduser()
-        if not rig_path.is_file():
-            raise FrameSourceError("frame_source_unavailable", f"bevy rig document {rig_path} does not exist")
-        return BevyFrameSource(json.loads(rig_path.read_text()), env, rig_path.parent)
-    raise FrameSourceError("frame_source_unavailable", f"unknown frame source scheme {scheme!r} (expected dir|bevy)")
+    if scheme != "bevy" or not target:
+        raise FrameSourceError("frame_source_unavailable", "closed-loop cameras require bevy:<rig.json>; prerecorded dir: frames cannot follow policy actions")
+    rig_path = Path(target).expanduser()
+    if not rig_path.is_file():
+        raise FrameSourceError("frame_source_unavailable", f"bevy rig document {rig_path} does not exist")
+    document = json.loads(rig_path.read_text())
+    cameras = document.get("cameras") or document.get("rig", {}).get("cameras")
+    if not cameras and not (document.get("profile") or profile):
+        raise FrameSourceError("frame_source_unavailable", "bevy rig document requires cameras or a camera profile")
+    backend = dict(document.get("backend") or {"kind": "embedded", "scene": document.get("scene")})
+    if backend.get("kind") == "embedded":
+        scene = backend.get("scene")
+        if isinstance(scene, str):
+            scene_path = Path(scene).expanduser()
+            if not scene_path.is_absolute():
+                scene_path = Path(os.environ.get("SIMFORGE_SCENE_ROOT", rig_path.parent)) / scene_path
+            backend["scene"] = json.loads(scene_path.read_text())
+        elif not isinstance(scene, Mapping):
+            raise FrameSourceError("frame_source_unavailable", "embedded cameras require a real scene document")
+    if document.get("sceneState"):
+        raise FrameSourceError("frame_source_unavailable", "sceneState providers are obsolete; the kernel Episode owns scene state")
+    if cameras:
+        channel = {"kind": "cameras", "rig": {"cameras": cameras},
+                   "passes": list(document.get("passes") or ["rgb"]), "backend": backend}
+    else:
+        from .episodes import observation_channels
+        channel = observation_channels(f"cams:{document.get('profile') or profile}", backend=backend,
+                                       passes=document.get("passes") or ["rgb"])[-1]
+    source = EpisodeFrameSource(channel)
+    missing = set(sensor_ids or ()) - set(source.sensor_ids)
+    if missing:
+        raise FrameSourceError("frame_source_rig_mismatch", f"rig is missing cameras {sorted(missing)}")
+    return source
 
 
 class ObservationAssembler:

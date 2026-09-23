@@ -37,6 +37,8 @@ export interface NativeServiceOptions {
 
 export interface NativeServiceSession {
   readonly client: NativeServiceClient;
+  /** Validated endpoint. Close `client` before handing this single-client service to Episode. */
+  readonly socket: string;
   /** Wire protocol the running service declared (equals `NATIVE_SERVICE_PROTOCOL`). */
   readonly protocol: number;
   /** The service's stderr, captured to a file in the workspace; survives `close()`. */
@@ -188,6 +190,7 @@ export async function startNativeRenderService(options: NativeServiceOptions): P
     });
     return {
       client,
+      socket: ready.endpoint,
       protocol: ready.protocol,
       logPath,
       readStderr: () => readLogTail(logPath),

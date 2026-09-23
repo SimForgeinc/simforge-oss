@@ -1,0 +1,284 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-control",
+  "cell": 2,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 2,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "a4cccaa6443fec58",
+      "mapId": "belmont-research-center",
+      "topologyDigest": "f11d400ccbaee606c1fe176e05273b45ef1c4a632183e3bdec6eb476bf0975f0",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.5918463184554938,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_9dc346bb0b5c9fd6"
+        },
+        "entryLaneRsl": "133:0:-1",
+        "referencePath": [
+          {
+            "laneRsl": "133:0:-1",
+            "sStart": 0,
+            "sEnd": 88.30006651417202,
+            "lengthM": 88.30006651417202,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2231:0:-1",
+            "sStart": 88.30006651417202,
+            "sEnd": 105.88457997114187,
+            "lengthM": 17.58451345696985,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "85:0:-1",
+            "sStart": 105.88457997114187,
+            "sEnd": 158.66516833380246,
+            "lengthM": 52.78058836266059,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "1568:0:-1",
+            "sStart": 158.66516833380246,
+            "sEnd": 175.28464215004016,
+            "lengthM": 16.619473816237715,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "86:0:-1",
+            "sStart": 175.28464215004016,
+            "sEnd": 195.71464540289088,
+            "lengthM": 20.430003252850714,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2334:0:-1",
+            "sStart": 195.71464540289088,
+            "sEnd": 209.83028597988218,
+            "lengthM": 14.115640576991293,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "105:0:1",
+            "sStart": 209.83028597988218,
+            "sEnd": 238.0403101098953,
+            "lengthM": 28.210024130013135,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "105:0:1": 209.83028597988218,
+          "133:0:-1": 0,
+          "1568:0:-1": 158.66516833380246,
+          "2231:0:-1": 88.30006651417202,
+          "2334:0:-1": 195.71464540289088,
+          "85:0:-1": 105.88457997114187,
+          "86:0:-1": 175.28464215004016
+        },
+        "sRange": [
+          0,
+          238.0403101098953
+        ],
+        "lateralLanes": {
+          "0": "133:0:-1"
+        },
+        "opposingLanes": [
+          "133:0:1"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 238.0402435957233
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0.0005028125618345077,
+          "score": 0.7502514062809172,
+          "slack": 0.4994971874381655,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 150,
+          "reason": "corridor.curvatureDegPer10m worst value 0 at s=150 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 238.04,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "238.04 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 24,
+          "score": 0.4,
+          "slack": 6,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph worst value 24 at s=0 m, wanted [30, 70]"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 1,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "133:0:-1",
+          "routeLaneChain": [
+            "133:0:-1",
+            "2231:0:-1",
+            "85:0:-1",
+            "1568:0:-1",
+            "86:0:-1",
+            "2334:0:-1",
+            "105:0:1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "133:0:-1",
+          "routeLaneChain": [
+            "133:0:-1",
+            "2231:0:-1",
+            "85:0:-1",
+            "1568:0:-1",
+            "86:0:-1",
+            "2334:0:-1",
+            "105:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "133:0:-1",
+          "routeLaneChain": [
+            "133:0:-1",
+            "2231:0:-1",
+            "85:0:-1",
+            "1568:0:-1",
+            "86:0:-1",
+            "2334:0:-1",
+            "105:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.5918463184554938,
+        "repairs": [
+          {
+            "kind": "speed_clamp",
+            "path": "corridor.speedLimitKph",
+            "requestedKph": [
+              30,
+              70
+            ],
+            "appliedKph": 24,
+            "touchesRequired": false,
+            "note": "speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter)"
+          }
+        ],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.59). speeds clamped to the site limit 24 kph (arrival invariants re-solved over the speed parameter). corridor.curvatureDegPer10m worst value 0 at s=150 m, wanted [0.5, 8]. corridor.speedLimitKph worst value 24 at s=0 m, wanted [30, 70]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "238.04 m of runway available, 220 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "belmont-research-center",
+    "topologySha256": "10ef077f8ccd2dc9b42e5e33f0f569f52874c39248edcbfb7e442142e57a5f97",
+    "engineGraphDigest": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+    "matcherIndexDigest": "f11d400ccbaee606c1fe176e05273b45ef1c4a632183e3bdec6eb476bf0975f0"
+  },
+  "siteKey": "belmont-research-center/seg_9dc346bb0b5c9fd6",
+  "status": "excluded",
+  "reason": "paired test cell was excluded; no unpaired control admitted"
+}

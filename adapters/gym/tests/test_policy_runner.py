@@ -9,23 +9,18 @@ cloud worker depend on.
 from __future__ import annotations
 
 import json
-import math
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from simforge_oss_gym.env import SimForgeEnv
-from simforge_oss_gym.replay_envelope import (
-    EnvelopeMonitor,
-    ReplayContextError,
-    load_replay_context,
-    require_model_episode_admission,
-)
+from simforge_oss_gym.episodes import load_episode_spec
+from simforge_oss_gym.native import Episode, NativeError
+from simforge_oss_gym.replay_envelope import load_replay_context
+from simforge_oss_gym.tools.episode_trace import verify_trace
 from simforge_oss_gym.tools.endpoint_policy import waypoints_to_plan
 from simforge_oss_gym.tools.policies import make_policy
-from simforge_oss_gym.scene_state import make_env_scene_state_provider
 from simforge_oss_gym.tools.policy_runner import run_episode
 
 
@@ -37,15 +32,11 @@ def test_offline_mode_has_no_deadline_and_reproduces_its_digest(spec: str, tmp_p
     digests = []
     for run in range(2):
         trace = tmp_path / f"offline-{run}.jsonl"
-        with SimForgeEnv(spec, session=0, decision_hz=10) as env:
-            summary = run_episode(
-                env,
-                make_policy("scripted"),
-                seed=101,
-                mode="offline-simtime",
-                max_steps=12,
-                trace_path=trace,
-            )
+        summary = run_episode(
+            load_episode_spec(spec).episodes[0], make_policy("scripted"),
+            seed=101, mode="offline-simtime", decision_hz=10,
+            max_steps=12, trace_path=trace,
+        )
         assert summary.mode == "offline-simtime"
         assert summary.status in ("completed", "terminated", "truncated")
         # No deadline exists in this mode, so a miss is impossible by construction.
@@ -60,18 +51,12 @@ def test_offline_mode_has_no_deadline_and_reproduces_its_digest(spec: str, tmp_p
 
 def test_realtime_mode_applies_the_fallback_on_a_forced_miss(spec: str, tmp_path: Path) -> None:
     trace = tmp_path / "realtime.jsonl"
-    with SimForgeEnv(spec, session=0, decision_hz=10) as env:
-        summary = run_episode(
-            env,
-            make_policy("scripted"),
-            seed=101,
-            mode="realtime",
-            deadline_ms=50.0,
-            fallback="zero-control",
-            max_steps=12,
-            force_miss_at=(3,),
-            trace_path=trace,
-        )
+    summary = run_episode(
+        load_episode_spec(spec).episodes[0], make_policy("scripted"),
+        seed=101, mode="realtime", decision_hz=10, deadline_ms=50.0,
+        fallback="zero-control", max_steps=12, force_miss_at=(3,),
+        trace_path=trace,
+    )
     assert summary.mode == "realtime"
     assert summary.deadline_misses == 1
     missed = [record for record in _trace_records(trace) if record.get("step") == 3]
@@ -80,32 +65,41 @@ def test_realtime_mode_applies_the_fallback_on_a_forced_miss(spec: str, tmp_path
 
 
 def test_realtime_requires_a_deadline_and_offline_refuses_forced_misses(spec: str) -> None:
-    with SimForgeEnv(spec, session=0) as env:
-        with pytest.raises(ValueError, match="realtime mode requires"):
-            run_episode(env, make_policy("scripted"), seed=1, mode="realtime", max_steps=1)
-    with SimForgeEnv(spec, session=0) as env:
-        with pytest.raises(ValueError, match="force_miss_at is meaningless"):
-            run_episode(env, make_policy("scripted"), seed=1, mode="offline-simtime", max_steps=1, force_miss_at=(1,))
+    episode = load_episode_spec(spec).episodes[0]
+    with pytest.raises(ValueError, match="realtime mode requires"):
+        run_episode(episode, make_policy("scripted"), seed=1, mode="realtime", max_steps=1)
+    with pytest.raises(ValueError, match="force_miss_at is meaningless"):
+        run_episode(episode, make_policy("scripted"), seed=1, mode="offline-simtime", max_steps=1, force_miss_at=(1,))
 
 
 def test_warmup_steps_are_labelled_and_not_counted_as_model_decisions(spec: str, tmp_path: Path) -> None:
     trace = tmp_path / "warmup.jsonl"
-    with SimForgeEnv(spec, session=0, decision_hz=10) as env:
-        summary = run_episode(
-            env,
-            make_policy("trajectory"),
-            seed=101,
-            mode="offline-simtime",
-            max_steps=8,
-            warmup_policy=make_policy("scripted"),
-            warmup_steps=4,
-            trace_path=trace,
-        )
+    summary = run_episode(
+        load_episode_spec(spec).episodes[0], make_policy("trajectory"),
+        seed=101, mode="offline-simtime", decision_hz=10, max_steps=8,
+        warmup_policy=make_policy("scripted"), warmup_steps=4, trace_path=trace,
+    )
+    raw, digest = verify_trace(trace.with_suffix(".episode-v2.jsonl").read_text())
+    warmup = [row for row in raw if row.get("phase") == "warmup"]
+    assert len(warmup) == 4
+    assert all(row["pol"] == "warmup:scripted" for row in warmup)
     steps = [record for record in _trace_records(trace) if "step" in record]
-    assert [record["pol"] for record in steps[:4]] == ["warmup:scripted"] * 4
-    assert all(record["pol"] == "scripted-trajectory" for record in steps[4:])
-    assert summary.warmup_steps == 4
-    assert summary.model_decisions == len(steps) - 4
+    assert len(steps) == summary.model_decisions == 4
+    assert all(row["pol"] == "scripted-trajectory" for row in steps)
+    assert _trace_records(trace)[0]["reset"]["t"] == warmup[-1]["t"]
+    assert summary.warmup_steps == 4 and summary.source_episode_digest == digest
+
+
+def test_warmup_termination_preserves_partial_kernel_result(spec: str, tmp_path: Path) -> None:
+    summary = run_episode(
+        load_episode_spec(spec).episodes[0], make_policy("trajectory"), seed=101,
+        episode_config={"clipSeconds": 0.2}, max_steps=8,
+        warmup_policy=make_policy("scripted"), warmup_steps=4,
+        trace_path=tmp_path / "partial.jsonl",
+    )
+    assert summary.result_status == "partial"
+    assert summary.truncation == "warmup_terminated"
+    assert summary.model_decisions == 0
 
 
 def _write_bundle(directory: Path, *, qualified: bool, lateral_m: float, poses: int = 40) -> Path:
@@ -139,38 +133,38 @@ def _write_bundle(directory: Path, *, qualified: bool, lateral_m: float, poses: 
     return directory
 
 
-def test_unqualified_bundle_refuses_a_model_episode(tmp_path: Path) -> None:
+def test_unqualified_bundle_refuses_a_model_episode(spec: str, tmp_path: Path) -> None:
     bundle = _write_bundle(tmp_path / "unqualified", qualified=False, lateral_m=0.0)
     context = load_replay_context(bundle)
-    assert context.qualified is False
-    with pytest.raises(ReplayContextError) as error:
-        require_model_episode_admission(context)
-    assert error.value.code == "replay_context_unqualified"
+    with pytest.raises(NativeError, match="replay_context_unqualified"):
+        run_episode(load_episode_spec(spec).episodes[0], make_policy("scripted"),
+                    seed=101, replay=context, max_steps=4)
 
 
-def test_envelope_projects_onto_the_polyline_and_breaches_off_trajectory(tmp_path: Path) -> None:
-    bundle = _write_bundle(tmp_path / "qualified", qualified=True, lateral_m=1.0)
-    monitor = EnvelopeMonitor(load_replay_context(bundle))
-    # Between two recorded samples (0.8 m apart) and dead on the line: a
-    # vertex-snapping implementation would report ~0.4 m of phantom offset.
-    inside = monitor.measure(step=0, t_s=0.05, x=0.4, y=0.0, heading_rad=0.0)
-    assert inside["inside"] is True
-    assert inside["lateralM"] == pytest.approx(0.0, abs=1e-9)
-    # 1.5 m off the recorded path with a 1.0 m envelope: out.
-    breached = monitor.measure(step=1, t_s=0.1, x=0.8, y=1.5, heading_rad=0.0)
-    assert breached["inside"] is False
-    assert breached["breached"] == ["lateral"]
-    assert monitor.breach is not None
-    assert monitor.summary()["breachedLimits"] == ["lateral"]
-
-
-def test_envelope_breaches_past_the_recorded_time_support(tmp_path: Path) -> None:
-    bundle = _write_bundle(tmp_path / "short", qualified=True, lateral_m=5.0, poses=5)
-    monitor = EnvelopeMonitor(load_replay_context(bundle))
-    # Past the recording there are no actor poses left to replay.
-    verdict = monitor.measure(step=9, t_s=9.0, x=3.2, y=0.0, heading_rad=0.0)
-    assert verdict["inside"] is False
-    assert "time-support" in verdict["breached"]
+def test_kernel_envelope_projects_onto_segments_and_stops_at_time_support(spec: str, tmp_path: Path) -> None:
+    loaded = load_episode_spec(spec).episodes[0]
+    context = load_replay_context(_write_bundle(tmp_path / "short", qualified=True, lateral_m=1.0))
+    settings = {"scenario": json.loads(loaded.input.to_json()), "seed": 101,
+                "observation": {"channels": [{"kind": "state"}]}}
+    probe = Episode(json.dumps(settings), loaded.graph)
+    initial = json.loads(probe.reset())["stateVector"]
+    probe.close()
+    x, y = initial[:2]
+    replay = context.episode_context()
+    replay.update(recordedPath=[[0, x - 0.4, y, 0], [0.15, x + 4.0, y, 0]],
+                  longitudinalS=10.0)
+    kernel = Episode(json.dumps({**settings, "replayContext": replay}), loaded.graph)
+    kernel.reset()
+    reset = json.loads(kernel.trace_json().splitlines()[0])["reset"]
+    assert reset["env"]["inside"] is True
+    assert reset["env"]["lateralM"] == pytest.approx(0.0, abs=1e-9)
+    first = json.loads(kernel.step(json.dumps({"k": "s", "speedMps": 8.0})))
+    assert first["envelope"]["inside"] is True
+    second = json.loads(kernel.step(json.dumps({"k": "s", "speedMps": 8.0})))
+    assert second["truncated"] and second["termReason"] == "envelope_exceeded"
+    assert "time-support" in second["envelope"]["breached"]
+    assert json.loads(kernel.finish())["status"] == "partial"
+    kernel.close()
 
 
 def test_endpoint_policy_refuses_without_a_real_frame_source(spec: str) -> None:
@@ -210,68 +204,3 @@ def test_waypoints_become_a_policy_step_plan_with_derived_heading_and_speed() ->
     assert [row[4] for row in plan] == pytest.approx([0.1, 0.2, 0.3])
 
 
-class _FakeSession:
-    """Minimal stand-in for the engine's actor table (no renderer needed)."""
-
-    actor_ids = ["ego", "lead"]
-    actor_kinds = ["vehicle", "truck"]
-    actor_dims = [[4.6, 1.9, 1.5], [7.0, 2.4, 3.0]]
-
-    def __init__(self) -> None:
-        self.t = 0.0
-        self.rows = [[0.0, 0.0, 0.0, 8.0, 0, 0, 0, 0], [20.0, 3.5, 1.5707963, 4.0, 0, 0, 0, 0]]
-        self.flags = [True, True]
-
-    def actors(self) -> list[list[float]]:
-        return self.rows
-
-    def present(self) -> list[bool]:
-        return self.flags
-
-    def ego_pose(self) -> tuple[float, float, float, float, float]:
-        return (self.t, self.rows[0][0], self.rows[0][1], self.rows[0][2], self.rows[0][3])
-
-
-class _FakeEnv:
-    def __init__(self, session: _FakeSession) -> None:
-        self._session = session
-        self.episode = type("Episode", (), {"map_id": "richmond-field-station"})()
-
-    @property
-    def native(self) -> _FakeSession:
-        return self._session
-
-
-def test_scene_state_export_follows_the_policy_and_manages_actor_lifecycle() -> None:
-    session = _FakeSession()
-    provider = make_env_scene_state_provider(_FakeEnv(session))
-    first = provider()[0]
-    assert first["version"] == "simforge.scene-state.v1"
-    assert first["mapId"] == "richmond-field-station"
-    ego = next(actor for actor in first["actors"] if actor["id"] == "ego")
-    lead = next(actor for actor in first["actors"] if actor["id"] == "lead")
-    # First appearance carries the static descriptor the renderer needs.
-    assert ego["kind"] == "spawn"
-    assert ego["catalogId"] == "vehicle.sedan"
-    assert ego["actorClass"] == "car"
-    assert lead["catalogId"] == "vehicle.box-truck"
-    # scene = (x, groundY, -y); a heading is a y-up quaternion about +Y.
-    assert lead["transform"]["position"] == [20.0, 0.0, -3.5]
-    assert lead["transform"]["rotation"][1] == pytest.approx(0.7071068, abs=1e-6)
-
-    # The policy steered: the very next document the renderer receives differs,
-    # which is what makes the rendered cameras closed-loop rather than replay.
-    session.t, session.rows[0][0], session.rows[0][1], session.rows[0][2] = 0.1, 0.8, 0.25, 0.3
-    second = provider()[0]
-    moved = next(actor for actor in second["actors"] if actor["id"] == "ego")
-    assert moved["kind"] == "update"
-    assert moved["transform"]["position"] == pytest.approx([0.8, 0.0, -0.25])
-    assert moved["transform"]["rotation"][1] == pytest.approx(math.sin(0.15), abs=1e-9)
-    assert second["actors"] != first["actors"]
-
-    # An actor that leaves the world despawns exactly once.
-    session.flags[1] = False
-    third = provider()[0]
-    assert ("lead", "despawn") in [(actor["id"], actor["kind"]) for actor in third["actors"]]
-    fourth = provider()[0]
-    assert [actor["id"] for actor in fourth["actors"]] == ["ego"]

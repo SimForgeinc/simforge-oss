@@ -352,6 +352,9 @@ export function EvaluationPageClient() {
       );
     }
     return (
+      <div>
+        <a href="/dashboard/evaluation/viewer">Open a recorded drive run or heat directory</a>
+        <a href="/dashboard/map-assets/drive"> · Launch a drive bench run</a>
       <LaunchStage
         gateway={gateway}
         host={host}
@@ -364,6 +367,7 @@ export function EvaluationPageClient() {
         recent={(jobs ?? []).filter((job) => !jobStatusPresentation(job.status).live)}
         onSelectRun={selectRun}
       />
+      </div>
     );
   }
 

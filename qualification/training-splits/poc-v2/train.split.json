@@ -1,0 +1,582 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v2-train",
+  "purpose": "train",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "19f890a500277be9",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "2eeee5c165bbb161",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "42e06b365815aa3e",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "5dae8f1eeb790ff4",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "601e1cdbe60d85fb",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "13b93c58ef454765",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "243fecf9699bf0d4",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "15abeb1a6daedbdb",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "2fa8977509047735",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "0734dced5a052ceb",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "19f9c4222ca68815",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "257d0311f226ca1e",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "394a825c079b4c9f",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "4dcb6ccfe6d569d6",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "69e68cba69a080af",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "857b12a6c425b396",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "369c9b29af604018",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "3d7b1feeaec1f9f3",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "05945784aee36152",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "70d0f71b7d8ae710",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 0,
+        "to": 99
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8397211816509262",
+        "siteKey": "yale-street/seg_0987c9068d8e224e",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-000.admission.json",
+          "sha256": "3ea11fddfab7abc53a0cba186f3d0ba825b35c3433bc8bf3c00b5ce30a177724"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396217679262636",
+        "siteKey": "yale-street/seg_aff2a2637b1dbfa4",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-001.admission.json",
+          "sha256": "963c91a8e455b46aae83d206132c00843d27b8a305c87375835150ebfe33cd56"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.839624294568282",
+        "siteKey": "yale-street/seg_334a19adf000cf35",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-002.admission.json",
+          "sha256": "189402fc6319f28d034fed08303078f4d70912e872fd9e28f8ee04399c557ea0"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_7f78a668276cdc39",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-003.admission.json",
+          "sha256": "d6e46d8be6ae953d4defa14bc142936faaa37cd05b7c76027173df9b1e29d796"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_c9b60fb3c1983bc2",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-004.admission.json",
+          "sha256": "ade50d9af9558613245bee248205d41bbd5d3b602ac1bb8a41be3fd553a68432"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_60e63bb16d5d26f2",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-005.admission.json",
+          "sha256": "0a88336bdcc049249bb955510c633460c7432edd1bcdb29a4852abb7c6bc2c80"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_9cc55c23ccb392bf",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-006.admission.json",
+          "sha256": "b3ee8f173d01da104cc923d1997ee65846a8290f5dcc2e6cfa307e6dab978c3a"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_b697850af2e25b2e",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-007.admission.json",
+          "sha256": "789a3f498cdbfc134192d2d44ebf95ccdc8e94760b29cb7ac49686d2190a9578"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_3ec6e96a447ce2da",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-008.admission.json",
+          "sha256": "f46f8f4657eb8a2bc867af06bbf7edd99edb05b4ab45b10c71dfb5a52aafbbdd"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-009.admission.json",
+          "sha256": "44b8436dfe3c99100755f970fbd384d4e522bbf4eaa25b7090411210449b7a63"
+        }
+      },
+      {
+        "cell": 10,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be ",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-010.admission.json",
+          "sha256": "7e327f727a769abbd730e167a1f8615582d4bc23d3977f2d37f2d5d00da48f26"
+        }
+      },
+      {
+        "cell": 11,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: site.frame.referencePath: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.ego.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-tail.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-lead.route: lane chain was not connectable end to end for the engine; kept the longest",
+        "siteKey": "el-camino-road/seg_925834df2b04fdea",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-011.admission.json",
+          "sha256": "55ada7bd8298c03534c160fb4b6404098975e8929865416fa4860eb72789e54f"
+        }
+      },
+      {
+        "cell": 12,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396768022284906",
+        "siteKey": "el-camino-road/seg_661c58b93753e2d7",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-012.admission.json",
+          "sha256": "b0d4e32c11c68ad6126e3c214a42e6d87fc716e256da5fa9a70207c7b3ba84a2"
+        }
+      },
+      {
+        "cell": 13,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.9797573039224883",
+        "siteKey": "el-camino-road/seg_e80bb4d4e2c8fa7c",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-013.admission.json",
+          "sha256": "1b3fd8d80366430bf6c674b1c0f1484746912708e136dc8e71f64aaf02cf5fdb"
+        }
+      },
+      {
+        "cell": 14,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8397965731290973",
+        "siteKey": "el-camino-road/seg_176740f3b1d01cce",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-014.admission.json",
+          "sha256": "0f1ef52c1b48935d07d5a37a98a50edc152bccb649ae329c75549821d2cb972b"
+        }
+      },
+      {
+        "cell": 15,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_74596f306bc794df",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-015.admission.json",
+          "sha256": "d07481bc7cd5061711c2d37cb0ded990290473e3ab3b30e68d3d16c7da772290"
+        }
+      },
+      {
+        "cell": 16,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396048790068953",
+        "siteKey": "el-camino-road/seg_d0747806f1b8ce38",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-016.admission.json",
+          "sha256": "b022511d50a835d02281da3cbaf64fc1a8d6a8732c33c477089ccb43f485ced1"
+        }
+      },
+      {
+        "cell": 17,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_ee0a0b496dbb37cb",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-017.admission.json",
+          "sha256": "c0ff939102815e47f14cc938a3c783f551a6c826e8ffaf80618a8e60192a9d30"
+        }
+      },
+      {
+        "cell": 18,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_56a6e7773c4621ae",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-018.admission.json",
+          "sha256": "4717db982b37c5b422b4a2f2fd9b478e1c67d7140407a4444ac8b43cb5cc6a27"
+        }
+      },
+      {
+        "cell": 19,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_007b2f0ac43d4862",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-019.admission.json",
+          "sha256": "c9fb06759dac8dc2fd3854d420de5839fd8923086abf6da56f3809bd2ee0be8e"
+        }
+      },
+      {
+        "cell": 20,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-020.admission.json",
+          "sha256": "7826bc4d08930acf2ac4c1c8460402a8acda7da667a0036e23c85dd10c25b50c"
+        }
+      },
+      {
+        "cell": 21,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_a0e83832a080cffa",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-021.admission.json",
+          "sha256": "f61db8743c0bfed2205febfb2e47c9c6188411934541871d4c44ca4fc04f53ae"
+        }
+      },
+      {
+        "cell": 22,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-022.admission.json",
+          "sha256": "039614dbf8df48e7b3f67cafa41127c9d6ae5b2b63ec7f70eaa3a79e5d01b362"
+        }
+      },
+      {
+        "cell": 23,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not co",
+        "receipt": {
+          "path": "receipts/poc-v2-train/cell-023.admission.json",
+          "sha256": "76a46b520f57916d6864b9920f4fb042021e9b1e922e0fce36dfd8e735041de4"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T14:52:07.937Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v2-train.episodes.json",
+      "sha256": "552c6f903b395fec1bf15d77a729b7fd55310f52871e0e66637ba2e025d70796"
+    },
+    "count": 1200
+  },
+  "digest": "3707c647c06e19c96a72beb0300e31631fc2237150cb531903afddd1f96be4f4"
+}

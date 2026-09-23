@@ -1,0 +1,76 @@
+{
+  "schema": "simforge.throughput-verification/v1",
+  "git_sha": "76f5f76002d83f7bbded9e29ec1899872b876d95",
+  "native_scope": "Existing release engine 0.7.0 / ABI 3; not a measurement of concurrent unbuilt Episode/observation changes",
+  "state": {
+    "command": "PYTHONPATH=adapters/gym CUDA_VISIBLE_DEVICES= adapters/gym/.venv/bin/python scripts/bench/closed-loop/state.py --out docs/engineering/benchmarks/state-throughput-2026-09-22.json --runner-class gpu-rtx5080",
+    "exit_code": 0,
+    "gate": {
+      "minimum_64_env_decisions_per_s": 5000,
+      "passed": true,
+      "failures": []
+    },
+    "workloads": {
+      "corridor": {
+        "1": 11250.126910027571,
+        "8": 36920.43232548708,
+        "32": 41344.668529302224,
+        "64": 41897.77949398106
+      },
+      "cpnco-dartout": {
+        "1": 11170.564716611896,
+        "8": 28374.67853986795,
+        "32": 31167.483803758478,
+        "64": 32659.386003009884
+      }
+    }
+  },
+  "rendered": {
+    "command": "NODE_OPTIONS=--conditions=development SIMFORGE_SKY_ASSETS=$HOME/.local/share/simforge/native-runtime/share/sky pnpm exec tsx --tsconfig tsconfig.base.json scripts/bench/closed-loop/rendered.mts --out docs/engineering/benchmarks/rendered-throughput-2026-09-22.json --runner-class gpu-rtx5080",
+    "exit_code": 0,
+    "gate": {
+      "profile": "alpamayo-2cam",
+      "minimum_ticks_per_s": 5,
+      "passed": true
+    },
+    "profiles": {
+      "alpamayo-2cam": 13.558297005016332,
+      "qwen-drive-3cam": 8.119987031438,
+      "auto-e2e-6view": 5.100677887369498
+    }
+  },
+  "actionlint": {
+    "version": "1.7.12",
+    "archive_sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    "file": ".github/workflows/throughput.yml",
+    "exit_code": 0,
+    "custom_self_hosted_labels": [
+      "gpu-rtx5080"
+    ]
+  },
+  "cli_typecheck": {
+    "command": "pnpm --filter @simforge-oss/cli exec tsc --noEmit",
+    "exit_code": 0,
+    "scope": "scene extraction, before later signal callsite edits"
+  },
+  "rendered_typecheck": {
+    "exit_code": 0,
+    "scope": "rendered.mts plus imports; temporary config extending tsconfig.base.json with Node typeRoots"
+  },
+  "floor_boundary_smoke": {
+    "exit_code": 0,
+    "stdout": "floor boundary, below-floor, non-finite, and missing 64-env row smoke passed"
+  },
+  "drive_smoke": {
+    "source_command": "NODE_OPTIONS=--conditions=development SIMFORGE_SKY_ASSETS=$HOME/.local/share/simforge/native-runtime/share/sky pnpm exec tsx --tsconfig tsconfig.base.json packages/cli/src/main.ts drive run --policy scripted --scenario scripts/bench/closed-loop/fixtures/corridor.episodes.json --seed 42 --duration 2 --out ~/simforge-assets/runs/drive/w0-scene-smoke",
+    "exit_code": 0,
+    "run_dir": "/home/path/simforge-assets/runs/drive/w0-scene-smoke/drive-corridor__scripted__seed42",
+    "steps": 20,
+    "verify_exit_code": 0,
+    "manifest_valid": true,
+    "verified_frame_digests": 168,
+    "frames_per_sensor": 84,
+    "trace_digest": "98080e0bbe1323bc7613d44f68b4021b867d7af46616c6132b682ea6ce76d959"
+  },
+  "ci_dispatch": "not performed; registration and E2E_GPU_RUNNER_READY configuration are external deployment prerequisites"
+}

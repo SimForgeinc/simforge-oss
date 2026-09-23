@@ -1,0 +1,329 @@
+{
+  "width": 512,
+  "height": 384,
+  "profiles": {
+    "none": [],
+    "student-front": [
+      {
+        "sensorId": "camera_student_front",
+        "cameraId": 7,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 640,
+        "height": 360
+      }
+    ],
+    "alpamayo-2cam": [
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_tele_30fov",
+        "cameraId": 6,
+        "fwd": 2.08,
+        "left": 0,
+        "up": 1.52,
+        "yawDeg": 0,
+        "hfov": 30,
+        "width": 512,
+        "height": 384
+      }
+    ],
+    "alpamayo-4cam": [
+      {
+        "sensorId": "camera_cross_left_120fov",
+        "cameraId": 0,
+        "fwd": 1.9,
+        "left": 0.42,
+        "up": 1.46,
+        "yawDeg": -55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_right_120fov",
+        "cameraId": 2,
+        "fwd": 1.9,
+        "left": -0.42,
+        "up": 1.46,
+        "yawDeg": 55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_tele_30fov",
+        "cameraId": 6,
+        "fwd": 2.08,
+        "left": 0,
+        "up": 1.52,
+        "yawDeg": 0,
+        "hfov": 30,
+        "width": 512,
+        "height": 384
+      }
+    ],
+    "auto-e2e-6view": [
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_left_120fov",
+        "cameraId": 0,
+        "fwd": 1.9,
+        "left": 0.42,
+        "up": 1.46,
+        "yawDeg": -55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_right_120fov",
+        "cameraId": 2,
+        "fwd": 1.9,
+        "left": -0.42,
+        "up": 1.46,
+        "yawDeg": 55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_tele_30fov",
+        "cameraId": 4,
+        "fwd": -1.95,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 180,
+        "hfov": 30,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_left_70fov",
+        "cameraId": 3,
+        "fwd": -1.85,
+        "left": 0.4,
+        "up": 1.46,
+        "yawDeg": 125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_right_70fov",
+        "cameraId": 5,
+        "fwd": -1.85,
+        "left": -0.4,
+        "up": 1.46,
+        "yawDeg": -125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      }
+    ],
+    "qwen-drive-3cam": [
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_left_120fov",
+        "cameraId": 0,
+        "fwd": 1.9,
+        "left": 0.42,
+        "up": 1.46,
+        "yawDeg": -55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_right_120fov",
+        "cameraId": 2,
+        "fwd": 1.9,
+        "left": -0.42,
+        "up": 1.46,
+        "yawDeg": 55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      }
+    ],
+    "alpamayo-6cam": [
+      {
+        "sensorId": "camera_cross_left_120fov",
+        "cameraId": 0,
+        "fwd": 1.9,
+        "left": 0.42,
+        "up": 1.46,
+        "yawDeg": -55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_right_120fov",
+        "cameraId": 2,
+        "fwd": 1.9,
+        "left": -0.42,
+        "up": 1.46,
+        "yawDeg": 55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_left_70fov",
+        "cameraId": 3,
+        "fwd": -1.85,
+        "left": 0.4,
+        "up": 1.46,
+        "yawDeg": 125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_right_70fov",
+        "cameraId": 5,
+        "fwd": -1.85,
+        "left": -0.4,
+        "up": 1.46,
+        "yawDeg": -125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_tele_30fov",
+        "cameraId": 6,
+        "fwd": 2.08,
+        "left": 0,
+        "up": 1.52,
+        "yawDeg": 0,
+        "hfov": 30,
+        "width": 512,
+        "height": 384
+      }
+    ],
+    "alpamayo-6cam-vqa": [
+      {
+        "sensorId": "camera_cross_left_120fov",
+        "cameraId": 0,
+        "fwd": 1.9,
+        "left": 0.42,
+        "up": 1.46,
+        "yawDeg": -55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_front_wide_120fov",
+        "cameraId": 1,
+        "fwd": 2.05,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 0,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_cross_right_120fov",
+        "cameraId": 2,
+        "fwd": 1.9,
+        "left": -0.42,
+        "up": 1.46,
+        "yawDeg": 55,
+        "hfov": 120,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_left_70fov",
+        "cameraId": 3,
+        "fwd": -1.85,
+        "left": 0.4,
+        "up": 1.46,
+        "yawDeg": 125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_tele_30fov",
+        "cameraId": 4,
+        "fwd": -1.95,
+        "left": 0,
+        "up": 1.5,
+        "yawDeg": 180,
+        "hfov": 30,
+        "width": 512,
+        "height": 384
+      },
+      {
+        "sensorId": "camera_rear_right_70fov",
+        "cameraId": 5,
+        "fwd": -1.85,
+        "left": -0.4,
+        "up": 1.46,
+        "yawDeg": -125,
+        "hfov": 70,
+        "width": 512,
+        "height": 384
+      }
+    ]
+  }
+}

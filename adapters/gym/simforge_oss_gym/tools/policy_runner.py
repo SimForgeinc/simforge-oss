@@ -1,86 +1,37 @@
-"""Episode runner: seeded policy episodes with a digested JSONL trace.
+"""Policy construction and campaign artifacts over the native kernel Episode.
 
-This is the canonical closed-loop episode entrypoint (``python -m
-simforge_oss_gym.tools.policy_runner``, console script
-``simforge-oss-policy-runner``). The evaluation campaign runner
-(``packages/evaluation/src/campaign.ts``) spawns exactly this module.
-
-Each trace line carries the deterministic step record plus a ``digest``, a
-SHA-256 chained over the canonical JSON of every deterministic record so far.
-Wall-clock timing (``timing``) is *excluded* from the digest: two runs with the
-same seed, policy and forced misses produce identical digests even though
-inference latency varies.
-
-Digest-covered per step: the policy action ``a`` (trajectory points included),
-the acting policy label ``pol``, whether the model replanned, the policy's
-``reasoning`` text, ``ex`` (the executor's telemetry: pose, signed cross-track
-error, applied setpoints, preview point; ``None`` on non-trajectory steps or
-speed-setpoint execution), the deadline verdict, reward, flags, the state
-vector and reward terms, the perceived object ids, and the replay-context
-envelope measurement when a bundle is enforced.
-
-Timing modes — a run carries exactly one, and the trace/summary say which:
-
-``offline-simtime`` (default)
-    The engine pauses at every inference barrier: nothing advances until the
-    decision returns. No deadline exists in this mode, ``dl.miss`` is 0 by
-    construction, and slow hardware costs wall time, not scientific validity.
-``realtime``
-    A wall-clock-driven schedule: the measured inference latency is compared
-    with an explicit ``--deadline-ms`` and a miss applies the configured
-    fallback. Only a run executed in this mode may be labelled "real-time".
-
-Deadline misses are also exercised deterministically in ``realtime``:
-``force_miss_at`` steps report a fixed elapsed time of 4x the deadline instead
-of the measured one, so the fallback path is part of the digested dynamics.
-
-    simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode.json \
-        --policy torch --seed 42 --policy-seed 7 --steps 30 --mode realtime \
-        --deadline-ms 50 --fallback zero-control --force-miss-at 9 --out /tmp/trace.jsonl
-
-    simforge-oss-policy-runner --spec scenario.episodes.json --policy endpoint \
-        --endpoint-socket /tmp/simforge-alpamayo.sock --camera-profile alpamayo-4cam \
-        --frame-source dir:/tmp/frames --replan-hz 0.5 --steps 300 \
-        --mode offline-simtime --out /tmp/trace.jsonl
+Episode owns warm-up, world advancement, barriers, deadline/fallback decisions,
+trajectory tracking, replay admission/enforcement and the v2 trace/result core.
+This adapter only invokes a policy at each delivered observation and converts
+sealed evidence for the unchanged campaign scorer. Camera frames are borrowed
+from Episode, never rendered by a second Python world/renderer loop.
 """
-
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import signal
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
-from ..env import SimForgeEnv
-from ..frames import FrameSourceError, make_frame_source
-from ..policy import Decision, PolicyRunner
-from ..replay_envelope import (
-    EnvelopeMonitor,
-    ReplayContext,
-    ReplayContextError,
-    load_replay_context,
-    require_model_episode_admission,
-    require_profile_coverage,
-)
+from ..episodes import LoadedEpisode, load_episode_spec
+from ..frames import EpisodeFrameSource, FrameSourceError, make_frame_source
+from ..native import ENGINE_HZ, Episode, NativeError
+from ..replay_envelope import ReplayContext, ReplayContextError, load_replay_context, require_profile_coverage
 from .endpoint_policy import DecisionContext, EndpointPolicy, EndpointPolicyError, profile_camera_map
+from .episode_trace import SCHEMA, convert_trace
 from .policies import Policy, make_policy, make_recorded_path_policy
 
 MODES = ("offline-simtime", "realtime")
 
 
-class EpisodeCancelled(RuntimeError):
-    """A stop signal arrived; the episode ends at the next barrier."""
-
-
 class _Cancellation:
-    """Cooperative stop flag installed for SIGTERM/SIGINT."""
+    """Cooperative stop flag; cancellation never advances or resumes the world."""
 
     def __init__(self) -> None:
         self.requested = False
@@ -92,7 +43,7 @@ class _Cancellation:
             try:
                 self._previous.append((signum, signal.getsignal(signum)))
                 signal.signal(signum, self._handle)
-            except (ValueError, OSError):  # non-main thread / unsupported platform
+            except (ValueError, OSError):
                 pass
         return self
 
@@ -109,10 +60,6 @@ class _Cancellation:
         self.signal = signal.Signals(signum).name
 
 
-def _canonical(record: Mapping[str, Any]) -> bytes:
-    return json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
-
-
 def _percentiles(samples: list[float]) -> dict[str, float]:
     if not samples:
         return {"p50": 0.0, "p95": 0.0, "max": 0.0}
@@ -120,16 +67,12 @@ def _percentiles(samples: list[float]) -> dict[str, float]:
     return {"p50": round(float(np.percentile(data, 50)), 4), "p95": round(float(np.percentile(data, 95)), 4), "max": round(float(data.max()), 4)}
 
 
-def _step_record(observation: Mapping[str, np.ndarray], info: Mapping[str, Any]) -> dict[str, Any]:
-    state = observation["state_vector"]
-    terms = info["reward_terms"]
-    return {
-        "t": info["t_s"],
-        "sv_sha256": hashlib.sha256(np.ascontiguousarray(state, dtype="<f8").tobytes()).hexdigest(),
-        "sv": [float(v) for v in state],
-        "terms": [terms["progress"], terms["proximity"], terms["comfort"]],
-        "objs": list(info["object_ids"]),
-    }
+def _wire_action(action: Mapping[str, Any]) -> dict[str, Any]:
+    if action.get("kind") == "control":
+        return {"k": "c", "c": [action["throttle"], action["brake"], action["steer"]]}
+    if action.get("kind") == "trajectory":
+        return {"k": "t", "p": action["points"]}
+    raise ValueError(f"unknown policy action kind {action.get('kind')!r}")
 
 
 @dataclass
@@ -143,13 +86,10 @@ class EpisodeSummary:
     episode_digest: str
     terminated: bool
     truncated: bool
-    #: ``offline-simtime`` | ``realtime``.
     mode: str = "offline-simtime"
-    #: ``completed`` | ``terminated`` | ``truncated`` | ``envelope_exceeded`` | ``cancelled`` | ``failed``.
     status: str = "completed"
     term_reason: str | None = None
     cancelled: bool = False
-    #: Decisions driven by the warm-up delegate rather than the evaluated policy.
     warmup_steps: int = 0
     model_decisions: int = 0
     infer_ms: dict[str, float] = field(default_factory=dict)
@@ -159,24 +99,47 @@ class EpisodeSummary:
     model: dict[str, Any] | None = None
     replay_context: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
+    source_schema: str = SCHEMA
+    source_episode_digest: str = ""
+    result_status: str = "succeeded"
+    truncation: str | None = None
 
 
-def _write_trace(trace_path: str | Path | None, lines: Sequence[str]) -> None:
-    """Write the trace atomically so a killed runner never leaves half a line."""
+def _write_trace(trace_path: str | Path | None, text: str) -> None:
     if trace_path is None:
         return
     target = Path(trace_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     scratch = target.with_name(f"{target.name}.partial")
-    scratch.write_text("\n".join(lines) + "\n")
+    scratch.write_text(text)
     scratch.replace(target)
 
 
+def _envelope_summary(replay: ReplayContext | None, records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """Aggregate kernel verdicts; no host projection or enforcement exists."""
+    if replay is None:
+        return None
+    rows = [row.get("reset", row) for row in records]
+    rows = [row for row in rows if row.get("env") is not None]
+    for row in rows:
+        value = row["env"]
+        if not value["inside"]:
+            return {"breached": True, "breachedLimits": value["breached"], "atStep": row.get("step", 0),
+                    "atTS": round(row["t"], 6), "limits": replay.limits.as_dict(),
+                    **{key: round(value[key], 6) for key in ("lateralM", "longitudinalS", "headingRad")}}
+    return {"breached": False, "limits": replay.limits.as_dict(),
+            **{name: round(max((abs(row["env"][key]) for row in rows), default=0.0), 6)
+               for name, key in (("maxLateralM", "lateralM"), ("maxLongitudinalS", "longitudinalS"), ("maxHeadingRad", "headingRad"))}}
+
+
 def run_episode(
-    env: SimForgeEnv,
+    episode: LoadedEpisode,
     policy: Policy,
     *,
     seed: int | str,
+    session: int = 0,
+    episode_config: Mapping[str, Any] | None = None,
+    decision_hz: int | None = None,
     mode: str = "offline-simtime",
     deadline_ms: float | None = None,
     fallback: str = "repeat-last",
@@ -186,263 +149,189 @@ def run_episode(
     trace_path: str | Path | None = None,
     warmup_policy: Policy | None = None,
     warmup_steps: int = 0,
-    envelope: EnvelopeMonitor | None = None,
+    replay: ReplayContext | None = None,
     enforce_envelope: bool = True,
     cancellation: _Cancellation | None = None,
+    on_decision: Callable[[int], None] | None = None,
 ) -> EpisodeSummary:
-    """Run one episode; returns its summary and writes the digested trace.
+    """Dispatch policies; every simulation/termination verdict comes from Episode.
 
-    ``mode='offline-simtime'`` passes no elapsed time to the executor, so no
-    deadline is enforced anywhere (the barrier is the loop itself).
-    ``mode='realtime'`` requires ``deadline_ms`` and reports the measured
-    latency per decision.
+    The campaign's historical ``max_steps`` includes its explicit warm-up;
+    translate it once to the kernel's policy-only decision budget. Forced misses
+    now consume actual wall time, rather than supplying an invented latency.
     """
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}; expected one of {MODES}")
-    if mode == "realtime":
-        if deadline_ms is None or deadline_ms <= 0:
-            raise ValueError("realtime mode requires a positive --deadline-ms")
-    else:
+    if mode == "realtime" and (deadline_ms is None or not np.isfinite(deadline_ms) or deadline_ms <= 0):
+        raise ValueError("realtime mode requires a positive --deadline-ms")
+    if mode == "offline-simtime":
         if force_miss_at:
             raise ValueError("force_miss_at is meaningless in offline-simtime mode (no deadline exists)")
-        deadline_ms = None
-
-    runner = PolicyRunner(env, deadline_ms=deadline_ms, fallback=fallback, execution=execution)
-    observation, info = runner.reset(seed)
-
-    chain = hashlib.sha256()
-    reset_record = {
-        "reset": {
-            **_step_record(observation, info),
-            "seed": seed,
-            "session": env.session_index,
-            "mode": mode,
-            "deadline_ms": deadline_ms,
-            "fallback": fallback,
-            "execution": runner.execution,
-            "policy": policy.name,
-            "warmup_policy": None if warmup_policy is None else warmup_policy.name,
-            "warmup_steps": int(warmup_steps),
-            "replay_context": None if envelope is None else envelope.context.scene_id,
-        }
+        if deadline_ms is not None:
+            raise ValueError("offline-simtime mode does not accept --deadline-ms")
+    if warmup_steps < 0 or max_steps <= warmup_steps:
+        raise ValueError("--steps must exceed nonnegative --warmup-steps")
+    if warmup_steps and warmup_policy is None:
+        raise ValueError("--warmup-steps requires --warmup-policy")
+    config = dict(episode_config or {})
+    hz = int(decision_hz or config.get("decisionHz", 10))
+    scenario = json.loads(episode.input.to_json())
+    if config.get("clipSeconds") is not None:
+        scenario["clipSeconds"] = config["clipSeconds"]
+    budget = min(max_steps, int(config.get("maxDecisions") or max_steps)) - warmup_steps
+    channels = [{"kind": "state"}, {"kind": "objects"}]
+    source = policy.frame_source if isinstance(policy, EndpointPolicy) else None
+    if source is not None:
+        if not isinstance(source, EpisodeFrameSource):
+            raise FrameSourceError("frame_source_unavailable", "closed-loop endpoints require the kernel Cameras channel")
+        channels.append(source.channel)
+    timing_mode: dict[str, Any] = {"kind": mode}
+    if mode == "realtime":
+        timing_mode.update(deadlineMs=deadline_ms, fallback="hold-last" if fallback == "repeat-last" else fallback)
+    spec: dict[str, Any] = {
+        "scenario": scenario, "seed": seed, "decisionHz": hz, "mode": timing_mode,
+        "warmupDecisions": warmup_steps, "maxDecisions": budget,
+        "observation": {"channels": channels}, "execution": execution,
     }
-    chain.update(_canonical(reset_record))
-
-    lines = [json.dumps({**reset_record, "digest": chain.hexdigest()}, sort_keys=True)]
+    for key in ("reward", "goal"):
+        if key in config:
+            spec[key] = config[key]
+    if warmup_policy is not None:
+        spec["warmupPolicy"] = warmup_policy.name
+        spec["warmupActions"] = [_wire_action(warmup_policy.act(index, None).action) for index in range(warmup_steps)]
+    if replay is not None:
+        spec["replayContext"] = replay.episode_context(measure_only=not enforce_envelope)
+    kernel = Episode(json.dumps(spec), episode.graph)
+    if source is not None:
+        source.bind(kernel)
+    annotations: dict[int, dict[str, Any]] = {}
     infer_samples: list[float] = []
     step_samples: list[float] = []
-    cross_track_samples: list[float] = []
-    ego_trail: list[tuple[float, float, float, float, float]] = [env.ego_pose()]
-    misses = 0
-    terminated = truncated = False
-    steps_done = 0
-    model_decisions = 0
-    status = "completed"
-    term_reason: str | None = None
+    cross_track: list[float] = []
+    ego_trail: list[tuple[float, float, float, float, float]] = []
     failure: dict[str, Any] | None = None
+    cancelled = False
 
-    for step in range(max_steps):
-        if cancellation is not None and cancellation.requested:
-            status = "cancelled"
-            term_reason = f"cancelled:{cancellation.signal or 'stop'}"
-            break
+    def context(observation: Mapping[str, Any], step: int, snapshot: Mapping[str, Any] | None = None) -> DecisionContext:
+        t_s = float(observation["tS"])
+        if hasattr(policy, "act_context"):
+            truth = snapshot if snapshot is not None else json.loads(kernel.snapshot())
+            actor = next(row["state"] for row in truth["actors"] if row["id"] == truth["egoId"])
+            pose = (t_s, actor["x"], actor["y"], actor["headingRad"], actor["speedMps"])
+            if not ego_trail or ego_trail[-1][0] != t_s:
+                ego_trail.append(pose)
+        return DecisionContext(step=step, t_s=t_s, tick=round(t_s * ENGINE_HZ),
+                               state_vector=np.asarray(observation["stateVector"], dtype=np.float64),
+                               ego_trail=tuple(ego_trail), info={"t_s": t_s})
 
-        acting: Policy = warmup_policy if (warmup_policy is not None and step < warmup_steps) else policy
-        is_warmup = acting is not policy
-        context = DecisionContext(
-            step=step,
-            t_s=float(info["t_s"]),
-            tick=int(round(float(info["t_s"]) * env.engine_hz)),
-            state_vector=observation["state_vector"],
-            ego_trail=tuple(ego_trail),
-            info=info,
-        )
-        t0 = time.perf_counter()
-        try:
-            # The evaluated policy observes every decision, warm-up included:
-            # a model's frame window has to be full of REAL frames by the time
-            # it first acts, and frames only exist while the episode runs.
-            if is_warmup and hasattr(policy, "observe"):
-                policy.observe(context)
-            if hasattr(acting, "act_context"):
-                decision = acting.act_context(context)
-            else:
-                decision = acting.act(step, observation["state_vector"])
-        except (EndpointPolicyError, FrameSourceError, ReplayContextError) as error:
-            status = "failed"
-            term_reason = getattr(error, "code", "policy_error")
-            failure = {"code": term_reason, "message": str(error), "detail": getattr(error, "detail", {}), "step": step}
-            break
-        infer_ms = (time.perf_counter() - t0) * 1000.0
+    def warmup_frame(payload: str, frames: Sequence[Any]) -> None:
+        event = json.loads(payload)
+        observation = event["observation"]
+        ctx = context(observation, round(float(observation["tS"]) * hz), event["snapshot"])
+        if source is not None:
+            source.observe(observation, frames)
+            policy.observe(ctx)
 
-        if mode == "realtime":
-            reported_ms: float | None = float(deadline_ms) * 4.0 if step in force_miss_at else infer_ms
-        else:
-            reported_ms = None  # the barrier is the loop; no deadline in this mode
-
-        t1 = time.perf_counter()
-        result: Decision = runner.act(decision.action, elapsed_ms=reported_ms)
-        step_ms = (time.perf_counter() - t1) * 1000.0
-
-        observation, info = result.observation, result.info
-        misses += result.deadline_miss
-        terminated, truncated = result.terminated, result.truncated
-        steps_done = step + 1
-        if not is_warmup:
-            model_decisions += 1
-        infer_samples.append(infer_ms)
-        step_samples.append(step_ms)
-        if result.executor is not None:
-            cross_track_samples.append(abs(float(result.executor["crossTrackErrorM"])))
-        pose = env.ego_pose()
-        ego_trail.append(pose)
-
-        envelope_measure: dict[str, Any] | None = None
-        if envelope is not None:
-            envelope_measure = envelope.measure(
-                step=step, t_s=float(pose[0]), x=float(pose[1]), y=float(pose[2]), heading_rad=float(pose[3])
-            )
-
-        deterministic = {
-            "step": step,
-            "pol": ("warmup:" + acting.name) if is_warmup else acting.name,
-            "replan": 0 if is_warmup else int(getattr(acting, "last_replanned", True)),
-            "a": decision.action,
-            "reasoning": decision.reasoning,
-            "ex": result.executor,
-            "miss": int(result.deadline_miss),
-            "applied": result.applied,
-            "rw": result.reward,
-            "term": int(terminated),
-            "trunc": int(truncated),
-            **_step_record(observation, info),
-        }
-        if envelope_measure is not None:
-            deterministic["env"] = envelope_measure
-        chain.update(_canonical(deterministic))
-        lines.append(
-            json.dumps(
-                {
-                    **deterministic,
-                    "digest": chain.hexdigest(),
-                    "timing": {"infer_ms": round(infer_ms, 4), "step_ms": round(step_ms, 4)},
-                },
-                sort_keys=True,
-            )
-        )
-
-        if envelope is not None and enforce_envelope and envelope.breach is not None:
-            # Every render past the breach comes from unreliable geometry:
-            # stop here, score up to this point, flag the truncation.
-            truncated = True
-            status = "envelope_exceeded"
-            term_reason = "envelope_exceeded"
-            break
-        if terminated or truncated:
-            status = "terminated" if terminated else "truncated"
-            term_reason = "terminated" if terminated else "truncated"
-            break
-
+    try:
+        observation = json.loads(kernel.reset(warmup_frame))
+        for step in range(warmup_steps, max_steps):
+            if kernel.ended:
+                break
+            if cancellation is not None and cancellation.requested:
+                cancelled = True
+                break
+            if source is not None:
+                source.observe(observation)
+            ctx = context(observation, step)
+            began = time.perf_counter()
+            try:
+                decision = policy.act_context(ctx) if hasattr(policy, "act_context") else policy.act(step, ctx.state_vector)
+            except (EndpointPolicyError, FrameSourceError, ReplayContextError) as error:
+                failure = {"code": error.code, "message": str(error), "detail": error.detail, "step": step}
+                break
+            infer_ms = (time.perf_counter() - began) * 1000.0
+            if step in force_miss_at:
+                time.sleep(float(deadline_ms) * 4.0 / 1000.0)
+            began = time.perf_counter()
+            result = json.loads(kernel.step(json.dumps(_wire_action(decision.action))))
+            step_ms = (time.perf_counter() - began) * 1000.0
+            observation = result["obs"]
+            infer_samples.append(infer_ms)
+            step_samples.append(step_ms)
+            if result["ex"] is not None:
+                cross_track.append(abs(float(result["ex"]["crossTrackErrorM"])))
+            annotations[step] = {"replan": int(getattr(policy, "last_replanned", True)),
+                                 "reasoning": decision.reasoning,
+                                 "timing": {"infer_ms": round(infer_ms, 4), "step_ms": round(step_ms, 4)}}
+            if on_decision is not None:
+                on_decision(step + 1)
+        core = json.loads(kernel.finish())
+        native_trace = kernel.trace_json()
+    finally:
+        if source is not None:
+            source.close()
+        kernel.close()
+    converted = convert_trace(native_trace, policy=policy.name, annotations=annotations)
+    records = [json.loads(line) for line in native_trace.splitlines()]
+    legacy_summary = json.loads(converted.splitlines()[-1])["summary"]
+    term_reason = core["termReason"]
+    status = ("cancelled" if cancelled else "failed" if failure else
+              "envelope_exceeded" if term_reason == "envelope_exceeded" else
+              "terminated" if term_reason in ("collision", "goal") else
+              "truncated" if core["truncation"] is not None else "completed")
     summary = EpisodeSummary(
-        policy=policy.name,
-        policy_checkpoint=policy.checkpoint_digest,
-        seed=seed,
-        session=env.session_index,
-        steps=steps_done,
-        deadline_misses=misses,
-        episode_digest=chain.hexdigest(),
-        terminated=terminated,
-        truncated=truncated,
-        mode=mode,
-        status=status,
-        term_reason=term_reason,
-        cancelled=status == "cancelled",
-        warmup_steps=min(int(warmup_steps), steps_done) if warmup_policy is not None else 0,
-        model_decisions=model_decisions,
-        infer_ms=_percentiles(infer_samples),
-        step_ms=_percentiles(step_samples),
-        cross_track_m=_percentiles(cross_track_samples),
-        envelope=None if envelope is None else envelope.summary(),
-        model=policy.provenance() if hasattr(policy, "provenance") else None,
-        replay_context=None if envelope is None else envelope.context.input_ref(),
-        error=failure,
+        policy=policy.name, policy_checkpoint=policy.checkpoint_digest, seed=seed, session=session,
+        steps=core["decisions"] + core["warmupDecisions"], deadline_misses=core["deadlineMisses"],
+        episode_digest=legacy_summary["episode_digest"], terminated=legacy_summary["terminated"],
+        truncated=legacy_summary["truncated"], mode=core["mode"], status=status,
+        term_reason=(f"cancelled:{cancellation.signal or 'stop'}" if cancelled and cancellation else
+                     failure["code"] if failure else term_reason), cancelled=cancelled,
+        warmup_steps=core["warmupDecisions"], model_decisions=core["decisions"],
+        infer_ms=_percentiles(infer_samples), step_ms=_percentiles(step_samples), cross_track_m=_percentiles(cross_track),
+        envelope=_envelope_summary(replay, records), model=policy.provenance() if hasattr(policy, "provenance") else None,
+        replay_context=None if replay is None else replay.input_ref(), error=failure,
+        source_episode_digest=core["episodeDigest"],
+        result_status=core["status"], truncation=core["truncation"],
     )
-    lines.append(json.dumps({"summary": summary.__dict__}, sort_keys=True))
-    _write_trace(trace_path, lines)
+    converted = "\n".join(converted.splitlines()[:-1]) + "\n" + json.dumps({"summary": summary.__dict__}, sort_keys=True) + "\n"
+    if trace_path is not None:
+        _write_trace(Path(trace_path).with_suffix(".episode-v2.jsonl"), native_trace)
+    _write_trace(trace_path, converted)
     return summary
 
 
-def _make_policy(name: str, seed: int) -> Policy:
-    """Construct a reference policy, reporting a missing optional dependency
-    as a typed refusal rather than an interpreter traceback (the torch policy
-    imports torch lazily so the scripted path stays torch-free)."""
-    try:
-        return make_policy(name, seed)
-    except ImportError as error:
-        raise EndpointPolicyError(
-            "policy_unavailable",
-            f"policy {name!r} needs a dependency this interpreter does not have: {error}",
-            {"policy": name},
-        ) from error
-
-
-def _build_policy(
-    args: argparse.Namespace, env: SimForgeEnv, replay: ReplayContext | None = None
-) -> tuple[Policy, Any]:
-    """Return the evaluated policy and any resource that must be closed."""
+def _build_policy(args: argparse.Namespace, decision_hz: int, replay: ReplayContext | None = None) -> tuple[Policy, Any]:
     if args.policy == "recorded-path":
         if replay is None:
-            raise ReplayContextError(
-                "replay_context_missing",
-                "--policy recorded-path is the stock replay of a bundle's recorded path; pass --replay-context",
-            )
-        return make_recorded_path_policy(replay.recorded_path, decision_hz=float(env.decision_hz)), None
+            raise ReplayContextError("replay_context_missing", "--policy recorded-path requires --replay-context")
+        return make_recorded_path_policy(replay.recorded_path, decision_hz=float(decision_hz)), None
     if args.policy != "endpoint":
-        return _make_policy(args.policy, args.policy_seed), None
+        return make_policy(args.policy), None
     if not args.endpoint_socket:
         raise EndpointPolicyError("endpoint_socket_required", "--policy endpoint requires --endpoint-socket")
     camera_map = profile_camera_map(args.camera_profile)
-    source = make_frame_source(args.frame_source, env, sensor_ids=tuple(camera_map))
+    source = make_frame_source(args.frame_source, profile=args.camera_profile, sensor_ids=tuple(camera_map))
     if source is None:
-        raise EndpointPolicyError(
-            "frame_source_required",
-            "--policy endpoint requires --frame-source (dir:<path> | bevy:<rig.json>); "
-            "camera observations are never synthesized",
-        )
+        raise EndpointPolicyError("frame_source_required", "--policy endpoint requires --frame-source bevy:<rig.json>; camera observations are never synthesized")
     try:
         from simforge_alpamayo.client import AlpamayoClient
     except ImportError as error:
-        source.close()
-        raise EndpointPolicyError(
-            "endpoint_client_unavailable",
-            f"simforge_alpamayo is not importable in this interpreter: {error}",
-        ) from error
+        raise EndpointPolicyError("endpoint_client_unavailable", f"simforge_alpamayo is not importable: {error}") from error
     params: dict[str, Any] = {}
     if args.num_traj_samples is not None:
         params["num_traj_samples"] = args.num_traj_samples
     if args.model_params:
         params.update(json.loads(args.model_params))
-    expect = {
-        key: value
-        for key, value in (("family", args.model_family), ("revision", args.model_revision), ("quant", args.model_quant))
-        if value
-    }
-    replan_every = max(1, round(env.decision_hz / args.replan_hz)) if args.replan_hz else 1
+    expect = {key: value for key, value in (("family", args.model_family), ("revision", args.model_revision), ("quant", args.model_quant)) if value}
+    replan_every = max(1, round(decision_hz / args.replan_hz)) if args.replan_hz else 1
+    client = AlpamayoClient(args.endpoint_socket)
     try:
-        client = AlpamayoClient(args.endpoint_socket)
-        policy = EndpointPolicy(
-            client,
-            frame_source=source,
-            camera_profile=args.camera_profile,
-            seed=int(args.policy_seed),
-            replan_every=replan_every,
-            params=params,
-            nav_text=args.nav_text,
-            allow_cold_start=args.allow_cold_start,
-            expect_model=expect or None,
-            plan_points=args.plan_points,
-        )
+        policy = EndpointPolicy(client, frame_source=source, camera_profile=args.camera_profile,
+                                seed=int(args.policy_seed), replan_every=replan_every, params=params,
+                                nav_text=args.nav_text, allow_cold_start=args.allow_cold_start,
+                                expect_model=expect or None, plan_points=args.plan_points)
     except Exception:
+        client.close()
         source.close()
         raise
     return policy, source
@@ -451,103 +340,70 @@ def _build_policy(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="simforge-oss-policy-runner")
     parser.add_argument("--spec", required=True, help="episode spec JSON")
-    parser.add_argument("--session", type=int, default=0, help="episode index inside the spec")
-    parser.add_argument(
-        "--policy",
-        choices=("scripted", "trajectory", "torch", "endpoint", "recorded-path"),
-        default="scripted",
-        help="`recorded-path` is the G5 stock replay: it drives a replay-context bundle's own recorded ego path",
-    )
+    parser.add_argument("--session", type=int, default=0)
+    parser.add_argument("--policy", choices=("scripted", "trajectory", "endpoint", "recorded-path"), default="scripted")
     parser.add_argument("--seed", default="42", help="episode seed (int or string)")
-    parser.add_argument("--policy-seed", type=int, default=0, help="torch weight seed / endpoint sampling seed")
+    parser.add_argument("--policy-seed", type=int, default=0)
     parser.add_argument("--steps", type=int, default=30)
-    parser.add_argument("--mode", choices=MODES, default="offline-simtime", help="closed-loop timing mode")
-    parser.add_argument("--deadline-ms", type=float, default=None, help="required in realtime mode")
+    parser.add_argument("--mode", choices=MODES, default="offline-simtime")
+    parser.add_argument("--deadline-ms", type=float, default=None)
     parser.add_argument("--fallback", choices=("repeat-last", "zero-control", "scripted"), default="repeat-last")
     parser.add_argument("--execution", choices=("pure-pursuit", "speed-setpoint"), default="pure-pursuit")
-    parser.add_argument("--force-miss-at", type=int, action="append", default=[], help="realtime only: step index whose elapsed time is forced over the deadline (repeatable)")
+    parser.add_argument("--force-miss-at", type=int, action="append", default=[], help="realtime only: delay this decision beyond its deadline")
     parser.add_argument("--decision-hz", type=int, default=None)
-    parser.add_argument("--maps-dir", default=None, help="installed map corpus root (default: SIMFORGE_MAPS_CACHE_ROOT layout)")
-    parser.add_argument("--out", default=None, help="trace JSONL path")
-    parser.add_argument("--summary-out", default=None, help="also write the summary JSON here")
-    # closed-loop model endpoint
-    parser.add_argument("--endpoint-socket", default=None, help="policy endpoint unix socket (msgpack wire)")
-    parser.add_argument("--camera-profile", default="alpamayo-4cam", help="authored rig preset feeding the model")
-    parser.add_argument("--frame-source", default=None, help="dir:<path> | bevy:<rig.json>")
-    parser.add_argument("--replan-hz", type=float, default=None, help="model replan cadence (ZOH between replans)")
+    parser.add_argument("--maps-dir", default=None)
+    parser.add_argument("--out", default=None)
+    parser.add_argument("--summary-out", default=None)
+    parser.add_argument("--endpoint-socket", default=None)
+    parser.add_argument("--camera-profile", default="alpamayo-4cam")
+    parser.add_argument("--frame-source", default=None, help="bevy:<rig.json>, rendered by the kernel Cameras channel")
+    parser.add_argument("--replan-hz", type=float, default=None)
     parser.add_argument("--num-traj-samples", type=int, default=None)
     parser.add_argument("--nav-text", default=None)
-    parser.add_argument("--model-params", default=None, help="extra endpoint params as JSON")
-    parser.add_argument("--model-family", default=None, help="expected endpoint family (refuses a mismatch)")
-    parser.add_argument("--model-revision", default=None, help="expected endpoint revision")
-    parser.add_argument("--model-quant", default=None, help="expected endpoint quantization")
-    parser.add_argument("--plan-points", type=int, default=None, help="truncate the model plan to N waypoints")
-    parser.add_argument("--allow-cold-start", action="store_true", help="permit a replicated oldest frame (stamped in provenance)")
-    # warm-up and replay context
-    parser.add_argument("--warmup-policy", choices=("scripted", "trajectory", "torch"), default=None, help="policy driving the history warm-up phase")
-    parser.add_argument("--warmup-steps", type=int, default=0, help="decisions driven by the warm-up policy before the evaluated policy acts")
-    parser.add_argument("--replay-context", default=None, help="simforge.replay-context/v1 bundle dir; enforces the validity envelope")
+    parser.add_argument("--model-params", default=None)
+    parser.add_argument("--model-family", default=None)
+    parser.add_argument("--model-revision", default=None)
+    parser.add_argument("--model-quant", default=None)
+    parser.add_argument("--plan-points", type=int, default=None)
+    parser.add_argument("--allow-cold-start", action="store_true")
+    parser.add_argument("--warmup-policy", choices=("scripted", "trajectory"), default=None)
+    parser.add_argument("--warmup-steps", type=int, default=0)
+    parser.add_argument("--replay-context", default=None)
     args = parser.parse_args(argv)
-
     seed: int | str = int(args.seed) if args.seed.lstrip("-").isdigit() else args.seed
     cancellation = _Cancellation().install()
     resource: Any = None
-    endpoint_policy: EndpointPolicy | None = None
+    policy: Policy | None = None
     try:
-        replay: ReplayContext | None = None
-        monitor: EnvelopeMonitor | None = None
-        if args.replay_context:
-            replay = load_replay_context(args.replay_context)
-            if args.policy == "endpoint":
-                require_model_episode_admission(replay)
-                require_profile_coverage(replay, profile_camera_map(args.camera_profile).values())
-            monitor = EnvelopeMonitor(replay)
-        warmup_policy = _make_policy(args.warmup_policy, args.policy_seed) if args.warmup_policy else None
+        replay = load_replay_context(args.replay_context) if args.replay_context else None
+        if replay is not None and args.policy == "endpoint":
+            require_profile_coverage(replay, profile_camera_map(args.camera_profile).values())
+        loaded = load_episode_spec(args.spec, maps_dir=args.maps_dir)
+        hz = int(args.decision_hz or loaded.episode_config.get("decisionHz", 10))
+        policy, resource = _build_policy(args, hz, replay)
+        warmup_policy = make_policy(args.warmup_policy) if args.warmup_policy else None
         warmup_steps = int(args.warmup_steps)
         if args.policy == "endpoint" and warmup_policy is None and warmup_steps == 0:
-            # The model needs 16 real ego poses and 4 real camera ticks; the
-            # warm-up phase produces them instead of padding the observation.
-            warmup_policy = _make_policy("scripted", args.policy_seed)
-            warmup_steps = 16
-        with SimForgeEnv(args.spec, session=args.session, decision_hz=args.decision_hz, maps_dir=args.maps_dir) as env:
-            policy, resource = _build_policy(args, env, replay)
-            endpoint_policy = policy if isinstance(policy, EndpointPolicy) else None
-            summary = run_episode(
-                env,
-                policy,
-                seed=seed,
-                mode=args.mode,
-                deadline_ms=args.deadline_ms,
-                fallback=args.fallback,
-                execution=args.execution,
-                max_steps=args.steps,
-                force_miss_at=tuple(args.force_miss_at),
-                trace_path=args.out,
-                warmup_policy=warmup_policy,
-                warmup_steps=warmup_steps,
-                envelope=monitor,
-                # The stock replay MEASURES deviation; it is the gate that
-                # decides whether an envelope may be written at all. Enforcing
-                # a not-yet-measured (zero-width) envelope against it would
-                # make G5 unrunnable by construction.
-                enforce_envelope=args.policy != "recorded-path",
-                cancellation=cancellation,
-            )
-    except (EndpointPolicyError, FrameSourceError, ReplayContextError) as error:
-        payload = {
-            "status": "failed",
-            "error": {"code": getattr(error, "code", "runner_error"), "message": str(error), "detail": getattr(error, "detail", {})},
-        }
+            warmup_policy, warmup_steps = make_policy("scripted"), 16
+        summary = run_episode(
+            loaded.episodes[args.session], policy, seed=seed, session=args.session,
+            episode_config=loaded.episode_config, decision_hz=hz, mode=args.mode,
+            deadline_ms=args.deadline_ms, fallback=args.fallback, execution=args.execution,
+            max_steps=args.steps, force_miss_at=tuple(args.force_miss_at), trace_path=args.out,
+            warmup_policy=warmup_policy, warmup_steps=warmup_steps, replay=replay,
+            enforce_envelope=args.policy != "recorded-path", cancellation=cancellation,
+        )
+    except (EndpointPolicyError, FrameSourceError, ReplayContextError, NativeError, ValueError) as error:
+        payload = {"status": "failed", "error": {"code": getattr(error, "code", "runner_error"), "message": str(error), "detail": getattr(error, "detail", {})}}
         json.dump(payload, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
         return 2
     finally:
         cancellation.restore()
-        if endpoint_policy is not None:
-            endpoint_policy.close()
+        if isinstance(policy, EndpointPolicy):
+            policy.close()
         if resource is not None:
             resource.close()
-
     document = summary.__dict__
     if args.summary_out:
         Path(args.summary_out).write_text(f"{json.dumps(document, sort_keys=True, indent=1)}\n")

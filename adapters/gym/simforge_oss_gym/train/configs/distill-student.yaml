@@ -1,0 +1,17 @@
+schema: simforge.train/v1
+recipe: distill-student
+out: ~/simforge-assets/runs/drive/training/distill-student
+dataset:
+  # Replace with the exact immutable teacher ref and its completed Bevy runs.
+  teacher: ppo-teacher/update-000001
+  runs:
+    - ~/simforge-assets/runs/drive/teacher/drive-corridor__torch__seed42
+  sensor: camera_front_wide_120fov
+options:
+  device: cpu
+  seed: 42
+  torch_threads: 4
+  max_frames: 200
+  sequence_length: 4
+  epochs: 1
+  learning_rate: 0.0001

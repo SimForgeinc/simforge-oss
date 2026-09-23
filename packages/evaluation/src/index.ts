@@ -7,3 +7,6 @@ export * from './episode-run.js';
 export * from './openloop-run.js';
 export * from './uploaded-video-run.js';
 export * from './replay-context/index.js';
+export * from './panels.js';
+export * from './promote.js';
+export * from './bench-geometry.js';

@@ -43,10 +43,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { z } from 'zod';
+import { canonicalJson } from '@simforge-oss/engine';
 
 import {
   parseTraceJsonl,
   scoreEpisode,
+  verifyEpisodeTrace,
   type EpisodeScore,
   type InfractionType,
   type ScenarioScoringContext,
@@ -104,18 +106,19 @@ const scenarioSchema = z.object({
    */
   replayContext: z.string().nullable().default(null),
   /**
-   * Camera frames for model episodes: `dir:<path>` (frames a renderer already
-   * produced) or `bevy:<rig.json>` (the resident renderer). Required by the
-   * `endpoint` policy — camera views are never synthesized.
+   * Camera frames for model episodes: `bevy:<rig.json>` selects the kernel
+   * Episode Cameras channel. Prerecorded images cannot reflect policy-diverged
+   * state and are not a closed-loop source.
    */
   frameSource: z.string().nullable().default(null),
+  alpasimStyle: z.object({ authoredRoute: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(2), egoId: z.string().optional() }).optional(),
 });
 
 const policySchema = z
   .object({
     policyId: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
     /** Runner policy name (`--policy`). `endpoint` drives a real model. */
-    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint', 'recorded-path']),
+    runnerPolicy: z.enum(['scripted', 'trajectory', 'endpoint', 'recorded-path']),
     policySeed: z.number().int().nonnegative().default(0),
     /** Closed-loop timing mode; a run carries exactly one. */
     mode: z.enum(['offline-simtime', 'realtime']).default('offline-simtime'),
@@ -142,7 +145,7 @@ const policySchema = z
       .nullable()
       .default(null),
     /** Decisions driven by a reference policy to build the model's history. */
-    warmupPolicy: z.enum(['scripted', 'trajectory', 'torch']).nullable().default(null),
+    warmupPolicy: z.enum(['scripted', 'trajectory']).nullable().default(null),
     warmupSteps: z.number().int().nonnegative().nullable().default(null),
     /** Permit a replicated oldest frame (stamped in provenance). */
     allowColdStart: z.boolean().default(false),
@@ -216,7 +219,7 @@ export interface ResolvedScenario {
   /** Resolved replay-context bundle (absolute) and its validity summary. */
   readonly replayContextDir: string | null;
   readonly replayContext: ReplayContext | null;
-  /** Resolved frame-source spec with any relative `dir:` path made absolute. */
+  /** Resolved frame-source spec with any relative `bevy:` path made absolute. */
   readonly frameSource: string | null;
 }
 
@@ -350,11 +353,9 @@ export async function resolveCampaign(configPath: string): Promise<ResolvedCampa
         : null);
     const replayContextDir = scenario.replayContext ? path.resolve(configDir, scenario.replayContext) : null;
     const replayContext = replayContextDir ? await loadReplayContext(replayContextDir) : null;
-    const frameSource = scenario.frameSource?.startsWith('dir:')
-      ? `dir:${path.resolve(configDir, scenario.frameSource.slice('dir:'.length))}`
-      : scenario.frameSource?.startsWith('bevy:')
-        ? `bevy:${path.resolve(configDir, scenario.frameSource.slice('bevy:'.length))}`
-        : scenario.frameSource ?? null;
+    const frameSource = scenario.frameSource?.startsWith('bevy:')
+      ? `bevy:${path.resolve(configDir, scenario.frameSource.slice('bevy:'.length))}`
+      : scenario.frameSource ?? null;
     scenarios.set(scenario.scenarioId, {
       scenario,
       specPath,
@@ -364,6 +365,7 @@ export async function resolveCampaign(configPath: string): Promise<ResolvedCampa
         actorKinds: facts.actorKinds,
         speedLimitMps: scenario.speedLimitMps ?? facts.speedLimitMps,
         expectedRouteM,
+        ...(scenario.alpasimStyle ? { alpasimStyle: scenario.alpasimStyle } : {}),
       },
       scoring: scenario.scoring as Partial<ScoringConfig>,
       replayContextDir,
@@ -537,6 +539,7 @@ async function writeEpisodeArtifacts(
           truncation: truncatedByEnvelope ? 'envelope_exceeded' : null,
           scoredThroughStep: score.steps,
           drivingScore: score.drivingScore,
+          ...(score['alpasim-style-score'] ? { 'alpasim-style-score': score['alpasim-style-score'] } : {}),
           routeCompletion: score.routeCompletion,
           penaltyProduct: score.penaltyProduct,
           infractions: score.infractions,
@@ -602,6 +605,8 @@ async function writeEpisodeArtifacts(
     },
     envelope: (outcome.summary['envelope'] ?? null) as Record<string, unknown> | null,
     episodeDigest: outcome.summary['episode_digest'] ?? null,
+    sourceEpisodeDigest: outcome.summary['source_episode_digest'] ?? null,
+    traceVersion: outcome.summary['source_schema'] ?? 'legacy-unversioned',
     traceSha256: outcome.traceSha256,
     createdAt: new Date().toISOString(),
   };
@@ -609,6 +614,7 @@ async function writeEpisodeArtifacts(
 
   for (const [role, file] of [
     ['trace', 'trace.jsonl'],
+    ['evidence', 'trace.episode-v2.jsonl'],
     ['runner-summary', 'runner-summary.json'],
     ['events', 'events.json'],
     ['score', 'score.json'],
@@ -624,7 +630,7 @@ async function writeEpisodeArtifacts(
       ? 'cancelled'
       : runnerStatus === 'failed'
         ? 'failed'
-        : truncatedByEnvelope
+        : truncatedByEnvelope || outcome.summary['result_status'] === 'partial'
           ? 'partial'
           : 'succeeded';
   const completedAt = new Date().toISOString();
@@ -647,7 +653,9 @@ async function writeEpisodeArtifacts(
         ? 'cancelled'
         : runnerStatus === 'terminated'
           ? 'terminated'
-          : null,
+          : outcome.summary['result_status'] === 'partial'
+            ? 'truncated'
+            : null,
     metrics: score
       ? {
           drivingScore: score.drivingScore,
@@ -692,6 +700,8 @@ async function writeEpisodeArtifacts(
         gitSha: adapter.gitSha,
         runnerModule: RUNNER_MODULE,
         metricVersionSource: 'packages/evaluation/src/scoring.ts',
+        traceVersion: provenance.traceVersion,
+        sourceEpisodeDigest: provenance.sourceEpisodeDigest,
       },
       controller: provenance.controller,
       compute: null,
@@ -848,24 +858,122 @@ export interface RerunVerdict {
   readonly match: boolean;
   readonly original: { episodeDigest: string | null; traceSha256Deterministic: string };
   readonly rerun: { episodeDigest: string | null; traceSha256Deterministic: string };
+  readonly rendererNondeterminism?: {
+    readonly reason: 'renderer nondeterminism';
+    readonly originalSourceEpisodeDigest: string;
+    readonly rerunSourceEpisodeDigest: string;
+    /** All deterministic native evidence except pixel hashes, including scene docs. */
+    readonly stateDigest: string;
+  };
 }
 
-/** Sha256 over the trace with wall-clock `timing` stripped from every line. */
-function deterministicTraceSha256(traceText: string): string {
+/** Deep canonical evidence hash. Only measured wall-clock/device telemetry is excluded. */
+export function deterministicTraceSha256(traceText: string, ignoreSourceDigest = false): string {
   const hash = createHash('sha256');
   for (const line of traceText.split('\n')) {
     if (!line.trim()) continue;
     const doc = JSON.parse(line) as Record<string, unknown>;
     delete doc['timing'];
-    if (doc['summary']) {
-      const summary = doc['summary'] as Record<string, unknown>;
+    const deadline = doc['dl'] as Record<string, unknown> | undefined;
+    if (deadline) deadline['el'] = null;
+    const summary = doc['summary'] as Record<string, unknown> | undefined;
+    if (summary) {
       delete summary['infer_ms'];
       delete summary['roundtrip_ms'];
+      delete summary['step_ms'];
+      if (ignoreSourceDigest) delete summary['source_episode_digest'];
+      const timing = summary['timing'] as Record<string, unknown> | undefined;
+      if (timing) delete timing['wallMs'];
+      const model = summary['model'] as Record<string, unknown> | null | undefined;
+      if (model) {
+        delete model['inferenceMs'];
+        delete model['vram'];
+      }
     }
-    hash.update(JSON.stringify(doc, Object.keys(doc).sort()));
+    hash.update(canonicalJson(doc));
     hash.update('\n');
   }
   return hash.digest('hex');
+}
+
+function nativeTraceIdentity(text: string): { sourceDigest: string; stateDigest: string; cameras: boolean } {
+  const records = text.split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line) as Record<string, unknown>);
+  const sourceDigest = verifyEpisodeTrace(records);
+  let cameras = false;
+  for (const row of records) {
+    delete row['digest'];
+    delete row['episode_digest'];
+    const reset = row['reset'] as Record<string, unknown> | undefined;
+    const observation = reset?.['observation'] as Record<string, unknown> | undefined;
+    const evidence = (observation?.['cameras'] ?? row['cameras']) as { frames?: Record<string, unknown>[] } | undefined;
+    if (evidence?.frames) {
+      cameras = true;
+      for (const frame of evidence.frames) {
+        delete frame['digest'];
+        delete frame['sha256'];
+      }
+    }
+    const summary = row['summary'] as Record<string, unknown> | undefined;
+    if (summary) delete summary['episodeDigest'];
+  }
+  return { sourceDigest, stateDigest: deterministicTraceSha256(records.map((row) => JSON.stringify(row)).join('\n')), cameras };
+}
+
+/** Native bench traces need no legacy conversion; verify both chains before classifying RGB-only differences. */
+export function compareNativeEpisodeTraces(originalTrace: string, rerunTrace: string) {
+  const original = nativeTraceIdentity(originalTrace);
+  const rerun = nativeTraceIdentity(rerunTrace);
+  const pixelIdentical = original.sourceDigest === rerun.sourceDigest;
+  const stateMatch = original.stateDigest === rerun.stateDigest;
+  return {
+    match: stateMatch, pixelIdentical, original, rerun,
+    rendererNondeterminism: !pixelIdentical && stateMatch && original.cameras && rerun.cameras
+      ? { reason: 'renderer nondeterminism', stateDigest: original.stateDigest }
+      : null,
+  };
+}
+
+/** Compare policy evidence and primary native identity without hiding pixel differences. */
+export function compareRerunTraces(
+  originalTrace: string, rerunTrace: string,
+  originalNativeTrace: string | null = null, rerunNativeTrace: string | null = null,
+): Omit<RerunVerdict, 'episodeId'> {
+  const originalSummary = parseTraceJsonl(originalTrace).summary ?? {};
+  const rerunSummary = parseTraceJsonl(rerunTrace).summary ?? {};
+  const original = {
+    episodeDigest: (originalSummary['episode_digest'] as string | undefined) ?? null,
+    traceSha256Deterministic: deterministicTraceSha256(originalTrace),
+  };
+  const rerun = {
+    episodeDigest: (rerunSummary['episode_digest'] as string | undefined) ?? null,
+    traceSha256Deterministic: deterministicTraceSha256(rerunTrace),
+  };
+  const originalSource = (originalSummary['source_episode_digest'] as string | undefined) ?? null;
+  const rerunSource = (rerunSummary['source_episode_digest'] as string | undefined) ?? null;
+  const originalNative = originalNativeTrace === null ? null : nativeTraceIdentity(originalNativeTrace);
+  const rerunNative = rerunNativeTrace === null ? null : nativeTraceIdentity(rerunNativeTrace);
+  if ((originalNative && originalNative.sourceDigest !== originalSource) ||
+      (rerunNative && rerunNative.sourceDigest !== rerunSource)) {
+    throw new Error('converted trace source digest disagrees with retained native evidence');
+  }
+  const policyMatch = original.episodeDigest !== null && original.episodeDigest === rerun.episodeDigest;
+  const nativeProofPresent = (originalSource === null || originalNative !== null) &&
+    (rerunSource === null || rerunNative !== null);
+  const match = policyMatch && nativeProofPresent && originalSource === rerunSource &&
+    original.traceSha256Deterministic === rerun.traceSha256Deterministic;
+  const rendererOnly = !match && policyMatch && originalSource !== rerunSource &&
+    originalNative?.cameras && rerunNative?.cameras &&
+    originalNative.stateDigest === rerunNative.stateDigest &&
+    deterministicTraceSha256(originalTrace, true) === deterministicTraceSha256(rerunTrace, true);
+  return {
+    match: match || Boolean(rendererOnly), original, rerun,
+    ...(rendererOnly ? { rendererNondeterminism: {
+      reason: 'renderer nondeterminism' as const,
+      originalSourceEpisodeDigest: originalNative.sourceDigest,
+      rerunSourceEpisodeDigest: rerunNative.sourceDigest,
+      stateDigest: originalNative.stateDigest,
+    } } : {}),
+  };
 }
 
 /**
@@ -880,7 +988,6 @@ export async function rerunEpisode(campaign: ResolvedCampaign, episodeId: string
     throw new Error(`episode ${episodeId} has no COMPLETE artifact to compare against`);
   }
   const originalTrace = await readFile(path.join(originalDir, 'trace.jsonl'), 'utf8');
-  const originalSummary = JSON.parse(await readFile(path.join(originalDir, 'runner-summary.json'), 'utf8')) as Record<string, unknown>;
 
   const scratch = path.join(campaign.campaignDir, '.rerun', episodeId);
   await rm(scratch, { recursive: true, force: true });
@@ -894,23 +1001,13 @@ export async function rerunEpisode(campaign: ResolvedCampaign, episodeId: string
     );
   }
 
-  const original = {
-    episodeDigest: (originalSummary['episode_digest'] as string | undefined) ?? null,
-    traceSha256Deterministic: deterministicTraceSha256(originalTrace),
-  };
-  const rerun = {
-    episodeDigest: (outcome.summary['episode_digest'] as string | undefined) ?? null,
-    traceSha256Deterministic: deterministicTraceSha256(outcome.traceText),
-  };
-  return {
-    episodeId,
-    match:
-      original.episodeDigest !== null &&
-      original.episodeDigest === rerun.episodeDigest &&
-      original.traceSha256Deterministic === rerun.traceSha256Deterministic,
-    original,
-    rerun,
-  };
+  const originalNativePath = path.join(originalDir, 'trace.episode-v2.jsonl');
+  const rerunNativePath = path.join(scratch, 'trace.episode-v2.jsonl');
+  const [originalNative, rerunNative] = await Promise.all([
+    existsSync(originalNativePath) ? readFile(originalNativePath, 'utf8') : null,
+    existsSync(rerunNativePath) ? readFile(rerunNativePath, 'utf8') : null,
+  ]);
+  return { episodeId, ...compareRerunTraces(originalTrace, outcome.traceText, originalNative, rerunNative) };
 }
 
 /* -------------------------------------------------------------------- report */
@@ -928,6 +1025,8 @@ export interface CampaignReport {
     truncatedEpisodes: number;
     meanDrivingScore: number;
     meanRouteCompletion: number;
+    meanAlpasimStyleScore: number | null;
+    alpasimStyleAssessed: number;
     infractions: Record<string, number>;
   }>;
   readonly aggregate: {
@@ -951,6 +1050,7 @@ export async function buildReport(campaign: ResolvedCampaign): Promise<CampaignR
       drivingScore: number;
       routeCompletion: number;
       infractions: Record<InfractionType, number>;
+      'alpasim-style-score'?: EpisodeScore['alpasim-style-score'];
     };
   }
   const rows: Row[] = [];
@@ -975,6 +1075,7 @@ export async function buildReport(campaign: ResolvedCampaign): Promise<CampaignR
       drivingScore: number;
       routeCompletion: number;
       infractions: Record<InfractionType, number>;
+      'alpasim-style-score'?: EpisodeScore['alpasim-style-score'];
     };
     rows.push({
       scenarioId: plan.scenario.scenarioId,
@@ -1010,6 +1111,9 @@ export async function buildReport(campaign: ResolvedCampaign): Promise<CampaignR
       truncatedEpisodes: group.filter((row) => row.truncated).length,
       meanDrivingScore: group.reduce((acc, r) => acc + r.score.drivingScore, 0) / group.length,
       meanRouteCompletion: group.reduce((acc, r) => acc + r.score.routeCompletion, 0) / group.length,
+      meanAlpasimStyleScore: group.every((r) => r.score['alpasim-style-score']?.value != null)
+        ? group.reduce((sum, r) => sum + r.score['alpasim-style-score']!.value!, 0) / group.length : null,
+      alpasimStyleAssessed: group.filter((r) => r.score['alpasim-style-score']?.value != null).length,
       infractions,
     };
   });
@@ -1052,9 +1156,10 @@ export function reportMarkdown(report: CampaignReport): string {
     .map(([policyId, score]) => `${policyId} ${(score * 100).toFixed(1)}`)
     .join(' · ');
   lines.push(`By policy: ${policies}`);
+  lines.push('Optional `alpasim-style-score`: **not an AlpaSim result**. Missing authority stays unavailable.');
   lines.push('');
-  lines.push('| scenario | policy | mode | scored | truncated | mean driving score | mean route completion | infractions |');
-  lines.push('|---|---|---|---:|---:|---:|---:|---|');
+  lines.push('| scenario | policy | mode | scored | truncated | mean driving score | mean alpasim-style-score | mean route completion | infractions |');
+  lines.push('|---|---|---|---:|---:|---:|---:|---:|---|');
   for (const row of report.perScenario) {
     const infractions =
       Object.entries(row.infractions)
@@ -1062,7 +1167,7 @@ export function reportMarkdown(report: CampaignReport): string {
         .join(', ') || '—';
     lines.push(
       `| ${row.scenarioId} | ${row.policyId} | ${row.mode} | ${row.scoredEpisodes} | ${row.truncatedEpisodes} | ` +
-        `${(row.meanDrivingScore * 100).toFixed(1)} | ${(row.meanRouteCompletion * 100).toFixed(1)}% | ${infractions} |`,
+        `${(row.meanDrivingScore * 100).toFixed(1)} | ${row.meanAlpasimStyleScore == null ? 'unavailable' : row.meanAlpasimStyleScore.toFixed(4)} | ${(row.meanRouteCompletion * 100).toFixed(1)}% | ${infractions} |`,
     );
   }
   lines.push('');

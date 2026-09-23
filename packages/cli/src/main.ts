@@ -10,7 +10,7 @@
  * - **every error is `{code, path?, reason, detail?}`**, JSON, on stderr.
  */
 
-import { delimiter } from 'node:path';
+import path, { delimiter } from 'node:path';
 import {
   boolFlag,
   listFlag,
@@ -68,7 +68,11 @@ import { renderHash, renderRun } from './commands/render.js';
 import { scenarioCommand } from './commands/scenario.js';
 import { renderSubmitCommand } from './commands/render-submit.js';
 import { renderGroupUsage, renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
-import { drive } from './commands/drive.js';
+import { runDrive } from './commands/drive/index.js';
+import { verifyDriveRun } from './commands/drive/verify.js';
+import { heat } from './commands/drive/heat.js';
+import { compose } from './commands/drive/compose.js';
+import { enhanceOffline } from './commands/drive/appearance.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
 import { cloudCommand } from './commands/cloud.js';
@@ -77,6 +81,9 @@ import { daemonCommand } from './commands/daemon.js';
 import { workerCommand } from './commands/worker.js';
 import { cloudEvalCommand } from './commands/cloud-eval.js';
 import { hostCommand } from './commands/host.js';
+import { trainCommand } from './commands/train.js';
+import { scenariosCommand } from './commands/scenarios.js';
+import { evalCommand } from './commands/eval.js';
 /** `--pretty` is the only flag every verb shares; `--help` is handled before dispatch. */
 const GLOBAL_BOOLEANS = ['pretty'];
 
@@ -131,7 +138,15 @@ const COMMANDS = [
   { name: 'render run', summary: 'execute one immutable render intent with the browser, CARLA, or native engine' },
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
-  { name: 'drive', summary: 'run a local closed-loop driving policy with native Bevy rendering' },
+  { name: 'drive run', summary: 'run a closed-loop driving policy with native Bevy rendering and evidence artifacts' },
+  { name: 'drive heat', summary: 'run several policies on one scenario and seed (VLAs one at a time), then compose' },
+  { name: 'drive compose', summary: 'compose 1–16 drive run videos into one HUD-annotated heat video' },
+  { name: 'drive verify', summary: 'verify drive run frame, digest, and result-manifest invariants' },
+  { name: 'drive enhance', summary: 'run an explicit offline Cosmos-Transfer pass over recorded RGB/depth/seg controls' },
+  { name: 'train', summary: 'train ppo-teacher or distill-student from a frozen config and register checkpoints' },
+  { name: 'eval promote', summary: 'gate a checkpoint on a frozen held-out panel, clean model health, matched baselines and rerun proof' },
+  { name: 'scenarios materialize', summary: 'materialize an admitted frozen scenario split with provenance' },
+  { name: 'scenarios verify-splits', summary: 'verify admission and seed/site/map disjointness of split manifests' },
   { name: 'corpus prewarm', summary: 'tile subset a camera route touches (--map --route poses.json [--radius m])' },
   { name: 'job submit|start|run|status|list|cancel|attach|artifacts', summary: 'durable native jobs (simforge.native-job/v1 manifests) in the native runner: compile, simulate, episode batches, renders; argv passes through to simforge-runner' },
   { name: 'worker reconcile|capacity', summary: 'native runner worker maintenance and declared capacity' },
@@ -320,6 +335,9 @@ async function dispatch(argv: readonly string[]): Promise<number> {
   }
 
   switch (head) {
+    case 'train': return trainCommand(argv.slice(1));
+    case 'eval': return evalCommand(argv.slice(1));
+    case 'scenarios': return scenariosCommand(argv.slice(1));
     case 'daemon': {
       const args = parseArgs(argv.slice(1), {
         booleans: [...GLOBAL_BOOLEANS, 'dev', 'no-worker', 'open-access'],
@@ -925,26 +943,89 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       });
     }
     case 'drive': {
-      const args = parseArgs(argv.slice(1), {
-        booleans: [...GLOBAL_BOOLEANS, 'no-start-model', 'no-start-renderer'],
-        values: ['policy', 'map', 'duration', 'camera-profile', 'model-socket', 'render-binary', 'native-world', 'quant', 'seed', 'out', 'deadline-ms'],
-      });
-      const policy = optionalString(args, 'policy') ?? 'alpamayo';
-      if (policy !== 'alpamayo') {
-        throw new CliError('bad_value', '--policy must be alpamayo', { path: '--policy' });
+      const command = sub && !sub.startsWith('-') ? sub : 'run';
+      if (command === 'heat') {
+        const args = parseArgs(argv.slice(2), {
+          booleans: [...GLOBAL_BOOLEANS, 'live', 'realtime', 'no-start-model', 'no-start-renderer', 'no-compose', 'record-controls', 'alpasim-style-score'],
+          values: ['policies', 'scenario', 'duration', 'seed', 'out', 'workers', 'model-socket', 'deadline-ms', 'render-binary', 'native-world', 'vehicle-models', 'pedestrian-models', 'quant', 'enhance', 'replan-hz', 'warmup-frames'],
+        });
+        return heat({
+          policies: requireString(args, 'policies'),
+          scenario: requireString(args, 'scenario'),
+          seed: Number(optionalString(args, 'seed') ?? '42'),
+          duration: optionalNumber(args, 'duration') ?? 10,
+          out: optionalString(args, 'out'),
+          workers: optionalString(args, 'workers'),
+          live: boolFlag(args, 'live'),
+          realtime: boolFlag(args, 'realtime'),
+          deadlineMs: optionalNumber(args, 'deadline-ms') ?? null,
+          modelSocket: optionalString(args, 'model-socket'),
+          noStartModel: boolFlag(args, 'no-start-model'),
+          noStartRenderer: boolFlag(args, 'no-start-renderer'),
+          renderBinary: optionalString(args, 'render-binary'),
+          nativeWorld: optionalString(args, 'native-world'),
+          vehicleModels: optionalString(args, 'vehicle-models'),
+          pedestrianModels: optionalString(args, 'pedestrian-models'),
+          quant: optionalString(args, 'quant'),
+          enhance: optionalString(args, 'enhance'),
+          recordControls: boolFlag(args, 'record-controls'),
+          replanHz: optionalNumber(args, 'replan-hz'),
+          warmupFrames: optionalNumber(args, 'warmup-frames'),
+          alpasimStyleScore: boolFlag(args, 'alpasim-style-score'),
+          compose: !boolFlag(args, 'no-compose'),
+          pretty: boolFlag(args, 'pretty'),
+        });
       }
-      return drive({
-        file: positional(args, 0, 'instance.json'),
-        map: optionalString(args, 'map'),
+      if (command === 'compose') {
+        const args = parseArgs(argv.slice(2), { booleans: [...GLOBAL_BOOLEANS, 'appearance'], values: ['out'] });
+        if (args.positionals.length === 0) throw new CliError('missing_argument', 'drive compose needs at least one run directory', { path: 'runDir' });
+        return compose({ runDirs: args.positionals, out: requireString(args, 'out'), appearance: boolFlag(args, 'appearance'), pretty: boolFlag(args, 'pretty') });
+      }
+      if (command === 'verify') {
+        const args = parseArgs(argv.slice(2), { booleans: GLOBAL_BOOLEANS, values: [] });
+        return verifyDriveRun(positional(args, 0, 'runDir'), boolFlag(args, 'pretty'));
+      }
+      if (command === 'enhance') {
+        const args = parseArgs(argv.slice(2), { booleans: [...GLOBAL_BOOLEANS, 'cosmos', 'prepare-only'], values: ['cosmos-root', 'out', 'sensor', 'prompt'] });
+        if (!boolFlag(args, 'cosmos')) throw new CliError('missing_option', 'drive enhance requires --cosmos');
+        return enhanceOffline({ runDir: positional(args, 0, 'runDir'), cosmosRoot: optionalString(args, 'cosmos-root'),
+          out: optionalString(args, 'out'), sensor: optionalString(args, 'sensor'), prompt: optionalString(args, 'prompt'), prepareOnly: boolFlag(args, 'prepare-only') });
+      }
+      if (command !== 'run') {
+        throw new CliError('unknown_command', `simforge drive ${command}`, { detail: { known: ['run', 'heat', 'compose', 'verify', 'enhance'] } });
+      }
+      const runArgs = sub === 'run' ? argv.slice(2) : argv.slice(1);
+      const args = parseArgs(runArgs, {
+        booleans: [...GLOBAL_BOOLEANS, 'live', 'realtime', 'no-start-model', 'no-start-renderer', 'record-controls', 'alpasim-style-score'],
+        values: ['policy', 'scenario', 'duration', 'camera-profile', 'model-socket', 'render-binary', 'native-world', 'vehicle-models', 'pedestrian-models', 'quant', 'seed', 'out', 'deadline-ms', 'enhance', 'policy-input', 'replan-hz', 'warmup-frames'],
+      });
+      const home = process.env['HOME'] ?? '.';
+      const scenario = optionalString(args, 'scenario') ?? positional(args, 0, 'scenario.json');
+      const realtime = boolFlag(args, 'realtime');
+      const policyInput = optionalString(args, 'policy-input');
+      if (policyInput !== undefined && policyInput !== 'raw' && policyInput !== 'enhanced') throw new CliError('bad_value', '--policy-input must be raw or enhanced');
+      return runDrive({
+        scenario,
+        policy: optionalString(args, 'policy') ?? 'scripted',
         duration: optionalNumber(args, 'duration') ?? 10,
-        cameraProfile: optionalString(args, 'camera-profile') ?? 'alpamayo-2cam',
-        modelSocket: optionalString(args, 'model-socket') ?? '/tmp/simforge-alpamayo.sock',
+        cameraProfile: optionalString(args, 'camera-profile'),
+        enhance: optionalString(args, 'enhance'),
+        policyInput,
+        recordControls: boolFlag(args, 'record-controls'),
+        replanHz: optionalNumber(args, 'replan-hz'),
+        warmupFrames: optionalNumber(args, 'warmup-frames'),
+        alpasimStyleScore: boolFlag(args, 'alpasim-style-score'),
+        modelSocket: optionalString(args, 'model-socket'),
         renderBinary: optionalString(args, 'render-binary'),
         nativeWorld: optionalString(args, 'native-world'),
+        vehicleModels: optionalString(args, 'vehicle-models'),
+        pedestrianModels: optionalString(args, 'pedestrian-models'),
         quant: optionalString(args, 'quant') ?? 'nf4',
         seed: Number(optionalString(args, 'seed') ?? '42'),
-        out: optionalString(args, 'out') ?? './run/alpamayo-drive',
-        deadlineMs: optionalNumber(args, 'deadline-ms') ?? 2500,
+        out: optionalString(args, 'out') ?? path.join(home, 'simforge-assets', 'runs', 'drive'),
+        deadlineMs: optionalNumber(args, 'deadline-ms') ?? null,
+        realtime,
+        live: boolFlag(args, 'live'),
         noStartModel: boolFlag(args, 'no-start-model'),
         noStartRenderer: boolFlag(args, 'no-start-renderer'),
         pretty: boolFlag(args, 'pretty'),

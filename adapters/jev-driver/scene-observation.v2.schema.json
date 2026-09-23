@@ -339,6 +339,24 @@
         "$ref": "#/$defs/object"
       }
     },
+    "signals": {
+      "description": "Optional native infrastructure state (not a camera detection); one row per controlled lane/approach. Unknown or indefinite phase timing is null, never zero or green.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["signalId", "laneRsl", "stopLineS", "connectingLaneRsls", "phase", "source", "timingSource", "timeToChangeS"],
+        "properties": {
+          "signalId": {"type": "string"},
+          "laneRsl": {"type": "string"},
+          "stopLineS": {"type": "number", "minimum": 0},
+          "connectingLaneRsls": {"type": "array", "items": {"type": "string"}},
+          "phase": {"enum": ["green", "yellow", "red", "flashing_yellow", "flashing_red", "off", "green_arrow", "yellow_arrow", "red_x", "proceed", "stop", "flashing_yellow_arrow", "flashing_red_arrow"]},
+          "source": {"enum": ["program", "override"]},
+          "timingSource": {"type": "string"},
+          "timeToChangeS": {"type": ["number", "null"], "minimum": 0}
+        }
+      }
+    },
     "candidates": {
       "type": "array",
       "minItems": 0,

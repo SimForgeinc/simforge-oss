@@ -227,6 +227,9 @@ pub struct ServiceState {
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
+    /// Catalog ids already reported as unresolved, so an actor that falls
+    /// back to the cuboid proxy is named once rather than every tick.
+    unresolved_models: std::collections::HashSet<String>,
     /// Lighting as the caller authored it (scene spec, then every
     /// `set_lighting`), before the service adds a metering camera.
     lighting_authored: Lighting,
@@ -257,6 +260,29 @@ impl ServiceState {
             .map(|dir| VehicleModelCatalog::load(Path::new(dir)))
             .transpose()
             .context("load pedestrian model catalog")?;
+        // Mirrors the playback CLI's `actor-models-unconfigured` wording: a
+        // scene without catalogs renders every actor as a procedural cuboid,
+        // and that has to be visible in the log rather than inferred.
+        match &vehicle_models {
+            None => eprintln!(
+                "actor-models-unconfigured: no vehicleModels directory in the scene spec; vehicle actors will render as procedural primitives, not CARLA GLBs"
+            ),
+            Some(catalog) => eprintln!(
+                "actor-models-configured: vehicleModels {} entries from {}",
+                catalog.len(),
+                spec.vehicle_models.as_deref().unwrap_or("")
+            ),
+        }
+        match &pedestrian_models {
+            None => eprintln!(
+                "actor-models-unconfigured: no pedestrianModels directory in the scene spec; pedestrian actors will render as procedural primitives, not CARLA GLBs"
+            ),
+            Some(catalog) => eprintln!(
+                "actor-models-configured: pedestrianModels {} entries from {}",
+                catalog.len(),
+                spec.pedestrian_models.as_deref().unwrap_or("")
+            ),
+        }
         let legend: HashMap<u32, String> = app
             .legend()
             .into_iter()
@@ -291,6 +317,7 @@ impl ServiceState {
                 .iter()
                 .map(|(actor, path)| (actor.clone(), PathBuf::from(path)))
                 .collect(),
+            unresolved_models: std::collections::HashSet::new(),
             lighting_authored: spec.lighting.clone(),
             auto_meter: spec.auto_meter,
             auto_meter_view: None,
@@ -769,6 +796,18 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                     color,
                     false,
                 );
+                if model.is_none()
+                    && !body_centred
+                    && (render_core::actor_lights::is_vehicle_class(&class) || class == "pedestrian")
+                {
+                    let catalog_id = actor.catalog_id.clone().unwrap_or_else(|| "<none>".into());
+                    if state.unresolved_models.insert(format!("{class}/{catalog_id}")) {
+                        eprintln!(
+                            "actor-model-unresolved: {} catalog id {} has no entry in the configured catalog; retaining procedural primitive",
+                            class, catalog_id
+                        );
+                    }
+                }
                 if let Some(model) = model {
                     let moving = actor.velocity.iter().map(|value| value * value).sum::<f32>().sqrt() > 0.2
                         || actor.catalog_id.as_deref().is_some_and(|id| id.ends_with("_walking"));

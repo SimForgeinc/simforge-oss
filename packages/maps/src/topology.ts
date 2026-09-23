@@ -5,3 +5,4 @@ export * from "./topology/roadway-consistency.js";
 export * from "./topology/build-runtime-parity.js";
 export * from "./topology/build-topology-index.js";
 export * from "./topology/junction-direction.js";
+export * from "./topology/road-boundary.js";

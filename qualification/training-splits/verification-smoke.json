@@ -1,0 +1,81 @@
+{
+  "schema": "simforge.scenario-split-smoke/v1",
+  "date": "2026-09-22",
+  "nativeAddon": {
+    "path": "/tmp/simforge-episode-final/node/simforge-native-runtime.linux-x64-gnu.node",
+    "sha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+    "engineVersion": "0.7.0"
+  },
+  "canonicalizerCutoverCompatibility": {
+    "verifierAddon": "/tmp/simforge-episode-final2/node/simforge-native-runtime.linux-x64-gnu.node",
+    "poc-v1": "actual verify-splits CLI passed after the final2 Ryu midpoint fix",
+    "overnight-v2": "actual verify-splits CLI passed after the final2 Ryu midpoint fix",
+    "artifacts": "unchanged; original producing native binary remains pinned in every admission receipt"
+  },
+  "cli": {
+    "entrypoint": "pnpm exec tsx --tsconfig tsconfig.base.json packages/cli/src/main.ts",
+    "NODE_OPTIONS": "--conditions=development",
+    "materialize": {
+      "poc-v1-train": 400,
+      "poc-v1-val": 60,
+      "poc-v1-test": 60,
+      "poc-v1-control": 60,
+      "overnight-v2-train": 120,
+      "overnight-v2-val": 80
+    },
+    "verifySplits": {
+      "poc-v1": "passed; exact paired test/control exception verified",
+      "overnight-v2": "passed; independent train/val seeds and sites"
+    },
+    "frozenMaterializeRepeat": "passed; unchanged smoke split digest 0425aa50dfa90dbbe2d0e3f551ae098808b981d0c2521ee409eee88f0bf324c1"
+  },
+  "unitRegression": {
+    "command": "pnpm exec vitest run src/__tests__/scenario-split.test.ts",
+    "cwd": "packages/scenario",
+    "testsPassed": 5,
+    "cases": [
+      "seed AND physical site independence",
+      "San Ramon release geography equivalence",
+      "complete nonduplicated admission proof coverage",
+      "frozen digest, negative draw index and duplicate seed rejection",
+      "digest-pinned paired test/control identity"
+    ]
+  },
+  "negativeSmoke": {
+    "passed": [
+      "exact artifact-byte tampering is rejected",
+      "rehashed repeated default parameter vectors are rejected",
+      "rehashed concretes differing only by seed are rejected"
+    ]
+  },
+  "typecheck": {
+    "result": "passed",
+    "scope": [
+      "packages/scenario/src/scenario-split.ts",
+      "packages/cli/src/commands/scenarios.ts",
+      "packages/cli/src/commands/scenario-split-admission.ts"
+    ],
+    "configuration": "repository tsconfig.base.json with only those root files and noEmit"
+  },
+  "pythonConsumer": {
+    "executable": "adapters/gym/.venv/bin/python",
+    "PYTHONPATH": "/tmp/simforge-episode-final/python",
+    "entrypoint": "simforge_oss_gym.episodes.load_episode_spec",
+    "instancesLoaded": 780,
+    "counts": {
+      "poc-v1-train": 400,
+      "poc-v1-val": 60,
+      "poc-v1-test": 60,
+      "poc-v1-control": 60,
+      "overnight-v2-train": 120,
+      "overnight-v2-val": 80
+    },
+    "note": "System python3 lacked gymnasium; the existing adapter virtualenv supplied dependencies. The isolated native package was selected explicitly; no installed wheel was replaced."
+  },
+  "admissionWitnesses": {
+    "nativeAuthoredScriptedHorizonCompletions": 780,
+    "collisionsInAdmittedRuns": 0,
+    "caveat": "Episode witnesses are whole-clip scripted warmup: the original result core remains partial/warmup_terminated with termReason=horizon. These are admission witnesses, not promoted policy runs."
+  },
+  "scope": "No project-wide builds, tests, lint, rendering, GPU work, template prerequisite relaxation, or modification of the completed overnight run."
+}

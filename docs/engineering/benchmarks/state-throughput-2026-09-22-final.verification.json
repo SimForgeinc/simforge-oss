@@ -1,0 +1,114 @@
+{
+  "schema": "simforge.state-throughput-final-verification/v1",
+  "artifacts": {
+    "schema": "simforge.episode-final-artifacts/v1",
+    "command": "cargo build --release --jobs 4 -p simforge-bindings-python -p simforge-bindings-node --features simforge-bindings-python/extension-module",
+    "elapsedSeconds": 149.58,
+    "pythonPath": "/tmp/simforge-episode-final/python/simforge_oss_gym/_native.abi3.so",
+    "nodePath": "/tmp/simforge-episode-final/node/simforge-native-runtime.linux-x64-gnu.node",
+    "pythonSha256": "bd62a064872fb06fcb59199f26d3ea60f01973614d2aabf90d517a3221a97b63",
+    "nodeSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+    "includes": [
+      "Episode cameras with checked FrameRef ranges",
+      "explicit-warmup hold-last regression fix",
+      "Phase-A default-serialization preservation"
+    ],
+    "rejectedExperimentReverted": true,
+    "installedWheelsModified": false
+  },
+  "measurement": {
+    "json": "state-throughput-2026-09-22-final.json",
+    "markdown": "state-throughput-2026-09-22-final.md",
+    "profile": "state-throughput-2026-09-22-final.profile.json",
+    "benchmarkSourceSha256": "211d4406430623471feac082ccad7c0d52fae1eb78cb366fc471b0fc62ba8ef1",
+    "baseline64": {
+      "corridor": 41897.77949398106,
+      "cpnco-dartout": 32659.386003009884
+    },
+    "final64": {
+      "corridor": 40142.20261754677,
+      "cpnco-dartout": 32100.96562500896
+    },
+    "changePercent": {
+      "corridor": -4.190143004324365,
+      "cpnco-dartout": -1.7098312195748533
+    },
+    "withinTenPercentOfOldBaseline": true,
+    "gate": {
+      "minimum_64_env_decisions_per_s": 5000,
+      "passed": true,
+      "failures": []
+    },
+    "quietWindow": "All sibling compilation, tests, rendering and video encoding paused; no CPU affinity or exclusive OS-level reservation."
+  },
+  "kernelContracts": {
+    "command": "cargo test -p simforge-session -- --nocapture",
+    "passed": 32,
+    "failed": 0,
+    "observationContracts": 10,
+    "output": "artifact://958",
+    "privilegedDigest": "2243af51a91457ca8e2d57745773f3bfd757aafba562d32e2a6a769bbe9c0492",
+    "visibleDigest": "1bfc56014c1eb6af25e63de72d50bc503d9ec15e50c10b8bf4409591f356f075",
+    "warning": "Unused super::cameras::* import in camera_tests.rs; test-only, no release behavior impact."
+  },
+  "pythonContracts": {
+    "files": [
+      "test_env.py",
+      "test_vector.py",
+      "test_observation_presets.py",
+      "test_episode_parity.py::test_thirty_second_episode_parity"
+    ],
+    "passed": 15,
+    "failed": 0,
+    "junit": "/tmp/simforge-episode-final/state-tests.xml"
+  },
+  "stateParity": {
+    "decisions": 300,
+    "simulationSeconds": 30,
+    "pyo3Digest": "7373dcbc245c7c7fec19cf9a4da139f2901f6ef793a812fc7281f50ea1e02761",
+    "napiDigest": "7373dcbc245c7c7fec19cf9a4da139f2901f6ef793a812fc7281f50ea1e02761",
+    "envSessionDigest": "7373dcbc245c7c7fec19cf9a4da139f2901f6ef793a812fc7281f50ea1e02761",
+    "evidenceDirectory": "/tmp/simforge-episode-final/state-parity"
+  },
+  "cameraParity": {
+    "schema": "simforge.episode-camera-parity/v1",
+    "simulationS": 10,
+    "sceneDocuments": 101,
+    "sceneMismatches": 0,
+    "framesCompared": 202,
+    "frameMismatches": 202,
+    "frameMismatchRate": 1.0,
+    "pyo3Digest": "e5a3aca2bfaf784f4a371461590895fc5ec2a2f3ea31cc91de672e151f768342",
+    "napiDigest": "035a5dec3e5731f73eeca703dd6e123b020d79ee0c097c64e8487f8b07ce4eb3",
+    "rendererNondeterminism": "Real GPU RGB differs across renderer camera resets/processes. Both raw frame identities remain in each v2 trace; no cross-run RGB bit-determinism claim.",
+    "passed": 1,
+    "failed": 0,
+    "junit": "/tmp/simforge-episode-final/camera-tests.xml",
+    "evidenceDirectory": "/tmp/simforge-episode-final/camera-parity"
+  },
+  "geometrySmoke": {
+    "lanes": 2701,
+    "sampledPoses": 195939,
+    "beforeAndFinalSha256": "d8a0f836c94632c17a7b955c226c29def3728d3c190ed79baea38fb6775ac0e9",
+    "finalBytes": "/tmp/simforge-episode-final/geometry.bin"
+  },
+  "batchViewSmoke": {
+    "frames": 41,
+    "retainedViews": 41,
+    "beforeAndFinalSha256": "a64df1944a2a0081dd40b39da7739ca75ff4e4fac5a2821b4170d8d7b8ca47fa",
+    "finalBytes": "/tmp/simforge-episode-final/contract.json"
+  },
+  "changesRetained": "No new hot-path source optimization: branchless experiment and its added test were fully reverted after failed alternate-layout recovery. Existing disabled-signal allocation cleanup is included in the final build.",
+  "floorProposal": {
+    "currentDecisionsPerSecond": 5000,
+    "proposedDecisionsPerSecond": 30000,
+    "applied": false,
+    "minimumObservedFinal64Window": 31880.950126613694,
+    "condition": "Confirm repeated quiescent self-hosted CI windows before adopting; 6.27% margin from the lowest final window is not a shared-host variance guarantee."
+  },
+  "limitations": [
+    "Instruction-layout sensitivity remains; exact predictor aliasing mechanism inferred, not proven.",
+    "No hosted CI workflow was dispatched by this task.",
+    "Camera RGB is not bit-identical across bindings/runs; raw frame identities retained in both traces."
+  ]
+}

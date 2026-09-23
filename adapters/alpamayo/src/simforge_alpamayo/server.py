@@ -39,6 +39,7 @@ from simforge_alpamayo.families import FAMILY_IDS
 from simforge_alpamayo.invoke import error_response, handle_item
 from simforge_alpamayo.obs import ObservationError, synthetic_observation
 from simforge_alpamayo.protocol import recv_msg, send_msg
+from simforge_policy_endpoint import capabilities, receipt
 
 logger = logging.getLogger("simforge_alpamayo.server")
 
@@ -77,7 +78,7 @@ class Server:
         """Returns ``(response, action)``; action in {"", "close", "shutdown"}."""
         op = req.get("op")
         if op == "hello":
-            return {"ok": True, **self.engine.info()}, ""
+            return {"ok": True, **self.engine.info(), **capabilities(cameras=True, ego_steps=16, camera_frames=4, horizon_s=6.4, hz=10)}, ""
         if op == "health":
             return {
                 "ok": True,
@@ -106,7 +107,11 @@ class Server:
                 item["prompt"] = req.get("prompt")
                 item["text_task"] = req.get("task") or "vqa"
             with self.lock:
-                return handle_item(self.engine, item), ""
+                response = handle_item(self.engine, item)
+            if op == "act" and response.get("ok"):
+                result = response.get("result", response)
+                result.update(receipt(req.get("obs") or {}, result.get("trajectories"), horizon_s=6.4))
+            return response, ""
         if op == "capabilities":
             return {"ok": True, "capabilities": self.engine.capabilities()}, ""
         if op == "reset":

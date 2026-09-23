@@ -1,0 +1,252 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "poc-v2-val",
+  "purpose": "val",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "yale-street",
+      "site": "0699c1a4a99fa953",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "yale-street",
+      "site": "0822313025c18262",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "yale-street",
+      "site": "0c610c1df3a5f6a5",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "yale-street",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-7b553f926394.json",
+      "map": "el-camino-road",
+      "site": "026594372b5c1c71",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cpnco-parked-row.template-718ae1a41d09.json",
+      "map": "el-camino-road",
+      "site": "213b84a3f67533ad",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/cut-in-brake.template-6487a00d1917.json",
+      "map": "el-camino-road",
+      "site": "04412a97fa01b6c0",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/school-dartout.template-c2536e7b0ea1.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    },
+    {
+      "template": "templates/bus-stop-emergence.template-5eb1dfd648a5.json",
+      "map": "el-camino-road",
+      "site": "unmatched-slot-1",
+      "seeds": {
+        "from": 100,
+        "to": 119
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_086de21f6da8c618",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-000.admission.json",
+          "sha256": "f4877a2bff0dd086ffae767c3e23483037c52fd0a14a1a62e3f2ab62c4fe9e57"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_efb7295cfdf55084",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-001.admission.json",
+          "sha256": "86a7f97959a0102b084b7bc014d871b004245f7e1d3f7cc456563cd8b8e69605"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "yale-street/seg_2ca0e80ae4072c94",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-002.admission.json",
+          "sha256": "dae967d57e9bfefde1a241fb7ca7a098f6c6c54c6bff482f36faf009ecb11349"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-003.admission.json",
+          "sha256": "66d4cdc1c0a152265c2bf703a549c9aa2a9f91e72397fb305e431eba58b3da2d"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be ",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-004.admission.json",
+          "sha256": "ad34860157d1ef72a83e1c9305e248bfac014cd1434070889b5846e0cd9ba456"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_5418b348ef252b45",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-005.admission.json",
+          "sha256": "9eb4c5df94add54741e8283b3bd6051d9dc3922a6c352908e3bf81e2e25737cc"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_4e3aada26a5661c4",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-006.admission.json",
+          "sha256": "6d6da608a3eaaa1bd4b7b317a0ee20803077fe5ce73dac7942812387f95a1449"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "el-camino-road/seg_38433d5885f3d6b8",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-007.admission.json",
+          "sha256": "1e4965c4ddb3e66f1862102c35b3e59aac42c166bb151af963ceeb1881058ef6"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-008.admission.json",
+          "sha256": "1088c260cfcb57694a096e40619edeac71703991e206acc8d6422414b48a35fc"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not co",
+        "receipt": {
+          "path": "receipts/poc-v2-val/cell-009.admission.json",
+          "sha256": "7675d196f0a487fa6a4be64538008705857a98c21dc94ddcb75c9384386eac05"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T14:52:34.147Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "poc-v2-val.episodes.json",
+      "sha256": "3ef5d49e6343e0598a3e589afda1550d2c24ab6ab73a4ab3e5a087836ac5ed46"
+    },
+    "count": 120
+  },
+  "digest": "d0a9b960b09f0a60b532a5723c9ffa2a413106efd3987be98b9132ced65914b2"
+}

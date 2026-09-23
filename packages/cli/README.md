@@ -104,37 +104,23 @@ probes its installed engines and sends that set with every lease request;
 `browser-render`, `carla-render`, `compile`, and `model-run` are accepted).
 `--data-root` is scratch space for claim inputs and outputs, not a host
 database or asset root.
-## Local Alpamayo driving
+## Closed-loop driving bench
 
-`drive` runs the pinned local Alpamayo 1.5 policy against the fixed-step
-native simulation and Bevy renderer. Each rendered camera history is sent to
-the model; its trajectory is anchored to the current ego pose and converted
-into a pure-pursuit action before the next simulation step.
+`drive run|heat|compose|verify` runs a policy (`scripted`, `jev`, `auto-e2e`,
+`alpamayo-1.5`, `qwen-drive`, or `torch:<checkpoint>`) against the fixed-step
+native simulation with Bevy-rendered cameras and writes a verifiable run
+directory (`run.json`, `steps.jsonl`, `trace.jsonl`, `score.json`, `drive.mp4`,
+`result.json`).
 
 ```bash
-simforge drive examples/edge-cases/01-construction-chicane-reversing-truck/scenario.instance.json \
-  --map richmond-field-station --policy alpamayo --duration 10 \
-  --camera-profile alpamayo-2cam --quant nf4 \
-  --out run/alpamayo-drive
+simforge drive run --policy alpamayo-1.5 --scenario scenario.instance.json \
+  --seed 42 --duration 10 --quant nf4 --out ~/simforge-assets/runs/drive
+simforge drive heat --policies scripted,jev,auto-e2e,alpamayo-1.5 \
+  --scenario scenario.instance.json --seed 42 --duration 10
 ```
 
-The command reads native map tiles from
-`$SIMFORGE_MAPS_CACHE_ROOT/.corpus/<map>/3d/tiles` (or the default
-`~/.local/share/simforge/maps/.corpus/...`). Pull the complete map first with
-`simforge maps pull <map>@<version>`; `--native-world` accepts a prepared tile
-directory or master GLB. Build the renderer with
-`cargo build --release --manifest-path renderer/Cargo.toml --bin
-native-render-service`. Alpamayo setup requires the pinned inference checkout
-and model cache; run `adapters/alpamayo/scripts/setup.sh` before using the
-default auto-started model service.
-
-The output directory contains `alpamayo-drive.mp4` with the Bevy camera view,
-predicted-plan inset, reasoning text and deadline status, plus
-`alpamayo-drive.json` with model latency, deadline verdict, pose, cross-track
-error, applied action and renderer/model handshake telemetry. Use
-`--no-start-model` or `--no-start-renderer` when a service is already running.
-Manual and scripted driving paths remain available through the existing
-simulation commands.
+Flags, run-directory layout, the policy interface and GPU residency rules are
+documented in `docs/engineering/drive-bench.md`.
 
 The `job`, `worker`, `cas` and `runtime` groups are forwarded verbatim (plus
 `--pretty`/`--root`) to the native runner binary, located through

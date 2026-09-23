@@ -1,9 +1,9 @@
 """Reference policies for the policy runner.
 
-All are deterministic given their construction arguments: the scripted
-policies are pure functions of the step index; the torch policy derives its
-weights from ``torch.manual_seed`` and runs inference in no-grad eval mode,
-so identical seeds yield bit-identical actions on one machine.
+Scripted policies are deterministic functions of their construction arguments
+and step index. Trained PPO checkpoints are served by ``train.serve`` and
+``simforge drive run --policy torch:<checkpoint>``; no random model is exposed
+under the name of a learned policy.
 
 Policies return a :class:`PolicyDecision`: the current policy action document
 (``{"kind": "control", ...}`` or ``{"kind": "trajectory", "points": [...]}``)
@@ -122,48 +122,12 @@ class ScriptedTrajectoryPolicy:
         return PolicyDecision(self._held, reasoning)
 
 
-class TorchMlpPolicy:
-    """Tiny random MLP over the 10-dim state vector; seeded, eval-mode, no-grad."""
-
-    name = "torch-mlp"
-
-    def __init__(self, seed: int = 0) -> None:
-        import torch  # deferred: keeps the scripted path torch-free
-
-        self._torch = torch
-        torch.manual_seed(seed)
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(10, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 3),
-        )
-        self.net.eval()
-        digest = hashlib.sha256()
-        for key, tensor in sorted(self.net.state_dict().items()):
-            digest.update(key.encode())
-            digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
-        self.checkpoint_digest = digest.hexdigest()
-
-    def act(self, step: int, state_vector: np.ndarray | None) -> PolicyDecision:
-        torch = self._torch
-        observation = np.zeros(10, dtype=np.float32) if state_vector is None else state_vector.astype(np.float32)
-        with torch.no_grad():
-            out = self.net(torch.from_numpy(observation))
-        throttle = float(torch.sigmoid(out[0])) * 0.8
-        steer = float(torch.tanh(out[2])) * 0.3
-        return PolicyDecision(control(throttle, 0.0, steer))
-
-
-def make_policy(name: str, seed: int = 0) -> Policy:
+def make_policy(name: str) -> Policy:
     if name == "scripted":
         return ScriptedPolicy()
     if name == "trajectory":
         return ScriptedTrajectoryPolicy()
-    if name == "torch":
-        return TorchMlpPolicy(seed)
-    raise ValueError(f"unknown policy {name!r} (expected 'scripted', 'trajectory' or 'torch')")
+    raise ValueError(f"unknown reference policy {name!r} (expected 'scripted' or 'trajectory'; trained checkpoints use drive --policy torch:<checkpoint>)")
 
 
 def make_recorded_path_policy(

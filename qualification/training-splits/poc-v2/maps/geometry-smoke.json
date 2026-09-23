@@ -1,0 +1,142 @@
+[
+  {
+    "map": "yale-street",
+    "source": "opendrive-road-boundary",
+    "metric": "simforge.offroad/v3",
+    "confidence": "authoritative",
+    "boundaries": 489,
+    "centrelineProbe": {
+      "drivable": 207,
+      "off-road": 0,
+      "unavailable": 0
+    },
+    "exceptions": [],
+    "provenance": {
+      "mapDirectory": "/home/path/.local/share/simforge/maps/dev-assets/yale-street",
+      "roadBoundarySha256": "39343955e11c96d3c7bcaf54906946e9dda1176c5f30b878cceec90c5424429f",
+      "laneSurfaces": 967,
+      "precisionM": 0.001,
+      "surfaceTypes": [
+        "bidirectional",
+        "biking",
+        "connectingRamp",
+        "driving",
+        "entry",
+        "exit",
+        "offRamp",
+        "onRamp",
+        "parking",
+        "shoulder",
+        "stop"
+      ],
+      "xodrSha256": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
+      "recipe": "opendrive-road-outline/v1",
+      "interpretation": "source OpenDRIVE paved cross-section outline, not surveyed ground-truth or a lane-union substitute; exposed section caps remain unavailable"
+    }
+  },
+  {
+    "map": "el-camino-road",
+    "source": "opendrive-road-boundary",
+    "metric": "simforge.offroad/v3",
+    "confidence": "authoritative",
+    "boundaries": 406,
+    "centrelineProbe": {
+      "drivable": 188,
+      "off-road": 0,
+      "unavailable": 0
+    },
+    "exceptions": [],
+    "provenance": {
+      "mapDirectory": "/home/path/.local/share/simforge/maps/dev-assets/el-camino-road",
+      "roadBoundarySha256": "4ba2d969a4991ac80388cb0c1ff6c154ce9816e803488f81365030f02dbdf82e",
+      "laneSurfaces": 867,
+      "precisionM": 0.001,
+      "surfaceTypes": [
+        "bidirectional",
+        "biking",
+        "connectingRamp",
+        "driving",
+        "entry",
+        "exit",
+        "offRamp",
+        "onRamp",
+        "parking",
+        "shoulder",
+        "stop"
+      ],
+      "xodrSha256": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+      "recipe": "opendrive-road-outline/v1",
+      "interpretation": "source OpenDRIVE paved cross-section outline, not surveyed ground-truth or a lane-union substitute; exposed section caps remain unavailable"
+    }
+  },
+  {
+    "map": "belmont-research-center",
+    "source": "opendrive-road-boundary",
+    "metric": "simforge.offroad/v3",
+    "confidence": "authoritative",
+    "boundaries": 471,
+    "centrelineProbe": {
+      "drivable": 161,
+      "off-road": 0,
+      "unavailable": 0
+    },
+    "exceptions": [],
+    "provenance": {
+      "mapDirectory": "/home/path/.local/share/simforge/maps/dev-assets/belmont-research-center",
+      "roadBoundarySha256": "e34548b83eab796ff4be0e27dc641e9271b5764c06461f0927c33eadb03530f8",
+      "laneSurfaces": 1025,
+      "precisionM": 0.001,
+      "surfaceTypes": [
+        "bidirectional",
+        "biking",
+        "connectingRamp",
+        "driving",
+        "entry",
+        "exit",
+        "offRamp",
+        "onRamp",
+        "parking",
+        "shoulder",
+        "stop"
+      ],
+      "xodrSha256": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+      "recipe": "opendrive-road-outline/v1",
+      "interpretation": "source OpenDRIVE paved cross-section outline, not surveyed ground-truth or a lane-union substitute; exposed section caps remain unavailable"
+    }
+  },
+  {
+    "map": "easterbrook-discovery-school",
+    "source": "opendrive-road-boundary",
+    "metric": "simforge.offroad/v3",
+    "confidence": "authoritative",
+    "boundaries": 286,
+    "centrelineProbe": {
+      "drivable": 39,
+      "off-road": 0,
+      "unavailable": 0
+    },
+    "exceptions": [],
+    "provenance": {
+      "mapDirectory": "/home/path/.local/share/simforge/maps/dev-assets/easterbrook-discovery-school",
+      "roadBoundarySha256": "51f2d462f84bf39985c1f9647828aa14e2460a91217c76f32264fc8e3bfff975",
+      "laneSurfaces": 479,
+      "precisionM": 0.001,
+      "surfaceTypes": [
+        "bidirectional",
+        "biking",
+        "connectingRamp",
+        "driving",
+        "entry",
+        "exit",
+        "offRamp",
+        "onRamp",
+        "parking",
+        "shoulder",
+        "stop"
+      ],
+      "xodrSha256": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+      "recipe": "opendrive-road-outline/v1",
+      "interpretation": "source OpenDRIVE paved cross-section outline, not surveyed ground-truth or a lane-union substitute; exposed section caps remain unavailable"
+    }
+  }
+]

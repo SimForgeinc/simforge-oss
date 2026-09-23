@@ -20,13 +20,14 @@ import type { EvalResultManifest } from "@simforge-oss/studio-ui/evaluation";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
 import { styles } from "../route-residuals.stylex";
+import { RunDirectoryViewer } from "./RunDirectoryViewer";
 
 type LocalRun = {
   id: string;
   kind: string;
   status: "queued" | "running" | "succeeded" | "failed";
-  modelVersionId: string;
-  endpointId: string;
+  modelVersionId: string | null;
+  endpointId: string | null;
   seed: number;
   metrics: Record<string, unknown> | null;
   outputRefs: unknown[];
@@ -92,7 +93,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
   useEffect(() => {
     setManifest(null);
     setManifestProblem(null);
-    if (!terminal) return;
+    if (!terminal || run?.kind === "drive_bench") return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -118,7 +119,11 @@ export function LocalRunClient({ runId }: { runId: string }) {
       }
     })();
     return () => controller.abort();
-  }, [runId, terminal]);
+  }, [runId, terminal, run?.kind]);
+
+  const directory = run?.outputRefs.find((ref): ref is { kind: string; path: string } =>
+    !!ref && typeof ref === "object" && "kind" in ref && ref.kind === "directory" && "path" in ref && typeof ref.path === "string");
+  if (run?.kind === "drive_bench" && directory) return <RunDirectoryViewer initialRef={directory.path} />;
 
   return (
     <div {...stylex.props(styles.content6)} >

@@ -10,8 +10,8 @@ import { MODEL_FAMILIES, type ModelFamilyId, type ModelQuant } from "./catalog";
  * assertions below make a divergence from the catalog a type error here
  * instead of a runtime surprise in a handler.
  */
-const FamilyEnum = z.enum(["alpamayo-1", "alpamayo-1.5", "alpamayo-2-super"]);
-const QuantEnum = z.enum(["bf16", "nf4", "fp8"]);
+const FamilyEnum = z.enum(["alpamayo-1", "alpamayo-1.5", "alpamayo-2-super", "qwen-drive-1.0", "auto-e2e"]);
+const QuantEnum = z.enum(["fp32", "bf16", "nf4", "fp8"]);
 
 const _familiesMatchCatalog: readonly ModelFamilyId[] = FamilyEnum.options;
 const _quantsAreModelQuants: readonly ModelQuant[] = QuantEnum.options;

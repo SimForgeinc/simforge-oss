@@ -1,0 +1,4 @@
+# Isolated research adapter. CUDA/cuDNN shared libraries must also be available.
+onnxruntime-gpu==1.24.4
+numpy>=1.24
+Pillow>=10

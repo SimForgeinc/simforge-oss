@@ -1,0 +1,357 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "overnight-v2-train",
+  "cell": 6,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "bb134df7fe3b4422a3a026ec2320ee2de43fe3b4485b0d4d7b56d5c6dc0ef106",
+      "paramsSha256": "c4becdb20c3749f84b5dfc19fae9b6b6589ef8563622e12cf0359324d605b042",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.16,
+            "conflictT": 3.72,
+            "revealToConflictS": 1.56
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: ego/queue-tail@3.719419030279975",
+          "kernel scripted completion: collision at 3.8000000000000003/13s"
+        ],
+        "collisions": [
+          {
+            "t": 3.719419030279975,
+            "a": "ego",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "collision",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 4.293411,
+            "simulationS": 3.8000000000000003,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 38,
+          "deadlineMisses": 0,
+          "episodeDigest": "92f8ad2befe2660728a6300cff8c8ed3347300f5b2c94e3d4b9b76b4c912fdf1",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "2e794c724f4c318c5937929debdd2d47d6acaebf70f79d269e2ff4a3c8685f71"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/overnight-v2-train/cell-006-seed-0.trace.json.gz",
+      "sha256": "459b868c89454d2e87d49db438aff9c873419525c2cc8b0584dd5bfe2be6ac21"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-006-seed-0.episode.jsonl.gz",
+      "sha256": "eb06cb3b85307ec7ce310755a64effcdc40b3ab0319b6db88498987c0561406c"
+    }
+  ],
+  "match": {
+    "candidateCount": 12,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "fe8680f93b47ecf3",
+      "mapId": "san-ramon-25-p2",
+      "topologyDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.8527905962000781,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_dada83df5d3ea65a"
+        },
+        "entryLaneRsl": "143:0:1",
+        "referencePath": [
+          {
+            "laneRsl": "143:0:1",
+            "sStart": 0,
+            "sEnd": 10.936839124762258,
+            "lengthM": 10.936839124762258,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:0:1",
+            "sStart": 10.936839124762258,
+            "sEnd": 99.97414108261086,
+            "lengthM": 89.0373019578486,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "1860:0:1",
+            "sStart": 99.97414108261086,
+            "sEnd": 126.21203045827558,
+            "lengthM": 26.237889375664725,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "314:0:2",
+            "sStart": 126.21203045827558,
+            "sEnd": 146.22204423833657,
+            "lengthM": 20.010013780060987,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2118:0:2",
+            "sStart": 146.22204423833657,
+            "sEnd": 187.06210834177583,
+            "lengthM": 40.84006410343925,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "313:0:2",
+            "sStart": 187.06210834177583,
+            "sEnd": 191.07210926398318,
+            "lengthM": 4.0100009222073565,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "1066:0:1",
+            "sStart": 191.07210926398318,
+            "sEnd": 240.4170741046349,
+            "lengthM": 49.34496484065171,
+            "isJunction": true,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "1066:0:1": 191.07210926398318,
+          "143:0:1": 0,
+          "1860:0:1": 99.97414108261086,
+          "2118:0:2": 146.22204423833657,
+          "313:0:2": 187.06210834177583,
+          "314:0:2": 126.21203045827558,
+          "95:0:1": 10.936839124762258
+        },
+        "sRange": [
+          0,
+          240.4170741046349
+        ],
+        "lateralLanes": {
+          "0": "143:0:1",
+          "1": "95:0:1",
+          "-1": "95:0:2"
+        },
+        "opposingLanes": [
+          "143:0:-1",
+          "143:0:-2",
+          "143:0:-3",
+          "143:0:-4"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 240.41293302202402
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0.009301987333593853,
+          "score": 0.7546509936667969,
+          "slack": 0.49069801266640617,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 60,
+          "reason": "corridor.curvatureDegPer10m worst value 0.01 at s=60 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 240.41,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "240.41 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 3,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "95:0:1",
+          "routeLaneChain": [
+            "95:0:1",
+            "1860:0:1",
+            "314:0:2",
+            "2118:0:2",
+            "313:0:2",
+            "1066:0:1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "143:0:1",
+          "routeLaneChain": [
+            "143:0:1",
+            "95:0:1",
+            "1860:0:1",
+            "314:0:2",
+            "2118:0:2",
+            "313:0:2",
+            "1066:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "143:0:1",
+          "routeLaneChain": [
+            "143:0:1",
+            "95:0:1",
+            "1860:0:1",
+            "314:0:2",
+            "2118:0:2",
+            "313:0:2",
+            "1066:0:1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.8527905962000781,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0.01 at s=60 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "240.41 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "san-ramon-25-p2",
+    "topologySha256": "1105af5b2a389ef77ec71f4a44a05f378e110f6a658715adc9cbd50a77673283",
+    "engineGraphDigest": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
+    "matcherIndexDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb"
+  },
+  "siteKey": "san-ramon-25-p2/seg_dada83df5d3ea65a",
+  "status": "excluded",
+  "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719419030279975; kernel scripted completion: collision at 3.8000000000000003/13s"
+}

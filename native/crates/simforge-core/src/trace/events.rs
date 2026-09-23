@@ -6,6 +6,25 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::SetValue;
 
+/// Geometric OBB face facing the partner centre at swept contact time; not legal fault.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ContactSide { Front, Lateral, Rear }
+
+impl ContactSide {
+    pub fn between(ego: &crate::math::Obb, partner: &crate::math::Obb) -> Self {
+        let (s, c) = crate::math::sin_cos(ego.heading_rad);
+        let dx = partner.center.x - ego.center.x;
+        let dy = partner.center.y - ego.center.y;
+        let longitudinal = dx * c + dy * s;
+        let lateral = -dx * s + dy * c;
+        // At corner ties the lateral face wins: rear-only is the sole exempt face.
+        if lateral.abs() * ego.length_m >= longitudinal.abs() * ego.width_m {
+            Self::Lateral
+        } else if longitudinal > 0.0 { Self::Front } else { Self::Rear }
+    }
+}
+
 /// Why a longitudinal/lateral command released its axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -156,6 +175,9 @@ pub enum SimEvent {
         collider_a: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         collider_b: Option<String>,
+        /// In `[a, b]` order, sampled at the same swept TOI as `t`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        contact_sides: Option<[ContactSide; 2]>,
     },
     #[serde(rename_all = "camelCase")]
     RoadDeparturePrevented {

@@ -1,0 +1,244 @@
+{
+  "schema": "simforge.w4-verification/v1",
+  "promotion": {
+    "path": "/home/path/simforge-assets/runs/drive/training/promotions/torch_teacher_update-000098__canary8/promotion.json",
+    "sha256": "f4a103723d2ad026063a08de3ab4f3a2da1c0f77b41fe52a009c3e10d8722ede",
+    "verdict": "insufficient-evidence",
+    "reasons": [
+      "matched BC baseline is absent",
+      "named metric has unavailable authority: authoritative-offroad",
+      "canary8 screening only; devpanel32 and full frozen test were not evaluated"
+    ],
+    "panelDigest": "15fec3fe2152ed262fb0c38f386cc48ea9244d795406734e20e7c9ee33fd295e"
+  },
+  "comparison": [
+    {
+      "policy": "torch:teacher/update-000098",
+      "health": {
+        "healthy": true,
+        "reasons": []
+      },
+      "drivingScore": {
+        "mean": 0.141954649161028,
+        "se": 0.049766890810144154,
+        "n": 8
+      },
+      "collisionEpisodes": 0,
+      "alpasimStyleKnownZeros": 0,
+      "alpasimStyleUnavailable": 8,
+      "hazardDrivingMean": 0.010760096991752944,
+      "controlDrivingMean": 0.27314920133030307
+    },
+    {
+      "policy": "scripted",
+      "health": {
+        "healthy": true,
+        "reasons": []
+      },
+      "drivingScore": {
+        "mean": 0.3347680024181706,
+        "se": 0.08728296920105809,
+        "n": 8
+      },
+      "collisionEpisodes": 1,
+      "alpasimStyleKnownZeros": 1,
+      "alpasimStyleUnavailable": 7,
+      "hazardDrivingMean": 0.14212547442699117,
+      "controlDrivingMean": 0.5274105304093502
+    },
+    {
+      "policy": "auto-e2e",
+      "health": {
+        "healthy": true,
+        "reasons": []
+      },
+      "drivingScore": {
+        "mean": 0.11209198642402839,
+        "se": 0.020183979149877154,
+        "n": 8
+      },
+      "collisionEpisodes": 1,
+      "alpasimStyleKnownZeros": 5,
+      "alpasimStyleUnavailable": 3,
+      "hazardDrivingMean": 0.11295376091301569,
+      "controlDrivingMean": 0.11123021193504107
+    }
+  ],
+  "verification": {
+    "path": "/home/path/simforge-assets/runs/drive/training/promotions/torch_teacher_update-000098__canary8/verification.json",
+    "selectedRuns": 32,
+    "decisions": 2787,
+    "frameDigestsVerified": 15540,
+    "rerunsMatched": 8,
+    "rendererOnlyDifferences": 8
+  },
+  "release": {
+    "schema": "simforge.training-release-verification/v1",
+    "release": "/home/path/simforge-assets/runs/drive/training/release/training-poc-v1",
+    "manifestSha256": "1f34acc514cbd8c04f8cd12b5b13c28c9c0f56d433a28733651c41a4e8a950b9",
+    "verifiedFiles": 227,
+    "verifiedBytes": 33183258,
+    "videos": [
+      {
+        "id": "01-first-test-v-frontier",
+        "status": "present",
+        "durationS": 14.4,
+        "frames": 144,
+        "width": 1024,
+        "height": 384
+      },
+      {
+        "id": "02-paired-hazard-removed-control",
+        "status": "present",
+        "durationS": 14.4,
+        "frames": 144,
+        "width": 1024,
+        "height": 384
+      },
+      {
+        "id": "03-worst-failure",
+        "status": "missing",
+        "durationS": 3.0,
+        "frames": 30,
+        "width": 1024,
+        "height": 384
+      },
+      {
+        "id": "04-exact-replay",
+        "status": "present",
+        "durationS": 14.4,
+        "frames": 144,
+        "width": 1024,
+        "height": 384
+      },
+      {
+        "id": "05-held-out-map",
+        "status": "present",
+        "durationS": 19.4,
+        "frames": 194,
+        "width": 1024,
+        "height": 384
+      },
+      {
+        "id": "06-matched-bc-baseline",
+        "status": "missing",
+        "durationS": 3.0,
+        "frames": 30,
+        "width": 1024,
+        "height": 384
+      }
+    ],
+    "visualInspections": [
+      {
+        "video": "03-worst-failure",
+        "atS": 1,
+        "observed": "explicit MISSING evidence card"
+      },
+      {
+        "video": "04-exact-replay",
+        "atS": 8,
+        "observed": "two real synchronized teacher HUD/native views; no RGB equality claim"
+      },
+      {
+        "video": "05-held-out-map",
+        "atS": 8,
+        "observed": "Easterbrook native roadway and teacher/AutoE2E panes"
+      }
+    ]
+  },
+  "runtime": {
+    "node": {
+      "path": "/tmp/simforge-appearance-native/node/simforge-native-runtime.linux-x64-gnu.node",
+      "sha256": "cca27c2d7b07b4ec762f0a2d392696f9f7b8833a11699bb077ade884c8215af6"
+    },
+    "pythonPolicyNativeSha256": "0b13075278adc5427b61cf69ae41f7d8890b57a86ee25d26825140a7da87b48d",
+    "pythonPolicyRoot": "/tmp/simforge-promotion/python",
+    "installedWheelsReplaced": false
+  },
+  "targetedTests": {
+    "evaluation": 58,
+    "nativeObservationContract": 11,
+    "nativePrivilegedDigest": "2243af51a91457ca8e2d57745773f3bfd757aafba562d32e2a6a769bbe9c0492"
+  },
+  "store": {
+    "typescriptLoad": true,
+    "pythonLoad": true,
+    "typescriptReceiptTamperingRejected": true,
+    "pythonReceiptTamperingRejected": true,
+    "receiptSha256": "f4a103723d2ad026063a08de3ab4f3a2da1c0f77b41fe52a009c3e10d8722ede"
+  },
+  "nativeContactProjection": {
+    "collision": {
+      "partnerId": "other",
+      "partnerKind": "vehicle",
+      "side": "front"
+    },
+    "summary": {
+      "deadline_misses": 0,
+      "episode_digest": "e8017cb806c620be1f2881fa714f2ac2971ff8ce92a712f6b3668c924cb0df84",
+      "mode": "offline-simtime",
+      "source_episode_digest": "49ebddd329498c41d4796b0d4a70b0765a7a045c1e0148a86e5b237654cc740d",
+      "source_schema": "simforge.episode-trace/v2",
+      "status": "succeeded",
+      "steps": 4,
+      "term_reason": "collision",
+      "terminated": true,
+      "truncated": false
+    }
+  },
+  "scope": "Canary8: four hazard/control pairs. No devpanel32/full-test or BC/DAgger result; native lane polygon offroad authority remains unavailable. Model health is not driving safety. Alpasim-style-score is not an AlpaSim result.",
+  "jevCadenceSmoke": {
+    "path": "/home/path/simforge-assets/runs/drive/training/promotions/torch_teacher_update-000098__canary8/smoke/jev-cadence/drive-corridor__jev__seed42",
+    "steps": 10,
+    "freshSteps": [
+      0,
+      5
+    ],
+    "frameDigestsVerified": 148,
+    "health": {
+      "decisions": 10,
+      "genuinePlans": 0,
+      "warmupSteps": 64,
+      "sessions": {
+        "expected": 1,
+        "completed": 1
+      },
+      "fallbacks": {
+        "prologue": 0,
+        "closedLoop": 10
+      },
+      "invalidPlans": 0,
+      "timeouts": 0,
+      "latencyMs": {
+        "p50": 0,
+        "p95": 1183.6551319999999
+      },
+      "planLatencyMs": {
+        "p50": 1183.6551319999999,
+        "p95": 1183.6551319999999
+      },
+      "driveLatencyMs": {
+        "p50": 0,
+        "p95": 1183.6551319999999
+      },
+      "queueLatencyMs": {
+        "p50": null,
+        "p95": null
+      },
+      "deadlineMisses": 0,
+      "maxPlanAgeS": 0.40000000000000036
+    },
+    "promotable": false,
+    "scope": "cadence/held-tracker execution smoke only; fallback health is exploratory, excluded from canary comparison"
+  },
+  "commands": {
+    "promotion": "NODE_OPTIONS=--conditions=development node_modules/.bin/tsx --tsconfig tsconfig.base.json packages/cli/src/main.ts eval promote torch:teacher/update-000098 --panel canary8 --split test --pretty",
+    "initialWallSeconds": 1180.86,
+    "resumedWallSeconds": 199.2,
+    "initialStdout": "artifact://1241",
+    "resumedStdout": "artifact://1245",
+    "release": "node_modules/.bin/tsx --tsconfig tsconfig.base.json tools/release-bundle/build.mts PROMOTION_DIR --id v1 --training-run /home/path/simforge-assets/runs/drive/training/w3-proof-20260922/teacher",
+    "releaseWallSeconds": 3.75
+  },
+  "modelHealthInterpretation": "All three canary policy groups pass model health; Jev is an additional exploratory cadence smoke with ten model-owned deadline fallbacks, not a canary baseline."
+}

@@ -11,6 +11,7 @@ import {
   preflight,
   prepareRuntime,
   readRuntimeRecord,
+  policyCheckpoints,
   reclaimCache,
   startInstall,
   storeHfToken,
@@ -121,6 +122,7 @@ export async function modelsList(options: ModelsOptions = {}): Promise<number> {
       observed: report.observed,
       localExecution: report.localExecution,
       models,
+      policies: await policyCheckpoints(),
       vault: await vaultStatus(),
     }, { pretty: options.pretty ?? false });
   return 0;

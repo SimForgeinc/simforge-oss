@@ -1,0 +1,52 @@
+[
+  {
+    "map": "yale-street",
+    "manifestSha256": "fec7a7a98b581eb679609f7d8a4e69e71bdfd9c175c421024ff1008f1c0942a8",
+    "junction": 62,
+    "junction_movement": 523,
+    "midblock_segment": 140,
+    "occlusion_zone": 22,
+    "parking_space": 481,
+    "roadBoundaries": 489,
+    "roadBoundaryPoints": 17881,
+    "cutBoundaries": 239
+  },
+  {
+    "map": "el-camino-road",
+    "manifestSha256": "8ac166e8bc8a09f0012d3c6f4282dbe8bf64bf16d19c4ee40871cbb562254315",
+    "junction": 72,
+    "junction_movement": 465,
+    "midblock_segment": 168,
+    "occlusion_zone": 18,
+    "parking_space": 967,
+    "work_zone_suitable": 4,
+    "roadBoundaries": 406,
+    "roadBoundaryPoints": 18924,
+    "cutBoundaries": 180
+  },
+  {
+    "map": "belmont-research-center",
+    "manifestSha256": "eb88435604eca46fe40d3df9086010fbeff112d77ea0ab23bde4d43f0477086e",
+    "junction": 81,
+    "junction_movement": 611,
+    "midblock_segment": 103,
+    "occlusion_zone": 18,
+    "parking_space": 997,
+    "roadBoundaries": 471,
+    "roadBoundaryPoints": 21898,
+    "cutBoundaries": 183
+  },
+  {
+    "map": "easterbrook-discovery-school",
+    "manifestSha256": "0fab757998509dd63a7b786dcd8ffb6ac4aee520c036e2cf751dcd654bc29438",
+    "junction": 17,
+    "junction_movement": 335,
+    "midblock_segment": 33,
+    "occlusion_zone": 2,
+    "parking_space": 98,
+    "work_zone_suitable": 1,
+    "roadBoundaries": 286,
+    "roadBoundaryPoints": 16253,
+    "cutBoundaries": 85
+  }
+]

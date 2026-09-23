@@ -1,0 +1,604 @@
+{
+  "version": 1,
+  "scenarioId": "poc-v2-cpnco",
+  "episode": {
+    "decisionHz": 10
+  },
+  "instances": [
+    {
+      "input": {
+        "schemaVersion": 1,
+        "mapId": "belmont-research-center",
+        "clipSeconds": 14,
+        "warmupSeconds": 1,
+        "dt": 0.02,
+        "seed": "200",
+        "physics": {
+          "mode": "dynamic-v1"
+        },
+        "operationalConditions": {
+          "weather": "clear",
+          "timeOfDay": "day",
+          "traffic": "moderate",
+          "visibility": "unrestricted",
+          "effects": {
+            "visibilityRangeM": 1000,
+            "frictionScale": 1,
+            "trafficSpeedFactor": 1
+          }
+        },
+        "metricSubject": "ego",
+        "actors": [
+          {
+            "id": "ego",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "133:0:1",
+                "s": 12.188885424285644,
+                "tFrac": 0
+              },
+              "pose": {
+                "x": -144.53055526565225,
+                "z": -61.29966118503712,
+                "headingRad": -1.5779206908069616
+              },
+              "speedMps": 6.111111111111112
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "133:0:1",
+                  "482:0:1",
+                  "142:0:-1",
+                  "142:1:-1",
+                  "2351:0:-1",
+                  "40:0:1",
+                  "1287:0:1",
+                  "75:0:1",
+                  "1404:0:1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              },
+              "cruiseSpeedMps": 6.111111111111112
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:ego",
+              "class:car",
+              "driver-profile:lawful",
+              "binding:on_reference",
+              "catalog:vehicle.sedan"
+            ]
+          },
+          {
+            "id": "ped",
+            "kind": "pedestrian",
+            "dims": {
+              "l": 0.6,
+              "w": 0.6,
+              "h": 1.75
+            },
+            "initial": {
+              "pose": {
+                "x": -122.68569521169537,
+                "z": -38.24434929068522,
+                "headingRad": -1.0035912979547055
+              },
+              "speedMps": 1.9426654187716648
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": false,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": false,
+                "aggression": 0.5,
+                "speedFactor": 1
+              },
+              "route": {
+                "kind": "polyline",
+                "points": [
+                  {
+                    "x": -147.65081740805147,
+                    "z": -77.4340746137777
+                  },
+                  {
+                    "x": -147.11408219893468,
+                    "z": -76.59151893745943
+                  },
+                  {
+                    "x": -146.57734698981793,
+                    "z": -75.74896326114116
+                  },
+                  {
+                    "x": -146.04061178070114,
+                    "z": -74.9064075848229
+                  },
+                  {
+                    "x": -145.50387657158436,
+                    "z": -74.06385190850463
+                  },
+                  {
+                    "x": -144.9671413624676,
+                    "z": -73.22129623218636
+                  },
+                  {
+                    "x": -144.43040615335082,
+                    "z": -72.37874055586809
+                  },
+                  {
+                    "x": -143.89367094423403,
+                    "z": -71.53618487954982
+                  },
+                  {
+                    "x": -143.35693573511728,
+                    "z": -70.69362920323157
+                  },
+                  {
+                    "x": -142.8202005260005,
+                    "z": -69.8510735269133
+                  },
+                  {
+                    "x": -142.28346531688373,
+                    "z": -69.00851785059503
+                  },
+                  {
+                    "x": -141.74673010776695,
+                    "z": -68.16596217427676
+                  },
+                  {
+                    "x": -141.20999489865017,
+                    "z": -67.3234064979585
+                  },
+                  {
+                    "x": -140.6732596895334,
+                    "z": -66.48085082164023
+                  },
+                  {
+                    "x": -140.13652448041663,
+                    "z": -65.63829514532196
+                  },
+                  {
+                    "x": -139.59978927129984,
+                    "z": -64.79573946900369
+                  },
+                  {
+                    "x": -139.06305406218308,
+                    "z": -63.95318379268542
+                  },
+                  {
+                    "x": -138.5263188530663,
+                    "z": -63.11062811636716
+                  },
+                  {
+                    "x": -137.98958364394952,
+                    "z": -62.26807244004889
+                  },
+                  {
+                    "x": -137.45284843483276,
+                    "z": -61.42551676373063
+                  },
+                  {
+                    "x": -136.91611322571597,
+                    "z": -60.58296108741236
+                  },
+                  {
+                    "x": -136.3793780165992,
+                    "z": -59.74040541109409
+                  },
+                  {
+                    "x": -135.84264280748243,
+                    "z": -58.89784973477582
+                  },
+                  {
+                    "x": -135.30590759836565,
+                    "z": -58.05529405845756
+                  },
+                  {
+                    "x": -134.76917238924887,
+                    "z": -57.21273838213929
+                  },
+                  {
+                    "x": -134.2324371801321,
+                    "z": -56.37018270582102
+                  },
+                  {
+                    "x": -133.69570197101532,
+                    "z": -55.52762702950275
+                  },
+                  {
+                    "x": -133.15896676189857,
+                    "z": -54.68507135318449
+                  },
+                  {
+                    "x": -132.62223155278178,
+                    "z": -53.84251567686623
+                  },
+                  {
+                    "x": -132.085496343665,
+                    "z": -52.99996000054796
+                  },
+                  {
+                    "x": -131.54876113454824,
+                    "z": -52.15740432422969
+                  },
+                  {
+                    "x": -131.01202592543146,
+                    "z": -51.31484864791142
+                  },
+                  {
+                    "x": -130.47529071631467,
+                    "z": -50.472292971593156
+                  },
+                  {
+                    "x": -129.93855550719792,
+                    "z": -49.629737295274886
+                  },
+                  {
+                    "x": -129.40182029808113,
+                    "z": -48.78718161895662
+                  },
+                  {
+                    "x": -128.86508508896435,
+                    "z": -47.94462594263835
+                  },
+                  {
+                    "x": -128.3283498798476,
+                    "z": -47.102070266320084
+                  },
+                  {
+                    "x": -127.79161467073081,
+                    "z": -46.259514590001814
+                  },
+                  {
+                    "x": -127.25487946161404,
+                    "z": -45.41695891368356
+                  },
+                  {
+                    "x": -126.71814425249727,
+                    "z": -44.57440323736529
+                  },
+                  {
+                    "x": -126.18140904338048,
+                    "z": -43.73184756104702
+                  },
+                  {
+                    "x": -125.64467383426371,
+                    "z": -42.889291884728756
+                  },
+                  {
+                    "x": -125.10793862514694,
+                    "z": -42.046736208410486
+                  },
+                  {
+                    "x": -124.57120341603016,
+                    "z": -41.20418053209222
+                  },
+                  {
+                    "x": -124.03446820691339,
+                    "z": -40.36162485577395
+                  },
+                  {
+                    "x": -123.49773299779662,
+                    "z": -39.519069179455684
+                  },
+                  {
+                    "x": -122.96099778867985,
+                    "z": -38.67651350313742
+                  },
+                  {
+                    "x": -122.42426257956306,
+                    "z": -37.83395782681915
+                  },
+                  {
+                    "x": -121.88752737044629,
+                    "z": -36.99140215050089
+                  },
+                  {
+                    "x": -121.35079216132951,
+                    "z": -36.14884647418262
+                  },
+                  {
+                    "x": -120.81405695221274,
+                    "z": -35.30629079786435
+                  },
+                  {
+                    "x": -120.27732174309597,
+                    "z": -34.46373512154608
+                  },
+                  {
+                    "x": -119.7405865339792,
+                    "z": -33.62117944522782
+                  },
+                  {
+                    "x": -119.160551420878,
+                    "z": -33.04668699308229
+                  },
+                  {
+                    "x": -118.38584000334477,
+                    "z": -33.67740640133401
+                  },
+                  {
+                    "x": -117.61112858581153,
+                    "z": -34.30812580958574
+                  },
+                  {
+                    "x": -116.83641716827829,
+                    "z": -34.93884521783746
+                  },
+                  {
+                    "x": -116.06170575074505,
+                    "z": -35.56956462608918
+                  },
+                  {
+                    "x": -115.28699433321182,
+                    "z": -36.20028403434091
+                  },
+                  {
+                    "x": -114.51228291567858,
+                    "z": -36.83100344259263
+                  }
+                ]
+              },
+              "cruiseSpeedMps": 1.9426654187716648
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:ped",
+              "class:pedestrian",
+              "binding:on_reference"
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "id": "ped-reaches-the-lane",
+            "actorId": "ped",
+            "trigger": {
+              "kind": "at",
+              "t": 4.763483324874081
+            },
+            "verb": "speed",
+            "target": {
+              "mode": "absolute",
+              "value": 1.9426654187716648
+            },
+            "dynamics": {
+              "shape": "step",
+              "constraint": "time",
+              "value": 0.1
+            }
+          }
+        ],
+        "signalPrograms": [],
+        "roadControls": [],
+        "surfacePatches": [],
+        "props": [
+          {
+            "id": "parked-row-0",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -127.97386440051457,
+              "z": -33.73244946623854,
+              "headingRad": -0.010337233662456207
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-1",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -122.6711517034614,
+              "z": -33.70045983447288,
+              "headingRad": -0.009312215045957743
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-2",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -117.3699480103322,
+              "z": -33.679460246630846,
+              "headingRad": -0.008873609769638873
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-3",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -112.06984489607596,
+              "z": -33.660970526701604,
+              "headingRad": -0.008851427114789224
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-4",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -106.77090324845697,
+              "z": -33.6416823156578,
+              "headingRad": -0.009271011550110737
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          }
+        ],
+        "occluders": [
+          {
+            "id": "parked-row-0",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -127.97386440051457,
+                "z": -33.73244946623854
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -0.010337233662456207,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-1",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -122.6711517034614,
+                "z": -33.70045983447288
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -0.009312215045957743,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-2",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -117.3699480103322,
+                "z": -33.679460246630846
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -0.008873609769638873,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-3",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -112.06984489607596,
+                "z": -33.660970526701604
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -0.008851427114789224,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-4",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -106.77090324845697,
+                "z": -33.6416823156578
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -0.009271011550110737,
+              "heightM": 1.78
+            }
+          }
+        ],
+        "occlusionPairs": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "occluderId": "parked-row"
+          }
+        ],
+        "nearMissCriteria": []
+      },
+      "provenance": {
+        "map": "belmont-research-center",
+        "family": "cpnco-parked-row",
+        "site": "0d172b3a2aa557a0",
+        "seed": 200,
+        "drawIndex": 200,
+        "inputSha256": "cfa95f85a152825bac8a89054078b889e50fe2e2aaae189953741776cfd55b3c"
+      }
+    }
+  ]
+}

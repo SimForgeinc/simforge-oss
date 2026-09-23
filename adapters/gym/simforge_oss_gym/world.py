@@ -116,7 +116,7 @@ class SimForgeWorld:
         return self._session.snapshot()
 
     def actor_frame(self) -> dict[str, Any]:
-        """Snapshot as columnar arrays: ids, kinds, present, pose ``(N, 5)``."""
+        """Snapshot as columnar arrays: ids, kinds, present, pose ``(N, 6)``."""
         snap = self._session.snapshot()
         return {
             "t_s": snap.t_s,

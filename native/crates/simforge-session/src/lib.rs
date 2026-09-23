@@ -33,6 +33,12 @@ pub use causal::{CausalChannel, CausalChannelCollector, CausalFrame};
 pub use env::{resolve_ego_id, EnvCheckpoint, EnvSession, StepInfo, StepResult};
 pub use episode::{
     BevConfig, EpisodeConfig, GoalSpec, ObservationConfig, ResolvedEpisode, RewardConfig, ENGINE_HZ,
+    Episode, EpisodeAction, EpisodeDeadline, EpisodeFallback, EpisodeMode,
+    EpisodeBatch, EpisodeBatchCheckpoint,
+    EpisodeObservation, EpisodeObservationConfig, EpisodeOptions, EpisodeReplayContext,
+    EpisodeSpec, EpisodeStep, EpisodeTiming, ObservationChannel, ResidentCameraRig,
+    ResultCore, EPISODE_TRACE_SCHEMA,
+    CameraBackend, CameraObservation, CameraPass, CameraSpec, FrameDescriptor, FrameRef,
 };
 pub use error::{Result, SessionError};
 pub use policy::{
@@ -40,7 +46,7 @@ pub use policy::{
     FallbackPolicy, PolicyAction, PolicyExecutor, PolicyExecutorConfig, ResolvedDecision,
     TrajectoryExecution, TrajectoryPoint, ZERO_CONTROL,
 };
-pub use reward::{RewardOutcome, RewardTerms};
+pub use reward::{RewardOutcome, RewardTerms, REWARD_TERM_COUNT, REWARD_TERM_NAMES};
 pub use trajectory::{
     anchor_plan_to_world, FollowerCommand, TrackedPose, TrajectoryFollower,
     TrajectoryFollowerConfig, TrajectoryPlanPoint,

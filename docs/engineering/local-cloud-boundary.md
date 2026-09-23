@@ -1,11 +1,107 @@
 # Local / SimCloud boundary
 
-**Status:** design review and cutover proposal (read-only; no implementation in this
-change).
+**Status:** boundary design and cutover proposal, with the Studio drive/evaluation
+viewer/launcher cutover below implemented on 2026-09-22. The remaining sections
+retain their design-review status; they are not claims of a completed storage migration.
 
 This proposal treats the preview as intentionally breakable. There is no released
 local-data or API compatibility contract to preserve. The target is one storage
 story, one host protocol, and one unambiguous answer to where a run's result lives.
+
+## Studio is a run-directory viewer and launcher
+
+Studio drive/evaluation no longer owns a simulation clock. `/dashboard/evaluation/viewer`
+opens a bench run directory or heat directory (`ref` is a local path, `~/` path,
+or local finalized artifact id, optionally prefixed `artifact:`). A registered
+result/video artifact addresses its containing run directory and recorded sibling
+files; this does not download or synchronize a cloud result into local storage.
+The local process/session gate protects these APIs. Evidence filenames are
+allowlisted, canonical-path checked, and video reads support HTTP byte ranges.
+
+The surface plays `drive.mp4` / `heat.mp4`, selects timestamped decisions from
+`steps.jsonl`, and shows reasoning, measured Jev distributions, optional recorded
+model BEV, scores and complete `result.json` / modelHealth receipts. Missing
+probabilities or geometry stay unavailable. Solo clips remain linked. Solo
+videos retain the native camera prologue; the viewer subtracts the recorded
+`warmupFrames / decisionHz` offset before selecting a policy decision. Seeking
+into that prologue displays no policy HUD. Heat composition is already
+policy-only, and a shorter pane holds its final recorded decision, never an
+invented continuation. Camera/BEV are policy input evidence; step poses are
+the recorded post-action result.
+
+Health qualification is independent of score and job status: the shared
+`@simforge-oss/evaluation/drive-evidence` assessor rejects missing model health,
+closed-loop fallbacks or invalid plans. A `succeeded` run with five closed-loop
+fallbacks is shown as exploratory/non-qualified, not silently promoted. Clean
+model health does **not** claim driving safety or held-out qualification. The
+same dependency-free package supplies the CLI/Studio SVG/BEV presentation and
+reasoning contract; Studio does not copy the scorer or policy logic.
+
+`/dashboard/map-assets/drive` accepts a policy, scenario path, seed and policy
+duration. Map/document entries may materialize an authored input with the
+existing compiler, but never play it. **Run with policy jev** queues a Jev bench
+job, not a browser takeover. `POST /api/simforge/drive/jobs` freezes the input
+under the runs root and submits `drive_bench` to the existing local model-run
+ledger. Bench jobs have no invented model-registry or endpoint row: the CLI
+owns the policy lifecycle and writes its resolved provenance.
+
+The local host starts that worker lane alongside lease reconciliation. Each
+attempt runs the real `simforge drive run`, then `simforge drive verify`, in a
+fresh `<runsRoot>/drive/studio/<jobId>/attempt-N/` root. The host SSE endpoint
+`/api/simforge/drive/jobs/<jobId>/events` streams the CLI's worker log and the
+bench's `log.txt`. Only successful verification completes the job and opens
+the recorded run viewer. Navigation does not destroy a queued/running job.
+Failure logs and attempt records remain available. `SIMFORGE_RUNS_ROOT`
+selects the local runs root; source hosts can set `SIMFORGE_REPO_ROOT`,
+installed hosts can set `SIMFORGE_CLI_BINARY`. An isolated development host
+can set `SIMFORGE_NEXT_DIST_DIR` to avoid sharing another host's Next cache.
+
+Removed: the complete `studio/app/lib/live-world/` subsystem (eight modules and
+five tests), `studio/worker/live-world-worker.ts`, the browser `jev-controller`
+and `/api/simforge/drive/jev` bridge, drive-only SUMO hook/test, truth-frame HUD
+helpers/styles and the old live-drive activity proof. No live-world module is
+kept for the editor. Kept deliberately: the existing editor/playback packages
+for authoring previews; lane-index/scratch-scenario builders and the gallery's
+one-time camera-to-spawn selection for authoring inputs; and the normal local
+worker/host queue. Standalone drive and evaluation routes no longer keep a
+WebGL world alive. Map editing, saved manual-track authoring and cloud sync are
+outside this cutover.
+
+### Cutover evidence
+
+`/tmp/simforge-studio-viewer/evidence/browser-proof.json` records a real
+Playwright Chromium run with `--disable-gpu`, zero WebGL context attempts and
+zero page errors. It opens the five-policy corridor heat at
+`~/simforge-assets/runs/drive/demo/corridor-seed42/`, its Jev solo, a real
+Qwen BEV run and a fallback-bearing Jev result. At heat video 2.00 s it shows
+decision 20 / recorded world 8.40 s; the solo prologue has no policy decision.
+Screenshots `heat-viewer.png`, `solo-viewer.png`, `bev-viewer.png`,
+`exploratory-viewer.png`, `launch-progress.png` and `launched-run.png` were
+read back visually. The proof also resolves a registered copy of the real Jev
+artifact, verifies a 32-byte HTTP 206 video range and refuses path traversal.
+`browser-proof-final-viewer.json` repeats playback after the source deletion
+and shared-helper cutover, including actual Play advancement and seeking,
+with the same zero-WebGL/zero-page-error result.
+
+The UI-submitted scripted run, seed 42, 2 policy seconds, is
+`/tmp/simforge-studio-viewer/runs/drive/studio/mrun_bde764913e184fdf875a9ca6/attempt-1/drive-corridor__scripted__seed42/`.
+It completed 20 decisions, scored 0.834841456986247, had zero closed-loop
+fallbacks/invalid plans, passed the CLI verifier and opened automatically.
+The proof used the isolated final W0 N-API artifact, not a replacement of any
+installed trainer wheel.
+Post-cutover verification independently checked 168 PNG hashes (84 frames per
+sensor) and the trace digest
+`0f168689ccfc4d43f8cdfe446663f471aed14d659ab361db9b997386df1651b5`.
+
+The focused Studio application/worker TypeScript check and CLI TypeScript
+check pass. A timeline regression protects the prologue, exact decision
+boundary, nonuniform recorded times and terminal hold. Pure-helper extraction
+retains byte-identical BEV SVG (36,276 bytes, SHA-256
+`fc28bd1d1af0753f21d9316eb82b73d03bab3cc7e7f7e73b52d5203118f22d2f`),
+probability bars, reasoning and health verdicts; receipts are
+`evidence-before.json` and `evidence-after.json` in that evidence directory.
+The existing model-run-store contracts also pass (7/7). Full project builds,
+formatters and project-wide test suites were not run for this scoped change.
 
 ## 1. Current state: verified findings
 

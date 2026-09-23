@@ -50,7 +50,7 @@ export const DrivableAreaSchema = z.strictObject({
    * separable forever: `clipgt-lane-union` is the instrument whose ground-truth control failed
    * and is retained for reproducibility, `clipgt-road-boundary` is the authoritative outline.
    */
-  source: z.enum(['clipgt-road-boundary', 'clipgt-lane-union']),
+  source: z.enum(['clipgt-road-boundary', 'clipgt-lane-union', 'native-lane-polygons', 'opendrive-road-boundary']),
   geometry: z.enum(['oriented-boundaries', 'polygons']),
   /** Must equal `ego.frame`; a mismatch is refused rather than transformed. */
   frame: z.string().min(1),
@@ -59,7 +59,7 @@ export const DrivableAreaSchema = z.strictObject({
   timeSupportUs: z.strictObject({ startUs: z.number().int(), endUs: z.number().int() }).nullable(),
   /** Oriented road edges. Populated for `oriented-boundaries`, empty otherwise. */
   boundaries: z.array(OrientedBoundarySchema).default([]),
-  /** Rings. For `oriented-boundaries` these are island exclusions only. */
+  /** Rings: island exclusions; source outlines may additionally carry finite known-road support. */
   polygons: z.array(DrivablePolygonSchema).default([]),
   coverage: z.strictObject({
     boundsMinXY: z.tuple([Finite, Finite]),
@@ -79,10 +79,14 @@ export const OFFROAD_METRIC_VERSIONS = {
   'oriented-boundaries': 'simforge.offroad/v3',
   polygons: 'simforge.offroad/v2',
 } as const;
-export type OffRoadMetricVersion = (typeof OFFROAD_METRIC_VERSIONS)[keyof typeof OFFROAD_METRIC_VERSIONS];
+/** Preserve the old bench lane-polygon instrument when no source road outline is installed. */
+export const OFFROAD_NATIVE_LANE_POLYGONS_VERSION = 'simforge.offroad/native-lane-polygons-v1' as const;
+export type OffRoadMetricVersion =
+  | (typeof OFFROAD_METRIC_VERSIONS)[keyof typeof OFFROAD_METRIC_VERSIONS]
+  | typeof OFFROAD_NATIVE_LANE_POLYGONS_VERSION;
 
 export function offRoadMetricVersion(area: DrivableArea): OffRoadMetricVersion {
-  return OFFROAD_METRIC_VERSIONS[area.geometry];
+  return area.source === 'native-lane-polygons' ? OFFROAD_NATIVE_LANE_POLYGONS_VERSION : OFFROAD_METRIC_VERSIONS[area.geometry];
 }
 
 function pointInRing(ring: readonly (readonly [number, number])[], x: number, y: number): boolean {
@@ -185,7 +189,21 @@ export function classifyPoint(area: DrivableArea, x: number, y: number): PointCl
       return { verdict: 'off-road', distanceM: distanceToRing(polygon.ring, x, y) };
     }
   }
-  if (area.geometry === 'oriented-boundaries') return classifyAgainstBoundaries(area, x, y);
+  if (area.geometry === 'oriented-boundaries') {
+    let hasFiniteSupport = false;
+    for (const polygon of area.polygons) {
+      if (polygon.kind !== 'drivable') continue;
+      hasFiniteSupport = true;
+      if (pointInRing(polygon.ring, x, y)) return { verdict: 'drivable', distanceM: 0 };
+    }
+    const boundary = classifyAgainstBoundaries(area, x, y);
+    // A point in finite source support is known road even if an unrelated cut
+    // on a neighbouring road is nearer. Outside that support, CUT still means
+    // unknown; a road-side half-plane must not extend a closed source surface.
+    return hasFiniteSupport && boundary.verdict === 'drivable'
+      ? { verdict: 'off-road', distanceM: boundary.distanceM }
+      : boundary;
+  }
   let nearest = Number.POSITIVE_INFINITY;
   for (const polygon of area.polygons) {
     if (polygon.kind !== 'drivable') continue;

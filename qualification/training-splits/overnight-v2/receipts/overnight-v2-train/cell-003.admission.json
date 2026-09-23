@@ -1,0 +1,441 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "overnight-v2-train",
+  "cell": 3,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "71bea95eb0aec0ac61ba0c38ecf79517a6b9729c1f5dcc70c0a4ed1e3b8d01a7",
+      "paramsSha256": "c4becdb20c3749f84b5dfc19fae9b6b6589ef8563622e12cf0359324d605b042",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.16,
+            "conflictT": 3.72,
+            "revealToConflictS": 1.56
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: ego/queue-tail@3.719434439640765",
+          "kernel scripted completion: collision at 3.8000000000000003/13s"
+        ],
+        "collisions": [
+          {
+            "t": 3.719434439640765,
+            "a": "ego",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "collision",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 3.39535,
+            "simulationS": 3.8000000000000003,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 38,
+          "deadlineMisses": 0,
+          "episodeDigest": "d81c4384cccd718131698574af090a8ae97402a5643e4c1254711a58475ba807",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "abc24a8d44302ccccdb928da04689b37ed00531b65f098c67428cba9f10f9d0b"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/overnight-v2-train/cell-003-seed-0.trace.json.gz",
+      "sha256": "bbf6d12985e47ee0d0d9473a58de16bc429b8afc7306cee327f6fdac4db7262e"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-003-seed-0.episode.jsonl.gz",
+      "sha256": "307dac94f8ee401d45ea99fc42a875a7b83aa722e7c59a4239d0160927b854a2"
+    }
+  ],
+  "match": {
+    "candidateCount": 4,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "4e889d8ca2bea770",
+      "mapId": "di-rosa-sf",
+      "topologyDigest": "971b38cb7579f5d70d4c9d3ee4b9c1f7596072925b2b6d2fdbf39e0bf598294f",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.85,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_2e1f73ec491437ce"
+        },
+        "entryLaneRsl": "44:0:4",
+        "referencePath": [
+          {
+            "laneRsl": "44:0:4",
+            "sStart": 0,
+            "sEnd": 91.52407897601775,
+            "lengthM": 91.52407897601775,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "754:0:1",
+            "sStart": 91.52407897601775,
+            "sEnd": 121.26436091311538,
+            "lengthM": 29.74028193709763,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "15:0:4",
+            "sStart": 121.26436091311538,
+            "sEnd": 124.05896131530076,
+            "lengthM": 2.7946004021853854,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "869:0:1",
+            "sStart": 124.05896131530076,
+            "sEnd": 164.32649809622484,
+            "lengthM": 40.2675367809241,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "105:0:-3",
+            "sStart": 164.32649809622484,
+            "sEnd": 176.2676709932457,
+            "lengthM": 11.941172897020843,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "200:0:-1",
+            "sStart": 176.2676709932457,
+            "sEnd": 208.00252935120693,
+            "lengthM": 31.734858357961212,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "55:0:-3",
+            "sStart": 208.00252935120693,
+            "sEnd": 258.6527578748107,
+            "lengthM": 50.650228523603786,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "55:1:-3",
+            "sStart": 258.6527578748107,
+            "sEnd": 260.7828656523519,
+            "lengthM": 2.130107777541216,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "497:0:-1",
+            "sStart": 260.7828656523519,
+            "sEnd": 293.1801441427976,
+            "lengthM": 32.397278490445686,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "122:0:-3",
+            "sStart": 293.1801441427976,
+            "sEnd": 339.95489514514355,
+            "lengthM": 46.77475100234595,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "677:0:-1",
+            "sStart": 339.95489514514355,
+            "sEnd": 380.7923477129505,
+            "lengthM": 40.83745256780694,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "54:0:3",
+            "sStart": 380.7923477129505,
+            "sEnd": 399.5410795718445,
+            "lengthM": 18.748731858893983,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "901:0:1",
+            "sStart": 399.5410795718445,
+            "sEnd": 419.17456237951427,
+            "lengthM": 19.633482807669807,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "45:0:3",
+            "sStart": 419.17456237951427,
+            "sEnd": 435.0348068129682,
+            "lengthM": 15.86024443345392,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "105:0:-3": 164.32649809622484,
+          "122:0:-3": 293.1801441427976,
+          "15:0:4": 121.26436091311538,
+          "200:0:-1": 176.2676709932457,
+          "44:0:4": 0,
+          "45:0:3": 419.17456237951427,
+          "497:0:-1": 260.7828656523519,
+          "54:0:3": 380.7923477129505,
+          "55:0:-3": 208.00252935120693,
+          "55:1:-3": 258.6527578748107,
+          "677:0:-1": 339.95489514514355,
+          "754:0:1": 91.52407897601775,
+          "869:0:1": 124.05896131530076,
+          "901:0:1": 399.5410795718445
+        },
+        "sRange": [
+          0,
+          435.0348068129682
+        ],
+        "lateralLanes": {
+          "0": "44:0:4",
+          "1": "44:0:3",
+          "2": "44:0:2"
+        },
+        "opposingLanes": [
+          "6:0:-2",
+          "6:0:-3",
+          "6:0:-5"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 435.03
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0,
+          "score": 0.75,
+          "slack": 0.5,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 10,
+          "reason": "corridor.curvatureDegPer10m worst value 0 at s=10 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 435.03,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "435.03 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 3,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "44:0:4",
+          "routeLaneChain": [
+            "44:0:4",
+            "754:0:1",
+            "15:0:4",
+            "869:0:1",
+            "105:0:-3",
+            "200:0:-1",
+            "55:0:-3",
+            "55:1:-3",
+            "497:0:-1",
+            "122:0:-3",
+            "677:0:-1",
+            "54:0:3",
+            "901:0:1",
+            "45:0:3"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "44:0:4",
+          "routeLaneChain": [
+            "44:0:4",
+            "754:0:1",
+            "15:0:4",
+            "869:0:1",
+            "105:0:-3",
+            "200:0:-1",
+            "55:0:-3",
+            "55:1:-3",
+            "497:0:-1",
+            "122:0:-3",
+            "677:0:-1",
+            "54:0:3",
+            "901:0:1",
+            "45:0:3"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "44:0:4",
+          "routeLaneChain": [
+            "44:0:4",
+            "754:0:1",
+            "15:0:4",
+            "869:0:1",
+            "105:0:-3",
+            "200:0:-1",
+            "55:0:-3",
+            "55:1:-3",
+            "497:0:-1",
+            "122:0:-3",
+            "677:0:-1",
+            "54:0:3",
+            "901:0:1",
+            "45:0:3"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.85,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0 at s=10 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "435.03 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "di-rosa-sf",
+    "topologySha256": "047a3c3bcdf002441bafaaf895b99c71de65483cecdba1582872062dda2c576c",
+    "engineGraphDigest": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
+    "matcherIndexDigest": "971b38cb7579f5d70d4c9d3ee4b9c1f7596072925b2b6d2fdbf39e0bf598294f"
+  },
+  "siteKey": "di-rosa-sf/seg_2e1f73ec491437ce",
+  "status": "excluded",
+  "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719434439640765; kernel scripted completion: collision at 3.8000000000000003/13s"
+}

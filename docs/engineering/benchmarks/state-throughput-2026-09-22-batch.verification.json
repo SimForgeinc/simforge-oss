@@ -1,0 +1,144 @@
+{
+  "schema": "simforge.episode-batch-verification/v1",
+  "native_extension": "/tmp/simforge-episode-batch/python/simforge_oss_gym/_native.abi3.so",
+  "native_extension_sha256": "51827afd63243dc4557ee186092f8311b406b0d1e9871238173b70b0166f3155",
+  "git_sha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f",
+  "cargo": {
+    "command": "cargo test -p simforge-session -- --nocapture",
+    "passed": 36,
+    "stdout": "/tmp/simforge-episode-batch/cargo-session-tests.txt",
+    "n8_sequential_digest_match": true,
+    "digests": [
+      "70744db99fdc671229b9da63b4147f9f8431e7673f38f1d1db80dbae5712f9a7",
+      "be2f9c33462c7b70d4b6337fbb8eeb68accfe28ec00229b6cd114c69b9016a09",
+      "72db414e37a86198a6823dfcaee549446fa245dd38bf0fa44ed5770004b2e2be",
+      "9092f7bc00d8ed3e2c5bfe8da089a0766469a1c037b6286dd021d1a36f17d984",
+      "a226482a508feff60f0f6aaae1a398f5484ec825043b3efe2056818161c1d5ed",
+      "d9b6b209b40843fa9868a9017742f63ff28a51c44b05c324103299ad0c8b3213",
+      "675227ceefb5e0755f52821a353a6241fe8779d0cfb0696c37701b1469aebd40",
+      "f826e10fe3785ffde61cbe16be5b410c79e1f75a441ed141acbef83444d4e1d1"
+    ],
+    "final_batch_regression": {
+      "passed": 3,
+      "stdout": "/tmp/simforge-episode-batch/cargo-batch-final.txt",
+      "includes": "warm-up reset reward, held trajectory anchors, mixed pending resets, changed threads and atomic malformed-input refusal"
+    }
+  },
+  "gym": {
+    "command": "python -m pytest adapters/gym/tests/{test_episode_batch,test_vector,test_env,test_observation_presets}.py -s",
+    "passed": 20,
+    "junit": "/tmp/simforge-episode-batch/gym-tests.xml",
+    "stdout": "/tmp/simforge-episode-batch/gym-tests.txt",
+    "n8_sequential_digest_match": true,
+    "digests": [
+      "10b840080a08d4e1283fd8f152741d63347a9c1046b0027d35d4c76c53f86d19",
+      "7834ad44ec51c94a83741fb5962932b45ba78070ed4843e84149d8e85e0a0fce",
+      "90a561f67e4981cd47972e42eb30120743c5e2d7c8825f056cc9fc07c0aadd01",
+      "98034391d75f61acf50e7e0351cc34e682240cd01cfafd5fb83eaf140f1b68d3",
+      "2ff47ca2b8acdb41b5c70015f62778ffdd5e88c9a598f8977ece94ccb2029b5c",
+      "5d24b577c49db01f4d8e0c4e2a6670bbc31cdd77648a912f857d902289c813aa",
+      "74b38266d40c604e5fa886dba532067fc2bb8a89206b0e0626c02edde151ed8c",
+      "3bb57225de0158ef018448fbf8900990d3fac4019252db9c22d41ee56e0f819c"
+    ]
+  },
+  "ppo_smoke": {
+    "source": "TrainViz historical frozen train/val; no new admission or quality claim",
+    "run_dir": "/tmp/simforge-episode-batch/ppo-smoke",
+    "device": "cpu",
+    "updates": 2,
+    "env_steps": 1020,
+    "rollout_rows": 1024,
+    "autoreset_only_rows": 4,
+    "metrics_sha256": "ea13ff12ff77a3eb66d330800de9a414877d0b00b0184766c9e4be5fbc7ac164",
+    "checkpoints": [
+      {
+        "path": "/tmp/simforge-episode-batch/ppo-smoke/checkpoints/update-000001.pt",
+        "sha256": "0eca9b748dc853397aa0f458d8979ba66befb0adfc853de8eb75536691ebf903"
+      },
+      {
+        "path": "/tmp/simforge-episode-batch/ppo-smoke/checkpoints/update-000002.pt",
+        "sha256": "64cfd334f7105e344a8ae2d8b1ed910e4509cae62eecdd08e502eb7c3d36b4ab"
+      }
+    ]
+  },
+  "throughput": {
+    "report": "docs/engineering/benchmarks/state-throughput-2026-09-22-batch.json",
+    "gate": {
+      "minimum_64_env_decisions_per_s": 5000,
+      "passed": true,
+      "failures": []
+    },
+    "rows64": [
+      {
+        "workload": "corridor",
+        "num_envs": 64,
+        "threads": 8,
+        "median_env_steps_per_s": 48830.055225636635,
+        "samples": [
+          {
+            "decisions": 173824,
+            "seconds": 5.000240379013121,
+            "env_steps_per_s": 34763.12873468435,
+            "batch_calls": 2729,
+            "autoreset_only_rows": 832
+          },
+          {
+            "decisions": 248576,
+            "seconds": 5.00112678098958,
+            "env_steps_per_s": 49703.99889578763,
+            "batch_calls": 3903,
+            "autoreset_only_rows": 1216
+          },
+          {
+            "decisions": 244160,
+            "seconds": 5.000199137022719,
+            "env_steps_per_s": 48830.055225636635,
+            "batch_calls": 3834,
+            "autoreset_only_rows": 1216
+          }
+        ],
+        "session_batch_baseline_decisions_per_s": 40142.20261754677,
+        "versus_session_batch_percent": 21.64269033979782
+      },
+      {
+        "workload": "cpnco-dartout",
+        "num_envs": 64,
+        "threads": 8,
+        "median_env_steps_per_s": 39741.00361562056,
+        "samples": [
+          {
+            "decisions": 189120,
+            "seconds": 5.000555940903723,
+            "env_steps_per_s": 37819.79488581051,
+            "batch_calls": 2973,
+            "autoreset_only_rows": 1152
+          },
+          {
+            "decisions": 198720,
+            "seconds": 5.000376989017241,
+            "env_steps_per_s": 39741.00361562056,
+            "batch_calls": 3124,
+            "autoreset_only_rows": 1216
+          },
+          {
+            "decisions": 229184,
+            "seconds": 5.001257878029719,
+            "env_steps_per_s": 45825.27147955999,
+            "batch_calls": 3603,
+            "autoreset_only_rows": 1408
+          }
+        ],
+        "session_batch_baseline_decisions_per_s": 32100.96562500896,
+        "versus_session_batch_percent": 23.800025456740336
+      }
+    ],
+    "profile": "docs/engineering/benchmarks/state-throughput-2026-09-22-batch.profile.json"
+  },
+  "scope": {
+    "gpu_used": false,
+    "installed_wheel_replaced": false,
+    "single_env": "SimForgeEnv / PolicyRunner intentionally remain low-level EnvSession; separate cutover follow-up",
+    "batch_cameras": "explicitly refused",
+    "ci_dispatch": "not performed; local command is the wired CI workload"
+  }
+}

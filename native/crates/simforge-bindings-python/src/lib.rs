@@ -1,8 +1,8 @@
 //! `simforge_oss_gym._native` — the SimForge native runtime for Python.
 //!
-//! Every array returned is a fresh NumPy array the caller owns; the GIL is
-//! released around stepping so batches run in parallel with Python-side work.
-//! Metadata crosses as JSON `str` once per call; stepping never does.
+//! State arrays are fresh NumPy arrays; camera FrameRef.buffer() instead leases
+//! renderer-ring memory until explicit release. The GIL is released around
+//! stepping/batches. Episode observations and evidence use the shared JSON codec.
 
 use numpy::{
     IntoPyArray, PyArray1, PyArray2, PyArray3, PyArray4, PyArrayMethods, PyReadonlyArray1,
@@ -329,6 +329,10 @@ impl PyScenarioInput {
     #[getter]
     fn metric_subject(&self) -> Option<String> {
         self.inner.input().metric_subject.clone()
+    }
+    #[getter]
+    fn ego_id(&self) -> PyResult<String> {
+        self.inner.ego_id().py()
     }
     #[getter]
     fn actor_ids(&self) -> Vec<String> {
@@ -669,6 +673,8 @@ pub struct PyStepView {
     bev: Option<Py<PyArray3<f32>>>,
     reward_terms: Py<PyArray1<f64>>,
     info_json: String,
+    signals_json: Option<String>,
+    term_reason: Option<&'static str>,
 }
 
 impl PyStepView {
@@ -694,6 +700,8 @@ impl PyStepView {
             bev,
             reward_terms: PyArray1::from_slice(py, &view.reward_terms()).unbind(),
             info_json: view.info_json().py()?,
+            signals_json: view.signals_json().py()?,
+            term_reason: view.term_reason(),
         })
     }
 }
@@ -742,6 +750,13 @@ impl PyStepView {
     }
     fn info_json(&self) -> String {
         self.info_json.clone()
+    }
+    fn signals_json(&self) -> Option<String> {
+        self.signals_json.clone()
+    }
+    #[getter]
+    fn term_reason(&self) -> Option<&'static str> {
+        self.term_reason
     }
 }
 
@@ -865,7 +880,7 @@ impl PyEnvSession {
 
 /* ------------------------------------------------------------- batch */
 
-#[pyclass(name = "BatchView", frozen)]
+#[pyclass(name = "BatchView", frozen, subclass)]
 pub struct PyBatchView {
     size: usize,
     t_s: Py<PyArray1<f64>>,
@@ -879,6 +894,7 @@ pub struct PyBatchView {
     bev: Option<Py<PyArray4<f32>>>,
     object_ids: Vec<Vec<String>>,
     info_json: Vec<String>,
+    signals_json: Vec<Option<String>>,
 }
 
 impl PyBatchView {
@@ -900,6 +916,11 @@ impl PyBatchView {
         };
         let mut object_ids = Vec::with_capacity(n);
         let mut info_json = Vec::with_capacity(n);
+        let signals_json = if batch.signals_enabled() {
+            (0..n).map(|i| batch.signals_json(i).py()).collect::<PyResult<Vec<_>>>()?
+        } else {
+            Vec::new()
+        };
         for i in 0..n {
             object_ids.push(batch.object_ids(i).py()?);
             info_json.push(batch.info_json(i).py()?);
@@ -934,11 +955,12 @@ impl PyBatchView {
                 .unbind(),
             object_count: PyArray1::from_slice(py, &flat.object_counts).unbind(),
             reward_terms: PyArray1::from_slice(py, batch.reward_terms())
-                .reshape([n, 3])?
+                .reshape([n, simforge_bindings_common::REWARD_TERM_COUNT])?
                 .unbind(),
             bev,
             object_ids,
             info_json,
+            signals_json,
         })
     }
 }
@@ -996,6 +1018,12 @@ impl PyBatchView {
             .get(world)
             .cloned()
             .ok_or_else(|| PyValueError::new_err(format!("world {world} out of range")))
+    }
+    fn signals_json(&self, world: usize) -> PyResult<Option<String>> {
+        if world >= self.size {
+            return Err(PyValueError::new_err(format!("world {world} out of range")));
+        }
+        Ok(self.signals_json.get(world).cloned().flatten())
     }
 }
 
@@ -1116,6 +1144,8 @@ impl PySessionBatch {
         self.inner.restore(world, checkpoint).py()
     }
 }
+
+mod episode_batch;
 
 /* ------------------------------------------------------------- world */
 
@@ -1597,6 +1627,77 @@ fn sha256_hex(data: &[u8]) -> String {
     rt::sha256_hex(data)
 }
 
+/// Zero-copy NumPy view of an Episode renderer-ring lease.
+#[pyclass(name = "FrameRef")]
+pub struct PyFrameRef {
+    inner: rt::FrameRef,
+}
+
+#[pymethods]
+impl PyFrameRef {
+    #[getter]
+    fn id(&self) -> u32 { self.inner.descriptor.id }
+    #[getter]
+    fn released(&self) -> bool { self.inner.released() }
+    fn release(&self) { self.inner.release(); }
+    fn buffer<'py>(this: Bound<'py, Self>) -> PyResult<Bound<'py, PyArray1<u8>>> {
+        let (ptr, len) = this.borrow().inner.raw_parts().map_err(BindingError::from).py()?;
+        // The NumPy base object retains FrameRef and therefore the mapping.
+        // Release invalidates the pixels, not the mapping allocation.
+        let view = unsafe { numpy::ndarray::ArrayView1::from_shape_ptr(len, ptr) };
+        let array = unsafe { PyArray1::borrow_from_array(&view, this.into_any()) };
+        array.call_method1("setflags", (false,))?;
+        Ok(array)
+    }
+}
+
+/// Kernel-owned closed-loop episode. Both bindings use the same JSON codec.
+#[pyclass(name = "Episode", unsendable)]
+pub struct PyEpisode {
+    inner: rt::Episode,
+}
+
+#[pymethods]
+impl PyEpisode {
+    #[new]
+    fn new(spec_json: &str, graph: &PyLaneGraph) -> PyResult<Self> {
+        Ok(Self { inner: rt::Episode::new(spec_json, &graph.inner).py()? })
+    }
+
+    #[pyo3(signature = (on_frame=None))]
+    fn reset(&mut self, py: Python<'_>, on_frame: Option<Py<PyAny>>) -> PyResult<String> {
+        if let Some(callback) = on_frame {
+            let mut callback_error = None;
+            let result = self.inner.reset_with(|payload, frames| {
+                let result = (|| -> PyResult<()> {
+                    let frames = frames.into_iter().map(|inner| Py::new(py, PyFrameRef { inner })).collect::<PyResult<Vec<_>>>()?;
+                    callback.call1(py, (payload, frames))?;
+                    Ok(())
+                })();
+                result.map_err(|error| { let message = error.to_string(); callback_error = Some(error); message })
+            });
+            if let Some(error) = callback_error { return Err(error); }
+            result.py()
+        } else {
+            py.detach(|| self.inner.reset()).py()
+        }
+    }
+    fn step(&mut self, py: Python<'_>, action_json: &str) -> PyResult<String> {
+        py.detach(|| self.inner.step(action_json)).py()
+    }
+    fn snapshot(&self) -> PyResult<String> { self.inner.snapshot().py() }
+    fn trace_json(&self) -> &str { self.inner.trace_json() }
+    fn trace_digest(&self) -> &str { self.inner.trace_digest() }
+    fn finish(&mut self) -> PyResult<String> { self.inner.finish().py() }
+    #[getter]
+    fn ego(&self) -> &str { self.inner.ego() }
+    #[getter]
+    fn ended(&self) -> bool { self.inner.ended() }
+    fn frame(&self, id: u32) -> PyResult<PyFrameRef> { Ok(PyFrameRef { inner: self.inner.frame(id).py()? }) }
+    fn scene_state_json(&self) -> Option<&str> { self.inner.scene_state_json() }
+    fn close(&mut self) { self.inner.close(); }
+}
+
 /* ------------------------------------------------------------ module */
 
 #[pymodule]
@@ -1607,6 +1708,9 @@ fn _native(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
         simforge_bindings_common::STATE_VECTOR_SIZE,
     )?;
     m.add("OBJECT_FEATURES", simforge_bindings_common::OBJECT_FEATURES)?;
+    m.add("REWARD_TERM_NAMES", PyTuple::new(py, simforge_bindings_common::REWARD_TERM_NAMES)?)?;
+    m.add("DEFAULT_REWARD_CONFIG_JSON", serde_json::to_string(&simforge_bindings_common::RewardConfig::default())
+        .map_err(|error| PyValueError::new_err(error.to_string()))?)?;
     m.add("ACTION_WIDTH", action::ACTION_WIDTH)?;
     m.add(
         "ACTION_FIELDS",
@@ -1634,8 +1738,12 @@ fn _native(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyCompileResult>()?;
     m.add_class::<PyStepView>()?;
     m.add_class::<PyEnvSession>()?;
+    m.add_class::<PyEpisode>()?;
+    m.add_class::<PyFrameRef>()?;
     m.add_class::<PyBatchView>()?;
     m.add_class::<PySessionBatch>()?;
+    m.add_class::<episode_batch::PyEpisodeBatch>()?;
+    m.add_class::<episode_batch::PyEpisodeBatchView>()?;
     m.add_class::<PyWorldSnapshot>()?;
     m.add_class::<PyTruthSubscription>()?;
     m.add_class::<PyWorldSession>()?;

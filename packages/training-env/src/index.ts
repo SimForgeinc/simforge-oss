@@ -40,6 +40,7 @@ export type {
   EpisodeConfig,
   Observation,
   ObservationConfig,
+  ObservedSignal,
   PairMinima,
   PerceivedObject,
   RewardConfig,

@@ -1097,6 +1097,12 @@ impl Simulation {
     pub fn actor_dims(&self, index: ActorIndex) -> crate::types::Dims {
         self.actors[index.index()].dims
     }
+    /// Current route and its interned identity. Consumers can retain the authored
+    /// route across lane changes without reprojecting unchanged-route snapshots.
+    pub fn actor_route(&self, index: ActorIndex) -> (&crate::map::Route, u32) {
+        let actor = &self.actors[index.index()];
+        (&actor.route, actor.route_ref)
+    }
     /// Actor indices in sorted-id order.
     #[inline]
     pub fn sorted_actor_indices(&self) -> &[ActorIndex] {
@@ -1141,6 +1147,15 @@ impl Simulation {
             lane: a.route.pose_at(a.route_s).lane,
             telemetry: self.vehicle_telemetry(index),
         }
+    }
+
+    /// Actual actuator input from the final physics substep, after setpoint
+    /// tracking and the physical control envelope. Not the lagged wheel angle.
+    pub fn applied_control(&self, index: ActorIndex) -> Option<VehicleControl> {
+        let body = self.actors[index.index()].body?;
+        self.telemetry[index.index()]
+            .or_else(|| self.physics.telemetry(body))
+            .map(|sample| sample.control)
     }
 
     /// Per-frame driving telemetry for one actor: the published contract a
@@ -1972,6 +1987,12 @@ impl Simulation {
                 b: b_id.clone(),
                 collider_a: collider_a.clone(),
                 collider_b: collider_b.clone(),
+                contact_sides: self.collision_body_at(contact.a, contact.t, t, &scratch)
+                    .zip(self.collision_body_at(contact.b, contact.t, t, &scratch))
+                    .map(|(a, b)| [
+                        crate::trace::events::ContactSide::between(&a, &b),
+                        crate::trace::events::ContactSide::between(&b, &a),
+                    ]),
             });
             if self.capture || self.live {
                 self.metrics.record_collision(CollisionRecord {
@@ -2033,6 +2054,27 @@ impl Simulation {
         }
         self.previous_collision_t = Some(t);
         self.scratch = scratch;
+    }
+
+    /// Reuse the detector's before/after body OBBs at its exact swept TOI, never the later decision pose.
+    fn collision_body_at(&self, party: CollisionParty, contact_t: f64, tick_t: f64, scratch: &Scratch) -> Option<Obb> {
+        let CollisionParty::Actor(index) = party else {
+            let CollisionParty::Static(slot) = party else { unreachable!() };
+            return Some(self.statics.shape(slot).obb);
+        };
+        let current = scratch.current_shapes[index.index()].iter().find(|shape| shape.label == ShapeLabel::Body)?.obb;
+        let Some(previous_t) = self.previous_collision_t else { return Some(current) };
+        if contact_t >= tick_t || tick_t <= previous_t { return Some(current) }
+        let previous = self.collision_snapshots[index.index()].shapes.iter().find(|shape| shape.label == ShapeLabel::Body)?.obb;
+        let fraction = ((contact_t - previous_t) / (tick_t - previous_t)).clamp(0.0, 1.0);
+        Some(Obb {
+            center: Vec2 {
+                x: previous.center.x + (current.center.x - previous.center.x) * fraction,
+                y: previous.center.y + (current.center.y - previous.center.y) * fraction,
+            },
+            heading_rad: crate::math::lerp_angle(previous.heading_rad, current.heading_rad, fraction),
+            ..current
+        })
     }
 
     pub(super) fn party_id(&self, party: CollisionParty) -> &str {

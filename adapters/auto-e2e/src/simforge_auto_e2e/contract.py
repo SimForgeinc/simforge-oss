@@ -28,15 +28,29 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-#: Pinned upstream code. There is NO release or tag in this repository, so a
-#: commit is the only immutable pin available and it is recorded as such.
+#: The upstream source revision that defines the model API used by the
+#: checkpoint. This is the checkout used by the measured reference driver;
+#: it is deliberately separate from the old MLflow v35/v63 records below.
 UPSTREAM_REPO = "https://github.com/autowarefoundation/auto_e2e"
-UPSTREAM_COMMIT = "21f98c5209dd4058ea92f5734c29da1f34d1c558"
+UPSTREAM_COMMIT = "31b83bf051564816739805c8295da4fb1e5ee287"
 UPSTREAM_LICENSE = "Apache-2.0"
-UPSTREAM_PINNED_BY = "commit (no release or tag published upstream)"
+UPSTREAM_PINNED_BY = "commit (no release or tag published upstream; working Best_Model reference checkout)"
 
-FAMILY = "autoware-auto-e2e"
-DISPLAY_NAME = "Autoware AutoE2E"
+FAMILY = "auto-e2e"
+DISPLAY_NAME = "Autoware AutoE2E (Best_Model.pt)"
+
+#: Descriptor of the strict-loading checkpoint provisioned outside the
+#: repository. The bytes are pinned by digest in the model-store lock.
+BEST_MODEL_FILENAME = "Best_Model.pt"
+BEST_MODEL_SHA256 = "6b84fd94af47aa20c8e9005663be6eb2c5c13a61b453b02d731f298ed0572c0c"
+BEST_MODEL_EPOCH = 28
+BEST_MODEL_NUM_VIEWS = 6
+BEST_MODEL_MAP_CONTEXT_CHANNELS = 14
+BEST_MODEL_ROUTE_CHANNELS = 2
+BEST_MODEL_GEOMETRY = "pseudo"
+BEST_MODEL_NAVIGATION_GEOMETRY = "kitscenes-v3-bev-1m-v1"
+BEST_MODEL_SIGNAL_SCALES = (0.7496416720258653, 0.014412731280522818)
+BEST_MODEL_HISTORY_MASK_LATEST_ACCELERATION = False
 
 # -- cameras ---------------------------------------------------------------
 
@@ -167,25 +181,29 @@ class ModelConfig:
     enable_reasoning: bool = False
     reasoning_mode: str = "none"
     #: Whether the backbone was initialised from ImageNet weights. Recorded
-    #: because it changes what `is_pretrained=True` downloads at build time;
+    #: because it changes what ``is_pretrained=True`` downloads at build time;
     #: it is NOT the trained policy.
     is_pretrained: bool = True
-    #: Per-signal output scales the model was trained with. The trajectory
-    #: loss applies dataset-specific scales, so a consumer that ignores them
-    #: mis-reads the head's output magnitude. v63:
-    #: acceleration 0.778, curvature 0.035.
-    acceleration_signal_scale: float | None = None
-    curvature_signal_scale: float | None = None
-    #: History-masking policy the checkpoint was trained with. v63: True.
+    #: Best_Model is a plain training export, while MLflow records use
+    #: ``il_checkpoint_v2``. The format is provenance, not a constructor arg.
+    checkpoint_format: str = "il_checkpoint_v2"
+    checkpoint_id: str | None = None
+    image_feature_size: int = 8
+    view_fusion_kwargs: dict[str, int] | None = None
+    #: Whether the checkpoint was trained with latest acceleration masked.
     mask_latest_history_acceleration: bool = False
+    #: AutoE2E Best_Model was trained with the learned pseudo projection.
+    geometry_type: str = GEOMETRY_TYPE_SHAPE_ONLY
+    navigation_geometry: str | None = None
 
     def as_kwargs(self) -> dict[str, object]:
-        """Constructor kwargs for upstream `AutoE2E`."""
         return {
             "backbone": self.backbone,
             "num_views": self.num_views,
             "embed_dim": self.embed_dim,
             "is_pretrained": self.is_pretrained,
+            "image_feature_size": self.image_feature_size,
+            "view_fusion_kwargs": self.view_fusion_kwargs,
             "num_timesteps": self.num_timesteps,
             "num_signals": self.num_signals,
             "egomotion_dim": self.egomotion_dim,

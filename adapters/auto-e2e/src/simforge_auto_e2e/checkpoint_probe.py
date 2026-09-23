@@ -1,63 +1,25 @@
-"""Compatibility probe for a real AutoE2E checkpoint.
+"""Strict compatibility probes for AutoE2E checkpoints.
 
-Why this exists. The registered checkpoints are real and, for the older
-versions, publicly retrievable. But the published repository is a single
-squashed commit, and the code that trained the checkpoints is NOT it. The
-failure that follows is the dangerous kind: every parameter NAME matches, so
-a permissive load reports success while several planner tensors are silently
-left at their initial values, and the model then returns plausible garbage.
+The public MLflow v35/v63 exports and the locally provisioned Autoware
+``Best_Model.pt`` are different checkpoint formats.  This module deliberately
+compares *names and shapes* before inference.  A permissive key-set check can
+miss an architecture mismatch and leave a model producing plausible garbage;
+the engine therefore treats a clean probe as a load gate and still performs a
+``strict=True`` PyTorch load afterwards.
 
-This probe makes that verdict explicit instead. It compares a checkpoint's
-state_dict against a constructed model and reports, per tensor, whether the
-name is absent, present-but-differently-shaped, or loadable. A checkpoint is
-declared usable only when nothing is missing, nothing is unexpected and every
-shape agrees.
-
-MEASURED against registered model `auto-e2e-driving-policy` v35
-(sha256 2890f90f9b4bcbb0eed0d2daa14d21fe062990aed2bac3e051777b0934b42060,
-1004 tensors, 160.98 M parameters), built from the checkpoint's OWN recorded
-config, and with the rename below applied: 219 renamed, 2 missing, 4
-unexpected, 8 shape mismatches. Verdict: incompatible.
-
-The divergence has four distinct causes, which the probe separates because
-they need different answers:
-
-1. A RENAME. 219 tensors are `Reactive_E2E.MapEncoder.*` in the checkpoint
-   and `Reactive_E2E.NavigationEncoder.*` in the published code, shapes
-   agreeing throughout. Remappable without inventing a value.
-2. A NEW module. `Reactive_E2E.FusedFeaturePooling.reduce_channels` exists
-   only in the published code and has no checkpoint weights. Not
-   remappable: there is nothing to load.
-3. A DELETED pair. The checkpoint's `TrajectoryPlanner.ego_state_proj` and
-   `.bev_proj` have no published counterpart.
-4. REWIRED shapes. Eight tensors share a name and disagree on shape.
-   CORRECTION to an earlier note of mine: `load_state_dict(strict=False)`
-   does NOT silently ignore these - it raises RuntimeError on a size
-   mismatch just as strict=True does. The real hazard is narrower and worth
-   stating precisely: code that inspects only the returned
-   missing_keys/unexpected_keys, or that compares key sets itself, sees
-   perfect agreement. This probe therefore compares shapes as well as
-   names. Seven are the planner. The eighth is the
-   navigation raster's input width: the checkpoint's map backbone takes a
-   3-channel raster, the published code expects 5, and v63's config records
-   14. Three different widths for the same input, which is exactly why this
-   adapter refuses to synthesise a raster.
-
-No network access, no torch import at module level: the probe is importable
-and testable without either.
+No torch import occurs at module import time.  The pure mapping probe remains
+usable in the adapter's lightweight test environment.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
 
-#: The exact planner tensors that disagree between the published HEAD and the
-#: registered checkpoints, with both shapes. Recorded from a real load, not
-#: predicted.
+# Historical public-checkpoint evidence is retained because it documents why
+# this adapter does not use the public MLflow model.  It is not the descriptor
+# for Best_Model.pt.
 KNOWN_PLANNER_MISMATCHES = {
-    # Not the planner: the navigation raster's channel width. Kept in this
-    # table because it is measured from the same load.
     "Reactive_E2E.MapEncoder._backbone.patch_embed.proj.weight": ((96, 3, 4, 4), (96, 5, 4, 4)),
     "Reactive_E2E.TrajectoryPlanner.visual_history_proj.weight": ((256, 896), (896, 896)),
     "Reactive_E2E.TrajectoryPlanner.visual_history_proj.bias": ((256,), (896,)),
@@ -68,31 +30,12 @@ KNOWN_PLANNER_MISMATCHES = {
     "Reactive_E2E.TrajectoryPlanner.control_head.weight": ((10, 256), (10, 2451)),
 }
 
-#: Why no constructor argument fixes it, so nobody re-derives this by hand.
-#: The published planner builds `Linear(visual_history_dim, visual_history_dim)`
-#: with no way to target embed_dim, and its `context_mlp` input is
-#: `feature_dim + egomotion_dim + visual_history_dim`, so reaching the
-#: checkpoint's 256 would require `feature_dim = 256 - 256 - 896`, i.e. a
-#: negative width. The checkpoint projected each stream down to embed_dim
-#: before concatenating; the published code concatenates raw features and
-#: halves. That is an architecture change, not a hyperparameter.
-#: Navigation-encoder INPUT widths from primary sources, with the reason each
-#: differs. CORRECTION to an earlier claim of mine: I called these "three
-#: widths for one input". They are not. The published encoder takes
-#: `map_context_channels + route_channels` concatenated (reactive_e2e.py:
-#: in_channels=..., then torch.cat([gated_map, gated_route])), so 5 = 3 map
-#: + 2 route. Against v35's 3 that is route conditioning being ADDED after
-#: v35, not a raster width changing. Only v63's 14-channel map is a genuine
-#: raster change, and it arrives with its own navigation geometry id
-#: (kitscenes-v3-bev-1m-v1). Both widths must come from the loaded config.
 OBSERVED_NAV_ENCODER_INPUTS = {
-    # label: (total in_channels, map channels, route channels)
     "v35-checkpoint-weights": (3, 3, 0),
     "published-head-default": (5, 3, 2),
     "v63-config": (16, 14, 2),
 }
 
-#: What survives the correction, stated without inflation.
 NAV_RASTER_FINDING = (
     "The map raster width is a property of the checkpoint's navigation "
     "geometry rather than a constant: 3 channels for v35, 14 for v63. Route "
@@ -112,10 +55,6 @@ NO_KWARG_RECONCILIATION = (
     "prerequisite is the training revision, not a different config."
 )
 
-
-#: The rename observed between the checkpoint and the published code. A
-#: probe that ignored it would report 219 unrelated-looking differences and
-#: bury the three that actually matter.
 KNOWN_RENAMES = (("Reactive_E2E.MapEncoder.", "Reactive_E2E.NavigationEncoder."),)
 
 
@@ -127,35 +66,17 @@ class ProbeReport:
     tensors_in_model: int
     missing: list[str] = field(default_factory=list)
     unexpected: list[str] = field(default_factory=list)
-    shape_mismatches: dict[str, tuple[tuple[int, ...], tuple[int, ...]]] = field(
-        default_factory=dict
-    )
-    #: checkpoint name -> model name, same shape, differing only by a known
-    #: module rename. Remappable without inventing a single value.
+    shape_mismatches: dict[str, tuple[tuple[int, ...], tuple[int, ...]]] = field(default_factory=dict)
     renamed: dict[str, str] = field(default_factory=dict)
 
     @property
     def loadable(self) -> bool:
-        """True only when a STRICT load of the checkpoint AS-IS would succeed.
-
-        Renames count against this. A renamed tensor is one `strict=True`
-        would reject, so reporting `loadable` while 219 names need remapping
-        would be the same class of lie the probe exists to prevent.
-        """
-        return not (
-            self.missing or self.unexpected or self.shape_mismatches or self.renamed
-        )
+        # A rename is not loadable AS-IS: strict=True would reject it.
+        return not (self.missing or self.unexpected or self.shape_mismatches or self.renamed)
 
     @property
     def remappable(self) -> bool:
-        """True when renames are the ONLY obstacle.
-
-        Distinguishes a checkpoint that a name map would rescue from one that
-        needs weights nobody has.
-        """
-        return bool(self.renamed) and not (
-            self.missing or self.unexpected or self.shape_mismatches
-        )
+        return bool(self.renamed) and not (self.missing or self.unexpected or self.shape_mismatches)
 
     @property
     def verdict(self) -> str:
@@ -164,7 +85,6 @@ class ProbeReport:
         if self.remappable:
             return "compatible-after-rename"
         if self.shape_mismatches and not self.missing and not self.unexpected:
-            # The dangerous case: a permissive load looks like it worked.
             return "incompatible-same-names"
         return "incompatible"
 
@@ -187,19 +107,17 @@ class ProbeReport:
         }
 
 
-def probe_state_dicts(
-    checkpoint: dict[str, Any], model: dict[str, Any]
-) -> ProbeReport:
-    """Compare two state_dicts by name AND shape.
+def _shape(value: Any) -> tuple[int, ...]:
+    raw = getattr(value, "shape", ())
+    return tuple(int(v) for v in raw)
 
-    Takes plain mappings of name -> object with a `.shape`, so this is
-    testable without torch. Shape comparison is the point: name-only
-    agreement is exactly what makes the published-HEAD load look successful.
-    """
+
+def probe_state_dicts(checkpoint: Mapping[str, Any], model: Mapping[str, Any]) -> ProbeReport:
+    """Compare two state dicts by name and tensor shape."""
+
     report = ProbeReport(len(checkpoint), len(model))
 
     def resolve(name: str) -> str | None:
-        """Map a checkpoint name onto a model name, renames included."""
         if name in model:
             return name
         for old, new in KNOWN_RENAMES:
@@ -218,26 +136,57 @@ def probe_state_dicts(
         matched.add(target)
         if target != name:
             report.renamed[name] = target
-        ck_shape = tuple(getattr(tensor, "shape", ()))
-        m_shape = tuple(getattr(model[target], "shape", ()))
-        if ck_shape != m_shape:
-            report.shape_mismatches[name] = (ck_shape, m_shape)
+        ck_shape, model_shape = _shape(tensor), _shape(model[target])
+        if ck_shape != model_shape:
+            report.shape_mismatches[name] = (ck_shape, model_shape)
     report.missing.extend(name for name in model if name not in matched)
     return report
 
 
-def probe_checkpoint_file(path: str, build_model) -> ProbeReport:
-    """Probe a real .pt against a model built from the checkpoint's OWN config.
+def best_model_config(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate and return the measured ``Best_Model.pt`` descriptor.
 
-    `build_model` receives the checkpoint's recorded config dict and must
-    return a torch module. The checkpoint's config is used rather than any
-    caller-supplied guess: v35 records `reasoning_mode: pooled_latent`, and a
-    guess of `horizon` raises before a single tensor is compared.
+    The export is intentionally a small plain mapping (no MLflow schema): its
+    ``model`` state dict is paired with the constructor metadata below.  Every
+    value affecting parameter shapes is explicit; no caller-supplied guess is
+    accepted by the engine.
     """
-    import torch
 
-    blob = torch.load(path, map_location="cpu", weights_only=True)
-    state = blob.get("model_state_dict", blob)
-    config = dict(blob.get("config") or {})
-    model = build_model(config)
-    return probe_state_dicts(state, model.state_dict())
+    required = ("model", "backbone", "num_views", "view_fusion_kwargs")
+    missing = [key for key in required if key not in payload]
+    if missing:
+        raise ValueError(f"Best_Model checkpoint missing descriptor fields: {missing}")
+    if not isinstance(payload["model"], Mapping):
+        raise ValueError("Best_Model checkpoint field `model` must be a state_dict mapping")
+    if int(payload["num_views"]) != 6:
+        raise ValueError(f"Best_Model descriptor num_views must be 6, got {payload['num_views']!r}")
+    if payload["backbone"] != "swin_v2_tiny":
+        raise ValueError(f"unsupported Best_Model backbone {payload['backbone']!r}")
+    return {
+        "checkpoint_format": "autoware-best-model-v1",
+        "checkpoint_id": "Best_Model.pt",
+        "backbone": str(payload["backbone"]),
+        "num_views": int(payload["num_views"]),
+        "embed_dim": 256,
+        "image_feature_size": 8,
+        "view_fusion_kwargs": dict(payload["view_fusion_kwargs"]),
+        "num_timesteps": 64,
+        "num_signals": 2,
+        "egomotion_dim": 256,
+        "visual_history_dim": 896,
+        "map_type": "rasterized",
+        "map_context_channels": 14,
+        "route_channels": 2,
+        "enable_route_conditioning": True,
+        "map_fusion_mode": "residual",
+        "temporal_memory_mode": "no_memory",
+        "planner_mode": "bezier",
+        "enable_world_model": False,
+        "enable_reasoning": False,
+        "reasoning_mode": "none",
+        "is_pretrained": False,
+        "geometry_type": "pseudo",
+        "navigation_geometry": "kitscenes-v3-bev-1m-v1",
+        "epoch": int(payload.get("epoch", 28)),
+        "trajectory_training_policy": dict(payload.get("trajectory_training_policy") or {}),
+    }

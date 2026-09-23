@@ -1,0 +1,480 @@
+{
+  "schema": "simforge.scenario-split-admission-report/v1",
+  "generatedAt": "2026-09-22T11:37:09.005Z",
+  "group": "overnight-v2",
+  "proposed": {
+    "train": 240,
+    "val": 80
+  },
+  "selection": "Unmodified native ranked matcher; first 2 fully admitted train sites and 1 val site per PoC family/map, or 1 train/val for overnight. Cross-family map-intel origins reserved by split. Every attempted cell remains recorded; missing matcher slots are explicitly unmatched and excluded. No template or required-clause repairs.",
+  "solvabilityPolicy": "native-authored-scripted/v1",
+  "kernelReceiptCaveat": "Whole-clip scripted warmup is admission-only: Episode result remains partial/warmup_terminated with termReason=horizon. It is not a scored/promotable policy run.",
+  "controlRelation": null,
+  "splits": [
+    {
+      "purpose": "train",
+      "splitId": "overnight-v2-train",
+      "digest": "9f070e4ea67072ca0ce970581fad2f41d39cb26e16f8dd0fc53c648f32268163",
+      "episodes": 120,
+      "uniquePhysicalConcretesIgnoringSeed": 120,
+      "admittedCells": 2,
+      "excludedCells": 16,
+      "families": [
+        {
+          "family": "cpnco-dartout",
+          "map": "di-rosa-sf",
+          "cells": 1,
+          "episodes": 60,
+          "parameterDrawsUniqueWithinCells": 60
+        },
+        {
+          "family": "cpnco-dartout",
+          "map": "san-ramon-25-p2",
+          "cells": 1,
+          "episodes": 60,
+          "parameterDrawsUniqueWithinCells": 60
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "splitId": "overnight-v2-val",
+      "digest": "6a5b73458459fb06ab68cc71627b6dc68b27803fc29fb590de06e6d0f9226586",
+      "episodes": 80,
+      "uniquePhysicalConcretesIgnoringSeed": 80,
+      "admittedCells": 4,
+      "excludedCells": 5,
+      "families": [
+        {
+          "family": "queue-tail",
+          "map": "di-rosa-sf",
+          "cells": 1,
+          "episodes": 20,
+          "parameterDrawsUniqueWithinCells": 20
+        },
+        {
+          "family": "cpnco-dartout",
+          "map": "di-rosa-sf",
+          "cells": 1,
+          "episodes": 20,
+          "parameterDrawsUniqueWithinCells": 20
+        },
+        {
+          "family": "queue-tail",
+          "map": "san-ramon-25-p2",
+          "cells": 1,
+          "episodes": 20,
+          "parameterDrawsUniqueWithinCells": 20
+        },
+        {
+          "family": "cpnco-dartout",
+          "map": "san-ramon-25-p2",
+          "cells": 1,
+          "episodes": 20,
+          "parameterDrawsUniqueWithinCells": 20
+        }
+      ]
+    }
+  ],
+  "solvabilityReceipts": [
+    {
+      "purpose": "train",
+      "family": "cpnco-dartout",
+      "map": "di-rosa-sf",
+      "site": "067669a68056670d",
+      "cell": 4,
+      "seedsTested": 60,
+      "collisions": 0,
+      "horizonWitnesses": 60,
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-004.admission.json",
+        "sha256": "222342cf0653bbb01bf803f3a4748aa8b3184498db96ec6f4832f332026739d7"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-train/cell-004-seed-0.trace.json.gz",
+          "sha256": "87f2db8b4a757614f75c56d18b53fe93bb2c2552ea66bacf1815aeb29b4fc614"
+        },
+        {
+          "path": "receipts/overnight-v2-train/cell-004-seed-0.episode.jsonl.gz",
+          "sha256": "5ae8f8f172941c48f0c99d585dc730d91aa5a92b7dd297fb1f6fce9a379968b5"
+        }
+      ]
+    },
+    {
+      "purpose": "train",
+      "family": "cpnco-dartout",
+      "map": "san-ramon-25-p2",
+      "site": "17692f0ec592f8b0",
+      "cell": 17,
+      "seedsTested": 60,
+      "collisions": 0,
+      "horizonWitnesses": 60,
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-017.admission.json",
+        "sha256": "9fe91d9f3c3ce235f56d46f995e15d99996253598ca85fbfa2a1f1878c6726c9"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-train/cell-017-seed-0.trace.json.gz",
+          "sha256": "ac967207ec264dadc3c80f3fbda1b439ac9e3f3c13d8bd27dbcaed3bc0cbd94a"
+        },
+        {
+          "path": "receipts/overnight-v2-train/cell-017-seed-0.episode.jsonl.gz",
+          "sha256": "0bc70eea1d3bad4dfeb078e1ec03f4c53c49a64d426dbe99778c7c05fbda6c13"
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "family": "queue-tail",
+      "map": "di-rosa-sf",
+      "site": "548ece4def41d5a5",
+      "cell": 0,
+      "seedsTested": 20,
+      "collisions": 0,
+      "horizonWitnesses": 20,
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-000.admission.json",
+        "sha256": "03248eff94c9504b996def980e364bc08c241aa3f655ad94bcf6bd8a4dd93025"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-val/cell-000-seed-100.trace.json.gz",
+          "sha256": "aee22d28f4983f125f23750c9ab343ba41fc298edcefb11eff0039b110fcb24f"
+        },
+        {
+          "path": "receipts/overnight-v2-val/cell-000-seed-100.episode.jsonl.gz",
+          "sha256": "dcdb2c596350c077d935cc9a821c80e6b8f3a5e6d7f5b6cf2ae7e825066b9049"
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "family": "cpnco-dartout",
+      "map": "di-rosa-sf",
+      "site": "418cbdc675ad41dc",
+      "cell": 1,
+      "seedsTested": 20,
+      "collisions": 0,
+      "horizonWitnesses": 20,
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-001.admission.json",
+        "sha256": "316635499d182b9d58b1e4dcfcd762487eb691b631f5e23e2b5ba2ff636685e5"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-val/cell-001-seed-100.trace.json.gz",
+          "sha256": "62da51117f526533527c04243e0b9201d31be9823882b2c0a288535dc6bf3c6e"
+        },
+        {
+          "path": "receipts/overnight-v2-val/cell-001-seed-100.episode.jsonl.gz",
+          "sha256": "ce63535bb7ee4cc18ecc178f35be1fa00225eff0b534ce3ab4610279983dfd80"
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "5136dbf1f340ac6c",
+      "cell": 7,
+      "seedsTested": 20,
+      "collisions": 0,
+      "horizonWitnesses": 20,
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-007.admission.json",
+        "sha256": "0896636543f268267dabbd308536398e541039e8c73919e97529a9d5e1e44b40"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-val/cell-007-seed-100.trace.json.gz",
+          "sha256": "4d8d128f06bfe662294fa434c12a96c9c0359e5449ebfd23f7c8cf14d3620fe2"
+        },
+        {
+          "path": "receipts/overnight-v2-val/cell-007-seed-100.episode.jsonl.gz",
+          "sha256": "10f56ade50db0a041bfdba26f44dfb9d69e5c472936c3590b8af6aff85b1cf7f"
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "family": "cpnco-dartout",
+      "map": "san-ramon-25-p2",
+      "site": "31dd1a0a6ce522a8",
+      "cell": 8,
+      "seedsTested": 20,
+      "collisions": 0,
+      "horizonWitnesses": 20,
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-008.admission.json",
+        "sha256": "9bfee916351989fa339923d003139764f8649ab5ff5f89b76286ae5fa9a07909"
+      },
+      "evidence": [
+        {
+          "path": "receipts/overnight-v2-val/cell-008-seed-100.trace.json.gz",
+          "sha256": "1b6455140711d9af5fc8e3930ad4cb01e91cec2a48857864da942be540d3083b"
+        },
+        {
+          "path": "receipts/overnight-v2-val/cell-008-seed-100.episode.jsonl.gz",
+          "sha256": "f16e4ea86ed46fa1d23dc7c1b17656574e2630812cbec0bdafa5f000bfc86d41"
+        }
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "purpose": "train",
+      "cell": 0,
+      "family": "queue-tail",
+      "map": "di-rosa-sf",
+      "site": "548ece4def41d5a5",
+      "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.599719587334228; kernel scripted completion: collision at 3.6/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-000.admission.json",
+        "sha256": "1b5b3734d0ddc6f59d58747493d23aa4282839d06410eda8463b3225176b24db"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 1,
+      "family": "queue-tail",
+      "map": "di-rosa-sf",
+      "site": "da1121b379a8b782",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.6993098292140423; kernel scripted completion: collision at 3.7/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-001.admission.json",
+        "sha256": "1cf5985ca7a27fe1829c032c83aae5ea62a6282b3c0802276212a3645cdc3d8c"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 2,
+      "family": "queue-tail",
+      "map": "di-rosa-sf",
+      "site": "1e6c7a6804a61010",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194334090410135; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-002.admission.json",
+        "sha256": "d1f926001937706dc1db3a7bec9f45f164a9ca8af05acb2edbe92a953814fe1d"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 3,
+      "family": "queue-tail",
+      "map": "di-rosa-sf",
+      "site": "4e889d8ca2bea770",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719434439640765; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-003.admission.json",
+        "sha256": "a931f24fd7cb91e53616c5a6336f3ab05f532b1969e7d92a99cd60b8580b1077"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 5,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "ef565292b63ab616",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.757525439376132; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-005.admission.json",
+        "sha256": "6d70e0e68dd7bb2e2968420d2bb2f35aed9b320dfc6464478f0dd81f63e9a04c"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 6,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "fe8680f93b47ecf3",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719419030279975; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-006.admission.json",
+        "sha256": "6211bfe611d23dfa03506778b32d6ea7a0f565ea126419ff43a51ee648ea9c73"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 7,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "7692386a39705588",
+      "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.578369100223142; kernel scripted completion: collision at 3.6/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-007.admission.json",
+        "sha256": "58aabce7126a79123cca0402cf18cfa8d069f9aa2c3749bdf68aa19026b286d4"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 8,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "9fc36a3719fa28b7",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194254861908553; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-008.admission.json",
+        "sha256": "ab09cb9a98d34ec3f83583f278573a54d27274d836dc9b02e549cb9d77e260bc"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 9,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "b5f4e0abaa3f34ca",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194267226301427; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-009.admission.json",
+        "sha256": "e690f330ad28a8b0219ed1520ba322d1321f4d444e5bbbfd65a41cc0f5cad395"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 10,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "5136dbf1f340ac6c",
+      "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.5792751832424408; kernel scripted completion: collision at 3.6/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-010.admission.json",
+        "sha256": "ca1d021dbc959cd30eba01cc156dcb8496cf2eda52ed6f4340025180319beef9"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 11,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "f4200fa83b32ed88",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719420831747125; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-011.admission.json",
+        "sha256": "d7fbb50f90c161f7f5ca1c5db848f63df4d3e026000b58c1308b98056511b9b7"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 12,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "26772eb077778e7d",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194250676416147; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-012.admission.json",
+        "sha256": "a1b33e798ead078a66ccee0e4da743fc66d5443fbb57189366c9c9318a364ce6"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 13,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "2e5515d1e89dc18e",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719433451362518; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-013.admission.json",
+        "sha256": "6a17441839e6750599d56c202b94d2ee45b13f0e2277a987096f59e2bef044c3"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 14,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "4abe4d6b013ac69f",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.8190742046263084; kernel scripted completion: collision at 3.9/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-014.admission.json",
+        "sha256": "def0458c1061e46cbef84e6a3c71ec95d9deff5e99b2f009eb192a55b95c503b"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 15,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "250f075aaf331af8",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.9181104247504677; kernel scripted completion: collision at 4/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-015.admission.json",
+        "sha256": "7fe58940983c8eda6d87bf4df6bd7ea231bcde21410109bdb8cbe81d44989ad7"
+      }
+    },
+    {
+      "purpose": "train",
+      "cell": 16,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "1e5b978387f73139",
+      "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194306987068413; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-train/cell-016.admission.json",
+        "sha256": "0113c748e1abe95ea6c0899ba524d87c86aa169b6e7f0f73e1e5b12588c51b04"
+      }
+    },
+    {
+      "purpose": "val",
+      "cell": 2,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "ef565292b63ab616",
+      "reason": "seed 100: scripted rehearsal collision: ego/queue-tail@3.679433998411293; kernel scripted completion: collision at 3.7/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-002.admission.json",
+        "sha256": "9bb47fcf2a51d3acd7a7f87d1b3db5fb529b681b332eeeaef1cf01715e1ece70"
+      }
+    },
+    {
+      "purpose": "val",
+      "cell": 3,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "fe8680f93b47ecf3",
+      "reason": "seed 100: scripted rehearsal collision: ego/queue-tail@3.7188806520167073; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-003.admission.json",
+        "sha256": "f4ba75482c6c1879a95d26d0c11795e80a2d4ea8a0b0b6366e7c098d0e495476"
+      }
+    },
+    {
+      "purpose": "val",
+      "cell": 4,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "7692386a39705588",
+      "reason": "seed 117: scripted rehearsal collision: ego/queue-tail@3.8983779426149545; kernel scripted completion: collision at 3.9/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-004.admission.json",
+        "sha256": "cfc729d56dfd1d2d168943259bb34e13ea2d82a4d7b78ae83d57d9f2dcf10ca5"
+      }
+    },
+    {
+      "purpose": "val",
+      "cell": 5,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "9fc36a3719fa28b7",
+      "reason": "seed 100: scripted rehearsal collision: ego/queue-tail@3.718905960161629; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-005.admission.json",
+        "sha256": "892ddd61e4789a60e6f5f635df2028b737f5d7567daf64a105d4ee35d434ab0d"
+      }
+    },
+    {
+      "purpose": "val",
+      "cell": 6,
+      "family": "queue-tail",
+      "map": "san-ramon-25-p2",
+      "site": "b5f4e0abaa3f34ca",
+      "reason": "seed 100: scripted rehearsal collision: ego/queue-tail@3.718910327787465; kernel scripted completion: collision at 3.8000000000000003/13s",
+      "receipt": {
+        "path": "receipts/overnight-v2-val/cell-006.admission.json",
+        "sha256": "0a4070289ff2c3364d456b0fc9a4ac2a20ad4966d696e7beba3c68be71c65886"
+      }
+    }
+  ],
+  "meetsProposedGrid": false
+}

@@ -1,0 +1,351 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "overnight-v2-train",
+  "cell": 2,
+  "templateSha256": "92b6850cd8a22f6fda0f90b6ad7aa1c3e0c34c28f1f32c632f8fd54b48a5e416",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 0,
+      "drawIndex": 0,
+      "inputSha256": "4c18a928c7791e00eb6a0340a86aef353635aafba36615fab2ba89e3d3e9dad6",
+      "paramsSha256": "c4becdb20c3749f84b5dfc19fae9b6b6589ef8563622e12cf0359324d605b042",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "inside-curve-screen",
+            "relevantOccluderIds": [
+              "inside-curve-screen"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 2.16,
+            "conflictT": 3.72,
+            "revealToConflictS": 1.56
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: ego/queue-tail@3.7194334090410135",
+          "kernel scripted completion: collision at 3.8000000000000003/13s"
+        ],
+        "collisions": [
+          {
+            "t": 3.7194334090410135,
+            "a": "ego",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 13,
+        "finalTS": 13,
+        "ticksSimulated": 651,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "collision",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 3.924427,
+            "simulationS": 3.8000000000000003,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 38,
+          "deadlineMisses": 0,
+          "episodeDigest": "baa25073a956a43c19908cc9b06678f06cd02b732c978b26aae6e9d9cb8c983a",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "f26df1b7f923319e7bcd7cdcc045029d24a11823b351a1fe654a3df13baec6cb"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/overnight-v2-train/cell-002-seed-0.trace.json.gz",
+      "sha256": "902d9e43a3edac1cd877c77c8ce5e2933d09a24e5f14399e75fb0fad8babc3dd"
+    },
+    {
+      "path": "receipts/overnight-v2-train/cell-002-seed-0.episode.jsonl.gz",
+      "sha256": "989276e994dfe95989056958758ae1dfb5a424b4d88166c9e9262b009a2df0e9"
+    }
+  ],
+  "match": {
+    "candidateCount": 4,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "1e6c7a6804a61010",
+      "mapId": "di-rosa-sf",
+      "topologyDigest": "971b38cb7579f5d70d4c9d3ee4b9c1f7596072925b2b6d2fdbf39e0bf598294f",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 0.85,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_260cc6a79cb6d85c"
+        },
+        "entryLaneRsl": "1:0:-1",
+        "referencePath": [
+          {
+            "laneRsl": "1:0:-1",
+            "sStart": 0,
+            "sEnd": 111.48243776879117,
+            "lengthM": 111.48243776879117,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "246:0:-1",
+            "sStart": 111.48243776879117,
+            "sEnd": 139.11228452969556,
+            "lengthM": 27.629846760904396,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:0:-1",
+            "sStart": 139.11228452969556,
+            "sEnd": 139.91505544030602,
+            "lengthM": 0.802770910610441,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:1:-1",
+            "sStart": 139.91505544030602,
+            "sEnd": 140.09913236991815,
+            "lengthM": 0.1840769296121357,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:2:-1",
+            "sStart": 140.09913236991815,
+            "sEnd": 141.7039107562614,
+            "lengthM": 1.6047783863432414,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:3:-1",
+            "sStart": 141.7039107562614,
+            "sEnd": 143.51257563441317,
+            "lengthM": 1.8086648781517636,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "95:4:-1",
+            "sStart": 143.51257563441317,
+            "sEnd": 229.021499952043,
+            "lengthM": 85.50892431762985,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "1:0:-1": 0,
+          "246:0:-1": 111.48243776879117,
+          "95:0:-1": 139.11228452969556,
+          "95:1:-1": 139.91505544030602,
+          "95:2:-1": 140.09913236991815,
+          "95:3:-1": 141.7039107562614,
+          "95:4:-1": 143.51257563441317
+        },
+        "sRange": [
+          0,
+          229.021499952043
+        ],
+        "lateralLanes": {
+          "0": "1:0:-1"
+        },
+        "opposingLanes": [],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 229.01921542234743
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0.5,
+            8
+          ],
+          "actual": 0,
+          "score": 0.75,
+          "slack": 0.5,
+          "weight": 3,
+          "supported": true,
+          "worstAtS": 140,
+          "reason": "corridor.curvatureDegPer10m worst value 0 at s=140 m, wanted [0.5, 8]"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 220,
+          "actual": 229.02,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "229.02 m of runway available, 220 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            8
+          ],
+          "actual": 1,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 25,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "1:0:-1",
+          "routeLaneChain": [
+            "1:0:-1",
+            "246:0:-1",
+            "95:0:-1",
+            "95:1:-1",
+            "95:2:-1",
+            "95:3:-1",
+            "95:4:-1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 80,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "1:0:-1",
+          "routeLaneChain": [
+            "1:0:-1",
+            "246:0:-1",
+            "95:0:-1",
+            "95:1:-1",
+            "95:2:-1",
+            "95:3:-1",
+            "95:4:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 88,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "1:0:-1",
+          "routeLaneChain": [
+            "1:0:-1",
+            "246:0:-1",
+            "95:0:-1",
+            "95:1:-1",
+            "95:2:-1",
+            "95:3:-1",
+            "95:4:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "degraded",
+        "score": 0.85,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0 at s=140 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "229.02 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ],
+      "alternateFrames": 1
+    }
+  },
+  "map": {
+    "id": "di-rosa-sf",
+    "topologySha256": "047a3c3bcdf002441bafaaf895b99c71de65483cecdba1582872062dda2c576c",
+    "engineGraphDigest": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
+    "matcherIndexDigest": "971b38cb7579f5d70d4c9d3ee4b9c1f7596072925b2b6d2fdbf39e0bf598294f"
+  },
+  "siteKey": "di-rosa-sf/seg_260cc6a79cb6d85c",
+  "status": "excluded",
+  "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194334090410135; kernel scripted completion: collision at 3.8000000000000003/13s"
+}

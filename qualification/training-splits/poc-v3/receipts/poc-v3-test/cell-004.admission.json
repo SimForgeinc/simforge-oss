@@ -1,0 +1,460 @@
+{
+  "schema": "simforge.scenario-admission/v2",
+  "splitId": "poc-v3-test",
+  "cell": 4,
+  "templateSha256": "ce5cbf6c8bf6a5d110749b4179603ab7b11e11f830c2744529ec3b98903a7834",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability",
+    "bench-window"
+  ],
+  "runs": [
+    {
+      "seed": 200,
+      "drawIndex": 200,
+      "inputSha256": "1ca7f05fd5b72ba1d0ad91cc7414a4f689e0da9696b1ada26140cf60c223c6ac",
+      "paramsSha256": "661b367a386f00e6ecb8c78191c8c5f04786533b76f742d3795f84f8ab85aa5c",
+      "policy": "native-authored-scripted/v2",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "failed",
+        "required": true,
+        "findings": [
+          "ego->queue-tail/actor:preview-van: blocked_at_conflict"
+        ],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "queue-tail",
+            "pair": [
+              "ego",
+              "queue-tail"
+            ],
+            "occluderId": "actor:preview-van",
+            "relevantOccluderIds": [
+              "actor:preview-van"
+            ],
+            "status": "blocked_at_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": null,
+            "conflictT": 14.809844757532597,
+            "revealToConflictS": null
+          }
+        ]
+      },
+      "solvability": {
+        "status": "failed",
+        "findings": [
+          "scripted rehearsal collision: preview-van/queue-tail@13.219632986719454"
+        ],
+        "collisions": [
+          {
+            "t": 13.219632986719454,
+            "a": "preview-van",
+            "b": "queue-tail"
+          }
+        ],
+        "clipSeconds": 23,
+        "finalTS": 23,
+        "ticksSimulated": 1151,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 47.261428,
+            "simulationS": 23,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 230,
+          "deadlineMisses": 0,
+          "episodeDigest": "097fcfa2d9f7d1721f91b00d9774762307296f3847e184d2bada6f6ffe8c19f1",
+          "modelHealth": null
+        }
+      },
+      "benchWindow": {
+        "schema": "simforge.bench-window-admission/v1",
+        "status": "failed",
+        "minimumS": 9.3,
+        "prologueS": 6.3,
+        "reactionMarginS": 3,
+        "hazardOnsets": [
+          {
+            "kind": "occlusion-reveal",
+            "subject": "ego->queue-tail/actor:preview-van",
+            "tS": null
+          },
+          {
+            "kind": "lane-change",
+            "subject": "van-pulls-aside",
+            "tS": null
+          }
+        ],
+        "authoredDefaultGoals": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 46.999078,
+            "simulationS": 23,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 230,
+          "deadlineMisses": 0,
+          "episodeDigest": "f2bbdf7e3d66280d3a305c7d3f3f5e0448d8223f868608d81883dd11730f248d",
+          "modelHealth": null
+        },
+        "benchContinuation": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "succeeded",
+          "truncation": "horizon",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 29.194325,
+            "simulationS": 9.3,
+            "policySimulationS": 3.000000000000001
+          },
+          "decisions": 30,
+          "warmupDecisions": 63,
+          "deadlineMisses": 0,
+          "episodeDigest": "c0ee3dab85cfce5e9def3944f3b63a6a8665fa15b5602a801c1906c8e1b37153",
+          "modelHealth": null
+        },
+        "findings": [
+          "ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s",
+          "van-pulls-aside: lane-change at never; requires >=9.3s"
+        ]
+      },
+      "rehearsalDigest": "b3f141f1b04d92661de13b9f7bcf62a9a6de5744472f0e7fd8f83a0cd54392dc"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/poc-v3-test/cell-004-seed-200.trace.json.gz",
+      "sha256": "9088ea9f87502b569d5eaacb59714199f21873ddf93efcf9bae18f04c2888b8b"
+    },
+    {
+      "path": "receipts/poc-v3-test/cell-004-seed-200.episode.jsonl.gz",
+      "sha256": "8226eab2eb7e4713ff33d75901546098d848ce3fceea5fb1da133af45244e5ee"
+    },
+    {
+      "path": "receipts/poc-v3-test/cell-004-seed-200.default-goals.episode.jsonl.gz",
+      "sha256": "a1d038ddce0f227dbeca198b85c0fef6f276fd507abad79b835e47b66fa5beb5"
+    },
+    {
+      "path": "receipts/poc-v3-test/cell-004-seed-200.bench-window.episode.jsonl.gz",
+      "sha256": "f94d61a4687051496b15746fc957ec9516a53e22441d5c007150b8b722dfe2d6"
+    }
+  ],
+  "match": {
+    "candidateCount": 7,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "3a0ea117c3174c9a",
+      "mapId": "easterbrook-discovery-school",
+      "topologyDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "queue-tail",
+      "score": 1,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "corridor",
+          "kind": "corridor",
+          "mapFeatureId": "seg_ddbc616743c75097"
+        },
+        "entryLaneRsl": "10:0:-1",
+        "referencePath": [
+          {
+            "laneRsl": "10:0:-1",
+            "sStart": 0,
+            "sEnd": 61.31954246160255,
+            "lengthM": 61.31954246160255,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "11180:0:-1",
+            "sStart": 61.31954246160255,
+            "sEnd": 108.1775291483267,
+            "lengthM": 46.85798668672415,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "11:0:-2",
+            "sStart": 108.1775291483267,
+            "sEnd": 155.53996917169206,
+            "lengthM": 47.36244002336536,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "61527:0:-2",
+            "sStart": 155.53996917169206,
+            "sEnd": 168.29343528363717,
+            "lengthM": 12.75346611194508,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "12:0:-2",
+            "sStart": 168.29343528363717,
+            "sEnd": 172.23707842199792,
+            "lengthM": 3.943643138360791,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "62065:0:-1",
+            "sStart": 172.23707842199792,
+            "sEnd": 237.35780198832248,
+            "lengthM": 65.12072356632456,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "13:0:-1",
+            "sStart": 237.35780198832248,
+            "sEnd": 243.93780199226018,
+            "lengthM": 6.580000003937687,
+            "isJunction": false,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "10:0:-1": 0,
+          "11180:0:-1": 61.31954246160255,
+          "11:0:-2": 108.1775291483267,
+          "12:0:-2": 168.29343528363717,
+          "13:0:-1": 237.35780198832248,
+          "61527:0:-2": 155.53996917169206,
+          "62065:0:-1": 172.23707842199792
+        },
+        "sRange": [
+          0,
+          243.93780199226018
+        ],
+        "lateralLanes": {
+          "0": "10:0:-1",
+          "-1": "10:0:-2"
+        },
+        "opposingLanes": [
+          "10:0:1",
+          "10:0:2"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 243.94027284393349
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "required",
+          "required": [
+            0,
+            4
+          ],
+          "actual": 0.09564942226533235,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.curvatureDegPer10m holds over the whole interval (worst 0.1)"
+        },
+        {
+          "path": "corridor.laneChangeLegal",
+          "essentiality": "required",
+          "required": "left lane change legal over s∈[125, 214]",
+          "actual": "allowed",
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 130,
+          "reason": "lane-change legality worst case \"allowed\" at s=130 m"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 241,
+          "actual": 243.94,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "243.94 m of runway available, 241 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            30,
+            70
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            2,
+            8
+          ],
+          "actual": 2,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 50,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "10:0:-1",
+          "routeLaneChain": [
+            "10:0:-1",
+            "11180:0:-1",
+            "11:0:-2",
+            "61527:0:-2",
+            "12:0:-2",
+            "62065:0:-1",
+            "13:0:-1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "queue-tail",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 50,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "10:0:-1",
+          "routeLaneChain": [
+            "10:0:-1",
+            "11180:0:-1",
+            "11:0:-2",
+            "61527:0:-2",
+            "12:0:-2",
+            "62065:0:-1",
+            "13:0:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "queue-lead",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 58,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "10:0:-1",
+          "routeLaneChain": [
+            "10:0:-1",
+            "11180:0:-1",
+            "11:0:-2",
+            "61527:0:-2",
+            "12:0:-2",
+            "62065:0:-1",
+            "13:0:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        },
+        {
+          "role": "preview-van",
+          "kind": "relative_to",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 66,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "10:0:-1",
+          "routeLaneChain": [
+            "10:0:-1",
+            "11180:0:-1",
+            "11:0:-2",
+            "61527:0:-2",
+            "12:0:-2",
+            "62065:0:-1",
+            "13:0:-1"
+          ],
+          "onMissing": "fail",
+          "requestedK": 0,
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "exact",
+        "score": 1,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Exact match: every clause and role bound without relaxation.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.1)",
+        "lane-change legality worst case \"allowed\" at s=130 m",
+        "243.94 m of runway available, 241 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 2)"
+      ],
+      "alternateFrames": 0
+    }
+  },
+  "map": {
+    "id": "easterbrook-discovery-school",
+    "topologySha256": "84e00c3a05d8e40b59ddc9ae7724e9664d7bc0c3e46f8e0a54d1c0d30ed9e70d",
+    "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+    "matcherIndexDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58"
+  },
+  "siteKey": "easterbrook-discovery-school/seg_ddbc616743c75097",
+  "status": "excluded",
+  "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.219632986719454; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s"
+}

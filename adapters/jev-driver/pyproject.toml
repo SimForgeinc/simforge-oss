@@ -7,10 +7,13 @@ name = "jevdrive"
 version = "0.1.0"
 description = "Simulation-only concurrent Jev driver runtime"
 requires-python = ">=3.12"
-dependencies = ["numpy", "typesafe-sdk==0.6.0", "simforge-oss-gym==0.1.0rc61"]
+dependencies = ["numpy", "msgpack>=1.0", "typesafe-sdk==0.6.0", "simforge-oss-gym==0.1.0rc61", "simforge-policy-endpoint==0.1.0"]
 
 [project.scripts]
 jevdrive = "jevdrive.__main__:main"
 
 [tool.setuptools]
 packages = ["jevdrive"]
+
+[tool.uv.sources]
+simforge-policy-endpoint = { path = "../policy-endpoint" }

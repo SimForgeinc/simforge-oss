@@ -1,0 +1,324 @@
+{
+  "schema": "simforge.state-throughput/v2",
+  "measured_at": "2026-09-22T11:24:41.368890+00:00",
+  "git_sha": "9dfd2baafe2e2265b21459d122543a9e91d57a8f",
+  "hardware": {
+    "host": "path-pc",
+    "cpu": "Intel(R) Core(TM) Ultra 9 285K",
+    "logical_cpus": 24,
+    "affinity_cpus": 24,
+    "os": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "architecture": "x86_64",
+    "runner_class": "gpu-rtx5080",
+    "load_average_at_start": [
+      2.3798828125,
+      3.3232421875,
+      3.17578125
+    ]
+  },
+  "python": "3.12.14 (main, Aug 14 2026, 15:34:45) [Clang 22.1.3 ]",
+  "suite_sha256": "94dad8345bf62cbbbdbe1c8a31a20ccb1ee5ff7ce414dd44338b3c09225c0b2e",
+  "map_id": "garching-phase-1-2",
+  "topology_sha256": "00652aeac46bbe94a0948a18b0f3e95c1f5440e13618ea7b805700fafd1e91f7",
+  "native_extension_sha256": "51827afd63243dc4557ee186092f8311b406b0d1e9871238173b70b0166f3155",
+  "benchmark_source_sha256": "211d4406430623471feac082ccad7c0d52fae1eb78cb366fc471b0fc62ba8ef1",
+  "method": "env-throughput.md#measured-results",
+  "loop_owner": "native EpisodeBatch (N kernel Episodes)",
+  "workloads": [
+    {
+      "id": "corridor",
+      "family": "benign-corridor",
+      "host": "path-pc",
+      "cpu": "x86_64",
+      "logical_cpus": 24,
+      "engine_version": "0.7.0",
+      "binding_abi": 3,
+      "observation": "native state(10)+objects(64,5), BEV disabled",
+      "decision_hz": 10,
+      "physics_hz": 50,
+      "action": [
+        6.0,
+        0.0
+      ],
+      "mode": "setpoint",
+      "info_channel": false,
+      "spec": "/home/path/simforge-oss/scripts/bench/closed-loop/fixtures/corridor.episodes.json",
+      "spec_sha256": "a14ae4698612981777624bae1bcfe749f66629da9fc72464038dd8d4b2930993",
+      "rows": [
+        {
+          "num_envs": 1,
+          "threads": 1,
+          "median_env_steps_per_s": 10760.74957942867,
+          "samples": [
+            {
+              "decisions": 52681,
+              "seconds": 5.000054371077567,
+              "env_steps_per_s": 10536.085428336384,
+              "batch_calls": 52944,
+              "autoreset_only_rows": 263
+            },
+            {
+              "decisions": 53955,
+              "seconds": 5.000045654014684,
+              "env_steps_per_s": 10790.901470405162,
+              "batch_calls": 54224,
+              "autoreset_only_rows": 269
+            },
+            {
+              "decisions": 53804,
+              "seconds": 5.000023428001441,
+              "env_steps_per_s": 10760.74957942867,
+              "batch_calls": 54073,
+              "autoreset_only_rows": 269
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 11502.078676114397,
+          "versus_session_batch_percent": -6.445174977156054
+        },
+        {
+          "num_envs": 8,
+          "threads": 8,
+          "median_env_steps_per_s": 29957.19025039463,
+          "samples": [
+            {
+              "decisions": 149792,
+              "seconds": 5.000201913062483,
+              "env_steps_per_s": 29957.19025039463,
+              "batch_calls": 18817,
+              "autoreset_only_rows": 744
+            },
+            {
+              "decisions": 145368,
+              "seconds": 5.000023405067623,
+              "env_steps_per_s": 29073.46390672225,
+              "batch_calls": 18262,
+              "autoreset_only_rows": 728
+            },
+            {
+              "decisions": 150600,
+              "seconds": 5.0000655020121485,
+              "env_steps_per_s": 30119.60542104796,
+              "batch_calls": 18919,
+              "autoreset_only_rows": 752
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 35712.17896208327,
+          "versus_session_batch_percent": -16.114918996678675
+        },
+        {
+          "num_envs": 32,
+          "threads": 8,
+          "median_env_steps_per_s": 35103.026304923944,
+          "samples": [
+            {
+              "decisions": 174176,
+              "seconds": 5.00035118998494,
+              "env_steps_per_s": 34832.7534171704,
+              "batch_calls": 5470,
+              "autoreset_only_rows": 864
+            },
+            {
+              "decisions": 175520,
+              "seconds": 5.0001386910444126,
+              "env_steps_per_s": 35103.026304923944,
+              "batch_calls": 5512,
+              "autoreset_only_rows": 864
+            },
+            {
+              "decisions": 175712,
+              "seconds": 5.000118109979667,
+              "env_steps_per_s": 35141.569885979065,
+              "batch_calls": 5518,
+              "autoreset_only_rows": 864
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 40922.998310185234,
+          "versus_session_batch_percent": -14.2217634229718
+        },
+        {
+          "num_envs": 64,
+          "threads": 8,
+          "median_env_steps_per_s": 48830.055225636635,
+          "samples": [
+            {
+              "decisions": 173824,
+              "seconds": 5.000240379013121,
+              "env_steps_per_s": 34763.12873468435,
+              "batch_calls": 2729,
+              "autoreset_only_rows": 832
+            },
+            {
+              "decisions": 248576,
+              "seconds": 5.00112678098958,
+              "env_steps_per_s": 49703.99889578763,
+              "batch_calls": 3903,
+              "autoreset_only_rows": 1216
+            },
+            {
+              "decisions": 244160,
+              "seconds": 5.000199137022719,
+              "env_steps_per_s": 48830.055225636635,
+              "batch_calls": 3834,
+              "autoreset_only_rows": 1216
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 40142.20261754677,
+          "versus_session_batch_percent": 21.64269033979782
+        }
+      ]
+    },
+    {
+      "id": "cpnco-dartout",
+      "family": "cpnco-dartout",
+      "host": "path-pc",
+      "cpu": "x86_64",
+      "logical_cpus": 24,
+      "engine_version": "0.7.0",
+      "binding_abi": 3,
+      "observation": "native state(10)+objects(64,5), BEV disabled",
+      "decision_hz": 10,
+      "physics_hz": 50,
+      "action": [
+        6.0,
+        0.0
+      ],
+      "mode": "setpoint",
+      "info_channel": false,
+      "spec": "/home/path/simforge-oss/scripts/bench/closed-loop/fixtures/cpnco-dartout.episodes.json",
+      "spec_sha256": "c9d7fbb68ca856921f5aadc2aadfbc509a48df4af746baad254fec5fe84b3cea",
+      "rows": [
+        {
+          "num_envs": 1,
+          "threads": 1,
+          "median_env_steps_per_s": 10196.88417367224,
+          "samples": [
+            {
+              "decisions": 51034,
+              "seconds": 5.000057140015997,
+              "env_steps_per_s": 10206.68335798993,
+              "batch_calls": 51353,
+              "autoreset_only_rows": 319
+            },
+            {
+              "decisions": 50985,
+              "seconds": 5.000056794960983,
+              "env_steps_per_s": 10196.88417367224,
+              "batch_calls": 51303,
+              "autoreset_only_rows": 318
+            },
+            {
+              "decisions": 50788,
+              "seconds": 5.00005892990157,
+              "env_steps_per_s": 10157.480284137331,
+              "batch_calls": 51105,
+              "autoreset_only_rows": 317
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 10981.968530220007,
+          "versus_session_batch_percent": -7.148849082815922
+        },
+        {
+          "num_envs": 8,
+          "threads": 8,
+          "median_env_steps_per_s": 30025.060035555034,
+          "samples": [
+            {
+              "decisions": 150128,
+              "seconds": 5.0000899189617485,
+              "env_steps_per_s": 30025.060035555034,
+              "batch_calls": 18883,
+              "autoreset_only_rows": 936
+            },
+            {
+              "decisions": 151280,
+              "seconds": 5.0000040660379454,
+              "env_steps_per_s": 30255.975395611193,
+              "batch_calls": 19028,
+              "autoreset_only_rows": 944
+            },
+            {
+              "decisions": 142152,
+              "seconds": 5.000431719003245,
+              "env_steps_per_s": 28427.94542314752,
+              "batch_calls": 17880,
+              "autoreset_only_rows": 888
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 27167.35549813031,
+          "versus_session_batch_percent": 10.518891091999727
+        },
+        {
+          "num_envs": 32,
+          "threads": 8,
+          "median_env_steps_per_s": 35978.7797556103,
+          "samples": [
+            {
+              "decisions": 180064,
+              "seconds": 5.000320442020893,
+              "env_steps_per_s": 36010.49214502474,
+              "batch_calls": 5662,
+              "autoreset_only_rows": 1120
+            },
+            {
+              "decisions": 168000,
+              "seconds": 5.005203397013247,
+              "env_steps_per_s": 33565.0695234984,
+              "batch_calls": 5283,
+              "autoreset_only_rows": 1056
+            },
+            {
+              "decisions": 179904,
+              "seconds": 5.000280754989944,
+              "env_steps_per_s": 35978.7797556103,
+              "batch_calls": 5657,
+              "autoreset_only_rows": 1120
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 31119.697048208593,
+          "versus_session_batch_percent": 15.614170985901122
+        },
+        {
+          "num_envs": 64,
+          "threads": 8,
+          "median_env_steps_per_s": 39741.00361562056,
+          "samples": [
+            {
+              "decisions": 189120,
+              "seconds": 5.000555940903723,
+              "env_steps_per_s": 37819.79488581051,
+              "batch_calls": 2973,
+              "autoreset_only_rows": 1152
+            },
+            {
+              "decisions": 198720,
+              "seconds": 5.000376989017241,
+              "env_steps_per_s": 39741.00361562056,
+              "batch_calls": 3124,
+              "autoreset_only_rows": 1216
+            },
+            {
+              "decisions": 229184,
+              "seconds": 5.001257878029719,
+              "env_steps_per_s": 45825.27147955999,
+              "batch_calls": 3603,
+              "autoreset_only_rows": 1408
+            }
+          ],
+          "session_batch_baseline_decisions_per_s": 32100.96562500896,
+          "versus_session_batch_percent": 23.800025456740336
+        }
+      ]
+    }
+  ],
+  "session_batch_baseline": {
+    "path": "docs/engineering/benchmarks/state-throughput-2026-09-22-final.json",
+    "sha256": "9831a5bd09f733f3aaf9e1cfec85dccbfd0cef630229c1e4564dbc694820e9cc",
+    "native_extension_sha256": "bd62a064872fb06fcb59199f26d3ea60f01973614d2aabf90d517a3221a97b63",
+    "measured_at": "2026-09-22T10:46:53.721542+00:00"
+  },
+  "gate": {
+    "minimum_64_env_decisions_per_s": 5000,
+    "passed": true,
+    "failures": []
+  }
+}

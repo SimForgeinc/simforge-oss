@@ -9,11 +9,12 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use simforge_core::engine::signals::{PhaseSource, SignalBook};
 use simforge_core::engine::visibility::{has_line_of_sight, OccluderShape, StaticOccluder};
 use simforge_core::engine::{ActorIndex, ActorSnapshot};
 use simforge_core::map::{LaneGraph, LaneId};
 use simforge_core::math::{atan2, cos, hypot, obb_corners, sin, sin_cos, Obb, Vec2};
-use simforge_core::types::Dims;
+use simforge_core::types::{ControlIndication, Dims, TimingSource};
 
 use crate::episode::{BevConfig, ObservationConfig};
 use crate::error::{Result, SessionError};
@@ -81,6 +82,24 @@ impl BevRaster {
     }
 }
 
+/// A current signal indication on one controlled lane/approach. This is
+/// infrastructure state, not a claim that a camera perceived a signal head.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObservedSignal {
+    pub signal_id: String,
+    pub lane_rsl: String,
+    /// Arc length in the lane's storage direction, metres.
+    pub stop_line_s: f64,
+    /// Empty means every movement from this approach.
+    pub connecting_lane_rsls: Vec<String>,
+    pub phase: ControlIndication,
+    pub source: PhaseSource,
+    pub timing_source: TimingSource,
+    /// Seconds to the next scheduled phase boundary, or unknown/indefinite.
+    pub time_to_change_s: Option<f64>,
+}
+
 /// One decision's observation. Buffers are reused across decisions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -91,6 +110,9 @@ pub struct Observation {
     pub objects: Vec<PerceivedObject>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bev: Option<BevRaster>,
+    /// Opt-in approach-level signal state; absent preserves legacy bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signals: Option<Vec<ObservedSignal>>,
 }
 
 impl Observation {
@@ -100,6 +122,52 @@ impl Observation {
             state_vector: cfg.state_vector.then_some([0.0; STATE_VECTOR_SIZE]),
             objects: Vec::new(),
             bev: cfg.bev.as_ref().map(BevRaster::new),
+            signals: cfg.signals.then(Vec::new),
+        }
+    }
+
+    /// Allocate approach identities once per reset; decision updates only
+    /// replace numeric/enum fields and reuse all buffers.
+    pub fn configure_signals(&mut self, book: &SignalBook) {
+        let Some(out) = &mut self.signals else { return };
+        out.clear();
+        for (index, program) in book.programs().iter().enumerate() {
+            let state = book.state_at_index(index as u32, self.t_s);
+            for line in &program.stop_lines {
+                let mut connecting_lane_rsls = line.connecting_lane_rsls.clone();
+                connecting_lane_rsls.sort_by(|a, b| simforge_core::hash::cmp_utf16(a, b));
+                out.push(ObservedSignal {
+                    signal_id: program.id.clone(),
+                    lane_rsl: line.rsl.clone(),
+                    stop_line_s: line.s,
+                    connecting_lane_rsls,
+                    phase: state.phase,
+                    source: state.source,
+                    timing_source: state.timing_source,
+                    time_to_change_s: None,
+                });
+            }
+        }
+        out.sort_by(|a, b| {
+            simforge_core::hash::cmp_utf16(&a.signal_id, &b.signal_id)
+                .then_with(|| simforge_core::hash::cmp_utf16(&a.lane_rsl, &b.lane_rsl))
+                .then_with(|| a.stop_line_s.total_cmp(&b.stop_line_s))
+                .then_with(|| a.connecting_lane_rsls.cmp(&b.connecting_lane_rsls))
+        });
+    }
+
+    pub fn update_signals(&mut self, book: &SignalBook, dt_s: f64) {
+        let Some(out) = &mut self.signals else { return };
+        let mut rows = out.iter_mut().peekable();
+        for (index, program) in book.programs().iter().enumerate() {
+            let timing = book.timing_at_index(index as u32, self.t_s, Some(dt_s));
+            while rows.peek().is_some_and(|row| row.signal_id == program.id) {
+                let row = rows.next().expect("peeked");
+                row.phase = timing.state.phase;
+                row.source = timing.state.source;
+                row.timing_source = timing.state.timing_source;
+                row.time_to_change_s = timing.time_to_change_s;
+            }
         }
     }
 }
@@ -222,6 +290,11 @@ impl ObservationBuilders {
             Self::state_vector(ctx, actors, ego, sv);
         }
         self.object_list(ctx, actors, ego, dt_s, &mut out.objects);
+        if ctx.config.visible {
+            if let Some(sv) = &mut out.state_vector {
+                sv[9] = out.objects.first().map_or(NEAREST_RANGE_SENTINEL_M, |o| o.range_m);
+            }
+        }
         if let (Some(bev_cfg), Some(bev)) = (&ctx.config.bev, &mut out.bev) {
             self.bev(ctx, actors, ego, bev_cfg, bev);
         }
@@ -235,12 +308,14 @@ impl ObservationBuilders {
         v: &mut [f64; STATE_VECTOR_SIZE],
     ) {
         let mut nearest = NEAREST_RANGE_SENTINEL_M;
-        for &idx in &ctx.sorted {
-            if idx == ctx.ego {
-                continue;
+        if !ctx.config.visible {
+            for &idx in &ctx.sorted {
+                if idx == ctx.ego {
+                    continue;
+                }
+                let a = ctx.actor(actors, idx);
+                nearest = nearest.min(hypot(a.x - ego.x, a.y - ego.y));
             }
-            let a = ctx.actor(actors, idx);
-            nearest = nearest.min(hypot(a.x - ego.x, a.y - ego.y));
         }
         v[0] = ego.x;
         v[1] = ego.y;
@@ -268,7 +343,7 @@ impl ObservationBuilders {
     ) {
         for &idx in &ctx.sorted {
             let slot = &mut self.actor_shapes[idx.index()];
-            if idx == ctx.ego {
+            if idx == ctx.ego || (ctx.config.visible && !ctx.actor(actors, idx).present) {
                 *slot = None;
                 continue;
             }
@@ -290,6 +365,13 @@ impl ObservationBuilders {
                 continue;
             }
             let a = ctx.actor(actors, idx);
+            let prev = self.prev_range[idx.index()];
+            if ctx.config.visible {
+                self.prev_range[idx.index()] = f64::NAN;
+                if !a.present {
+                    continue;
+                }
+            }
             let dx = a.x - ego.x;
             let dy = a.y - ego.y;
             let range = hypot(dx, dy);
@@ -318,13 +400,14 @@ impl ObservationBuilders {
                     continue;
                 }
             }
-            let prev = self.prev_range[idx.index()];
             let range_rate = if !prev.is_nan() && dt_s > 0.0 {
                 (range - prev) / dt_s
             } else {
                 0.0
             };
-            self.prev_range[idx.index()] = range;
+            if !ctx.config.visible || los {
+                self.prev_range[idx.index()] = range;
+            }
             out.push(PerceivedObject {
                 actor: idx,
                 range_m: range,
@@ -346,6 +429,9 @@ impl ObservationBuilders {
             target: o.actor,
             visible: o.line_of_sight,
         }));
+        if ctx.config.visible {
+            out.retain(|o| o.line_of_sight);
+        }
     }
 
     /// The raster frame is the ego pose: +x forward, +y left, so a policy
@@ -440,7 +526,10 @@ impl ObservationBuilders {
 
         // Actor OBB occupancy: fill each corner polygon row by row.
         for &idx in &ctx.sorted {
-            if idx == ctx.ego {
+            if idx == ctx.ego
+                || (ctx.config.visible
+                    && !self.last_los.iter().any(|p| p.target == idx && p.visible))
+            {
                 continue;
             }
             let a = ctx.actor(actors, idx);

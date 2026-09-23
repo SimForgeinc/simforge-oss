@@ -331,10 +331,8 @@ export async function prepareRuntime(options: PrepareOptions): Promise<RuntimeRe
   // model is not a prepared environment.
   const adapterRoot = await resolveAdapterRoot(options.adapterRoot);
   {
-    // --no-deps: the adapter adds only numpy/msgpack, which the upstream lock
-    // already pins. Resolving its dependencies would be free to move a
-    // version the lock fixed.
-    await run("uv", ["pip", "install", "--no-deps", "-e", adapterRoot], {
+    // Install both first-party packages without resolving upstream's pinned environment.
+    await run("uv", ["pip", "install", "--no-deps", "-e", join(adapterRoot, "../policy-endpoint"), "-e", adapterRoot], {
       cwd: layout.code,
       env: venvEnv,
       step: "install-adapter",

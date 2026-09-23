@@ -7,7 +7,7 @@ selected through :mod:`simforge_oss_gym.profiles`.
 """
 
 from .env import SimForgeEnv, action_space_for, encode_action, observation_space_for
-from .episodes import EpisodeSpec, LoadedEpisode, available_maps, load_episode_spec, maps_root
+from .episodes import EpisodeSpec, LoadedEpisode, available_maps, load_episode_spec, maps_root, observation_channels
 from .native import (
     ACTION_FIELDS,
     ACTION_WIDTH,
@@ -17,6 +17,9 @@ from .native import (
     STATE_VECTOR_SIZE,
     EngineError,
     EnvSession,
+    Episode,
+    EpisodeBatch,
+    FrameRef,
     LaneGraph,
     MapBundle,
     NativeError,
@@ -61,6 +64,9 @@ __all__ = [
     "STATE_VECTOR_SIZE",
     "EngineError",
     "EnvSession",
+    "Episode",
+    "EpisodeBatch",
+    "FrameRef",
     "EpisodeSpec",
     "LaneGraph",
     "LoadedEpisode",
@@ -101,6 +107,7 @@ __all__ = [
     "make_vector_env",
     "maps_root",
     "observation_space_for",
+    "observation_channels",
     "run_simulation",
     "check_feasibility",
 ]

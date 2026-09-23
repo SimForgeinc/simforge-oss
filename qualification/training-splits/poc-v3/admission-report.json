@@ -1,0 +1,931 @@
+{
+  "schema": "simforge.poc-admission-report/v3",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "nativeVersion": "0.7.0",
+  "nativeRuntimeChanged": false,
+  "nativeAddon": "/home/path/simforge-assets/runs/drive/training/reward-poc-v1-20260922/runtime/node/simforge-native-runtime.linux-x64-gnu.node",
+  "splits": [
+    {
+      "purpose": "train",
+      "digest": "2f5fc30c2b749040259f475650396fb09c535650a3455952831444fe070b368f",
+      "episodes": 1200,
+      "admittedCells": 12,
+      "excludedCells": 10,
+      "cells": [
+        {
+          "cell": 1,
+          "map": "yale-street",
+          "family": "queue-tail",
+          "site": "934704144327c0b2",
+          "siteKey": "yale-street/seg_271752883b746bd6",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.4,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-001.admission.json",
+            "sha256": "9e3d36b9cf658e56ad8781390a5718b3d59cef430247fe2f101a4027791eae89"
+          }
+        },
+        {
+          "cell": 2,
+          "map": "yale-street",
+          "family": "queue-tail",
+          "site": "e980c787d2480738",
+          "siteKey": "yale-street/seg_a7f55654fd2333c0",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 23,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-002.admission.json",
+            "sha256": "e932421672898433a1fa4f543347a33541b331404e40a2da95dc478de1fbcfec"
+          }
+        },
+        {
+          "cell": 5,
+          "map": "yale-street",
+          "family": "cpnco-parked-row",
+          "site": "4dde082b62355289",
+          "siteKey": "yale-street/seg_334a19adf000cf35",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 10.88,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-005.admission.json",
+            "sha256": "5fb4dfc26b84ebd372c60f3e924fa8150cb99b5e8056192933724d36d91caa5f"
+          }
+        },
+        {
+          "cell": 6,
+          "map": "yale-street",
+          "family": "cpnco-parked-row",
+          "site": "d5ca556517cda81c",
+          "siteKey": "yale-street/seg_bfae739b7e35253c",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 13.82,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-006.admission.json",
+            "sha256": "6e261b1b1f86cc2e227835eacf63fb630b4729f6cfc7b436daabcd9f72119c6d"
+          }
+        },
+        {
+          "cell": 7,
+          "map": "yale-street",
+          "family": "cut-in-brake",
+          "site": "15abeb1a6daedbdb",
+          "siteKey": "yale-street/seg_b697850af2e25b2e",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-007.admission.json",
+            "sha256": "831d6fb036af5c89684037b68ce10dcd9c49d1297e7fbdf7edf187b5d6089fc5"
+          }
+        },
+        {
+          "cell": 8,
+          "map": "yale-street",
+          "family": "cut-in-brake",
+          "site": "2fa8977509047735",
+          "siteKey": "yale-street/seg_3ec6e96a447ce2da",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-008.admission.json",
+            "sha256": "841c5c11704f2388e3b218f5708bcf15d4b3c9b8a4a9d7e03376c49ec4328794"
+          }
+        },
+        {
+          "cell": 12,
+          "map": "el-camino-road",
+          "family": "queue-tail",
+          "site": "3ab10ead9af92829",
+          "siteKey": "el-camino-road/seg_eeb93ab4e59fd329",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.4,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-012.admission.json",
+            "sha256": "f0adcb9f2d92c6423b254753c35eeda5471e187b194880bd10321a05eb1b948b"
+          }
+        },
+        {
+          "cell": 13,
+          "map": "el-camino-road",
+          "family": "queue-tail",
+          "site": "4dcb6ccfe6d569d6",
+          "siteKey": "el-camino-road/seg_74596f306bc794df",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.4,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-013.admission.json",
+            "sha256": "d507878e8dbea75d65e95811009e709f18fe19fed5e69400e7949606ee55439d"
+          }
+        },
+        {
+          "cell": 17,
+          "map": "el-camino-road",
+          "family": "cpnco-parked-row",
+          "site": "8bae492f98d7f0ca",
+          "siteKey": "el-camino-road/seg_beed6b0fc6e1ea0c",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 13.72,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-017.admission.json",
+            "sha256": "747315e5827f94827e215e9265c94de97080b71f82961c5dd95507db76decd51"
+          }
+        },
+        {
+          "cell": 19,
+          "map": "el-camino-road",
+          "family": "cpnco-parked-row",
+          "site": "bfa078bfb17fbe52",
+          "siteKey": "el-camino-road/seg_d41bbd7a87094553",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 12.18,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-019.admission.json",
+            "sha256": "f4632a53b8723bbc1765ab5b19367a7d42116d8e81a812054d6113209502860a"
+          }
+        },
+        {
+          "cell": 20,
+          "map": "el-camino-road",
+          "family": "cut-in-brake",
+          "site": "1eea5e3556894a2a",
+          "siteKey": "el-camino-road/seg_c987c7348b409732",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-020.admission.json",
+            "sha256": "5355c4e5d0e83458b98d852163bb2c6be0bf58fdf90116d23463a4945f8bc04c"
+          }
+        },
+        {
+          "cell": 21,
+          "map": "el-camino-road",
+          "family": "cut-in-brake",
+          "site": "320143f21488ad6a",
+          "siteKey": "el-camino-road/seg_c3d131d2ec2ef233",
+          "seeds": {
+            "from": 0,
+            "to": 99
+          },
+          "episodes": 100,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-021.admission.json",
+            "sha256": "274fb481ea2e2e6b3495cc5637a25a1c9bad005907ebd9e6db2f7e78e6cd83a0"
+          }
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 0,
+          "reason": "seed 0: bench-scripted/prologue63+reaction30: collision at 7.3s; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-000.admission.json",
+            "sha256": "4fd2d5fd1a3e62b4ab6327a62aba22c0748c04c9fb7b22580eae43938db4a92a"
+          }
+        },
+        {
+          "cell": 3,
+          "reason": "arrival_unconverged at interactions.ped-reaches-the-lane.trigger.arrival: required arrival interaction \"ped-reaches-the-lane\" cannot be resolved",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-003.admission.json",
+            "sha256": "d26dd2eab8935aa6e0fc8e151843050638994a486115262627f4a2167401f514"
+          }
+        },
+        {
+          "cell": 4,
+          "reason": "seed 1: ego->ped/parked-row: occlusion-reveal at 8.86; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-004.admission.json",
+            "sha256": "9856e6ea18a749d04145e0f0301b9d57b6a93a6d4ff54449714d890e70aa8ab9"
+          }
+        },
+        {
+          "cell": 9,
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.299468020018269; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-009.admission.json",
+            "sha256": "f8258bcfd3aa353d921cfd70920f94d167dba1a683ea9053e16c7827f20775fd"
+          }
+        },
+        {
+          "cell": 10,
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@12.279253767808045; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-010.admission.json",
+            "sha256": "e17e26afae38c053d17aa0c0d85db01de861509ec657715aa5753bc28ddfd758"
+          }
+        },
+        {
+          "cell": 11,
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.619727115466574; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-011.admission.json",
+            "sha256": "acffd684d65c5e9a15291ac2d567ef4d60e373e5acd605e6c807d37cc9a7a9f4"
+          }
+        },
+        {
+          "cell": 14,
+          "reason": "seed 1: ego->ped/parked-row: never_blocked_before_conflict; ego->ped/parked-row: occlusion-reveal at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-014.admission.json",
+            "sha256": "25ebb501a78c7e55b2eff5c48424df850ad9159efa411d092dce15dd21328ce2"
+          }
+        },
+        {
+          "cell": 15,
+          "reason": "seed 0: ego->ped/parked-row: never_blocked_before_conflict; ego->ped/parked-row: occlusion-reveal at never; requires >=9.3s; native-authored/default-goals: goal at 2.1s; requires >=9.3s; bench-scripted/prologue63+reaction30: goal at 2.1s; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-015.admission.json",
+            "sha256": "45b86a993feb3d16994c2eb438acab344f9b766d34c53ec519774b572cf3711c"
+          }
+        },
+        {
+          "cell": 16,
+          "reason": "arrival_unconverged at interactions.ped-reaches-the-lane.trigger.arrival: required arrival interaction \"ped-reaches-the-lane\" cannot be resolved",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-016.admission.json",
+            "sha256": "2beaf9ca6209ac23e72a5964822ffb782b7ad9489c6f97997bb4cc3e154fdd06"
+          }
+        },
+        {
+          "cell": 18,
+          "reason": "seed 1: ego->ped/parked-row: never_blocked_before_conflict; ego->ped/parked-row: occlusion-reveal at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-train/cell-018.admission.json",
+            "sha256": "587b53ed8313dea4e7dff24f5e7901dd643c550c68aa8bbf5181523c689f479d"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "digest": "885d1a20f883c0b5f8d601994cf7de4ac49e711a1d318580d746c4fe06a652c8",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 3,
+      "cells": [
+        {
+          "cell": 1,
+          "map": "yale-street",
+          "family": "queue-tail",
+          "site": "601e1cdbe60d85fb",
+          "siteKey": "yale-street/seg_c9b60fb3c1983bc2",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.5,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-001.admission.json",
+            "sha256": "8f56134384d47d6d297c19c1d8840519fe2d5692be1323527d1bf00958eacf45"
+          }
+        },
+        {
+          "cell": 3,
+          "map": "yale-street",
+          "family": "cpnco-parked-row",
+          "site": "13b93c58ef454765",
+          "siteKey": "yale-street/seg_60e63bb16d5d26f2",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 12.02,
+          "minimumAuthoredDefaultCompletionS": 16.5,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-003.admission.json",
+            "sha256": "d7366a66db403979f8c8937cf86f76c8a9f45cb729b82078623243861ed1b55c"
+          }
+        },
+        {
+          "cell": 4,
+          "map": "yale-street",
+          "family": "cut-in-brake",
+          "site": "0c610c1df3a5f6a5",
+          "siteKey": "yale-street/seg_2ca0e80ae4072c94",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-004.admission.json",
+            "sha256": "07e1efb69d72ad5d460c226eb458a5dfbfa956eb00756af264048ac439538e42"
+          }
+        },
+        {
+          "cell": 6,
+          "map": "el-camino-road",
+          "family": "queue-tail",
+          "site": "1ec1dbe130b57cd9",
+          "siteKey": "el-camino-road/seg_08afec57399b12cd",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 23,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-006.admission.json",
+            "sha256": "f7091e34fcdece7b773caefecfad27a6620cffddd70bc01e58e474bff06c087e"
+          }
+        },
+        {
+          "cell": 7,
+          "map": "el-camino-road",
+          "family": "cpnco-parked-row",
+          "site": "369c9b29af604018",
+          "siteKey": "el-camino-road/seg_56a6e7773c4621ae",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 13.36,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-007.admission.json",
+            "sha256": "60ae025cba113086417b755c3e399b572f5de87ac08b91669c80db5ea04226ce"
+          }
+        },
+        {
+          "cell": 8,
+          "map": "el-camino-road",
+          "family": "cut-in-brake",
+          "site": "05945784aee36152",
+          "siteKey": "el-camino-road/seg_a8412123d3d0fad8",
+          "seeds": {
+            "from": 100,
+            "to": 119
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-008.admission.json",
+            "sha256": "3ce1db4288f4f330458dae286ff99ed13b620b0b237b61b745698aad45352ab1"
+          }
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 0,
+          "reason": "seed 100: bench-scripted/prologue63+reaction30: collision at 7.3s; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-000.admission.json",
+            "sha256": "f2fa165d9eaec8ff908b17819465271fe576584279b0153aa01222cf6d72cd2b"
+          }
+        },
+        {
+          "cell": 2,
+          "reason": "arrival_unconverged at interactions.ped-reaches-the-lane.trigger.arrival: required arrival interaction \"ped-reaches-the-lane\" cannot be resolved",
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-002.admission.json",
+            "sha256": "401300033ee630165795d697a4ab92057a61e1170e07e820680203f0e407d384"
+          }
+        },
+        {
+          "cell": 5,
+          "reason": "seed 100: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.279013932141496; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-val/cell-005.admission.json",
+            "sha256": "eadbc7d12e908205d9e850cb962113eb82c751586e78937dbf2cfc511720c61b"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "test",
+      "digest": "202c0e3bbe59f68cca5e811bade6ed6cdf02fdbc636aed50ab0ea2589d3dbb98",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5,
+      "cells": [
+        {
+          "cell": 0,
+          "map": "belmont-research-center",
+          "family": "queue-tail",
+          "site": "882011686a0bd99e",
+          "siteKey": "belmont-research-center/seg_069115ab2064cfcc",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.4,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-000.admission.json",
+            "sha256": "a0d96bd4ef63c462429e029c0b37c655364a51ec112582f03482fce10b2e4219"
+          }
+        },
+        {
+          "cell": 1,
+          "map": "belmont-research-center",
+          "family": "cpnco-parked-row",
+          "site": "0d172b3a2aa557a0",
+          "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 12.72,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-001.admission.json",
+            "sha256": "b2397006d6788da8cc05c9c2faa98ab50f18a3a65092ab884f4cde8088b55af7"
+          }
+        },
+        {
+          "cell": 3,
+          "map": "belmont-research-center",
+          "family": "cut-in-brake",
+          "site": "4ec277e34637b24b",
+          "siteKey": "belmont-research-center/seg_20ad0d96b4977422",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-003.admission.json",
+            "sha256": "99db0db3d426efb3543fb6f3040225e7880a8bfb369933bfae7647cd66081e09"
+          }
+        },
+        {
+          "cell": 8,
+          "map": "easterbrook-discovery-school",
+          "family": "queue-tail",
+          "site": "9ab46274852bfdbc",
+          "siteKey": "easterbrook-discovery-school/seg_8d1cb6d3fe5cd1ee",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 9.4,
+          "minimumAuthoredDefaultCompletionS": 14.4,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-008.admission.json",
+            "sha256": "e3a4e0250f5a20b868a19c12387e99f4cd8b4fdb3298cc3c91debb059cb05858"
+          }
+        },
+        {
+          "cell": 9,
+          "map": "easterbrook-discovery-school",
+          "family": "cpnco-parked-row",
+          "site": "8a25131d0d5108e9",
+          "siteKey": "easterbrook-discovery-school/seg_120bd635fc5b4a32",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 13.08,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-009.admission.json",
+            "sha256": "b3d0861b2deb3b135f2b5f61d8144d69fd99d59f9342cecb4c2a0de6942ae26b"
+          }
+        },
+        {
+          "cell": 10,
+          "map": "easterbrook-discovery-school",
+          "family": "cut-in-brake",
+          "site": "1fc62acf30d56197",
+          "siteKey": "easterbrook-discovery-school/seg_0748535da9266a6f",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": 11,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-010.admission.json",
+            "sha256": "d0bef0f28d5efb1e54e81883b7bfaf036fa35cc03130f03708133815437ee512"
+          }
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 2,
+          "reason": "role_semantic_projection_failed at roles.cut-in.pose.s: constrained role \"cut-in\" cannot reach its matcher-selected local lane within 12.00 m",
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-002.admission.json",
+            "sha256": "3894cb2c0103bdf4879499754cb6f8c99fa3960848c3cb5400b5126c21b155ac"
+          }
+        },
+        {
+          "cell": 4,
+          "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@13.219632986719454; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-004.admission.json",
+            "sha256": "773a1307619cdde5cc4b3c48cc4a1bfd2107b14ee4e9cfd73088f06ad4a9807c"
+          }
+        },
+        {
+          "cell": 5,
+          "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@12.819801800214512; ego->queue-tail/actor:preview-van: occlusion-reveal at never; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-005.admission.json",
+            "sha256": "666ed9a12d90e9ba4086d69bd78832adaf2c0559c91cde53355d23472cdd39f4"
+          }
+        },
+        {
+          "cell": 6,
+          "reason": "seed 209: scripted rehearsal collision: preview-van/queue-tail@19.116254980602523",
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-006.admission.json",
+            "sha256": "c18d3217e30923254b11180b95f16cc2939f1e9b80138525db5793db760fa715"
+          }
+        },
+        {
+          "cell": 7,
+          "reason": "seed 200: ego->queue-tail/actor:preview-van: occlusion-reveal at 7.9; requires >=9.3s; van-pulls-aside: lane-change at never; requires >=9.3s; bench-scripted/prologue63+reaction30: collision at 7.7s; requires >=9.3s",
+          "receipt": {
+            "path": "receipts/poc-v3-test/cell-007.admission.json",
+            "sha256": "91c9a1076ee9b1049aa3c203f200d5ff7413e82889f48e9de0c5acc380c92bcb"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "control",
+      "digest": "d37ef356a841eb50612971b6d620fe352f0f6aa3a1035400a3cca6588b7a94d2",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5,
+      "cells": [
+        {
+          "cell": 0,
+          "map": "belmont-research-center",
+          "family": "queue-tail",
+          "site": "882011686a0bd99e",
+          "siteKey": "belmont-research-center/seg_069115ab2064cfcc",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 22.2,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-000.admission.json",
+            "sha256": "77afd4e91b12ced2297d7a550e553b7c3191c605fdfe54031510499d97e64347"
+          }
+        },
+        {
+          "cell": 1,
+          "map": "belmont-research-center",
+          "family": "cpnco-parked-row",
+          "site": "0d172b3a2aa557a0",
+          "siteKey": "belmont-research-center/seg_9c832e8e0bc1eeae",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-001.admission.json",
+            "sha256": "d448022ce7128a9ef8ed382b2db2c5e92a730745a8408e20adfc56e750ea2cc9"
+          }
+        },
+        {
+          "cell": 3,
+          "map": "belmont-research-center",
+          "family": "cut-in-brake",
+          "site": "4ec277e34637b24b",
+          "siteKey": "belmont-research-center/seg_20ad0d96b4977422",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-003.admission.json",
+            "sha256": "ab5bc049e9a1560723680214bbf098947b00f7473af0848daa5ed4010385b179"
+          }
+        },
+        {
+          "cell": 8,
+          "map": "easterbrook-discovery-school",
+          "family": "queue-tail",
+          "site": "9ab46274852bfdbc",
+          "siteKey": "easterbrook-discovery-school/seg_8d1cb6d3fe5cd1ee",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 23,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-008.admission.json",
+            "sha256": "d2a8e452f486fb0ccbfdc96ff35d813bea0eed3939667eb8cf52afa64bfc7630"
+          }
+        },
+        {
+          "cell": 9,
+          "map": "easterbrook-discovery-school",
+          "family": "cpnco-parked-row",
+          "site": "8a25131d0d5108e9",
+          "siteKey": "easterbrook-discovery-school/seg_120bd635fc5b4a32",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 24,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-009.admission.json",
+            "sha256": "cb5fdc0dd58242252b9db5e5298935aac7ca5610bedc5a2b30d03f188dfa012a"
+          }
+        },
+        {
+          "cell": 10,
+          "map": "easterbrook-discovery-school",
+          "family": "cut-in-brake",
+          "site": "1fc62acf30d56197",
+          "siteKey": "easterbrook-discovery-school/seg_0748535da9266a6f",
+          "seeds": {
+            "from": 200,
+            "to": 219
+          },
+          "episodes": 20,
+          "minimumHazardOnsetS": null,
+          "minimumAuthoredDefaultCompletionS": 18,
+          "minimumBenchContinuationS": 9.3,
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-010.admission.json",
+            "sha256": "4f351e67b63d7451b8391588d93b86f83daddb6290a12d929fc94c0fd6699036"
+          }
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 2,
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-002.admission.json",
+            "sha256": "e33dc6d411e8abe1c35a702198a2af65d1e8fca3116628ac5d1d1bdd66e77544"
+          }
+        },
+        {
+          "cell": 4,
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-004.admission.json",
+            "sha256": "d42b7882a44898493fc1c7451eb1cf86d0f8dfeb50908c45bbd70041d17a0d02"
+          }
+        },
+        {
+          "cell": 5,
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-005.admission.json",
+            "sha256": "78a767896c9165bd03cec9ae5e3cdd92c4ddcc975e09c9cbb8179cf5c18ee0fe"
+          }
+        },
+        {
+          "cell": 6,
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-006.admission.json",
+            "sha256": "4441aa73a1e1baff0dcd06519c4ea7bd98a968f511a0bf6752f66b08a5ac823c"
+          }
+        },
+        {
+          "cell": 7,
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v3-control/cell-007.admission.json",
+            "sha256": "f78d2bc0bb8cda8778de131ff5d73439b6a0427c40fd8f3e12aaa84f79882c60"
+          }
+        }
+      ]
+    }
+  ],
+  "benchWindow": {
+    "minimumS": 9.3,
+    "prologueS": 6.3,
+    "reactionMarginS": 3,
+    "proofRows": 1560,
+    "hazardOnsetRangesS": {
+      "queue-tail": [
+        9.4,
+        11.26
+      ],
+      "cut-in-brake": [
+        11,
+        11
+      ],
+      "cpnco-parked-row": [
+        10.88,
+        15.72
+      ]
+    },
+    "minimumAuthoredDefaultCompletionS": 14.4,
+    "minimumBenchContinuationS": 9.3,
+    "controllers": "native-authored with default route/queue goals; real scriptedPolicy at10Hz after63authored prologue decisions for30policy decisions",
+    "horizonInterpretation": "Horizon results are right-censored survival bounds, not observed goal times. The separate goal:null witness still proves whole-authored-clip safety."
+  },
+  "verification": {
+    "schema": "simforge.scenario-split-verification/v1",
+    "valid": true,
+    "splits": [
+      {
+        "splitId": "poc-v3-control",
+        "purpose": "control",
+        "digest": "d37ef356a841eb50612971b6d620fe352f0f6aa3a1035400a3cca6588b7a94d2",
+        "episodes": 120,
+        "admittedCells": 6,
+        "excludedCells": 5
+      },
+      {
+        "splitId": "poc-v3-test",
+        "purpose": "test",
+        "digest": "202c0e3bbe59f68cca5e811bade6ed6cdf02fdbc636aed50ab0ea2589d3dbb98",
+        "episodes": 120,
+        "admittedCells": 6,
+        "excludedCells": 5
+      },
+      {
+        "splitId": "poc-v3-train",
+        "purpose": "train",
+        "digest": "2f5fc30c2b749040259f475650396fb09c535650a3455952831444fe070b368f",
+        "episodes": 1200,
+        "admittedCells": 12,
+        "excludedCells": 10
+      },
+      {
+        "splitId": "poc-v3-val",
+        "purpose": "val",
+        "digest": "885d1a20f883c0b5f8d601994cf7de4ac49e711a1d318580d746c4fe06a652c8",
+        "episodes": 120,
+        "admittedCells": 6,
+        "excludedCells": 3
+      }
+    ],
+    "independence": "seed AND map-intel site; test/control geography held out from train/val",
+    "controls": "digest-pinned one-to-one hazard removals of test; not an independent split"
+  },
+  "negativeProofVerification": {
+    "validFrozenValPassed": true,
+    "rehashAwareNegativeChecks": [
+      {
+        "mode": "early-default-goal",
+        "rejected": true,
+        "error": "Error: poc-v3-val: bench prologue/reaction-window admission mismatch"
+      },
+      {
+        "mode": "missing-timing-proof",
+        "rejected": true,
+        "error": "Error: poc-v3-val: bench prologue/reaction-window admission mismatch"
+      }
+    ]
+  },
+  "preservedV2Inputs": [
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/train.split.json",
+      "sha256": "eb96f08bab7b015d169b0e6729449e46b5e72b6e7242d1b8a18616b1faf40de8"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/poc-v2-train.episodes.json",
+      "sha256": "552c6f903b395fec1bf15d77a729b7fd55310f52871e0e66637ba2e025d70796"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/val.split.json",
+      "sha256": "5a07e3f0a90e294871fd5de99964186f3d07b6e753ef973bf40ac33b55f6b471"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/poc-v2-val.episodes.json",
+      "sha256": "3ef5d49e6343e0598a3e589afda1550d2c24ab6ab73a4ab3e5a087836ac5ed46"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/test.split.json",
+      "sha256": "4448a1dfefc23fa2c5c45e170ec4723c5337019850cb8a0a563836b2072f91a3"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/poc-v2-test.episodes.json",
+      "sha256": "31d792622a683410abd6417dfbaac7ba2063f31deafc35e74c6941cf6b387652"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/control.split.json",
+      "sha256": "aee96f839621ea627f2b48549ab7d9e6a4742d4045b90e3e582cf4784de36aa5"
+    },
+    {
+      "path": "/home/path/simforge-oss/qualification/training-splits/poc-v2/poc-v2-control.episodes.json",
+      "sha256": "258bded744eea82c00a78c2a13b7426c39b0176a65341025f59a7871783592ed"
+    }
+  ],
+  "v2BenchAudit": "/home/path/simforge-assets/runs/drive/supply-poc-v2/bench-window-audit/summary.json",
+  "scopedTests": {
+    "scenarioSplitContractsPassed": 5,
+    "projectWideValidation": "not run; Main integration responsibility"
+  },
+  "maps": "Existing poc-v2 installed map derivations; no map artifacts or .corpus modified for v3.",
+  "traceVerification": {
+    "path": "trace-verification.json",
+    "chainsVerified": 153,
+    "sha256": "a71081d1c65d2fcc4b1ed6236d0cff02f72915f8bf566c89ae5b2148cb3135d7"
+  }
+}

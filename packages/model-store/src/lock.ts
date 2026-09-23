@@ -64,8 +64,12 @@ const ModelEntrySchema = z.object({
   weights: z.object({
     repo: z.string().min(1),
     revision: z.string().regex(/^[0-9a-f]{40}$/),
-    license: z.literal("OpenMDW-1.1"),
-    licenseBlobSha: z.string().regex(/^[0-9a-f]{40}$/),
+    /**
+     * Model families may use a vendor license other than OpenMDW-1.1. The
+     * catalog carries the exact identifier and the optional blob pin.
+     */
+    license: z.string().min(1),
+    licenseBlobSha: z.string().regex(/^[0-9a-f]{40}$/).nullable(),
     // Bare 64-hex: the exact string `model_versions.checkpoint_digest`
     // stores and the model-run worker compares against the live engine.
     checkpointDigest: z.string().regex(/^[0-9a-f]{64}$/),

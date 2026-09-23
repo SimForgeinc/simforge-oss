@@ -1,0 +1,394 @@
+{
+  "schema": "simforge.eval-panel/v1",
+  "panelId": "devpanel32-v2",
+  "expectedEpisodes": 32,
+  "frozenAt": "2026-09-22",
+  "selection": "Pre-checkpoint-selection round-robin over all six admitted poc-v2 test cells in manifest cell order; ascending explicit RNG seeds beginning 200; first sixteen test worlds and their exact parent-input-digest-linked hazard-removed controls. No results were consulted and the v1 panels are unchanged. Authored clip duration is evaluated after the common 63-decision warmup.",
+  "timing": {
+    "mode": "offline-simtime",
+    "decisionHz": 10,
+    "replanHz": 2,
+    "warmupFrames": 64
+  },
+  "statistics": {
+    "bootstrapSeed": 28092026,
+    "bootstrapReplicates": 10000,
+    "confidence": 0.95,
+    "minimumCollisionReduction": 0.2,
+    "maximumCompletionLoss": 0.02,
+    "referenceRule": "mean >= reference - 1 SE"
+  },
+  "sources": [
+    {
+      "purpose": "test",
+      "manifest": "../training-splits/poc-v2/test.split.json",
+      "manifestSha256": "4448a1dfefc23fa2c5c45e170ec4723c5337019850cb8a0a563836b2072f91a3",
+      "splitDigest": "dfabe4e5f8577c8e467fe78730279f1ff22b18d821a83630f6f8d03b5e8db178",
+      "episodes": "../training-splits/poc-v2/poc-v2-test.episodes.json",
+      "episodesSha256": "31d792622a683410abd6417dfbaac7ba2063f31deafc35e74c6941cf6b387652"
+    },
+    {
+      "purpose": "control",
+      "manifest": "../training-splits/poc-v2/control.split.json",
+      "manifestSha256": "aee96f839621ea627f2b48549ab7d9e6a4742d4045b90e3e582cf4784de36aa5",
+      "splitDigest": "ef31e70be2b00ee478dde429fbf2d03659c8654adee2375e30931b0ed5774382",
+      "episodes": "../training-splits/poc-v2/poc-v2-control.episodes.json",
+      "episodesSha256": "258bded744eea82c00a78c2a13b7426c39b0176a65341025f59a7871783592ed"
+    }
+  ],
+  "entries": [
+    {
+      "id": "test-cell1-seed200",
+      "source": "test",
+      "instance": 0,
+      "seed": 200,
+      "inputSha256": "52afd68f312d7816a883aa2fb82d9387033895c7458b2889746ee195afbf9778",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed200"
+    },
+    {
+      "id": "control-cell1-seed200",
+      "source": "control",
+      "instance": 0,
+      "seed": 200,
+      "inputSha256": "250b01285a87d6fae75ced0585b14210b143e20bee8268e6a3da8b1a8c8f4181",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed200"
+    },
+    {
+      "id": "test-cell2-seed200",
+      "source": "test",
+      "instance": 20,
+      "seed": 200,
+      "inputSha256": "cfa95f85a152825bac8a89054078b889e50fe2e2aaae189953741776cfd55b3c",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed200"
+    },
+    {
+      "id": "control-cell2-seed200",
+      "source": "control",
+      "instance": 20,
+      "seed": 200,
+      "inputSha256": "ec4032689033bc5b35c80a07f4c4f332f9fd071a3ddc93c85b7d24526c0725ff",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed200"
+    },
+    {
+      "id": "test-cell3-seed200",
+      "source": "test",
+      "instance": 40,
+      "seed": 200,
+      "inputSha256": "4aeca7b4def87e32248fdcd88b9137c928d121ca062d5c16e21558d1a506eb35",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed200"
+    },
+    {
+      "id": "control-cell3-seed200",
+      "source": "control",
+      "instance": 40,
+      "seed": 200,
+      "inputSha256": "853b90e8123bf1f011dae51f5df2146e1d6a69f7c087848a3c3efcef5d13da6c",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed200"
+    },
+    {
+      "id": "test-cell6-seed200",
+      "source": "test",
+      "instance": 60,
+      "seed": 200,
+      "inputSha256": "18001a34f795338ed133de8823c803137da89a13de089baccab3ce753fcd033d",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed200"
+    },
+    {
+      "id": "control-cell6-seed200",
+      "source": "control",
+      "instance": 60,
+      "seed": 200,
+      "inputSha256": "fee832d269dd1d9ea5edab69202f1553631ab4918212bab45ad638a76aa59f58",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed200"
+    },
+    {
+      "id": "test-cell7-seed200",
+      "source": "test",
+      "instance": 80,
+      "seed": 200,
+      "inputSha256": "3b5d16c73a86a3c858cb05d82fb02e346d4ad6600a780a3fed92c8428c1f0b8e",
+      "mapId": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "durationS": 14,
+      "pairId": "cell7-seed200"
+    },
+    {
+      "id": "control-cell7-seed200",
+      "source": "control",
+      "instance": 80,
+      "seed": 200,
+      "inputSha256": "3f6f7902f1f86faaf6c950417d7cf82e63f96b8a91436cb126c9fb6ba1bb7db6",
+      "mapId": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "durationS": 14,
+      "pairId": "cell7-seed200"
+    },
+    {
+      "id": "test-cell8-seed200",
+      "source": "test",
+      "instance": 100,
+      "seed": 200,
+      "inputSha256": "d77e808913ae7739597396246a3260ed4fc515e17386722200a40149c6405e09",
+      "mapId": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "durationS": 8,
+      "pairId": "cell8-seed200"
+    },
+    {
+      "id": "control-cell8-seed200",
+      "source": "control",
+      "instance": 100,
+      "seed": 200,
+      "inputSha256": "faee8a2a3d835b731e979ed8e3244c5eea7cb743662bd54c39ea7a1a96306e53",
+      "mapId": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "durationS": 8,
+      "pairId": "cell8-seed200"
+    },
+    {
+      "id": "test-cell1-seed201",
+      "source": "test",
+      "instance": 1,
+      "seed": 201,
+      "inputSha256": "2ee56710d31b1991051149e205acc501ad7c3eb2011b42ba3ca71937e2dce274",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed201"
+    },
+    {
+      "id": "control-cell1-seed201",
+      "source": "control",
+      "instance": 1,
+      "seed": 201,
+      "inputSha256": "5fd7a551e7bb9f9d9b0c7a36f8325e081c7aaa4a1700a6c8282305361a7abcbb",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed201"
+    },
+    {
+      "id": "test-cell2-seed201",
+      "source": "test",
+      "instance": 21,
+      "seed": 201,
+      "inputSha256": "81ff9f0b6930006fb84cd61bbc0e95b1aace344cc4f651ba9b6869e89489ae95",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed201"
+    },
+    {
+      "id": "control-cell2-seed201",
+      "source": "control",
+      "instance": 21,
+      "seed": 201,
+      "inputSha256": "89147367bf4e79586f929439b16cdde17c8680f485e64c6105941b9bcbd51a95",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed201"
+    },
+    {
+      "id": "test-cell3-seed201",
+      "source": "test",
+      "instance": 41,
+      "seed": 201,
+      "inputSha256": "d48f9263b0be56f4b22eaee994ca625bbbdf8ccc28760678116ce82de3f28956",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed201"
+    },
+    {
+      "id": "control-cell3-seed201",
+      "source": "control",
+      "instance": 41,
+      "seed": 201,
+      "inputSha256": "0d6b3307cdb1748ad4cfe4ab22b92483842042ff6f3a2f623d0e65eecd6f0eb5",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed201"
+    },
+    {
+      "id": "test-cell6-seed201",
+      "source": "test",
+      "instance": 61,
+      "seed": 201,
+      "inputSha256": "73c9ca91a6afb6539a895c9718b9cb7de76e5d64a6a03982e4c27719822b740c",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed201"
+    },
+    {
+      "id": "control-cell6-seed201",
+      "source": "control",
+      "instance": 61,
+      "seed": 201,
+      "inputSha256": "c1df32004f573d1fc8b08bab0fc6d428c9768b62a7b0d8e704771103ec011856",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed201"
+    },
+    {
+      "id": "test-cell7-seed201",
+      "source": "test",
+      "instance": 81,
+      "seed": 201,
+      "inputSha256": "e90d019358181ad56f069804fd0189a3dec808ce00813f6f3ea01b8ff230c445",
+      "mapId": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "durationS": 14,
+      "pairId": "cell7-seed201"
+    },
+    {
+      "id": "control-cell7-seed201",
+      "source": "control",
+      "instance": 81,
+      "seed": 201,
+      "inputSha256": "04632195eecf2af7f396fad795a3cb3954c2af7a7a11d3b2ec62234af7ce0152",
+      "mapId": "easterbrook-discovery-school",
+      "site": "8a25131d0d5108e9",
+      "durationS": 14,
+      "pairId": "cell7-seed201"
+    },
+    {
+      "id": "test-cell8-seed201",
+      "source": "test",
+      "instance": 101,
+      "seed": 201,
+      "inputSha256": "e128e59e540d509583780e1dfcde8e251a8564f927b90966248e99a69990b65d",
+      "mapId": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "durationS": 8,
+      "pairId": "cell8-seed201"
+    },
+    {
+      "id": "control-cell8-seed201",
+      "source": "control",
+      "instance": 101,
+      "seed": 201,
+      "inputSha256": "52f0bfad3ac90d61ab24378852165f80589e8ed71b1b0f15a5d9e2cb7d762ec1",
+      "mapId": "easterbrook-discovery-school",
+      "site": "4cd0226330f69d93",
+      "durationS": 8,
+      "pairId": "cell8-seed201"
+    },
+    {
+      "id": "test-cell1-seed202",
+      "source": "test",
+      "instance": 2,
+      "seed": 202,
+      "inputSha256": "ac33f9bc2b174878b5828941815280417886077238916c0d995308a61cf3212b",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed202"
+    },
+    {
+      "id": "control-cell1-seed202",
+      "source": "control",
+      "instance": 2,
+      "seed": 202,
+      "inputSha256": "20ffc6ff28d54ac5e18740886d02cd72c953fae8577510d9582b506bff47bfc4",
+      "mapId": "belmont-research-center",
+      "site": "882011686a0bd99e",
+      "durationS": 13,
+      "pairId": "cell1-seed202"
+    },
+    {
+      "id": "test-cell2-seed202",
+      "source": "test",
+      "instance": 22,
+      "seed": 202,
+      "inputSha256": "4b17069e6e43675d014032d6934855a7065c1f7fc82d8c4f59fc7b80d0c8506c",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed202"
+    },
+    {
+      "id": "control-cell2-seed202",
+      "source": "control",
+      "instance": 22,
+      "seed": 202,
+      "inputSha256": "eb21ea96e33a440a08e428fb7baf111f9a89be32a5650e1df978cd5e70c5a10c",
+      "mapId": "belmont-research-center",
+      "site": "0d172b3a2aa557a0",
+      "durationS": 14,
+      "pairId": "cell2-seed202"
+    },
+    {
+      "id": "test-cell3-seed202",
+      "source": "test",
+      "instance": 42,
+      "seed": 202,
+      "inputSha256": "fe0963babc35bbab0315fe44108ce61f57a222e16675c86fb34d9b6d22111b4d",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed202"
+    },
+    {
+      "id": "control-cell3-seed202",
+      "source": "control",
+      "instance": 42,
+      "seed": 202,
+      "inputSha256": "2fa7143e57562baa172a4942d90ff1adad92d256d091f15cded4da1b5d40fde2",
+      "mapId": "belmont-research-center",
+      "site": "2c117f5abcb76512",
+      "durationS": 8,
+      "pairId": "cell3-seed202"
+    },
+    {
+      "id": "test-cell6-seed202",
+      "source": "test",
+      "instance": 62,
+      "seed": 202,
+      "inputSha256": "763a57daebf9dd010e6c19e2772936db85769406ed813ea375d22ef8c3d1c379",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed202"
+    },
+    {
+      "id": "control-cell6-seed202",
+      "source": "control",
+      "instance": 62,
+      "seed": 202,
+      "inputSha256": "0ecf3e047553340927013f4126caab4e98196225bf3f6572d10a62397f2f495a",
+      "mapId": "easterbrook-discovery-school",
+      "site": "3442a731d82eb05a",
+      "durationS": 13,
+      "pairId": "cell6-seed202"
+    }
+  ],
+  "digest": "0079014157eb63d59426d1b929c329a7476255f1a18f83c6f770e9e46c364069"
+}

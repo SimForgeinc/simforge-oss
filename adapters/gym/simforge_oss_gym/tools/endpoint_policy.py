@@ -41,31 +41,12 @@ from ..frames import (
     ObservationAssembler,
     ego_history_from_trail,
 )
+from ..episodes import camera_profile
 from .policies import PolicyDecision, trajectory
 
 #: Alpamayo output cadence: 64 waypoints at 10 Hz = 6.4 s.
 MODEL_DT_S = 0.1
 MODEL_HORIZON_S = 6.4
-
-#: Camera-index convention (upstream ``CAMERA_DISPLAY_NAMES``), mirrored from
-#: ``packages/scenario/src/schema/v2/sensor-rigs.ts`` and the Alpamayo bridge.
-CAMERA_INDEX: dict[str, int] = {
-    "cross-left": 0,
-    "front-wide": 1,
-    "cross-right": 2,
-    "rear-left": 3,
-    "rear-tele": 4,
-    "rear-right": 5,
-    "front-tele": 6,
-}
-
-#: Authored rig presets -> sensor ids, camera-index ascending.
-RIG_PROFILES: dict[str, tuple[str, ...]] = {
-    "alpamayo-2cam": ("front-wide", "front-tele"),
-    "alpamayo-4cam": ("cross-left", "front-wide", "cross-right", "front-tele"),
-    "alpamayo-6cam": ("cross-left", "front-wide", "cross-right", "rear-left", "rear-right", "front-tele"),
-    "alpamayo-6cam-vqa": ("cross-left", "front-wide", "cross-right", "rear-left", "rear-tele", "rear-right"),
-}
 
 
 class EndpointPolicyError(RuntimeError):
@@ -91,14 +72,10 @@ class DecisionContext:
 
 
 def profile_camera_map(profile: str) -> dict[str, int]:
-    sensors = RIG_PROFILES.get(profile)
-    if sensors is None:
-        raise EndpointPolicyError(
-            "camera_profile_unknown",
-            f"unknown rig profile {profile!r}; known: {sorted(RIG_PROFILES)}",
-            {"known": sorted(RIG_PROFILES)},
-        )
-    return {sensor_id: CAMERA_INDEX[sensor_id] for sensor_id in sensors}
+    try:
+        return {camera["sensorId"]: camera["cameraId"] for camera in camera_profile(profile)}
+    except ValueError as error:
+        raise EndpointPolicyError("camera_profile_unknown", str(error)) from error
 
 
 def waypoints_to_plan(

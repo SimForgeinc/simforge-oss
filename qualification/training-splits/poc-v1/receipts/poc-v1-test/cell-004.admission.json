@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v1-test",
+  "cell": 4,
+  "templateSha256": "718ae1a41d0985609e6313265901bb50532a387bc3323f005f83a7dd01c77e69",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ped (failed at 28/72 sites). Example: Infeasible at this site. only 47.35 m of runway, 210 m needed (short by 162.65 m). this map index carries no occlusion_zone layer. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 47.35 m available. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "easterbrook-discovery-school",
+    "topologySha256": "84e00c3a05d8e40b59ddc9ae7724e9664d7bc0c3e46f8e0a54d1c0d30ed9e70d",
+    "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+    "matcherIndexDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.parked-vehicle-zone.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ped (failed at 28/72 sites). Example: Infeasible at this site. only 47.35 m of runway, 210 m needed (short by 162.65 m). this map index carries no occlusion_zone layer. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 47.35 m available. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.parked-vehicle-zone.atM."
+}

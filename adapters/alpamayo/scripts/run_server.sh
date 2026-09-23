@@ -40,5 +40,5 @@ if [ ! -x "$VENDOR/.venv/bin/python" ]; then
 fi
 
 export HF_HOME="${HF_HOME:-${SIMFORGE_ASSETS_ROOT:-$HOME/simforge-assets}/hf-cache}"
-export PYTHONPATH="$ROOT/src:$VENDOR/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$ROOT/src:$ROOT/../policy-endpoint:$VENDOR/src${PYTHONPATH:+:$PYTHONPATH}"
 exec "$VENDOR/.venv/bin/python" -m simforge_alpamayo.server "${ARGS[@]}"

@@ -3,18 +3,16 @@ import { notFound } from "next/navigation";
 import { requireAppContext } from "@/app/lib/db/app-context";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
 import { FreeDrive } from "./[mapVersionId]/FreeDrive";
+import { DriveSession } from "./DriveSession";
 
-/**
- * Free-drive entry from the coverage atlas. This route intentionally resolves
- * only the requested map and never creates a scenario/document.
- */
+/** Map launches author a scratch input; a bare route accepts an existing bench input path. */
 export default async function FreeDriveEntryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ map?: string }>;
+  searchParams: Promise<{ map?: string; scenario?: string }>;
 }) {
-  const { map: mapVersionId } = await searchParams;
-  if (!mapVersionId) notFound();
+  const { map: mapVersionId, scenario } = await searchParams;
+  if (!mapVersionId) return <DriveSession initialScenario={scenario} />;
   await connection();
   const context = await requireAppContext("/dashboard/map-assets/drive");
   const map = (await listScenarioMapDescriptors(context)).find(

@@ -1,0 +1,1622 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "overnight-v2-val",
+  "cell": 8,
+  "templateSha256": "54ef2724cadfc7631b8370016b5292e92b574b4d7ff7dd0fcc7177f65dd2a818",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [
+    {
+      "seed": 100,
+      "drawIndex": 100,
+      "inputSha256": "5bad4de5b6f7a2f838e732c461579a0f584b3f8d1c6211b18cd746d1e391c8b8",
+      "paramsSha256": "707210aee8c25323ebb3958f8547ed574da6714362a5a902e0f14fe4df44776c",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4,
+            "conflictT": 20.76941090627255,
+            "revealToConflictS": 16.76941090627255
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.217705,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "1a9d30da32a95cd2f460b0f917adf5f5989539e915795ac7e71a8939340e7875",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "d79dae1773b898f3b5bd5f263d979b45790bac40e4f9129b5d74722629074ff2"
+    },
+    {
+      "seed": 101,
+      "drawIndex": 101,
+      "inputSha256": "e843837bcf92e3079c9267ec05094889e26d93a9683e1f1dfc6a067beb8359b1",
+      "paramsSha256": "901343ae93d307f4cd1da656e0529d5b87ceb1a1b646f89e6097a2655cea3406",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.14,
+            "conflictT": 20.527895324322152,
+            "revealToConflictS": 16.38789532432215
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.268278000000002,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "c1a883298078d8f7c38bf0cc31d23a7712b3d18c1d7baac3863f8d0fca7e3af5",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "33de346b98182f107c2125689b7dbc0a5fade8e263e6891aa17a9b0b8e175d88"
+    },
+    {
+      "seed": 102,
+      "drawIndex": 102,
+      "inputSha256": "d8f5764607cd528966caeccc2f3a4e8edbf7fbf10dc8bbe05ba96786f944985a",
+      "paramsSha256": "bcde1a325b33242752ac990b9c08d006354b3d0db2f21f28482df08d5a561988",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.2,
+            "conflictT": 20.371965115197355,
+            "revealToConflictS": 16.171965115197356
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 15.904899,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "18c37bfea630d6ad983ea440c81c6108d91e0dfcecb2f8c7987239f43c7bb938",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "55001cb1cb1c685d0d4aaf5dbd3d074a7d5ee2af120c78991778ee664786f118"
+    },
+    {
+      "seed": 103,
+      "drawIndex": 103,
+      "inputSha256": "18516ba11acd68e01397561c4258ec3564fa535a26d066cd77a784fa00be8b93",
+      "paramsSha256": "63e3a87151e1553ba4fff272f8d1d80c88cf4fd3c693eb4603047b658f0ee2fb",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.22,
+            "conflictT": 20.33714511517298,
+            "revealToConflictS": 16.11714511517298
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 15.972722000000001,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "c11ec8dcb0f40a0af3794d4a95ae5b69b0f313e80a480d1f420bedd0fca858f6",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "0e680012c42e66f45089ce0d0759b87ebe643927b68aa7dd6bd6d90c62677a62"
+    },
+    {
+      "seed": 104,
+      "drawIndex": 104,
+      "inputSha256": "08c22c215105ef4c24a2bd6d286b9ce26abdb7aac555a1fc43c2a7e9bf54d71b",
+      "paramsSha256": "f28a46ce71e84ef66d47e57ec68a3b7486d48fc53e1404c14e94b65d0f1a7b40",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.16,
+            "conflictT": 20.50947301832988,
+            "revealToConflictS": 16.34947301832988
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 15.649124,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "c5bac27f717211ecc3c3be5699a8382d2d6519af857e12edbc5de5b3c14f8f7e",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "361478c595e1b140b04e4f8ab9f0db2ecfdd71d5a54ecce40767f1fd3e0ecc41"
+    },
+    {
+      "seed": 105,
+      "drawIndex": 105,
+      "inputSha256": "405a0780569a6972c889b90d6c172437b64aa5f9d1f2b18f5fde3e24e0ee0fcf",
+      "paramsSha256": "cd9ca46c91682c4d2956f3aaffcfa7a89204c6422648c44bca1afc3df1aabbc3",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.26,
+            "conflictT": 20.282280425175905,
+            "revealToConflictS": 16.022280425175907
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.083651,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "637e2ce1981a6f166a67756c47de290bebe547147e076591181f613038f92e17",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "6609ffbd460e8bbcd1e26087e0feee1024425b4ecd1b8f9bd887488909055d84"
+    },
+    {
+      "seed": 106,
+      "drawIndex": 106,
+      "inputSha256": "d655ffbe7b6a6345faca696306339b99970de3bf2f51c1da71902e0c6ecf7975",
+      "paramsSha256": "018b1f5098e9ea46d700d041772e78cf90ca0187cb5b1791fe3c9a07f7f1319c",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.26,
+            "conflictT": 20.279332058407952,
+            "revealToConflictS": 16.019332058407954
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 15.824518,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "bb11e16b73c7ff0688eca5b8a15d31d4762e48fec5a6bbb7e4c1ddd7293dab44",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "1ee58a32e561183a58acd3da6980d7e40cf965f26efdd9011022be3265110d66"
+    },
+    {
+      "seed": 107,
+      "drawIndex": 107,
+      "inputSha256": "b34b56b9cd1c94c78056f11895602b5de928573c46272395e40291b143a64cc2",
+      "paramsSha256": "50548a9536b404f5c544955b88211640e96a4f93beeac06e4e07a42862252937",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.2,
+            "conflictT": 20.367217529623936,
+            "revealToConflictS": 16.167217529623937
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.6198,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "b1aeabb0fa1271b1dafe4867dcd93096598334a24bfbd24ce4f5de479c8364e3",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "ad0131e90065dee97ec31d4d338b7acc1027af8b6e54eda7bc44f9b7441b85c6"
+    },
+    {
+      "seed": 108,
+      "drawIndex": 108,
+      "inputSha256": "47dd8e7055522c47baf5ca56a7ca3380e4184e95365cae60688dcde8d283cfaa",
+      "paramsSha256": "4007048660affb9b091c9abe5a5b848a90c3304e1e011812368d6ef6ac01dd68",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.3,
+            "conflictT": 20.235807975905914,
+            "revealToConflictS": 15.935807975905913
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.483214,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "179048344ea69cd5b76223719354075f2e5f87fdf5f595a057a9812ad7b40089",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "9a7195dd8719ad18e8cef849bdb9c3ac34d0f4f4e11fc0a1c05e01abd4edbb57"
+    },
+    {
+      "seed": 109,
+      "drawIndex": 109,
+      "inputSha256": "97d432b565c8dc45e7e9b25cdd9fa7db02e4c15791589071b0d9630d85c29d39",
+      "paramsSha256": "9cfe88d000087f0918e625b8d0d0501b63d6ad2cf1560540c61b95203d88e2c7",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.26,
+            "conflictT": 20.2868008413082,
+            "revealToConflictS": 16.0268008413082
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.327042,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "fd4fa0ffce6b761ee0258d91b8921083338a786eccaa1c4a056b39b19864bd58",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "744ae281d7abfa15c6678bd4834f2504a191a615a9ffba77ba993c22261fcc79"
+    },
+    {
+      "seed": 110,
+      "drawIndex": 110,
+      "inputSha256": "b9fd8d48d3a1d4199bd6d3d8bd5504ad61afe83f11e0b2cb90e8b738f8152b00",
+      "paramsSha256": "1920c76acb53e77527a4aef3aef7ef39420ee8b965854aed254acc2a05c46c7a",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.1,
+            "conflictT": 20.576350112001077,
+            "revealToConflictS": 16.47635011200108
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.618432,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "6a0c8349a70f4487a97e3a7115b1634d272e18236b0be860e8bb7180ad031d35",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "ff82c6f8fb15e53b49a2e451b9829089c545b0d910b5903b3d4a8851f6783e13"
+    },
+    {
+      "seed": 111,
+      "drawIndex": 111,
+      "inputSha256": "65b79868978eeef03c2f7ca7dd3b3042a87663d7c9f9c0f4d5ad5bb7e2f745c1",
+      "paramsSha256": "b93c47e1a257c77d43b65133b13552f36dee289650f4334b1cbf067b2c020351",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.0600000000000005,
+            "conflictT": 20.624708197657565,
+            "revealToConflictS": 16.564708197657566
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.426046,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "f53df21bf73882c56b03eb455c9199ea4f8fa054e46b48e0e805ad2120673838",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "4cd802d1bf2ed52e1497546aa5d8fcced384823da8cb3e1e984f28647247c135"
+    },
+    {
+      "seed": 112,
+      "drawIndex": 112,
+      "inputSha256": "6ae11a41642d31993ff7a45121fc306ec2db15c82e04ea56536513415e20189b",
+      "paramsSha256": "b6f9be86df104b54df552c185675b1909267059780e49aed024140c6fc80b019",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.04,
+            "conflictT": 20.652279030040912,
+            "revealToConflictS": 16.612279030040913
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.23432,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "ef219e0a5a3cda661b2d929701319ae4e1ca1f3c32416c247895e6aacc263fdc",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "776ea62d28f024846221f367f180099487ae98ad4f5418b85d14ada14d735768"
+    },
+    {
+      "seed": 113,
+      "drawIndex": 113,
+      "inputSha256": "2db9e934a0e5ce1cf48bc2d50360aaa3e8819d8e1cc6ab5351485ba03e302bc5",
+      "paramsSha256": "4b9b35426d522ac10119215826dbacae337afa8f9f724d0098bf4f8f7d000fb8",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.04,
+            "conflictT": 20.6613861289739,
+            "revealToConflictS": 16.6213861289739
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.23651,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "76083e306d2245da478a5f9e2ef66874f67130f2aaad3d8b91c1655f37063526",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "76fd13ab4e215398831dd42b2c84726fd63212dad79688ecf95a1ebe77c5e8c8"
+    },
+    {
+      "seed": 114,
+      "drawIndex": 114,
+      "inputSha256": "ad855f030afa9d588ad16973a4980cee11661079020d1ddc983418c87ba67739",
+      "paramsSha256": "5f64fa15e533cb5d579bb3f64d5249e7c16c04f8a108399b0ced130cba80d1fe",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.3,
+            "conflictT": 20.239765648596368,
+            "revealToConflictS": 15.939765648596367
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.599576000000003,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "d6034fab11983d2b940eb4304d03a4ef3a735c6d49c9ddf286cb6f16ecdd1bee",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "1843b8d1887c19227bdaae2aa355ebdd5f20d4793a044630302e5f9ba80b6cc8"
+    },
+    {
+      "seed": 115,
+      "drawIndex": 115,
+      "inputSha256": "2f96deceeab37d22cb306f0f68f8ff412d7d9b3cb7359c8f4b13c6a55642ab4d",
+      "paramsSha256": "adaff478ccb75fc426688ea21cb7e836ec8bca3717c48ac776db9c07f5c9bcf6",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4,
+            "conflictT": 20.833591405725432,
+            "revealToConflictS": 16.833591405725432
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.181300999999998,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "04aef18bab2f9f1a2612ace3c82f1393b8656d169fea449d5b1577d5a5453897",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "67b7120d490a461bb1bd016c561046c93b0cdf0bb74454e81545df576601b771"
+    },
+    {
+      "seed": 116,
+      "drawIndex": 116,
+      "inputSha256": "5f82327107953937ea2a6b0059cf348a81a6ff7c934c841fbda8edec911cc9be",
+      "paramsSha256": "965ac7548eba40be7849a77c3df2915e634a445c3f57647d498b29445e63a72d",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.1,
+            "conflictT": 20.581665958985873,
+            "revealToConflictS": 16.48166595898587
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.782593,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "ab846f3b79cb24599bed19fc8333387d876766a6f2ef7ffbf715e6658d13ce1f",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "1297f0be8822db60fd5ba550b6ff04ed2baca1e895885469dc9b49e7e923e428"
+    },
+    {
+      "seed": 117,
+      "drawIndex": 117,
+      "inputSha256": "33df7750c2d40124d2b0ce14826ea641762e6082386936b92318f68792513650",
+      "paramsSha256": "04c1eee4a8b8e8518209622fc9de720f72122fe97ddf4300e2aa1c6e826307dd",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.0600000000000005,
+            "conflictT": 20.628837496391657,
+            "revealToConflictS": 16.56883749639166
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.330975000000002,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "547b1f2bfc83f25ffd19372e466b9a3daa1e5a99ab5f6f08aac1532cab306fce",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "baf24ee5c423b6a01f49bd1c1f68ddd33e6247ebd5c3b9d756a9d21887538d9d"
+    },
+    {
+      "seed": 118,
+      "drawIndex": 118,
+      "inputSha256": "406a2f9f5e62a20848fa9c5f0b2dc6458335655e204b3a6fe4c86217d5929c53",
+      "paramsSha256": "a8679dd4ea97abdb2b07cf6b43ee21a31dc994a319376c00e382e546a4a8e6bf",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.28,
+            "conflictT": 20.257304523237792,
+            "revealToConflictS": 15.977304523237791
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.589953,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "c6ab172ea919d36c808eacc2f922a9b771fa65ab0204591001c09c3a650344de",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "af738e16634ea5d0566e1abaac0445d3ee43e5f517ffb9f5d654ce9a7b4a3a69"
+    },
+    {
+      "seed": 119,
+      "drawIndex": 119,
+      "inputSha256": "b4b67cc8cab237f038943191db5347769372d87a418b75c1bf021e48ce649f00",
+      "paramsSha256": "b4ffa73c453febaf64071890cac20bbb7a2b31643802c942cdb833d8da0ff473",
+      "policy": "native-authored-scripted/v1",
+      "geometry": {
+        "status": "passed",
+        "findings": []
+      },
+      "occlusion": {
+        "status": "passed",
+        "required": true,
+        "findings": [],
+        "relations": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "pair": [
+              "ego",
+              "ped"
+            ],
+            "occluderId": "parked-row",
+            "relevantOccluderIds": [
+              "parked-row-0",
+              "parked-row-1",
+              "parked-row-2",
+              "parked-row-3"
+            ],
+            "status": "revealed_before_conflict",
+            "firstBlockedT": 0,
+            "losOpenT": 4.2,
+            "conflictT": 20.372636687973202,
+            "revealToConflictS": 16.172636687973203
+          }
+        ]
+      },
+      "solvability": {
+        "status": "passed",
+        "findings": [],
+        "collisions": [],
+        "clipSeconds": 16,
+        "finalTS": 16,
+        "ticksSimulated": 801,
+        "kernel": {
+          "schema": "simforge.episode-result-core/v1",
+          "status": "partial",
+          "truncation": "warmup_terminated",
+          "termReason": "horizon",
+          "mode": "offline-simtime",
+          "timing": {
+            "wallMs": 16.36637,
+            "simulationS": 16,
+            "policySimulationS": 0
+          },
+          "decisions": 0,
+          "warmupDecisions": 160,
+          "deadlineMisses": 0,
+          "episodeDigest": "f8ed3512669c1fbfab25c96ad7c20f1d60c545cc6ed87be50e62bf34e8a413b2",
+          "modelHealth": null
+        }
+      },
+      "rehearsalDigest": "43f7c7527a623874a8defe7c1618b04ea77f68c6ac29db09eaf31e37dba61d4f"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "receipts/overnight-v2-val/cell-008-seed-100.trace.json.gz",
+      "sha256": "1b6455140711d9af5fc8e3930ad4cb01e91cec2a48857864da942be540d3083b"
+    },
+    {
+      "path": "receipts/overnight-v2-val/cell-008-seed-100.episode.jsonl.gz",
+      "sha256": "f16e4ea86ed46fa1d23dc7c1b17656574e2630812cbec0bdafa5f000bfc86d41"
+    }
+  ],
+  "match": {
+    "candidateCount": 6,
+    "failureSummary": "",
+    "notes": [],
+    "site": {
+      "siteId": "31dd1a0a6ce522a8",
+      "mapId": "san-ramon-25-p2",
+      "topologyDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb",
+      "matchSemanticsVersion": "1.0.0",
+      "anchorId": "cpnco-dartout",
+      "score": 1,
+      "frame": {
+        "origin": {
+          "anchorFeatureId": "pz",
+          "kind": "corridor",
+          "mapFeatureId": "seg_27f6c771ef252c73"
+        },
+        "entryLaneRsl": "33:0:-1",
+        "referencePath": [
+          {
+            "laneRsl": "33:0:-1",
+            "sStart": 0,
+            "sEnd": 63.45000018920111,
+            "lengthM": 63.45000018920111,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "2988:0:-1",
+            "sStart": 63.45000018920111,
+            "sEnd": 75.05467466469857,
+            "lengthM": 11.60467447549746,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "170:0:1",
+            "sStart": 75.05467466469857,
+            "sEnd": 79.8646748794387,
+            "lengthM": 4.810000214740119,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "19579:0:1",
+            "sStart": 79.8646748794387,
+            "sEnd": 94.40467952145511,
+            "lengthM": 14.540004642016413,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "169:0:1",
+            "sStart": 94.40467952145511,
+            "sEnd": 96.63468084674619,
+            "lengthM": 2.2300013252910826,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "19701:0:1",
+            "sStart": 96.63468084674619,
+            "sEnd": 111.59469233780385,
+            "lengthM": 14.960011491057664,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "168:0:1",
+            "sStart": 111.59469233780385,
+            "sEnd": 113.66469403947836,
+            "lengthM": 2.070001701674512,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "20200:0:1",
+            "sStart": 113.66469403947836,
+            "sEnd": 130.24470478336426,
+            "lengthM": 16.580010743885893,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "167:0:1",
+            "sStart": 130.24470478336426,
+            "sEnd": 131.9747054375662,
+            "lengthM": 1.730000654201964,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "17970:0:1",
+            "sStart": 131.9747054375662,
+            "sEnd": 142.96470736584155,
+            "lengthM": 10.990001928275326,
+            "isJunction": true,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "166:0:1",
+            "sStart": 142.96470736584155,
+            "sEnd": 143.94470739289258,
+            "lengthM": 0.9800000270510484,
+            "isJunction": false,
+            "contiguous": true
+          },
+          {
+            "laneRsl": "17411:0:1",
+            "sStart": 143.94470739289258,
+            "sEnd": 175.52516476417716,
+            "lengthM": 31.580457371284567,
+            "isJunction": true,
+            "contiguous": true
+          }
+        ],
+        "sOfLane": {
+          "166:0:1": 142.96470736584155,
+          "167:0:1": 130.24470478336426,
+          "168:0:1": 111.59469233780385,
+          "169:0:1": 94.40467952145511,
+          "170:0:1": 75.05467466469857,
+          "17411:0:1": 143.94470739289258,
+          "17970:0:1": 131.9747054375662,
+          "19579:0:1": 79.8646748794387,
+          "19701:0:1": 96.63468084674619,
+          "20200:0:1": 113.66469403947836,
+          "2988:0:-1": 63.45000018920111,
+          "33:0:-1": 0
+        },
+        "sRange": [
+          0,
+          175.52516476417716
+        ],
+        "lateralLanes": {
+          "0": "33:0:-1"
+        },
+        "opposingLanes": [
+          "33:0:1"
+        ],
+        "handedness": "right",
+        "mirrored": false,
+        "egoGateId": null,
+        "egoTurn": null,
+        "runwayUpstreamM": 0,
+        "runwayDownstreamM": 175.52516457497606
+      },
+      "clauses": [
+        {
+          "path": "corridor.curvatureDegPer10m",
+          "essentiality": "preferred",
+          "required": [
+            0,
+            12
+          ],
+          "actual": 0.0022937236339317713,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.curvatureDegPer10m holds over the whole interval (worst 0)"
+        },
+        {
+          "path": "corridor.requiresAdjacent",
+          "essentiality": "required",
+          "required": [
+            "parking"
+          ],
+          "actual": [
+            "opposing",
+            "parking",
+            "shoulder",
+            "sidewalk"
+          ],
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "every required adjacency present along the corridor"
+        },
+        {
+          "path": "corridor.runwayDownstreamM",
+          "essentiality": "required",
+          "required": 150,
+          "actual": 175.53,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "reason": "175.53 m of runway available, 150 m needed"
+        },
+        {
+          "path": "corridor.speedLimitKph",
+          "essentiality": "preferred",
+          "required": [
+            25,
+            65
+          ],
+          "actual": 64,
+          "score": 1,
+          "slack": 0,
+          "weight": 2,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.speedLimitKph holds over the whole interval (worst 64)"
+        },
+        {
+          "path": "corridor.throughLanesSameDir",
+          "essentiality": "required",
+          "required": [
+            1,
+            2
+          ],
+          "actual": 1,
+          "score": 1,
+          "slack": 0,
+          "weight": 1,
+          "supported": true,
+          "worstAtS": 0,
+          "reason": "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+        },
+        {
+          "path": "features.pz.atM",
+          "essentiality": "preferred",
+          "required": [
+            50,
+            150
+          ],
+          "actual": null,
+          "score": 1,
+          "slack": 0,
+          "weight": 0,
+          "supported": false,
+          "reason": "this map index carries no parking_zone layer"
+        }
+      ],
+      "bindings": [
+        {
+          "role": "ego",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 0,
+            "tFrac": 0,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "33:0:-1",
+          "routeLaneChain": [
+            "33:0:-1",
+            "2988:0:-1",
+            "170:0:1",
+            "19579:0:1",
+            "169:0:1",
+            "19701:0:1",
+            "168:0:1",
+            "20200:0:1",
+            "167:0:1",
+            "17970:0:1",
+            "166:0:1",
+            "17411:0:1"
+          ],
+          "notes": []
+        },
+        {
+          "role": "ped",
+          "kind": "on_reference",
+          "status": "bound",
+          "pose": {
+            "k": 0,
+            "s": 105,
+            "tFrac": -1,
+            "headingOffsetRad": 0
+          },
+          "laneRsl": "19701:0:1",
+          "routeLaneChain": [
+            "19701:0:1",
+            "168:0:1",
+            "20200:0:1",
+            "167:0:1",
+            "17970:0:1",
+            "166:0:1",
+            "17411:0:1"
+          ],
+          "notes": []
+        }
+      ],
+      "featureMatches": {},
+      "degradation": {
+        "verdict": "exact",
+        "score": 1,
+        "repairs": [],
+        "failedRequiredClauses": [],
+        "summary": "Exact match: every clause and role bound without relaxation.",
+        "intentPreserved": true
+      },
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0)",
+        "every required adjacency present along the corridor",
+        "175.53 m of runway available, 150 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ],
+      "alternateFrames": 0
+    }
+  },
+  "map": {
+    "id": "san-ramon-25-p2",
+    "topologySha256": "1105af5b2a389ef77ec71f4a44a05f378e110f6a658715adc9cbd50a77673283",
+    "engineGraphDigest": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
+    "matcherIndexDigest": "ad1a7739ca16ddba1ce051e3eafdfc86e476d84bf205598bf8938b694f4946fb"
+  },
+  "siteKey": "san-ramon-25-p2/seg_27f6c771ef252c73",
+  "status": "admitted",
+  "reason": null
+}

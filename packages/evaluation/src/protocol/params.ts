@@ -198,11 +198,11 @@ export const PolicyEpisodeParamsSchema = z
     forceMissAt: z.array(z.number().int().nonnegative()).default([]),
     execution: z.enum(['pure-pursuit', 'speed-setpoint']).default('pure-pursuit'),
     /**
-     * `endpoint` runs the model; scripted/trajectory/torch are references;
+     * `endpoint` runs the model; scripted/trajectory are references;
      * `recorded-path` is the G5 stock replay of a replay-context bundle's own
      * recorded ego path, which needs no model and no frame source.
      */
-    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint', 'recorded-path']).default('scripted'),
+    runnerPolicy: z.enum(['scripted', 'trajectory', 'endpoint', 'recorded-path']).default('scripted'),
     policySeed: z.number().int().nonnegative().default(0),
     cameraProfile: z.string().min(1).default('alpamayo-4cam'),
     /** Model replan cadence; the executor holds the plan in between (ZOH). */
@@ -211,7 +211,7 @@ export const PolicyEpisodeParamsSchema = z
     navText: z.string().max(2_000).nullable().default(null),
     /** `dir:<path>` | `bevy:<rig.json>`; required for `endpoint`. */
     frameSource: z.string().min(1).nullable().default(null),
-    warmupPolicy: z.enum(['scripted', 'trajectory', 'torch']).nullable().default(null),
+    warmupPolicy: z.enum(['scripted', 'trajectory']).nullable().default(null),
     warmupSteps: z.number().int().nonnegative().nullable().default(null),
     /** `simforge.replay-context/v1` bundle; enables envelope enforcement. */
     replayContext: z.string().min(1).nullable().default(null),

@@ -1,0 +1,24 @@
+{
+  "schema": "simforge.scenario-split-verification/v1",
+  "valid": true,
+  "splits": [
+    {
+      "splitId": "overnight-v2-train",
+      "purpose": "train",
+      "digest": "9f070e4ea67072ca0ce970581fad2f41d39cb26e16f8dd0fc53c648f32268163",
+      "episodes": 120,
+      "admittedCells": 2,
+      "excludedCells": 16
+    },
+    {
+      "splitId": "overnight-v2-val",
+      "purpose": "val",
+      "digest": "6a5b73458459fb06ab68cc71627b6dc68b27803fc29fb590de06e6d0f9226586",
+      "episodes": 80,
+      "admittedCells": 4,
+      "excludedCells": 5
+    }
+  ],
+  "independence": "seed AND map-intel site; test/control geography held out from train/val",
+  "controls": "digest-pinned one-to-one hazard removals of test; not an independent split"
+}

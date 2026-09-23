@@ -725,6 +725,190 @@
         "torch": ">=2.8",
         "package": "alpamayo2_super"
       }
+    },
+    "qwen-drive-1.0": {
+      "displayName": "Qwen-Drive 1.0 (4B)",
+      "weights": {
+        "repo": "Qwen/Qwen-Drive-1.0-4B",
+        "revision": "28484089a7cc8c335cf5089fb0745cf7c49b6eaa",
+        "license": "Apache-2.0",
+        "licenseBlobSha": null,
+        "checkpointDigest": "d076947d2aab4eb3671266228f0d85c157f1c96c23f025a53dbf2b1a7f585e8e",
+        "totalBytes": 13261075008,
+        "weightBytes": 13238109612,
+        "files": [
+          {
+            "path": ".gitattributes",
+            "digestSource": "hf-lfs",
+            "sha256": "db67effd08fddbf66ca31b551dc4cdada09f5d7797d6c72bde5ae8fe3955536a",
+            "blobId": null,
+            "sizeBytes": 1793
+          },
+          {
+            "path": "README.md",
+            "digestSource": "hf-lfs",
+            "sha256": "18e864bce847ff4c045e137ca26342df1e0c544a959cfdbb28529ab905841725",
+            "blobId": null,
+            "sizeBytes": 44350
+          },
+          {
+            "path": "config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "91e765ca4a46e63b364b7e79f16bdb2b5d0e271684c566c03ae87d259c2d9ff8",
+            "blobId": null,
+            "sizeBytes": 6091
+          },
+          {
+            "path": "generation_config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "303aba891d66ab63908a7b3cc9163bcb835fdf8b9f6301c73216f3f1eb3992dd",
+            "blobId": null,
+            "sizeBytes": 244
+          },
+          {
+            "path": "preprocessor_config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+            "blobId": null,
+            "sizeBytes": 390
+          },
+          {
+            "path": "tokenizer_config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "28ed2feadb6891c10cd943b2b978f05ccca1f8b0093ec4e42809f43c7dc4a1a0",
+            "blobId": null,
+            "sizeBytes": 13815
+          },
+          {
+            "path": "tokenizer.json",
+            "digestSource": "hf-lfs",
+            "sha256": "9825446f866dd1d1f6ab843f10af4014c168334d50d977f0afbd3ee304c4856a",
+            "blobId": null,
+            "sizeBytes": 12807970
+          },
+          {
+            "path": "vocab.json",
+            "digestSource": "hf-lfs",
+            "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003",
+            "blobId": null,
+            "sizeBytes": 6722759
+          },
+          {
+            "path": "merges.txt",
+            "digestSource": "hf-lfs",
+            "sha256": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d",
+            "blobId": null,
+            "sizeBytes": 3353259
+          },
+          {
+            "path": "chat_template.json",
+            "digestSource": "hf-lfs",
+            "sha256": "539a99faa82b28397b7e8cc3c63473a42905438f07c1692de0c3f46e31202aec",
+            "blobId": null,
+            "sizeBytes": 5143
+          },
+          {
+            "path": "chat_template.jinja",
+            "digestSource": "hf-lfs",
+            "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+            "blobId": null,
+            "sizeBytes": 7756
+          },
+          {
+            "path": "model.safetensors",
+            "digestSource": "hf-lfs",
+            "sha256": "b9de4bf448f57485fdaa45c60b1eea8e41a4b6ae82ec0cee8855a1e0301caccc",
+            "blobId": null,
+            "sizeBytes": 9078630512
+          },
+          {
+            "path": "planner-sft/config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "4dbfc812ac2f4b5e6995220be6330f97f8f1c5827a8d5dbf061c50cf5e66d798",
+            "blobId": null,
+            "sizeBytes": 913
+          },
+          {
+            "path": "planner-sft/model.safetensors",
+            "digestSource": "hf-lfs",
+            "sha256": "dcf5989ed292799e77f539b21e5d8b701566676c1c5d13038135e97f96e2d7b4",
+            "blobId": null,
+            "sizeBytes": 2079739550
+          },
+          {
+            "path": "planner-rl/config.json",
+            "digestSource": "hf-lfs",
+            "sha256": "4dbfc812ac2f4b5e6995220be6330f97f8f1c5827a8d5dbf061c50cf5e66d798",
+            "blobId": null,
+            "sizeBytes": 913
+          },
+          {
+            "path": "planner-rl/model.safetensors",
+            "digestSource": "hf-lfs",
+            "sha256": "74478eb7ec5dea0d8144372ed7b60e6f508da7d9eb1522e567b391cad6dbaf29",
+            "blobId": null,
+            "sizeBytes": 2079739550
+          }
+        ]
+      },
+      "sidecars": [],
+      "code": {
+        "git": "https://github.com/QwenLM/Qwen-Drive-1.0",
+        "commit": "28091c1532e869bc7aee91fc0aef6b3e6fd0b2e0",
+        "treeSha": "095fd5f7fd3d193ed025222c57bf364c1bd63ab3",
+        "committedAt": "2026-09-03T01:38:48Z",
+        "license": "Apache-2.0",
+        "lock": "pyproject.toml@28091c1532e869bc7aee91fc0aef6b3e6fd0b2e0"
+      },
+      "runtime": {
+        "python": "3.12",
+        "attn": "sdpa",
+        "torch": ">=2.8",
+        "package": "qwen_drive"
+      }
+    },
+    "auto-e2e": {
+      "displayName": "Autoware AutoE2E Best_Model.pt",
+      "weights": {
+        "repo": "local/autoware-e2e",
+        "revision": "31b83bf051564816739805c8295da4fb1e5ee287",
+        "license": "Apache-2.0",
+        "licenseBlobSha": null,
+        "checkpointDigest": "6b84fd94af47aa20c8e9005663be6eb2c5c13a61b453b02d731f298ed0572c0c",
+        "totalBytes": 300930941,
+        "weightBytes": 300928585,
+        "files": [
+          {
+            "path": "Best_Model.pt",
+            "digestSource": "hf-lfs",
+            "sha256": "6b84fd94af47aa20c8e9005663be6eb2c5c13a61b453b02d731f298ed0572c0c",
+            "blobId": null,
+            "sizeBytes": 300928585
+          },
+          {
+            "path": "adapter-manifest.json",
+            "digestSource": "hf-lfs",
+            "sha256": "d28b8ed1a98d61d4944cc3e79a51cec1358e9a1a19fa71a21dc4855b8bac3807",
+            "blobId": null,
+            "sizeBytes": 2356
+          }
+        ]
+      },
+      "sidecars": [],
+      "code": {
+        "git": "https://github.com/autowarefoundation/auto_e2e",
+        "commit": "31b83bf051564816739805c8295da4fb1e5ee287",
+        "treeSha": null,
+        "committedAt": null,
+        "license": "Apache-2.0",
+        "lock": "adapter + upstream source commit"
+      },
+      "runtime": {
+        "python": "3.12",
+        "attn": "sdpa",
+        "torch": "2.7.1+cu126",
+        "package": "simforge_auto_e2e"
+      }
     }
   }
 }

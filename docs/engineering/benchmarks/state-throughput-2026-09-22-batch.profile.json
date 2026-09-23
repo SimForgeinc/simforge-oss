@@ -1,0 +1,93 @@
+{
+  "schema": "simforge.episode-batch-profile/v1",
+  "native_extension_sha256": "51827afd63243dc4557ee186092f8311b406b0d1e9871238173b70b0166f3155",
+  "workload": "corridor; 8 worlds, 8 threads, 40000 batch calls",
+  "samples": 6297,
+  "lost_samples": 0,
+  "command": "sudo -n perf record -F 99 --call-graph dwarf -o /tmp/simforge-episode-batch/eight-world.perf.data python /tmp/simforge-episode-batch/profile-eight.py",
+  "raw_data": "/tmp/simforge-episode-batch/eight-world.perf.data",
+  "profile_script": "import numpy as np\nfrom simforge_oss_gym import SimForgeVectorEnv, load_episode_spec\n\nspec = load_episode_spec('/home/path/simforge-oss/scripts/bench/closed-loop/fixtures/corridor.episodes.json')\nwith SimForgeVectorEnv(episodes=[spec.episodes[0]] * 8, threads=8, bev=False, info_channel=False) as env:\n    actions = np.tile([6.0, 0.0], (8, 1))\n    env.reset(seed=0)\n    for _ in range(40000):\n        env.step(actions)\n    print(env.trace_digests())\n",
+  "sections": [
+    {
+      "event": "# Samples: 3K of event 'cpu_atom/cycles/P'",
+      "symbols": [
+        {
+          "children": "33.24%",
+          "self": "33.24%",
+          "symbol": "[.] <simforge_core::map::route::Route>::project_point_with_step"
+        },
+        {
+          "children": "16.93%",
+          "self": "16.93%",
+          "symbol": "[.] <simforge_core::map::lane_graph::Polyline>::sample"
+        },
+        {
+          "children": "6.84%",
+          "self": "6.84%",
+          "symbol": "[.] <simforge_core::map::lane_graph::LaneGraph>::nearest_lane"
+        },
+        {
+          "children": "6.19%",
+          "self": "6.19%",
+          "symbol": "[.] <simforge_core::map::route::Route>::pose_at"
+        },
+        {
+          "children": "5.70%",
+          "self": "5.70%",
+          "symbol": "[.] <simforge_core::map::lane_graph::Polyline>::project"
+        },
+        {
+          "children": "0.52%",
+          "self": "0.52%",
+          "symbol": "[.] simforge_core::hash::js_number_to_string"
+        }
+      ]
+    },
+    {
+      "event": "# Samples: 2K of event 'cpu_core/cycles/P'",
+      "symbols": [
+        {
+          "children": "19.56%",
+          "self": "19.56%",
+          "symbol": "[.] <simforge_core::map::lane_graph::Polyline>::sample"
+        },
+        {
+          "children": "15.85%",
+          "self": "15.85%",
+          "symbol": "[.] <simforge_core::map::route::Route>::pose_at"
+        },
+        {
+          "children": "10.77%",
+          "self": "10.77%",
+          "symbol": "[.] <simforge_core::map::route::Route>::project_point_with_step"
+        },
+        {
+          "children": "6.13%",
+          "self": "6.13%",
+          "symbol": "[.] <simforge_core::map::lane_graph::LaneGraph>::nearest_lane"
+        },
+        {
+          "children": "5.83%",
+          "self": "5.83%",
+          "symbol": "[.] <simforge_core::map::lane_graph::Polyline>::project"
+        },
+        {
+          "children": "0.67%",
+          "self": "0.67%",
+          "symbol": "[.] simforge_core::hash::write_canonical"
+        },
+        {
+          "children": "0.57%",
+          "self": "0.57%",
+          "symbol": "[.] simforge_core::hash::js_number_to_string"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Profile covers startup plus rollout and is not an additional throughput window.",
+    "Perf was run after siblings resumed; no affinity or exclusive CPU reservation.",
+    "No source-identical old-binary CPU-placement control; this sample localizes runtime cost, not causation of the historical 8/32-world differences.",
+    "User-mode perf was refused by perf_event_paranoid=4; scoped sudo perf succeeded without changing host sysctl."
+  ]
+}

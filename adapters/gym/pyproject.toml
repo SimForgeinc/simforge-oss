@@ -1,6 +1,6 @@
 [project]
 name = "simforge-oss-gym"
-version = "0.1.0rc67"
+version = "0.1.0rc70"
 description = "SimForge Python SDK: Gymnasium environments over the Rust native runtime (PyO3), with explicit GPU-batch, articulated-physics and sensor-tensor profiles"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,7 @@ Repository = "https://github.com/SimForgeinc/simforge-oss"
 [project.optional-dependencies]
 dev = ["pytest==9.1.1"]
 torch = ["torch>=2.0"]
+train = ["torch>=2.0", "torchvision>=0.15", "matplotlib>=3.8", "msgpack>=1.0", "PyYAML>=6.0", "Pillow>=10", "simforge-policy-endpoint==0.1.0"]
 # roadway-dynamic-gpu-v1: Warp/CUDA device batch (adapters/gpu).
 gpu = ["simforge-oss-gpu==0.1.0rc67", "warp-lang>=1.17", "torch>=2.0"]
 # articulated-mujoco-v1: MuJoCo CPU solver (adapters/physics); add `articulated-warp` for the batched backend.
@@ -30,10 +31,11 @@ articulated-warp = ["simforge-oss-physics[warp]==0.1.0rc67"]
 nurec = ["simforge-oss-splat==0.1.0rc67"]
 # Resident Bevy sensors in-process: the simforge_native provider (renderer/service/python); libsimforge_render
 # ships in the native runtime bundle. torch only for the device path.
-bevy = ["simforge-oss-native-renderer==0.1.0rc67"]
+bevy = ["simforge-oss-native-renderer>=0.1.0rc70"]
 
 [project.scripts]
 simforge-oss-policy-runner = "simforge_oss_gym.tools.policy_runner:main"
+simforge-oss-train = "simforge_oss_gym.train.__main__:main"
 
 [build-system]
 requires = ["maturin>=1.7,<2.0"]
@@ -47,13 +49,15 @@ build-backend = "maturin"
 manifest-path = "../../native/crates/simforge-bindings-python/Cargo.toml"
 module-name = "simforge_oss_gym._native"
 python-source = "."
-python-packages = ["simforge_oss_gym", "simforge_oss_gym.tools"]
+python-packages = ["simforge_oss_gym", "simforge_oss_gym.tools", "simforge_oss_gym.train"]
 features = ["extension-module"]
 strip = true
 include = [
     { path = "simforge_oss_gym/_native.pyi", format = ["sdist", "wheel"] },
     { path = "simforge_oss_gym/py.typed", format = ["sdist", "wheel"] },
     { path = "simforge_oss_gym/THIRD_PARTY_NOTICES", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_gym/camera_profiles.json", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_gym/train/configs/*.yaml", format = ["sdist", "wheel"] },
     { path = "tests/**/*", format = "sdist" },
 ]
 
@@ -62,6 +66,7 @@ simforge-oss-gpu = { path = "../gpu" }
 simforge-oss-physics = { path = "../physics" }
 simforge-oss-splat = { path = "../../renderer/splat/python" }
 simforge-oss-native-renderer = { path = "../../renderer/service/python" }
+simforge-policy-endpoint = { path = "../policy-endpoint" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

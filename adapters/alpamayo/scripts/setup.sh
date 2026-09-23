@@ -91,7 +91,7 @@ fi
 
 # 4. Our adapter, without dependencies: it adds only numpy/msgpack, which the
 #    upstream lock already provides.
-VIRTUAL_ENV="$PWD/.venv" uv pip install --no-deps -e "$ROOT"
+VIRTUAL_ENV="$PWD/.venv" uv pip install --no-deps -e "$ROOT/../policy-endpoint" -e "$ROOT"
 
 PY="$VENDOR/.venv/bin/python"
 

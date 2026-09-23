@@ -1,0 +1,452 @@
+{
+  "schema": "simforge.scenario-split/v1",
+  "splitId": "overnight-v2-train",
+  "purpose": "train",
+  "cells": [
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "di-rosa-sf",
+      "site": "548ece4def41d5a5",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "di-rosa-sf",
+      "site": "da1121b379a8b782",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "di-rosa-sf",
+      "site": "1e6c7a6804a61010",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "di-rosa-sf",
+      "site": "4e889d8ca2bea770",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/cpnco-dartout.template-54ef2724cadf.json",
+      "map": "di-rosa-sf",
+      "site": "067669a68056670d",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "ef565292b63ab616",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "fe8680f93b47ecf3",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "7692386a39705588",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "9fc36a3719fa28b7",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "b5f4e0abaa3f34ca",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "5136dbf1f340ac6c",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "f4200fa83b32ed88",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "26772eb077778e7d",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "2e5515d1e89dc18e",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "4abe4d6b013ac69f",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "250f075aaf331af8",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/queue-tail.template-92b6850cd8a2.json",
+      "map": "san-ramon-25-p2",
+      "site": "1e5b978387f73139",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    },
+    {
+      "template": "templates/cpnco-dartout.template-54ef2724cadf.json",
+      "map": "san-ramon-25-p2",
+      "site": "17692f0ec592f8b0",
+      "seeds": {
+        "from": 0,
+        "to": 59
+      }
+    }
+  ],
+  "admission": {
+    "proofs": [
+      {
+        "cell": 0,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.599719587334228; kernel scripted completion: collision at 3.6/13s",
+        "siteKey": "di-rosa-sf/seg_2ee8367d3b00f5c4",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-000.admission.json",
+          "sha256": "1b5b3734d0ddc6f59d58747493d23aa4282839d06410eda8463b3225176b24db"
+        }
+      },
+      {
+        "cell": 1,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.6993098292140423; kernel scripted completion: collision at 3.7/13s",
+        "siteKey": "di-rosa-sf/seg_695a83c997b5fe8c",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-001.admission.json",
+          "sha256": "1cf5985ca7a27fe1829c032c83aae5ea62a6282b3c0802276212a3645cdc3d8c"
+        }
+      },
+      {
+        "cell": 2,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194334090410135; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "di-rosa-sf/seg_260cc6a79cb6d85c",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-002.admission.json",
+          "sha256": "d1f926001937706dc1db3a7bec9f45f164a9ca8af05acb2edbe92a953814fe1d"
+        }
+      },
+      {
+        "cell": 3,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719434439640765; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "di-rosa-sf/seg_2e1f73ec491437ce",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-003.admission.json",
+          "sha256": "a931f24fd7cb91e53616c5a6336f3ab05f532b1969e7d92a99cd60b8580b1077"
+        }
+      },
+      {
+        "cell": 4,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "di-rosa-sf/seg_920f0b9e88fed9cf",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-004.admission.json",
+          "sha256": "222342cf0653bbb01bf803f3a4748aa8b3184498db96ec6f4832f332026739d7"
+        }
+      },
+      {
+        "cell": 5,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.757525439376132; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_729a383358a46364",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-005.admission.json",
+          "sha256": "6d70e0e68dd7bb2e2968420d2bb2f35aed9b320dfc6464478f0dd81f63e9a04c"
+        }
+      },
+      {
+        "cell": 6,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719419030279975; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_dada83df5d3ea65a",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-006.admission.json",
+          "sha256": "6211bfe611d23dfa03506778b32d6ea7a0f565ea126419ff43a51ee648ea9c73"
+        }
+      },
+      {
+        "cell": 7,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.578369100223142; kernel scripted completion: collision at 3.6/13s",
+        "siteKey": "san-ramon-25-p2/seg_a7fcce200fc4ad88",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-007.admission.json",
+          "sha256": "58aabce7126a79123cca0402cf18cfa8d069f9aa2c3749bdf68aa19026b286d4"
+        }
+      },
+      {
+        "cell": 8,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194254861908553; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_a29a16dbfe289d23",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-008.admission.json",
+          "sha256": "ab09cb9a98d34ec3f83583f278573a54d27274d836dc9b02e549cb9d77e260bc"
+        }
+      },
+      {
+        "cell": 9,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194267226301427; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_db072a866893aab1",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-009.admission.json",
+          "sha256": "e690f330ad28a8b0219ed1520ba322d1321f4d444e5bbbfd65a41cc0f5cad395"
+        }
+      },
+      {
+        "cell": 10,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 2: scripted rehearsal collision: ego/queue-tail@3.5792751832424408; kernel scripted completion: collision at 3.6/13s",
+        "siteKey": "san-ramon-25-p2/seg_a5e9781920041d88",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-010.admission.json",
+          "sha256": "ca1d021dbc959cd30eba01cc156dcb8496cf2eda52ed6f4340025180319beef9"
+        }
+      },
+      {
+        "cell": 11,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719420831747125; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_19cd602a6fd700b4",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-011.admission.json",
+          "sha256": "d7fbb50f90c161f7f5ca1c5db848f63df4d3e026000b58c1308b98056511b9b7"
+        }
+      },
+      {
+        "cell": 12,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194250676416147; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_5890f4613c7e7c33",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-012.admission.json",
+          "sha256": "a1b33e798ead078a66ccee0e4da743fc66d5443fbb57189366c9c9318a364ce6"
+        }
+      },
+      {
+        "cell": 13,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.719433451362518; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_7ebe5ce89ee9a718",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-013.admission.json",
+          "sha256": "6a17441839e6750599d56c202b94d2ee45b13f0e2277a987096f59e2bef044c3"
+        }
+      },
+      {
+        "cell": 14,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.8190742046263084; kernel scripted completion: collision at 3.9/13s",
+        "siteKey": "san-ramon-25-p2/seg_7bc071010ad0f8e9",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-014.admission.json",
+          "sha256": "def0458c1061e46cbef84e6a3c71ec95d9deff5e99b2f009eb192a55b95c503b"
+        }
+      },
+      {
+        "cell": 15,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.9181104247504677; kernel scripted completion: collision at 4/13s",
+        "siteKey": "san-ramon-25-p2/seg_3fe596eecda3863f",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-015.admission.json",
+          "sha256": "7fe58940983c8eda6d87bf4df6bd7ea231bcde21410109bdb8cbe81d44989ad7"
+        }
+      },
+      {
+        "cell": 16,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "excluded",
+        "reason": "seed 0: scripted rehearsal collision: ego/queue-tail@3.7194306987068413; kernel scripted completion: collision at 3.8000000000000003/13s",
+        "siteKey": "san-ramon-25-p2/seg_f855aa10fecffe07",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-016.admission.json",
+          "sha256": "0113c748e1abe95ea6c0899ba524d87c86aa169b6e7f0f73e1e5b12588c51b04"
+        }
+      },
+      {
+        "cell": 17,
+        "checks": [
+          "geometry",
+          "occlusion",
+          "solvability"
+        ],
+        "status": "admitted",
+        "siteKey": "san-ramon-25-p2/seg_c206b696a392171e",
+        "receipt": {
+          "path": "receipts/overnight-v2-train/cell-017.admission.json",
+          "sha256": "9fe91d9f3c3ce235f56d46f995e15d99996253598ca85fbfa2a1f1878c6726c9"
+        }
+      }
+    ],
+    "generatedAt": "2026-09-22T11:31:50.178Z",
+    "compilerVersion": "0.7.0",
+    "nativeAddonSha256": "4a9d1b71b8d640147fedc3e7124bcbe612c529d12076f9a57cd7a16ceb5aa1c0"
+  },
+  "materialization": {
+    "episodes": {
+      "path": "overnight-v2-train.episodes.json",
+      "sha256": "34e4cefd00704da8fbcddcc105ba09841e309bf3f9df07a9e91118e0fc77de16"
+    },
+    "count": 120
+  },
+  "digest": "9f070e4ea67072ca0ce970581fad2f41d39cb26e16f8dd0fc53c648f32268163"
+}

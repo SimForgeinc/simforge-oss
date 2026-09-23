@@ -1,0 +1,421 @@
+{
+  "version": 1,
+  "scenarioId": "throughput-cpnco-dartout",
+  "instances": [
+    {
+      "input": {
+        "schemaVersion": 1,
+        "mapId": "garching-phase-1-2",
+        "clipSeconds": 16.0,
+        "warmupSeconds": 1.0,
+        "dt": 0.02,
+        "seed": "42",
+        "physics": {
+          "mode": "dynamic-v1"
+        },
+        "operationalConditions": {
+          "weather": "clear",
+          "timeOfDay": "day",
+          "traffic": "moderate",
+          "visibility": "unrestricted",
+          "effects": {
+            "visibilityRangeM": 1000.0,
+            "frictionScale": 1.0,
+            "trafficSpeedFactor": 1.0
+          }
+        },
+        "metricSubject": "ego",
+        "actors": [
+          {
+            "id": "ego",
+            "kind": "car",
+            "dims": {
+              "l": 4.7,
+              "w": 1.82,
+              "h": 1.45
+            },
+            "initial": {
+              "laneRef": {
+                "rsl": "353:2:1",
+                "s": 33.44354605170503,
+                "tFrac": 0.0
+              },
+              "pose": {
+                "x": -831.086147614275,
+                "z": 654.7339780693757,
+                "headingRad": -3.126923624794842
+              },
+              "speedMps": 6.666666666666667
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": true,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": true,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "lanePath",
+                "lanes": [
+                  "353:2:1",
+                  "353:1:1",
+                  "353:0:1",
+                  "3305:0:1",
+                  "149:1:1",
+                  "149:0:1",
+                  "3284:0:1",
+                  "148:0:1",
+                  "548:0:1",
+                  "358:0:1"
+                ]
+              },
+              "drivingProfile": {
+                "comfortableLateralAccelerationMps2": 2.2,
+                "comfortableDecelerationMps2": 2.5
+              },
+              "cruiseSpeedMps": 6.666666666666667
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:ego",
+              "class:car",
+              "driver-profile:lawful",
+              "binding:on_reference",
+              "catalog:vehicle.sedan"
+            ]
+          },
+          {
+            "id": "ped",
+            "kind": "pedestrian",
+            "dims": {
+              "l": 0.6,
+              "w": 0.6,
+              "h": 1.75
+            },
+            "initial": {
+              "pose": {
+                "x": -876.3708450991239,
+                "z": 652.8166093984404,
+                "headingRad": -3.1369718158405235
+              },
+              "speedMps": 1.5000000000000002
+            },
+            "behavior": {
+              "rules": {
+                "obeySignals": true,
+                "yieldToVehicles": false,
+                "yieldToPedestrians": true,
+                "collisionAvoidance": false,
+                "aggression": 0.5,
+                "speedFactor": 1.0
+              },
+              "route": {
+                "kind": "polyline",
+                "points": [
+                  {
+                    "x": -864.4628758163485,
+                    "z": 652.7615842128256
+                  },
+                  {
+                    "x": -865.4335734916406,
+                    "z": 652.7660696812115
+                  },
+                  {
+                    "x": -866.4042711669327,
+                    "z": 652.7705551495975
+                  },
+                  {
+                    "x": -867.3749688422248,
+                    "z": 652.7750406179834
+                  },
+                  {
+                    "x": -868.345666517517,
+                    "z": 652.7795260863694
+                  },
+                  {
+                    "x": -869.316364192809,
+                    "z": 652.7840115547554
+                  },
+                  {
+                    "x": -870.2870618681012,
+                    "z": 652.7884970231413
+                  },
+                  {
+                    "x": -871.2577595433933,
+                    "z": 652.7929824915273
+                  },
+                  {
+                    "x": -872.2284572186854,
+                    "z": 652.7974679599132
+                  },
+                  {
+                    "x": -873.1991548939775,
+                    "z": 652.8019534282992
+                  },
+                  {
+                    "x": -874.1698525692697,
+                    "z": 652.8064388966851
+                  },
+                  {
+                    "x": -875.1405502445617,
+                    "z": 652.8109243650711
+                  },
+                  {
+                    "x": -876.1112479198539,
+                    "z": 652.815409833457
+                  },
+                  {
+                    "x": -877.081945595146,
+                    "z": 652.819895301843
+                  },
+                  {
+                    "x": -878.0526432704381,
+                    "z": 652.8243807702289
+                  },
+                  {
+                    "x": -879.0233409457302,
+                    "z": 652.8288662386149
+                  },
+                  {
+                    "x": -879.9940386210224,
+                    "z": 652.8333517070008
+                  },
+                  {
+                    "x": -880.9647362963144,
+                    "z": 652.8378371753868
+                  },
+                  {
+                    "x": -881.9354339716066,
+                    "z": 652.8423226437727
+                  },
+                  {
+                    "x": -882.6445695106926,
+                    "z": 653.2828004781508
+                  },
+                  {
+                    "x": -883.1054221000106,
+                    "z": 654.1371358848635
+                  },
+                  {
+                    "x": -883.5662746893286,
+                    "z": 654.9914712915763
+                  },
+                  {
+                    "x": -884.0271272786465,
+                    "z": 655.845806698289
+                  },
+                  {
+                    "x": -884.4879798679644,
+                    "z": 656.7001421050019
+                  },
+                  {
+                    "x": -884.9488324572824,
+                    "z": 657.5544775117146
+                  },
+                  {
+                    "x": -885.4096850466003,
+                    "z": 658.4088129184274
+                  }
+                ]
+              },
+              "cruiseSpeedMps": 1.5000000000000002
+            },
+            "presentAtStart": true,
+            "static": false,
+            "tags": [
+              "role:ped",
+              "class:pedestrian",
+              "binding:on_reference"
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "id": "ped-reaches-the-lane",
+            "actorId": "ped",
+            "trigger": {
+              "kind": "at",
+              "t": 5.1998666190243785
+            },
+            "verb": "speed",
+            "target": {
+              "mode": "absolute",
+              "value": 1.5000000000000002
+            },
+            "dynamics": {
+              "shape": "step",
+              "constraint": "time",
+              "value": 0.1
+            }
+          }
+        ],
+        "signalPrograms": [],
+        "roadControls": [],
+        "surfacePatches": [],
+        "props": [
+          {
+            "id": "parked-row-0",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -860.4706816973795,
+              "z": 653.0904937591359,
+              "headingRad": -3.116156071705605
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1.0,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-1",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -866.8410342807013,
+              "z": 653.2170485268156,
+              "headingRad": -3.128142749358727
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1.0,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-2",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -873.2148427069474,
+              "z": 653.274242987971,
+              "headingRad": -3.13909432676098
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1.0,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          },
+          {
+            "id": "parked-row-3",
+            "groupId": "parked-row",
+            "catalogId": "vehicle.suv",
+            "pose": {
+              "x": -879.6081750804204,
+              "z": 653.2626799109354,
+              "headingRad": 3.141280444513506
+            },
+            "dims": {
+              "l": 4.85,
+              "w": 1.95,
+              "h": 1.78
+            },
+            "scale": 1.0,
+            "collidable": false,
+            "essentiality": "required",
+            "occludes": {
+              "observer": "ego",
+              "target": "ped"
+            },
+            "targetRevealToConflictS": 0.9
+          }
+        ],
+        "occluders": [
+          {
+            "id": "parked-row-0",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -860.4706816973795,
+                "z": 653.0904937591359
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -3.116156071705605,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-1",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -866.8410342807013,
+                "z": 653.2170485268156
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -3.128142749358727,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-2",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -873.2148427069474,
+                "z": 653.274242987971
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": -3.13909432676098,
+              "heightM": 1.78
+            }
+          },
+          {
+            "id": "parked-row-3",
+            "groupId": "parked-row",
+            "obb": {
+              "center": {
+                "x": -879.6081750804204,
+                "z": 653.2626799109354
+              },
+              "lengthM": 4.85,
+              "widthM": 1.95,
+              "headingRad": 3.141280444513506,
+              "heightM": 1.78
+            }
+          }
+        ],
+        "occlusionPairs": [
+          {
+            "observer": "ego",
+            "target": "ped",
+            "occluderId": "parked-row"
+          }
+        ],
+        "nearMissCriteria": []
+      }
+    }
+  ]
+}

@@ -26,6 +26,8 @@
 
 /* ------------------------------------------------------------ trace shapes */
 
+import { ACTOR_KINDS, canonicalJson, isRoadActorKind, sha256, type ActorKind } from '@simforge-oss/engine';
+
 import {
   footprintContainment,
   offRoadMetricVersion,
@@ -67,7 +69,11 @@ export interface TraceStepRecord {
   readonly sv: readonly number[] | null;
   /** [progress, proximity, comfort] — the wire's non-terminal reward terms. */
   readonly terms?: readonly number[] | null;
+  /** Complete kernel terms; compact `terms` is retained only for archived traces. */
+  readonly reward_terms?: Readonly<Record<string, number | boolean>>;
   readonly objs: readonly TraceObj[];
+  readonly collision?: { readonly partnerId: string; readonly partnerKind: string; readonly side?: 'front' | 'lateral' | 'rear' } | null;
+  readonly events?: readonly { readonly kind: string; readonly a?: string; readonly b?: string; readonly contactSides?: readonly ('front' | 'lateral' | 'rear')[] }[];
   /** Optional signal annotation; enables the red-light checker when present. */
   readonly sig?: TraceSignalState | null;
   /**
@@ -85,15 +91,87 @@ export interface ParsedTrace {
   readonly summary: Record<string, unknown> | null;
 }
 
+export const EPISODE_TRACE_SCHEMA = 'simforge.episode-trace/v2';
+
+/** Verify the kernel chain, including reset/warm-up and the sealed completion record. */
+export function verifyEpisodeTrace(records: readonly Record<string, unknown>[]): string {
+  const reset = records[0]?.['reset'] as Record<string, unknown> | undefined;
+  if (reset?.['schema'] !== EPISODE_TRACE_SCHEMA) throw new Error(`expected ${EPISODE_TRACE_SCHEMA} reset record`);
+  let chain = '';
+  let step = 0;
+  for (const [index, row] of records.entries()) {
+    if ('summary' in row) {
+      const summary = row['summary'] as Record<string, unknown>;
+      if (index !== records.length - 1 || row['episode_digest'] !== chain || summary['episodeDigest'] !== chain) throw new Error('invalid episode completion record');
+      continue;
+    }
+    if (index > 0 && row['step'] !== step++) throw new Error(`non-contiguous episode trace at record ${index}`);
+    const { digest, timing: _timing, ...deterministic } = row;
+    if (deterministic['dl']) deterministic['dl'] = { ...deterministic['dl'] as Record<string, unknown>, el: null };
+    chain = sha256(chain + canonicalJson(deterministic));
+    if (digest !== chain) throw new Error(`episode trace digest mismatch at record ${index}`);
+  }
+  if (!records.at(-1)?.['summary']) throw new Error('episode trace is not sealed: call Episode.finish() first');
+  return chain;
+}
+
+function episodeObjects(value: unknown): TraceObj[] {
+  return (value as { id: string; rangeM: number; bearingRad: number; rangeRateMps: number; lineOfSight: boolean }[] ?? [])
+    .map((object) => [object.id, object.rangeM, object.bearingRad, object.rangeRateMps, object.lineOfSight ? 1 : 0]);
+}
+
+/** The same scoring projection as gym's tools/episode_trace.py; raw v2 evidence stays untouched. */
+function parseEpisodeTrace(records: readonly Record<string, unknown>[]): ParsedTrace {
+  const digest = verifyEpisodeTrace(records);
+  const reset = records[0]!['reset'] as Record<string, unknown>;
+  const observation = reset['observation'] as Record<string, unknown>;
+  const warmup = records.filter((row) => row['phase'] === 'warmup');
+  const start = warmup.at(-1);
+  const core = records.at(-1)!['summary'] as Record<string, unknown>;
+  return {
+    reset: {
+      seed: reset['seed'] as number | string,
+      t: (start?.['t'] ?? reset['t']) as number,
+      sv: (start?.['sv'] ?? observation['stateVector'] ?? null) as readonly number[] | null,
+      // Reset object handles have no scorer IDs; warm-up rows do.
+      objs: start ? episodeObjects(start['objs']) : [],
+      ...(typeof reset['deadline_ms'] === 'number' ? { deadline_ms: reset['deadline_ms'] } : {}),
+      ...(typeof reset['fallback'] === 'string' ? { fallback: reset['fallback'] } : {}),
+      policy: 'policy',
+    },
+    steps: records.filter((row) => row['phase'] === 'policy').map((row, index) => ({
+      step: index, t: row['t'] as number, a: row['a'],
+      miss: row['miss'] as number, applied: row['applied'] as string,
+      rw: row['rw'] as number, term: row['term'] as number, trunc: row['trunc'] as number,
+      sv: row['sv'] as readonly number[] | null,
+      terms: row['terms'] as readonly number[],
+      ...(row['reward_terms'] ? { reward_terms: row['reward_terms'] as NonNullable<TraceStepRecord['reward_terms']> } : {}),
+      objs: episodeObjects(row['objs']),
+      ex: (row['ex'] ?? (Array.isArray(row['sv']) && row['sv'].length >= 4
+        ? { x: row['sv'][0], y: row['sv'][1], headingRad: Math.atan2(row['sv'][3], row['sv'][2]) } : null)) as NonNullable<TraceStepRecord['ex']> | null,
+      collision: (row['collision'] ?? null) as TraceStepRecord['collision'],
+      events: row['events'] as TraceStepRecord['events'],
+      // Native signal approaches lack signed stop-line distance: not scorer sig.
+    })),
+    summary: {
+      mode: core['mode'], status: core['status'], steps: core['decisions'],
+      term_reason: core['termReason'],
+      terminated: ['collision', 'offroad', 'red_crossing', 'goal'].includes(core['termReason'] as string),
+      truncated: core['truncation'] !== null,
+      deadline_misses: core['deadlineMisses'],
+      episode_digest: digest, source_episode_digest: digest, source_schema: EPISODE_TRACE_SCHEMA,
+    },
+  };
+}
+
 /** Parse an episode-runner trace (JSONL). Unknown keys pass through untouched. */
 export function parseTraceJsonl(text: string): ParsedTrace {
+  const records = text.split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line) as Record<string, unknown>);
+  if ((records[0]?.['reset'] as Record<string, unknown> | undefined)?.['schema'] === EPISODE_TRACE_SCHEMA) return parseEpisodeTrace(records);
   let reset: TraceResetRecord | null = null;
   let summary: Record<string, unknown> | null = null;
   const steps: TraceStepRecord[] = [];
-  for (const line of text.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const doc = JSON.parse(trimmed) as Record<string, unknown>;
+  for (const doc of records) {
     if (doc['reset'] !== undefined) {
       reset = doc['reset'] as TraceResetRecord;
     } else if (doc['summary'] !== undefined) {
@@ -114,14 +192,16 @@ export interface TerminalRewardView {
   readonly reward: number;
   /** Named terms; terminal `collision` / `goal` present only when they fired. */
   readonly rewardTerms: Readonly<Record<string, number>>;
+  readonly authoritativeTerms?: boolean;
 }
 
 /**
  * Collision rule shared with the policy-eval server's `col` wire metric:
- * an explicit terminal collision term, or a termination whose reward is
- * deeply negative without a goal bonus.
+ * native terms are authoritative. Only archived callers without named native
+ * facts use the old deeply-negative-terminal fallback.
  */
 export function collisionFromReward(view: TerminalRewardView): boolean {
+  if (view.authoritativeTerms) return 'collision' in view.rewardTerms;
   return (
     'collision' in view.rewardTerms ||
     (view.terminated && view.reward <= -1 && !('goal' in view.rewardTerms))
@@ -137,11 +217,14 @@ export function goalFromReward(view: TerminalRewardView): boolean {
 const TERMINAL_RESIDUAL_EPS = 1e-6;
 
 /**
- * Rebuild a {@link TerminalRewardView} from a trace record: the wire carries
- * `rw` and the three shaping terms, so any terminal collision penalty / goal
- * bonus survives exactly as the residual `rw - (progress+proximity+comfort)`.
+ * Prefer the complete named kernel breakdown. Archived traces with only
+ * `rw` and three shaping terms retain their original terminal-residual reader.
  */
 export function rewardViewFromStep(step: TraceStepRecord): TerminalRewardView {
+  if (step.reward_terms) return {
+    terminated: step.term === 1, reward: step.rw, authoritativeTerms: true,
+    rewardTerms: Object.fromEntries(Object.entries(step.reward_terms).filter((entry): entry is [string, number] => typeof entry[1] === 'number')),
+  };
   const [progress = 0, proximity = 0, comfort = 0] = step.terms ?? [];
   const residual = step.rw - (progress + proximity + comfort);
   return {
@@ -304,6 +387,13 @@ export interface ScenarioScoringContext {
    * way. Reported in {@link EpisodeScore.unavailable} and never counted.
    */
   readonly unavailableInfractions?: readonly InfractionType[];
+  /** Opt-in instrument; missing safety authority remains unavailable, never a pass. */
+  readonly alpasimStyle?: {
+    readonly authoredRoute: readonly (readonly [number, number])[];
+    readonly egoId?: string;
+    /** Geometric contact-side findings from an authoritative contact observer, keyed by decision. */
+    readonly collisionSides?: Readonly<Record<number, readonly ('front' | 'lateral' | 'rear')[]>>;
+  };
 }
 
 /* ---------------------------------------------------------------- scoring */
@@ -311,6 +401,7 @@ export interface ScenarioScoringContext {
 export interface EpisodeScore {
   /** routeCompletion × penaltyProduct, in [0, 1]. */
   readonly drivingScore: number;
+  readonly 'alpasim-style-score'?: AlpasimStyleScore;
   readonly routeCompletion: number;
   readonly penaltyProduct: number;
   readonly infractions: Readonly<Record<InfractionType, number>>;
@@ -393,7 +484,7 @@ function penaltyFor(type: InfractionType, p: PenaltyFactors): number {
 
 function collisionTypeForKind(kind: string | undefined): InfractionType {
   if (kind === 'pedestrian') return 'collision-pedestrian';
-  if (kind === 'vehicle' || kind === 'bicycle') return 'collision-vehicle';
+  if (ACTOR_KINDS.some((entry) => entry === kind) && isRoadActorKind(kind as ActorKind)) return 'collision-vehicle';
   return 'collision-static';
 }
 
@@ -414,6 +505,60 @@ export function resolveScoringConfig(overrides?: Partial<ScoringConfig>): Scorin
     ...overrides,
     penalties: { ...DEFAULT_SCORING_CONFIG.penalties, ...(overrides?.penalties ?? {}) },
   };
+}
+
+export interface AlpasimStyleScore {
+  readonly name: 'alpasim-style-score';
+  readonly version: 'simforge.alpasim-style-score/v1';
+  readonly label: 'not an AlpaSim result';
+  readonly value: number | null;
+  readonly progress: number | null;
+  readonly hardFailures: readonly string[];
+  readonly unavailable: readonly string[];
+  readonly maxLateralM: number | null;
+}
+
+/** Geometric fault is front OR lateral contact, not legal responsibility. */
+export function alpasimStyleScore(facts: {
+  progress: number | null; collisionAtFault: boolean | null; offroad: boolean | null; maxLateralM: number | null;
+}): AlpasimStyleScore {
+  const finite = (value: number | null) => value !== null && Number.isFinite(value);
+  const hardFailures = [
+    ...(facts.collisionAtFault === true ? ['front-or-lateral-collision'] : []),
+    ...(facts.offroad === true ? ['offroad'] : []),
+    ...(finite(facts.maxLateralM) && facts.maxLateralM! >= 4 ? ['lateral-corridor-exit'] : []),
+  ];
+  const unavailable = [
+    ...(!finite(facts.progress) ? ['progress'] : []),
+    ...(facts.collisionAtFault === null ? ['collision-side-attribution'] : []),
+    ...(facts.offroad === null ? ['authoritative-offroad'] : []),
+    ...(!finite(facts.maxLateralM) ? ['authored-route-corridor'] : []),
+  ];
+  return {
+    name: 'alpasim-style-score', version: 'simforge.alpasim-style-score/v1', label: 'not an AlpaSim result',
+    value: hardFailures.length ? 0 : unavailable.length ? null : Math.min(Math.max(facts.progress!, 0) / 0.8, 1),
+    progress: finite(facts.progress) ? facts.progress : null, hardFailures, unavailable,
+    maxLateralM: finite(facts.maxLateralM) ? facts.maxLateralM : null,
+  };
+}
+
+/** Nearest authored segment's perpendicular error; longitudinal endpoint overshoot is not lateral exit. */
+export function authoredRouteLateralM(route: readonly (readonly [number, number])[], x: number, y: number): number | null {
+  let nearest = Infinity;
+  let lateral: number | null = null;
+  for (let i = 1; i < route.length; i++) {
+    const [ax, ay] = route[i - 1]!;
+    const [bx, by] = route[i]!;
+    const dx = bx - ax, dy = by - ay, length = Math.hypot(dx, dy);
+    if (!Number.isFinite(length) || length === 0) continue;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (length * length)));
+    const distance = Math.hypot(x - ax - t * dx, y - ay - t * dy);
+    if (distance < nearest) {
+      nearest = distance;
+      lateral = Math.abs(dx * (y - ay) - dy * (x - ax)) / length;
+    }
+  }
+  return lateral;
 }
 
 /** Score one episode trace against its authored scenario context. */
@@ -717,9 +862,9 @@ export function scoreEpisode(
       if (collisionFromReward(view)) {
         terminalCollision = true;
         const partner = step.objs[0] ?? null;
-        const kind = partner ? ctx.actorKinds?.[partner[0]] : undefined;
+        const kind = step.collision?.partnerKind ?? (partner ? ctx.actorKinds?.[partner[0]] : undefined);
         push(collisionTypeForKind(kind), step, 'infraction', {
-          partnerId: partner?.[0] ?? null,
+          partnerId: step.collision?.partnerId ?? partner?.[0] ?? null,
           partnerKind: kind ?? null,
           penalty: view.rewardTerms.collision ?? null,
         });
@@ -783,9 +928,40 @@ export function scoreEpisode(
   // its hash; it is not a certification of legality, so lane-departure remains
   // unavailable under a rail binding alone.
   if (laneContext) unavailable.add('lane-departure');
+  let namedScore: AlpasimStyleScore | undefined;
+  if (ctx.alpasimStyle) {
+    let maxLateralM: number | null = null;
+    let corridorComplete = trace.steps.length > 0;
+    let collisionAtFault: boolean | null = false;
+    for (const step of trace.steps) {
+      const x = step.ex?.x ?? step.sv?.[0], y = step.ex?.y ?? step.sv?.[1];
+      const lateral = x !== undefined && y !== undefined ? authoredRouteLateralM(ctx.alpasimStyle.authoredRoute, x, y) : null;
+      if (lateral === null) corridorComplete = false;
+      else maxLateralM = Math.max(maxLateralM ?? 0, lateral);
+      if (collisionFromReward(rewardViewFromStep(step))) {
+        const contacts = ctx.alpasimStyle.egoId
+          ? step.events?.filter((event) => event.kind === 'collision' && (event.a === ctx.alpasimStyle!.egoId || event.b === ctx.alpasimStyle!.egoId))
+          : undefined;
+        const sides = contacts?.length
+          ? contacts.map((event) => event.contactSides?.[event.a === ctx.alpasimStyle!.egoId ? 0 : 1])
+          : step.collision?.side ? [step.collision.side] : ctx.alpasimStyle.collisionSides?.[step.step];
+        if (sides?.some((side) => side === 'front' || side === 'lateral')) collisionAtFault = true;
+        else if ((!sides?.length || sides.some((side) => side !== 'rear')) && collisionAtFault !== true) collisionAtFault = null;
+      }
+    }
+    const offroad = containmentEnabled && drivableArea?.confidence === 'authoritative'
+      ? counts['off-road'] > 0 ? true : containmentAssessed === trace.steps.length && trace.steps.length > 0 && !unavailable.has('off-road') ? false : null
+      : null;
+    namedScore = alpasimStyleScore({
+      progress: terminalGoal || (ctx.expectedRouteM != null && ctx.expectedRouteM > 0 && s0 !== null && lastS !== null) ? routeCompletion : null,
+      collisionAtFault, offroad,
+      maxLateralM: corridorComplete || (maxLateralM !== null && maxLateralM >= 4) ? maxLateralM : null,
+    });
+  }
 
   return {
     drivingScore: routeCompletion * penaltyProduct,
+    ...(namedScore ? { 'alpasim-style-score': namedScore } : {}),
     routeCompletion,
     penaltyProduct,
     infractions: counts,

@@ -9,6 +9,8 @@
 mod batch;
 mod compile;
 mod env;
+mod episode;
+mod episode_batch;
 mod handoff;
 mod policy;
 mod simulate;
@@ -37,6 +39,8 @@ pub use compile::{
     template_identity_json, Compiled, MapAsset, PolicyCallback, Site,
 };
 pub use env::{Env, StepView};
+pub use episode::{Episode, FrameRef};
+pub use episode_batch::EpisodeBatch;
 pub use handoff::{Handoff, HANDOFF_ACTOR_ROW, HANDOFF_BODY_ROW};
 pub use policy::{Policy, PolicyOutcome};
 pub use simulate::{check_feasibility_json, run_simulation_json, Sim, ACTOR_ROW};
@@ -506,6 +510,10 @@ impl Scenario {
 
     pub fn actor_ids(&self) -> Vec<String> {
         self.input.actors.iter().map(|a| a.id.clone()).collect()
+    }
+
+    pub fn ego_id(&self) -> Result<String> {
+        Ok(simforge_session::resolve_ego_id(&self.input)?)
     }
 
     pub fn seed_json(&self) -> String {

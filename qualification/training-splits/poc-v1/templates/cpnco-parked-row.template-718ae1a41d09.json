@@ -1,0 +1,344 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "CPNCO — dart-out from behind a prop parked row",
+    "description": "Crossing Pedestrian, Not at Crossing, Obscured — the portable rendition. The sibling template `cpnco-dartout` requires a true kerb-parking cross-section (`requiresAdjacent: ['parking']`), which exists on exactly one of the five maps: every other map has parking *lots*, not parking *lanes*. This variant carries its own occluder wall instead: a row of four parked SUVs placed as L3 props at the kerb edge of the ego lane, so the scenario transfers to any urban corridor with enough runway. The pedestrian walks the pavement line behind that row and steps into the carriageway without looking (`rules.collisionAvoidance: false`), and the arrival solver back-solves its start so it reaches the ego lane `arrivalTtc` seconds before the ego does. The metric that carries the archetype is reveal-to-conflict: how long ego has line of sight before the conflict, tuned by `occluderGapM` — how far the last parked car sits upstream of the dart point.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "C5.cpnco-dartout",
+    "tags": [
+      "vru",
+      "occlusion",
+      "midblock",
+      "parked-row",
+      "prop-occluder",
+      "campaign-occluded-pedestrian"
+    ],
+    "author": "agent/campaign-occluded-pedestrian",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      {
+        "id": "arrivalTtc",
+        "type": "continuous",
+        "description": "Seconds between the pedestrian reaching the ego lane centre and the ego reaching the same point. Below ~1.5 s no production AEB stops in time; 2.5 s is a comfortable but real event.",
+        "unit": "s",
+        "tier": 1,
+        "range": [
+          0.8,
+          2.5
+        ],
+        "default": 1.6,
+        "distribution": "uniform"
+      },
+      {
+        "id": "pedSpeedKph",
+        "type": "continuous",
+        "description": "Pedestrian travel speed. Euro NCAP uses 5 km/h for a walking VRU and 8 km/h for a running one; the band covers both and the slow-walker case.",
+        "unit": "kph",
+        "tier": 1,
+        "range": [
+          4.0,
+          8.5
+        ],
+        "default": 5.4,
+        "distribution": "uniform"
+      },
+      {
+        "id": "occluderGapM",
+        "type": "continuous",
+        "description": "Metres between the last parked car and the dart point. This is the reveal-to-conflict axis: a short gap keeps the pedestrian hidden until the last moment, a long gap gives the ego a look.",
+        "unit": "m",
+        "tier": 1,
+        "range": [
+          0.0,
+          7.0
+        ],
+        "default": 3.0,
+        "distribution": "uniform"
+      },
+      {
+        "id": "dartLeadM",
+        "type": "continuous",
+        "description": "Metres upstream of the dart point at which the pedestrian leaves the pavement line. A short lead is a steep step-out and a short reveal; a long lead is a diagonal walk that the ego sees earlier.",
+        "unit": "m",
+        "tier": 1,
+        "range": [
+          1.5,
+          4.5
+        ],
+        "default": 2.8,
+        "distribution": "uniform"
+      }
+    ],
+    "constraints": []
+  },
+  "environment": {
+    "weather": "clear",
+    "timeOfDay": "afternoon"
+  },
+  "anchor": {
+    "id": "cpnco-parked-row",
+    "corridor": {
+      "throughLanesSameDir": {
+        "value": [
+          1,
+          2
+        ],
+        "essentiality": "required"
+      },
+      "speedLimitKph": {
+        "value": [
+          25,
+          65
+        ],
+        "essentiality": "preferred",
+        "weight": 3
+      },
+      "requiresAdjacent": {
+        "value": [
+          "sidewalk"
+        ],
+        "essentiality": "preferred",
+        "weight": 2
+      },
+      "curvatureDegPer10m": {
+        "value": [
+          0,
+          4
+        ],
+        "essentiality": "required"
+      },
+      "runwayDownstreamM": {
+        "value": [
+          210,
+          null
+        ],
+        "essentiality": "required"
+      }
+    },
+    "features": [
+      {
+        "id": "parked-vehicle-zone",
+        "kind": "occlusion_zone",
+        "label": "the mapped kerbside parked-vehicle occlusion zone used by the authored SUV row",
+        "essentiality": "required",
+        "atM": {
+          "value": [
+            -200,
+            200
+          ],
+          "essentiality": "required"
+        }
+      }
+    ],
+    "policy": {
+      "allowMirror": false,
+      "maxSitesPerMap": 8,
+      "diversity": "moderate",
+      "minScore": 0.5
+    }
+  },
+  "roles": [
+    {
+      "id": "ego",
+      "kind": "on_reference",
+      "label": "the vehicle under test",
+      "actor": {
+        "class": "car",
+        "catalogId": "vehicle.sedan"
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": "125 - clamp(0.8 * lane.speedLimitKph, 22, 50) / 3.6 * 8",
+        "tFrac": 0,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 22, 50)"
+    },
+    {
+      "id": "ped",
+      "kind": "on_reference",
+      "label": "the pedestrian that steps out from behind the parked row",
+      "actor": {
+        "class": "pedestrian"
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": 60,
+        "tFrac": -1,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": "param.pedSpeedKph"
+    }
+  ],
+  "props": [
+    {
+      "id": "parked-row",
+      "catalogId": "vehicle.suv",
+      "label": "five parked SUVs nose-to-tail at the kerb; the last one ends `occluderGapM` upstream of the dart point",
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": "114.4 - param.occluderGapM",
+        "tFrac": -0.78,
+        "headingOffsetRad": 0
+      },
+      "headingOffsetRad": 0,
+      "scale": 1,
+      "repeat": {
+        "count": 5,
+        "spacingM": 5.3,
+        "tFracStep": 0
+      },
+      "occludes": {
+        "observer": "ego",
+        "target": "ped"
+      },
+      "targetRevealToConflictS": 0.9
+    }
+  ],
+  "choreography": {
+    "clipSeconds": 14,
+    "warmupSeconds": 1,
+    "interactions": [
+      {
+        "id": "ped-commits",
+        "label": "the pedestrian does not look — the defining property of a dart-out",
+        "actor": "ped",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "ped-ignores-traffic",
+        "actor": "ped",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.yieldToVehicles",
+          "value": false
+        }
+      },
+      {
+        "id": "ped-walks-out",
+        "label": "along the pavement behind the parked row, then straight into the carriageway",
+        "actor": "ped",
+        "verb": "route",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "mode": "polyline",
+          "points": [
+            {
+              "laneOffset": 0,
+              "s": 60,
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": "125 - param.dartLeadM",
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": 126,
+              "tFrac": 0.15,
+              "headingOffsetRad": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ped-reaches-the-lane",
+        "label": "the arrival relation that makes the clip critical rather than incidental",
+        "actor": "ped",
+        "verb": "speed",
+        "trigger": {
+          "kind": "arrival",
+          "of": "ped",
+          "at": {
+            "pose": {
+              "laneOffset": 0,
+              "s": 125,
+              "tFrac": 0,
+              "headingOffsetRad": 0
+            }
+          },
+          "syncWith": "ego",
+          "ttc": "param.arrivalTtc"
+        },
+        "target": {
+          "mode": "absolute",
+          "valueKph": "param.pedSpeedKph"
+        },
+        "dynamics": {
+          "shape": "step",
+          "constraint": "time",
+          "value": 0.1
+        }
+      }
+    ]
+  },
+  "invariants": [
+    {
+      "id": "criticality",
+      "kind": "pet",
+      "label": "ego must actually be threatened by the pedestrian",
+      "essentiality": "required",
+      "of": "ego",
+      "to": "ped",
+      "range": [
+        0.2,
+        3.0
+      ]
+    },
+    {
+      "id": "arrival-band",
+      "kind": "arrival",
+      "label": "the solved arrival offset must survive the run",
+      "essentiality": "required",
+      "of": "ped",
+      "at": {
+        "pose": {
+          "laneOffset": 0,
+          "s": 125,
+          "tFrac": 0,
+          "headingOffsetRad": 0
+        }
+      },
+      "syncWith": "ego",
+      "deltaTRange": [
+        -3.0,
+        -0.6
+      ]
+    },
+    {
+      "id": "ego-decel-budget",
+      "kind": "decel_budget",
+      "label": "beyond a hard stop the conflict was unavoidable, which is a different finding",
+      "essentiality": "preferred",
+      "of": "ego",
+      "maxMps2": 8.0
+    }
+  ],
+  "variants": [],
+  "metricSubject": "ego"
+}

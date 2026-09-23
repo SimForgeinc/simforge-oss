@@ -1,0 +1,40 @@
+{
+  "schema": "simforge.scenario-split-verification/v1",
+  "valid": true,
+  "splits": [
+    {
+      "splitId": "poc-v2-control",
+      "purpose": "control",
+      "digest": "ef31e70be2b00ee478dde429fbf2d03659c8654adee2375e30931b0ed5774382",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5
+    },
+    {
+      "splitId": "poc-v2-test",
+      "purpose": "test",
+      "digest": "dfabe4e5f8577c8e467fe78730279f1ff22b18d821a83630f6f8d03b5e8db178",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5
+    },
+    {
+      "splitId": "poc-v2-train",
+      "purpose": "train",
+      "digest": "3707c647c06e19c96a72beb0300e31631fc2237150cb531903afddd1f96be4f4",
+      "episodes": 1200,
+      "admittedCells": 12,
+      "excludedCells": 12
+    },
+    {
+      "splitId": "poc-v2-val",
+      "purpose": "val",
+      "digest": "d0a9b960b09f0a60b532a5723c9ffa2a413106efd3987be98b9132ced65914b2",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 4
+    }
+  ],
+  "independence": "seed AND map-intel site; test/control geography held out from train/val",
+  "controls": "digest-pinned one-to-one hazard removals of test; not an independent split"
+}

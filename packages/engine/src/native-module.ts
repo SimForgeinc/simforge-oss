@@ -168,6 +168,8 @@ export interface NativeStepResult {
   readonly bev?: Float32Array;
   readonly rewardTerms: Float64Array;
   readonly infoJson: string;
+  readonly signalsJson?: string;
+  readonly termReason?: string;
 }
 
 export interface NativeBevShape {

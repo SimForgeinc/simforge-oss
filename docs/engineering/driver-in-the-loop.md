@@ -1,117 +1,51 @@
-# Driver in the loop
+# Authored driving-policy runs
 
-One entry point, one artifact, no new data structures.
+Studio's drive routes are **bench launchers and recorded-run viewers**, not
+human-in-the-loop simulators (cutover: 2026-09-22). The kernel `Episode` is the
+only closed-loop authority. See [the local/host boundary](local-cloud-boundary.md)
+and [the drive bench contract](drive-bench.md).
 
-From a scenario row in the dataset list, beside Edit: **Driver in the Loop**. Pressing it
+## Scenario entry
 
-1. creates a **variation** of that scenario — a separate document with a parent pointer, the same
-   map, the same dataset — with a sensor rig guaranteed on the actor about to be driven,
-2. opens the drive UX on that actor,
-3. records its trajectory for exactly the scenario's clip length, and
-4. writes that trajectory into the variation as the actor's motion, then returns to the list.
+`/dashboard/drive/<documentId>?actor=<roleId>` resolves the existing authored
+document and selected vehicle role. `DriverInTheLoopDrive` resolves its installed
+map; `DriveSession` uses the existing authoring compiler with
+`materializeOnly: true`, sets the compiled actor as `metricSubject`, and submits
+the resulting input to the local bench job API. It never starts a world,
+advances a tick, sends pedals/steering, records a take, or saves policy output
+back into the document.
 
-The variation is then an ordinary scenario: it carries the existing `Variation` badge, opens in the
-editor, plays back, and renders.
+The editor/list's existing variation-creation and role-resolution operations
+remain authoring features: the scenario shown in the launcher is that resulting
+document, including its authored content. This cutover does not change editor
+motion tools, manual-track schemas, sensor authoring, or existing saved tracks.
+The earlier automatic human-drive recording/save behavior has been removed.
 
-## Why this needs nothing new
+## Map and path entry
 
-- **The clip is an existing interaction.** `packages/scenario/src/schema/v2/manual-drive.ts:55-76`
-  defines `ManualDriveRecording` (`{ version, clipSeconds, samples[{ timeS, x, y, z, headingRad,
-  speedMps }] }`) and `:100-151` validates it: strictly increasing time, a sample at exactly `0` and
-  at exactly `clipSeconds`, `y === 0`, 2..6001 samples.
-  `packages/editor/src/manual-drive.ts` turns a recording into the actor's motion
-  (`recordedManualDrive`), and `EditorDocument.replaceActorMotion` displaces whatever motion the
-  actor had.
-- **Playback and render already replay it.**
-  `native/crates/simforge-compiler/src/materialize/builder.rs:770,1648-1754` folds the interaction
-  into the actor's spawn as a `recordedTrack`; `native/crates/simforge-core/src/map/timed.rs:17-21`
-  interpolates recorded pose, yaw and signed speed between samples. A 20 Hz capture replays on the
-  50 Hz engine tick.
-- **Lineage already exists.** `derivation_kind = 'variation'` with `derived_from_document_id` already
-  satisfies the CHECK in `studio/migrations/20260805013000_uniscenario_document_lineage.sql:95-100`,
-  and `ScenarioDocumentRow` already badges a variation. No migration.
+`/dashboard/map-assets/drive` accepts an instance or `episodes.json` path. A map
+selection prepares a one-car scratch scenario from its lane index. The gallery
+may use its existing authoring camera once to choose a spawn; the standalone
+launcher creates no WebGL viewport. Neither runs an environment in the browser.
 
-## How it works
+The launch form supplies policy, seed and policy duration. **Run with policy jev**
+submits a new bench job, not a takeover of a browser world. The bench launches
+the normal policy server, handles its native prologue, and writes the same
+artifacts as the CLI. Studio streams worker output plus `log.txt`, waits for
+`drive verify`, then opens `/dashboard/evaluation/viewer?ref=<run-directory>`.
 
-### Creating the variation
+## Recorded playback
 
-- `POST /api/simforge/documents/[documentId]/driver-in-the-loop` — same two access checks as
-  `duplicate` (source copyable, destination mutable). Body: `{ roleId? }`. Responds
-  `{ document, roleId }`, or `409 not_drivable` with a readable reason.
-- `studio/app/lib/scenario/driver-in-the-loop.ts` decides the two things that must be decided before
-  the variation exists:
-  - `resolveDriverRole` — the requested role, else the scenario's `metricSubject`, else its only
-    drivable vehicle. Refuses an unpinned scenario (a scene-frame recording cannot replay without a
-    pin), a non-vehicle or frame-bound role, and an ambiguous scenario, so a refusal is a message on
-    the button rather than a dead drive screen.
-  - `driverInTheLoopContent` — attaches the `basic-dash-camera` rig
-    (`instantiateSensorRig`) when the driven actor has no sensors, because the list disables render
-    without a sensor profile. An actor that already has sensors is untouched. It also displaces the
-    driven actor's authored motion (`competingMotionInteractions`) *before* the drive: the world the
-    human drives is compiled from this content, so an authored route left on the driven actor is
-    spawned and stepped by the engine — on a scenario whose route steps 167 m per second that hands
-    the driver a van at 620 km/h which spins out and slides for the rest of the clip. Every other
-    actor keeps its choreography.
-- `duplicateScenarioDocument` takes `derivation` and `content`, so the variation is written with its
-  own digest in the same transaction as its parent edge.
+The viewer plays `drive.mp4` or `heat.mp4` and reads `steps.jsonl`, `score.json`,
+`result.json`, model-health receipts and optional recorded model BEV. Solo
+videos include the camera prologue; heat videos begin at policy time zero.
+The viewer accounts for that offset and never displays a policy decision over
+a prologue frame. A failed health receipt stays exploratory, even if the run
+status is `succeeded`.
 
-### Starting the drive
-
-- `ScenarioDocumentRow` renders the Driver in the Loop button beside Edit
-  (`onDriverInTheLoop`); it is inert with an explanatory tooltip on a read-only dataset and absent
-  where no handler is supplied (the review queue).
-- `useScenarioDocumentActions.startDriverInTheLoop` POSTs, splices the variation into the list — the
-  drive leaves the page, and coming back to a list that had forgotten the variation would read as a
-  lost drive — and returns the drive target.
-- `packages/studio-ui/src/scenario/drive-route.ts` is the one constructor of the drive URL
-  (`/dashboard/drive/<documentId>?actor=<roleId>`); `ScenarioDatasetsClient` owns the navigation,
-  because the dataset column keeps the world scene beside it alive and never routes on its own.
-
-### Driving and saving
-
-- `studio/app/dashboard/drive/[documentId]/page.tsx` loads the document, resolves the actor, and
-  renders `DriverInTheLoopDrive`, which resolves the installed map entry and its lane topology.
-- `DriveSession` is take-only: it compiles the variation once, drives the resolved actor from
-  t = 0 (`beginTake`), and shows the clip countdown from the world clock. The scenario's other
-  actors run around the driver. `R` drives the clip again. The wheel and pedals go through
-  `setDriverCommand`, not `control`: the driver command is held across physics substeps and is the
-  only one of the two that carries a handbrake, so `control` silently dropped Space. Where the
-  runtime has no held-command surface the pause menu says so rather than promising a handbrake.
-- On `TakeEvent { kind: 'complete' }` the session applies `recordedManualDrive` to its live
-  `EditorDocument` and hands the finished template to `onSaveClip`, which PATCHes the variation and
-  returns to the list. A failed take or a rejected save keeps the drive on screen with the reason and
-  a "Drive it again" action; nothing partial is written.
-
-## What was removed
-
-Driving used to start from the map gallery, and takes used to be authored from the editor timeline
-and round-tripped through a `localStorage` mailbox. All of it is gone:
-
-- `packages/studio-ui/src/scenario/editor/manual-drive/` — the take mailbox (`take-handoff`), the
-  editor recorder hook, and the details/review panels. `competingMotionRefusal` survives as
-  `packages/studio-ui/src/scenario/editor/competing-motion.ts`.
-- The take-guard machinery in `packages/editor/src/manual-drive.ts`
-  (`manualDriveTakeGuard`, `encode`/`decodeManualDriveTakeGuard`, `checkManualDriveTake`). It existed
-  because a take round-tripped through another tab against a document the author could edit
-  meanwhile; a variation is created for one drive and nobody else is editing it.
-- The `manual_drive` timeline palette action, so a recording can only come from a drive.
-- Free drive: `drive-scenario.ts` (`createDriveScenario`, `pickDriveSpawn`), `MapGalleryDrive`, the
-  gallery's Drive button and its take-query handling, the car/map pickers, the spawn selector, and
-  the `endless` world-source mode. `drivingLanes` survives as
-  `studio/app/dashboard/map-assets/drive/drive-lanes.ts` for the HUD's minimap.
-- The pause menu's Respawn and Change car, which only meant anything without a scenario.
-
-## Verification
-
-- `studio/app/lib/scenario/__tests__/driver-in-the-loop.test.ts` — role resolution (only vehicle,
-  declared subject, explicit request, ambiguity, pedestrian, missing actor), variation content (rig
-  added, existing rig kept, the driven actor's authored motion displaced and every other actor's
-  kept), and the drive route contract: the URL `driveHref` emits is turned back into the App Router
-  directory it claims and that directory must hold a `page.tsx`. That last one exists because it
-  did not hold: the button minted a variation and then navigated to a route that never existed.
-- `packages/studio-ui/test/unit/scenario/list-document-row.test.tsx` — the button calls its handler,
-  is inert on a read-only dataset, and is absent without a handler.
-- `packages/editor/src/manual-drive.test.ts` — a recorded track still follows its actor when the
-  actor is moved.
-- Typecheck: `packages/editor`, `packages/studio-ui` and `studio` are clean apart from a pre-existing
-  `app/lib/dashboard-nav.ts` error (an `icon`-less nav entry) that predates this work.
+`studio/app/lib/live-world/`, its act/human worker, the Jev browser controller,
+drive-only SUMO bridge, truth-frame HUD helpers and the old drive-activity smoke
+have been deleted. Editor preview/playback remains in the existing shared
+editor/playback packages; no part of the removed live-world subsystem is kept
+for it. The targeted timeline regression and real no-WebGL Playwright proof
+are documented in the local/host boundary document.

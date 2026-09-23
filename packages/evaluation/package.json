@@ -16,6 +16,10 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./drive-evidence": {
+        "types": "./dist/drive-evidence.d.ts",
+        "default": "./dist/drive-evidence.js"
+      },
       "./params": {
         "types": "./dist/protocol/params.d.ts",
         "default": "./dist/protocol/params.js"
@@ -50,6 +54,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./drive-evidence": {
+      "development": "./src/drive-evidence.ts",
+      "types": "./dist/drive-evidence.d.ts",
+      "default": "./dist/drive-evidence.js"
+    },
     "./params": {
       "development": "./src/protocol/params.ts",
       "types": "./dist/protocol/params.d.ts",
@@ -75,7 +84,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/client/index.ts src/index.ts src/protocol/index.ts src/protocol/params.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/worker-cli.ts src/rig-cli.ts src/replay-context/index.ts src/replay-context/bin.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist && node -e \"const fs=require('node:fs');fs.cpSync('src/replay-context/python','dist/replay-context/python',{recursive:true});fs.cpSync('scripts','dist/scripts',{recursive:true})\"",
+    "build": "tsup src/drive-evidence.ts src/client/index.ts src/index.ts src/protocol/index.ts src/protocol/params.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/worker-cli.ts src/rig-cli.ts src/replay-context/index.ts src/replay-context/bin.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist && node -e \"const fs=require('node:fs');fs.cpSync('src/replay-context/python','dist/replay-context/python',{recursive:true});fs.cpSync('scripts','dist/scripts',{recursive:true})\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke:dist": "node scripts/smoke-dist.mjs"
@@ -83,6 +92,7 @@
   "dependencies": {
     "@simforge-oss/compiler": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/maps": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
     "@simforge-oss/training-env": "workspace:*",
     "zod": "^4.4.3",

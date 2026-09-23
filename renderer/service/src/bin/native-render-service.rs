@@ -33,7 +33,7 @@ fn main() -> Result<()> {
             "--help" | "-h" => {
                 println!("native-render-service --scene SCENE.json --socket ENDPOINT [--shm PATH] [--shm-size-mb 256] [--ready-file PATH]\n\
                     Synchronous v5 MessagePack request/response with shared-memory frames; no background simulation clock.\n\
-                    Closed loop: python -m simforge_native.closed_loop --help. reset_episode/step_episode use typed ConsumerSpec products.\n\
+                    Closed loop: python -m simforge_oss_gym.tools.policy_runner --help (kernel Episode owns world time and camera barriers).\n\
                     Two output modes: sensor-capture --profile training|showcase; describe_products exposes their typed defaults.\n\
                     This resident SceneApp engine supports model catalogs but is not sensor-capture's qualified shared-shadow/ring backend.\n\
                     Scene lighting 'sensor|cinematic' is a legacy visual control, NOT an output mode; policy cameras always use cinematic.");

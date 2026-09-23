@@ -2,7 +2,7 @@
 
 use simforge_core::engine::ActorSnapshot;
 use simforge_core::rng::Seed;
-use simforge_session::{EnvCheckpoint, EnvSession, StepResult};
+use simforge_session::{EnvCheckpoint, EnvSession, StepResult, REWARD_TERM_COUNT};
 
 use super::simulate::{push_actor_row, ACTOR_ROW};
 use super::{decode_checkpoint, encode_checkpoint, episode_config_from_json, Graph, Scenario};
@@ -17,7 +17,7 @@ pub struct StepView<'a> {
     session: &'a EnvSession,
     objects: &'a [f32],
     object_ids: &'a [String],
-    reward_terms: [f64; 3],
+    reward_terms: [f64; REWARD_TERM_COUNT],
 }
 
 impl<'a> StepView<'a> {
@@ -32,6 +32,13 @@ impl<'a> StepView<'a> {
     }
     pub fn truncated(&self) -> bool {
         self.result.truncated
+    }
+    pub fn term_reason(&self) -> Option<&'static str> {
+        self.result.term_reason()
+    }
+    pub fn signals_json(&self) -> Result<Option<String>> {
+        self.result.observation.signals.as_ref()
+            .map(serde_json::to_string).transpose().map_err(Into::into)
     }
     /// `[f64; STATE_VECTOR_SIZE]`, or empty when the state vector is disabled.
     pub fn state_vector(&self) -> &[f64] {
@@ -59,8 +66,8 @@ impl<'a> StepView<'a> {
             .as_ref()
             .map(|b| ((b.height, b.width, b.channels), &b.data[..]))
     }
-    /// `[progress, proximity, comfort]`.
-    pub fn reward_terms(&self) -> [f64; 3] {
+    /// Values ordered by `simforge_session::REWARD_TERM_NAMES`.
+    pub fn reward_terms(&self) -> [f64; REWARD_TERM_COUNT] {
         self.reward_terms
     }
     /// `{events, minima, causal}` with actor handles resolved to canonical ids.
@@ -80,11 +87,16 @@ impl<'a> StepView<'a> {
                 })
             })
             .collect();
-        Ok(serde_json::to_string(&serde_json::json!({
+        let mut value = serde_json::json!({
             "events": info.events,
             "minima": minima,
             "causal": info.causal,
-        }))?)
+            "rewardTerms": info.reward_terms,
+        });
+        if let Some(collision) = &info.collision {
+            value["collision"] = serde_json::to_value(collision)?;
+        }
+        Ok(serde_json::to_string(&value)?)
     }
 
     fn session_actor_id(&self, actor: simforge_core::engine::ActorIndex) -> String {
@@ -186,7 +198,7 @@ impl Env {
             session: &self.session,
             objects: &self.objects,
             object_ids: &self.object_ids,
-            reward_terms: [terms.progress, terms.proximity, terms.comfort],
+            reward_terms: terms.values(),
         }
     }
 

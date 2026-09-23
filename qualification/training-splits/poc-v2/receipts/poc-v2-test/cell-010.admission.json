@@ -1,0 +1,29 @@
+{
+  "schema": "simforge.scenario-admission/v1",
+  "splitId": "poc-v2-test",
+  "cell": 10,
+  "templateSha256": "5eb1dfd648a55f31550642acb4a003fb4863e29abdc4ddc78dd4c68488e6af7c",
+  "compilerVersion": "0.7.0",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "checks": [
+    "geometry",
+    "occlusion",
+    "solvability"
+  ],
+  "runs": [],
+  "evidence": [],
+  "match": {
+    "candidateCount": 0,
+    "failureSummary": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM.",
+    "notes": [],
+    "site": null
+  },
+  "map": {
+    "id": "easterbrook-discovery-school",
+    "topologySha256": "84e00c3a05d8e40b59ddc9ae7724e9664d7bc0c3e46f8e0a54d1c0d30ed9e70d",
+    "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+    "matcherIndexDigest": "94cca13c315324aa63a4a160569b0c240e194aa96965424128b3be6a377fab58"
+  },
+  "status": "excluded",
+  "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be bound and is not cosmetic. Would have required relaxing a required clause: ped could not be bound and is not cosmetic. Required clauses this map index cannot answer: features.stop.atM."
+}

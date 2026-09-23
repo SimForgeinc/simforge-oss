@@ -10,7 +10,7 @@ import { z } from "zod";
  * endpoint never changes a run that already started.
  */
 
-export const MODEL_RUN_KINDS = ["openloop", "policy_episode", "artifact"] as const;
+export const MODEL_RUN_KINDS = ["openloop", "policy_episode", "artifact", "drive_bench"] as const;
 export type ModelRunKind = (typeof MODEL_RUN_KINDS)[number];
 
 export const MODEL_QUANTS = ["none", "fp16", "bf16", "int8", "nf4", "gptq", "awq"] as const;
@@ -131,14 +131,32 @@ export {
   type InputKind,
 } from "@simforge-oss/evaluation/params";
 
+/** Bench owns policy startup; reference policies need no invented registry endpoint. */
+export const DriveBenchParamsSchema = z.object({
+  scenario: z.string().trim().min(1).max(4096),
+  policy: z.string().trim().regex(/^(scripted|jev|alpamayo-1\.5|qwen-drive|auto-e2e|torch:.+)$/),
+  duration: z.number().finite().positive().max(3600),
+});
+
 export const CreateModelRunSchema = z.object({
-  modelVersionId: z.string().min(1),
-  endpointId: z.string().min(1),
+  modelVersionId: z.string().min(1).nullable().default(null),
+  endpointId: z.string().min(1).nullable().default(null),
   kind: z.enum(MODEL_RUN_KINDS),
   params: z.record(z.unknown()).default({}),
   seed: z.number().int().nonnegative().default(0),
   maxAttempts: z.number().int().min(1).max(20).default(3),
 }).superRefine((value, ctx) => {
+  if (value.kind === "drive_bench") {
+    const parsed = DriveBenchParamsSchema.safeParse(value.params);
+    if (!parsed.success) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["params"], message: parsed.error.message });
+    if (value.modelVersionId !== null || value.endpointId !== null) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "drive_bench resolves policies through the bench, not a registry endpoint" });
+    }
+    return;
+  }
+  if (!value.modelVersionId || !value.endpointId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "registered model and endpoint are required for this run kind" });
+  }
   // Reject an unrunnable run at submission instead of burning attempts on it.
   if (value.kind === "openloop") {
     const parsed = OpenloopParamsSchema.safeParse(value.params);
@@ -205,8 +223,8 @@ export type ModelEndpointRecord = {
 
 export type ModelRunRecord = {
   id: string;
-  modelVersionId: string;
-  endpointId: string;
+  modelVersionId: string | null;
+  endpointId: string | null;
   kind: ModelRunKind;
   status: "queued" | "running" | "succeeded" | "failed";
   params: Record<string, unknown>;

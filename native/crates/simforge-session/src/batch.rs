@@ -43,7 +43,7 @@ pub struct FlatBatch {
 }
 
 impl FlatBatch {
-    fn resize_for(&mut self, worlds: usize, max_objects: usize, config: &EpisodeConfig) {
+    pub(crate) fn resize_for(&mut self, worlds: usize, max_objects: usize, config: &EpisodeConfig) {
         self.worlds = worlds;
         self.max_objects = max_objects;
         self.state.clear();
@@ -86,7 +86,7 @@ impl FlatBatch {
         self.t_s.resize(worlds, 0.0);
     }
 
-    fn write(&mut self, i: usize, result: &StepResult) {
+    pub(crate) fn write(&mut self, i: usize, result: &StepResult) {
         let obs = &result.observation;
         if let Some(sv) = &obs.state_vector {
             self.state[i * STATE_VECTOR_SIZE..(i + 1) * STATE_VECTOR_SIZE].copy_from_slice(sv);

@@ -4,12 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import { CoordinateFrame, buildMapIntel, loadMapSources, asMapId } from '@simforge-oss/maps/node';
-import { TOPOLOGY_CONTENT_EPOCH, buildLanePolygonsLocal, buildMapTopologyIndex, validateRoadwayConsistency } from '@simforge-oss/maps/topology';
+import { TOPOLOGY_CONTENT_EPOCH, buildLanePolygonsLocal, buildMapTopologyIndex, buildRoadBoundaryOutline, validateRoadwayConsistency } from '@simforge-oss/maps/topology';
 import { canonicalJson, filesUnder, hashFile, sha256 } from './closure.js';
 import { buildRoadwayConsistencyReport, serializeRoadwayConsistencyReport } from './roadway-consistency.js';
 import { collection, extractXodrSemantics, type SemanticCollection } from './xodr-semantics.js';
 
-export const ROAD_SIDECAR_REVISION = 'source-semantics-v4';
+export const ROAD_SIDECAR_REVISION = 'source-semantics-v5';
 export const DEFAULT_SKY_PATH = path.join(os.homedir(), 'simforge-assets', 'hdri', 'clear-day-sky.hdr');
 
 function gzipCanonical(value: unknown): Buffer {
@@ -83,6 +83,7 @@ export async function writeRoadSidecars(contentDir: string, xodrPath: string, ma
   const topologyBytes = gzipCanonical(topology);
   await writeFile(path.join(contentDir, 'topology-index.json.gz'), topologyBytes);
   await emit('lane-polygons.geojson.gz', lanes);
+  await emit('road-boundary.json.gz', buildRoadBoundaryOutline(text, sha256(xodr)));
   await emit('signals.geojson.gz', signals);
   await emit('map.geojson.gz', authoredMap ?? semantic.mapGeojson);
   if (search) await emit('search-index.json.gz', search);

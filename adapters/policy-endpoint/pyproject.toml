@@ -1,0 +1,10 @@
+[project]
+name = "simforge-policy-endpoint"
+version = "0.1.0"
+description = "SimForge additive policy-endpoint v3 metadata contract"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

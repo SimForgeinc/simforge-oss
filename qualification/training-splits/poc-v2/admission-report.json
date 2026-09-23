@@ -1,0 +1,608 @@
+{
+  "schema": "simforge.poc-admission-report/v2",
+  "nativeAddonSha256": "c6cf397691647301545adcfb0eb882b83ea5287bbe1d7d88b6136e700ad14015",
+  "nativeVersion": "0.7.0",
+  "admissionGoal": null,
+  "splits": [
+    {
+      "purpose": "train",
+      "digest": "3707c647c06e19c96a72beb0300e31631fc2237150cb531903afddd1f96be4f4",
+      "episodes": 1200,
+      "admittedCells": 12,
+      "excludedCells": 12,
+      "byMapFamily": [
+        {
+          "map": "yale-street",
+          "family": "queue-tail",
+          "episodes": 200
+        },
+        {
+          "map": "yale-street",
+          "family": "cpnco-parked-row",
+          "episodes": 200
+        },
+        {
+          "map": "yale-street",
+          "family": "cut-in-brake",
+          "episodes": 200
+        },
+        {
+          "map": "el-camino-road",
+          "family": "queue-tail",
+          "episodes": 200
+        },
+        {
+          "map": "el-camino-road",
+          "family": "cpnco-parked-row",
+          "episodes": 200
+        },
+        {
+          "map": "el-camino-road",
+          "family": "cut-in-brake",
+          "episodes": 200
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 0,
+          "family": "queue-tail",
+          "map": "yale-street",
+          "site": "19f890a500277be9",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8397211816509262",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-000.admission.json",
+            "sha256": "3ea11fddfab7abc53a0cba186f3d0ba825b35c3433bc8bf3c00b5ce30a177724"
+          }
+        },
+        {
+          "cell": 1,
+          "family": "queue-tail",
+          "map": "yale-street",
+          "site": "2eeee5c165bbb161",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396217679262636",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-001.admission.json",
+            "sha256": "963c91a8e455b46aae83d206132c00843d27b8a305c87375835150ebfe33cd56"
+          }
+        },
+        {
+          "cell": 2,
+          "family": "queue-tail",
+          "map": "yale-street",
+          "site": "42e06b365815aa3e",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.839624294568282",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-002.admission.json",
+            "sha256": "189402fc6319f28d034fed08303078f4d70912e872fd9e28f8ee04399c557ea0"
+          }
+        },
+        {
+          "cell": 9,
+          "family": "school-dartout",
+          "map": "yale-street",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-009.admission.json",
+            "sha256": "44b8436dfe3c99100755f970fbd384d4e522bbf4eaa25b7090411210449b7a63"
+          }
+        },
+        {
+          "cell": 10,
+          "family": "bus-stop-emergence",
+          "map": "yale-street",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be ",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-010.admission.json",
+            "sha256": "7e327f727a769abbd730e167a1f8615582d4bc23d3977f2d37f2d5d00da48f26"
+          }
+        },
+        {
+          "cell": 11,
+          "family": "queue-tail",
+          "map": "el-camino-road",
+          "site": "0734dced5a052ceb",
+          "reason": "seed 0: site.frame.referencePath: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.ego.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-tail.route: lane chain was not connectable end to end for the engine; kept the longest connectable run (207.7 m of 9 lanes); roles.queue-lead.route: lane chain was not connectable end to end for the engine; kept the longest",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-011.admission.json",
+            "sha256": "55ada7bd8298c03534c160fb4b6404098975e8929865416fa4860eb72789e54f"
+          }
+        },
+        {
+          "cell": 12,
+          "family": "queue-tail",
+          "map": "el-camino-road",
+          "site": "19f9c4222ca68815",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396768022284906",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-012.admission.json",
+            "sha256": "b0d4e32c11c68ad6126e3c214a42e6d87fc716e256da5fa9a70207c7b3ba84a2"
+          }
+        },
+        {
+          "cell": 13,
+          "family": "queue-tail",
+          "map": "el-camino-road",
+          "site": "257d0311f226ca1e",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.9797573039224883",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-013.admission.json",
+            "sha256": "1b3fd8d80366430bf6c674b1c0f1484746912708e136dc8e71f64aaf02cf5fdb"
+          }
+        },
+        {
+          "cell": 14,
+          "family": "queue-tail",
+          "map": "el-camino-road",
+          "site": "394a825c079b4c9f",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8397965731290973",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-014.admission.json",
+            "sha256": "0f1ef52c1b48935d07d5a37a98a50edc152bccb649ae329c75549821d2cb972b"
+          }
+        },
+        {
+          "cell": 16,
+          "family": "queue-tail",
+          "map": "el-camino-road",
+          "site": "69e68cba69a080af",
+          "reason": "seed 0: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@2.8396048790068953",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-016.admission.json",
+            "sha256": "b022511d50a835d02281da3cbaf64fc1a8d6a8732c33c477089ccb43f485ced1"
+          }
+        },
+        {
+          "cell": 22,
+          "family": "school-dartout",
+          "map": "el-camino-road",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-022.admission.json",
+            "sha256": "039614dbf8df48e7b3f67cafa41127c9d6ae5b2b63ec7f70eaa3a79e5d01b362"
+          }
+        },
+        {
+          "cell": 23,
+          "family": "bus-stop-emergence",
+          "map": "el-camino-road",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not co",
+          "receipt": {
+            "path": "receipts/poc-v2-train/cell-023.admission.json",
+            "sha256": "76a46b520f57916d6864b9920f4fb042021e9b1e922e0fce36dfd8e735041de4"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "val",
+      "digest": "d0a9b960b09f0a60b532a5723c9ffa2a413106efd3987be98b9132ced65914b2",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 4,
+      "byMapFamily": [
+        {
+          "map": "yale-street",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "yale-street",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "yale-street",
+          "family": "cut-in-brake",
+          "episodes": 20
+        },
+        {
+          "map": "el-camino-road",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "el-camino-road",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "el-camino-road",
+          "family": "cut-in-brake",
+          "episodes": 20
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 3,
+          "family": "school-dartout",
+          "map": "yale-street",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 106/106 sites), corridor.throughLanesSameDir (failed at 37/106 sites), corridor.runwayDownstreamM (failed at 36/106 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-val/cell-003.admission.json",
+            "sha256": "66d4cdc1c0a152265c2bf703a549c9aa2a9f91e72397fb305e431eba58b3da2d"
+          }
+        },
+        {
+          "cell": 4,
+          "family": "bus-stop-emergence",
+          "map": "yale-street",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 115/115 sites), roles.bus (failed at 102/115 sites), roles.ego (failed at 96/115 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be ",
+          "receipt": {
+            "path": "receipts/poc-v2-val/cell-004.admission.json",
+            "sha256": "ad34860157d1ef72a83e1c9305e248bfac014cd1434070889b5846e0cd9ba456"
+          }
+        },
+        {
+          "cell": 8,
+          "family": "school-dartout",
+          "map": "el-camino-road",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 122/122 sites), corridor.runwayDownstreamM (failed at 49/122 sites), corridor.throughLanesSameDir (failed at 32/122 sites). Example: Infeasible at this site. corridor.throughLanesSameDir worst value 4 at s=150 m, wanted [1, 3]. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-val/cell-008.admission.json",
+            "sha256": "1088c260cfcb57694a096e40619edeac71703991e206acc8d6422414b48a35fc"
+          }
+        },
+        {
+          "cell": 9,
+          "family": "bus-stop-emergence",
+          "map": "el-camino-road",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 132/132 sites), roles.bus (failed at 123/132 sites), roles.ego (failed at 114/132 sites). Example: Infeasible at this site. corridor.curvatureDegPer10m worst value 77.02 at s=80 m, wanted [0, 7]. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not co",
+          "receipt": {
+            "path": "receipts/poc-v2-val/cell-009.admission.json",
+            "sha256": "7675d196f0a487fa6a4be64538008705857a98c21dc94ddcb75c9384386eac05"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "test",
+      "digest": "dfabe4e5f8577c8e467fe78730279f1ff22b18d821a83630f6f8d03b5e8db178",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5,
+      "byMapFamily": [
+        {
+          "map": "belmont-research-center",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "belmont-research-center",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "belmont-research-center",
+          "family": "cut-in-brake",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "cut-in-brake",
+          "episodes": 20
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 0,
+          "family": "queue-tail",
+          "map": "belmont-research-center",
+          "site": "14577d1a82cdf0a9",
+          "reason": "seed 200: ego->queue-tail/actor:preview-van: blocked_at_conflict; scripted rehearsal collision: preview-van/queue-tail@3.4197880409780024",
+          "receipt": {
+            "path": "receipts/poc-v2-test/cell-000.admission.json",
+            "sha256": "ea061d69ea0b6f7fa431f668ae86358b0ac739d83215b16651f146cef92d27e1"
+          }
+        },
+        {
+          "cell": 4,
+          "family": "school-dartout",
+          "map": "belmont-research-center",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 147/147 sites), corridor.runwayDownstreamM (failed at 57/147 sites), corridor.curvatureDegPer10m (failed at 40/147 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-test/cell-004.admission.json",
+            "sha256": "cb946dca845f0c14973e253198237a5def143da34afd021e81b5ca5741a6cf16"
+          }
+        },
+        {
+          "cell": 5,
+          "family": "bus-stop-emergence",
+          "map": "belmont-research-center",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be",
+          "receipt": {
+            "path": "receipts/poc-v2-test/cell-005.admission.json",
+            "sha256": "2d38b2dd9d25ee5a37ceccad0b811647027a7425c19fe17f99c87d759a66e6b0"
+          }
+        },
+        {
+          "cell": 9,
+          "family": "school-dartout",
+          "map": "easterbrook-discovery-school",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ball (failed at 35/72 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-test/cell-009.admission.json",
+            "sha256": "141fc70912adb35c11ff49dcba503ed615acfe459c59b474fdc35ed58becbee3"
+          }
+        },
+        {
+          "cell": 10,
+          "family": "bus-stop-emergence",
+          "map": "easterbrook-discovery-school",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have re",
+          "receipt": {
+            "path": "receipts/poc-v2-test/cell-010.admission.json",
+            "sha256": "4dd0e2aae42e4dd5745f33e95e4a0bc3dbc219746ec09598cb43e7aaa34ed231"
+          }
+        }
+      ]
+    },
+    {
+      "purpose": "control",
+      "digest": "ef31e70be2b00ee478dde429fbf2d03659c8654adee2375e30931b0ed5774382",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5,
+      "byMapFamily": [
+        {
+          "map": "belmont-research-center",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "belmont-research-center",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "belmont-research-center",
+          "family": "cut-in-brake",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "queue-tail",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "cpnco-parked-row",
+          "episodes": 20
+        },
+        {
+          "map": "easterbrook-discovery-school",
+          "family": "cut-in-brake",
+          "episodes": 20
+        }
+      ],
+      "exclusions": [
+        {
+          "cell": 0,
+          "family": "queue-tail",
+          "map": "belmont-research-center",
+          "site": "14577d1a82cdf0a9",
+          "reason": "paired test cell was excluded; no unpaired control admitted",
+          "receipt": {
+            "path": "receipts/poc-v2-control/cell-000.admission.json",
+            "sha256": "28f440ed34d5e94b473bb5afec0ac00a4f7708d025d80da268eef2d2dfab5141"
+          }
+        },
+        {
+          "cell": 4,
+          "family": "school-dartout",
+          "map": "belmont-research-center",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 147/147 sites), corridor.runwayDownstreamM (failed at 57/147 sites), corridor.curvatureDegPer10m (failed at 40/147 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-control/cell-004.admission.json",
+            "sha256": "a8a6a7e1866a3a4d9fdc01ee7ff1cb627397c0ed779f18b9b089fb31e3dab4bb"
+          }
+        },
+        {
+          "cell": 5,
+          "family": "bus-stop-emergence",
+          "map": "belmont-research-center",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 147/147 sites), roles.bus (failed at 147/147 sites), roles.ego (failed at 146/147 sites). Example: Infeasible at this site. this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: ego could not be bound and is not cosmetic. Would have required relaxing a required clause: bus could not be",
+          "receipt": {
+            "path": "receipts/poc-v2-control/cell-005.admission.json",
+            "sha256": "ffd7108a455756bcb6f64ea2386833a1f19b062733a74b285f223d08e92a1591"
+          }
+        },
+        {
+          "cell": 9,
+          "family": "school-dartout",
+          "map": "easterbrook-discovery-school",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.sz.atM (failed at 72/72 sites), corridor.runwayDownstreamM (failed at 41/72 sites), roles.ball (failed at 35/72 sites). Example: Infeasible at this site. this map index carries no school_zone layer. Required clauses this map index cannot answer: features.sz.atM.",
+          "receipt": {
+            "path": "receipts/poc-v2-control/cell-009.admission.json",
+            "sha256": "ea3ce61084d2bec97b6386ee38637f4d07afb74d3fc8ef9bb0e2076173c21eb0"
+          }
+        },
+        {
+          "cell": 10,
+          "family": "bus-stop-emergence",
+          "map": "easterbrook-discovery-school",
+          "site": "unmatched-slot-1",
+          "reason": "No feasible site. Required clauses that failed most often: features.stop.atM (failed at 72/72 sites), roles.bus (failed at 72/72 sites), roles.ego (failed at 72/72 sites). Example: Infeasible at this site. only 29.83 m of runway, 210 m needed (short by 180.17 m). this map index carries no bus_stop layer. roles.bus could not be satisfied. roles.ego could not be satisfied. roles.ped could not be satisfied. Would have required relaxing a required clause: run-up shortened to the 29.83 m available. Would have re",
+          "receipt": {
+            "path": "receipts/poc-v2-control/cell-010.admission.json",
+            "sha256": "3ed0d67bdc7fca9bf227b0f63e89b86176eb9c1e9c54bfd6dc3945783ae51ca8"
+          }
+        }
+      ]
+    }
+  ],
+  "preselection": {
+    "file": "supply-survey.json",
+    "nativeAddonSha256": "cca27c2d7b07b4ec762f0a2d392696f9f7b8833a11699bb077ade884c8215af6",
+    "finalAdmission": "Every frozen seed was subsequently rematerialized and rehearsed using the ABI4 addon recorded above.",
+    "queueStopBumperGapM": [
+      5.951748682349917,
+      6.1965475844663604
+    ]
+  },
+  "maps": [
+    {
+      "map": "yale-street",
+      "layout": "dev-assets",
+      "manifestSha256": "fec7a7a98b581eb679609f7d8a4e69e71bdfd9c175c421024ff1008f1c0942a8",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "yale-street",
+      "layout": "map-bundles",
+      "manifestSha256": "fec7a7a98b581eb679609f7d8a4e69e71bdfd9c175c421024ff1008f1c0942a8",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "yale-street",
+      "layout": ".corpus",
+      "manifestSha256": "fec7a7a98b581eb679609f7d8a4e69e71bdfd9c175c421024ff1008f1c0942a8",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "el-camino-road",
+      "layout": "dev-assets",
+      "manifestSha256": "8ac166e8bc8a09f0012d3c6f4282dbe8bf64bf16d19c4ee40871cbb562254315",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "el-camino-road",
+      "layout": "map-bundles",
+      "manifestSha256": "8ac166e8bc8a09f0012d3c6f4282dbe8bf64bf16d19c4ee40871cbb562254315",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "el-camino-road",
+      "layout": ".corpus",
+      "manifestSha256": "8ac166e8bc8a09f0012d3c6f4282dbe8bf64bf16d19c4ee40871cbb562254315",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "belmont-research-center",
+      "layout": "dev-assets",
+      "manifestSha256": "eb88435604eca46fe40d3df9086010fbeff112d77ea0ab23bde4d43f0477086e",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "belmont-research-center",
+      "layout": "map-bundles",
+      "manifestSha256": "eb88435604eca46fe40d3df9086010fbeff112d77ea0ab23bde4d43f0477086e",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "belmont-research-center",
+      "layout": ".corpus",
+      "manifestSha256": "eb88435604eca46fe40d3df9086010fbeff112d77ea0ab23bde4d43f0477086e",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "easterbrook-discovery-school",
+      "layout": "dev-assets",
+      "manifestSha256": "0fab757998509dd63a7b786dcd8ffb6ac4aee520c036e2cf751dcd654bc29438",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "easterbrook-discovery-school",
+      "layout": "map-bundles",
+      "manifestSha256": "0fab757998509dd63a7b786dcd8ffb6ac4aee520c036e2cf751dcd654bc29438",
+      "verifiedDerivedMembers": 3
+    },
+    {
+      "map": "easterbrook-discovery-school",
+      "layout": ".corpus",
+      "manifestSha256": "0fab757998509dd63a7b786dcd8ffb6ac4aee520c036e2cf751dcd654bc29438",
+      "verifiedDerivedMembers": 3
+    }
+  ],
+  "sourceBlobsVerifiedUnchanged": 8,
+  "benchTestPairing": [
+    {
+      "family": "cpnco",
+      "testCell": 2,
+      "seed": 200,
+      "inputSha256": "cfa95f85a152825bac8a89054078b889e50fe2e2aaae189953741776cfd55b3c"
+    },
+    {
+      "family": "queue-tail",
+      "testCell": 6,
+      "seed": 200,
+      "inputSha256": "18001a34f795338ed133de8823c803137da89a13de089baccab3ce753fcd033d"
+    }
+  ],
+  "pocV1Preservation": {
+    "schema": "simforge.scenario-split-verification/v1",
+    "valid": true,
+    "splits": [
+      {
+        "splitId": "poc-v1-control",
+        "purpose": "control",
+        "digest": "f65a583aab38552e57222b590746b7a0a1ba50e93b941e3284ecfdd1a65da2e5",
+        "episodes": 60,
+        "admittedCells": 3,
+        "excludedCells": 4
+      },
+      {
+        "splitId": "poc-v1-test",
+        "purpose": "test",
+        "digest": "d8b3f512d63000f45e4aad7d46d736fcade5a326a0505748784c77611d26f87c",
+        "episodes": 60,
+        "admittedCells": 3,
+        "excludedCells": 4
+      },
+      {
+        "splitId": "poc-v1-train",
+        "purpose": "train",
+        "digest": "0233a368c32e64c4c886583c59c809d8a683e06332d1bf63ce6c0a0a7492af67",
+        "episodes": 400,
+        "admittedCells": 4,
+        "excludedCells": 9
+      },
+      {
+        "splitId": "poc-v1-val",
+        "purpose": "val",
+        "digest": "230204fe880d95912e7d84025aa96143f1748ea425af4bd1c21872c2d48e0d56",
+        "episodes": 60,
+        "admittedCells": 3,
+        "excludedCells": 3
+      }
+    ],
+    "independence": "seed AND map-intel site; test/control geography held out from train/val",
+    "controls": "digest-pinned one-to-one hazard removals of test; not an independent split"
+  },
+  "scopedTests": {
+    "parkingOcclusionAndFactVocabulary": {
+      "passed": 11,
+      "skipped": 1
+    },
+    "roadOutlineAndReplayContext": {
+      "passed": 56,
+      "skipped": 0
+    },
+    "projectWideValidation": "not run; Main integration responsibility"
+  },
+  "runtimeAddon": "/home/path/simforge-assets/runs/drive/training/reward-poc-v1-20260922/runtime/node/simforge-native-runtime.linux-x64-gnu.node"
+}

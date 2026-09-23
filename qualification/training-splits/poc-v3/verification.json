@@ -1,0 +1,40 @@
+{
+  "schema": "simforge.scenario-split-verification/v1",
+  "valid": true,
+  "splits": [
+    {
+      "splitId": "poc-v3-control",
+      "purpose": "control",
+      "digest": "d37ef356a841eb50612971b6d620fe352f0f6aa3a1035400a3cca6588b7a94d2",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5
+    },
+    {
+      "splitId": "poc-v3-test",
+      "purpose": "test",
+      "digest": "202c0e3bbe59f68cca5e811bade6ed6cdf02fdbc636aed50ab0ea2589d3dbb98",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 5
+    },
+    {
+      "splitId": "poc-v3-train",
+      "purpose": "train",
+      "digest": "2f5fc30c2b749040259f475650396fb09c535650a3455952831444fe070b368f",
+      "episodes": 1200,
+      "admittedCells": 12,
+      "excludedCells": 10
+    },
+    {
+      "splitId": "poc-v3-val",
+      "purpose": "val",
+      "digest": "885d1a20f883c0b5f8d601994cf7de4ac49e711a1d318580d746c4fe06a652c8",
+      "episodes": 120,
+      "admittedCells": 6,
+      "excludedCells": 3
+    }
+  ],
+  "independence": "seed AND map-intel site; test/control geography held out from train/val",
+  "controls": "digest-pinned one-to-one hazard removals of test; not an independent split"
+}

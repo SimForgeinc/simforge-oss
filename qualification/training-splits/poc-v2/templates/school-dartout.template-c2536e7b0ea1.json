@@ -1,0 +1,491 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "School dart-out — ball first, then the child",
+    "description": "A real signed school-zone dart-out: a ball rolls from behind the pickup row before a child follows, crosses the carriageway completely, and remains present at the far-side refuge. The ego keeps production collision avoidance enabled and brakes after the precursor cue; the scene therefore records a genuine, bounded near-conflict without contact. The school-zone and adjacent pedestrian infrastructure are hard map requirements, not cosmetic hints.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "C12.ball-then-child",
+    "tags": [
+      "vru",
+      "occlusion",
+      "school-zone",
+      "child",
+      "precursor-cue",
+      "campaign-occluded-pedestrian"
+    ],
+    "author": "agent/campaign-occluded-pedestrian",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      {
+        "id": "arrivalTtc",
+        "type": "continuous",
+        "description": "Seconds between the child reaching the ego lane centre and the ego reaching the same point.",
+        "unit": "s",
+        "tier": 1,
+        "range": [
+          0.8,
+          2.5
+        ],
+        "default": 1.5,
+        "distribution": "uniform"
+      },
+      {
+        "id": "childSpeedKph",
+        "type": "continuous",
+        "description": "Child running speed. A child chasing a ball is faster than the NCAP 5 km/h walker and slower than an adult sprint.",
+        "unit": "kph",
+        "tier": 1,
+        "range": [
+          5.0,
+          9.5
+        ],
+        "default": 7.0,
+        "distribution": "uniform"
+      },
+      {
+        "id": "ballLeadS",
+        "type": "continuous",
+        "description": "Seconds between the ball leaving the kerb and the child leaving it. This is the whole point of the archetype: how much warning a perception stack gets that a child is about to follow.",
+        "unit": "s",
+        "tier": 1,
+        "range": [
+          2.0,
+          4.0
+        ],
+        "default": 3.0,
+        "distribution": "uniform"
+      },
+      {
+        "id": "dartLeadM",
+        "type": "continuous",
+        "description": "Metres upstream of the conflict point at which the child leaves the kerb line.",
+        "unit": "m",
+        "tier": 1,
+        "range": [
+          1.5,
+          4.5
+        ],
+        "default": 2.8,
+        "distribution": "uniform"
+      },
+      {
+        "id": "occluderGapM",
+        "type": "continuous",
+        "description": "Metres between the last parked drop-off car and the dart point.",
+        "unit": "m",
+        "tier": 1,
+        "range": [
+          1.0,
+          6.0
+        ],
+        "default": 3.0,
+        "distribution": "uniform"
+      },
+      {
+        "id": "ballSpeedKph",
+        "type": "continuous",
+        "description": "Speed of the rolling ball once it is moving.",
+        "unit": "kph",
+        "tier": 2,
+        "range": [
+          9.0,
+          15.0
+        ],
+        "default": 11.0,
+        "distribution": "uniform"
+      }
+    ],
+    "constraints": []
+  },
+  "environment": {
+    "weather": "clear",
+    "timeOfDay": "afternoon"
+  },
+  "anchor": {
+    "id": "school-dartout",
+    "corridor": {
+      "throughLanesSameDir": {
+        "value": [
+          1,
+          3
+        ],
+        "essentiality": "required"
+      },
+      "speedLimitKph": {
+        "value": [
+          20,
+          50
+        ],
+        "essentiality": "preferred",
+        "weight": 2
+      },
+      "requiresAdjacent": {
+        "value": [
+          "sidewalk"
+        ],
+        "essentiality": "preferred",
+        "weight": 2
+      },
+      "curvatureDegPer10m": {
+        "value": [
+          0,
+          7
+        ],
+        "essentiality": "required"
+      },
+      "runwayDownstreamM": {
+        "value": [
+          210,
+          null
+        ],
+        "essentiality": "required"
+      }
+    },
+    "features": [
+      {
+        "id": "sz",
+        "kind": "school_zone",
+        "label": "the exact signed school zone containing the pickup-time dart-out",
+        "essentiality": "required",
+        "atM": {
+          "value": [
+            0,
+            200
+          ],
+          "essentiality": "required"
+        }
+      },
+      {
+        "id": "xw",
+        "kind": "crossing",
+        "label": "a marked crossing on the corridor — the structural trace a school run leaves on a map",
+        "essentiality": "cosmetic",
+        "atM": {
+          "value": [
+            40,
+            200
+          ],
+          "essentiality": "cosmetic",
+          "weight": 2
+        }
+      }
+    ],
+    "policy": {
+      "allowMirror": false,
+      "maxSitesPerMap": 8,
+      "diversity": "moderate",
+      "minScore": 0.4
+    }
+  },
+  "roles": [
+    {
+      "id": "ego",
+      "kind": "on_reference",
+      "label": "the vehicle under test",
+      "actor": {
+        "class": "car",
+        "catalogId": "vehicle.sedan"
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": "125 - clamp(0.8 * lane.speedLimitKph, 22, 50) / 3.6 * 8",
+        "tFrac": 0,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": "clamp(0.65 * lane.speedLimitKph, 22, 36)"
+    },
+    {
+      "id": "child",
+      "kind": "on_reference",
+      "label": "the child that runs out after the ball",
+      "actor": {
+        "class": "pedestrian",
+        "dims": {
+          "length": 0.4,
+          "width": 0.4,
+          "height": 1.25
+        }
+      },
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": 60,
+        "tFrac": -1,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": "param.childSpeedKph"
+    },
+    {
+      "id": "ball",
+      "kind": "on_reference",
+      "label": "the ball — the precursor cue, at rest against the kerb face just off the child’s pavement line so the two do not read as one closing pair",
+      "actor": {
+        "class": "static_object",
+        "catalogId": "prop.playground_ball",
+        "dims": {
+          "length": 0.24,
+          "width": 0.24,
+          "height": 0.24
+        }
+      },
+      "essentiality": "preferred",
+      "pose": {
+        "laneOffset": 0,
+        "s": 119,
+        "tFrac": -0.55,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": 0
+    }
+  ],
+  "props": [
+    {
+      "id": "drop-off-row",
+      "catalogId": "vehicle.suv",
+      "label": "three cars parked on the school run; the last one ends `occluderGapM` upstream of the dart point",
+      "essentiality": "required",
+      "pose": {
+        "laneOffset": 0,
+        "s": "114.4 - param.occluderGapM",
+        "tFrac": -0.78,
+        "headingOffsetRad": 0
+      },
+      "headingOffsetRad": 0,
+      "scale": 1,
+      "repeat": {
+        "count": 3,
+        "spacingM": 5.3,
+        "tFracStep": 0
+      },
+      "occludes": {
+        "observer": "ego",
+        "target": "child"
+      },
+      "targetRevealToConflictS": 0.8
+    }
+  ],
+  "choreography": {
+    "clipSeconds": 14,
+    "warmupSeconds": 1,
+    "interactions": [
+      {
+        "id": "child-commits",
+        "label": "a child chasing a ball does not look. Held at t=0.02: a set rules.* at t<=0 is folded into spawn state and leaves the timeline, and after() cannot reference it there.",
+        "actor": "child",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0.02
+        },
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "child-ignores-traffic",
+        "actor": "child",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.yieldToVehicles",
+          "value": false
+        }
+      },
+      {
+        "id": "ball-rolls",
+        "label": "the precursor: the ball leaves the kerb `ballLeadS` seconds ahead of the child",
+        "actor": "ball",
+        "verb": "route",
+        "trigger": {
+          "kind": "after",
+          "of": "child-commits",
+          "event": "start",
+          "delayS": "param.ballLeadS"
+        },
+        "target": {
+          "mode": "polyline",
+          "points": [
+            {
+              "laneOffset": 0,
+              "s": 119,
+              "tFrac": -0.55,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": 121.5,
+              "tFrac": 0.8,
+              "headingOffsetRad": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "ball-accelerates",
+        "label": "the kick",
+        "actor": "ball",
+        "verb": "speed",
+        "trigger": {
+          "kind": "after",
+          "of": "ball-rolls",
+          "event": "start",
+          "delayS": 0
+        },
+        "target": {
+          "mode": "absolute",
+          "valueKph": "param.ballSpeedKph"
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "time",
+          "value": 0.4
+        }
+      },
+      {
+        "id": "ego-brakes-after-cue",
+        "label": "the driver responds to the rolling-ball precursor with a controlled stop before the child reaches the conflict area",
+        "actor": "ego",
+        "verb": "speed",
+        "trigger": { "kind": "after", "of": "ball-rolls", "event": "start", "delayS": 0.6 },
+        "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "time", "value": 4.5 }
+      },
+      {
+        "id": "child-chases",
+        "label": "out from behind the parked drop-off cars, straight into the carriageway",
+        "actor": "child",
+        "verb": "route",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "mode": "polyline",
+          "points": [
+            {
+              "laneOffset": 0,
+              "s": 60,
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": "125 - param.dartLeadM",
+              "tFrac": -1,
+              "headingOffsetRad": 0
+            },
+            {
+              "laneOffset": 0,
+              "s": 128,
+              "tFrac": 1,
+              "headingOffsetRad": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "child-reaches-the-lane",
+        "label": "the arrival relation that makes the clip critical rather than incidental",
+        "actor": "child",
+        "verb": "speed",
+        "trigger": {
+          "kind": "arrival",
+          "of": "child",
+          "at": {
+            "pose": {
+              "laneOffset": 0,
+              "s": 125,
+              "tFrac": 0,
+              "headingOffsetRad": 0
+            }
+          },
+          "syncWith": "ego",
+          "ttc": "param.arrivalTtc"
+        },
+        "target": {
+          "mode": "absolute",
+          "valueKph": "param.childSpeedKph"
+        },
+        "dynamics": {
+          "shape": "step",
+          "constraint": "time",
+          "value": 0.1
+        }
+      },
+      {
+        "id": "child-clears-and-stops",
+        "label": "the child reaches the far-side refuge and remains visible after the conflict",
+        "actor": "child",
+        "verb": "speed",
+        "trigger": { "kind": "after", "of": "child-reaches-the-lane", "event": "start", "delayS": 6.5 },
+        "target": { "mode": "stop" },
+        "dynamics": { "shape": "linear", "constraint": "time", "value": 0.5 }
+      }
+    ]
+  },
+  "invariants": [
+    {
+      "id": "criticality",
+      "kind": "pet",
+      "label": "the ego must actually be threatened by the child",
+      "essentiality": "required",
+      "of": "ego",
+      "to": "child",
+      "range": [
+        0.2,
+        3.0
+      ]
+    },
+    {
+      "id": "arrival-band",
+      "kind": "arrival",
+      "label": "the solved arrival offset must survive the run",
+      "essentiality": "required",
+      "of": "child",
+      "at": {
+        "pose": {
+          "laneOffset": 0,
+          "s": 125,
+          "tFrac": 0,
+          "headingOffsetRad": 0
+        }
+      },
+      "syncWith": "ego",
+      "deltaTRange": [
+        -3.0,
+        -0.6
+      ]
+    },
+    {
+      "id": "cue-precedes-threat",
+      "kind": "event_order",
+      "label": "the ball must actually be a precursor: it rolls before the child reaches the lane",
+      "essentiality": "required",
+      "events": [
+        "ball-rolls",
+        "child-reaches-the-lane"
+      ],
+      "strict": true,
+      "minSeparationS": 1.0
+    },
+    {
+      "id": "ego-decel-budget",
+      "kind": "decel_budget",
+      "label": "beyond a hard stop the conflict was unavoidable, which is a different finding",
+      "essentiality": "preferred",
+      "of": "ego",
+      "maxMps2": 8.0
+    }
+  ],
+  "variants": [],
+  "metricSubject": "ego"
+}

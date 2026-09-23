@@ -25,6 +25,7 @@ import {
   type Point2,
 } from '../../geometry/vec.js';
 import { slugify } from '../slug.js';
+import type { GeoFeature, MapGeojsonProperties } from '../../types/sources.js';
 
 const TYPE: LocationType = 'parking_space';
 
@@ -36,18 +37,15 @@ export function densifyParkingSpaces(ctx: BuildContext): LocationDraft[] {
   const mapId = ctx.sources.mapId as string;
   const out: LocationDraft[] = [];
   const features = (ctx.sources.mapGeojson?.features ?? []).filter(
-    (f) => f.properties.Type === 'ParkingSpace',
+    (f) => f.properties.Type?.toLowerCase() === 'parkingspace',
   );
 
   for (const f of features) {
     const guid = f.properties.Id;
     if (!guid) continue;
-    const ring = firstRing(f.geometry.coordinates);
-    if (!ring || ring.length < 4) continue;
+    const unique = parkingFootprint(ctx, f);
+    if (!unique) continue;
 
-    const corners = ring.map(([lng, lat]) => ctx.toLocal(lng as number, lat as number));
-    // Polygons are closed; drop the repeated last vertex before measuring.
-    const unique = corners.slice(0, corners.length - 1);
     const bayCentre = centroid(unique);
 
     const entry = f.properties.EntryPosition;
@@ -72,7 +70,7 @@ export function densifyParkingSpaces(ctx: BuildContext): LocationDraft[] {
     const roadName = lift.anchor.road ? roadNameFor(ctx, lift.anchor.road.rsl as string) : '';
 
     const facts: Record<string, FactValue> = {
-      entry_heading_deg: Math.round(bearingDegBetween(bayCentre, entryLocal) * 10) / 10,
+      ...(entry ? { entry_heading_deg: Math.round(bearingDegBetween(bayCentre, entryLocal) * 10) / 10 } : {}),
       stall_length_m: Math.round(longM * 100) / 100,
       stall_width_m: Math.round(shortM * 100) / 100,
       is_parallel_parking: isParallel,
@@ -105,11 +103,26 @@ export function densifyParkingSpaces(ctx: BuildContext): LocationDraft[] {
   return out;
 }
 
-function firstRing(coordinates: unknown): number[][] | null {
-  if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
-  const ring = coordinates[0];
-  if (!Array.isArray(ring)) return null;
-  return ring as number[][];
+/** Source footprint, never an invented default-size parking bay. */
+export function parkingFootprint(ctx: BuildContext, feature: GeoFeature<MapGeojsonProperties>): Point2[] | null {
+  if (feature.geometry.type === 'Polygon') {
+    const rings = feature.geometry.coordinates as number[][][];
+    const ring = rings[0];
+    if (!ring || ring.length < 4) return null;
+    return ring.slice(0, -1).map(([lng, lat]) => ctx.toLocal(lng!, lat!));
+  }
+  // XODR ingestion retains object dimensions and an absolute map heading.
+  // Its GeoJSON point is the centre of that explicitly dimensioned rectangle.
+  if (feature.geometry.type !== 'Point') return null;
+  const [lng, lat] = feature.geometry.coordinates as number[];
+  const length = Number(feature.properties.length), width = Number(feature.properties.width);
+  const heading = feature.properties.hdg;
+  if (!(length > 0 && width > 0) || heading === undefined || !Number.isFinite(heading)) return null;
+  const centre = ctx.toLocal(lng!, lat!), c = Math.cos(heading), s = Math.sin(heading);
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([along, across]) => ({
+    x: centre.x + along! * length / 2 * c - across! * width / 2 * s,
+    y: centre.y + along! * length / 2 * s + across! * width / 2 * c,
+  }));
 }
 
 function bayDimensions(corners: Point2[]): {
