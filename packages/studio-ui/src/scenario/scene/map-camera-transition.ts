@@ -3,11 +3,11 @@ import { VisibleClock } from "../../lib/visible-clock";
 
 export const MAP_ZOOM_IN_MS = 1_800;
 /**
- * Quiet window before a map counts as loaded. It guarded against the old
- * whole-queue test briefly reading zero between decode batches; the required
- * view scope (below) does not flap that way, so a few polls are enough.
+ * No quiet window. It guarded against the old whole-queue test briefly
+ * reading zero between decode batches; readiness is now the viewer's required
+ * view scope, which does not flap that way, so the first complete poll counts.
  */
-export const MAP_MODEL_STABLE_MS = 200;
+export const MAP_MODEL_STABLE_MS = 0;
 export const MAP_MODEL_LOAD_TIMEOUT_MS = 90_000;
 
 export type MapModelLoadSnapshot = {
@@ -243,6 +243,49 @@ export function animateMapCamera(
   return () => {
     cancelled = true;
     cancelAnimationFrame(frame);
+  };
+}
+
+/** Input that means the user has taken the camera: any of these ends an intro zoom. */
+export const CAMERA_TAKEOVER_EVENTS = ["pointerdown", "wheel", "keydown", "touchstart"] as const;
+
+/**
+ * The map intro zoom, played on an already interactive scene. It never gates
+ * readiness: the scene is revealed and accepts input when its view is
+ * complete, and the first pointer, wheel, key or touch on `surface` ends the
+ * zoom where it is and hands the camera to the user. `onEnd` runs once,
+ * whether the zoom finished or was interrupted.
+ */
+export function playInterruptibleMapZoom(
+  surface: EventTarget,
+  apply: (view: CameraView) => void,
+  from: CameraView,
+  to: CameraView,
+  durationMs: number,
+  onEnd: (interrupted: boolean) => void,
+): () => void {
+  let ended = false;
+  let cancelAnimation: () => void = () => undefined;
+  const detach = () => {
+    for (const type of CAMERA_TAKEOVER_EVENTS) surface.removeEventListener(type, interrupt, true);
+  };
+  const end = (interrupted: boolean) => {
+    if (ended) return;
+    ended = true;
+    detach();
+    onEnd(interrupted);
+  };
+  const interrupt = () => {
+    cancelAnimation();
+    end(true);
+  };
+  for (const type of CAMERA_TAKEOVER_EVENTS) surface.addEventListener(type, interrupt, true);
+  apply(from);
+  cancelAnimation = animateMapCamera(apply, from, to, durationMs, () => end(false));
+  return () => {
+    cancelAnimation();
+    detach();
+    ended = true;
   };
 }
 
