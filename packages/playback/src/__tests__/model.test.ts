@@ -615,7 +615,7 @@ describe('SimForge concrete playback import', () => {
 
 
 /** Bake one worker-SUMO-shaped actor into the fixture trace, the way `mergeSumoTrafficIntoTrace` does. */
-function withSumoTraffic(source: SimTrace, id = 'sumo-0a1b2c3d', metadata: object = sumoTraceActorMetadata()): SimTrace {
+function withSumoTraffic(source: SimTrace, id = 'sumo-0a1b2c3d', metadata: object = sumoTraceActorMetadata('car')): SimTrace {
   return {
     ...source,
     header: {
@@ -674,8 +674,8 @@ describe('trace-only traffic (worker SUMO baked into the authoritative trace)', 
 
   it('uses the vehicle class the trace carries instead of assuming a sedan', () => {
     const fixture = pair();
-    const truck = { ...sumoTraceActorMetadata(), kind: 'truck', dims: { l: 8, w: 2.5, h: 3.4 }, tags: ['ambient', 'sumo'] };
-    const bus = { ...sumoTraceActorMetadata(), kind: 'bus', tags: ['ambient', 'catalog:vehicle.bus', 'sumo'] };
+    const truck = { ...sumoTraceActorMetadata('car'), kind: 'truck', dims: { l: 8, w: 2.5, h: 3.4 }, tags: ['ambient', 'sumo'] };
+    const bus = { ...sumoTraceActorMetadata('car'), kind: 'bus', tags: ['ambient', 'catalog:vehicle.bus', 'sumo'] };
     const bundle = parsePlaybackPair(
       fixture.instance,
       withSumoTraffic(withSumoTraffic(fixture.trace, 'sumo-truck001', truck), 'sumo-bus00001', bus),
@@ -690,7 +690,7 @@ describe('trace-only traffic (worker SUMO baked into the authoritative trace)', 
 
   it('derives the SUMO origin from tags on traces written without an explicit origin', () => {
     const fixture = pair();
-    const { origin: _origin, ...legacy } = sumoTraceActorMetadata();
+    const { origin: _origin, ...legacy } = sumoTraceActorMetadata('car');
     const traced = withSumoTraffic(fixture.trace, 'sumo-legacy01', legacy);
     expect(traceActorOrigin(traced, 'sumo-legacy01')).toBe('sumo');
     expect(traceOnlyTrafficActorIds(fixture.instance.input, traced)).toEqual(['sumo-legacy01']);
