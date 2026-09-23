@@ -195,6 +195,8 @@ export const PrewarmSetSchema = z.strictObject({
   objectCount: z.number().int().nonnegative(),
   byteLength: z.number().int().nonnegative(),
   createdAt: z.string().min(1).max(64),
+  /** The bound ambient turn-verdict table (an extra member), when the map version has one. */
+  turnVerdictsSha256: RenderSha256Schema.optional(),
 });
 export const PrewarmManifestRequestSchema = z.strictObject({
   ...ControlBaseShape,

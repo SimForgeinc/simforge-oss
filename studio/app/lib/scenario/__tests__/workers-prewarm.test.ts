@@ -287,6 +287,28 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.equal(second.next, null);
   assert.deepEqual([...first.members, ...second.members].map((member) => member.relativePath).sort(), ["geometry.bin", "images/x.ktx2", "master.gltf"]);
 
+  // A bound ambient turn-verdict table (browser closure blob) rides along once, on the last page.
+  const verdictsSha = DIGEST("7");
+  await execute(
+    `INSERT INTO simforge.browser_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state)
+     VALUES ('usbblob_verdicts', 'local-artifacts', :key, :sha256, 20480, 'application/gzip', 'verified')`,
+    { key: `blobs/sha256/77/${verdictsSha}`, sha256: verdictsSha },
+  );
+  await execute(
+    `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('ambientTurnVerdicts', jsonb_build_object('engineSemVer', '0.9.0', 'closureDigest', CAST(:closure AS text), 'sha256', CAST(:sha AS text))) WHERE id = 'usmapv_prewarm'`,
+    { closure: DIGEST("8"), sha: verdictsSha },
+  );
+  const bound = await listPrewarmSets();
+  assert.equal(bound.sets[0]!.turnVerdictsSha256, verdictsSha);
+  assert.notEqual(bound.generation, manifest.generation, "binding a verdict table changes the generation");
+  const page1 = await listPrewarmMembers("usnset_prewarm", null, 2);
+  const page2 = await listPrewarmMembers("usnset_prewarm", page1.next, 2);
+  const all = [...page1.members, ...page2.members];
+  assert.deepEqual(all.filter((member) => member.relativePath === "derived/ambient/turn-verdicts.json.gz"), [
+    { relativePath: "derived/ambient/turn-verdicts.json.gz", sha256: verdictsSha, sizeBytes: 20480 },
+  ]);
+  assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [verdictsSha])).downloads), [verdictsSha]);
+
   // Only digests of that published set are signed.
   const signed = await signPrewarmBlobs("usnset_prewarm", [DIGEST("a"), DIGEST("e"), "not-a-digest"]);
   assert.deepEqual(Object.keys(signed.downloads), [DIGEST("a")]);
