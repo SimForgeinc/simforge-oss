@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   contentHash,
   parseSimScenarioInput,
+  sumoTraceActorMetadata,
   TRACE_FORMAT_VERSION,
   type SimScenarioInput,
   type SimTrace,
@@ -15,10 +16,13 @@ import {
   canonicalPreviewParity,
   defaultCatalogIdForActorKind,
   evaluatePlaybackSignalHeadStates,
+  isTrafficPlaybackActor,
   parsePlaybackPair,
   readPlaybackFiles,
   samplePlaybackActors,
   samplePlaybackSignals,
+  traceActorOrigin,
+  traceOnlyTrafficActorIds,
   type PlaybackBundle,
   type PlaybackFile,
 } from '../model';
@@ -590,3 +594,122 @@ describe('SimForge concrete playback import', () => {
   });
 });
 
+
+/** Bake one worker-SUMO-shaped actor into the fixture trace, the way `mergeSumoTrafficIntoTrace` does. */
+function withSumoTraffic(source: SimTrace, id = 'sumo-0a1b2c3d', metadata: object = sumoTraceActorMetadata()): SimTrace {
+  return {
+    ...source,
+    header: {
+      ...source.header,
+      actorIds: [...source.header.actorIds, id].sort(),
+      ambientActorIds: [id],
+      actorMetadata: {
+        // Current engines emit metadata for every authored actor too.
+        ...(source.header.actorMetadata ?? Object.fromEntries(input().actors.map((actor) => [actor.id, {
+          kind: actor.kind, dims: actor.dims, static: actor.static, tags: actor.tags, origin: 'authored',
+        }]))),
+        [id]: metadata as any,
+      },
+    },
+    ticks: {
+      ...source.ticks,
+      actors: {
+        ...source.ticks.actors,
+        [id]: {
+          x: [30, 32],
+          y: [-5, -5],
+          headingRad: [0, 0],
+          speedMps: [2, 2],
+          lateralOffsetM: [0, 0],
+          motionDirection: [1, 1],
+          laneRsl: [null, null],
+          s: [0, 2],
+          present: [0, 1],
+        },
+      },
+    },
+  };
+}
+
+describe('trace-only traffic (worker SUMO baked into the authoritative trace)', () => {
+  it('replays SUMO vehicles that exist only in the trace, from the trace metadata', () => {
+    const fixture = pair();
+    const bundle = parsePlaybackPair(fixture.instance, withSumoTraffic(fixture.trace));
+    const sumo = bundle.actors.find((actor) => actor.id === 'sumo-0a1b2c3d');
+    expect(sumo).toMatchObject({
+      origin: 'sumo',
+      kind: 'car',
+      static: false,
+      catalogId: 'vehicle.sedan',
+      modelBasis: 'input-tag',
+      dims: { l: 4.55, w: 1.82, h: 1.48 },
+      // First present sample, scene frame (z = -y).
+      initial: { x: 32, z: 5, headingRad: 0 },
+    });
+    expect(isTrafficPlaybackActor(sumo!)).toBe(true);
+    expect(bundle.actors.filter((actor) => !isTrafficPlaybackActor(actor)).map((actor) => actor.id)).toEqual(['bus', 'ego']);
+    const sampled = samplePlaybackActors(bundle, 0.5).find((actor) => actor.id === 'sumo-0a1b2c3d');
+    expect(sampled).toMatchObject({ present: false });
+    expect(samplePlaybackActors(bundle, 1).find((actor) => actor.id === 'sumo-0a1b2c3d')).toMatchObject({ present: true, x: 32, z: 5 });
+  });
+
+  it('uses the vehicle class the trace carries instead of assuming a sedan', () => {
+    const fixture = pair();
+    const truck = { ...sumoTraceActorMetadata(), kind: 'truck', dims: { l: 8, w: 2.5, h: 3.4 }, tags: ['ambient', 'sumo'] };
+    const bus = { ...sumoTraceActorMetadata(), kind: 'bus', tags: ['ambient', 'catalog:vehicle.bus', 'sumo'] };
+    const bundle = parsePlaybackPair(
+      fixture.instance,
+      withSumoTraffic(withSumoTraffic(fixture.trace, 'sumo-truck001', truck), 'sumo-bus00001', bus),
+    );
+    expect(bundle.actors.find((actor) => actor.id === 'sumo-truck001')).toMatchObject({
+      kind: 'truck', catalogId: defaultCatalogIdForActorKind('truck'), modelBasis: 'kind-default',
+    });
+    expect(bundle.actors.find((actor) => actor.id === 'sumo-bus00001')).toMatchObject({
+      kind: 'bus', catalogId: 'vehicle.bus', modelBasis: 'input-tag',
+    });
+  });
+
+  it('derives the SUMO origin from tags on traces written without an explicit origin', () => {
+    const fixture = pair();
+    const { origin: _origin, ...legacy } = sumoTraceActorMetadata();
+    const traced = withSumoTraffic(fixture.trace, 'sumo-legacy01', legacy);
+    expect(traceActorOrigin(traced, 'sumo-legacy01')).toBe('sumo');
+    expect(traceOnlyTrafficActorIds(fixture.instance.input, traced)).toEqual(['sumo-legacy01']);
+    expect(parsePlaybackPair(fixture.instance, traced).actors.find((actor) => actor.id === 'sumo-legacy01')?.origin).toBe('sumo');
+  });
+
+  it('still rejects a trace-only actor that is not traffic', () => {
+    const fixture = pair();
+    const authoredStowaway = { kind: 'car', dims: { l: 4, w: 2, h: 1.5 }, static: false, tags: ['catalog:vehicle.sedan'], origin: 'authored' };
+    const error = message(() => parsePlaybackPair(fixture.instance, withSumoTraffic(fixture.trace, 'intruder', authoredStowaway)));
+    expect(error).toContain('actor ids differ');
+    expect(error).toContain('intruder');
+  });
+
+  it('still rejects a trace-only actor without render metadata', () => {
+    const fixture = pair();
+    const traced = withSumoTraffic(fixture.trace);
+    const { ['sumo-0a1b2c3d']: _dropped, ...metadata } = traced.header.actorMetadata!;
+    const error = message(() => parsePlaybackPair(fixture.instance, { ...traced, header: { ...traced.header, actorMetadata: metadata } }));
+    expect(error).toContain('actor ids differ');
+  });
+
+  it('validates traffic track channels like authored ones', () => {
+    const fixture = pair();
+    const traced = withSumoTraffic(fixture.trace);
+    (traced.ticks.actors['sumo-0a1b2c3d'] as any).x = [30];
+    expect(message(() => parsePlaybackPair(fixture.instance, traced))).toContain('ticks.actors.sumo-0a1b2c3d.x length 1');
+  });
+
+  it('keeps authored identity checks strict when traffic is present', () => {
+    const fixture = pair();
+    const traced = withSumoTraffic(fixture.trace);
+    const { ego: _ego, ...actors } = traced.ticks.actors;
+    const error = message(() => parsePlaybackPair(fixture.instance, {
+      ...traced,
+      header: { ...traced.header, actorIds: traced.header.actorIds.filter((id) => id !== 'ego') },
+      ticks: { ...traced.ticks, actors },
+    }));
+    expect(error).toContain('actor ids differ');
+  });
+});
