@@ -797,11 +797,17 @@ export function ScenarioEditorSurface({
   }, [active, controller, editorDocument, signalOverlays, signalProjection.index, state?.mode, viewer]);
   // Background traffic is not an authored actor, so the editor's own picking
   // ignores it. A click on one opens a read-only card that says what it is.
+  // Only while authoring: during playback a click belongs to the chase camera
+  // (the same gate as the signal-orb picker), and panels stay hidden.
+  const playbackInspecting = Boolean(sharedPlayback?.inspecting);
+  useEffect(() => {
+    if (playbackInspecting) setSelectedTrafficActor(null);
+  }, [playbackInspecting]);
   useEffect(() => {
     const renderer = sharedActorRenderer;
     const sceneViewer = viewer;
     const canvas = sceneViewer?.renderer.domElement ?? null;
-    if (!active || !renderer || !sceneViewer || !canvas || state?.mode !== "idle") return;
+    if (!active || playbackInspecting || !renderer || !sceneViewer || !canvas || state?.mode !== "idle") return;
     const raycaster = new Raycaster();
     const pointer = new Vector2();
     let press: { pointerId: number; x: number; y: number } | null = null;
@@ -842,7 +848,7 @@ export function ScenarioEditorSurface({
       canvas.removeEventListener("pointerdown", onPointerDown, { capture: true });
       canvas.removeEventListener("pointerup", onPointerUp, { capture: true });
     };
-  }, [active, sharedActorRenderer, sharedPlayback?.bundle, sharedPlayback?.controller, state?.mode, viewer]);
+  }, [active, playbackInspecting, sharedActorRenderer, sharedPlayback?.bundle, sharedPlayback?.controller, state?.mode, viewer]);
   // A new trace (an edit, or the authoritative swap) may no longer carry the body.
   useEffect(() => {
     setSelectedTrafficActor((current) => current && !current.id.startsWith("sumo:")
@@ -1162,7 +1168,7 @@ export function ScenarioEditorSurface({
         onConfigureCustomRoute={configureCustomRoute}
         showActorMotionControls={experience === "advanced"}
       />
-      {selectedTrafficActor && active ? (
+      {selectedTrafficActor && active && !playbackInspecting ? (
         <TrafficActorDetailsPanel
           key={selectedTrafficActor.id}
           actor={selectedTrafficActor}
