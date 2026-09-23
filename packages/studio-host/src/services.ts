@@ -26,6 +26,8 @@ import type {
   ScenarioRevisionDto,
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
+  ScenarioRevisionMotionDto,
+  ScenarioRevisionResimulationDto,
   ScenarioSimulationVerificationDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
@@ -181,11 +183,17 @@ export interface StudioProjectService {
     filters?: Record<string, unknown>,
     signal?: AbortSignal,
   ): Promise<{ simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } }>;
-  /** The authoritative simulation a revision renders and is evaluated against. */
-  resolveRevisionSimulation(
+  /** Which motion a revision's renders replay (its original result by default). Never simulates. */
+  getRevisionMotion(revisionId: string, signal?: AbortSignal): Promise<ScenarioRevisionMotionDto>;
+  /**
+   * Explicitly re-simulate a revision under the current engine: adds a result
+   * without changing what renders by default, and returns the motion diff
+   * against the active result.
+   */
+  resimulateRevision(
     revisionId: string,
     options?: { waitMs?: number; signal?: AbortSignal },
-  ): Promise<ScenarioSimulationStatusDto>;
+  ): Promise<ScenarioRevisionResimulationDto>;
 }
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */

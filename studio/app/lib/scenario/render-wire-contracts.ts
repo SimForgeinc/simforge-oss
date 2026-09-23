@@ -1,4 +1,4 @@
-import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RENDER_MOTION_SOURCES, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -96,7 +96,22 @@ export const SubmitScenarioRenderIntentSchema = z.strictObject({
   renderSpec: LocalRenderSpecV3Schema,
   idempotencyKey: z.string().trim().min(1).max(200),
   priority: z.number().int().min(-100).max(100).optional(),
+  /**
+   * Where the motion comes from. Absent or `original`: the revision's active
+   * (original) simulation, whatever engine produced it; a revision with none
+   * is refused (`original_simulation_missing`), never re-simulated
+   * implicitly. `resimulated`: the explicitly re-simulated result `simKey`
+   * of this revision. `original-xosc`: the labelled legacy OpenSCENARIO
+   * replay for revisions that have no stored trace; nothing selects it
+   * implicitly.
+   */
+  motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
+  /** With `motionSource: "resimulated"`: which of the revision's results to render. */
+  simKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).superRefine((input, context) => {
+  if ((input.motionSource === "resimulated") !== (input.simKey !== undefined)) {
+    context.addIssue({ code: "custom", path: ["simKey"], message: "simKey is required with, and only with, motionSource \"resimulated\"." });
+  }
   if (input.engine !== "native" && (input.renderProfile !== undefined || input.nativeVramBudgetBytes !== undefined)) {
     context.addIssue({ code: "custom", path: ["renderProfile"], message: "Render and ML profiles require the native engine." });
   }
