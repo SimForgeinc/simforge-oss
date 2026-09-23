@@ -4,6 +4,8 @@ import net from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { crc32 } from 'node:zlib';
+
 import { decode, encode } from '@msgpack/msgpack';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -152,5 +154,23 @@ describe('NativeServiceClient', () => {
     expect(client.supports('observe_actors')).toBe(true);
     await expect(client.observeActors()).resolves.toEqual({ tick: 4, actors: [actor] });
     await client.close();
+  });
+
+  it('verifies every shared-memory payload against the CRC32 the service published', async () => {
+    const directory = await fs.mkdtemp(path.join(tmpdir(), 'sf-shm-test-'));
+    const shm = path.join(directory, 'ring');
+    const payload = Buffer.from('rgba-bytes-of-one-frame');
+    await fs.writeFile(shm, Buffer.concat([Buffer.alloc(128), payload]));
+    service = await fakeService((request) => request.op === 'hello' ? { ...hello, shm: { path: shm, size_bytes: 1024, meta_bytes: 0 } } : {});
+    const client = await NativeServiceClient.connect(service.endpoint);
+    const record = {
+      sensorId: 'cam', pass: 'rgb', offset: 0, len: payload.byteLength, width: 1, height: 1, format: 'rgba8', tickId: 3,
+      digest: crc32(payload).toString(16).padStart(8, '0'),
+    };
+    await expect(client.readFrame(record)).resolves.toEqual(payload);
+    await expect(client.readFrame({ ...record, digest: '00000000' }))
+      .rejects.toMatchObject({ code: 'native_frame_digest_mismatch', retryable: false });
+    await client.close();
+    await fs.rm(directory, { recursive: true, force: true });
   });
 });

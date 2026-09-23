@@ -130,6 +130,10 @@ export async function captureBrowserArtifacts(input: BrowserCaptureInput): Promi
       throwIfAborted(input.signal);
       let started = performance.now();
       input.controller.renderAt(frame.sourceTimeSeconds);
+      // An actor whose GLB has not arrived is drawn as a procedural stand-in:
+      // hold the frame until every requested model is resident (and refuse a
+      // model that failed), so no captured frame shows one.
+      if (await awaitActorModels(input)) input.controller.renderAt(frame.sourceTimeSeconds);
       const actors = samplePlaybackActors(input.bundle, frame.sourceTimeSeconds);
       addTiming(timings, 'worldUpdate', performance.now() - started);
       const work: Promise<void>[] = [];
@@ -317,6 +321,33 @@ async function prepareSceneForCapture(
     `Browser capture map detail did not become ready: ${stats.residentAssets} resident, `
     + `${stats.loading} loading, ${stats.uploading} uploading.`,
   );
+}
+
+/** Longest a capture frame waits for requested actor models. */
+const ACTOR_MODEL_WAIT_MS = 60_000;
+
+/**
+ * Waits until the viewer has no actor model still loading. Returns whether it
+ * had to wait (the frame must then be drawn again with the models). A model
+ * that failed, or one still loading at the deadline, fails the capture
+ * (`render_actor_model_unavailable`) instead of recording its stand-in.
+ */
+export async function awaitActorModels(input: Pick<BrowserCaptureInput, "viewer" | "signal">, timeoutMs = ACTOR_MODEL_WAIT_MS): Promise<boolean> {
+  const deadline = performance.now() + timeoutMs;
+  let waited = false;
+  for (;;) {
+    const models = Object.values(input.viewer.getStats().loadDiagnostics.actorModels);
+    const failed = models.find((model) => model.state === 'failed');
+    if (failed) throw new Error(`render_actor_model_unavailable: ${failed.downgradeReason}`);
+    const loading = models.filter((model) => model.state === 'loading');
+    if (loading.length === 0) return waited;
+    if (performance.now() >= deadline) {
+      throw new Error(`render_actor_model_unavailable: ${loading.length} actor model(s) still loading after ${timeoutMs / 1000} s (${loading.map((model) => model.url).join(', ')})`);
+    }
+    throwIfAborted(input.signal);
+    waited = true;
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 function sampleGroundHeight(viewer: CityViewer, x: number, z: number): number {

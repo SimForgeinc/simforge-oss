@@ -67,8 +67,12 @@ import {
  * determinism violation, recorded and never allowed to replace the original.
  */
 
-/** Bump when the TypeScript half of the pipeline changes what a request resolves to. */
-export const SIMULATION_PIPELINE_REVISION = 2;
+/**
+ * Bump when the TypeScript half of the pipeline changes what a request resolves to.
+ * 3: documents with no authored actors resolve to the blank world instead of
+ * failing `unsupported_portable_semantics`, so their memoized failures re-resolve.
+ */
+export const SIMULATION_PIPELINE_REVISION = 3;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
@@ -314,13 +318,14 @@ export function simulationObjectKeys(workspaceId: string, completion: Pick<Simul
 
 /**
  * The render timeline step (WS-B): trace + the map's height source → the
- * canonical timeline every renderer samples. Best effort: a render without it
- * falls back to the XOSC, so a failure here never fails the simulation.
+ * canonical timeline every renderer samples. It is the render contract: no
+ * renderer re-derives poses from the XOSC, so a simulation whose timeline
+ * cannot be built fails (`render_timeline_build_failed`).
  */
 export async function buildSimulationTimeline(
   simulation: AuthoritativeSimulation,
   closure: Pick<SimulationMapClosure, "xodr" | "topology">,
-): Promise<SimulationTimeline | null> {
+): Promise<SimulationTimeline> {
   try {
     const { buildRenderTimeline } = await import("@simforge-oss/render/timeline");
     return await buildRenderTimeline({
@@ -330,8 +335,7 @@ export async function buildSimulationTimeline(
       catalogDigest: null,
     });
   } catch (error) {
-    console.warn(`[simulation] render timeline for ${simulation.simKey} unavailable: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

@@ -5,6 +5,7 @@ export * from './cancellation.js';
 export * from './capabilities.js';
 export * from './engine.js';
 export * from './hash.js';
+export * from './render-input-error.js';
 export * from './progress.js';
 export * from './schedule.js';
 export * from './worker-control.js';

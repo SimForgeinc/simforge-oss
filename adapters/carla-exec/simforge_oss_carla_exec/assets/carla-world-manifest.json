@@ -54,7 +54,7 @@
   {
    "carlaWorld": "Richmond_Field_Station_Richmond_CA",
    "cookedXodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
-   "note": "Richmond Field Station pre-2026-08-27 export; runtime digest and signal remap as approved in backend.py up to 0.1.0-rc.73",
+   "note": "Richmond Field Station pre-2026-08-27 export; runtime digest and signal remap as approved in backend.py up to 0.1.0-rc.73; the world also cooks three low-mounted pedestrian signals (444-446) the source never declares, forced Red and frozen",
    "signalIdMap": {
     "367": "423",
     "368": "429",
@@ -65,7 +65,12 @@
     "373": "431",
     "374": "432"
    },
-   "sourceXodrSha256": "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643"
+   "sourceXodrSha256": "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
+   "unownedCookedSignalIds": [
+    "444",
+    "445",
+    "446"
+   ]
   },
   {
    "carlaWorld": "Yale_St_Palo_Alto_CA",

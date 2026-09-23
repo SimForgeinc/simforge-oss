@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 
+import { resolveEncoder, resolveProbe, type LocalExecutable } from "@simforge-oss/render/native";
 import { createRenderEngine as createBrowserRenderEngine } from "@simforge-oss/render/web";
 import { canonicalize, type RenderIntentV1 } from "@simforge-oss/scenario";
 import {
@@ -261,7 +262,7 @@ async function encodeBrowserMp4(
   const preset = qualityPreset(intent.renderSpec.video?.quality);
   const crf = Number(qualityCrf(intent.renderSpec.video?.quality));
   await runProcess(
-    process.env.SIMFORGE_FFMPEG_BINARY?.trim() || "ffmpeg",
+    resolvedTool(resolveEncoder(), "ffmpeg"),
     [
       "-hide_banner",
       "-loglevel", "error",
@@ -293,9 +294,18 @@ function qualityPreset(quality: "draft" | "standard" | "high" | "lossless" | und
   return quality === "high" || quality === "lossless" ? "medium" : "veryfast";
 }
 
+/**
+ * The encoder/probe the runtime resolves (env, runtime root, then a PATH
+ * lookup), never a bare command name spawned on the chance one exists.
+ */
+function resolvedTool(tool: LocalExecutable, name: string): string {
+  if (tool.state === "available") return tool.path;
+  throw new Error(`render_encoder_missing: no ${name} is installed for the browser MP4 (looked in ${tool.searched.join(", ") || "an empty PATH"})`);
+}
+
 async function probeDuration(path: string, signal: AbortSignal): Promise<number> {
   const output = await runProcess(
-    process.env.SIMFORGE_FFPROBE_BINARY?.trim() || "ffprobe",
+    resolvedTool(resolveProbe(), "ffprobe"),
     ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path],
     signal,
   );

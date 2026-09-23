@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BrowserContext, Page } from "playwright-core";
 import type {} from "../../packages/viewer/src/viewer-diagnostics";
+import { hostUrl } from "./host-url";
 
 type Descriptor = { mapVersionId: string; sourceMapId: string; label: string; browserAssetRootUrl: string };
 type RequestRow = { url: string; bytes: number; bodyBytes: number; status?: number; at: number };
@@ -216,7 +217,7 @@ export async function verifyWorldNavigation({ context, ticketUrl, map, other, ou
 
     // Start the different-map case independently of the editor's replaceState
     // history edits. The same-route lifetime was asserted above, before reload.
-    await page.goto(new URL("/dashboard/map-assets", ticketUrl).href, { waitUntil: "domcontentloaded" });
+    await page.goto(hostUrl(ticketUrl, "/dashboard/map-assets").href, { waitUntil: "domcontentloaded" });
     await ready(page, map.mapVersionId);
     const differentBoundary = rows.length;
     const mounts = (await page.evaluate(() => window.__worldNavigation())).mounts;

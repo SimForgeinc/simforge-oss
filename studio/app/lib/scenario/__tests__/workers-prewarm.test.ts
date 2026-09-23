@@ -6,7 +6,7 @@ import { test } from "node:test";
 process.env.SIMFORGE_ENV = "dev";
 
 import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
-import { loadBuiltinRenderEngine } from "@simforge-oss/render";
+import { CONTROL_FEATURES_V1, loadBuiltinRenderEngine } from "@simforge-oss/render";
 import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
@@ -388,7 +388,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.ok(inputs.every((input) => input.download === undefined), "a batch-v1 lease carries no signed URL or bearer token");
   assert.ok(!JSON.stringify(lease).includes("authorization"));
   // A worker that declared controlFeatures=v1 learns which newer output fields this plane accepts.
-  assert.deepEqual((lease as { controlFeatures?: string[] }).controlFeatures, ["native-evidence.scene-source", "native-evidence.parity"]);
+  assert.deepEqual((lease as { controlFeatures?: string[] }).controlFeatures, [...CONTROL_FEATURES_V1]);
 
   const urls = await signRenderInputsV2({
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken, workerNodeId: WORKER_NODE_ID,

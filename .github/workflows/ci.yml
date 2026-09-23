@@ -39,6 +39,7 @@ jobs:
         run: pnpm meshy:smoke:live
       - run: pnpm verify:naming
       - run: pnpm verify:origins
+      - run: pnpm verify:no-silent-fallbacks
       - run: pnpm typecheck
       - run: pnpm test:release
       - name: Test the repository scripts

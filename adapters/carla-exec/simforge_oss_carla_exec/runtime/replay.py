@@ -28,6 +28,7 @@ from typing import Any, Iterable, Mapping
 from .._compat_env import simforge_env
 from .compiler import LIFECYCLE_ABSENT, ActorFrame, PlanFrame
 from .contract import REPLAY_PARITY_TOLERANCES
+from .policy import CarlaRenderError
 
 #: CARLA Rotation.pitch = PITCH_SIGN * OSC pitch; Rotation.roll = ROLL_SIGN * OSC roll.
 CARLA_PITCH_SIGN = -1.0
@@ -51,31 +52,22 @@ MAX_RECORDED_VIOLATIONS = 32
 
 
 def map_z_calibration(xodr_sha256: str) -> tuple[float, str]:
-    """(offset, source) for a map. ``SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON``
-    (``{"<xodrSha256>": metres}``) extends and overrides the built-ins."""
-    offsets = dict(MAP_Z_CALIBRATION_M)
-    raw = simforge_env("CARLA_MAP_Z_OFFSETS_JSON", "").strip()
-    source = "built-in"
-    if raw:
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise RuntimeError("SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON must be valid JSON") from exc
-        if not isinstance(parsed, Mapping) or any(
-            not isinstance(key, str) or len(key) != 64
-            or not isinstance(value, (int, float)) or isinstance(value, bool)
-            or not isfinite(float(value)) or abs(float(value)) > 2.0
-            for key, value in parsed.items()
-        ):
-            raise RuntimeError(
-                "SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON must map XODR sha256 values to offsets within 2 m"
-            )
-        if xodr_sha256 in parsed:
-            source = "environment"
-        offsets.update({key: float(value) for key, value in parsed.items()})
-    if xodr_sha256 not in offsets:
+    """(offset, source) for a map, from the package's own registry only.
+
+    A worker-configured offset (``SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON``) used to
+    shift every actor up to 2 m; the same package then rendered differently
+    per worker. It is refused; a calibration is added to
+    ``MAP_Z_CALIBRATION_M`` with the measurement that justifies it.
+    """
+    raw = simforge_env("CARLA_MAP_Z_OFFSETS_JSON")
+    if raw is not None and raw.strip() not in {"", "{}"}:
+        raise CarlaRenderError(
+            "carla_forbidden_worker_config",
+            "SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON is set: per-map height calibration belongs in MAP_Z_CALIBRATION_M",
+        )
+    if xodr_sha256 not in MAP_Z_CALIBRATION_M:
         return 0.0, "none"
-    return float(offsets[xodr_sha256]), source
+    return float(MAP_Z_CALIBRATION_M[xodr_sha256]), "built-in"
 
 
 @dataclass(frozen=True)

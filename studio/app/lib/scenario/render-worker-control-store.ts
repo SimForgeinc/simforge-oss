@@ -24,12 +24,21 @@ import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { CONTROL_FEATURES_V1, WORKER_CONTROL_FEATURES_V1 } from "@simforge-oss/render";
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
+  carlaRuntimeEvidencePolicyFailure,
+  carlaSubstitutionVerdict,
   isScenarioParityEvidenceAccepted,
+  nativeEvidencePolicyFailure,
+  RENDER_CONTROL_FEATURE_RENDER_SUBSTITUTIONS,
+  renderSubstitutionsVerdict,
   SCENARIO_PARITY_EVIDENCE_VERSION,
   ScenarioParityEvidenceV1Schema,
+  scenarioParityEvidencePolicyFailure,
   SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
   SIMFORGE_RTX3080_HARDWARE_PROFILE,
   SIMFORGE_RTX3090_HARDWARE_PROFILE,
+  type RenderEvidenceRejection,
+  type RenderSubstitutionRecord,
+  type ScenarioParityEvidenceV1,
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
@@ -828,6 +837,8 @@ type ActiveLease = {
   execution_package_control_sha256: string;
   source_input_digest: string;
   xsd_sha256: string;
+  /** The worker's `controlFeatures` label: `v1` means its leases list every `CONTROL_FEATURES_V1` feature. */
+  control_features: string | null;
 };
 
 async function activeLease(
@@ -841,11 +852,13 @@ async function activeLease(
             a.attempt_number, l.worker_node_id, j.intent_sha256,
             j.cancel_requested_at::text AS cancel_requested_at,
             j.renderer_engine, j.execution_package_id, j.execution_package_control_sha256,
-            ep.source_input_digest, ep.xsd_sha256
+            ep.source_input_digest, ep.xsd_sha256,
+            w.metadata->'labels'->>'controlFeatures' AS control_features
        FROM simforge.worker_leases l
        JOIN simforge.render_jobs j ON j.id = l.render_job_id
        JOIN simforge.render_attempts a ON a.id = l.render_attempt_id
        JOIN simforge.execution_packages ep ON ep.id = j.execution_package_id
+       LEFT JOIN simforge.worker_nodes w ON w.id = l.worker_node_id
       WHERE l.id = :lease_id AND l.worker_node_id = :worker_node_id
         AND j.id = :job_id
         AND l.lease_token_sha256 = :token_sha256 AND l.lease_state = 'active'
@@ -1229,12 +1242,72 @@ export function parseEvidenceTolerant<T>(schema: TolerantParseSchema<T>, value: 
   return parsed.value;
 }
 
-async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<NativeRunDiagnostics> {
+/**
+ * Evidence that records a degraded render (no-silent-fallbacks policy,
+ * docs/engineering/no-silent-fallbacks.md). The control plane fails the job
+ * itself, non-retryable, with `render.<code>` and a message naming the
+ * degradation, so the result is recorded whatever the worker does next. The
+ * error message is the bare code, which the completion route returns as
+ * `error`; `verificationDetails` (returned as `details`) tells the worker the
+ * job is already failed and must not be retried.
+ */
+export class RenderEvidenceRejectedError extends Error {
+  readonly code: string;
+  readonly rejection: RenderEvidenceRejection;
+  /**
+   * Kept small: workers read at most the first 2 KiB of a refusal body. The
+   * full details are persisted with the failed job (`failure_detail`).
+   */
+  readonly verificationDetails: {
+    message: string;
+    retryable: false;
+    jobFailed: boolean;
+    failureCode: string;
+  };
+
+  constructor(rejection: RenderEvidenceRejection) {
+    super(rejection.code);
+    this.name = "RenderEvidenceRejectedError";
+    this.code = rejection.code;
+    this.rejection = rejection;
+    this.verificationDetails = {
+      message: rejection.message.length > 1_000 ? `${rejection.message.slice(0, 997)}...` : rejection.message,
+      retryable: false,
+      jobFailed: false,
+      failureCode: renderEvidenceFailureCode(rejection.code),
+    };
+  }
+}
+
+/** The job failure code for a rejected evidence code, in the worker's `render.<code>` namespace. */
+export function renderEvidenceFailureCode(code: string): string {
+  return `render.${code}`.slice(0, 100);
+}
+
+function rejectEvidence(rejection: RenderEvidenceRejection | null): void {
+  if (rejection) throw new RenderEvidenceRejectedError(rejection);
+}
+
+/** The newer output fields a lease listed (see `claimResponseV2`). */
+export function leaseControlFeatures(controlFeaturesLabel: string | null): ReadonlySet<string> {
+  return new Set<string>(controlFeaturesLabel === WORKER_CONTROL_FEATURES_V1 ? CONTROL_FEATURES_V1 : []);
+}
+
+function intentAllowSubstitutions(intent: { allowSubstitutions?: readonly string[] }): readonly string[] {
+  return intent.allowSubstitutions ?? [];
+}
+
+async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<{
+  diagnostics: NativeRunDiagnostics;
+  substitutions: RenderSubstitutionRecord[];
+}> {
   const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
   const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
   if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
   const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
   const diagnostics = parseEvidenceTolerant(NativeRunDiagnosticsSchema, await readReservedJson(diagnosticsReservation));
+  const rawManifest = await readReservedJson(manifestReservation);
+  const manifest = parseEvidenceTolerant(NativeRenderManifestSchema, rawManifest);
   const failure = nativeEvidenceFailure(
     reservations.map((item) => ({
       role: item.artifact_role,
@@ -1244,12 +1317,27 @@ async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, 
       sha256: item.expected_sha256,
       sizeBytes: Number(item.expected_size_bytes),
     })),
-    parseEvidenceTolerant(NativeRenderManifestSchema, await readReservedJson(manifestReservation)),
+    manifest,
     diagnostics,
     nativeRunExpectations(intent, { intentSha256, executionPackageControlSha256: lease.execution_package_control_sha256 }),
   );
   if (failure) throw new Error(failure);
-  return diagnostics;
+  const timeline = intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID);
+  rejectEvidence(nativeEvidencePolicyFailure({
+    manifest,
+    diagnostics,
+    features: leaseControlFeatures(lease.control_features),
+    timelineSha256: timeline?.sha256 ?? null,
+    motionSource: intent.motionSource,
+  }));
+  // Read from the raw document: a manifest schema that does not know
+  // `substitutions` yet would otherwise drop it as an unknown key.
+  const recorded = renderSubstitutionsVerdict(
+    (rawManifest as Record<string, unknown> | null)?.substitutions,
+    intentAllowSubstitutions(intent),
+  );
+  rejectEvidence(recorded.rejection ?? null);
+  return { diagnostics, substitutions: recorded.substitutions ?? [] };
 }
 
 /** Evidence a completed attempt/job is fenced on: engine-specific schema, document and attestation. */
@@ -1258,7 +1346,26 @@ type CompletionEvidence = {
   evidence: Record<string, unknown>;
   accepted: boolean;
   attestation: Record<string, unknown>;
+  /** Substitutions the intent allowed and the engine recorded; persisted with the attempt. */
+  substitutions: RenderSubstitutionRecord[];
 };
+
+function parseCarlaParityEvidence(value: unknown): ScenarioParityEvidenceV1 {
+  try {
+    return parseEvidenceTolerant(ScenarioParityEvidenceV1Schema, value);
+  } catch (error) {
+    const issues = error instanceof Error && "verificationDetails" in error
+      ? (error as { verificationDetails?: { issues?: unknown } }).verificationDetails?.issues
+      : undefined;
+    throw new RenderEvidenceRejectedError({
+      code: "carla_parity_evidence_invalid",
+      message: `the CARLA manifest's parity evidence does not satisfy ${SCENARIO_PARITY_EVIDENCE_VERSION}: ${Array.isArray(issues)
+        ? issues.slice(0, 5).map((issue: { path?: string; message?: string }) => `${issue.path ?? "(root)"}: ${issue.message ?? "invalid"}`).join("; ")
+        : error instanceof Error ? error.message : String(error)}`,
+      ...(Array.isArray(issues) ? { details: { issues: issues.slice(0, 20) } } : {}),
+    });
+  }
+}
 
 /**
  * A CARLA completion carries the executor's own manifest (`manifest.json`,
@@ -1266,8 +1373,13 @@ type CompletionEvidence = {
  * validation of the exact OpenSCENARIO document it replayed and the worker
  * attestation. The evidence identity must name this lease's revision, package,
  * control digest and source-input digest; the XOSC attestation must name the
- * document the intent bound. Acceptance is the parity verdict under native
- * physics, exactly as `isScenarioParityEvidenceAccepted` defines it.
+ * document the intent bound. Acceptance then refuses every recorded
+ * degradation: a run that is not a trace-replay scenario render, a map that
+ * is not bound exactly (or was generated), dropped or nudged actors, blocking
+ * divergences, an inexact environment, an unverified runtime image or worker
+ * identity, and actor bodies substituted without the intent's
+ * `allowSubstitutions` and a recorded substitution. Only then is the parity
+ * verdict (`isScenarioParityEvidenceAccepted`) consulted.
  */
 async function verifyCarlaCompletion(lease: ActiveLease, reservations: readonly NativeReservation[]): Promise<CompletionEvidence> {
   const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
@@ -1275,7 +1387,7 @@ async function verifyCarlaCompletion(lease: ActiveLease, reservations: readonly 
   const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
   const engineManifest = await readReservedJson(manifestReservation) as Record<string, unknown>;
   if (!engineManifest || typeof engineManifest !== "object" || Array.isArray(engineManifest)) throw new Error("render_manifest_invalid");
-  const evidence = ScenarioParityEvidenceV1Schema.parse(engineManifest.parityEvidence);
+  const evidence = parseCarlaParityEvidence(engineManifest.parityEvidence);
   if (
     evidence.identity.revisionId !== intent.scenarioRevision.revisionId
     || evidence.identity.executionPackageId !== lease.execution_package_id
@@ -1298,11 +1410,21 @@ async function verifyCarlaCompletion(lease: ActiveLease, reservations: readonly 
   }
   const attestation = engineManifest.attestation ?? engineManifest.workerAttestation;
   if (!attestation || typeof attestation !== "object" || Array.isArray(attestation)) throw new Error("worker_attestation_invalid");
+  rejectEvidence(scenarioParityEvidencePolicyFailure(evidence));
+  rejectEvidence(carlaRuntimeEvidencePolicyFailure(attestation));
+  const substitution = carlaSubstitutionVerdict({
+    fallbacks: engineManifest.carlaVehicleFallbacks,
+    substitutions: engineManifest.substitutions,
+    allowSubstitutions: intentAllowSubstitutions(intent),
+    substitutionsNegotiated: leaseControlFeatures(lease.control_features).has(RENDER_CONTROL_FEATURE_RENDER_SUBSTITUTIONS),
+  });
+  rejectEvidence(substitution.rejection ?? null);
   return {
     schema: SCENARIO_PARITY_EVIDENCE_VERSION,
     evidence,
     accepted: isScenarioParityEvidenceAccepted(evidence),
     attestation: attestation as Record<string, unknown>,
+    substitutions: substitution.substitutions ?? [],
   };
 }
 
@@ -1408,10 +1530,15 @@ async function verifyBrowserCompletion(lease: ActiveLease, intentSha256: string,
       throw new Error("browser_render_manifest_receipt_mismatch");
     }
   }
+  // The browser engine is a labelled preview lane; it records no
+  // substitutions, and one that did would have to be allowed by the intent.
+  const recorded = renderSubstitutionsVerdict((manifest as Record<string, unknown>).substitutions, intentAllowSubstitutions(intent));
+  rejectEvidence(recorded.rejection ?? null);
   return {
     schema: BROWSER_RENDER_MANIFEST_V1_SCHEMA,
     evidence: manifest,
     accepted: true,
+    substitutions: recorded.substitutions ?? [],
     attestation: {
       schema: "simforge.browser-render-attestation/v1",
       intentSha256,
@@ -1424,11 +1551,12 @@ async function verifyBrowserCompletion(lease: ActiveLease, intentSha256: string,
 
 async function verifyCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<CompletionEvidence> {
   if (lease.renderer_engine === "native") {
-    const diagnostics = await verifyNativeCompletion(lease, intentSha256, reservations);
+    const { diagnostics, substitutions } = await verifyNativeCompletion(lease, intentSha256, reservations);
     return {
       schema: diagnostics.schema,
       evidence: diagnostics,
       accepted: true,
+      substitutions,
       attestation: {
         schema: "simforge.native-render-attestation/v1",
         intentSha256,
@@ -1492,8 +1620,31 @@ export async function completeRenderJobV2(input: {
   }
   // Success is fenced by the database: a succeeded full render must carry
   // accepted evidence of the engine that rendered it, verified against the
-  // engine's own output document before the fenced transaction.
-  const completion = await verifyCompletion(lease, input.intentSha256, reservations);
+  // engine's own output document before the fenced transaction. Evidence that
+  // records a degradation fails the job here, non-retryable, so the code and
+  // message reach the job result whatever the worker does with the refusal.
+  let completion: CompletionEvidence;
+  try {
+    completion = await verifyCompletion(lease, input.intentSha256, reservations);
+  } catch (error) {
+    if (error instanceof RenderEvidenceRejectedError) {
+      const failed = await failRenderJobV2({
+        jobId: input.jobId,
+        leaseId: input.leaseId,
+        fenceToken: input.fenceToken,
+        workerNodeId: input.workerNodeId,
+        intentSha256: input.intentSha256,
+        failure: {
+          code: error.verificationDetails.failureCode,
+          message: error.rejection.message.slice(0, 2_000),
+          retryable: false,
+          details: { source: "control-plane-evidence-policy", ...(error.rejection.details ? { evidence: error.rejection.details } : {}) },
+        },
+      });
+      error.verificationDetails.jobFailed = failed !== null;
+    }
+    throw error;
+  }
   // A CARLA run whose parity verdict failed is a verified, rejected result: it
   // never becomes a succeeded job (the database fence would refuse it too).
   if (!completion.accepted) throw new Error("parity_evidence_rejected");
@@ -1568,9 +1719,16 @@ export async function completeRenderJobV2(input: {
           SET attempt_state = 'succeeded', completed_at = NOW(),
               parity_evidence_schema = :parity_schema,
               parity_evidence = CAST(:parity_evidence AS jsonb),
-              parity_accepted = TRUE
+              parity_accepted = TRUE,
+              metrics = COALESCE(metrics, '{}'::jsonb) || CAST(:metrics AS jsonb)
         WHERE id = :attempt_id`,
-      { attempt_id: lease.attempt_id, parity_schema: evidence.parity_schema, parity_evidence: evidence.parity_evidence },
+      {
+        attempt_id: lease.attempt_id,
+        parity_schema: evidence.parity_schema,
+        parity_evidence: evidence.parity_evidence,
+        // Every substitution the intent allowed and the engine made, shown with the job result.
+        metrics: JSON.stringify({ renderSubstitutions: completion.substitutions }),
+      },
     );
     await tx.execute(
       `UPDATE simforge.worker_leases SET lease_state = 'released', released_at = NOW()
@@ -1609,7 +1767,7 @@ export async function failRenderJobV2(input: {
     await tx.execute(
       `UPDATE simforge.render_attempts
           SET attempt_state = CASE WHEN :cancelled THEN 'cancelled' ELSE 'failed' END,
-              completed_at = NOW(), metrics = jsonb_build_object('failureCode', :code)
+              completed_at = NOW(), metrics = jsonb_build_object('failureCode', CAST(:code AS text))
         WHERE id = :attempt_id`,
       { attempt_id: lease.attempt_id, code: input.failure.code, cancelled: lease.cancel_requested_at !== null },
     );

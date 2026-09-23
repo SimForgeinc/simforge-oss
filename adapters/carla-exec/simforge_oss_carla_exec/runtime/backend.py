@@ -17,6 +17,15 @@ from typing import Any, Callable, Iterable, Mapping, Protocol
 
 from .. import world_manifest as _world_manifest
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
+from .policy import (
+    LIDAR_DETERMINISTIC_ATTRIBUTES,
+    CarlaRenderError,
+    LidarSweep,
+    WalkerAnimationMonitor,
+    bone_pose_signature,
+    lidar_ticks_per_revolution,
+    write_lidar_ply,
+)
 from .contract import (
     ASSET_CATALOG_SCHEMA,
     CAMERA_MODALITIES,
@@ -153,25 +162,47 @@ KIA_CARNIVAL_CLASS_PATH = (
 KIA_CARNIVAL_MAKE = "Kia"
 KIA_CARNIVAL_MODEL = "Carnival"
 KIA_CARNIVAL_BASE_TYPE = "van"
-RUNTIME_BLUEPRINT_ALIASES: Mapping[str, str] = {
-    # CARLA 0.10's compatibility cook exposes the stock sedan under its UE4 id.
-    "vehicle.lincoln.mkz": "vehicle.ue4.chevrolet.impala",
-}
+# There are no runtime blueprint aliases. The former `vehicle.lincoln.mkz ->
+# vehicle.ue4.chevrolet.impala` alias rendered every catalog sedan as an
+# Impala even on the kia image, which ships the MKZ; a body the image lacks is
+# now a `carla-actor-body` substitution the intent must allow.
 # Mirrors PRONTO_CHASE_CAMERA_SENSOR_ID in @simforge-oss/scenario.
 PRONTO_CHASE_CAMERA_SENSOR_ID = "chase-cam-trailing"
 
 ENVIRONMENT_READBACK_TIMEOUT_S = 2.0
+#: The accepted RGB review grade (`rrmaps-accepted-v1`, SimCloud
+#: `docs/carla-010-render-controls.md`): CARLA's SceneCapture renders the
+#: cooked sky washed grey, and camera post-process is the only runtime lever.
+#: Applied to every RGB camera and recorded in `cameraGrade` evidence.
+CAMERA_GRADE_PROFILE = "rrmaps-accepted-v1"
 DEFAULT_RGB_CAMERA_GRADE: Mapping[str, str] = {
     "temp": "5250",
     "scene_color_tint": "210,218,235",
     "slope": "0.96",
     "shadow_constrast_scale": "0.82",
 }
-MAP_RGB_EXPOSURE: tuple[tuple[str, str], ...] = (
-    ("Yale", "-0.4"),
-    ("Page_Mill", "-0.3"),
-    ("Di_Rosa", "-0.2"),
-)
+#: Per cooked world `exposure_compensation`, keyed by the exact cooked map
+#: name (never a substring of it), for the worlds whose baked sun reads brighter.
+COOKED_MAP_RGB_EXPOSURE: Mapping[str, str] = {
+    "Yale_St_Palo_Alto_CA": "-0.4",
+}
+#: Camera post-process per render quality, rgb only (depth, semantic and
+#: instance cameras have no post-process). Every attribute is required.
+RGB_QUALITY_ATTRIBUTES: Mapping[str, Mapping[str, str]] = {
+    "preview": {"enable_postprocess_effects": "False", "motion_blur_intensity": "0.0", "gamma": "2.2"},
+    "standard": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
+    "high": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
+    "cinematic": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
+}
+
+#: The lighting a cooked world bakes, per exact cooked map name, as CARLA
+#: weather values. A cooked RoadRunner world reports `is_weather_enabled()`
+#: false: `set_weather` cannot change its sun, sky or weather. Such a world
+#: renders a request only when the request IS its baked environment; each
+#: entry must be measured on the cooked level before it is added. None are
+#: measured yet, so every environment request on a weather-disabled cooked
+#: world fails `carla_environment_unsupported_on_cooked_map`.
+COOKED_MAP_BAKED_ENVIRONMENTS: Mapping[str, Mapping[str, float]] = {}
 
 #: Conservative planar half-extents (half-length, half-width) used for spawn
 #: overlap checks when the asset catalog carries no dimensions for an entry.
@@ -190,13 +221,6 @@ SPAWN_FOOTPRINT_HALF_EXTENTS_BY_KIND: Mapping[str, tuple[float, float]] = {
 }
 DEFAULT_SPAWN_FOOTPRINT_HALF_EXTENTS = (2.45, 1.05)
 
-#: Bounded nudge offsets (meters along the actor's authored heading, i.e.
-#: along the lane) tried in order when the authored spawn footprint overlaps
-#: an already-placed actor or CARLA refuses the spawn. The authored position
-#: always goes first; an actor that fits nowhere in this window is DROPPED and
-#: reported, never stacked on top of another actor.
-SPAWN_NUDGE_OFFSETS_M: tuple[float, ...] = (0.0, 1.5, -1.5, 3.0, -3.0, 4.5, -4.5)
-
 #: Clearance kept between spawn footprints so settled bodies never touch.
 SPAWN_FOOTPRINT_CLEARANCE_M = 0.15
 
@@ -214,6 +238,9 @@ VEHICLE_GROUND_CHECK_EVERY_TICKS = 10
 #: spawn-time overlap test refuses the near-surface staging (bodies authored
 #: in contact at t=0). It is teleported down before the first tick.
 REPLAY_STAGING_ALTITUDE_M = 50.0
+#: Blueprint placement probes spawn this high above the map origin when the
+#: world declares no spawn points.
+BLUEPRINT_PROBE_ALTITUDE_M = 500.0
 #: Replay: moving walkers/vehicles are sampled by the cooked-mesh height
 #: diagnostic this often (ticks); static bodies once, at spawn.
 REPLAY_GROUND_SAMPLE_EVERY_TICKS = 50
@@ -264,20 +291,44 @@ def _planar_footprints_overlap(
 
 
 
-def apply_supported_blueprint_attributes(
+def apply_blueprint_attributes(
     blueprint: Any,
-    requested: Mapping[str, str],
-) -> tuple[dict[str, str], list[str]]:
-    """Apply optional renderer tuning without turning an image-specific knob into a runtime gate."""
+    requested: Mapping[str, object],
+    label: str,
+) -> dict[str, str]:
+    """Set every requested attribute; a blueprint lacking one fails the render.
+
+    Skipping an unsupported attribute used to leave the sensor at the image's
+    default for it, which changes the output without anyone knowing.
+    """
+    missing = sorted(name for name in requested if not blueprint.has_attribute(name))
+    if missing:
+        raise CarlaRenderError(
+            "carla_sensor_attribute_unsupported",
+            f"CARLA {label} blueprint lacks required attribute(s): {', '.join(missing)}",
+        )
     applied: dict[str, str] = {}
-    unsupported: list[str] = []
     for name, value in requested.items():
-        if not blueprint.has_attribute(name):
-            unsupported.append(name)
-            continue
-        blueprint.set_attribute(name, value)
-        applied[name] = value
-    return applied, unsupported
+        blueprint.set_attribute(name, str(value))
+        applied[name] = str(value)
+    return applied
+
+
+def blueprint_attribute_readback(actor: Any, names: Iterable[str]) -> dict[str, str]:
+    """The attribute values the spawned sensor actually carries."""
+    attributes = getattr(actor, "attributes", None)
+    if not isinstance(attributes, Mapping):
+        raise CarlaRenderError(
+            "carla_sensor_attribute_unverifiable",
+            f"CARLA sensor {getattr(actor, 'type_id', '?')} exposes no attributes to read back",
+        )
+    missing = sorted(name for name in names if name not in attributes)
+    if missing:
+        raise CarlaRenderError(
+            "carla_sensor_attribute_unverifiable",
+            f"CARLA sensor {getattr(actor, 'type_id', '?')} did not read back: {', '.join(missing)}",
+        )
+    return {name: str(attributes[name]) for name in sorted(names)}
 
 
 #: Every cooked-world table below is DERIVED from the generated manifest
@@ -297,6 +348,11 @@ def apply_supported_blueprint_attributes(
 #:   SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON ({"<source>": ["<runtime>"]}) extends it.
 #: - COOKED_SIGNAL_ID_MAPS: (world, source sha256, runtime sha256) -> authored signal
 #:   id -> runtime signal id, where the cooked world renumbered its heads.
+#: - APPROVED_UNOWNED_COOKED_SIGNALS: runtime signal heads an approved cooked world
+#:   ships beyond the authored map, per (world, source sha256, runtime sha256), by
+#:   OpenDRIVE id. They cannot be driven from the scenario, so they are forced Red and
+#:   frozen for the whole render and recorded in the map evidence. Any unowned head not
+#:   listed (and any head with no OpenDRIVE id) fails the render.
 #: - UNBINDABLE_COOKED_SOURCES: sources the manifest knows have no usable world
 #:   (needs-recook / needs-decision / no-world). They are refused with the manifest's
 #:   reason, whatever the env or the binding policy says.
@@ -304,6 +360,7 @@ _WORLD_MANIFEST = _world_manifest.load()
 COOKED_SIGNAL_ID_MAPS: Mapping[tuple[str, str, str], Mapping[str, str]] = _world_manifest.signal_id_maps(_WORLD_MANIFEST)
 COOKED_MAP_NAMES_BY_XODR_SHA256: Mapping[str, str] = _world_manifest.cooked_map_names(_WORLD_MANIFEST)
 APPROVED_COOKED_XODR_DIGESTS: Mapping[str, frozenset[str]] = _world_manifest.approved_cooked_digests(_WORLD_MANIFEST)
+APPROVED_UNOWNED_COOKED_SIGNALS: Mapping[tuple[str, str, str], frozenset[str]] = _world_manifest.unowned_cooked_signals(_WORLD_MANIFEST)
 UNBINDABLE_COOKED_SOURCES: Mapping[str, _world_manifest.Refusal] = _world_manifest.refusals(_WORLD_MANIFEST)
 
 
@@ -386,14 +443,35 @@ def approved_cooked_xodr_digests(source_xodr_sha256: str) -> frozenset[str]:
     return frozenset(approved)
 
 
+def forbid_output_changing_worker_config() -> None:
+    """Worker settings that used to change render output are refused.
+
+    A render is defined by its job input; a worker's environment may not
+    substitute a generated world, an approximate map, a per-map height shift
+    or a signal remap for what the package says.
+    """
+    forbidden = {
+        "SIMFORGE_CARLA_ALLOW_GENERATED_XODR": "generated-OpenDRIVE worlds are not rendered; cook the map",
+        "SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON": "per-map height calibration belongs in MAP_Z_CALIBRATION_M",
+        "SIMFORGE_CARLA_SIGNAL_ID_MAP": "signal remaps belong in COOKED_SIGNAL_ID_MAPS",
+    }
+    for name, reason in forbidden.items():
+        value = os.environ.get(name)
+        if value is not None and value.strip() not in {"", "0", "{}"}:
+            raise CarlaRenderError("carla_forbidden_worker_config", f"{name} is set: {reason}")
+    binding = os.environ.get("SIMFORGE_CARLA_MAP_BINDING")
+    if binding is not None and binding.strip().lower() not in {"", "exact"}:
+        raise CarlaRenderError(
+            "carla_forbidden_worker_config",
+            "SIMFORGE_CARLA_MAP_BINDING may only be exact: an approximate map is never rendered",
+        )
+
+
 def map_binding_policy() -> str:
-    """``exact`` (default) fails a render whose runtime road network is not the
-    package XODR; ``allow-approximate`` renders it and labels every output
-    ``approximate map``."""
-    policy = (simforge_env("CARLA_MAP_BINDING", "exact") or "exact").strip().lower()
-    if policy not in {"exact", "allow-approximate"}:
-        raise RuntimeError("SIMFORGE_CARLA_MAP_BINDING must be exact or allow-approximate")
-    return policy
+    """Always ``exact``: a runtime road network that is not the package XODR
+    (or an approved cooked re-serialization of it) fails the render."""
+    forbid_output_changing_worker_config()
+    return "exact"
 
 
 #: Physics substepping applied (and recorded) on every world. Replayed actors
@@ -442,8 +520,13 @@ CAMERA_ENCODER_QUEUE_POLL_S = 1.0
 SENSOR_LISTEN_RETRY_DELAYS_S = (0.1, 0.25, 0.5, 1.0)
 
 
-def _presentation_video_codec_args() -> list[str]:
-    """Encoder selection shared by every per-camera stream (h264 mp4 output)."""
+def presentation_video_codec_args() -> list[str]:
+    """Encoder selection shared by every per-camera stream (h264 mp4 output).
+
+    The worker environment picks software or NVENC; both are fixed, high
+    rate-control settings, and the exact arguments are recorded on every
+    video artifact (`encoderArgs`).
+    """
     encoder = simforge_env("PRESENTATION_VIDEO_ENCODER", "software")
     if encoder not in {"software", "nvidia"}:
         raise RuntimeError("SIMFORGE_PRESENTATION_VIDEO_ENCODER must be software or nvidia")
@@ -473,7 +556,7 @@ class _CameraStreamEncoder:
             "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
             "-f", "rawvideo", "-pix_fmt", "bgra",
             "-s", f"{width}x{height}", "-r", f"{fps:g}", "-i", "-",
-            *_presentation_video_codec_args(),
+            *presentation_video_codec_args(),
             "-pix_fmt", "yuv420p",
             "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
             "-movflags", "+faststart",
@@ -535,18 +618,26 @@ class _CameraStreamEncoder:
             pass
 
 
+_presentation_video_codec_args = presentation_video_codec_args
+
+
 def _normalized_map_name(value: object) -> str:
     tail = str(value or "").replace("\\", "/").split("/")[-1]
     return tail[:-5] if tail.lower().endswith(".xodr") else tail
 
-def _is_baked_default_daylight(requested: Mapping[str, float]) -> bool:
-    return (
-        all(requested[field] == 0.0 for field in (
-            "cloudiness", "precipitation", "precipitation_deposits",
-            "wind_intensity", "fog_density", "fog_distance", "wetness",
-        ))
-        and requested["sun_altitude_angle"] >= 0.0
-    )
+def _environment_mismatches(
+    requested: Mapping[str, float],
+    observed: Mapping[str, float],
+) -> dict[str, dict[str, float]]:
+    return {
+        field: {"requested": requested[field], "observed": observed[field]}
+        for field in ENVIRONMENT_FIELDS
+        if (
+            abs((requested[field] - observed[field] + 180.0) % 360.0 - 180.0)
+            if field == "sun_azimuth_angle"
+            else abs(requested[field] - observed[field])
+        ) > 1e-4
+    }
 
 
 
@@ -607,7 +698,7 @@ def runtime_asset_bindings(
     manifest_sha256: str | None = None,
     abort: Callable[[], None] | None = None,
 ) -> dict[str, Mapping[str, object]]:
-    """Validate a signed asset catalog and index CARLA bindings plus fallback semantics."""
+    """Validate a signed asset catalog and index its CARLA bindings (blueprint, fidelity, class, dims)."""
     check = abort or (lambda: None)
     check()
     if not isinstance(manifest, Mapping):
@@ -635,6 +726,15 @@ def runtime_asset_bindings(
         indexed: dict[str, object] = {}
         if isinstance(blueprint_id, str) and blueprint_id:
             indexed["blueprintId"] = blueprint_id
+            fidelity = carla.get("fidelity")
+            if not isinstance(fidelity, str) or not fidelity:
+                # Without it an approximate body cannot be told from the
+                # authored one, and would render as if it were exact.
+                raise CarlaRenderError(
+                    "carla_catalog_binding_incomplete",
+                    f"asset catalog entry {asset_id} binds CARLA blueprint {blueprint_id} without a fidelity",
+                )
+            indexed["fidelity"] = fidelity
         actor_class = entry.get("actorClass")
         if isinstance(actor_class, str) and actor_class:
             indexed["actorClass"] = actor_class
@@ -770,6 +870,14 @@ class CarlaBackend:
         self.map_load_timeout_s = timeout_s
 
     def configure_environment(self, environment: Environment) -> None:
+        """Show exactly the requested environment, or fail.
+
+        A world with weather applies it and reads it back. A cooked custom
+        world (`is_weather_enabled()` false) bakes its sun and sky at cook
+        time; it renders a request only if the request is its registered
+        baked environment. Rendering the baked lighting in place of a dawn,
+        dusk or overcast request used to succeed, labelled only in evidence.
+        """
         assert self.world is not None
         self.environment_evidence = {"available": False}
         requested = {field: float(getattr(environment, field)) for field in ENVIRONMENT_FIELDS}
@@ -777,18 +885,28 @@ class CarlaBackend:
         if not callable(enabled):
             raise RuntimeError("CARLA weather availability API is unavailable")
         if not enabled():
-            if not _is_baked_default_daylight(requested):
-                raise RuntimeError(
-                    "the cooked custom map supports only its baked default clear-daylight environment"
+            map_name = str(self.map_evidence.get("loadedMapName")) if isinstance(self.map_evidence, Mapping) else ""
+            baked = COOKED_MAP_BAKED_ENVIRONMENTS.get(map_name)
+            if baked is None:
+                raise CarlaRenderError(
+                    "carla_environment_unsupported_on_cooked_map",
+                    f"cooked world {map_name or '?'} bakes its lighting (CARLA weather is disabled on it) and "
+                    f"no baked environment is registered for it, so the requested environment {requested} "
+                    "cannot be shown",
+                )
+            mismatches = _environment_mismatches(requested, baked)
+            if mismatches:
+                raise CarlaRenderError(
+                    "carla_environment_unsupported_on_cooked_map",
+                    f"cooked world {map_name} bakes a different environment than requested: {mismatches}",
                 )
             self.environment_evidence = {
                 "schema": "simforge.environment-evidence/v1",
                 "available": True,
-                "exact": False,
+                "exact": True,
+                "mode": "cooked-baked",
                 "requested": requested,
-                "observed": None,
-                "mode": "cooked-baked-default",
-                "reason": "custom-map-baked-default-daylight",
+                "observed": {field: float(baked[field]) for field in ENVIRONMENT_FIELDS},
             }
             return
         setter = getattr(self.world, "set_weather", None)
@@ -800,22 +918,15 @@ class CarlaBackend:
         while True:
             observed_weather = getter()
             observed = {field: float(getattr(observed_weather, field)) for field in ENVIRONMENT_FIELDS}
-            mismatches = {
-                field: {"requested": requested[field], "observed": observed[field]}
-                for field in ENVIRONMENT_FIELDS
-                if (
-                    abs((requested[field] - observed[field] + 180.0) % 360.0 - 180.0)
-                    if field == "sun_azimuth_angle"
-                    else abs(requested[field] - observed[field])
-                ) > 1e-4
-            }
+            mismatches = _environment_mismatches(requested, observed)
             if not mismatches:
                 self.environment_evidence = {
                     "schema": "simforge.environment-evidence/v1",
                     "available": True,
+                    "exact": True,
+                    "mode": "runtime-weather",
                     "requested": requested,
                     "observed": observed,
-                    "exact": True,
                 }
                 return
             if monotonic() >= deadline:
@@ -825,15 +936,14 @@ class CarlaBackend:
             sleep(0.01)
 
     def load_opendrive(self, map_name: str, xodr: bytes, fixed_timestep_s: float) -> None:
-        """Load the runtime world bound to the package XODR by digest.
+        """Load the cooked runtime world bound to the package XODR by digest.
 
         The world is chosen by the XODR sha256 (the cooked-world registry),
         never trusted by name: a package that names one world while its XODR
         binds another is rejected, and after loading, the runtime's own
         OpenDRIVE must be the package XODR byte-for-byte or an approved cooked
-        re-serialization of it. Anything else fails, unless the worker is
-        configured ``SIMFORGE_CARLA_MAP_BINDING=allow-approximate``, in which
-        case the render proceeds labelled ``approximate map``.
+        re-serialization of it. There is no generated-OpenDRIVE world (a bare
+        road mesh in a void) and no approximate binding.
         """
         requested_name = _normalized_map_name(map_name)
         if not requested_name or requested_name != map_name or any(
@@ -846,7 +956,7 @@ class CarlaBackend:
         if refusal is not None:
             # Known to have no usable world: refuse before touching the server,
             # whatever the binding policy, and never fall back to a generated world.
-            raise RuntimeError(refusal)
+            raise CarlaRenderError("carla_map_world_unbound", refusal)
         cooked_name = cooked_map_name_for_xodr(package_sha256)
         if cooked_name is not None and cooked_name != requested_name:
             raise RuntimeError(
@@ -857,95 +967,59 @@ class CarlaBackend:
         available = list(available_getter() or ()) if callable(available_getter) else []
         matching = [value for value in available if _normalized_map_name(value) == requested_name]
         if len(matching) != 1:
-            if cooked_name is not None:
-                # This XODR has a cooked runtime world. Rendering it as a
-                # generated bare-OpenDRIVE world silently loses the cooked
-                # meshes and signal identities (and has crashed the engine on
-                # large maps), so a missing cooked world is fatal even when
-                # generated-XODR fallback is enabled for uncooked maps.
-                raise RuntimeError(
-                    f"CARLA runtime does not contain the cooked custom map {cooked_name} "
-                    f"required for this XODR ({package_sha256}); "
-                    "refusing the generated-OpenDRIVE fallback for a cooked map"
-                )
-            if simforge_env("CARLA_ALLOW_GENERATED_XODR") != "1":
-                raise RuntimeError(
-                    f"CARLA runtime does not contain exactly one cooked custom map named {requested_name}"
-                )
-            params = self.carla.OpendriveGenerationParameters(
-                vertex_distance=2.0, max_road_length=500.0, wall_height=0.0,
-                additional_width=0.6, smooth_junctions=True, enable_mesh_visibility=True,
+            # Only a cooked world has the map's meshes; there is no world
+            # generated from the bare OpenDRIVE.
+            raise CarlaRenderError(
+                "carla_map_not_cooked",
+                f"CARLA runtime does not contain exactly one cooked custom map named {requested_name} "
+                f"(XODR {package_sha256})",
             )
-            self.world = self.client.generate_opendrive_world(xodr.decode("utf-8"), params)
-            observed_name = _normalized_map_name(self.world.get_map().name)
-            self.signal_id_map = {}
-            self.map_evidence = {
-                "schema": "simforge.carla-map-evidence/v1",
-                "available": True,
-                "source": "generated-opendrive-world",
-                "identityMode": "generated-opendrive",
-                "binding": "exact",
-                "bindingPolicy": policy,
-                "requestedMapName": requested_name,
-                "loadedMapName": observed_name,
-                "packageXodrSha256": package_sha256,
-                "runtimeXodrSha256": package_sha256,
-                "xodrByteExact": True,
-                "signalIdentityMode": "direct-opendrive-id",
-                "signalIdMap": {},
-                "exact": True,
-            }
+        self.client.set_timeout(self.map_load_timeout_s)
+        loaded = self.client.load_world(requested_name)
+        self.world = loaded if loaded is not None else self.client.get_world()
+        runtime_map = self.world.get_map()
+        loaded_name = _normalized_map_name(getattr(runtime_map, "name", ""))
+        if loaded_name != requested_name:
+            raise RuntimeError(
+                f"loaded CARLA map {loaded_name or 'unknown'} does not match {requested_name}"
+            )
+        runtime_xodr = str(runtime_map.to_opendrive() or "")
+        if not runtime_xodr:
+            raise RuntimeError("loaded cooked CARLA map exposes no OpenDRIVE identity")
+        runtime_sha256 = hashlib.sha256(runtime_xodr.encode("utf-8")).hexdigest()
+        if runtime_sha256 == package_sha256:
+            identity_mode = "xodr-byte-exact"
+        elif runtime_sha256 in approved_cooked_xodr_digests(package_sha256):
+            identity_mode = "approved-cooked-digest"
         else:
-            self.client.set_timeout(self.map_load_timeout_s)
-            loaded = self.client.load_world(requested_name)
-            self.world = loaded if loaded is not None else self.client.get_world()
-            runtime_map = self.world.get_map()
-            loaded_name = _normalized_map_name(getattr(runtime_map, "name", ""))
-            if loaded_name != requested_name:
-                raise RuntimeError(
-                    f"loaded CARLA map {loaded_name or 'unknown'} does not match {requested_name}"
-                )
-            runtime_xodr = str(runtime_map.to_opendrive() or "")
-            if not runtime_xodr:
-                raise RuntimeError("loaded cooked CARLA map exposes no OpenDRIVE identity")
-            runtime_sha256 = hashlib.sha256(runtime_xodr.encode("utf-8")).hexdigest()
-            if runtime_sha256 == package_sha256:
-                identity_mode = "xodr-byte-exact"
-            elif runtime_sha256 in approved_cooked_xodr_digests(package_sha256):
-                identity_mode = "approved-cooked-digest"
-            elif policy == "allow-approximate":
-                identity_mode = "approximate"
-            else:
-                raise RuntimeError(
-                    f"CARLA world {loaded_name} is not bound to the package XODR: runtime OpenDRIVE "
-                    f"{runtime_sha256} is neither the package XODR {package_sha256} nor an approved "
-                    "cooked re-serialization of it (approve the pair in "
-                    "SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON, or render labelled approximate with "
-                    "SIMFORGE_CARLA_MAP_BINDING=allow-approximate)"
-                )
-            self.signal_id_map = dict(COOKED_SIGNAL_ID_MAPS.get(
-                (requested_name, package_sha256, runtime_sha256),
-                {},
-            ))
-            exact = identity_mode != "approximate"
-            self.map_evidence = {
-                "schema": "simforge.carla-map-evidence/v1",
-                "available": True,
-                "source": "cooked-custom-map",
-                "identityMode": identity_mode,
-                "binding": "exact" if exact else "approximate",
-                "bindingPolicy": policy,
-                "requestedMapName": requested_name,
-                "loadedMapName": loaded_name,
-                "packageXodrSha256": package_sha256,
-                "runtimeXodrSha256": runtime_sha256,
-                "xodrByteExact": runtime_sha256 == package_sha256,
-                "signalIdentityMode": (
-                    "approved-cooked-map-remap" if self.signal_id_map else "direct-opendrive-id"
-                ),
-                "signalIdMap": dict(sorted(self.signal_id_map.items())),
-                "exact": exact,
-            }
+            raise CarlaRenderError(
+                "carla_map_digest_mismatch",
+                f"CARLA world {loaded_name} is not bound to the package XODR: runtime OpenDRIVE "
+                f"{runtime_sha256} is neither the package XODR {package_sha256} nor an approved "
+                "cooked re-serialization of it",
+            )
+        self.signal_id_map = dict(COOKED_SIGNAL_ID_MAPS.get(
+            (requested_name, package_sha256, runtime_sha256),
+            {},
+        ))
+        self.map_evidence = {
+            "schema": "simforge.carla-map-evidence/v1",
+            "available": True,
+            "source": "cooked-custom-map",
+            "identityMode": identity_mode,
+            "binding": "exact",
+            "bindingPolicy": policy,
+            "requestedMapName": requested_name,
+            "loadedMapName": loaded_name,
+            "packageXodrSha256": package_sha256,
+            "runtimeXodrSha256": runtime_sha256,
+            "xodrByteExact": runtime_sha256 == package_sha256,
+            "signalIdentityMode": (
+                "approved-cooked-map-remap" if self.signal_id_map else "direct-opendrive-id"
+            ),
+            "signalIdMap": dict(sorted(self.signal_id_map.items())),
+            "exact": True,
+        }
         self.package_xodr_sha256 = package_sha256
         self.fixed_timestep_s = fixed_timestep_s
         settings = self.world.get_settings()
@@ -1064,16 +1138,16 @@ class CarlaBackend:
         box = getattr(actor, "bounding_box", None)
         location = getattr(box, "location", None)
         extent = getattr(box, "extent", None)
-        if location is not None and extent is not None:
-            try:
-                return float(location.z) - float(extent.z)
-            except (TypeError, ValueError):
-                pass
-        if klass == WALKER:
-            dims = entry.get("dims") if isinstance(entry, Mapping) else None
-            height = dims.get("h") if isinstance(dims, Mapping) else None
-            return -(float(height) / 2.0 if isinstance(height, (int, float)) else 0.9)
-        return 0.0
+        try:
+            return float(location.z) - float(extent.z)
+        except (AttributeError, TypeError, ValueError) as exc:
+            # A guessed pivot (half the catalog height, 0.9 m for walkers) would
+            # put the body at a height parity cannot catch, since parity would
+            # assume the same guess.
+            raise CarlaRenderError(
+                "carla_actor_extent_unavailable",
+                f"CARLA actor {getattr(actor, 'type_id', '?')} has no readable bounding box to ground it by",
+            ) from exc
 
     def _hold_kinematic(self, actor_id: str, actor: Any) -> None:
         setter = getattr(actor, "set_simulate_physics", None)
@@ -1098,24 +1172,26 @@ class CarlaBackend:
         assert self.world is not None
         check = abort or (lambda: None)
         library = self.world.get_blueprint_library()
-        points = self.world.get_map().get_spawn_points()
+        points = list(self.world.get_map().get_spawn_points() or ())
         if not points:
-            return frozenset(blueprint_ids)
+            # A cooked custom world may declare no spawn points. Probe high
+            # above the map origin instead, where nothing can occupy the pose;
+            # never report the ids placeable without having placed them.
+            points = [self.carla.Transform(self.carla.Location(x=0.0, y=0.0, z=BLUEPRINT_PROBE_ALTITUDE_M))]
         available: set[str] = set()
         for index, blueprint_id in enumerate(sorted(set(blueprint_ids))):
             check()
             try:
                 blueprint = library.find(blueprint_id)
-            except RuntimeError:
-                continue
+            except (IndexError, KeyError, RuntimeError):
+                continue  # not in the registry: not placeable
             probe = self.world.try_spawn_actor(blueprint, points[index % len(points)])
             if probe is None:
-                continue
+                continue  # registered but not cooked into this image
             available.add(blueprint_id)
-            try:
-                probe.destroy()
-            except RuntimeError:
-                pass
+            if probe.destroy() is False:
+                # A probe left in the world would be rendered.
+                raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe")
         return frozenset(available)
 
     def spawn(self, actors: Mapping[str, ActorBinding], first_frame: PlanFrame, catalog: Mapping[str, Any], abort: Callable[[], None] | None = None) -> None:
@@ -1145,39 +1221,24 @@ class CarlaBackend:
         self.pose_gate = PoseGate(float(getattr(self, "fixed_timestep_s", 0.02)), mode=gate_mode())
         placements: dict[str, dict[str, Any]] = {}
         placed_footprints: list[tuple[float, float, float, float, float, float]] = []
-        # Actors the executor decided to drop before any CARLA body exists
-        # (e.g. authored knockdown poses native physics cannot execute). They
-        # are reported exactly like spawn-placement drops.
-        execution_drops: Mapping[str, str] = getattr(self, "execution_drops", {})
         library = self.world.get_blueprint_library()
         for actor_id, binding in actors.items():
             check()
             state = first_frame.actors[actor_id]
-            if actor_id in execution_drops:
-                self.dropped_actor_ids.add(actor_id)
-                placements[actor_id] = {
-                    "outcome": "dropped",
-                    "cause": "execution-semantics",
-                    "reason": execution_drops[actor_id],
-                    "authored": {"x": state.x, "y": state.y, "z": state.z},
-                }
-                continue
-            entry = catalog.get(binding.catalog_name, {}) if isinstance(catalog, Mapping) else {}
+            entry = catalog.get(binding.catalog_name) if isinstance(catalog, Mapping) else None
             requested_blueprint_id = entry.get("blueprintId") if isinstance(entry, Mapping) else None
             if not isinstance(requested_blueprint_id, str) or not requested_blueprint_id:
                 raise RuntimeError(f"asset catalog has no exact CARLA binding for {actor_id} ({binding.catalog_name})")
-            blueprint_id = RUNTIME_BLUEPRINT_ALIASES.get(requested_blueprint_id, requested_blueprint_id)
+            blueprint_id = requested_blueprint_id
             try:
                 blueprint = library.find(blueprint_id)
             except RuntimeError as exc:
-                raise RuntimeError(
-                    f"CARLA runtime is missing required catalog blueprint for {actor_id} ({blueprint_id}, {binding.kind})"
+                raise CarlaRenderError(
+                    "carla_blueprint_unavailable",
+                    f"CARLA runtime is missing required catalog blueprint for {actor_id} ({blueprint_id}, {binding.kind})",
                 ) from exc
             entry_dims = entry.get("dims") if isinstance(entry, Mapping) else None
-            entry_height = (
-                entry_dims.get("h") or entry_dims.get("height")
-                if isinstance(entry_dims, Mapping) else None
-            )
+            entry_height = entry_dims.get("h") if isinstance(entry_dims, Mapping) else None
             half_height = (
                 float(entry_height) / 2.0
                 if isinstance(entry_height, (int, float)) else 0.0
@@ -1188,56 +1249,46 @@ class CarlaBackend:
             # so a prop is spawned directly on the ground: its origin is the
             # base of its mesh. Vehicles and walkers keep a lift so their
             # collision shapes clear the surface; physics settles vehicles and
-            # walkers are grounded kinematically right after spawn.
+            # walkers are grounded kinematically right after spawn. The lift
+            # is only staging: every body is measured and re-posed before t=0.
             spawn_lift = 0.0 if spawn_class == PROP else max(0.25, half_height + 0.15)
             half_length, half_width = _spawn_footprint_half_extents(entry, binding.kind)
             heading_rad = radians(state.heading_deg)
             cos_h, sin_h = cos(heading_rad), sin(heading_rad)
-            actor = None
-            placement: dict[str, Any] | None = None
-            footprint: tuple[float, float, float, float, float, float] | None = None
-            for nudge in SPAWN_NUDGE_OFFSETS_M:
-                check()
-                x = state.x + cos_h * nudge
-                y = state.y + sin_h * nudge
-                candidate_footprint = (x, y, cos_h, sin_h, half_length, half_width)
-                if any(
-                    _planar_footprints_overlap(candidate_footprint, other, SPAWN_FOOTPRINT_CLEARANCE_M)
-                    for other in placed_footprints
-                ):
-                    continue
-                ground_z, ground_source = self._ground_elevation(x, -y, state.z)
-                transform = self.carla.Transform(
-                    self.carla.Location(x=x, y=-y, z=ground_z + spawn_lift),
-                    self.carla.Rotation(yaw=-state.heading_deg),
+            # The actor is placed at its authored pose or not at all: moving it
+            # along its lane (the former +-4.5 m nudge) or dropping it would
+            # change the scene the render shows.
+            footprint = (state.x, state.y, cos_h, sin_h, half_length, half_width)
+            if any(
+                _planar_footprints_overlap(footprint, other, SPAWN_FOOTPRINT_CLEARANCE_M)
+                for other in placed_footprints
+            ):
+                raise CarlaRenderError(
+                    "carla_actor_spawn_refused",
+                    f"{actor_id} overlaps an already placed actor at its authored pose; native physics "
+                    "cannot place two bodies in contact",
                 )
-                candidate = self.world.try_spawn_actor(blueprint, transform)
-                check()
-                if candidate is None:
-                    continue
-                actor = candidate
-                footprint = candidate_footprint
-                placement = {
-                    "outcome": "nudged" if nudge else "placed",
-                    "authored": {"x": state.x, "y": state.y, "z": state.z},
-                    "placed": {"x": x, "y": y, "z": ground_z + spawn_lift},
-                    "nudgeAlongHeadingM": nudge,
-                    "groundZ": ground_z,
-                    "groundSource": ground_source,
-                    "spawnLiftM": spawn_lift,
-                }
-                break
-            if actor is None or placement is None or footprint is None:
-                # An unplaceable actor is dropped and reported in the manifest;
-                # stacking it on top of an already-placed body is never allowed.
-                self.dropped_actor_ids.add(actor_id)
-                placements[actor_id] = {
-                    "outcome": "dropped",
-                    "reason": "no collision-free spawn within the bounded lane nudge window",
-                    "authored": {"x": state.x, "y": state.y, "z": state.z},
-                    "nudgeCandidatesM": list(SPAWN_NUDGE_OFFSETS_M),
-                }
-                continue
+            ground_z, ground_source = self._ground_elevation(state.x, -state.y, state.z)
+            transform = self.carla.Transform(
+                self.carla.Location(x=state.x, y=-state.y, z=ground_z + spawn_lift),
+                self.carla.Rotation(yaw=-state.heading_deg),
+            )
+            actor = self.world.try_spawn_actor(blueprint, transform)
+            check()
+            if actor is None:
+                raise CarlaRenderError(
+                    "carla_actor_spawn_refused",
+                    f"CARLA refused to spawn {actor_id} ({blueprint_id}) at its authored pose",
+                )
+            placement: dict[str, Any] = {
+                "outcome": "placed",
+                "authored": {"x": state.x, "y": state.y, "z": state.z},
+                "placed": {"x": state.x, "y": state.y, "z": ground_z + spawn_lift},
+                "nudgeAlongHeadingM": 0.0,
+                "groundZ": ground_z,
+                "groundSource": ground_source,
+                "spawnLiftM": spawn_lift,
+            }
             observed_type_id = str(getattr(actor, "type_id", ""))
             if observed_type_id != blueprint_id:
                 try:
@@ -1252,10 +1303,6 @@ class CarlaBackend:
                 "requestedBlueprintId": requested_blueprint_id,
                 "observedBlueprintId": observed_type_id,
                 "verification": "runtime-type-id-readback",
-                **(
-                    {"runtimeBlueprintAlias": blueprint_id}
-                    if blueprint_id != requested_blueprint_id else {}
-                ),
             }
             klass = motion_class(observed_type_id)
             bottom_offset = self._bottom_offset(actor, klass, entry if isinstance(entry, Mapping) else None)
@@ -1282,8 +1329,9 @@ class CarlaBackend:
                                 self.carla.Rotation(yaw=-state.heading_deg),
                             ))
                             if actor is None:
-                                raise RuntimeError(
-                                    f"CARLA refused to respawn prop {actor_id} at its grounded elevation"
+                                raise CarlaRenderError(
+                                    "carla_actor_spawn_refused",
+                                    f"CARLA refused to respawn prop {actor_id} at its grounded elevation",
                                 )
                             self._hold_kinematic(actor_id, actor)
                     else:
@@ -1313,9 +1361,6 @@ class CarlaBackend:
             if isinstance(runtime_id, int):
                 self.actor_id_by_runtime_id[runtime_id] = actor_id
             self.actor_lifecycle[actor_id] = state.lifecycle
-        if actors and not self.actors:
-            raise RuntimeError("spawn placement dropped every scenario actor")
-        self.static_actor_ids -= self.dropped_actor_ids
         # A kinematic static body is already held; it has nothing to settle.
         self.frozen_static_actor_ids |= self.static_actor_ids & self.kinematic_actor_ids
         self.spawn_placement = {
@@ -1327,7 +1372,7 @@ class CarlaBackend:
                 if item.get("outcome") == "nudged"
             ),
         }
-        self.streaming_primary_actor_id = next(iter(self.actors), None)
+        self.streaming_primary_actor_id = next(iter(sorted(self.actors)), None)
         self._configure_collision_sensors(library, check)
 
     # -- trace replay ---------------------------------------------------------
@@ -1377,36 +1422,29 @@ class CarlaBackend:
         self.z_offset_m, self.z_offset_source = map_z_calibration(getattr(self, "package_xodr_sha256", ""))
         self.ground_diagnostic = GroundDiagnostic()
         placements: dict[str, dict[str, Any]] = {}
-        execution_drops: Mapping[str, str] = getattr(self, "execution_drops", {})
         library = self.world.get_blueprint_library()
         for actor_id in sorted(actors):
             check()
             binding = actors[actor_id]
             state = first_frame.actors[actor_id]
             authored = {"x": state.x, "y": state.y, "z": state.z}
-            if actor_id in execution_drops:
-                self.dropped_actor_ids.add(actor_id)
-                placements[actor_id] = {
-                    "outcome": "dropped", "cause": "execution-semantics",
-                    "reason": execution_drops[actor_id], "authored": authored,
-                }
-                continue
             if state.lifecycle == LIFECYCLE_ABSENT:
                 # Deleted before the clip starts: never shown, never spawned.
                 self.absent_actors.add(actor_id)
                 self.actor_lifecycle[actor_id] = LIFECYCLE_ABSENT
                 placements[actor_id] = {"outcome": "absent-at-clip-start", "authored": authored}
                 continue
-            entry = catalog.get(binding.catalog_name, {}) if isinstance(catalog, Mapping) else {}
+            entry = catalog.get(binding.catalog_name) if isinstance(catalog, Mapping) else None
             requested_blueprint_id = entry.get("blueprintId") if isinstance(entry, Mapping) else None
             if not isinstance(requested_blueprint_id, str) or not requested_blueprint_id:
                 raise RuntimeError(f"asset catalog has no exact CARLA binding for {actor_id} ({binding.catalog_name})")
-            blueprint_id = RUNTIME_BLUEPRINT_ALIASES.get(requested_blueprint_id, requested_blueprint_id)
+            blueprint_id = requested_blueprint_id
             try:
                 blueprint = library.find(blueprint_id)
             except RuntimeError as exc:
-                raise RuntimeError(
-                    f"CARLA runtime is missing required catalog blueprint for {actor_id} ({blueprint_id}, {binding.kind})"
+                raise CarlaRenderError(
+                    "carla_blueprint_unavailable",
+                    f"CARLA runtime is missing required catalog blueprint for {actor_id} ({blueprint_id}, {binding.kind})",
                 ) from exc
             klass = motion_class(blueprint_id)
             entry_mapping = entry if isinstance(entry, Mapping) else None
@@ -1443,13 +1481,13 @@ class CarlaBackend:
                     outcome = "staged"
             check()
             if actor is None:
-                self.dropped_actor_ids.add(actor_id)
-                placements[actor_id] = {
-                    "outcome": "dropped",
-                    "reason": "CARLA refused to spawn the body at or above its timeline pose",
-                    "authored": authored,
-                }
-                continue
+                # A missing body changes the picture; the actor is never
+                # silently left out of the render.
+                raise CarlaRenderError(
+                    "carla_actor_spawn_refused",
+                    f"CARLA refused to spawn {actor_id} ({blueprint_id}) at "
+                    + ("its timeline pose" if klass == PROP else "or above its timeline pose"),
+                )
             observed_type_id = str(getattr(actor, "type_id", ""))
             if observed_type_id != blueprint_id:
                 try:
@@ -1468,7 +1506,10 @@ class CarlaBackend:
                         actor.destroy()
                         actor = self.world.try_spawn_actor(blueprint, carla_transform(self.carla, pose))
                         if actor is None:
-                            raise RuntimeError(f"CARLA refused to respawn prop {actor_id} at its timeline elevation")
+                            raise CarlaRenderError(
+                                "carla_actor_spawn_refused",
+                                f"CARLA refused to respawn prop {actor_id} at its timeline elevation",
+                            )
                         self._hold_kinematic(actor_id, actor)
                 else:
                     actor.set_transform(carla_transform(self.carla, pose))
@@ -1483,17 +1524,16 @@ class CarlaBackend:
                 "requestedBlueprintId": requested_blueprint_id,
                 "observedBlueprintId": observed_type_id,
                 "verification": "runtime-type-id-readback",
-                **({"runtimeBlueprintAlias": blueprint_id} if blueprint_id != requested_blueprint_id else {}),
             }
             self.actor_classes[actor_id] = klass
             self.bottom_offsets[actor_id] = bottom
             self.kinematic_actor_ids.add(actor_id)
             self.replay_poses[actor_id] = pose
-            box = getattr(actor, "bounding_box", None)
-            if box is not None:
-                self.replay_extents[actor_id] = (
-                    float(box.extent.x), float(box.extent.y), float(box.extent.z), float(box.location.z),
-                )
+            # `_bottom_offset` already proved the box readable.
+            box = actor.bounding_box
+            self.replay_extents[actor_id] = (
+                float(box.extent.x), float(box.extent.y), float(box.extent.z), float(box.location.z),
+            )
             self.replay_blueprints[actor_id] = blueprint
             self.kinematic_commands[actor_id] = (pose.x, pose.y, pose.z)
             self.actors[actor_id] = actor
@@ -1518,9 +1558,6 @@ class CarlaBackend:
                 "groundSource": ground_source,
                 "cookedMinusTimelineZM": delta,
             }
-        if actors and not self.actors and not self.absent_actors:
-            raise RuntimeError("spawn placement dropped every scenario actor")
-        self.static_actor_ids -= self.dropped_actor_ids
         self.spawn_placement = {
             "schema": "simforge.spawn-placement/v1",
             "mode": EXECUTION_MODE_TRACE_REPLAY,
@@ -1531,7 +1568,7 @@ class CarlaBackend:
                 actor_id for actor_id, item in placements.items() if item.get("outcome") == "staged"
             ),
         }
-        self.streaming_primary_actor_id = next(iter(self.actors), None)
+        self.streaming_primary_actor_id = next(iter(sorted(self.actors)), None)
         # No collision sensors: in replay nothing is simulated, so contacts are
         # the trace's own events rather than a CARLA observation.
 
@@ -1542,7 +1579,10 @@ class CarlaBackend:
         old.destroy()
         actor = self.world.try_spawn_actor(self.replay_blueprints[actor_id], carla_transform(self.carla, pose))
         if actor is None:
-            raise RuntimeError(f"CARLA refused to respawn moving prop {actor_id} at its timeline pose")
+            raise CarlaRenderError(
+                "carla_actor_spawn_refused",
+                f"CARLA refused to respawn moving prop {actor_id} at its timeline pose",
+            )
         self._hold_kinematic(actor_id, actor)
         self.actors[actor_id] = actor
         if isinstance(old_id, int):
@@ -1570,8 +1610,9 @@ class CarlaBackend:
             self._apply_appearance(actor_id, actor, state.appearance, frame.t)
             klass = self.actor_classes[actor_id]
             walker = klass == WALKER
+            # Measured at spawn for every replayed body.
             pose = render_pose(
-                state, bottom_offset_m=self.bottom_offsets.get(actor_id, 0.0),
+                state, bottom_offset_m=self.bottom_offsets[actor_id],
                 z_offset_m=self.z_offset_m, walker=walker,
             )
             previous = self.replay_poses.get(actor_id)
@@ -1653,9 +1694,9 @@ class CarlaBackend:
             speed = 0.0 if (self.actor_classes.get(actor_id) == WALKER and state.downed) else state.speed_mps
             velocity = (cos(yaw) * speed, sin(yaw) * speed, 0.0)
             velocities[actor_id] = velocity
-            extent = self.replay_extents.get(actor_id)
-            if extent is None:
-                continue
+            # Every replayed body's extent was read at spawn; a body missing
+            # from the Doppler set would read as static world.
+            extent = self.replay_extents[actor_id]
             bodies.append(DopplerBody(
                 actor_id, (pose.x, -pose.y, pose.z + extent[3]), yaw, extent[:3], velocity,
             ))
@@ -1780,22 +1821,14 @@ class CarlaBackend:
         check()
         assert self.world is not None
         authored = set(signal_ids)
-        raw_remap = simforge_env("CARLA_SIGNAL_ID_MAP", "{}")
-        try:
-            configured_remap = json.loads(raw_remap)
-        except json.JSONDecodeError as exc:
-            raise RuntimeError("SIMFORGE_CARLA_SIGNAL_ID_MAP must be valid JSON") from exc
-        if not isinstance(configured_remap, Mapping):
-            raise RuntimeError("SIMFORGE_CARLA_SIGNAL_ID_MAP must be a JSON object")
+        # The remap comes only from the approved cooked-world registry; a
+        # worker-configured remap (SIMFORGE_CARLA_SIGNAL_ID_MAP) is refused.
+        forbid_output_changing_worker_config()
         signal_remap = {
             key: value
             for key, value in getattr(self, "signal_id_map", {}).items()
             if key in authored
         }
-        for key, value in configured_remap.items():
-            if key in signal_remap and signal_remap[key] != value:
-                raise RuntimeError(f"configured CARLA signal remap conflicts with cooked map identity for {key}")
-            signal_remap[key] = value
         if (
             any(not isinstance(key, str) or not isinstance(value, str) or not value for key, value in signal_remap.items())
             or set(signal_remap) - authored
@@ -1841,12 +1874,19 @@ class CarlaBackend:
         # frozen for the whole render — deterministic and inert — and recorded in
         # the map evidence. Worlds without a cooked remap stay strictly fail-closed.
         unowned_cooked_extras: list[str] = []
-        unowned_cooked_actor_ids: list[str] = []
-        if getattr(self, "signal_id_map", {}):
-            unowned_cooked_extras = extra
-            unowned_cooked_actor_ids = unbound
-            extra = []
-            unbound = []
+        map_evidence = getattr(self, "map_evidence", None)
+        approved_unowned: frozenset[str] = frozenset()
+        if getattr(self, "signal_id_map", {}) and isinstance(map_evidence, Mapping):
+            world_key = (
+                str(map_evidence.get("loadedMapName")),
+                str(map_evidence.get("packageXodrSha256")),
+                str(map_evidence.get("runtimeXodrSha256")),
+            )
+            if world_key in APPROVED_UNOWNED_COOKED_SIGNALS:
+                approved_unowned = APPROVED_UNOWNED_COOKED_SIGNALS[world_key]
+        if approved_unowned:
+            unowned_cooked_extras = sorted(set(extra) & approved_unowned)
+            extra = sorted(set(extra) - approved_unowned)
         if missing or extra or unbound or duplicate_ids:
             details = []
             if missing:
@@ -1864,10 +1904,11 @@ class CarlaBackend:
                 details.append(f"unbound actor ids: {', '.join(sorted(unbound))}")
             if duplicate_ids:
                 details.append(f"duplicate OpenDRIVE ids: {', '.join(sorted(set(duplicate_ids)))}")
-            raise RuntimeError(
+            raise CarlaRenderError(
+                "carla_signal_ownership_unapproved",
                 "authored OpenDRIVE traffic signal heads cannot be safely owned in CARLA ("
                 + "; ".join(details)
-                + ")"
+                + "); a runtime head the scenario does not drive must be approved per cooked world",
             )
         if not lights:
             self.signals = {}
@@ -1917,7 +1958,7 @@ class CarlaBackend:
 
         unowned_keys = {
             self._signal_identity(resolved[signal_id]) for signal_id in unowned_cooked_extras
-        } | {int(actor_id) for actor_id in unowned_cooked_actor_ids}
+        }
 
         self.signals = {
             authored_id: resolved[runtime_id]
@@ -1935,10 +1976,11 @@ class CarlaBackend:
             check()
             self.world.tick()
             check()
-            if unowned_cooked_extras or unowned_cooked_actor_ids:
-                evidence = dict(getattr(self, "map_evidence", {}) or {})
+            if unowned_cooked_extras:
+                evidence = dict(self.map_evidence)
                 evidence["unownedFrozenSignalIds"] = list(unowned_cooked_extras)
-                evidence["unownedFrozenSignalActorIds"] = list(unowned_cooked_actor_ids)
+                evidence["unownedFrozenSignalState"] = "red"
+                evidence["unownedSignalApproval"] = "APPROVED_UNOWNED_COOKED_SIGNALS"
                 self.map_evidence = evidence
         except Exception as original_error:
             try:
@@ -2109,12 +2151,60 @@ class CarlaBackend:
                 ticks += 1
                 with self.sensor_condition:
                     self.sensor_condition.wait(0.05)
+        preroll = self._lidar_preroll(check)
         return {
             "schema": "simforge.replay-prepare/v1",
             "settleTicks": 0,
             "sensorWarmupTicks": ticks,
             "physics": "off-from-spawn",
+            # The first captures' lidar revolutions include these ticks, in
+            # which every body is held at its clip-start pose.
+            "lidarPreRollTicks": preroll,
         }
+
+    def _lidar_preroll(self, check: Callable[[], None]) -> int:
+        """Tick until each lidar holds all but the last slice of a revolution,
+        so the t=0 capture is already a full revolution."""
+        sweeps = getattr(self, "lidar_sweeps", None) or {}
+        ticks = max((sweep.ticks_per_revolution for sweep in sweeps.values()), default=1) - 1
+        for _ in range(ticks):
+            check()
+            carla_frame = int(self.world.tick())
+            previous = getattr(self, "last_carla_frame", None)
+            if previous is not None and carla_frame != previous + 1:
+                raise RuntimeError(
+                    f"CARLA synchronous tick barrier is broken during lidar pre-roll: {previous} -> {carla_frame}"
+                )
+            self.last_carla_frame = carla_frame
+            self._collect_lidar_slices(carla_frame, check)
+            with self.sensor_condition:
+                for old_frame in [frame for frame in self.sensor_pending if frame <= carla_frame]:
+                    del self.sensor_pending[old_frame]
+        return ticks
+
+    def _collect_lidar_slices(self, carla_frame: int, check: Callable[[], None]) -> None:
+        """Keep this tick's slice of every lidar's revolution."""
+        sweeps = getattr(self, "lidar_sweeps", None) or {}
+        if not sweeps:
+            return
+        keys = set(sweeps)
+        deadline = monotonic() + self.sensor_timeout_s
+        while True:
+            with self.sensor_condition:
+                if self.sensor_error:
+                    raise self.sensor_error
+                pending = self.sensor_pending.get(carla_frame)
+                if pending is not None and keys <= set(pending):
+                    slices = {key: pending.pop(key) for key in sorted(keys)}
+                    break
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    missing = sorted(keys - set(pending or ()))
+                    raise RuntimeError(f"lidar slice timeout at CARLA frame {carla_frame}; missing: {', '.join(missing)}")
+                self.sensor_condition.wait(min(0.25, remaining))
+            check()
+        for key, data in slices.items():
+            sweeps[key].add(carla_frame, bytes(data.raw_data))
 
     def _settled_z(self, actor_id: str, actor: Any) -> float:
         """Settled elevation for the pre-t0 reset.
@@ -2260,12 +2350,12 @@ class CarlaBackend:
         output_dir.mkdir(parents=True, exist_ok=True)
         library = self.world.get_blueprint_library()
         sensor_blueprints = NATIVE_SENSOR_BLUEPRINTS
-        quality_attributes = {
-            "preview": {"enable_postprocess_effects": "False", "motion_blur_intensity": "0.0", "gamma": "2.2"},
-            "standard": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
-            "high": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
-            "cinematic": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
-        }
+        self.lidar_sweeps = {}
+        self.sensor_attribute_evidence = {}
+        self.streaming_anchor_actor_id = None
+        # Anything that renders pixels must show walking walkers walking.
+        self.walker_animation = WalkerAnimationMonitor() if spec.sensors else None
+        self.walker_animation_evidence = None
         for requested in spec.sensors:
             check()
             key = requested.artifact_name
@@ -2277,29 +2367,29 @@ class CarlaBackend:
                     f"{sensor_blueprints[requested.modality]}"
                 ) from exc
             config = requested.config
+            label = f"{requested.modality} sensor {key}"
             if requested.modality in {"rgb", "depth", "semantic", "instance", "normals"}:
-                attributes = {
+                attributes: dict[str, object] = {
                     "image_size_x": config["width"],
                     "image_size_y": config["height"],
                     "fov": config["fov"],
                 }
                 if requested.modality == "rgb":
-                    requested_grade = dict(DEFAULT_RGB_CAMERA_GRADE)
-                    loaded_map_name = str(self.map_evidence.get("loadedMapName", ""))
-                    for map_token, exposure in MAP_RGB_EXPOSURE:
-                        if map_token in loaded_map_name:
-                            requested_grade["exposure_compensation"] = exposure
-                            break
-                    applied_grade, unsupported_grade = apply_supported_blueprint_attributes(
-                        blueprint,
-                        requested_grade,
-                    )
+                    loaded_map_name = str(self.map_evidence.get("loadedMapName"))
+                    grade = dict(DEFAULT_RGB_CAMERA_GRADE)
+                    if loaded_map_name in COOKED_MAP_RGB_EXPOSURE:
+                        grade["exposure_compensation"] = COOKED_MAP_RGB_EXPOSURE[loaded_map_name]
+                    attributes.update(grade)
+                    attributes.update(RGB_QUALITY_ATTRIBUTES[spec.quality])
                     self.camera_grade_evidence[key] = {
                         "schema": "simforge.camera-grade-evidence/v1",
-                        "profile": "rrmaps-accepted-v1",
+                        "profile": CAMERA_GRADE_PROFILE,
                         "mapName": loaded_map_name,
-                        "attributes": dict(sorted(applied_grade.items())),
-                        "unsupportedAttributes": sorted(unsupported_grade),
+                        "attributes": dict(sorted(grade.items())),
+                        "mapExposureSource": (
+                            "COOKED_MAP_RGB_EXPOSURE" if loaded_map_name in COOKED_MAP_RGB_EXPOSURE else None
+                        ),
+                        "quality": spec.quality,
                         "postprocess": spec.quality != "preview",
                         "motionBlurIntensity": 0.0,
                     }
@@ -2312,9 +2402,6 @@ class CarlaBackend:
                         "minLuma": 255,
                         "maxLuma": 0,
                     }
-                for name, value in quality_attributes[spec.quality].items():
-                    if blueprint.has_attribute(name):
-                        blueprint.set_attribute(name, value)
                 extension = "mp4"
                 # Camera pixels exist only as encoded video, so conversion picks
                 # the stream's visual representation: depth maps logarithmically,
@@ -2326,6 +2413,18 @@ class CarlaBackend:
                     else self.carla.ColorConverter.Raw
                 )
             elif requested.modality in {"lidar", "semantic-lidar"}:
+                ticks_per_revolution = lidar_ticks_per_revolution(
+                    float(config["rotationFrequencyHz"]), float(self.fixed_timestep_s),
+                )
+                if ticks_per_revolution > 1 and not self.replaying:
+                    # Physics validation cannot pre-roll a revolution before
+                    # t=0 without moving its bodies.
+                    raise CarlaRenderError(
+                        "carla_lidar_schedule_unsupported",
+                        f"lidar {key} needs {ticks_per_revolution} ticks per revolution; physics validation "
+                        "can only assemble single-tick revolutions (rotationFrequencyHz "
+                        f"{1.0 / float(self.fixed_timestep_s):g})",
+                    )
                 attributes = {
                     "channels": config["channels"],
                     "range": config["rangeM"],
@@ -2333,7 +2432,12 @@ class CarlaBackend:
                     "rotation_frequency": config["rotationFrequencyHz"],
                     "upper_fov": config["upperFovDeg"],
                     "lower_fov": config["lowerFovDeg"],
+                    "horizontal_fov": config["horizontalFovDeg"],
                 }
+                if requested.modality == "lidar":
+                    # Semantic lidar has no drop-off, noise or intensity model.
+                    attributes.update(LIDAR_DETERMINISTIC_ATTRIBUTES)
+                self.lidar_sweeps[key] = LidarSweep(requested.modality, ticks_per_revolution)
                 extension = "ply"
                 converter = None
             else:
@@ -2345,13 +2449,10 @@ class CarlaBackend:
                 }
                 extension = "csv"
                 converter = None
+            # Every sensor delivers every world tick: lidar needs each tick's
+            # slice of its revolution, and cameras are read on capture ticks.
             attributes["sensor_tick"] = self.fixed_timestep_s
-            for name, value in attributes.items():
-                if not blueprint.has_attribute(name):
-                    raise RuntimeError(
-                        f"CARLA native {requested.modality} blueprint lacks required attribute {name}"
-                    )
-                blueprint.set_attribute(name, str(value))
+            applied_attributes = apply_blueprint_attributes(blueprint, attributes, label)
             t = requested.transform
             transform = self.carla.Transform(
                 self.carla.Location(x=t["x"], y=-t["y"], z=t["z"]),
@@ -2381,6 +2482,14 @@ class CarlaBackend:
                         f"CARLA sensor {key} did not read back its resolved vehicle parent"
                     )
             check()
+            self.sensor_attribute_evidence[key] = {
+                "requested": dict(sorted(applied_attributes.items())),
+                "observed": blueprint_attribute_readback(sensor_actor, applied_attributes),
+            }
+            if requested.actor_id is not None and getattr(self, "streaming_anchor_actor_id", None) is None:
+                # Tiles stream around the spectator; anchor it on a sensor host.
+                self.streaming_anchor_actor_id = requested.actor_id
+                self.streaming_primary_actor_id = requested.actor_id
             target_dir = output_dir / key
             target_dir.mkdir(parents=True, exist_ok=False)
             self.sensor_configs[key] = {
@@ -2585,9 +2694,13 @@ class CarlaBackend:
                 context = getattr(self, "replay_doppler_context", None)
                 self._write_radar_csv(target, data, None if context is None else {
                     **context,
-                    "hostActorId": config.get("actorId"),
-                    "hostVelocity": context["velocities"].get(config.get("actorId"), (0.0, 0.0, 0.0)),
+                    "hostActorId": config["actorId"],
+                    "hostVelocity": self._radar_host_velocity(context, config["actorId"]),
                 })
+            elif config["modality"] in {"lidar", "semantic-lidar"}:
+                # One full revolution, assembled from this tick and the ones
+                # before it; a single tick is only a sector of the sweep.
+                write_lidar_ply(target, config["modality"], self.lidar_sweeps[sensor_key].revolution(carla_frame))
             else:
                 data.save_to_disk(str(target))
             size = target.stat().st_size
@@ -2606,6 +2719,19 @@ class CarlaBackend:
             "relativePath": relative,
         }
         return record, target, size
+
+    @staticmethod
+    def _radar_host_velocity(context: Mapping[str, Any], host_actor_id: str | None) -> tuple[float, float, float]:
+        """The radar host's timeline velocity (a world-mounted radar is static)."""
+        if host_actor_id is None:
+            return (0.0, 0.0, 0.0)
+        velocities = context["velocities"]
+        if host_actor_id not in velocities:
+            raise CarlaRenderError(
+                "carla_radar_host_velocity_unavailable",
+                f"radar host {host_actor_id} has no timeline velocity for this capture",
+            )
+        return tuple(velocities[host_actor_id])
 
     def _capture_world_frame(self, carla_frame: int, capture: Mapping[str, float | int], abort: Callable[[], None] | None = None) -> None:
         check = abort or (lambda: None)
@@ -2628,9 +2754,12 @@ class CarlaBackend:
                     raise RuntimeError(f"sensor frame timeout at CARLA frame {carla_frame}; missing: {', '.join(missing)}")
                 self.sensor_condition.wait(min(0.25, remaining))
             check()
+        sweeps = getattr(self, "lidar_sweeps", None) or {}
+        for key, sweep in sweeps.items():
+            sweep.add(carla_frame, bytes(images[key].raw_data))
         output_index = int(capture["outputFrameIndex"])
         scheduled_time = float(capture["scheduledTimeS"])
-        content_time = float(capture.get("contentTimeS", scheduled_time))
+        content_time = float(capture["contentTimeS"])
         if self.sensor_writer_pool is None:
             self.sensor_writer_pool = ThreadPoolExecutor(
                 max_workers=self.sensor_writer_workers,
@@ -2800,7 +2929,7 @@ class CarlaBackend:
                 raise RuntimeError(f"authored static actor {actor_id} has non-zero speed")
             return
         ground_z, ground_source = self._ground_elevation(state.x, -state.y, state.z)
-        z = ground_z - self.bottom_offsets.get(actor_id, 0.0)
+        z = ground_z - self.bottom_offsets[actor_id]
         transform = self.carla.Transform(
             self.carla.Location(x=state.x, y=-state.y, z=z),
             self.carla.Rotation(yaw=-state.heading_deg),
@@ -3014,7 +3143,10 @@ class CarlaBackend:
                 raise RuntimeError(f"the CARLA runtime has no VehicleDoor.{VEHICLE_DOOR_MEMBERS[component]}")
             (opener if state == "open" else closer)(member)
             self.door_states[(actor_id, component)] = state
-            self.appearance_verification.setdefault(actor_id, {})[f"door.{component}"] = "command-confirmed"
+            # CARLA 0.10 exposes no door state to read back (open_door and
+            # close_door only; vehicles have no bones), so this records that
+            # the command was issued, not that the door moved.
+            self.appearance_verification.setdefault(actor_id, {})[f"door.{component}"] = "command-issued-no-readback"
 
     @staticmethod
     def _forward_vector(transform: Any) -> tuple[float, float, float]:
@@ -3031,9 +3163,13 @@ class CarlaBackend:
         check()
         self.current_plan_frame = getattr(self, "current_plan_frame", None)
         self.carla_to_plan_frame = getattr(self, "carla_to_plan_frame", {})
-        primary = self.actors.get(getattr(self, "streaming_primary_actor_id", None) or "")
+        anchor_id = getattr(self, "streaming_primary_actor_id", None)
+        primary = self.actors.get(anchor_id) if anchor_id is not None else None
         streaming_evidence = getattr(self, "streaming_evidence", None)
         if primary is not None:
+            # Map tiles stream around the spectator. Following the sensor host
+            # is what keeps the geometry the cameras see loaded; a failure to
+            # follow it could render missing geometry, so it fails the job.
             try:
                 source = primary.get_transform()
                 spectator = self.world.get_spectator()
@@ -3049,11 +3185,14 @@ class CarlaBackend:
                         roll=0.0,
                     ),
                 ))
-                if streaming_evidence is not None:
-                    streaming_evidence["spectatorFollow"] = "active"
-            except Exception:
-                if streaming_evidence is not None:
-                    streaming_evidence["spectatorFollow"] = "unavailable"
+            except RuntimeError as exc:
+                raise CarlaRenderError(
+                    "carla_streaming_anchor_failed",
+                    f"CARLA could not move the streaming spectator onto {anchor_id}: {exc}",
+                ) from exc
+            if streaming_evidence is not None:
+                streaming_evidence["spectatorFollow"] = "active"
+                streaming_evidence["anchorActorId"] = anchor_id
         previous_frame = getattr(self, "last_carla_frame", None)
         carla_frame = int(self.world.tick())
         self.last_carla_frame = carla_frame
@@ -3078,6 +3217,7 @@ class CarlaBackend:
                 self.replay_doppler_context = self._doppler_context()
             self._capture_world_frame(carla_frame, capture, abort)
         else:
+            self._collect_lidar_slices(carla_frame, check)
             with self.sensor_condition:
                 if self.sensor_error:
                     raise self.sensor_error
@@ -3124,6 +3264,9 @@ class CarlaBackend:
                 "appearance": dict(applied_appearance.get(actor_id, {})),
             }
         self._observe_pose_gates(result)
+        frame = getattr(self, "current_plan_frame", None)
+        if frame is not None:
+            self._sample_walker_animation(int(frame[0]))
         return result
 
     def _replay_tick_result(
@@ -3147,7 +3290,7 @@ class CarlaBackend:
                 "x": pose.x,
                 "y": pose.y,
                 "z": pose.z,
-                "contactZ": pose.z + self.bottom_offsets.get(actor_id, 0.0) - getattr(self, "z_offset_m", 0.0),
+                "contactZ": pose.z + self.bottom_offsets[actor_id] - self.z_offset_m,
                 "headingDeg": pose.heading_deg,
                 "pitchDeg": pose.pitch_deg,
                 "rollDeg": pose.roll_deg,
@@ -3166,7 +3309,31 @@ class CarlaBackend:
         frame = getattr(self, "current_plan_frame", None)
         if frame is not None:
             self._replay_ground_sample(int(frame[0]))
+            self._sample_walker_animation(int(frame[0]))
         return result
+
+    def _sample_walker_animation(self, frame_index: int) -> None:
+        """Feed walking walkers' leg poses to the animation monitor."""
+        monitor = getattr(self, "walker_animation", None)
+        if monitor is None:
+            return
+        targets = getattr(self, "current_frame_actors", None) or {}
+        for actor_id, klass in sorted(getattr(self, "actor_classes", {}).items()):
+            if klass != WALKER:
+                continue
+            actor = self.actors.get(actor_id)
+            state = targets.get(actor_id)
+            if actor is None or state is None or state.lifecycle == LIFECYCLE_ABSENT:
+                continue
+            if not monitor.wants_sample(actor_id, frame_index, state.speed_mps, state.downed):
+                continue
+            getter = getattr(actor, "get_bones", None)
+            if not callable(getter):
+                raise CarlaRenderError(
+                    "carla_walker_animation_unverifiable",
+                    f"CARLA walker {actor_id} exposes no get_bones() to verify its gait",
+                )
+            monitor.observe(actor_id, frame_index, bone_pose_signature(getter()))
 
     def collision_readback(self, frame_index: int, t: float, abort: Callable[[], None] | None = None) -> list[Mapping[str, Any]]:
         check = abort or (lambda: None)
@@ -3247,6 +3414,7 @@ class CarlaBackend:
                 for camera_id, evidence in sorted(self.camera_grade_evidence.items())
             },
             "visualQuality": dict(self.visual_quality_evidence),
+            "walkerAnimation": getattr(self, "walker_animation_evidence", None),
             "sensorListen": {
                 "retryCount": sum(self.sensor_listen_retries.values()),
                 "recoveredSensors": {
@@ -3279,6 +3447,7 @@ class CarlaBackend:
                     "modality": config["modality"],
                     "transform": dict(config["transform"]),
                     "config": dict(config["config"]),
+                    "attributes": getattr(self, "sensor_attribute_evidence", {}).get(sensor_key),
                     "capturedFrames": sum(
                         1 for item in self.sensor_records
                         if item["artifactName"] == sensor_key
@@ -3313,6 +3482,9 @@ class CarlaBackend:
                     f"{len(indexes)} of {expected_frame_count}"
                 )
         self._close_camera_encoders()
+        monitor = getattr(self, "walker_animation", None)
+        if monitor is not None:
+            self.walker_animation_evidence = monitor.finish()
         if any(config["modality"] == "rgb" for config in self.sensor_configs.values()):
             self.visual_quality_evidence = dict(self._visual_quality_report())
             if self.visual_quality_evidence["verdict"] != "pass":
