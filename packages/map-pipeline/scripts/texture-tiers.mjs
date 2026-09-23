@@ -135,6 +135,13 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
   for (const asset of Object.values(assets)) for (const image of asset.images) {
     if (!available.has(image)) throw new Error(`Missing image ${image}`);
   }
+  // An additive overlay starts with the closure's own tiers: their index and
+  // objects live in the source root until the overlay holds a copy.
+  const readOverlaid = async (relative) => {
+    try { return await readFile(path.join(outputRoot, '3d', relative)); }
+    catch (error) { if (error.code !== 'ENOENT' || outputRoot === sourceRoot) throw error; }
+    return readFile(path.join(sourceRoot, '3d', relative));
+  };
   const reports = {};
   const payloads = {};
   const previousImages = {};
@@ -143,7 +150,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
     payloads[id] = { schemaVersion: 1, id, codec: id.split('-')[2], longestEdgePx: Number(id.split('-')[1]), sourceManifestSha256, images: {}, assets };
     const reference = existing.variants[id];
     if (reference) {
-      const bytes = await readFile(path.join(variantRoot, reference.file));
+      const bytes = await readOverlaid(`variants/${reference.file}`);
       if (sha256(bytes) !== reference.outputSha256) throw new Error(`Corrupt derivative index ${id}`);
       previousImages[id] = JSON.parse(bytes).images;
     }
@@ -172,7 +179,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
         const previous = previousImages[id]?.[sourceKey];
         let image;
         if (previous?.sourceSha256 === sourceSha256 && previous.revision === TEXTURE_TIERS_REVISION) {
-          const object = await readFile(path.join(outputRoot, '3d', previous.file));
+          const object = await readOverlaid(previous.file);
           if (sha256(object) !== previous.outputSha256) throw new Error(`Corrupt immutable texture object ${previous.file}`);
           image = previous;
           report.reusedObjects++;
