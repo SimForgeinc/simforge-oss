@@ -48,6 +48,46 @@ EMPTY_AMBIENT_CONFIG_SHA256 = "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e831
 EMPTY_AMBIENT_RESULT_SHA256 = "1925590408012373ea3cc6b9d02703527531492efb52aa39689d541a0581f840"
 
 
+#: Execution modes a CARLA lease may request.
+#:
+#: ``trace-replay`` is the default and the only mode whose output is the
+#: scenario's render: CARLA renders the canonical trace, every replayed actor
+#: is kinematic (physics off from spawn) and posed each tick from the shared
+#: timeline sampler, and observed transforms must match the sampler within
+#: ``REPLAY_PARITY_TOLERANCES`` or the job fails.
+#:
+#: ``native-physics`` is the opt-in *physics validation* mode: CARLA vehicles
+#: are driven by native controls chasing the trace. Its output measures how
+#: CARLA physics diverges from the trace; it is never the scenario's render.
+#:
+#: ``diagnostic-replay`` is the historical name of trace replay and is
+#: normalized to ``trace-replay`` at every contract boundary.
+EXECUTION_MODE_TRACE_REPLAY = "trace-replay"
+EXECUTION_MODE_PHYSICS_VALIDATION = "native-physics"
+EXECUTION_MODE_ALIASES: Mapping[str, str] = {"diagnostic-replay": EXECUTION_MODE_TRACE_REPLAY}
+EXECUTION_MODES = frozenset({EXECUTION_MODE_TRACE_REPLAY, EXECUTION_MODE_PHYSICS_VALIDATION})
+DEFAULT_EXECUTION_MODE = EXECUTION_MODE_TRACE_REPLAY
+#: What a run in each mode is for; carried into manifests and parity evidence
+#: so no consumer can present a physics-validation run as the scenario render.
+EXECUTION_PURPOSE: Mapping[str, str] = {
+    EXECUTION_MODE_TRACE_REPLAY: "scenario-render",
+    EXECUTION_MODE_PHYSICS_VALIDATION: "physics-validation",
+}
+#: Blocking replay parity: observed CARLA transforms against the sampler.
+#: float32 positions plus UE centimetre units bound what CARLA can return.
+REPLAY_PARITY_TOLERANCES: Mapping[str, float] = {"positionM": 0.01, "rotationDeg": 0.1}
+
+
+def normalize_execution_mode(value: Any, label: str) -> str:
+    """Resolve an execution-mode token, accepting the historical alias."""
+    if value is None:
+        return DEFAULT_EXECUTION_MODE
+    mode = EXECUTION_MODE_ALIASES.get(value, value) if isinstance(value, str) else value
+    if mode not in EXECUTION_MODES:
+        raise ContractError(f"{label} must be trace-replay or native-physics")
+    return mode
+
+
 class ContractError(ValueError):
     """An immutable execution package or lease violated its contract."""
 
@@ -363,8 +403,10 @@ class RuntimeRequirements:
             raise ContractError("runtimeRequirements.jobMode is unsupported")
         if traffic_mode not in {"disabled", "native", "sumo"}:
             raise ContractError("runtimeRequirements.trafficMode is unsupported")
-        if execution_mode not in {"native-physics", "diagnostic-replay"}:
-            raise ContractError("runtimeRequirements.executionMode is unsupported")
+        try:
+            execution_mode = normalize_execution_mode(execution_mode, "runtimeRequirements.executionMode")
+        except ContractError as exc:
+            raise ContractError("runtimeRequirements.executionMode is unsupported") from exc
         sensor_modalities = value.get("sensorModalities")
         outputs = value.get("outputs")
         if (
@@ -570,9 +612,7 @@ class RenderSpec:
             item not in allowed_outputs for item in outputs
         ):
             raise ContractError("renderSpec.outputs must contain unique supported values")
-        execution_mode = value.get("executionMode", "native-physics")
-        if execution_mode not in {"native-physics", "diagnostic-replay"}:
-            raise ContractError("renderSpec.executionMode must be native-physics or diagnostic-replay")
+        execution_mode = normalize_execution_mode(value.get("executionMode"), "renderSpec.executionMode")
         quality = value.get("quality", "standard")
         if quality not in {"preview", "standard", "high", "cinematic"}:
             raise ContractError("renderSpec.quality is unsupported")
