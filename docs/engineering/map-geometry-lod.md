@@ -186,6 +186,23 @@ TAA: 42 dB mean PSNR). With FXAA the floor is 52.7 dB mean / 44.9 dB min.
 | Richmond, forced L2 (+ impostors past L2) | 10.0M -> 0.35M | 58.6 / 44.6 dB | 0.9947 / 0.9871 |
 | Richmond, forced coarsest / impostor | 10.0M -> 0.03M | 58.8 / 44.3 dB | 0.9948 / 0.9863 |
 
+**GPU time (RTX 3080, box 3, 2026-09-23)**, Belmont, 8 cameras (cinematic,
+per-view shadow cascades), 47 ticks from tick 200, full master vs the static
+selection, run A/B/A/B through the production worker image:
+
+| | GPU busy / tick | GPU frame median | tick median (whole service) | peak VRAM |
+|---|---:|---:|---:|---:|
+| full master | 2581 / 2586 ms | 648 ms | 3031 / 3004 ms | 8.36 GB |
+| geometry LOD | 665 / 665 ms | 167 ms | 1567 / 1603 ms | 8.04 GB |
+
+GPU work falls 3.9x (-74 %). The tick falls less (-47 %) because about
+920 ms per tick is outside the GPU (per-tick settle, readback, CPU lidar),
+which the throughput and GPU-lidar work removes; combine the GPU column with
+those results. perf/gpu-deep's runtime LOD path (`SceneSpec.geometryLod`,
+per-view `VisibilityRange`s) measured -75 % GPU per 8-camera render on an RTX
+5080 independently, and its frames gate at 43.7 dB mean / 39.4 dB min PSNR
+against the full master with TAA on (TAA repeat-run floor 42.0 / 37.1 dB).
+
 Belmont vertex-shader invocations per tick fall from 1.95G to 0.48G and
 clipped primitives from 1.66G to 0.34G. At `pixelErrorPx` 2 PSNR drops to
 40.8 dB; at 4 and above impostors reach mid-range trees and edge-on cards
@@ -219,6 +236,9 @@ derivative, **opt-in only**: a job must request it explicitly and the render
 manifest must record it; it is never selected implicitly.
 
 ## Published map versions
+
+Status: dev reconciled on 2026-09-23 (20 live map versions, 10 build keys,
+204 native blobs, revision 3); staging not applied.
 
 A native asset set is immutable and unique per registry release, so the
 SimCloud backfill cannot add members to it. It uploads the derivative files
