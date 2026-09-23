@@ -36,6 +36,7 @@ export const EngineCapabilitySchema = z.enum([
   'camera.output.processed_rgb',
   'camera.noise.ptc',
   'camera.reported-calibration-override',
+  'camera.principal_point_offset',
   'full-mount-rotation',
 ]);
 
@@ -51,6 +52,12 @@ export const EngineCapabilityFeaturesSchema = z.strictObject({
     evidenceTier: z.enum(['declared', 'integrated', 'exercised', 'qualified']),
     note: z.string().min(1).optional(),
   }),
+  'principal-point-offset': z.strictObject({
+    support: z.literal('unsupported'),
+    evidenceTier: z.literal('declared'),
+    effective: z.strictObject({ xPx: z.literal(0), yPx: z.literal(0) }),
+    note: z.string().min(1),
+  }).optional(),
 });
 
 export const EngineCapabilityDeclarationSchema = z.strictObject({

@@ -10,6 +10,7 @@ import {
   CameraCalibrationSetSchema,
   CameraProfileSchema,
   cameraCalibrationWithYawOffset,
+  cameraProfileCapabilities,
   dashCameras,
   firstEnabledDashCamera,
   newSensorId,
@@ -274,6 +275,12 @@ describe('actor-attached sensors', () => {
   it('requires rolling-shutter profiles to declare their readout span', () => {
     expect(() => CameraProfileSchema.parse({ acquisition: { shutter: 'rolling' } }))
       .toThrow(/readoutSpanS/);
+  });
+
+  it('classifies a non-centred principal point as an authored camera feature', () => {
+    const profile = CameraProfileSchema.parse({ projection: { principalPointOffsetPx: { x: 8, y: -4 } } });
+    expect(profile.projection.principalPointOffsetPx).toEqual({ x: 8, y: -4 });
+    expect(cameraProfileCapabilities(profile)).toContain('camera.principal_point_offset');
   });
 
   it('classifies an explicit custom-rig profile as authored', () => {

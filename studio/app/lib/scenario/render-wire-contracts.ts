@@ -116,6 +116,12 @@ const LocalEngineCapabilityFeaturesSchema = z.strictObject({
     evidenceTier: z.enum(["declared", "integrated", "exercised", "qualified"]),
     note: z.string().min(1).optional(),
   }),
+  "principal-point-offset": z.strictObject({
+    support: z.literal("unsupported"),
+    evidenceTier: z.literal("declared"),
+    effective: z.strictObject({ xPx: z.literal(0), yPx: z.literal(0) }),
+    note: z.string().min(1),
+  }).optional(),
 });
 const UniqueCapabilitiesSchema = z.array(LocalEngineCapabilitySchema)
   .min(1)

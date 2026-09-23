@@ -108,6 +108,12 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
       evidenceTier: 'integrated',
       note: 'GPU rendered-horizon proof pending',
     },
+    'principal-point-offset': {
+      support: 'unsupported',
+      evidenceTier: 'declared',
+      effective: { xPx: 0, yPx: 0 },
+      note: 'ServiceCamera has no principal-point input; Bevy sub_camera_view is the Phase 2/4 route',
+    },
   },
   modalities: ['rgb', 'lidar', 'radar'],
   limits: {

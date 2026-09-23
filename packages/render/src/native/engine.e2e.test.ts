@@ -5,14 +5,15 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import { extractOpenScenarioExecutionPlan } from '@simforge-oss/openscenario';
-import { CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { PRONTO_CHASE_CAMERA_SENSOR_ID, CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createFixedSchedules } from '../schedule.js';
 import type { RenderInputFile } from '../engine.js';
 import { nativeActorAssetsInput } from './actor-assets.js';
+import { createNativeCameraSchedule, type NativeScheduledCamera } from './camera-schedule.js';
 import { createRenderEngine } from './engine.js';
-import { nativeActorCatalogId } from './lowering.js';
+import { nativeActorCatalogId, type NativeSceneState } from './lowering.js';
 
 const enabled = process.env.SIMFORGE_NATIVE_E2E === '1';
 const suite = enabled ? describe : describe.skip;
@@ -53,6 +54,41 @@ function rotatedFrameDifference(
     }
   }
   return difference / samples;
+}
+
+function projectLandmark(
+  camera: NativeScheduledCamera,
+  horizontalFovDeg: number,
+  landmark: readonly [number, number, number],
+): [number, number] {
+  const normalize = (vector: readonly number[]) => {
+    const length = Math.hypot(...vector);
+    return vector.map((value) => value / length) as [number, number, number];
+  };
+  const dot = (left: readonly number[], right: readonly number[]) =>
+    left.reduce((sum, value, index) => sum + value * right[index]!, 0);
+  const forward = normalize(camera.target.map((value, index) => value - camera.eye[index]!));
+  const right = normalize([-forward[2], 0, forward[0]]);
+  const up: [number, number, number] = [
+    right[1] * forward[2] - right[2] * forward[1],
+    right[2] * forward[0] - right[0] * forward[2],
+    right[0] * forward[1] - right[1] * forward[0],
+  ];
+  const delta = landmark.map((value, index) => value - camera.eye[index]!) as [number, number, number];
+  const depth = dot(delta, forward);
+  const fx = (camera.width / 2) / Math.tan(horizontalFovDeg * Math.PI / 360);
+  const fy = (camera.height / 2) / Math.tan(camera.fovDeg * Math.PI / 360);
+  return [camera.width / 2 + fx * dot(delta, right) / depth, camera.height / 2 - fy * dot(delta, up) / depth];
+}
+
+function landmarkPatchRange(frame: Uint8Array, width: number, pixel: readonly [number, number]): number {
+  const centerX = Math.round(pixel[0]);
+  const centerY = Math.round(pixel[1]);
+  const samples: number[] = [];
+  for (let y = centerY - 6; y <= centerY + 6; y += 1) {
+    for (let x = centerX - 6; x <= centerX + 6; x += 1) samples.push(frame[y * width + x]!);
+  }
+  return Math.max(...samples) - Math.min(...samples);
 }
 
 suite('native retained service GPU e2e', () => {
@@ -116,6 +152,15 @@ suite('native retained service GPU e2e', () => {
         profileSource: 'default',
       },
     };
+    const chaseLandmarkCamera: RenderSourceV3 = {
+      ...frontCamera,
+      sensorId: PRONTO_CHASE_CAMERA_SENSOR_ID,
+      outputName: 'chase-landmark-rgb',
+      transform: {
+        position: { x: -8, y: 3, z: 0 },
+        rotation: { yawRad: 0, pitchRad: -Math.atan2(2, 8), rollRad: 0 },
+      },
+    };
     const intent: RenderIntentV1 = {
       schema: 'simforge.render-intent/v1',
       intentId: 'native-gpu-e2e',
@@ -125,7 +170,7 @@ suite('native retained service GPU e2e', () => {
         openScenario: { sha256: xoscSha256, sizeBytes: xosc.byteLength },
         map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: 'c'.repeat(64) },
       },
-      sensorHosts: ['front-rgb', 'front-rgb-roll'].map((sourceId) => ({
+      sensorHosts: ['front-rgb', 'front-rgb-roll', 'chase-landmark-rgb'].map((sourceId) => ({
         sourceId, actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId },
       })),
       renderSpec: {
@@ -138,7 +183,7 @@ suite('native retained service GPU e2e', () => {
             ...frontCamera.transform,
             rotation: { ...frontCamera.transform.rotation, rollRad: 10 * Math.PI / 180 },
           },
-        }],
+        }, chaseLandmarkCamera],
         clip: { startSeconds: clipStart, endSeconds: clipEnd },
         video: { width: 320, height: 180, fps: 12, container: 'mp4', codec: 'h264', quality: 'high' },
         artifacts: ['manifest', 'video', 'trace'],
@@ -182,10 +227,13 @@ suite('native retained service GPU e2e', () => {
     expect(probe.streams[0]).toMatchObject({ codec_name: 'h264', pix_fmt: 'yuv420p', nb_frames: '24' });
     const baselineVideo = manifest.artifacts.find((artifact) => artifact.identity.sensorId === 'front-camera');
     const rolledVideo = manifest.artifacts.find((artifact) => artifact.identity.sensorId === 'front-camera-roll');
+    const landmarkVideo = manifest.artifacts.find((artifact) => artifact.identity.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID);
     expect(baselineVideo?.identity.role).toBe('video');
     expect(rolledVideo?.identity.role).toBe('video');
+    expect(landmarkVideo?.identity.role).toBe('video');
     const baselineFrame = await grayVideoFrame(path.join(output, baselineVideo!.relativePath), 12);
     const rolledFrame = await grayVideoFrame(path.join(output, rolledVideo!.relativePath), 12);
+    const renderedLandmarkFrame = await grayVideoFrame(path.join(output, landmarkVideo!.relativePath), 12);
     expect(baselineFrame).toHaveLength(320 * 180);
     expect(rolledFrame).toHaveLength(320 * 180);
     // Image Y points down, so authored +roll about +X must align under a
@@ -195,9 +243,27 @@ suite('native retained service GPU e2e', () => {
     const oppositeHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 10);
     expect(alignedHorizon).toBeLessThan(flatHorizon * 0.8);
     expect(alignedHorizon).toBeLessThan(oppositeHorizon * 0.7);
-    const trace = JSON.parse(await fs.readFile(path.join(output, 'trace/native-trace.json'), 'utf8')) as {
-      frames: Array<{ actors: Array<{ id: string; transform: { position: number[] } }> }>;
-    };
+    const trace = JSON.parse(await fs.readFile(path.join(output, 'trace/native-trace.json'), 'utf8')) as { frames: NativeSceneState[] };
+    const landmarkFrame = trace.frames[12]!;
+    const landmarkActor = landmarkFrame.actors.find((candidate) => candidate.id === actor.id && candidate.kind !== 'despawn');
+    if (!landmarkActor) throw new Error(`rendered landmark host ${actor.id} is absent at the assertion frame`);
+    const landmarkCamera = createNativeCameraSchedule(
+      [chaseLandmarkCamera],
+      [intent.sensorHosts.find((host) => host.sourceId === chaseLandmarkCamera.outputName)!],
+      [landmarkFrame],
+    )[0]![0]!;
+    // The chase camera and host-body landmark share the same attached actor,
+    // so service ground snapping translates both equally and cannot move the pixel.
+    const projectedLandmark = projectLandmark(landmarkCamera, chaseLandmarkCamera.attributes.horizontalFovDeg, [
+      landmarkActor.transform.position[0],
+      landmarkActor.transform.position[1] + 1,
+      landmarkActor.transform.position[2],
+    ]);
+    expect(projectedLandmark[0]).toBeGreaterThan(6);
+    expect(projectedLandmark[0]).toBeLessThan(chaseLandmarkCamera.attributes.width - 7);
+    expect(projectedLandmark[1]).toBeGreaterThan(6);
+    expect(projectedLandmark[1]).toBeLessThan(chaseLandmarkCamera.attributes.height - 7);
+    expect(landmarkPatchRange(renderedLandmarkFrame, chaseLandmarkCamera.attributes.width, projectedLandmark)).toBeGreaterThan(5);
     const positions = trace.frames
       .map((frame) => frame.actors.find((candidate) => candidate.id === actor.id)?.transform.position.join(','))
       .filter(Boolean);

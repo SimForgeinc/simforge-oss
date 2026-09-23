@@ -19,6 +19,12 @@ test("Studio accepts checkpoint-1 native capabilities and completion evidence", 
     evidenceTier: "integrated",
     note: "GPU rendered-horizon proof pending",
   });
+  assert.deepEqual(nativeCapabilities.features?.["principal-point-offset"], {
+    support: "unsupported",
+    evidenceTier: "declared",
+    effective: { xPx: 0, yPx: 0 },
+    note: "ServiceCamera has no principal-point input; Bevy sub_camera_view is the Phase 2/4 route",
+  });
 
   const completion = CompleteRenderJobV2Schema.parse({
     schema: "simforge.render-worker-control/v2",

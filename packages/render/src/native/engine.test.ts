@@ -76,6 +76,12 @@ describe('native retained engine adapter', () => {
           evidenceTier: 'integrated',
           note: 'GPU rendered-horizon proof pending',
         },
+        'principal-point-offset': {
+          support: 'unsupported',
+          evidenceTier: 'declared',
+          effective: { xPx: 0, yPx: 0 },
+          note: 'ServiceCamera has no principal-point input; Bevy sub_camera_view is the Phase 2/4 route',
+        },
       },
     });
     expect(engine.capabilities.capabilities).toEqual(expect.arrayContaining([
@@ -138,6 +144,16 @@ describe('native retained engine adapter', () => {
       },
     };
     expect(rejectionReasons(raw)).toContain('missing capability camera.output.raw');
+  });
+
+  it('rejects authored principal-point offsets and records the centred effective value', () => {
+    const offset = CameraProfileSchema.parse({
+      projection: { principalPointOffsetPx: { x: 12, y: -7 } },
+    });
+    expect(rejectionReasons(withProfile(offset))).toContain('missing capability camera.principal_point_offset');
+    expect(resolveEffectiveCameraProfile(offset, 'sensor').effective?.projection.principalPointOffsetPx).toBeUndefined();
+    expect(createRenderEngine({ binary: '/bin/true' }).capabilities.features?.['principal-point-offset']?.effective)
+      .toEqual({ xPx: 0, yPx: 0 });
   });
 
   it('rejects reported calibration overrides when an engine does not declare support', () => {

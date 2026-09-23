@@ -3048,6 +3048,26 @@
             "brown-conrady",
             "kannala-brandt"
           ]
+        },
+        "principalPointOffsetPx": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -32768,
+              "maximum": 32768
+            },
+            "y": {
+              "type": "number",
+              "minimum": -32768,
+              "maximum": 32768
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

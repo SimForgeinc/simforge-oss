@@ -171,6 +171,7 @@ describe('native run expectations', () => {
 
   it('records the generic profile as effective for dataset sensor capture', () => {
     const profile = CameraProfileSchema.parse({});
+    expect(cameraProfileConfigHash(profile)).toBe('f33e4b7b5209b292b760e2ac4e9fb3a4e88f5fde3607237f9c476d4e7e29a377');
     const parsed = NativeRenderManifestSchema.parse({
       ...evidence().manifest,
       fidelityMode: 'dataset',
@@ -188,6 +189,7 @@ describe('native run expectations', () => {
 
     expect(parsed.look).toMatchObject({ profile: 'sensor', autoMeter: false });
     expect(parsed.cameraProfiles[0]).toMatchObject({ requested: profile, effective: profile, differences: [] });
+    expect(parsed.cameraProfiles[0]?.effective?.projection.principalPointOffsetPx).toBeUndefined();
   });
 
   it('classifies v1 manifests as pre-v2 camera-profile evidence absence', () => {

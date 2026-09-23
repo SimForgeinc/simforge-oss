@@ -139,6 +139,10 @@ export const CameraProfileSchema = z.strictObject({
   fidelity: z.enum(['generic-uncalibrated', 'device-fitted']).default('generic-uncalibrated'),
   projection: z.strictObject({
     model: z.enum(['pinhole', 'brown-conrady', 'kannala-brandt']).default('pinhole'),
+    principalPointOffsetPx: z.strictObject({
+      x: z.number().finite().min(-32_768).max(32_768),
+      y: z.number().finite().min(-32_768).max(32_768),
+    }).optional(),
   }).prefault({}),
   detector: z.strictObject({
     noise: z.enum(['none', 'ptc']).default('none'),
@@ -193,6 +197,10 @@ export function markCameraProfileSourceResolved<T extends { profileSource: Camer
 export function cameraProfileCapabilities(profile: CameraProfile): string[] {
   return [
     `camera.projection.${profile.projection.model.replace('-', '_')}`,
+    ...(profile.projection.principalPointOffsetPx
+      && (profile.projection.principalPointOffsetPx.x !== 0 || profile.projection.principalPointOffsetPx.y !== 0)
+      ? ['camera.principal_point_offset']
+      : []),
     `camera.shutter.${profile.acquisition.shutter}`,
     `camera.output.${profile.outputStage}_rgb`,
     ...(profile.detector.noise === 'ptc' ? ['camera.noise.ptc'] : []),
