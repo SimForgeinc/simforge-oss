@@ -7,10 +7,6 @@ export const dialog = stylex.create({
   form: { marginTop: space.s6, display: "flex", flexDirection: "column", gap: space.s5 },
   grid: { display: "grid", gap: space.s4, [SM]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } },
   span2: { [SM]: { gridColumn: "span 2" } },
-  footer: { marginTop: space.s5, display: "flex", flexDirection: "column", gap: space.s5 },
-  progressText: { marginBottom: space.s1, display: "flex", justifyContent: "space-between", fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
-  progress: { height: "0.375rem", overflow: "hidden", backgroundColor: colors.fill },
-  progressBar: { height: "100%", backgroundColor: colors.accent, transitionProperty: "width", transitionDuration: motion.durStandard },
   // The two dropzones share every layout/hover utility but differ in their
   // focus treatment, so the focus states live in the two variant keys below:
   // the asset dialog's <div> takes `focus-visible:ring-2`, the map panel's
@@ -19,7 +15,6 @@ export const dialog = stylex.create({
   /** `cursor-pointer focus-within:border-[#E8E044] focus-within:outline-none` */
   dropPointer: { cursor: "pointer", ":focus-within": { borderColor: colors.accent, outlineWidth: stroke.thick, outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px" } },
   panel: { marginTop: space.s6, display: "flex", flexDirection: "column", gap: space.s5 },
-  card: { backgroundColor: colors.fillFaint, padding: space.s4 },
   tabGroup: { marginTop: space.s5, display: "flex", width: "fit-content", backgroundColor: colors.fillFaint, padding: space.s1 },
   tab: { display: "flex", alignItems: "center", gap: space.s1_5, paddingInline: space.s4, paddingBlock: space.s1_5, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted, ":hover": { color: colors.ink }, ":disabled": { opacity: 0.4 } },
   tabActive: { backgroundColor: colors.fillStrong, color: colors.ink },
@@ -30,11 +25,8 @@ export const dialog = stylex.create({
   toolbar: { maxWidth: "1500px", marginInline: "auto", borderBottomWidth: 0, backgroundColor: "transparent", paddingInline: 0 },
   iconSm: { width: "0.875rem", height: "0.875rem" },
   iconAccent: { marginBottom: space.s3, width: "1.5rem", height: "1.5rem", color: colors.accent },
-  // The two "loading preview" boxes are unrelated: the drawer's is a bordered
-  // 18rem card on the theme tokens, the generate dialog's is a bare 16/7 slot.
+  // The drawer's loading preview: a bordered 18rem card on the theme tokens.
   drawerPreviewLoading: { display: "grid", height: "18rem", placeItems: "center", backgroundColor: colors.card, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground },
-  generatePreviewLoading: { display: "flex", aspectRatio: "16 / 7", alignItems: "center", justifyContent: "center", color: colors.inkFaint },
-  previewSpinner: { marginRight: space.s2, width: "1.25rem", height: "1.25rem" },
   drawerTitle: { paddingRight: space.s8, fontSize: text.size2xl, lineHeight: text.lineXl },
   statLabel: { color: colors.inkFaint },
   statValue: { marginTop: space.s1, fontSize: text.sizeSm, lineHeight: text.lineSm, fontVariantNumeric: "tabular-nums" },
@@ -47,15 +39,10 @@ export const dialog = stylex.create({
   faintText: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkFaint },
   alignEndRow: { display: "flex", alignItems: "flex-end" },
   uploadLabelMb: { marginBottom: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
-  padOnly: { padding: space.s4 },
-  mutedTextMt1: { marginTop: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
-  hintMt2: { marginTop: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkFaint },
-  noteMt1: { marginTop: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
-  noteMt2: { marginTop: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
   dlXs: { display: "flex", flexDirection: "column", gap: space.s2, fontSize: text.sizeXs, lineHeight: text.lineXs },
   dlLabel: { color: colors.inkFaint },
-  // Drawer copy runs on the theme tokens; the upload/generate dialogs are
-  // deliberately on white alphas, so these do not share a key.
+  // Drawer copy runs on the theme tokens; the upload dialog is deliberately on
+  // white alphas, so these do not share a key.
   drawerNote: { fontSize: text.sizeXs, lineHeight: text.lineSm, color: colors.mutedForeground },
   drawerClipTag: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.mutedForeground },
   drawerBody: { fontSize: text.sizeSm, lineHeight: text.lineBase, color: colors.inkSecondary },
@@ -79,16 +66,9 @@ export const dialog = stylex.create({
   uploadMono: { marginTop: space.s1, wordBreak: "break-all", backgroundColor: colors.scrimLight, paddingInline: space.s3, paddingBlock: space.s2, fontFamily: text.fontMono, color: colors.inkSecondary },
   fieldLabel: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
   fieldControl: { marginTop: space.s1 },
-  actionsRow: { display: "flex", justifyContent: "flex-end", gap: space.s2 },
   preview: { aspectRatio: "1", width: "100%", backgroundImage: "radial-gradient(circle,#27303a,#101317)", objectFit: "contain" },
   stack: { display: "flex", flexDirection: "column", gap: space.s3 },
   grid2: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: space.s3 },
-  errorText: { fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.critical },
-  recent: { marginTop: space.s5, borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash, padding: space.s4 },
-  recentList: { marginTop: space.s2, display: "flex", flexDirection: "column", gap: space.s2 },
-  recentItem: { display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.fillSubtle, paddingInline: space.s3, paddingBlock: space.s2, textAlign: "left", fontSize: text.sizeSm, lineHeight: text.lineSm, ":hover": { backgroundColor: colors.fill } },
-  accentText: { color: colors.accent },
-  subText: { marginTop: space.s1, display: "block", fontSize: text.sizeMeta, lineHeight: text.lineXs, color: colors.inkFaint },
   dropHint: { marginTop: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkFaint },
   cardSuccess: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.positive, backgroundColor: colors.positiveWash, padding: space.s4 },
   cardWarning: { borderWidth: stroke.hairline, borderStyle: "solid", borderColor: colors.warning, backgroundColor: colors.warningWash, padding: space.s4 },
@@ -153,7 +133,6 @@ export const dialog = stylex.create({
   warningText: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.warning },
   clipsTitle: { fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkMuted },
   clipsText: { marginTop: space.s1, fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.inkSecondary },
-  successText: { fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightMedium, color: "#d1fae5" },
   // These three sit on `Button variant="outline"`, whose own :hover repaints
   // background (and, for `autoSize`, colour). `bg-transparent` / `text-…` only
   // ever pinned the rest state in Tailwind — the variant's pseudo-class rule

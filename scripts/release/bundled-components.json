@@ -191,7 +191,7 @@
           "remediation": [
             "Optional: record the plan from the Meshy account billing history to drop the CC BY 4.0 credit requirement for these 35 models."
           ],
-          "residualProvenanceGap": "Which Meshy plan the closure was generated under is not recorded in this repository. tools/meshy/generate.mjs drives Meshy's Text-to-3D API with a MESHY_API_KEY from the secrets manager, and the API is a subscription feature, which suggests a paid plan, but that is an inference. It is answerable only from the Meshy account's billing history, and it is not blocking: attributing under CC BY 4.0 is valid in both cases."
+          "residualProvenanceGap": "Which Meshy plan the closure was generated under is not recorded in this repository. The catalog generator (maintained in the SimCloud platform, not in this repository) drives Meshy's Text-to-3D API with a MESHY_API_KEY from the secrets manager, and the API is a subscription feature, which suggests a paid plan, but that is an inference. It is answerable only from the Meshy account's billing history, and it is not blocking: attributing under CC BY 4.0 is valid in both cases."
         },
         {
           "kind": "availability",

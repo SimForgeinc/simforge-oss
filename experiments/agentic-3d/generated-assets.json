@@ -12,7 +12,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.horn-cue-sign/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.horn-cue-sign/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-30T13:36:30.607Z",
   "sha256": "332dc9e573f666e5ec58b5e154d7b1b75abf54b524e6a43d1f9650b1b0e32457",
   "declaredDims": {
@@ -46,7 +46,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.compact-utility-tractor/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.compact-utility-tractor/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-30T14:47:31.251Z",
   "sha256": "9ce9b28cdd4adc6a73d83ce01f70058d5ded6b41e9ca0ece71285d648de75c08",
   "declaredDims": {
@@ -81,7 +81,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.fallen-branch-pile/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.fallen-branch-pile/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-30T22:42:02.817Z",
   "sha256": "336e49f46b2b041faa8bd1094ef669af249573514f79e1f9d1de7b8976783b9d",
   "declaredDims": {
@@ -115,7 +115,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T06:59:34.316Z",
   "sha256": "04e36687429519025d64960148376fa7d13ab1a4c7456dbc59a02074dd11407a",
   "declaredDims": {
@@ -149,7 +149,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.open-car-door-panel/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.open-car-door-panel/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:02:04.207Z",
   "sha256": "64aa6aa4e4120e35acd043b0f33e96b0d8abfbf1d259e29accc0cf2e705ef0b6",
   "declaredDims": {
@@ -183,7 +183,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v2/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v2/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:07:54.736Z",
   "sha256": "9a990154268496777ff95a897b7ab492dfbd92e71c2cfd7080fdb869c00eafa5",
   "declaredDims": {
@@ -218,7 +218,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v3/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v3/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:11:04.558Z",
   "sha256": "ac1550c6cd0182466c48e33cd9052f1ffe5bf3081f614d6b3e703ef055750a9d",
   "declaredDims": {
@@ -252,7 +252,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-mid/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-mid/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:14:00.280Z",
   "sha256": "2b73d9286246461f99863238f7841496c617bf11c5842f031e1e6dd87c99542d",
   "declaredDims": {
@@ -286,7 +286,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.open-door-blue-hatchback/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.open-door-blue-hatchback/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:17:49.937Z",
   "sha256": "a992c747948bfd72f7e7b33ce2b0fdab6b35aa85e8765b40812e12e7340cf208",
   "declaredDims": {
@@ -320,7 +320,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.driver-door-panel/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.driver-door-panel/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:20:18.984Z",
   "sha256": "9591819d36beabb38c4cb0de05e095172f660d83426d6de1112a4dee8249491c",
   "declaredDims": {
@@ -354,7 +354,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.white-driver-door-readable/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.white-driver-door-readable/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:36:22.908Z",
   "sha256": "f7323cf587d7c4a88e259d8047c74f07ea453cfa318fb5a9b163241d12be864e",
   "declaredDims": {
@@ -388,7 +388,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.lowpoly-car-door-geometry/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.lowpoly-car-door-geometry/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T07:41:00.546Z",
   "sha256": "6eb5150f4515bee17579e082229d17eff57f73778ed41fef355d072d1bc8aa8b",
   "declaredDims": {
@@ -422,7 +422,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.cyclist-with-rider/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.cyclist-with-rider/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T08:15:03.789Z",
   "sha256": "19ffb11064bf289931a40ba463b95aa164113dcf754544019cb20f5f99763942",
   "declaredDims": {
@@ -456,7 +456,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.utility-box-trailer/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.utility-box-trailer/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T08:57:10.860Z",
   "sha256": "4cabebae4de1da2842e30f36877cf5362ebc570cc462f8f3f586ccc9bb4442f0",
   "declaredDims": {
@@ -490,7 +490,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.realistic-open-driver-door-thin/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.realistic-open-driver-door-thin/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T09:20:32.579Z",
   "sha256": "cba483195aa27d2b771dc7cab21de79cd40c04600881afcac6f0a723d8315cf5",
   "declaredDims": {
@@ -524,7 +524,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.actor-driver-door/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.actor-driver-door/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T09:29:50.204Z",
   "sha256": "88dab179d8d86214c1a3843917b0b70080d33e6053aae1e7db18cf881e15ca41",
   "declaredDims": {
@@ -558,7 +558,7 @@
   },
   "glbPath": "experiments/agentic-3d/assets/custom.onepiece-open-door-hatchback-final/model.glb",
   "thumbnail": "experiments/agentic-3d/assets/custom.onepiece-open-door-hatchback-final/thumb.png",
-  "source": "meshy",
+  "source": "generated",
   "generatedAt": "2026-08-31T10:04:24.169Z",
   "sha256": "6e2e8a1035abf195fab08722450408a4f65df0257c91b360e2de698dd61750cc",
   "declaredDims": {
@@ -586,7 +586,7 @@
   "description": "A tan three-seat upholstered sofa with rolled arms, three cushions, and two pale throw pillows.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.sofa-road-hazard-baked/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.2,
    "w": 0.95,
@@ -618,7 +618,7 @@
   "description": "A slightly worn white soccer ball with contrasting dark gray polygonal panels.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.soccer-ball-final/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.32,
    "w": 0.32,
@@ -650,7 +650,7 @@
   "description": "A dark charcoal three-seat sofa with rolled arms, tufted back cushions, and short legs.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.discarded-sofa-roadblock/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.2,
    "w": 0.95,
@@ -682,7 +682,7 @@
   "description": "A stationary adult man wearing a bright orange hoodie, dark navy pants, and black shoes.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.stationary-pedestrian-hi-vis/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.55,
    "w": 0.7,
@@ -714,7 +714,7 @@
   "description": "A bright blue block-style three-seat sofa with square arms and lightly tufted back cushions.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.simple-blue-block-sofa/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.5,
    "w": 1,
@@ -746,7 +746,7 @@
   "description": "A green enclosed-cab farm tractor with yellow wheel rims and large black tires.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.drivable-tractor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 3.8,
    "w": 1.9,
@@ -779,7 +779,7 @@
   "description": "A large bright red textured ball intended as a rolling or child-chase road hazard.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.child-chase-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.3,
    "w": 0.3,
@@ -811,7 +811,7 @@
   "description": "A red octagonal STOP sign mounted on a short dark post with a weighted round base.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.schoolbus-stop-sign-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.5,
    "w": 0.15,
@@ -843,7 +843,7 @@
   "description": "A vivid orange two-seat sofa with rounded arms, broad cushions, and matching throw pillows.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.sofa-singlemesh-silhouette/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.4,
    "w": 1,
@@ -875,7 +875,7 @@
   "description": "A black-and-tan German shepherd with upright ears posed stepping or running forward.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.animal.running-dog-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.15,
    "w": 0.35,
@@ -907,7 +907,7 @@
   "description": "A red STOP sign on a black folding signal arm with a circular warning light and mounting post.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.school-bus-stop-signal/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.25,
    "w": 0.15,
@@ -939,7 +939,7 @@
   "description": "Two tall reusable shopping bags in orange and yellow containing groceries and leafy greens.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.bright-shopping-bags/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.55,
    "w": 0.28,
@@ -971,7 +971,7 @@
   "description": "A tan short-haired dog wearing a dark chest harness and posed walking cautiously forward.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.dog-long-leash/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1,
    "w": 0.3,
@@ -1003,7 +1003,7 @@
   "description": "A long low silver flatbed utility trailer with two wheels and an upright rear edge.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.broken-flatbed-trailer/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.5,
    "w": 2,
@@ -1036,7 +1036,7 @@
   "description": "A standard red octagonal STOP sign with white lettering and border on a slim gray pole.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.stop-sign-runtime/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.1,
    "w": 1,
@@ -1068,7 +1068,7 @@
   "description": "A tall silver metal ladder with dark rungs and orange safety caps shown in an open leaning stance.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.large-dropped-extension-ladder/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.8,
    "w": 0.55,
@@ -1100,7 +1100,7 @@
   "description": "A plain white high-roof delivery cargo van with black lower trim and rear tail lights.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.open-delivery-van/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 5.98,
    "w": 2.05,
@@ -1133,7 +1133,7 @@
   "description": "A long rectangular dark metal drainage grate recessed within a pale concrete frame.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road-drain-grate/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1,
    "w": 0.35,
@@ -1165,7 +1165,7 @@
   "description": "A flat billboard-like yellow school bus side silhouette with dark outlined windows and trim.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.yellow-schoolbus-billboard/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.12,
    "w": 2.55,
@@ -1197,7 +1197,7 @@
   "description": "A stationary adult man wearing a dark navy sweater, tan trousers, and black slip-on shoes.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.stationary-pedestrian-natural/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.6,
    "w": 0.65,
@@ -1229,7 +1229,7 @@
   "description": "A wide irregular black road cavity surrounded by broken jagged pieces of dark asphalt.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.recessed-road-pothole-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.6,
    "w": 1.1,
@@ -1261,7 +1261,7 @@
   "description": "A medium tan dog with a white chest and paws posed running forward with its mouth open.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.animal.running-dog/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.05,
    "w": 0.32,
@@ -1294,7 +1294,7 @@
   "description": "A short gray concrete overpass supported by thick piers and topped with metal safety railings.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road-overpass-short-span/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 25,
    "w": 10,
@@ -1326,7 +1326,7 @@
   "description": "A golden-yellow retriever-type dog posed running forward with one front paw raised.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.golden-retriever-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.15,
    "w": 0.4,
@@ -1358,7 +1358,7 @@
   "description": "A vertical dark gray three-lens traffic signal with deep visors and a visible green upper light.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.signalized_crosswalk_pole/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.45,
    "w": 0.3,
@@ -1390,7 +1390,7 @@
   "description": "A realistic bright green enclosed-cab farm tractor with large black tires and yellow wheel rims.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.pbr-farm-tractor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.5,
    "w": 2.2,
@@ -1423,7 +1423,7 @@
   "description": "A helmeted man in a white T-shirt and blue shorts balances on a skateboard while pointing forward.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.skateboard-rider/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.9,
    "w": 0.6,
@@ -1455,7 +1455,7 @@
   "description": "A shallow oval black-gray road pothole insert with a thin irregular raised rim.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.simple-black-pothole-disc-v4/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.4,
    "w": 0.9,
@@ -1487,7 +1487,7 @@
   "description": "A stylized golden-yellow dog stands alert on four legs with floppy ears and a black nose.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-readable-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.3,
    "w": 0.35,
@@ -1519,7 +1519,7 @@
   "description": "A realistic orange basketball with dark channel lines and a slightly worn textured surface.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.realistic-basketball-v5/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.24,
    "w": 0.24,
@@ -1551,7 +1551,7 @@
   "description": "A rectangular white segmented road-marking panel resembling a broad stop-line surface.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road.stop-line-white-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.5,
    "w": 3.6,
@@ -1583,7 +1583,7 @@
   "description": "A bright green enclosed-cab tractor has oversized black agricultural tires with yellow rims.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.green-farm-tractor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 3.6,
    "w": 2,
@@ -1616,7 +1616,7 @@
   "description": "A low gray asphalt ring forms a wide oval pothole opening with an uneven cracked edge.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.flat-asphalt-pothole-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.8,
@@ -1648,7 +1648,7 @@
   "description": "A flat gray roadway mat displays a row of broad white rectangular zebra-crossing stripes.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-mat/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.2,
    "w": 7.8,
@@ -1680,7 +1680,7 @@
   "description": "A compact yellow school bus features black side stripes, dark wheels, rectangular windows, and red warning lights.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.school-bus-visible-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 10.5,
    "w": 2.55,
@@ -1713,7 +1713,7 @@
   "description": "A smooth round white play ball has a large pink-red patch across its upper surface.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.child-play-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.22,
    "w": 0.22,
@@ -1745,7 +1745,7 @@
   "description": "A realistic tan-and-black German shepherd stands alert with upright ears and one foreleg slightly raised.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.dog-runner/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.15,
    "w": 0.38,
@@ -1777,7 +1777,7 @@
   "description": "A compact pale green tractor has a dark enclosed cab and four chunky black tires.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.farm-tractor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4,
    "w": 2,
@@ -1810,7 +1810,7 @@
   "description": "A shallow gray pothole has a broken blocky rim surrounding a dark recessed center for pooled water.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.waterfilled-pothole-rim/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.5,
    "w": 1,
@@ -1842,7 +1842,7 @@
   "description": "A tan upholstered three-seat sofa has tufted back cushions, rolled arms, and short dark feet.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.static-sofa-vehicle/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.2,
    "w": 0.95,
@@ -1874,7 +1874,7 @@
   "description": "An athletic man in a dark blue shirt and shorts is posed mid-sprint with arms pumping and one knee raised.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.stable-sprinting-pedestrian/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.9,
    "w": 0.7,
@@ -1906,7 +1906,7 @@
   "description": "A low rough gray asphalt mound surrounds a narrow dark oval pothole opening.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road-pothole-dark/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.8,
@@ -1938,7 +1938,7 @@
   "description": "A modern black-framed glass bus shelter includes a wooden bench, gray platform, and white stop sign panel.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.glass-bus-stop-shelter/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.2,
    "w": 1.6,
@@ -1970,7 +1970,7 @@
   "description": "Separate bright white rectangular road bars are arranged in parallel rows to form a zebra crossing.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-bars/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.2,
    "w": 7.8,
@@ -2002,7 +2002,7 @@
   "description": "An adult in gray clothing leans forward while pushing a black stroller with a pale frame and four wheels.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.animated-adult-pushing-stroller/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.45,
    "w": 0.65,
@@ -2034,7 +2034,7 @@
   "description": "A slim dark walking cane has a curved ergonomic handle and a small rubber tip.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.walking-cane/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.9,
    "w": 0.12,
@@ -2066,7 +2066,7 @@
   "description": "A high-visibility orange-and-white striped road barricade stands on four dark legs with two amber warning lamps.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2,
    "w": 0.65,
@@ -2098,7 +2098,7 @@
   "description": "A large circular gray pothole has thick shattered asphalt slabs and loose rubble around a deep center.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.large-road-pothole/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.5,
    "w": 2,
@@ -2130,7 +2130,7 @@
   "description": "A bright yellow three-seat upholstered sofa with rounded arms and several matching cushions.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.upright-yellow-road-sofa/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.5,
    "w": 1,
@@ -2162,7 +2162,7 @@
   "description": "Large freestanding white block letters spelling STOP for placement on a roadway.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road.stop-bar-and-stop-legend/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 3.5,
    "w": 4,
@@ -2194,7 +2194,7 @@
   "description": "A red octagonal STOP sign with white lettering mounted on a gray portable post and base.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.visible-stop-sign/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.15,
    "w": 0.85,
@@ -2226,7 +2226,7 @@
   "description": "A compact driveable green tractor with an enclosed black cab, white wheel hubs, and large treaded tires.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.compact-utility-tractor-driveable/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 3.5,
    "w": 1.8,
@@ -2259,7 +2259,7 @@
   "description": "A bulky white tufted mattress lying awkwardly on its side as a road obstruction.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.fallen-mattress/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2,
    "w": 1.5,
@@ -2291,7 +2291,7 @@
   "description": "A brown-haired adult in a gray top and dark trousers pushing a black baby stroller.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-pushing-stroller-rig/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.5,
    "w": 0.65,
@@ -2323,7 +2323,7 @@
   "description": "A single broad white rectangular road marking used as a vehicle stop line.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road.stop-line-white/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.45,
    "w": 3.6,
@@ -2355,7 +2355,7 @@
   "description": "A seated bald adult wearing a pale blue shirt and gray trousers in a manual wheelchair.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.wheelchair-user/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.1,
    "w": 0.7,
@@ -2387,7 +2387,7 @@
   "description": "A white utility flatbed truck with orange safety stripes, a roof beacon, and traffic cones on the bed.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.roadwork-arrow-board-truck/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 6.2,
    "w": 2.3,
@@ -2420,7 +2420,7 @@
   "description": "A yellow school-bus facade with dark windows, gray lower trim, black rails, and rear corner lights.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.schoolbus-rear-facade/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.18,
    "w": 2.4,
@@ -2453,7 +2453,7 @@
   "description": "A modern black covered baby stroller with a white frame, storage basket, and four wheels.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.baby-stroller/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.05,
    "w": 0.65,
@@ -2485,7 +2485,7 @@
   "description": "A shallow dark-gray oval pothole with a depressed center and cracked irregular rim.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.recessed-road-pothole/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.8,
@@ -2517,7 +2517,7 @@
   "description": "A red octagonal STOP billboard with white lettering supported by three tall gray posts.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.stop-sign-v4-billboard/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.3,
    "w": 1.4,
@@ -2549,7 +2549,7 @@
   "description": "A red octagonal roadside sign displaying two stacked white STOP legends on a perforated metal post.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.12,
    "w": 1,
@@ -2581,7 +2581,7 @@
   "description": "A young adult in a light gray jacket and blue jeans hurrying forward with large black and white shopping bags.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.hurrying-pedestrian-large-bags/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.75,
    "w": 0.6,
@@ -2613,7 +2613,7 @@
   "description": "An orange folding construction barricade with diagonal white stripes, horizontal rails, and an amber warning lamp.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.roadwork-barricade-striped/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2,
    "w": 0.6,
@@ -2645,7 +2645,7 @@
   "description": "A brown-and-white dog runs forward with one front paw raised and ears lifted.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.running-dog/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.05,
    "w": 0.35,
@@ -2677,7 +2677,7 @@
   "description": "A flattened white mattress with dark blue side stripes lying horizontally as road debris.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.flat-fallen-mattress/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2,
    "w": 1.5,
@@ -2709,7 +2709,7 @@
   "description": "A woman in a dark top and blue jeans walks while carrying attached red and yellow shopping bags.",
   "class": "pedestrian",
   "glbPath": "experiments/agentic-3d/assets/custom.adult-carrying-attached-shopping-bags/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.85,
    "w": 0.5,
@@ -2741,7 +2741,7 @@
   "description": "A monochrome brown statue of a standing short-haired dog facing forward.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-statue-v4/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.4,
@@ -2773,7 +2773,7 @@
   "description": "A portable roadwork barricade with orange-and-white chevrons, black folding legs, and two amber reflectors.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.8,
    "w": 0.65,
@@ -2806,7 +2806,7 @@
   "description": "A flat rectangular crosswalk marking composed of evenly spaced white zebra stripes with dark gaps.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-zebra-markings/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4,
    "w": 3,
@@ -2838,7 +2838,7 @@
   "description": "A low natural-wood shipping pallet with stacked slats and open forklift gaps.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.flat-wooden-road-pallet/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 1,
@@ -2870,7 +2870,7 @@
   "description": "A flat circular pothole decal with a black center and a broken light-gray asphalt rim.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.asphalt-pothole-decal/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.4,
    "w": 0.9,
@@ -2902,7 +2902,7 @@
   "description": "A dark gray four-wheeled baby stroller with a raised canopy, bassinet, and angled push handle.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-stroller/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.05,
    "w": 0.62,
@@ -2934,7 +2934,7 @@
   "description": "A bright yellow four-door taxi sedan with black checker graphics, large TAXI lettering, and a roof sign.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.marked-city-taxi/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.9,
    "w": 1.85,
@@ -2967,7 +2967,7 @@
   "description": "A fluorescent yellow rectangular roadside sign showing a black walking-person symbol on a gray metal post.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-crossing-sign/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.15,
    "w": 0.75,
@@ -2999,7 +2999,7 @@
   "description": "A realistic tan-brown dog with a white chest runs forward with its mouth open and front legs extended.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.visible-running-dog/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.35,
@@ -3031,7 +3031,7 @@
   "description": "A low-poly faceted ball made of angular orange, dark blue, gray, and brown panels.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.ball.faceted-soccer-v4/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.4,
    "w": 0.4,
@@ -3063,7 +3063,7 @@
   "description": "A smooth solid bright-red spherical ball with subtle shading.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.ball.red-sphere-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.35,
    "w": 0.35,
@@ -3095,7 +3095,7 @@
   "description": "A white road-crossing marking composed of multiple broad zebra stripes and a long boundary stripe.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.full-zebra-crosswalk-marking/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 5.5,
    "w": 7.5,
@@ -3127,7 +3127,7 @@
   "description": "A simplified bright-yellow dog figure with pointed ears, black facial features, raised tail, and a running pose.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-billboard-v5/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.3,
    "w": 0.25,
@@ -3159,7 +3159,7 @@
   "description": "A large pale-pink spherical play ball with a wide white inset panel and white side segment.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.children-chase-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.45,
    "w": 0.45,
@@ -3191,7 +3191,7 @@
   "description": "A freestanding red octagonal STOP sign with large white lettering, white border, gray post, and weighted base.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.15,
    "w": 0.85,
@@ -3223,7 +3223,7 @@
   "description": "A dense rectangular hedge formed from many small dark- and light-green leaves.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.hedge-green-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4,
    "w": 0.9,
@@ -3255,7 +3255,7 @@
   "description": "A low circular gray road crater with a raised broken rim and shallow recessed center.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.pothole-crater-ring-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.3,
    "w": 0.9,
@@ -3287,7 +3287,7 @@
   "description": "A white enclosed single-axle box trailer with a black wheel, white fender, tow bar, and hitch.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.detached-cargo-trailer/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 5.2,
    "w": 2.25,
@@ -3320,7 +3320,7 @@
   "description": "A white ladder-style crosswalk marking with six narrow vertical stripes between two long horizontal bands.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-band/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 6,
    "w": 0.5,
@@ -3352,7 +3352,7 @@
   "description": "A grounded spherical beach-style ball divided into pale pink, white, light gray, and light-blue panels.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.grounded-spherical-play-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.25,
    "w": 0.25,
@@ -3384,7 +3384,7 @@
   "description": "A compact green enclosed-cab tractor with oversized black tires and bright-yellow wheel rims.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.road-tractor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 4.2,
    "w": 2.1,
@@ -3417,7 +3417,7 @@
   "description": "A simple red octagonal STOP sign with bold white letters, a white border, and a slender gray post.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-solid-red-v4/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.08,
    "w": 1.1,
@@ -3449,7 +3449,7 @@
   "description": "A single long narrow white road-marking stripe with slightly tapered ends.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-white-stripe/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.45,
    "w": 8,
@@ -3481,7 +3481,7 @@
   "description": "A realistic reddish-brown dog with a white chest runs forward with upright ears, open mouth, and extended paws.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.dog-actor/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.1,
    "w": 0.45,
@@ -3513,7 +3513,7 @@
   "description": "A dark charcoal three-seat upholstered sofa with padded arms, tufted back cushions, and short black feet.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road-sofa-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 2.2,
    "w": 0.95,
@@ -3545,7 +3545,7 @@
   "description": "A white high-roof delivery van with dark lower trim and a large side cargo door visibly open or displaced.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.open-delivery-van-door/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 5.9,
    "w": 2.1,
@@ -3578,7 +3578,7 @@
   "description": "A deep dark-gray road pothole with a broad jagged broken rim and rough crater walls.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.large-pothole/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.8,
@@ -3610,7 +3610,7 @@
   "description": "A tall paired-sign assembly with two red octagonal STOP faces, white borders, and narrow gray support poles.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.stop-sign-highviz-v3/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.12,
    "w": 1.2,
@@ -3642,7 +3642,7 @@
   "description": "A white ladder-style pedestrian crosswalk made from several parallel horizontal road stripes.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-ladder-marking/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 7,
    "w": 4,
@@ -3674,7 +3674,7 @@
   "description": "A weathered light-tan wooden pallet lying flat with visible slats and support rails.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.fallen-wooden-pallet/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 1,
@@ -3706,7 +3706,7 @@
   "description": "A long, flat light-gray concrete overpass slab with a slightly tapered end.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.road-overpass-span/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 30,
    "w": 12,
@@ -3738,7 +3738,7 @@
   "description": "A tan wooden shipping crate with vertical planks, a reinforced frame, and metal corner fasteners.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.wooden-shipping-crate/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.2,
    "w": 0.8,
@@ -3770,7 +3770,7 @@
   "description": "A dark three-lens traffic signal on a short pole with green-tinted lights and a bright green lower lens.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.bright-green-traffic-signal/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.6,
    "w": 0.6,
@@ -3802,7 +3802,7 @@
   "description": "A compact yellow school bus with black stripes, gray windows, and black wheels shown from the side.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.school-bus-stop-arm/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 10.5,
    "w": 2.55,
@@ -3835,7 +3835,7 @@
   "description": "A red octagonal STOP sign with bold white lettering and border mounted on a gray pole.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.visible-stop-sign-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.12,
    "w": 0.9,
@@ -3867,7 +3867,7 @@
   "description": "A large pale wooden cargo crate with horizontal boards, reinforced corners, and metal brackets.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.dropped-cargo-wooden-crate/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1.5,
    "w": 1.2,
@@ -3899,7 +3899,7 @@
   "description": "A worn blue toy ball with raised gray panels, black seams, and a tan center patch.",
   "class": "vehicle",
   "glbPath": "experiments/agentic-3d/assets/custom.vehicle.rolling-toy-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.4,
    "w": 0.4,
@@ -3931,7 +3931,7 @@
   "description": "A brown-and-white pointed-ear dog running forward with its mouth open and tongue visible.",
   "class": "animal",
   "glbPath": "experiments/agentic-3d/assets/custom.running-dog-vehicle/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 1,
    "w": 0.35,
@@ -3963,7 +3963,7 @@
   "description": "A bright red rubber playground ball with broad molded panel seams.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.red-playground-ball/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.3,
    "w": 0.3,
@@ -3995,7 +3995,7 @@
   "description": "A red octagonal STOP sign with large white lettering, a pale border, and a slim gray post.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.street.red-octagon-stop-v5/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.08,
    "w": 0.9,
@@ -4027,7 +4027,7 @@
   "description": "A dark-gray shallow road pothole with an oval recessed center and irregular flattened edges.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.dark-flat-road-pothole/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.8,
    "w": 0.55,
@@ -4059,7 +4059,7 @@
   "description": "A smooth bright-red spherical ball mounted above a pale pink stem and small round base.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.ball.red-sphere-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.35,
    "w": 0.35,
@@ -4092,7 +4092,7 @@
   "description": "A clean red octagonal STOP sign with crisp white text, a double white border, and a gray pole.",
   "class": "prop",
   "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v2/model.glb",
-  "source": "meshy",
+  "source": "generated",
   "declaredDims": {
    "l": 0.1,
    "w": 0.95,

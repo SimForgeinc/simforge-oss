@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, Loader2, SearchX, Sparkles, Upload } from "lucide-react";
+import { Boxes, Loader2, SearchX, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -17,8 +17,8 @@ import { AssetDetailDrawer } from "./AssetDetailDrawer";
 import { AssetGalleryGrid, AssetGalleryGridSkeleton } from "./AssetGalleryGrid";
 import { AssetGalleryHeader, type GallerySection } from "./AssetGalleryHeader";
 import { AssetGalleryToolbar } from "./AssetGalleryToolbar";
-import { AssetGenerateDialog } from "./AssetGenerateDialog";
 import { AssetUploadDialog, type AssetUploadKind } from "./AssetUploadDialog";
+import { ASSET_GALLERY_HOST_ACTIONS } from "@/app/lib/host/asset-gallery-actions";
 import { MapList } from "./MapList";
 import { gallery } from "./AssetGalleryPageClient.stylex";
 import {
@@ -45,7 +45,8 @@ export function AssetGalleryPageClient({ initialPage }: { initialPage: GalleryPa
   const [selected, setSelected] = useState<GalleryAssetSummary | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadKind, setUploadKind] = useState<AssetUploadKind>("model");
-  const [generateOpen, setGenerateOpen] = useState(false);
+  // The host action whose dialog is open, if any (see `host/asset-gallery-actions`).
+  const [hostActionId, setHostActionId] = useState<string | null>(null);
   // Bumped on publish so the Maps section refetches the catalog it just added to.
   const [mapReloadToken, setMapReloadToken] = useState(0);
   const [reloading, setReloading] = useState(false);
@@ -140,7 +141,9 @@ export function AssetGalleryPageClient({ initialPage }: { initialPage: GalleryPa
   return (
     <AppStage fill title="Assets" eyebrow="Asset library" testId="assets-stage" actions={
       <div {...stylex.props(gallery.actions)}>
-        {section === "models" ? <Button onClick={() => setGenerateOpen(true)}><Sparkles aria-hidden="true" />Generate model</Button> : null}
+        {section === "models" ? ASSET_GALLERY_HOST_ACTIONS.map(({ id, label, icon: Icon }) => (
+          <Button key={id} onClick={() => setHostActionId(id)}>{Icon ? <Icon aria-hidden="true" /> : null}{label}</Button>
+        )) : null}
         <Button variant="outline" onClick={() => { setUploadKind(section === "maps" ? "map" : "model"); setUploadOpen(true); }}><Upload aria-hidden="true" />{section === "maps" ? "Import map" : "Import model"}</Button>
       </div>
     }>
@@ -208,12 +211,14 @@ export function AssetGalleryPageClient({ initialPage }: { initialPage: GalleryPa
                 <EmptyState
                   icon={<Boxes {...stylex.props(gallery.icon)} />}
                   title="The library is empty"
-                  description="Generate a model from reference photos, or import a GLB you already have."
+                  description="Import a GLB you already have to start the library."
                   action={
                     <div {...stylex.props(gallery.actions)}>
-                      <Button type="button" onClick={() => setGenerateOpen(true)}>
-                        Generate a model
-                      </Button>
+                      {ASSET_GALLERY_HOST_ACTIONS.map(({ id, label }) => (
+                        <Button key={id} type="button" onClick={() => setHostActionId(id)}>
+                          {label}
+                        </Button>
+                      ))}
                       <Button
                         type="button"
                         variant="outline"
@@ -256,19 +261,19 @@ export function AssetGalleryPageClient({ initialPage }: { initialPage: GalleryPa
           setMapReloadToken((token) => token + 1);
         }}
       />
-      {/* Mounted only while open: the dialog owns an image picker, a poll loop
-          and an in-flight generation, none of which should exist on a page the
+      {/* A host action's dialog is mounted only while open: whatever it holds
+          (uploads, a poll loop, in-flight work) should not exist on a page the
           visitor is only browsing. */}
-      {generateOpen ? (
-        <AssetGenerateDialog
-          open
-          onClose={() => setGenerateOpen(false)}
+      {ASSET_GALLERY_HOST_ACTIONS.filter(({ id }) => id === hostActionId).map(({ id, Dialog }) => (
+        <Dialog
+          key={id}
+          onClose={() => setHostActionId(null)}
           onPublished={(asset) => {
             publish(asset);
-            setGenerateOpen(false);
+            setHostActionId(null);
           }}
         />
-      ) : null}
+      ))}
       <AssetDetailDrawer
         asset={selected}
         onClose={() => setSelected(null)}

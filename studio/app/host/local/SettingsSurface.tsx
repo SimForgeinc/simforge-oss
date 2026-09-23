@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { AppStage } from "@/app/components/AppStage";
 import { plate } from "@/app/components/AppStage.stylex";
-import { AiProviderSettings } from "./AiProviderSettings";
 import { LocalExecutionCard } from "./LocalExecutionCard";
 import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
@@ -28,11 +27,10 @@ export function SettingsSurface() {
     >
       <div {...stylex.props(plate.scroller)}>
         <nav {...stylex.props([hairline.all, plate.tabs])} aria-label="Settings sections">
-          {[["computer", "This computer"], ["ai", "AI providers"], ["storage", "Storage"], ["account", "Account"]].map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => setSection(id!)} {...stylex.props([focus.ringInset, plate.tab], section === id ? plate.tabActive : plate.tabIdle)}>{label}</button>)}
+          {[["computer", "This computer"], ["storage", "Storage"], ["account", "Account"]].map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => setSection(id!)} {...stylex.props([focus.ringInset, plate.tab], section === id ? plate.tabActive : plate.tabIdle)}>{label}</button>)}
         </nav>
         <div>
       {section === "computer" ? <LocalExecutionCard /> : null}
-      {section === "ai" ? <AiProviderSettings /> : null}
       {section === "storage" ? <section {...stylex.props([hairline.all, plate.root])}>
         <p {...stylex.props([typography.eyebrow, plate.eyebrow])}>Storage</p>
         <h2 {...stylex.props(plate.title)}>Map cache on this computer</h2>

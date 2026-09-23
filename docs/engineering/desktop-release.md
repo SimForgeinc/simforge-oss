@@ -267,8 +267,7 @@ read from an artifact, an API or a live endpoint rather than asserted.
 record. `studio-preview.2` (release id `384989037`, source `c79c4af6`, build
 0.1.2, installer run `34255225493`) was published at 19:24Z and is the
 preview channel pointer: it adds the assistant workspace selection that the
-staging Cloud's `/api/desktop/ai/anthropic` route now requires
-(`docs/product/ai-providers.md`). Both are prereleases; there is no stable
+staging Cloud's `/api/desktop/ai/anthropic` route now requires. Both are prereleases; there is no stable
 release and no `latest`. The withdrawn `desktop-v0.1.0-preview.20260907`
 draft (`b102bceac`) stays private for evidence and must never be republished.
 

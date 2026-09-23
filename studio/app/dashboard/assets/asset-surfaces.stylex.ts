@@ -41,22 +41,3 @@ export const preview = stylex.create({
   error: { position: "absolute", inset: 0, display: "grid", placeItems: "center", paddingInline: space.s8, textAlign: "center", fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.critical },
 });
 
-export const picker = stylex.create({
-  root: { display: "flex", flexDirection: "column", gap: space.s3 },
-  // `focus-visible:outline-none` is Tailwind's transparent 2px outline, not `outline: none`,
-  // so forced-colours mode still has an outline to repaint.
-  drop: { display: "flex", minHeight: "7rem", width: "100%", flexDirection: "column", alignItems: "center", justifyContent: "center", borderWidth: stroke.hairline, borderStyle: "dashed", borderColor: colors.hairlineStrong, backgroundColor: colors.fillFaint, paddingInline: space.s6, textAlign: "center", transitionProperty: "border-color, background-color", transitionDuration: motion.durStandard, transitionTimingFunction: motion.easeStandard, ":hover": { borderColor: colors.accentLineSubtle, backgroundColor: colors.accentWash }, ":disabled": { cursor: "not-allowed", opacity: 0.45 } },
-  addIcon: { marginBottom: space.s2, width: "1.5rem", height: "1.5rem", color: colors.accent },
-  label: { fontSize: text.sizeSm, lineHeight: text.lineSm, fontWeight: text.weightMedium },
-  hint: { marginTop: space.s1, fontSize: text.sizeXs, lineHeight: text.lineXs, color: colors.inkFaint },
-  images: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: space.s3, [SM]: { gridTemplateColumns: "repeat(4, minmax(0, 1fr))" } },
-  image: { position: "relative", overflow: "hidden", backgroundColor: colors.fillFaint },
-  imagePreview: { aspectRatio: "1", width: "100%", objectFit: "cover" },
-  front: { position: "absolute", left: "0.5rem", top: "0.5rem", backgroundColor: colors.accent, paddingInline: space.s2, paddingBlock: space.s0_5, color: "#000" },
-  remove: { position: "absolute", right: "0.375rem", top: "0.375rem", backgroundColor: colors.scrimHeavy, padding: space.s1, color: colors.inkSecondary, ":hover": { color: colors.ink } },
-  tinyIcon: { width: "0.875rem", height: "0.875rem" },
-  controls: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.s1, paddingInline: space.s1_5, paddingBlock: space.s1_5 },
-  move: { padding: space.s1, color: colors.inkMuted, ":hover": { backgroundColor: colors.fillStrong, color: colors.ink }, ":disabled": { opacity: 0.2 } },
-  view: { minWidth: 0, fontSize: text.sizeMicro, color: colors.inkMuted },
-  note: { fontSize: text.sizeXs, lineHeight: text.lineSm, color: colors.inkMuted },
-});
