@@ -493,6 +493,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none and does not request motionSource '${LEGACY_XOSC_MOTION_SOURCE}'`);
       }
       const warnings: { code: string; message: string }[] = [];
+      // The map's ground derivative: the renderer's placement heights and
+      // the contact gate both come from it (docs/engineering/ground-height.md).
+      const groundMember = closure.members.get(GROUND_MESH_MEMBER);
       let contactGate: ContactGateReport | undefined;
       const applyAttitude = options.applyAttitude !== false;
       let lowering: NativeSceneLowering | NativeTimelineLowering;
@@ -506,7 +509,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         lowering = timelineLowering;
         // Contact gate: every wheel the renderer will draw stands on the
         // rendered ground within 3 cm (docs/engineering/ground-height.md).
-        const groundMember = closure.members.get(GROUND_MESH_MEMBER);
         if (groundMember) {
           const opened = await openRenderTimeline(await fs.readFile(timelineInput.path));
           try {
@@ -585,6 +587,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         pedestrianModels: actorAssets.directory,
         captureClock: capture.clock,
         taaSamples: capture.samplesPerFrame,
+        ...(groundMember ? { groundMesh: groundMember.path } : {}),
         ...(sensorRigs.lidars.length + sensorRigs.radars.length > 0 && nativeSensorCacheDir(options)
           ? { sensorCacheDir: nativeSensorCacheDir(options) }
           : {}),
@@ -620,6 +623,24 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         throw new RenderInputError('native_capture_clock_unsupported', 'the render service does not pin the capture clock; the pinned (simulation-time) capture this job asks for cannot run on it');
       }
       const captureClock = capture.clock;
+      const groundSource = client.ground;
+      if (!groundSource) {
+        await session.close();
+        throw new RenderInputError('native_ground_source_unreported', 'the render service did not report its placement height source at hello (a service that predates the ground derivative)');
+      }
+      if (groundMember) {
+        // The service must place actors on the same surface the gate checked.
+        if (!client.supports('ground_mesh') || groundSource.source !== 'ground-mesh') {
+          await session.close();
+          throw new RenderInputError('native_ground_mesh_unsupported', `the render service did not load ${GROUND_MESH_MEMBER} (reported ${JSON.stringify(groundSource)}); it would place actors on a different ground than the simulator`);
+        }
+        if (groundSource.sha256 !== groundMember.sha256) {
+          await session.close();
+          throw new RenderInputError('native_ground_mesh_mismatch', `the render service loaded ground ${groundSource.sha256}, the closure carries ${groundMember.sha256}`);
+        }
+      } else {
+        warnings.push({ code: 'native_ground_legacy_field', message: `the map closure carries no ${GROUND_MESH_MEMBER}; heights for actors without one come from the renderer's legacy mesh field (a map version published before its ground derivative)` });
+      }
 
       const encoders = new Map<string, Encoder>();
       const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
@@ -883,6 +904,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(observedFrames.length > 0 ? { observedFramesPath: observedRelative, observedFrames: observedFrames.map((line) => JSON.parse(line) as unknown) } : {}),
         parity,
         attitude: applyAttitude ? 'full' : 'yaw-only',
+        groundSource,
       });
       const traceDigest = await hashFile(tracePath);
       phase('parityAndTrace');
