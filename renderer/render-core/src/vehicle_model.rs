@@ -80,6 +80,7 @@ impl RiderSpec {
 
     /// Material colours an actor's variant writes (empty for the authored look).
     pub fn colors_for(&self, actor_id: &str) -> Vec<(String, [f32; 3])> {
+        // fallback-ok: a null palette is variant 0, the authored colours (nothing to write)
         self.palettes[self.variant(actor_id)].clone().unwrap_or_default()
     }
 

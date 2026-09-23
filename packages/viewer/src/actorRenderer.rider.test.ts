@@ -165,6 +165,14 @@ describe('ridden two-wheelers', () => {
     renderer.dispose();
   });
 
+  it('refuses to pedal a moving ridden actor that has no odometer', async () => {
+    const renderer = await load();
+    expect(() => renderer.sync([actor({ speedMps: 4 })])).toThrow(/odometerM/);
+    renderer.sync([actor({ speedMps: 0 })]);
+    expect(find(renderer, 'bike-0', 'Crank').rotation.z).toBeCloseTo(0, 5);
+    renderer.dispose();
+  });
+
   it('fits and places the model by its bike, not by the rider bind pose', async () => {
     const renderer = await load();
     renderer.sync([actor({ odometerM: 0 })]);
