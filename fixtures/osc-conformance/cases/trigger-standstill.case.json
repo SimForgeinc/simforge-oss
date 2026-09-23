@@ -68,7 +68,7 @@
       "StandStillCondition (class reference)",
       "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)"
     ],
-    "derivation": "Ego speed reaches 0 at t=4.0 (cubic over 3 s) and stays; stood still >= 1.01 s first at t=5.02 (D-08). Other ramps 20->25 m/s cubic over 3 s from 5.02.",
+    "derivation": "Ego follows the exact cubic 10->0 over [1,4]. D-08: standing still means speed < 0.05 m/s; v = 30(1-tau)^2(1+2tau) m/s drops below 0.05 first at t=3.88. Stood still >= 1.01 s first at t=4.90. Other ramps 20->25 m/s cubic over 3 s from 4.90.",
     "actors": {
       "ego": {
         "x0": 50,
@@ -89,7 +89,7 @@
         "v0": 20,
         "longitudinal": [
           {
-            "t0": 5.02,
+            "t0": 4.9,
             "to": 25,
             "shape": "cubic",
             "durationS": 3
@@ -102,7 +102,7 @@
         "start": 1.0
       },
       "change": {
-        "start": 5.02
+        "start": 4.9
       }
     },
     "decisions": [
@@ -111,9 +111,8 @@
     ]
   },
   "expect": {
-    "ours": "deviates",
-    "finding": "F-05",
-    "esmini": "agrees",
-    "note": "The `stop` target does not follow the prescribed cubic (1.6 m/s off mid-ramp) and reaches 0 about 0.3 s early, so the standstill trigger fires at 4.72 s instead of 5.02 s. The trigger logic itself (D-08) is consistent with that earlier stop."
+    "ours": "conforms",
+    "esmini": "disagrees",
+    "esminiNote": "esmini treats standstill as exactly zero speed (fires at 5.02); D-08 counts below 0.05 m/s, which an exact cubic stop reaches 0.12 s before rest"
   }
 }

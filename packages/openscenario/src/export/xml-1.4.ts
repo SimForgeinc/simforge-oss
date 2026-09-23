@@ -531,9 +531,8 @@ function leafCondition(resolved: ResolvedAsamScenario, condition: Condition): Le
         triggeringActor: actor(condition.a),
         // OSC has no distance dead-band. Export the exact deterministic entry
         // threshold used by the native engine. The engine measures gaps between
-        // bodies, not between reference points, so the OSC reading is
-        // freespace="true" (along-lane: bumper to bumper along the route;
-        // euclidean: see the approximation warning in `analyzeAsamCapabilities`).
+        // bodies (along-lane: bumper to bumper along the route; euclidean: the
+        // footprint separation), which is OSC freespace="true".
         xml: `<RelativeDistanceCondition entityRef="${xml(actor(condition.b))}" relativeDistanceType="${condition.mode === 'euclidean' ? 'euclidianDistance' : 'longitudinal'}" freespace="true" rule="${mapRule(condition.cmp)}" value="${finite(condition.cmp === 'lt' || condition.cmp === 'lte' ? Math.max(0, condition.value - (condition.hysteresis ?? 0)) : condition.value + (condition.hysteresis ?? 0))}" coordinateSystem="${condition.mode === 'euclidean' ? 'entity' : 'road'}"/>`,
       };
     case 'ttc':

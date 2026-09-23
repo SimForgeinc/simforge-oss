@@ -27,8 +27,8 @@
         </BoundingBox>
         <Performance maxSpeed="100" maxAcceleration="12" maxDeceleration="12"/>
         <Axles>
-          <FrontAxle maxSteering="0.7" wheelDiameter="0.675" trackWidth="1.596" positionX="2.784" positionZ="0.3375"/>
-          <RearAxle maxSteering="0" wheelDiameter="0.675" trackWidth="1.596" positionX="0" positionZ="0.3375"/>
+          <FrontAxle maxSteering="0.7" wheelDiameter="0.675" trackWidth="1.596" positionX="1.392" positionZ="0.3375"/>
+          <RearAxle maxSteering="0" wheelDiameter="0.675" trackWidth="1.596" positionX="-1.392" positionZ="0.3375"/>
         </Axles>
         <Properties>
           <Property name="uniscenarios.actorId" value="ego"/>
@@ -44,8 +44,8 @@
         </BoundingBox>
         <Performance maxSpeed="100" maxAcceleration="12" maxDeceleration="12"/>
         <Axles>
-          <FrontAxle maxSteering="0.7" wheelDiameter="0.675" trackWidth="1.596" positionX="2.784" positionZ="0.3375"/>
-          <RearAxle maxSteering="0" wheelDiameter="0.675" trackWidth="1.596" positionX="0" positionZ="0.3375"/>
+          <FrontAxle maxSteering="0.7" wheelDiameter="0.675" trackWidth="1.596" positionX="1.392" positionZ="0.3375"/>
+          <RearAxle maxSteering="0" wheelDiameter="0.675" trackWidth="1.596" positionX="-1.392" positionZ="0.3375"/>
         </Axles>
         <Properties>
           <Property name="uniscenarios.actorId" value="near"/>

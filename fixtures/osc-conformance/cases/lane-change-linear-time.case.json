@@ -73,9 +73,7 @@
     ]
   },
   "expect": {
-    "ours": "deviates",
-    "finding": "F-08",
-    "esmini": "disagrees",
-    "esminiNote": "our export rewrites every lane change as cubic with the engine's effective duration (F-08), so esmini runs a cubic, 0.34 m from the authored linear profile; esmini executes a genuinely linear lane change exactly (probe-lane-change-linear)"
+    "ours": "conforms",
+    "esmini": "agrees"
   }
 }

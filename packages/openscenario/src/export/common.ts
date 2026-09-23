@@ -267,20 +267,6 @@ export function analyzeAsamCapabilities(
       });
     }
   }
-  if (!replay) {
-    for (const interaction of input.interactions) {
-      if (interaction.trigger.kind !== 'when') continue;
-      const root = interaction.trigger.condition;
-      const leaves = root.kind === 'and' || root.kind === 'or' ? root.of : root.kind === 'not' ? [root.of] : [root];
-      if (leaves.some((leaf) => leaf.kind === 'distance' && leaf.mode === 'euclidean')) {
-        warnings.push({
-          code: 'distance_metric_approximated',
-          path: `interactions.${interaction.id}.trigger.condition`,
-          reason: 'the engine measures euclidean distance between circumscribed body circles; it is exported as the OpenSCENARIO freespace (bounding-box) distance, which it never exceeds',
-        });
-      }
-    }
-  }
   for (const interaction of input.interactions) {
     if (interaction.verb !== 'set') continue;
     if (interaction.target.key === 'lights.emergency' || interaction.target.key === 'audio.horn') {
