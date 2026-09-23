@@ -224,15 +224,16 @@ RGB_CAMERA_PROFILES: Mapping[str, Mapping[str, Any]] = {
 
 
 def rgb_camera_profile(server_version: str) -> tuple[str, Mapping[str, Any]]:
-    parts = str(server_version or "").split(".")
-    generation = ".".join(parts[:2]) if len(parts) >= 2 else ""
-    profile = RGB_CAMERA_PROFILES.get(generation)
-    if profile is None:
+    if not isinstance(server_version, str) or not server_version:
+        raise CarlaRenderError("carla_engine_version_unsupported", "CARLA reported no server version")
+    parts = server_version.split(".")
+    generation = ".".join(parts[:2])
+    if len(parts) < 2 or generation not in RGB_CAMERA_PROFILES:
         raise CarlaRenderError(
             "carla_engine_version_unsupported",
             f"no RGB camera profile is defined for CARLA server version {server_version!r}",
         )
-    return generation, profile
+    return generation, RGB_CAMERA_PROFILES[generation]
 
 
 #: The lighting a cooked world bakes, per exact cooked map name, as CARLA
@@ -1251,7 +1252,9 @@ class CarlaBackend:
         apply_batch_sync = getattr(getattr(self, "client", None), "apply_batch_sync", None)
         if callable(command) and callable(apply_batch_sync):
             responses = apply_batch_sync([command(probe.id)], False)
-            error = str(getattr(responses[0], "error", "") or "") if responses else "no response"
+            if not responses:
+                raise RuntimeError(f"CARLA returned no response destroying the {blueprint_id} placement probe")
+            error = responses[0].error
             if error:
                 raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe: {error}")
             return
