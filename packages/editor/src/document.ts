@@ -724,6 +724,7 @@ export class EditorDocument {
     const dims = getEntry(input.catalogId).dims;
     const id = input.id ?? this.allocateActorId(input.catalogId);
     if (this.#doc.role(id)) throw new Error(`actor id "${id}" already exists`);
+    const sensors = this.#starterSensors(kind, input);
     this.#doc.addRole({
       id,
       kind: 'scene_absolute',
@@ -732,7 +733,7 @@ export class EditorDocument {
         catalogId: input.catalogId,
         dims: { length: dims.l, width: dims.w, height: dims.h },
         static: kind === 'prop' || input.static === true,
-        sensors: this.#starterSensors(kind, input),
+        sensors,
       },
       pose: {
         position: { x: q(input.x), y: q(input.y), z: q(input.z) },
@@ -745,6 +746,10 @@ export class EditorDocument {
       essentiality: kind === 'prop' ? 'preferred' : 'required',
       ...(input.bodyColor ? { extensions: { 'studio.presentation.bodyColor': input.bodyColor } } : {}),
     });
+    // A starter rig is a sensor like any other: the role it lands on becomes
+    // the sensor-derived metric subject, in the same undo step as the
+    // placement, exactly as adding that sensor by hand would do.
+    if (sensors.length > 0) this.#reconcileSensorSubject(id);
     return id;
   }
 

@@ -260,7 +260,17 @@ test("GPL accompaniment clears only for a verified build receipt and a real arch
   assert.deepEqual(receipts.problems, []);
   assert.deepEqual(receipts.verified, ["linux-x64", "macos-arm64", "macos-x64", "windows-x64"]);
   const cleared = await auditBundledComponents({ repoRoot, encoderReceipts: receipts });
-  assert.equal(cleared.publicRedistribution, "cleared", JSON.stringify(cleared.platforms, null, 2));
+  // Receipts discharge exactly the GPL accompaniment. Whatever still blocks is
+  // a blocker the audit reports with or without them (today the actor closure,
+  // whose document is not published yet), so the ledger's other gates cannot
+  // turn this case red and the receipts cannot clear anything but their own.
+  const audited = ["linux-x64", "macos-arm64", "macos-x64", "windows-x64"];
+  const before = new Set(blockingReasons(blocked, audited));
+  const after = blockingReasons(cleared, audited);
+  assert.ok(!after.some((reason) => reason.includes("corresponding-source")), JSON.stringify(after, null, 2));
+  assert.ok(after.every((reason) => before.has(reason)), "receipts may only remove blockers");
+  assert.ok(after.length < before.size, "the verified receipts must discharge the GPL obligation");
+  assert.equal(cleared.publicRedistribution, after.length === 0 ? "cleared" : "blocked");
   assert.deepEqual(cleared.sourceDrift, []);
   assert.equal(blockingReasons(cleared, ["not-a-platform"]).length, 1, "an unaudited platform is blocked, not cleared");
 });

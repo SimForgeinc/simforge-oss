@@ -74,8 +74,28 @@ else if (command === 'author' || command === 'vista-author') {
     })),
   });
 } else if (command === 'judge') {
-  // The blind 2D footage pass: it ranks candidates and decides nothing.
-  emit({ cellId: flag('cell').split('/').pop(), plausible: true, realism: 8, dynamism: 7, defects: [] });
+  // The decomposed review ensemble over redacted 2D footage
+  // (tools/gates/judge_ensemble.py). It can only add contract-defined
+  // blockers: advisoryPass is true unless a plan answers a question 'no'.
+  const cellId = flag('cell-id');
+  const answers = {
+    'physical-plausibility': 'yes',
+    'mechanism-match': 'yes',
+    'criticality-visible': 'yes',
+    'label-answer-consistency': 'yes',
+    ...(plan.ensemble?.[cellId] ?? {}),
+  };
+  emit({
+    cellId,
+    tier: '2d',
+    contentHash: 'ensemble-' + cellId,
+    advisoryPass: Object.values(answers).every((answer) => answer === 'yes'),
+    answers,
+    escalated: false,
+    escalationReasons: [],
+    models: ['smoke-judge'],
+    records: [],
+  });
 } else if (command === 'semantic2d') {
   const cellId = flag('cell-id');
   const render = flag('render');
@@ -179,15 +199,43 @@ if (command === 'sites' && sub === 'match') {
 }
 `;
 
+/**
+ * Stand-in for \`@simforge-oss/trace-render\`, the 2D tier's renderer: the
+ * artifacts it writes (an mp4 and \`manifest.json\` with per-frame \`t\`/\`png\`)
+ * are what the pipeline normalizes. The renderer's own output is covered by
+ * tools/trace-render's tests.
+ */
+const FAKE_TRACE_RENDER = `#!/usr/bin/env node
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+const flag = (name) => {
+  const at = process.argv.indexOf('--' + name);
+  return at === -1 ? null : process.argv[at + 1];
+};
+const out = flag('out');
+await mkdir(join(out, 'frames'), { recursive: true });
+await writeFile(join(out, 'frames', 'frame-000.png'), 'fake png');
+await writeFile(join(out, 'trace-render.mp4'), 'fake mp4 for ' + out);
+await writeFile(join(out, 'manifest.json'), JSON.stringify({
+  kind: 'trace-render-manifest',
+  frames: [{ index: 0, t: 0, png: 'frame-000.png', svg: 'frame-000.svg' }],
+}));
+process.stdout.write(join(out, 'manifest.json') + '\\n');
+`;
+
 async function harness(t, plan) {
   const dir = await mkdtemp(join(tmpdir(), 'showcase-pipeline-smoke-'));
   t.after(async () => rm(dir, { recursive: true, force: true }));
   const python = join(dir, 'fake-bridge.mjs');
   const cli = join(dir, 'fake-cli.mjs');
+  const renderer2d = join(dir, 'fake-trace-render.mjs');
   await writeFile(python, FAKE_BRIDGE);
   await writeFile(cli, FAKE_CLI);
+  await writeFile(renderer2d, FAKE_TRACE_RENDER);
   await chmod(python, 0o755);
   await chmod(cli, 0o755);
+  await chmod(renderer2d, 0o755);
   const planPath = join(dir, 'plan.json');
   await writeFile(planPath, JSON.stringify(plan));
   process.env.SMOKE_PLAN = planPath;
@@ -230,7 +278,7 @@ async function harness(t, plan) {
   };
   await writeFile(join(jobDir, '00-brief.json'), JSON.stringify(job));
   const events = [];
-  const pipeline = new ShowcasePipeline({ root: dir, python: process.execPath, cli });
+  const pipeline = new ShowcasePipeline({ root: dir, python: process.execPath, cli, renderer2d });
   // The pipeline spawns `node <python> <bridge> ...`; point the bridge at the
   // stand-in so the stage protocol is answered without a python runtime.
   pipeline.bridge = python;
@@ -413,6 +461,8 @@ test('a valid trace renders, matches the oracle and is accepted with no retry at
     gateFirstFailure: null,
     semanticScreened: true,
     semanticConfidence: 0.9,
+    ensembleScreened: true,
+    ensembleAccepted: true,
     renderTier: '3d',
     renderStatus: 'complete',
   });
@@ -422,8 +472,26 @@ test('a valid trace renders, matches the oracle and is accepted with no retry at
   assert.equal(gallery.headline, '/artifacts/jobs/job-1/65-render3d/yale-street-site-a-0/rollout.mp4');
   assert.equal(events.some((event) => event.stage.startsWith('80-')), false);
   assert.equal(await exists(join(jobDir, '70-judge.json')), false);
-  // The blind 2D pass still runs and still decides nothing.
+  // The review ensemble reads the redacted 2D pass; with no blocking answer it adds nothing.
   assert.equal((await read('60-render2d/quality.json')).cells.length, 1);
+});
+
+test('a review-ensemble "no" blocks an oracle-matched cell with its contract defect code', async (t) => {
+  const { read } = await harness(t, {
+    contract: SEMANTIC_CONTRACT,
+    cells: CELLS,
+    gateRejects: [],
+    renderFails: {},
+    ensemble: { 'yale-street-site-a-0': { 'physical-plausibility': 'no' } },
+  });
+
+  const product = await read('75-product.json');
+  assert.equal(product.semanticAcceptedCells, 1);
+  assert.equal(product.acceptedCells, 0);
+  assert.equal(product.cells[0].semanticAccepted, true);
+  assert.equal(product.cells[0].ensembleAccepted, false);
+  assert.equal(product.cells[0].accepted, false);
+  assert.ok(product.cells[0].defectCodes.includes('scenario.plausibility'));
 });
 
 test('a gate-rejected cell is reported, never re-decided, and never rendered', async (t) => {

@@ -10,15 +10,16 @@ import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { assertNoDuplicateFetches, Checks } from './texture-tier-assertions';
+import { hostUrl } from './host-url';
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 assert(args.get('root') && args.get('texture-url'), '--root and --texture-url are required');
 const viewerRoot = resolve(args.get('viewer-root') ?? join(import.meta.dirname, '..', '..'));
 const host = JSON.parse(await readFile(join(args.get('root')!, 'host.json'), 'utf8')) as { baseUrl: string; controlToken: string };
 const base = new URL(host.baseUrl);
 assert(base.hostname === '127.0.0.1' && Number(base.port) >= 5514 && Number(base.port) <= 5517);
-const url = new URL(args.get('texture-url')!, base);
+const url = hostUrl(base, args.get('texture-url')!);
 assert.equal(url.origin, base.origin, 'texture must be served by the real isolated daemon');
-const basis = await fetch(new URL('/basis/basis_transcoder.wasm', base), { method: 'HEAD', headers: { authorization: `Bearer ${host.controlToken}` } });
+const basis = await fetch(hostUrl(base, '/basis/basis_transcoder.wasm'), { method: 'HEAD', headers: { authorization: `Bearer ${host.controlToken}` } });
 assert(basis.ok, 'Basis runtime missing: run node studio/scripts/sync-studio-assets.mjs in the daemon worktree');
 const browser = await chromium.launch({ headless: true, executablePath: args.get('chromium') ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
   args: ['--no-sandbox', '--use-gl=angle', '--use-angle=vulkan', '--enable-features=Vulkan', '--disable-vulkan-surface'] });
