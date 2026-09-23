@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
-    "directory": "packages/trace-render"
+    "directory": "tools/trace-render"
   },
   "publishConfig": { "access": "public", "provenance": true },
   "license": "Apache-2.0",

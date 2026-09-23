@@ -298,8 +298,11 @@ async function createScenario(page: Page, datasetName: string): Promise<void> {
   await page.getByTestId("scenario-dataset-rail").getByRole("button", { name: datasetName }).click();
   await expect(page.getByTestId("scenario-document-index")).toBeVisible({ timeout: 120_000 });
 
-  await page.getByTestId("scenario-add-scenario").click();
-  await page.getByRole("menuitem", { name: "New Scenario" }).click();
+  // The header's labelled action goes straight to the map picker; it has to be on screen without
+  // scrolling, which is the regression it guards (the foot-of-list row was clipped off-screen).
+  const newScenario = page.getByTestId("scenario-new-scenario");
+  await expect(newScenario).toBeInViewport();
+  await newScenario.click();
 
   const picker = page.getByRole("dialog", { name: "Select map" });
   await expect(picker).toBeVisible({ timeout: 60_000 });

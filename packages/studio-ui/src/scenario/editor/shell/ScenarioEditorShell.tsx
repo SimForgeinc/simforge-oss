@@ -8,6 +8,7 @@ import type {
 import * as stylex from "@stylexjs/stylex";
 import { mergeStyleProps } from "../../../components/stylex/surface";
 import { styles } from "./ScenarioEditorShell.stylex";
+import { playerChrome } from "../player/player-mode.stylex";
 import {
   SCENARIO_EDITOR_SHELL_STYLE,
   type ScenarioEditorShellStyle,
@@ -42,6 +43,11 @@ export interface ScenarioEditorShellProps
   floatingOverlay?: ScenarioEditorShellSlot;
   canvasMode?: ScenarioEditorCanvasMode;
   disabled?: boolean;
+  /**
+   * The simulation player owns the viewport: the left sidebar and the status
+   * overlay step aside (hidden, still mounted, so they return unchanged).
+   */
+  playerMode?: boolean;
   geometryStyle?: ScenarioEditorShellStyle;
   /**
    * Caller StyleX styles for the shell root, composed after the shell's own so
@@ -67,6 +73,7 @@ export function ScenarioEditorShell({
   floatingOverlay,
   canvasMode = "interactive",
   disabled = false,
+  playerMode = false,
   geometryStyle,
   className,
   xstyle,
@@ -99,6 +106,7 @@ export function ScenarioEditorShell({
       data-canvas-mode={canvasMode}
       data-editor-shell-geometry="v1"
       data-has-header={String(hasHeader)}
+      data-player-mode={String(playerMode)}
       data-testid={testId}
       style={shellStyle}
     >
@@ -116,9 +124,14 @@ export function ScenarioEditorShell({
       >
         {leftSidebar !== null && leftSidebar !== undefined
           ? renderSlot(leftSidebar, {
-              className: stylex.props(styles.leftSidebar, chromeDisabled && styles.disabledChrome).className,
+              className: stylex.props(
+                styles.leftSidebar,
+                chromeDisabled && styles.disabledChrome,
+                playerMode && playerChrome.hidden,
+              ).className,
               "data-editor-shell-region": "left-sidebar",
-              inert: chromeDisabled || undefined,
+              "aria-hidden": playerMode || undefined,
+              inert: chromeDisabled || playerMode || undefined,
             })
           : null}
 
@@ -143,8 +156,10 @@ export function ScenarioEditorShell({
           })}
           {statusOverlay
             ? renderSlot(statusOverlay, {
-                className: stylex.props(styles.statusLayer).className,
+                className: stylex.props(styles.statusLayer, playerMode && playerChrome.hidden).className,
                 "data-editor-shell-region": "status-overlay",
+                "aria-hidden": playerMode || undefined,
+                inert: playerMode || undefined,
               })
             : null}
           {floatingOverlay

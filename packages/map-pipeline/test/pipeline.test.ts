@@ -129,12 +129,17 @@ afterAll(async () => {
   await Promise.all(temporaryRoots.map((root) => rm(root, { recursive: true, force: true })));
 });
 
+// The 25 GB default floor is sized for a full map's texture tiers; this
+// synthetic map needs kilobytes, so the case must not depend on how full the
+// machine's disk happens to be.
+const SYNTHETIC_MAP_FREE_BYTES = 1e8;
+
 describe('map master pipeline', () => {
   it('builds a verbatim master with external images and a web tier that shares them', async () => {
     const workDir = await mkdtemp(path.join(os.tmpdir(), 'simforge-pipeline-work-'));
     temporaryRoots.push(workDir);
     const gpuTool = process.env['SIMFORGE_KTX2_GPU_VARIANT_BIN'];
-    const result = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, texturesFullBc7: gpuTool ? { tool: gpuTool } : false });
+    const result = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, texturesFullBc7: gpuTool ? { tool: gpuTool } : false, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES });
     const master = result.stages.master;
     const web = result.stages.web!;
 
@@ -258,7 +263,7 @@ describe('map master pipeline', () => {
     expect(web.report.instancedNodes).toBe(2);
 
     // Cached stages return the same closure without rebuilding.
-    const again = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, texturesFullBc7: gpuTool ? { tool: gpuTool } : false });
+    const again = await runMapPipeline({ sourceDir, name: 'synthetic-map', workDir, cellSize: 100, texturesFullBc7: gpuTool ? { tool: gpuTool } : false, minFreeDiskBytes: SYNTHETIC_MAP_FREE_BYTES });
     expect(again.canonical.digest).toBe(result.canonical.digest);
     expect(again.derived[0]!.digest).toBe(result.derived[0]!.digest);
 
