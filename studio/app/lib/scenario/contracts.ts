@@ -657,11 +657,21 @@ export const MAP_GRAPH_SIDECARS = [
 ] as const;
 
 /**
+ * Closure members the client also pins but does not address through a
+ * descriptor URL of its own: the ground surface bodies stand on (engine 0.11
+ * contact; the descriptor's `ground.sha256`, checked by playback's map
+ * runtime). Streamed with their digest attested exactly like
+ * {@link MAP_GRAPH_SIDECARS}; a redirect to the object store would carry no
+ * `x-content-sha256` and the client would refuse the map.
+ */
+export const DIGEST_ATTESTED_MAP_MEMBERS = [...MAP_GRAPH_SIDECARS, "derived/ground/ground-mesh.bin"] as const;
+
+/**
  * Whether this closure member's bytes must reach the client with their digest
- * attested. See {@link MAP_GRAPH_SIDECARS}.
+ * attested. See {@link MAP_GRAPH_SIDECARS} and {@link DIGEST_ATTESTED_MAP_MEMBERS}.
  */
 export function requiresDigestAttestation(relativePath: string): boolean {
-  return (MAP_GRAPH_SIDECARS as readonly string[]).includes(relativePath);
+  return (DIGEST_ATTESTED_MAP_MEMBERS as readonly string[]).includes(relativePath);
 }
 
 // ── Authoritative simulation ────────────────────────────────────────────────
