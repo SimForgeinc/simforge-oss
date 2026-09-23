@@ -321,6 +321,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const closure = collectNativeMapMembers(context.inputs.values());
       if (!intent.renderTextures) throw new Error('native_render_texture_profile_missing');
       if (!intent.nativeVramBudgetBytes && !intent.nativeVramCapacityBytes) throw new Error('native_vram_capacity_missing');
+      const warnings: { code: string; message: string }[] = [];
       const sensorVideo = nativeSensorVideoFormat(intent);
       // The intent's capacity is the fleet's largest device (or 16 GiB); the
       // device this job holds is measured by the worker. Check against the
@@ -343,7 +344,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       phase('textureProfile');
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
-      const { masterPath: _stagedPath, ...stagedEvidence } = textureProfile;
+      const { masterPath: _stagedPath, transcodeAtLoad, ...stagedEvidence } = textureProfile;
+      if (transcodeAtLoad) {
+        // Identical pixels, but the service spends minutes of CPU on a map
+        // ingest should have pre-transcoded: never silent.
+        warnings.push({ code: 'texture_tier_miss', message: `uastc-full textures transcode at load: ${transcodeAtLoad}` });
+        console.error(JSON.stringify({ event: 'native.texture_tier_miss', jobId: context.jobId, reason: transcodeAtLoad }));
+      }
       const textureEvidence = nativeTextureEvidence(stagedEvidence, vram, intent.nativeVramBudgetBytes !== undefined, context.controlFeatures ?? new Set());
       // Actor appearance is part of the render contract: the intent declares
       // the actor closure as `actors.native-closure`, the worker delivers its
@@ -379,7 +386,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // trace through the shared sampler. Re-lowering the derived xosc is a
       // labelled fallback for execution packages that predate the timeline.
       const timelineInput = context.inputs.get(RENDER_TIMELINE_INPUT_ID);
-      const warnings: { code: string; message: string }[] = [];
       let lowering: NativeSceneLowering;
       let timelineSha256: string | undefined;
       let timelineBytes: Uint8Array | undefined;
