@@ -61,7 +61,8 @@ export const styles = stylex.create({
     overflow: "hidden",
   },
   stageHead: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: space.s3, minWidth: 0 },
-  stageName: { minWidth: 0 },
+  stageName: { display: "flex", alignItems: "center", gap: space.s2, minWidth: 0 },
+  headlineIcon: { flexShrink: 0, color: colors.accent },
   stageCity: {
     // Several breakpoints on one property are literal queries (see the style guide).
     height: { default: "11rem", "@media (min-width: 640px)": "14rem", "@media (min-width: 1024px)": "16rem" },
