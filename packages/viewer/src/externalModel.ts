@@ -8,6 +8,7 @@ import {
   Texture,
   Vector3,
   type BufferGeometry,
+  type Object3D,
 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -134,7 +135,8 @@ async function performLoad({ binding, generation: loadGeneration }: QueuedLoad):
   }
 
   try {
-    const extents = normaliseScene(gltf.scene, binding.scale ?? 1, binding.yawRad ?? 0);
+    assertRider(binding, gltf.scene, gltf.animations);
+    const extents = normaliseScene(gltf.scene, binding.scale ?? 1, binding.yawRad ?? 0, binding.rider !== undefined);
     records.set(binding.contentHash, {
       state: 'ready',
       scene: gltf.scene,
@@ -159,12 +161,16 @@ function normaliseScene(
   scene: Group,
   scale: number,
   yawRad: number,
+  ridden = false,
 ): Readonly<{ l: number; w: number; h: number }> {
   scene.scale.multiplyScalar(scale);
   scene.rotateY(yawRad);
   scene.updateMatrixWorld(true);
 
-  const bounds = new Box3().setFromObject(scene);
+  // A ridden two-wheeler is placed by its bike; its rider's skinned bind pose
+  // is not where the rider is drawn.
+  const measure = (): Box3 => (ridden ? modelBoundsWithoutRider(scene) : new Box3().setFromObject(scene));
+  const bounds = measure();
   if (bounds.isEmpty()) throw new Error('External model has no measurable geometry');
   const centre = bounds.getCenter(new Vector3());
   scene.position.x -= centre.x;
@@ -172,9 +178,48 @@ function normaliseScene(
   scene.position.z -= centre.z;
   scene.updateMatrixWorld(true);
 
-  const size = new Box3().setFromObject(scene).getSize(new Vector3());
+  const size = measure().getSize(new Vector3());
   return { l: size.x, w: size.z, h: size.y };
 }
+
+/**
+ * A binding that declares a rider must deliver it: the tagged rider subtree
+ * and the clip that poses it. Anything less would draw a riderless bike.
+ */
+function assertRider(binding: ExternalGlbModelBinding, scene: Group, clips: readonly AnimationClip[]): void {
+  if (!binding.rider) return;
+  let riders = 0;
+  scene.traverse((object) => {
+    if (object.userData?.semanticClass === 'rider' && (object as Mesh).isMesh) riders++;
+  });
+  if (riders === 0) throw new Error('ridden model has no mesh tagged semanticClass "rider"');
+  if (!clips.some((clip) => clip.name === binding.rider!.clip)) {
+    throw new Error(`ridden model has no "${binding.rider.clip}" clip`);
+  }
+}
+
+export function isRiderSubtree(object: Object3D): boolean {
+  for (let node: Object3D | null = object; node; node = node.parent) {
+    if (node.userData?.semanticClass === 'rider') return true;
+  }
+  return false;
+}
+
+/** Bounds of a model's vehicle geometry, ignoring its rider. */
+export function modelBoundsWithoutRider(scene: Object3D): Box3 {
+  scene.updateMatrixWorld(true);
+  const bounds = new Box3();
+  scene.traverse((object) => {
+    const mesh = object as Mesh;
+    if (!mesh.isMesh || isRiderSubtree(mesh)) return;
+    mesh.geometry.computeBoundingBox();
+    bounds.union(mesh.geometry.boundingBox!.clone().applyMatrix4(mesh.matrixWorld));
+  });
+  if (bounds.isEmpty()) throw new Error('ridden model has no vehicle geometry outside its rider');
+  return bounds;
+}
+
+
 
 function emitChange(contentHash: string): void {
   for (const listener of [...listeners]) {

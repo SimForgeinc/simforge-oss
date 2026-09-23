@@ -41,6 +41,90 @@ pub struct VehicleModelEntry {
     pub ground_offset_m: f32,
     /// Motion-state animation GLBs and their named clips.
     pub animations: HashMap<String, (PathBuf, String)>,
+    /// Ridden two-wheeler: the rider is part of the model and posed by one
+    /// odometer-phased clip (catalog/vehicles-carla/CONVENTIONS.md).
+    pub rider: Option<RiderSpec>,
+}
+
+/// The render timeline's `wheelSpinRad` radius: `odometerM = wheelSpinRad * 0.35`.
+pub const TIMELINE_WHEEL_RADIUS_M: f64 = 0.35;
+
+/// Posing and appearance of a ridden two-wheeler's rider.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RiderSpec {
+    /// The single looping clip (bicycles: one crank revolution; motor: one wheel revolution).
+    pub clip: String,
+    pub clip_duration_s: f64,
+    /// Odometer metres per clip loop.
+    pub meters_per_cycle: f64,
+    /// `palettes[fnv1a32(actorId) % len]`; `None` keeps the authored colours.
+    pub palettes: Vec<Option<Vec<(String, [f32; 3])>>>,
+}
+
+impl RiderSpec {
+    /// Clip time for an odometer reading: a pure function of distance, so a
+    /// frame renders identically however it is reached (seek, chunking, fps).
+    pub fn clip_time_s(&self, odometer_m: f64) -> f32 {
+        ((odometer_m / self.meters_per_cycle).rem_euclid(1.0) * self.clip_duration_s) as f32
+    }
+
+    /// Clip time from the render timeline's `wheelSpinRad` channel.
+    pub fn clip_time_from_wheel_spin(&self, wheel_spin_rad: f64) -> f32 {
+        self.clip_time_s(wheel_spin_rad * TIMELINE_WHEEL_RADIUS_M)
+    }
+
+    /// Palette variant of an actor: FNV-1a 32 of its id, as the browser does.
+    pub fn variant(&self, actor_id: &str) -> usize {
+        fnv1a32(actor_id) as usize % self.palettes.len()
+    }
+
+    /// Material colours an actor's variant writes (empty for the authored look).
+    pub fn colors_for(&self, actor_id: &str) -> Vec<(String, [f32; 3])> {
+        self.palettes[self.variant(actor_id)].clone().unwrap_or_default()
+    }
+
+    fn parse(value: &serde_json::Value) -> Result<Self> {
+        let field = |name: &str| value.get(name).with_context(|| format!("rider binding lacks {name}"));
+        let clip = field("clip")?.as_str().context("rider.clip must be a string")?.to_string();
+        let clip_duration_s = field("clipDurationS")?.as_f64().filter(|v| *v > 0.0).context("rider.clipDurationS must be > 0")?;
+        let meters_per_cycle = field("metersPerCycle")?.as_f64().filter(|v| *v > 0.0).context("rider.metersPerCycle must be > 0")?;
+        let slots: Vec<String> = field("slots")?
+            .as_array()
+            .context("rider.slots must be an array")?
+            .iter()
+            .map(|v| v.as_str().map(str::to_string).context("rider.slots entries must be strings"))
+            .collect::<Result<_>>()?;
+        let mut palettes = Vec::new();
+        for palette in field("palettes")?.as_array().context("rider.palettes must be an array")? {
+            if palette.is_null() {
+                palettes.push(None);
+                continue;
+            }
+            let object = palette.as_object().context("rider palette must be null or an object")?;
+            let mut colors = Vec::new();
+            for slot in &slots {
+                let rgb = object
+                    .get(slot)
+                    .and_then(|v| v.as_array())
+                    .filter(|a| a.len() == 3)
+                    .with_context(|| format!("rider palette lacks slot {slot}"))?;
+                let channel = |i: usize| rgb[i].as_f64().map(|v| v as f32).context("palette channel must be a number");
+                colors.push((slot.clone(), [channel(0)?, channel(1)?, channel(2)?]));
+            }
+            if object.len() != slots.len() {
+                bail!("rider palette names slots outside rider.slots");
+            }
+            palettes.push(Some(colors));
+        }
+        if palettes.is_empty() {
+            bail!("rider.palettes is empty");
+        }
+        Ok(Self { clip, clip_duration_s, meters_per_cycle, palettes })
+    }
+}
+
+pub fn fnv1a32(text: &str) -> u32 {
+    text.bytes().fold(0x811c9dc5_u32, |hash, byte| (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193))
 }
 
 /// Catalog-id keyed model table. The sorted fallback list supports stable
@@ -178,6 +262,11 @@ impl VehicleModelCatalog {
                             ))
                         })
                         .collect(),
+                    rider: value
+                        .get("rider")
+                        .map(RiderSpec::parse)
+                        .transpose()
+                        .with_context(|| format!("catalog-models.json {catalog_id}"))?,
                 },
             );
         }
@@ -215,6 +304,11 @@ impl VehicleModelCatalog {
             if !glb_path.is_file() {
                 continue;
             }
+            if entry.get("rider").is_some() {
+                // The manifest does not carry the rider palettes/phase contract;
+                // only the generated sidecar does.
+                bail!("{catalog_id} is a ridden model ({manifest_key}); load it through catalog-models.json");
+            }
             let display = entry
                 .get("display")
                 .and_then(|v| v.as_str())
@@ -244,6 +338,7 @@ impl VehicleModelCatalog {
                     yaw_offset_rad: 0.0,
                     ground_offset_m: 0.0,
                     animations: HashMap::new(),
+                    rider: None,
                 },
             );
         }
@@ -310,8 +405,52 @@ fn manifest_lengths(manifest: &Path) -> HashMap<String, f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::VehicleModelCatalog;
+    use super::{fnv1a32, VehicleModelCatalog};
     use std::fs;
+    use std::path::Path;
+
+    #[test]
+    fn fnv1a32_matches_the_browser_and_asset_builder() {
+        assert_eq!(fnv1a32(""), 0x811c9dc5);
+        assert_eq!(fnv1a32("a"), 0xe40c292c);
+    }
+
+    #[test]
+    fn the_pack_sidecar_binds_ridden_two_wheelers() {
+        let pack = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog/vehicles-carla");
+        let catalog = VehicleModelCatalog::load(&pack).unwrap();
+        for id in ["vehicle.bicycle", "vehicle.motorcycle"] {
+            let entry = catalog.resolve(id).unwrap();
+            let rider = entry.rider.as_ref().unwrap_or_else(|| panic!("{id} is not ridden"));
+            assert!(entry.glb_path.is_file(), "{}", entry.glb_path.display());
+            assert_eq!(rider.clip, "ride");
+            assert_eq!(entry.animations.get("ride").map(|(p, c)| (p.clone(), c.as_str())), Some((entry.glb_path.clone(), "ride")));
+            assert_eq!(rider.palettes[0], None, "variant 0 keeps the authored look");
+            assert!(rider.palettes.len() > 1);
+            // Clip time wraps every metersPerCycle and is independent of how it is reached.
+            let m = rider.meters_per_cycle;
+            assert!((rider.clip_time_s(0.25 * m) - rider.clip_time_s(3.25 * m)).abs() < 1e-5);
+            // Every actor gets one variant, and every non-authored variant colours every slot.
+            let colors = (0..64).map(|i| rider.colors_for(&format!("actor-{i}")));
+            assert!(colors.clone().any(|c| c.is_empty()) && colors.clone().any(|c| !c.is_empty()));
+        }
+    }
+
+    #[test]
+    fn the_manifest_fallback_refuses_ridden_models() {
+        let root = std::env::temp_dir().join(format!("simforge-rider-manifest-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("models")).unwrap();
+        fs::write(root.join("models/vehicle_motorcycle_harley_rider.glb"), b"glb").unwrap();
+        fs::write(
+            root.join("manifest.json"),
+            r#"{"vehicles":{"vehicle_motorcycle_harley_rider":{"file":"models/vehicle_motorcycle_harley_rider.glb","rider":{}}}}"#,
+        )
+        .unwrap();
+        let error = VehicleModelCatalog::load(&root).unwrap_err().to_string();
+        assert!(error.contains("ridden model"), "{error}");
+        fs::remove_dir_all(&root).unwrap();
+    }
 
     #[test]
     fn meshy_sidecar_resolves_scale_grounding_yaw_and_animation() {

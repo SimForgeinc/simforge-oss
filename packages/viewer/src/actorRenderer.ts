@@ -62,6 +62,7 @@ import type { ActorSensor } from '@simforge-oss/scenario';
 import {
   externalModelClips,
   externalModelScene,
+  modelBoundsWithoutRider,
   onExternalModelChange,
   requestExternalModel,
 } from './externalModel';
@@ -115,6 +116,13 @@ export interface ActorView {
   /** Scenario clock and sampled speed drive procedural motion until a rigged GLB is installed. */
   readonly animationTimeS?: number;
   readonly speedMps?: number;
+  /**
+   * Distance travelled since spawn, metres: the render timeline's
+   * `wheelSpinRad * 0.35`, or the same Σ|v|·dt over trace ticks. A ridden
+   * two-wheeler's clip is phased by this, never by the clock, so a frame
+   * looks the same however playback reached it.
+   */
+  readonly odometerM?: number;
   /**
    * Road-wheel steer angle, radians, positive to the left. The recorded
    * trace's `physics.steerRad` or the live frame's `telemetry.steerRad`; a
@@ -553,6 +561,10 @@ interface AnimatedClone {
   templateDims: Dims;
   activeClip: AnimationClip | null;
   drawCalls: number;
+  /** Per-actor material clones (paint tint, rider palette) this clone owns. */
+  ownedMaterials: Material[];
+  /** The body tint the paint clones currently carry. */
+  bodyColor: string | undefined;
 }
 
 const _matrix = new Matrix4();
@@ -1037,7 +1049,9 @@ export class ActorRenderer {
       root.traverse((object) => {
         object.userData.actorId = actor.id;
       });
-      const bounds = new Box3().setFromObject(scene);
+      // A ridden two-wheeler fits by its bike: the rider sits above the
+      // catalog box and its skinned bind pose is not where it is drawn.
+      const bounds = binding.rider ? modelBoundsWithoutRider(scene) : new Box3().setFromObject(scene);
       const size = bounds.getSize(new Vector3());
       const templateDims = { l: size.x, w: size.z, h: size.y };
       const container = new Group();
@@ -1065,12 +1079,29 @@ export class ActorRenderer {
         activeClip: null,
         drawCalls,
         templateDims,
+        ownedMaterials: binding.rider ? applyRiderPalette(root, binding.rider, actor.id) : [],
+        bodyColor: undefined,
       };
       this.animatedClones.set(actor.id, animated);
     }
 
+    if (binding.paint && animated.bodyColor !== actor.bodyColor) {
+      tintPaintSlots(animated, binding.paint, actor);
+    }
     animated.container.matrix.copy(poseMatrix(actor, animated.templateDims, 'uniform'));
     animated.container.matrixWorldNeedsUpdate = true;
+    if (binding.rider) {
+      const clip = clips.find((candidate) => candidate.name === binding.rider!.clip);
+      // The catalog promises this clip; externalModel refuses a ridden model without it.
+      if (!clip) throw new Error(`ridden model ${binding.url} has no ${binding.rider.clip} clip`);
+      if (clip !== animated.activeClip) {
+        animated.mixer.stopAllAction();
+        animated.mixer.clipAction(clip).reset().play();
+        animated.activeClip = clip;
+      }
+      animated.mixer.setTime(riderClipTimeS(binding.rider, actor.odometerM ?? 0));
+      return animated.drawCalls;
+    }
     const requestedName = (actor.speedMps ?? 0) > 0.1
       ? binding.clips?.locomotion
       : binding.clips?.idle;
@@ -1087,6 +1118,7 @@ export class ActorRenderer {
   private disposeAnimatedClone(actorId: string, animated: AnimatedClone): void {
     animated.mixer.stopAllAction();
     animated.mixer.uncacheRoot(animated.root);
+    for (const material of animated.ownedMaterials) material.dispose();
     animated.container.removeFromParent();
     this.animatedClones.delete(actorId);
   }
@@ -1353,6 +1385,78 @@ export class ActorRenderer {
 }
 
 /** Convert an authored absolute body color into a multiplier for catalog materials. */
+type RiderBinding = NonNullable<Extract<ExternalModelBinding, { readonly kind: 'glb' }>['rider']>;
+
+/** FNV-1a 32 of a string's UTF-8 bytes: the rider variant hash every renderer shares. */
+export function fnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(text)) {
+    hash = Math.imul(hash ^ byte, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+/** Clip time of a ridden two-wheeler: its odometer phase within one clip loop. */
+export function riderClipTimeS(rider: RiderBinding, odometerM: number): number {
+  const cycles = odometerM / rider.metersPerCycle;
+  return (cycles - Math.floor(cycles)) * rider.clipDurationS;
+}
+
+/** Palette variant of an actor (`null` = authored colours). */
+export function riderPalette(rider: RiderBinding, actorId: string): RiderBinding['palettes'][number] {
+  return rider.palettes[fnv1a32(actorId) % rider.palettes.length] ?? null;
+}
+
+/** Clone and colour the actor's rider palette slots; returns the owned clones. */
+function applyRiderPalette(root: Object3D, rider: RiderBinding, actorId: string): Material[] {
+  const palette = riderPalette(rider, actorId);
+  if (!palette) return [];
+  const clones = new Map<Material, Material>();
+  const missing = new Set(Object.keys(palette));
+  root.traverse((object) => {
+    const mesh = object as Mesh;
+    if (!mesh.isMesh) return;
+    const swap = (material: Material): Material => {
+      const rgb = palette[material.name];
+      if (!rgb) return material;
+      missing.delete(material.name);
+      let clone = clones.get(material);
+      if (!clone) {
+        clone = material.clone();
+        // glTF baseColorFactor is linear, as is three's working colour space.
+        (clone as MeshStandardMaterial).color.setRGB(rgb[0], rgb[1], rgb[2]);
+        clones.set(material, clone);
+      }
+      return clone;
+    };
+    mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+  });
+  if (missing.size > 0) throw new Error(`rider palette slots missing from the model: ${[...missing].join(', ')}`);
+  return [...clones.values()];
+}
+
+/** Per-actor paint for an animated clone's tintable slot (instanced models use instance colour). */
+function tintPaintSlots(animated: AnimatedClone, paint: string, actor: ActorView): void {
+  const tint = instanceBodyTint(actor);
+  animated.root.traverse((object) => {
+    const mesh = object as Mesh;
+    if (!mesh.isMesh) return;
+    const swap = (material: Material): Material => {
+      if (material.name !== paint) return material;
+      const owned = animated.ownedMaterials.includes(material);
+      const target = (owned ? material : material.clone()) as MeshStandardMaterial;
+      if (!owned) {
+        target.userData.paintBase = (material as MeshStandardMaterial).color.clone();
+        animated.ownedMaterials.push(target);
+      }
+      target.color.copy(target.userData.paintBase as Color).multiply(tint);
+      return target;
+    };
+    mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+  });
+  animated.bodyColor = actor.bodyColor;
+}
+
 function instanceBodyTint(actor: ActorView): Color {
   if (!actor.bodyColor) return WHITE_INSTANCE_TINT;
   const cacheKey = `${actor.catalogId}:${actor.bodyColor}`;

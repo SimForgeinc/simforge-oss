@@ -51,6 +51,10 @@ pub struct ActorState {
     pub transform: ActorTransform,
     #[serde(default)]
     pub velocity: [f32; 3],
+    /// Render-timeline `wheelSpinRad` (`Σ v·dt / 0.35 m`): the odometer that
+    /// phases a ridden two-wheeler's clip. Required for those actors.
+    #[serde(rename = "wheelSpinRad", default)]
+    pub wheel_spin_rad: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
