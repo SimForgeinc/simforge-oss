@@ -279,3 +279,17 @@ def test_load_opendrive_refuses_a_known_unbound_source_before_touching_carla(mon
     })()
     with pytest.raises(RuntimeError, match="needs-recook: road network differs"):
         backend.load_opendrive("Belmont_Office_Park_Belmont_CA", body, 0.02)
+
+
+def test_unversioned_local_catalog_is_content_addressed():
+    from simforge_oss_carla_exec.runtime.backend import asset_catalog_version_id, runtime_asset_bindings
+    body = {"contractVersion": "uniscenario.asset-catalog/v1", "entries": []}
+    sha = "ab" * 32
+    assert asset_catalog_version_id(body, sha) == f"catalog_local_{sha}"
+    assert asset_catalog_version_id({**body, "catalogVersionId": "uscatalog-1"}, sha) == "uscatalog-1"
+    assert asset_catalog_version_id({**body, "catalogVersionId": ""}, sha) is None
+    assert asset_catalog_version_id({**body, "contractVersion": "other"}, sha) is None
+    assert asset_catalog_version_id(body, None) is None
+    assert runtime_asset_bindings(body, expected_catalog_version_id=f"catalog_local_{sha}", manifest_sha256=sha) == {}
+    with pytest.raises(Exception, match="version does not match"):
+        runtime_asset_bindings(body, expected_catalog_version_id=f"catalog_local_{'cd' * 32}", manifest_sha256=sha)
