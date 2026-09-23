@@ -425,3 +425,16 @@ def test_timeline_signal_keys_are_mapped_to_opendrive_ids():
     assert _opendrive_signal_ids({"signal:5814": "red"}) == {"5814": "red"}
     with pytest.raises(Exception, match="not signal:<OpenDRIVE id>"):
         _opendrive_signal_ids({"5814": "red"})
+
+
+def test_ridden_two_wheelers_are_recorded_as_a_static_rider_pose_in_trace_replay():
+    from types import SimpleNamespace
+    from simforge_oss_carla_exec.runtime import executor
+    plan = SimpleNamespace(actors={"bike": SimpleNamespace(kind="bicycle"), "moto": SimpleNamespace(kind="motorcycle"),
+                                   "car": SimpleNamespace(kind="car"), "ped": SimpleNamespace(kind="pedestrian")})
+    assert executor.ridden_two_wheelers(plan, executor.EXECUTION_MODE_TRACE_REPLAY) == ["bike", "moto"]
+    assert executor.ridden_two_wheelers(plan, executor.EXECUTION_MODE_PHYSICS_VALIDATION) == []
+    items = executor._approximations(executor.EXECUTION_MODE_TRACE_REPLAY, {}, ["bike"])
+    rider = [item for item in items if item["id"] == "rider-pose-static"][0]
+    assert rider["code"] == "carla_rider_pose_static" and rider["actorIds"] == ["bike"]
+    assert all(item["id"] != "rider-pose-static" for item in executor._approximations(executor.EXECUTION_MODE_TRACE_REPLAY, {}, []))

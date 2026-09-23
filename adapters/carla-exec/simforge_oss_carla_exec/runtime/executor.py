@@ -1487,9 +1487,26 @@ def _artifact(
     return {"kind": kind, "artifactUrl": bound["artifactUrl"], "sha256": digest, "sizeBytes": size, "mediaType": media_type, **({"metadata": dict(metadata)} if metadata else {})}
 
 
-def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object]) -> list[dict[str, str]]:
+#: Actor kinds CARLA renders with a blueprint rider (BP_Base2wheeled + AB_Biker).
+RIDDEN_TWO_WHEELER_KINDS = frozenset({"bicycle", "motorcycle", "scooter"})
+RIDER_POSE_STATIC_WARNING = "carla_rider_pose_static"
+RIDER_POSE_STATIC_MESSAGE = (
+    "CARLA trace replay has no wheel/crank state: two-wheeler riders hold a static pose "
+    "(pedals do not turn); native renders pedal from the timeline odometer."
+)
+
+
+def ridden_two_wheelers(plan: ExecutionPlan, execution_mode: str) -> list[str]:
+    """Actors whose rider CARLA cannot animate under trace replay (their legs follow wheel state)."""
+    if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
+        return []
+    return sorted(actor_id for actor_id, binding in plan.actors.items() if binding.kind in RIDDEN_TWO_WHEELER_KINDS)
+
+
+def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object],
+                    riders: list[str] | None = None) -> list[dict[str, object]]:
     """What this render shows that is known not to be exact, stated plainly."""
-    items: list[dict[str, str]] = []
+    items: list[dict[str, object]] = []
     if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
         items.append({"id": "physics-validation", "detail": "CARLA physics drove the vehicles; poses diverge from the scenario trace by design"})
         return items
@@ -1500,6 +1517,9 @@ def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object])
         {"id": "radar-doppler", "detail": "radar velocity comes from CARLA's velocity of a kinematic body; use the timeline speed for Doppler truth"},
         {"id": "collisions", "detail": "contacts are the trace's events; CARLA reports no physical impulses"},
     ])
+    if riders:
+        items.append({"id": "rider-pose-static", "code": RIDER_POSE_STATIC_WARNING,
+                      "detail": RIDER_POSE_STATIC_MESSAGE, "actorIds": list(riders)})
     return items
 
 
@@ -2264,7 +2284,7 @@ def execute_lease(
                         "label": "Trace replay" if replay else "CARLA physics validation (not the scenario render)",
                     },
                     "timeline": dict(sampler.evidence()),
-                    "approximations": _approximations(execution_mode, runtime_evidence),
+                    "approximations": _approximations(execution_mode, runtime_evidence, ridden_two_wheelers(plan, execution_mode)),
                 },
                 rendered_appearance if replay else None,
             )
@@ -2280,6 +2300,7 @@ def execute_lease(
         "parity": parity_value,
         "parityEvidence": parity_evidence,
         "substitutions": [dict(item) for item in substitutions],
+        "riderPoseStatic": ridden_two_wheelers(plan, lease.render_spec.execution_mode),
         "artifacts": artifacts,
     }
 

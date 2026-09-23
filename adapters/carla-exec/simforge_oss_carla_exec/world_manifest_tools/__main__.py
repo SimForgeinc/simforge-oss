@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     nas.add_argument("--sudo", action="store_true", help="read with sudo -n (the exports are 0600)")
     nas.add_argument("--root", required=True)
     nas.add_argument("--inputs", required=True, type=Path)
+    nas.add_argument("--derived", action="store_true",
+                     help="collect a derived tree (e.g. GLB_Map_Export_corrected) as nas-derived")
 
     cooked = sub.add_parser("collect-cooked", help="identify the cooked image's worlds (read-only)")
     cooked.add_argument("--ssh", help="docker host (default: local)")
@@ -65,9 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "collect-nas":
         run = collect.ssh_runner(args.ssh) if args.ssh else collect.local_runner
         args.inputs.mkdir(parents=True, exist_ok=True)
-        previous_path = args.inputs / "nas.json"
+        label = "nas-derived" if args.derived else "nas"
+        previous_path = args.inputs / f"{label}.json"
         previous = json.loads(previous_path.read_text()) if previous_path.exists() else None
-        doc = collect.collect_nas(run, args.root, args.inputs, sudo=args.sudo, previous=previous)
+        doc = collect.collect_nas(run, args.root, args.inputs, sudo=args.sudo, previous=previous, label=label)
         print(f"{len(doc['files'])} files under {args.root}")
         return 0
     if args.command == "collect-cooked":

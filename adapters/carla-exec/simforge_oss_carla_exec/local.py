@@ -1233,6 +1233,15 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
         message = "CARLA render failed its blocking parity gate: " + json.dumps(summary, sort_keys=True)
         emit("warning", {"code": "carla.parity_failed", "message": message[:4096]})
         raise RuntimeError(message)
+    riders = result.get("riderPoseStatic") or []
+    if riders:
+        # A known degradation, stated where the UI shows job warnings.
+        emit("warning", {
+            "code": "carla_rider_pose_static",
+            "message": ("CARLA trace replay has no wheel/crank state: two-wheeler riders hold a static pose "
+                        "(pedals do not turn); native renders pedal from the timeline odometer. Actors: "
+                        + ", ".join(riders))[:4096],
+        })
     manifest_entries = _artifact_manifest_entries(result["artifacts"])
     substitutions = result.get("substitutions")
     if not isinstance(substitutions, list):
