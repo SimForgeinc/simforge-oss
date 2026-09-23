@@ -85,7 +85,8 @@ function record(name, status, ms, detail = "", log = null) {
 const base = args.base
   ? { ref: args.base, sha: sh("git", ["merge-base", "HEAD", args.base], { cwd: root }) }
   : resolveBase(root, layout.baseRefs);
-const changed = args.full || !base ? null : changedFiles(root, base.sha);
+const diffFiles = base ? changedFiles(root, base.sha) : null; // the change itself, even under --full
+const changed = args.full ? null : diffFiles;
 const touches = (globs) => changed === null || changed.some((file) => matchesAny(file, globs));
 const changedMatching = (globs) => (changed ?? []).filter((file) => matchesAny(file, globs) && existsSync(join(root, file)));
 
@@ -275,16 +276,16 @@ for (const c of plan.cargo) {
     if (want("rust")) {
       const t0 = Date.now();
       const log = join(runDir, `${label.replace(":", "-")}.log`);
+      // rustfmt: gate only on files this change touched (main is not fmt-clean everywhere).
       const fmt = await runLogged("cargo", ["fmt", "--check", ...pkgArgs], { cwd, env: rust.env, logFile: log.replace(".log", "-fmt.log") });
-      if (fmt.code !== 0) {
-        record(label, "fail", Date.now() - t0, `cargo fmt --check (${c.scope}); run \`cargo fmt\` in ${c.ws.dir}/`, fmt.logFile);
-      } else {
-        const mode = args.full ? c.ws.fullMode ?? "test" : c.ws.mode ?? "test";
-        const cmd = mode === "test" ? ["nextest", "run", "--no-fail-fast", "--no-tests=pass", ...pkgArgs] : ["check", "--tests", ...pkgArgs];
-        const res = await runLogged("cargo", cmd, { cwd, env: rust.env, logFile: log, stream: args.stream });
-        const summary = mode === "test" ? readFileSync(log, "utf8").match(/Summary \[.*$/m)?.[0]?.replace(/\s+/g, " ").trim() ?? "" : "cargo check --tests";
-        record(label, res.code === 0 ? "pass" : "fail", Date.now() - t0, `${c.scope} · ${summary} · sccache ${rust.remote}`, log);
-      }
+      const unformatted = [...readFileSync(fmt.logFile, "utf8").matchAll(/^Diff in (.+?):\d+:/gm)].map((m) => m[1].replace(`${root}/`, ""));
+      const mine = [...new Set(unformatted.filter((f) => diffFiles === null || diffFiles.includes(f)))];
+      const mode = args.full ? c.ws.fullMode ?? "test" : c.ws.mode ?? "test";
+      const cmd = mode === "test" ? ["nextest", "run", "--no-fail-fast", "--no-tests=pass", ...pkgArgs] : ["check", "--tests", ...pkgArgs];
+      const res = await runLogged("cargo", cmd, { cwd, env: rust.env, logFile: log, stream: args.stream });
+      const summary = mode === "test" ? readFileSync(log, "utf8").match(/Summary \[.*$/m)?.[0]?.replace(/\s+/g, " ").trim() ?? "" : "cargo check --tests";
+      const fmtNote = mine.length ? ` · rustfmt needed: ${mine.join(" ")} (run \`cargo fmt\` in ${c.ws.dir}/)` : "";
+      record(label, res.code === 0 && !mine.length ? "pass" : "fail", Date.now() - t0, `${c.scope} · ${summary} · sccache ${rust.remote}${fmtNote}`, res.code === 0 ? fmt.logFile : log);
     }
     if (want("wasm")) {
       for (const crate of c.ws.wasm ?? []) {
