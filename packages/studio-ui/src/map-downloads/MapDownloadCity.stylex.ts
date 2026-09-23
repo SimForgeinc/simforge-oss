@@ -29,6 +29,15 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   streetsLit: { stroke: colors.accentLine },
+  ghost: {
+    fill: colors.fillFaint,
+    stroke: colors.hairlineStrong,
+    strokeWidth: 0.025,
+    strokeLinejoin: "round",
+    transitionProperty: "opacity",
+    transitionDuration: { default: motion.durSlow, [layout.reducedMotion]: "0s" },
+  },
+  ghostLit: { opacity: 0 },
   building: {
     opacity: 0,
     transform: "translateY(calc(var(--rise) * 1px))",
