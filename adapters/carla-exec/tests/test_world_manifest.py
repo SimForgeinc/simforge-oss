@@ -402,3 +402,26 @@ def test_carla_010_bone_readback_names_bones_name():
         SimpleNamespace(bone_name="thigh_l", relative=rot(3.0)),
     ])
     assert bone_pose_signature(bones) == {"crl_thigh__R": (12.0, 0.0, 0.0), "thigh_l": (3.0, 0.0, 0.0)}
+
+
+def test_non_physical_gate_heads_become_the_worlds_approved_unowned_heads():
+    gate = '<signal id="{sid}" s="45" t="-2" type="1000011" subtype="20" orientation="+" dynamic="yes" zOffset="0"/>'
+    head = '<signal id="{sid}" name="Signal_3Light_Post01" s="40" t="-2" type="1000001" subtype="-1" orientation="+" dynamic="yes" zOffset="0" height="1.1" width="0.4"/>'
+    def net(ids, ctrl):
+        body = (f'<road id="1" length="50" junction="-1"><planView><geometry s="0" x="0" y="0" hdg="0" length="50"><line/></geometry></planView>'
+                f'<lanes><laneSection s="0"><right><lane id="-1" type="driving"><width sOffset="0" a="3.5" b="0" c="0" d="0"/></lane></right>'
+                f'<center><lane id="0" type="none"/></center></laneSection></lanes>'
+                f'<signals>{head.format(sid=ids[0])}{gate.format(sid=ids[1])}</signals></road>')
+        c = f'<controller id="{ctrl}"><control signalId="{ids[0]}"/><control signalId="{ids[1]}"/></controller>'
+        return ('<?xml version="1.0"?><OpenDRIVE><header north="1" south="0" east="1" west="0"><geoReference><![CDATA[x]]></geoReference></header>'
+                + body + c + '</OpenDRIVE>').encode()
+    result = xodr_identity.compare(xodr_identity.parse(net(("10", "11"), "7")), xodr_identity.parse(net(("110", "111"), "70")))
+    assert result.geometry_equivalent and result.signal_id_map == {"10": "110", "11": "111"}
+    assert result.signals["nonPhysicalGateRuntimeIds"] == ["111"]
+
+
+def test_timeline_signal_keys_are_mapped_to_opendrive_ids():
+    from simforge_oss_carla_exec.runtime.timeline import _opendrive_signal_ids
+    assert _opendrive_signal_ids({"signal:5814": "red"}) == {"5814": "red"}
+    with pytest.raises(Exception, match="not signal:<OpenDRIVE id>"):
+        _opendrive_signal_ids({"5814": "red"})

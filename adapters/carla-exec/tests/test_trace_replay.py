@@ -344,7 +344,7 @@ def test_bound_timeline_maps_the_shared_sampler_binding_onto_plan_frames():
             return {"a": {"present": True, "x": 1.0, "y": 2.0, "z": 3.0, "headingRad": math.pi / 2,
                           "pitchRad": 0.01, "rollRad": -0.02, "speedMps": 4.0, "downed": False}}
 
-        def signals_at(self, t): return {"7": "red"}
+        def signals_at(self, t): return {"signal:7": "red"}
         def light_modes_at(self, actor_id, t): return {"brake": "on", "indicatorLeft": "flashing", "lowBeam": "off"}
 
     plan = ExecutionPlan(
