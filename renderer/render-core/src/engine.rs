@@ -2383,7 +2383,7 @@ pub struct SceneApp {
     fog: Option<DistanceFog>,
     /// Pre-wetness material state, keyed by material asset, so the road ramp
     /// is reversible instead of a one-way destructive edit.
-    dry_road_materials: HashMap<AssetId<StandardMaterial>, (f32, f32, Color)>,
+    dry_road_materials: HashMap<AssetId<StandardMaterial>, (f32, f32, Color, bevy::material::OpaqueRendererMethod)>,
     /// Handle of the [`ScatteringMedium`] the physical atmosphere resolves
     /// into. Reused across relights so the 1024x1024 density/phase LUT pair
     /// is replaced in place rather than leaked.
@@ -3711,6 +3711,9 @@ impl SceneApp {
         // so a name-only match left wetness inert there).
         const ROAD_MARKERS: [&str; 2] = ["asphalt1_road", "roads_road_layer0"];
         let wetness = wetness.clamp(0.0, 1.0);
+        // Deferred road materials need every view that draws them to carry
+        // a deferred prepass, which the look adds with SSR (and only then).
+        let deferred_road = wetness > 0.0 && self.profile_config.cinematic.ssr;
         self.scene_revision += 1;
         let world = self.app.world_mut();
         let mut road_materials: Vec<Handle<StandardMaterial>> = Vec::new();
@@ -3755,11 +3758,19 @@ impl SceneApp {
             let Some(mut material) = assets.get_mut(&handle) else {
                 continue;
             };
-            let (dry_roughness, dry_metallic, dry_color) = *self
+            let (dry_roughness, dry_metallic, dry_color, dry_method) = *self
                 .dry_road_materials
                 .entry(id)
-                .or_insert((material.perceptual_roughness, material.metallic, material.base_color));
+                .or_insert((material.perceptual_roughness, material.metallic, material.base_color, material.opaque_render_method));
             material.perceptual_roughness = dry_roughness * (1.0 - wetness) + 0.16 * wetness;
+            // Screen-space reflections read the deferred G-buffer: a forward
+            // material never receives them, so a wet road reflected nothing
+            // but the environment probe (SSR on and off rendered the same
+            // bytes). With SSR on, wet road materials draw deferred;
+            // everything else, and a dry road, stays on its original
+            // (forward) path.
+            material.opaque_render_method =
+                if deferred_road { bevy::material::OpaqueRendererMethod::Deferred } else { dry_method };
             material.metallic = dry_metallic.max(0.04 * wetness);
             let mut linear = dry_color.to_linear();
             let k = 1.0 - 0.35 * wetness;
@@ -7651,6 +7662,54 @@ mod tests {
             std::mem::forget(app);
             assert_eq!(misses, 0, "{preset:?}: {misses} cascade views picked LODs from the fallback origin");
         }
+    }
+
+    /// A wet road shows screen-space reflections. SSR reads the deferred
+    /// G-buffer, and road materials drew forward, so SSR on and off rendered
+    /// the same bytes even at wetness 0.85 (Belmont rain, box 3). A road
+    /// plane with a box standing on it, seen at a grazing angle, must
+    /// render differently with SSR on than off. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_wet_road_reflects_in_screen_space() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let lighting = Lighting { atmosphere: true, sun_elev_deg: 25.0, sun_azim_deg: 180.0, wetness: 0.85, ..Default::default() };
+        let render = |ssr: bool| {
+            let mut config = RenderConfig::preset(Preset::Showcase);
+            config.ssr.enabled = ssr;
+            let mut app = SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
+            app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: false, depth: false, hdr: false }, ..test_camera("cam", 160, 96) });
+            app.wait_until_ready().unwrap();
+            {
+                let world = app.app.world_mut();
+                let plane = world.resource_mut::<Assets<Mesh>>().add(Plane3d::default().mesh().size(200.0, 200.0));
+                let block = world.resource_mut::<Assets<Mesh>>().add(Cuboid::new(2.0, 3.0, 2.0));
+                let road = world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
+                    base_color: Color::linear_rgb(0.05, 0.05, 0.05),
+                    perceptual_roughness: 0.9,
+                    ..default()
+                });
+                let red = world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
+                    base_color: Color::linear_rgb(0.8, 0.05, 0.05),
+                    ..default()
+                });
+                world.spawn((Name::new("asphalt1_road"), Mesh3d(plane), MeshMaterial3d(road), Transform::from_xyz(0.0, 0.0, 0.0)));
+                world.spawn((Mesh3d(block), MeshMaterial3d(red), Transform::from_xyz(0.0, 1.5, -12.0)));
+            }
+            // The relight applies the wetness to the road material spawned above.
+            app.apply_lighting(&lighting, config.profile_config()).unwrap();
+            app.set_pose("cam", &[0.0, 1.2, 6.0], &[0.0, 0.6, -12.0]).unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let bytes = app.capture(1, &["cam:rgb".to_string()]).unwrap().passes["cam:rgb"].bytes.clone();
+            std::mem::forget(app);
+            bytes
+        };
+        let (on, off) = (render(true), render(false));
+        let differing = on.chunks(4).zip(off.chunks(4)).filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 2)).count();
+        assert!(differing > 100, "SSR changed only {differing} pixels of a wet road");
     }
 
     /// A device error stops rendering for good; the next wait must fail at
