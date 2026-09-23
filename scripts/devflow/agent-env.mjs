@@ -412,6 +412,9 @@ for (const sub of cfg.sharedState ?? []) {
   if (!existsSync(link)) symlinkSync(shared, link);
 }
 
+// 3b. layout hook: extra per-env setup that returns extra env vars
+if (cfg.setup) Object.assign(ctx, { extraVars: await cfg.setup(ctx) });
+
 // 4. database (template clone)
 if (cfg.database) {
   await step("database", async () => {
@@ -447,7 +450,7 @@ if (cfg.database) {
 await step("env", async () => {
   let base = "";
   if (cfg.baseEnv) base = await baseEnvFile(cfg.baseEnv);
-  const vars = cfg.vars ? cfg.vars(ctx) : {};
+  const vars = { ...(cfg.vars ? cfg.vars(ctx) : {}), ...(ctx.extraVars ?? {}) };
   const lines = base.split("\n").filter((l) => {
     const key = l.split("=")[0]?.trim();
     return !(key && key in vars);
@@ -471,7 +474,7 @@ if (args.start && cfg.start) {
       return `already up (pid ${state.pid})`;
     }
     await stopServer(state);
-    const vars = cfg.vars ? cfg.vars(ctx) : {};
+    const vars = { ...(cfg.vars ? cfg.vars(ctx) : {}), ...(ctx.extraVars ?? {}) };
     const serverEnv = { ...env0, ...vars, PORT: String(port), DEVFLOW_ENV: args.name };
     if (args.prod && cfg.prodBuild) {
       const b = cfg.prodBuild;

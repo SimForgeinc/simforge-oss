@@ -2,6 +2,36 @@
 // (scripts/devflow/). After the monorepo cutover this file lives at
 // `oss/devflow.config.mjs`; the monorepo root config imports it and re-roots
 // it with `underDir(config, "oss")`, and the public mirror keeps using it as is.
+import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+// Agent envs publish only these maps into their fresh Studio database (seeding
+// every installed map takes minutes); DEVFLOW_MAPS=all|a,b,c overrides.
+const ENV_MAPS = ["richmond-field-station", "yale-street"];
+
+function mapsFarm(ctx) {
+  const source = process.env.SIMFORGE_MAPS_CACHE_ROOT || join(process.env.XDG_DATA_HOME || join(homedir(), ".local/share"), "simforge/maps");
+  const wanted = process.env.DEVFLOW_MAPS ?? ENV_MAPS.join(",");
+  if (wanted === "all" || !existsSync(source)) return {};
+  const maps = new Set(wanted.split(","));
+  const farm = join(ctx.stateDir, "maps");
+  mkdirSync(farm, { recursive: true });
+  for (const top of readdirSync(source, { withFileTypes: true })) {
+    const from = join(source, top.name);
+    const to = join(farm, top.name);
+    if (["dev-assets", "map-bundles", ".corpus"].includes(top.name)) {
+      mkdirSync(to, { recursive: true });
+      for (const entry of readdirSync(from)) {
+        // Keep non-map helpers (e.g. sumo-runtime); filter map directories.
+        const isMap = existsSync(join(source, "map-bundles", entry)) || existsSync(join(source, ".corpus", entry));
+        if ((!isMap || maps.has(entry)) && !existsSync(join(to, entry))) symlinkSync(join(from, entry), join(to, entry));
+      }
+    } else if (!existsSync(to)) symlinkSync(from, to);
+  }
+  return { SIMFORGE_MAPS_CACHE_ROOT: farm };
+}
+
 export default {
   name: "simforge-oss",
   // The closest merge base among these is "my change".
@@ -127,6 +157,7 @@ export default {
       SIMFORGE_CLOUD_ROOT: ctx.stateDir,
       ...(ctx.httpsUrl ? { NEXT_PUBLIC_BASE_URL: ctx.httpsUrl, SIMFORGE_ALLOWED_DEV_ORIGINS: `localhost,127.0.0.1,${ctx.tailnetHost}` } : {}),
     }),
+    setup: mapsFarm,
     urls: (ctx) => ({ studio: ctx.httpsUrl ?? ctx.localUrl }),
     start: { cwd: "studio", run: ["pnpm", "dev"] },
     prodBuild: { cwd: "studio", run: ["pnpm", "build"] },
