@@ -17,3 +17,5 @@ export declare function buildBrowserPacks(options: {
   tiers?: readonly string[];
   chunkBytes?: number;
 }): Promise<BrowserPackBuildReport>;
+export declare const BROWSER_PACK_CHUNK_MAGIC: 'SFBPACK1';
+export declare const BROWSER_PACK_CHUNK_HEADER_BYTES: 16;
