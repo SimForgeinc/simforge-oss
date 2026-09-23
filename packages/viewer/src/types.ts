@@ -253,7 +253,7 @@ export interface CityViewerStats {
     residencyBytes: Record<string, { resident: number; pending: number }>;
     residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
     /** Browser pack of the selected tier: `missing` means members load one request at a time. */
-    mapPack?: ({ state: 'packed' | 'missing'; tier: string; reason: string | null } & Partial<import('./map-pack').MapPackStats>) | null;
+    mapPack?: ({ state: 'packed' | 'missing'; tier: string; reason: string | null; variantSource?: 'closure' | 'derived' | null } & Partial<import('./map-pack').MapPackStats>) | null;
     actorModels: Readonly<Record<string, { state: 'idle' | 'loading' | 'ready' | 'failed'; url: string; downgradeReason: string }>>;
   };
   /** Required visible geometry is resident, independently of final texture quality. */

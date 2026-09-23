@@ -358,6 +358,8 @@ export class CityViewer {
    */
   private packReader: MapPackReader | null = null;
   private packStatus: { state: 'packed' | 'missing'; tier: string; reason: string | null } | null = null;
+  /** Where the variant envelope came from: the closure, or a published derivative set. */
+  private variantSource: 'closure' | 'derived' | null = null;
   private inflatePool: Ktx2InflatePool | null = null;
   private sourceManifestSha256 = '';
   private textureBudgetRecovery: Promise<void> | null = null;
@@ -1126,17 +1128,42 @@ export class CityViewer {
     return value;
   }
 
+  /**
+   * The map's variant envelope. A published map version gets presentation
+   * derivatives (per-GPU texture tiers, browser packs) as a descriptor-bound
+   * browser derivative set whose full envelope is served at
+   * `derived/browser-variants/manifest.json`: a superset of the closure's
+   * `3d/variants/manifest.json` bound to the same source manifest, which a
+   * backfill must never replace. Both are requested at once; the derived one
+   * wins when present and bound to this manifest.
+   */
   private async loadVariantManifest(): Promise<CityAssetVariantManifest | null> {
     const relative = this.options.variantManifestUrl || 'variants/manifest.json';
-    try {
-      const response = await this.fetchAssetResponse(resolveUrl(this.assetBase, relative), this.abort.signal);
-      if (!response.ok) return null;
-      const value = await this.readJsonResponse(response);
-      return isCityAssetVariantManifest(value) ? value : null;
-    } catch (error) {
-      if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
-      return null;
+    const read = async (url: string): Promise<CityAssetVariantManifest | null> => {
+      try {
+        const response = await this.fetchAssetResponse(url, this.abort.signal);
+        if (!response.ok) {
+          void response.body?.cancel().catch(() => undefined);
+          return null;
+        }
+        const value = await this.readJsonResponse(response);
+        return isCityAssetVariantManifest(value) ? value : null;
+      } catch (error) {
+        if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
+        return null;
+      }
+    };
+    const [closure, derived] = await Promise.all([
+      read(resolveUrl(this.assetBase, relative)),
+      this.options.variantManifestUrl ? Promise.resolve(null) : read(new URL('../derived/browser-variants/manifest.json', new URL(this.assetBase, document.baseURI)).href),
+    ]);
+    if (derived && derived.sourceManifestSha256 === this.sourceManifestSha256) {
+      this.variantSource = 'derived';
+      return derived;
     }
+    if (derived) console.warn('[map-pack] derived/browser-variants is bound to another source manifest; ignoring it');
+    this.variantSource = closure ? 'closure' : null;
+    return closure;
   }
 
   private async loadStaticSemantics(manifest: CityManifest): Promise<StaticSemantics | null> {
@@ -1261,7 +1288,7 @@ export class CityViewer {
       | { file?: string; outputSha256?: string; digest?: string; sourceManifestSha256?: string; bytes?: number }
       | undefined;
     if (!reference) {
-      const reason = `map publishes no ${key}; loading its members one request at a time`;
+      const reason = `map publishes no ${key} (variant envelope: ${this.variantSource ?? 'none'}; no derived/browser-variants set bound); loading its members one request at a time`;
       this.packStatus = { state: 'missing', tier: tierId, reason };
       console.warn('[map-pack]', reason);
       return;
@@ -1954,7 +1981,7 @@ export class CityViewer {
           vegetation: { resident: veg?.bytes ?? 0, pending: veg?.pendingBytes ?? 0 },
         },
         residencyDeadline: this.residencyDeadline,
-        mapPack: this.packStatus ? { ...this.packStatus, ...(this.packReader?.stats() ?? {}) } : null,
+        mapPack: this.packStatus ? { ...this.packStatus, variantSource: this.variantSource, ...(this.packReader?.stats() ?? {}) } : null,
         actorModels: externalModelDiagnostics(),
       },
       usable,
