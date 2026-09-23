@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
+import { LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
 import { seedPinnedMap } from "../../scenario/__tests__/pinning-fixtures";
-import { execute, queryOne, shutdownDatabase, withTransaction } from "../data-api";
+import { execute, queryOne, shutdownDatabase, withTransaction } from "@/app/lib/db/data-api";
 
 /**
  * 20260923090000 (workspace purge guard) and 20260923090100 (revision

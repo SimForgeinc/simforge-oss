@@ -3,7 +3,7 @@ import { hostname } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { retentionRefsDocument } from "../app/lib/db/retention-refs";
-import { shutdownDatabase } from "../app/lib/db/data-api";
+import { shutdownDatabase } from "@/app/lib/db/data-api";
 
 /**
  * Write the `simforge.retention-refs.v1` snapshot of this installation's

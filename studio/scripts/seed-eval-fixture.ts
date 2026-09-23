@@ -18,9 +18,9 @@ import {
   LOCAL_SESSION,
   LOCAL_USER_ID,
   LOCAL_WORKSPACE_ID,
-} from "../app/lib/auth/session";
-import { getAppContext } from "../app/lib/db/app-context";
-import { withTransaction } from "../app/lib/db/data-api";
+} from "@/app/lib/auth/session";
+import { getAppContext } from "@/app/lib/db/app-context";
+import { withTransaction } from "@/app/lib/db/data-api";
 import {
   FIXTURE_CANDIDATE_POLICY_ID,
   fixtureCheckpointDigest,

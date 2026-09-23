@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_WORKSPACE_ID, LOCAL_USER_ID, LOCAL_ORGANIZATION_ID } from "../../auth/session";
-import { execute, queryOne, shutdownDatabase } from "../data-api";
+import { LOCAL_WORKSPACE_ID, LOCAL_USER_ID, LOCAL_ORGANIZATION_ID } from "@/app/lib/auth/session";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import {
   getMapAssetEnrichmentById,
   getMapAssetEnrichmentManifest,

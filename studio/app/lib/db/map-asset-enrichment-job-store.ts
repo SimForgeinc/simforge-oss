@@ -6,7 +6,7 @@
  * succeeded / failed / timeout by the Lambda worker itself.
  */
 import type { EnrichmentJob, EnrichmentJobStatus, EnrichmentJobType } from "@simforge-oss/studio-shared";
-import { execute, queryOne, queryRows } from "./data-api";
+import { execute, queryOne, queryRows } from "@/app/lib/db/data-api";
 import { parseJson as sharedParseJson } from "./json-helpers";
 
 type EnrichmentJobRow = {

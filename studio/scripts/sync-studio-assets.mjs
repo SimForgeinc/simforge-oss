@@ -49,8 +49,12 @@ await cp(studioUiPublic, publicDir, { recursive: true });
 // desktop stage picks them up with the rest of `public/`. Models only — the
 // manifests, conversion tooling and licence files are not served to browsers,
 // they are audited at release (scripts/release/bundled-components.json).
+//
+// A deployment that serves `/catalog/*` from its own asset origin (a rewrite in
+// its Next config) sets SIMFORGE_STUDIO_CATALOG_MODELS=remote and skips the copy.
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
-for (const pack of ["vehicles-carla", "pedestrians-carla"]) {
+const catalogPacks = process.env.SIMFORGE_STUDIO_CATALOG_MODELS === "remote" ? [] : ["vehicles-carla", "pedestrians-carla"];
+for (const pack of catalogPacks) {
   const models = join(repoRoot, "catalog", pack, "models");
   const destination = join(publicDir, "catalog", pack, "models");
   await mkdir(destination, { recursive: true });

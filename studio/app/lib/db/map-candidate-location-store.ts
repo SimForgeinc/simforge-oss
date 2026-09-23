@@ -1,5 +1,5 @@
 import type { CandidateLocation, CandidateLocationSource, CandidateLocationRegion, CandidateLocationEvidence } from "@simforge-oss/studio-shared";
-import { batchExecute, execute, queryRows } from "./data-api";
+import { batchExecute, execute, queryRows } from "@/app/lib/db/data-api";
 import { parseJson as sharedParseJson, parseJsonArray as sharedParseJsonArray } from "./json-helpers";
 
 // ── Row shape ────────────────────────────────────────────────────────────────

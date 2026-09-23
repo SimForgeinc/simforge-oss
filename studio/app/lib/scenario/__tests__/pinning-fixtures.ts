@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import { execute } from "../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import { execute } from "@/app/lib/db/data-api";
 
 export const CLOSURE_A = "a".repeat(64);
 export const CLOSURE_B = "b".repeat(64);

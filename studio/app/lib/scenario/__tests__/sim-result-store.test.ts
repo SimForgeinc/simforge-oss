@@ -18,8 +18,8 @@ import { contentHash } from "@simforge-oss/engine";
 import { runSimulation, traceDigest } from "@simforge-oss/engine/node";
 
 import { migrate } from "../../../../scripts/migrate";
-import { execute, queryOne, queryRows, shutdownDatabase } from "../../db/data-api";
-import { putS3Object } from "../../s3/s3-put-object";
+import { execute, queryOne, queryRows, shutdownDatabase } from "@/app/lib/db/data-api";
+import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import {
   LANE_LEFT,
   scenario,

@@ -9,10 +9,10 @@ import {
   LOCAL_ORGANIZATION_ID,
   LOCAL_USER_ID,
   LOCAL_WORKSPACE_ID,
-} from "../app/lib/auth/session";
-import { queryRows, shutdownDatabase, withTransaction } from "../app/lib/db/data-api";
-import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
-import { SUMO_RUNTIME_BUCKET } from "../app/lib/s3/s3-config";
+} from "@/app/lib/auth/session";
+import { queryRows, shutdownDatabase, withTransaction } from "@/app/lib/db/data-api";
+import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
+import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
 import {
   findPublishedRegistryInstallation,
   publishRegistryInstallation,
@@ -20,7 +20,7 @@ import {
   type DevAssetMap,
   type RegistryMapInstallation,
 } from "../app/lib/map-ingest/server/dev-asset-publication";
-import { registerLocalFile, writeLocalObject } from "../app/lib/s3/s3-object";
+import { registerLocalFile, writeLocalObject } from "@/app/lib/s3/s3-object";
 import { CATALOG } from "@simforge-oss/asset-catalog";
 import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { migrate } from "./migrate";

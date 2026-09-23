@@ -3,8 +3,8 @@ import {
   type Scenario,
 } from "@simforge-oss/scenario/contracts";
 import { datasetScenarioId, scenarioRowId } from "./ids";
-import { queryOne, queryRows, withTransaction } from "./data-api";
-import type { AppContext } from "./app-context";
+import { queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
+import type { AppContext } from "@/app/lib/db/app-context";
 import { scenarioMediaProxyUrl } from "@/app/lib/media-utils";
 import {
   buildInitialScenarioDraft,

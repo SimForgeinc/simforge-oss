@@ -4,10 +4,10 @@
  * model-run store conventions: API routes create/read requests with an
  * AppContext; the worker leases/completes them store-direct.
  */
-import type { AppContext } from "../db/app-context";
-import { queryOne, withTransaction } from "../db/data-api";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { queryOne, withTransaction } from "@/app/lib/db/data-api";
 import { hifiPreviewRequestId } from "../db/ids";
-import { getPresignedGetUrl } from "../s3/s3-presign";
+import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import type {
   CreateHifiPreviewInput,
   HifiPreviewProfile,

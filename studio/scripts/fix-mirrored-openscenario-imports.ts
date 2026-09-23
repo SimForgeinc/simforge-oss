@@ -36,7 +36,7 @@ import {
 } from "@simforge-oss/scenario";
 
 import { canonicalContentSha256 } from "../app/lib/scenario/core";
-import { queryRows, shutdownDatabase } from "../app/lib/db/data-api";
+import { queryRows, shutdownDatabase } from "@/app/lib/db/data-api";
 
 type DraftRow = {
   document_id: string;

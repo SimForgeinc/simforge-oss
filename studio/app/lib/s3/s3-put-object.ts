@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { ReadStream } from "node:fs";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
-import { writeLocalObject } from "./s3-object";
+import { writeLocalObject } from "@/app/lib/s3/s3-object";
 
 const gzipAsync = promisify(gzip);
 

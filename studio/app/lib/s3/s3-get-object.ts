@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { gunzip } from "node:zlib";
 import { promisify } from "node:util";
-import { localObjectPath, readLocalObject, readLocalObjectMetadata } from "./s3-object";
+import { localObjectPath, readLocalObject, readLocalObjectMetadata } from "@/app/lib/s3/s3-object";
 
 const gunzipAsync = promisify(gunzip);
 

@@ -10,7 +10,7 @@
  * GC role (docs/operations/simulation-retention.md); other principals may not delete the
  * content-addressed objects.
  */
-import { shutdownDatabase } from "../app/lib/db/data-api";
+import { shutdownDatabase } from "@/app/lib/db/data-api";
 import { runSimulationRetention, type RetentionPolicy } from "../app/lib/scenario/sim-retention";
 
 function numberOption(name: string): number | undefined {

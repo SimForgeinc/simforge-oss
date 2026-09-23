@@ -23,7 +23,7 @@ import {
   datasetExportTaskAttemptId,
   datasetExportTaskId,
 } from "./ids";
-import { execute, queryOne, queryRows, withTransaction } from "./data-api";
+import { execute, queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
 
 type ExportJobRow = {
   id: string;

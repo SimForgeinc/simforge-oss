@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import { before, test } from "node:test";
 
 import { bootModelTestDatabase, echoEndpointDescriptor } from "./harness";
-import type { AppContext } from "../../db/app-context";
-import { execute } from "../../db/data-api";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { execute } from "@/app/lib/db/data-api";
 import { CreateModelRunSchema, CreateModelVersionSchema } from "../contracts";
 import {
   createModelEndpoint,

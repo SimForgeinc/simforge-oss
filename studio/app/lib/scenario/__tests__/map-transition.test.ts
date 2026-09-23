@@ -17,14 +17,14 @@ import type { TopologyIndex } from "@simforge-oss/engine";
 import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import type { AppContext } from "../../db/app-context";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import { createScenarioDocument } from "../document-store";
 import { listDocumentVersions, moveDraftToMapVersion, restoreVersionToDraft } from "../sim-history";
 import { setSimulationExecutorForTests } from "../sim-result-store";
 import { fakeAuthoritativeSimulation } from "./sim-fixtures";
-import { writeLocalObject } from "../../s3/s3-object";
+import { writeLocalObject } from "@/app/lib/s3/s3-object";
 import type { ScenarioDocumentDto } from "../contracts";
 import { KEPT_TOLERANCE_M, LANE_SEARCH_RADIUS_M, MOVE_TOLERANCE_M, planMapTransition } from "../map-transition";
 import {

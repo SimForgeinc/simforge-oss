@@ -14,12 +14,12 @@ import {
   MapOverlayPayloadSchema,
 } from "@simforge-oss/studio-shared";
 import type { RoadSegmentForMatching } from "@simforge-oss/studio-shared";
-import { execute, queryOne } from "./data-api";
+import { execute, queryOne } from "@/app/lib/db/data-api";
 import { normalizeMapArtifactBucket } from "./map-asset-store";
-import { S3_BUCKET } from "../s3/s3-config";
+import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 import { parseJson as sharedParseJson } from "./json-helpers";
-import { getS3ObjectUtf8 } from "../s3/s3-get-object";
-import { putS3ObjectUtf8Gzipped } from "../s3/s3-put-object";
+import { getS3ObjectUtf8 } from "@/app/lib/s3/s3-get-object";
+import { putS3ObjectUtf8Gzipped } from "@/app/lib/s3/s3-put-object";
 import { getBrowserAssetUrl } from "../assets/asset-url-service";
 
 /**

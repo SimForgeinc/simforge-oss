@@ -4,7 +4,7 @@
  * counter; `read` prints the highest committed counter and closes.
  */
 import { setImmediate as yieldToEventLoop } from "node:timers/promises";
-import { execute, queryOne, shutdownDatabase } from "../../data-api";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 
 const mode = process.argv[2];
 

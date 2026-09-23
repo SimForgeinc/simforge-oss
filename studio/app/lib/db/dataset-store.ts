@@ -7,7 +7,7 @@ import type {
 } from "@simforge-oss/studio-shared";
 import { createHash } from "node:crypto";
 import { datasetId } from "./ids";
-import { execute, queryOne, queryRows, type SqlParams } from "./data-api";
+import { execute, queryOne, queryRows, type SqlParams } from "@/app/lib/db/data-api";
 
 export const SYSTEM_GLOBAL_WORKSPACE_ID = "ws_system_global";
 export const TEMPLATE_SCENARIOS_DATASET_ID = "ds_template_scenarios";

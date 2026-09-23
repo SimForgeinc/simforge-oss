@@ -3,8 +3,8 @@ import type {
   ScenarioStatus,
 } from "@simforge-oss/scenario/contracts";
 import { cache } from "react";
-import { getCurrentSession } from "./auth/session";
-import { getAppContext } from "./db/app-context";
+import { getCurrentSession } from "@/app/lib/auth/session";
+import { getAppContext } from "@/app/lib/db/app-context";
 import { getScenarioById as getScenarioByIdFromDb, listScenariosForWorkspace } from "./db/scenario-query-store";
 
 export type ScenarioSummary = {

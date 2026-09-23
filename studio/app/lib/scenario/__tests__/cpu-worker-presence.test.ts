@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { migrate } from "../../../../scripts/migrate";
-import { execute, shutdownDatabase } from "../../db/data-api";
+import { execute, shutdownDatabase } from "@/app/lib/db/data-api";
 import { liveCpuWorkers, noteLocalWorkerPresence } from "../jobs/local-native-render-store";
 
 /**

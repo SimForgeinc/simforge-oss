@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 // a migrated component's own styles.
 import "./stylex.css";
 import "./globals.css";
+import { hostMetadata } from "@/app/host/metadata";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -44,7 +45,7 @@ const SITE_TITLE = "SimForge — Data Infrastructure for Physical AI";
 const SITE_DESCRIPTION =
   "SimForge turns real-world streets into simulation-ready digital twins. Compose scenarios, render multi-sensor synthetic data, and validate autonomous systems in CARLA and Unreal Engine — all from the browser.";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
@@ -84,6 +85,9 @@ export const metadata: Metadata = {
     },
   },
 };
+
+/** The root metadata, with the attached host's additions (app/host/metadata.ts) layered on. */
+export const metadata: Metadata = { ...baseMetadata, ...hostMetadata };
 
 export default function RootLayout({
   children,

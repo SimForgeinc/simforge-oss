@@ -25,7 +25,7 @@
  * many columns as it has submitted runs.
  */
 
-import type { AppContext } from '../db/app-context';
+import type { AppContext } from '@/app/lib/db/app-context';
 import { listModelEndpoints, listModelVersions } from '../models/model-registry-store';
 import { createModelRun } from '../models/model-run-store';
 import { CreateModelRunSchema } from '../models/contracts';

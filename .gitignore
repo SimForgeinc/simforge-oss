@@ -76,3 +76,12 @@ studio/public/render-selection/
 studio/public/app-switcher/
 studio/public/scenario-editor/carla-mark.png
 studio/public/scenario-editor/driver-behaviors/
+
+# Mounts of an attached Studio host (studio/host.config.mjs): local links
+# created by next.config.ts, never content of this repository.
+(host)
+/studio/public/_host
+.studio/
+
+# Written by Next on every dev/build (its path depends on distDir).
+/studio/next-env.d.ts

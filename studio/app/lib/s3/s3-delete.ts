@@ -1,8 +1,8 @@
 import { readdir, rm } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-import { LOCAL_ARTIFACTS_DIR } from "../db/config";
-import { localObjectPath } from "./s3-object";
-import { S3_BUCKET } from "./s3-config";
+import { LOCAL_ARTIFACTS_DIR } from "@/app/lib/db/config";
+import { localObjectPath } from "@/app/lib/s3/s3-object";
+import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 
 async function walkFiles(root: string, current: string, output: string[]): Promise<void> {
   let entries;

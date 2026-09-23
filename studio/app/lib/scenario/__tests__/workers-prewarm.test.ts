@@ -10,8 +10,8 @@ import { CONTROL_FEATURES_V1, loadBuiltinRenderEngine } from "@simforge-oss/rend
 import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import { approveRenderWorker } from "../control-plane-store";
 import { createRenderIntentJob } from "../render-intent-store";
 import { claimResponseV2, registerRenderWorkerV2, signRenderInputsV2 } from "../render-worker-control-store";

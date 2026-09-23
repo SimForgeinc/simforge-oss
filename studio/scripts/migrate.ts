@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execute, executeScript, queryRows, shutdownDatabase } from "../app/lib/db/data-api";
+import { execute, executeScript, queryRows, shutdownDatabase } from "@/app/lib/db/data-api";
 import { localOnlyReason, migrationHostKind, migrationsLedger } from "./migration-plan";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");

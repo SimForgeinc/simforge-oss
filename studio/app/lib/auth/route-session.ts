@@ -1,5 +1,5 @@
 import { connection, NextResponse, type NextRequest } from "next/server";
-import { LOCAL_SESSION, type AuthenticatedUser } from "./session";
+import { LOCAL_SESSION, type AuthenticatedUser } from "@/app/lib/auth/session";
 
 type RouteSessionSuccess = {
   ok: true;

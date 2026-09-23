@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { before, test } from "node:test";
 
 import { bootModelTestDatabase, echoEndpointDescriptor } from "../../models/__tests__/harness";
-import type { AppContext } from "../../db/app-context";
+import type { AppContext } from "@/app/lib/db/app-context";
 import { createModelEndpoint, createModelVersion } from "../../models/model-registry-store";
 import { listModelRuns } from "../../models/model-run-store";
 import {

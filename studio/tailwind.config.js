@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import tailwindcssAnimate from "tailwindcss-animate";
+import { hostStyleRoots, loadStudioHost } from "./host.config.mjs";
 
 /**
  * `@simforge-oss/studio-ui` resolves to its build output, but the dev host and
@@ -20,6 +21,7 @@ export default {
       "./app/**/*.{ts,tsx}",
       `${studioUi}/src/**/*.{ts,tsx}`,
       `${studioUi}/dist/**/*.js`,
+      ...hostStyleRoots(loadStudioHost()).map((root) => `${root}/**/*.{ts,tsx}`),
     ],
   },
   theme: {

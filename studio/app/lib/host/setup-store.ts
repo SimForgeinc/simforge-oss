@@ -1,7 +1,7 @@
 import "server-only";
 import { SCENARIO_AUTHORING_QUALITY_IDS, type ScenarioAuthoringQuality } from "@simforge-oss/studio-host";
 import { queryOne } from "@/app/lib/db/data-api";
-import type { StudioSetup, StudioSetupMode } from "./setup";
+import type { StudioSetup, StudioSetupMode } from "@/app/lib/host/setup";
 
 /**
  * The installation's first-run setup row (`simforge.local_studio_setup`,

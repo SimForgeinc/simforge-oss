@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import type { registerLocalFile as RegisterLocalFile } from "../s3-object";
+import type { registerLocalFile as RegisterLocalFile } from "@/app/lib/s3/s3-object";
 
 let root: string;
 let registerLocalFile: typeof RegisterLocalFile;
@@ -13,7 +13,7 @@ before(async () => {
   process.env["SIMFORGE_CLOUD_ROOT"] = root;
   // Deferred import, not a static one: the module resolves its object root from the
   // environment at load time, so the temporary root must exist before it is loaded.
-  ({ registerLocalFile } = await import("../s3-object"));
+  ({ registerLocalFile } = await import("@/app/lib/s3/s3-object"));
 });
 
 after(async () => {

@@ -1,0 +1,31 @@
+{
+  "//": "Modules an attached Studio host may replace (see host.config.mjs). Import them only as @/<path without extension>; a relative import would bypass the host. Everything else a host ships must be a new path.",
+  "schema": "simforge.studio-host-slots/v1",
+  "slots": [
+    "app/host/index.ts",
+    "app/host/home-page.tsx",
+    "app/host/auth-session-route.ts",
+    "app/host/metadata.ts",
+    "app/host/metadata-routes.ts",
+    "app/host/proxy.ts",
+    "app/lib/auth/client.ts",
+    "app/lib/auth/index.ts",
+    "app/lib/auth/route-session.ts",
+    "app/lib/auth/session.ts",
+    "app/lib/db/app-context.ts",
+    "app/lib/db/config.ts",
+    "app/lib/db/data-api.ts",
+    "app/lib/host/capabilities.ts",
+    "app/lib/host/evaluation-links.ts",
+    "app/lib/host/kind.ts",
+    "app/lib/host/setup.ts",
+    "app/lib/s3/content-type-map.ts",
+    "app/lib/s3/gzip.ts",
+    "app/lib/s3/s3-config.ts",
+    "app/lib/s3/s3-delete.ts",
+    "app/lib/s3/s3-get-object.ts",
+    "app/lib/s3/s3-object.ts",
+    "app/lib/s3/s3-presign.ts",
+    "app/lib/s3/s3-put-object.ts"
+  ]
+}

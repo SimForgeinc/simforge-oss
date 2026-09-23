@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MEDIA_URL_TTL_SECONDS } from "./s3-presign";
+import { MEDIA_URL_TTL_SECONDS } from "@/app/lib/s3/s3-presign";
 
 /**
  * Margin between a presigned URL's lifetime and how long a browser may reuse

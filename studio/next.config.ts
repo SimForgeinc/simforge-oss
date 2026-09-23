@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { withAtomicDevEmit } from "./dev-atomic-emit.mjs";
 import { stylexBabelConfig, stylexCompileRoots } from "./stylex.config.mjs";
+import { linkStudioHost, loadStudioHost } from "./host.config.mjs";
+
+/**
+ * The attached host, if any (`SIMFORGE_STUDIO_HOST`; see host.config.mjs).
+ * A hosted build runs with `<host>/.studio/root` as its project directory;
+ * linking here keeps that directory current on every `next dev|build|start`.
+ */
+const host = loadStudioHost();
+linkStudioHost(host);
 
 /**
  * Origin serving a live twin's camera feeds (MJPEG) when one is attached.
@@ -23,6 +32,10 @@ const nextConfig: NextConfig = {
   // Local assets require the browser's loopback session. Next's server-side
   // image fetch cannot authenticate as that browser; serve the encoded assets directly.
   images: { unoptimized: true },
+  // A hosted build writes its own output so it never overwrites the local one.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : host ? { distDir: host.distDir } : {}),
+  // The host's tsconfig resolves `@/*` to the host first: that is how slots resolve.
+  ...(host ? { typescript: { tsconfigPath: relative(__dirname, host.tsconfig) } } : {}),
   // Workspace packages are bundled from source, so file tracing must span the monorepo.
   outputFileTracingRoot: join(__dirname, ".."),
   // Cargo outputs may be external worktree symlinks. Desktop staging copies
@@ -35,13 +48,9 @@ const nextConfig: NextConfig = {
       ? [{ source: "/streams/:path*", destination: `${twinHttpOrigin}/streams/:path*` }]
       : [];
   },
-  allowedDevOrigins: [
-    "127.0.0.1",
-    "100.72.252.40",
-    "path-b860i-aorus-pro-ice",
-    "path-b860i-aorus-pro-ice.tail1cad6a.ts.net",
-    ...configuredDevOrigins,
-  ],
+  // Other hosts that may load the dev server (a LAN or tailnet name, say)
+  // come from SIMFORGE_ALLOWED_DEV_ORIGINS; none are baked in.
+  allowedDevOrigins: ["127.0.0.1", ...configuredDevOrigins],
   cacheComponents: true,
   partialPrefetching: true,
   serverExternalPackages: ["@electric-sql/pglite", "@napi-rs/keyring", "@simforge-oss/native-runtime", "@simforge-oss/render"],
@@ -100,4 +109,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/** A host's config hook receives this app's config and returns the hosted one. */
+export default async function config(): Promise<NextConfig> {
+  if (!host?.nextConfig) return nextConfig;
+  // An absolute path, not a file URL: this config is transpiled to CommonJS,
+  // where the import becomes a require().
+  const hook = await import(host.nextConfig);
+  return hook.extendNextConfig(nextConfig, { studioDir: __dirname, host });
+}

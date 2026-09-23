@@ -19,8 +19,8 @@ import { join, resolve } from "node:path";
 import { chromium, type BrowserContext, type Page } from "playwright-core";
 import { verifyWorldNavigation } from "./verify-world-navigation";
 import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
-import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
-import { checksumBoundPutRequiredHeaders, getPresignedGetUrl, getPresignedPutUrl } from "../app/lib/s3/s3-presign";
+import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
+import { checksumBoundPutRequiredHeaders, getPresignedGetUrl, getPresignedPutUrl } from "@/app/lib/s3/s3-presign";
 import { hostUrl } from "./host-url";
 
 const gateStarted = performance.now();

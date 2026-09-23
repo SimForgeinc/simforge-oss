@@ -5,13 +5,13 @@ import { existsSync } from "node:fs";
 import { after, before, test } from "node:test";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_WORKSPACE_ID } from "../../auth/session";
+import { LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
 import { cleanupRemovedMapAssetObjects } from "../../maps/map-asset-object-cleanup";
-import { localObjectPath } from "../../s3/s3-object";
-import { S3_BUCKET } from "../../s3/s3-config";
-import { putS3Object } from "../../s3/s3-put-object";
+import { localObjectPath } from "@/app/lib/s3/s3-object";
+import { S3_BUCKET } from "@/app/lib/s3/s3-config";
+import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import { seedPinnedMap, SIMULATION_MEMBERS } from "../../scenario/__tests__/pinning-fixtures";
-import { execute, shutdownDatabase } from "../data-api";
+import { execute, shutdownDatabase } from "@/app/lib/db/data-api";
 import {
   collectReferencedDigests,
   partitionReferencedObjects,

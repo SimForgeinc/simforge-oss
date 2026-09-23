@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 import { ScenarioFormatError, parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import type { AppContext } from "../../db/app-context";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import { CreateScenarioDocumentSchema, UpdateScenarioDocumentSchema } from "../contracts";
 import { canonicalContentSha256 } from "../core";
 import { createScenarioDocument, getScenarioDocument } from "../document-store";

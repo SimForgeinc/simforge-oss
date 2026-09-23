@@ -14,9 +14,9 @@ import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
 
 import { migrate } from "../../../../scripts/migrate";
 import { pinScenarioDocuments } from "../../../../scripts/pin-scenario-documents";
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import type { AppContext } from "../../db/app-context";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import { EMPTY_AMBIENT_CONFIG_SHA256, EMPTY_AMBIENT_RESULT_SHA256, UpdateScenarioDocumentSchema } from "../contracts";
 import { renderSeed } from "../render-intent-store";
 import { canonicalContentSha256 } from "../core";

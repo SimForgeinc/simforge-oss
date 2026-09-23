@@ -19,8 +19,13 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hostStyleRoots, loadStudioHost } from "./host.config.mjs";
 
 const studioDir = dirname(fileURLToPath(import.meta.url));
+
+/** An attached host's sources are compiled like this app's own (host.config.mjs). */
+const host = loadStudioHost();
+const hostRoots = hostStyleRoots(host);
 
 /** Variable and class names are hashed from paths relative to the repo root. */
 const repoRoot = join(studioDir, "..");
@@ -46,6 +51,7 @@ export const stylexCompileRoots = [
   join(studioDir, "app"),
   join(studioUiDir, "src"),
   join(studioUiDir, "dist"),
+  ...hostRoots,
 ];
 
 /** Glob form of {@link stylexCompileRoots}, for the PostCSS plugin. */
@@ -53,6 +59,7 @@ export const stylexIncludeGlobs = [
   join(studioDir, "app/**/*.{js,jsx,ts,tsx}"),
   join(studioUiDir, "src/**/*.{js,jsx,ts,tsx}"),
   join(studioUiDir, "dist/**/*.js"),
+  ...hostRoots.map((root) => join(root, "**/*.{js,jsx,ts,tsx}")),
 ];
 
 /**
@@ -81,7 +88,8 @@ export const stylexBabelOptions = {
    * `stylex/`, and Drive's instrument tokens under `drive/`.
    */
   aliases: {
-    "@/*": [join(studioDir, "*")],
+    ...(host ? { "@/app/dashboard/*": [join(host.dir, "dashboard/*"), join(host.dir, "app/dashboard/*"), join(studioDir, "app/dashboard/*")] } : {}),
+    "@/*": [...(host ? [join(host.dir, "*")] : []), join(studioDir, "*")],
     "@simforge-oss/studio-ui/stylex/*": [join(studioUiDir, "src/stylex/*")],
     "@simforge-oss/studio-ui/drive/*": [join(studioUiDir, "src/drive/*")],
   },

@@ -4,7 +4,7 @@ import { copyFile, link, mkdir, readFile, rename, rm, stat, writeFile } from "no
 import { dirname, resolve, sep } from "node:path";
 import { PassThrough, type Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { LOCAL_ARTIFACTS_DIR, LOCAL_ARTIFACT_BUCKET } from "../db/config";
+import { LOCAL_ARTIFACTS_DIR, LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { MAP_CACHE_BUCKET, MAP_CACHE_KEY_PREFIX } from "../cloud/map-registry";
 import { resolveCachedMapAsset } from "../map-cache/service";
 

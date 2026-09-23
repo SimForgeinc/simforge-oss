@@ -3,7 +3,7 @@ import "../../models/__tests__/test-env";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { SqlParams } from "../../db/data-api";
+import type { SqlParams } from "@/app/lib/db/data-api";
 import { readRenderIntentText } from "../render-worker-control-store";
 
 /**

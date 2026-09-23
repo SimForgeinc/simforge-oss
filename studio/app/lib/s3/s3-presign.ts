@@ -1,9 +1,9 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { LOCAL_ARTIFACTS_DIR } from "../db/config";
-import { readLocalObjectMetadata, writeLocalObject } from "./s3-object";
-import { S3_BUCKET } from "./s3-config";
+import { LOCAL_ARTIFACTS_DIR } from "@/app/lib/db/config";
+import { readLocalObjectMetadata, writeLocalObject } from "@/app/lib/s3/s3-object";
+import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 import { signLocalObjectUrl } from "./local-object-auth";
 import { getRegisteredMap, MAP_CACHE_BUCKET } from "../cloud/map-registry";
 

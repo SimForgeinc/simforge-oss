@@ -8,7 +8,7 @@ import type {
 } from "@simforge-oss/studio-shared";
 import { cache } from "react";
 import { mapAssetArtifactRowId } from "./ids";
-import { execute, queryOne, queryRows, withTransaction } from "./data-api";
+import { execute, queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
 import {
   FLYBY_PREVIEW_ARTIFACT_TYPE,
   flybyPreviewKeyForOriginalKey,

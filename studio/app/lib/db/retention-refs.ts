@@ -1,4 +1,4 @@
-import { queryRows } from "./data-api";
+import { queryRows } from "@/app/lib/db/data-api";
 
 /**
  * What this installation's records still reference, for every path that

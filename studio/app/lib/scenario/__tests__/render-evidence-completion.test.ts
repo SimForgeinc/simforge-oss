@@ -11,10 +11,10 @@ import { CONTROL_FEATURES_V1, loadBuiltinRenderEngine } from "@simforge-oss/rend
 import { hashRenderIntent } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
-import type { AppContext } from "../../db/app-context";
-import { execute, queryOne, shutdownDatabase } from "../../db/data-api";
-import { writeLocalObject } from "../../s3/s3-object";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
+import { writeLocalObject } from "@/app/lib/s3/s3-object";
 import { approveRenderWorker } from "../control-plane-store";
 import { createRenderIntentJob } from "../render-intent-store";
 import { getRenderJobDetail, publicFailureDetail, publicRenderSubstitutions, publicRenderWarnings } from "../render/detail-store";

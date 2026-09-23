@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { GET, PUT } from "../app/api/local-objects/[bucket]/[...key]/route";
-import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
-import { getPresignedGetUrl, getPresignedPutUrl } from "../app/lib/s3/s3-presign";
+import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
+import { getPresignedGetUrl, getPresignedPutUrl } from "@/app/lib/s3/s3-presign";
 import { hostUrl } from "./host-url";
 
 const bytes = Buffer.from("simforge-local-object-roundtrip\n");

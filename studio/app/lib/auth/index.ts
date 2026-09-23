@@ -1,4 +1,4 @@
-import { LOCAL_SESSION } from "./session";
+import { LOCAL_SESSION } from "@/app/lib/auth/session";
 
 const localBetterAuthSession = {
   user: {

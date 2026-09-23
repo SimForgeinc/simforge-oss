@@ -1,5 +1,5 @@
-import type { AppContext } from "../db/app-context";
-import { queryOne, queryRows, withTransaction, type Transaction } from "../db/data-api";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { modelRunAttemptId, modelRunEventId, modelRunId } from "../db/ids";
 import {
   ModelEndpointDescriptorSchema,

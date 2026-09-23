@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool, type PoolClient } from "pg";
-import { LOCAL_DATABASE_DIR, LOCAL_DATABASE_LOCK } from "./config";
+import { LOCAL_DATABASE_DIR, LOCAL_DATABASE_LOCK } from "@/app/lib/db/config";
 import { acquireDataDirLock, type DataDirLock } from "./data-dir-lock";
 
 export type SqlPrimitive = string | number | boolean | null | Date;

@@ -33,7 +33,7 @@ async function main() {
   try {
     // Database config is read at module evaluation time. Dynamic imports are intentional here:
     // the throwaway root must be installed before any database or store module can open PGlite.
-    const database = await import("../app/lib/db/data-api");
+    const database = await import("@/app/lib/db/data-api");
     shutdownDatabase = database.shutdownDatabase;
     const { migrate } = await import("./migrate");
     const expectedMigrations = (await readdir(resolve(appRoot, "migrations")))

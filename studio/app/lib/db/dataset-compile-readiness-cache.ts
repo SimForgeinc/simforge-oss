@@ -1,4 +1,4 @@
-import { execute, queryOne } from "./data-api";
+import { execute, queryOne } from "@/app/lib/db/data-api";
 
 export type DatasetCompileReadinessResponse = {
   dataset_id: string;

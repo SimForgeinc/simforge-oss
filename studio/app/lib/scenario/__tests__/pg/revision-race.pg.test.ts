@@ -9,9 +9,9 @@ import { promisify } from "node:util";
 
 import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
-import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../../auth/session";
-import type { AppContext } from "../../../db/app-context";
-import { queryOne, shutdownDatabase } from "../../../db/data-api";
+import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
+import type { AppContext } from "@/app/lib/db/app-context";
+import { queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
 import { createScenarioDocument } from "../../document-store";
 import { seedPinnedMap } from "../pinning-fixtures";
 

@@ -67,7 +67,8 @@
     "test:host-modules": "node --conditions=development --import tsx --test app/host/__tests__/host-modules.test.ts app/lib/host/__tests__/asset-gallery-actions.test.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "test:eval-compare": "node --conditions=development --import tsx --test app/lib/evaluation/__tests__/model-comparison.test.ts",
-    "test:eval-launch": "node --conditions=development --import tsx --test app/lib/evaluation/__tests__/comparison-launch.test.ts"
+    "test:eval-launch": "node --conditions=development --import tsx --test app/lib/evaluation/__tests__/comparison-launch.test.ts",
+    "test:host-slots": "node scripts/host-slot-imports.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",

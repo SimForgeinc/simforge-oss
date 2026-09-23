@@ -13,7 +13,7 @@ import { GET as getEpisode } from "../../../api/evaluation/campaigns/[campaignId
 import { GET as getFrame } from "../../../api/evaluation/campaigns/[campaignId]/episodes/[episodeId]/frames/[...framePath]/route";
 import { GET as getPolicy } from "../../../api/evaluation/campaigns/[campaignId]/policies/[policyId]/route";
 import { POST as postPromote } from "../../../api/models/versions/[versionId]/promote/route";
-import type { AppContext } from "../../db/app-context";
+import type { AppContext } from "@/app/lib/db/app-context";
 import { CreateModelRunSchema } from "../../models/contracts";
 import { createModelEndpoint, createModelVersion } from "../../models/model-registry-store";
 import { completeModelRun, createModelRun, leaseNextModelRun } from "../../models/model-run-store";

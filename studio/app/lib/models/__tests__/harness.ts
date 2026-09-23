@@ -6,9 +6,9 @@ import {
   LOCAL_SESSION,
   LOCAL_USER_ID,
   LOCAL_WORKSPACE_ID,
-} from "../../auth/session";
-import { getAppContext, type AppContext } from "../../db/app-context";
-import { withTransaction } from "../../db/data-api";
+} from "@/app/lib/auth/session";
+import { getAppContext, type AppContext } from "@/app/lib/db/app-context";
+import { withTransaction } from "@/app/lib/db/data-api";
 import { CreateModelEndpointSchema, type ModelEndpointDescriptor } from "../contracts";
 
 /** Fresh PGlite: apply EVERY migration, then the minimal local identity rows. */

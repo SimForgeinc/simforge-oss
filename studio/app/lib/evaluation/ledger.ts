@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
-import type { AppContext } from "../db/app-context";
+import type { AppContext } from "@/app/lib/db/app-context";
 import { comparability, rankMetric } from "./model-comparison";
 import { listModelVersions } from "../models/model-registry-store";
 import {

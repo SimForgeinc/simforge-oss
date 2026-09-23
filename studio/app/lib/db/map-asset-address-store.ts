@@ -1,5 +1,5 @@
 import type { MapAssetAddress } from "@simforge-oss/studio-shared";
-import { queryRows } from "./data-api";
+import { queryRows } from "@/app/lib/db/data-api";
 
 /**
  * Read all Overture-derived address rows for a map asset.
