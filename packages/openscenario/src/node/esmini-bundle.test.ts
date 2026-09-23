@@ -45,7 +45,7 @@ const input = parseSimScenarioInput({
     id: 'car',
     kind: 'car',
     initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 2 },
-    behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 20, z: 0 }] } },
+    behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 20, z: 0 }] }, cruiseSpeedMps: 2 },
   }],
 });
 const trace = runSimulation(input, { graph }).trace;
@@ -97,7 +97,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
         id: kind,
         kind,
         initial: { pose: { x: 0, z: index * 3, headingRad: 0 }, speedMps: 1 },
-        behavior: { route: { kind: 'polyline' as const, points: [{ x: 0, z: index * 3 }, { x: 20, z: index * 3 }] } },
+        behavior: { route: { kind: 'polyline' as const, points: [{ x: 0, z: index * 3 }, { x: 20, z: index * 3 }] }, cruiseSpeedMps: 1 },
       })),
     });
     const categoryXml = exportOpenScenarioXml13Esmini(categoryInput, { engine: engine(), graph }).content;
@@ -162,7 +162,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
           id: 'pedestrian',
           kind: 'pedestrian',
           initial: { pose: { x: 12, z: 4, headingRad: -Math.PI / 2 }, speedMps: 1 },
-          behavior: { route: { kind: 'polyline', points: [{ x: 12, z: 4 }, { x: 12, z: -4 }] } },
+          behavior: { route: { kind: 'polyline', points: [{ x: 12, z: 4 }, { x: 12, z: -4 }] }, cruiseSpeedMps: 1 },
         },
       ],
       interactions: [

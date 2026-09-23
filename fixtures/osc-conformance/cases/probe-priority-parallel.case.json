@@ -1,0 +1,63 @@
+{
+  "id": "probe-priority-parallel",
+  "feature": "Event priority parallel",
+  "osc": [
+    "Event.priority=parallel",
+    "LaneChangeAction"
+  ],
+  "description": "E1 ramps 20->30 m/s over 4 s from t=1; E2 (parallel) changes lane at t=2. Different domains: both run.",
+  "clipSeconds": 7,
+  "kind": "xosc",
+  "xosc": "probes/probe-priority-parallel.xosc",
+  "oscVersion": "1.3",
+  "actors": [],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "8.4.2.2 Event priority (override/skip/parallel)",
+      "7.5.1 Conflicting actions (same domain: newer action overrides)",
+      "LaneChangeAction / LaneChangeActionDynamics (class reference)"
+    ],
+    "derivation": "parallel: E2 starts regardless of E1; the actions are on different domains, so neither is overridden. Speed reaches 30 at t=5; lane change sinusoidal over [2,5].",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 30,
+            "shape": "linear",
+            "durationS": 4
+          }
+        ],
+        "lateral": [
+          {
+            "t0": 2,
+            "toY": -1.75,
+            "shape": "sinusoidal",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "e1": {
+        "start": 1.0,
+        "end": 5.0
+      },
+      "e2": {
+        "start": 2.0,
+        "end": 5.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "not-expressible",
+    "esmini": "agrees"
+  }
+}

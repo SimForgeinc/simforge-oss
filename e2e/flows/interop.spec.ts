@@ -75,9 +75,6 @@ const PINNED_ESMINI = definePrerequisite({
 
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..");
 const LTAP_TEMPLATE = join(REPO_ROOT, "examples", "ltap-opposing.template.json");
-/** A real OpenSCENARIO 1.4 golden that ships with the repository. */
-const CONFORMANCE_XOSC = join(REPO_ROOT, "packages", "openscenario", "conformance", "actor-despawn.xosc");
-const FIXTURES = resolve(import.meta.dirname, "..", "fixtures", "interop");
 
 interface ExportResult {
   ok: boolean;
@@ -95,17 +92,6 @@ interface ExportResult {
   out: string;
   bytes: number;
   warnings: { path: string; reason: string }[];
-}
-
-interface ImportSummary {
-  ok: boolean;
-  standard: string;
-  stats: { actors: number; rolesTranslated: number };
-  map: { status: string; selectedMapVersionId: string | null; diagnostic: { code: string } | null };
-  capabilities: { supported: number; approximated: number; unsupported: number };
-  lossy: string[];
-  findings: { kind: string; code: string }[];
-  out: string | null;
 }
 
 interface CliErrorDetail {
@@ -199,79 +185,6 @@ async function materialize(
   const instance = JSON.parse(await readFile(instanceFile, "utf8")) as InstanceDocument;
   return { instanceFile, traceFile, instance };
 }
-
-test.describe("OpenSCENARIO import — findings, not crashes", () => {
-  test("classifies malformed, future-version and missing inputs by exit code", async ({ e2e }) => {
-    // A future major version parses: it is a statement about the *input*, so
-    // it is exit 2 with a finding, never a command failure.
-    const future = await runCli(["import", join(FIXTURES, "unsupported-version.xosc")]);
-    expect(future.code).toBe(2);
-    expect(payload<ImportSummary>(future).findings.map((finding) => finding.code)).toContain("version_unsupported");
-
-    // Something that is not XML at all cannot be reasoned about: exit 1.
-    const junk = await runCli(["import", join(FIXTURES, "not-openscenario.xosc")]);
-    expect(junk.code).toBe(1);
-    expect(junk.stdout).toBe("");
-    expect((JSON.parse(junk.stderr) as CliErrorDetail).code).toBe("malformed_xml");
-
-    const missing = await runCli(["import", join(FIXTURES, "no-such-scene.xosc")]);
-    expect(missing.code).toBe(1);
-    expect((JSON.parse(missing.stderr) as CliErrorDetail).code).toBe("file_not_found");
-
-    await writeEvidence(e2e, "interop-import-classification", {
-      outcome: "verified",
-      futureVersionExit: future.code,
-      malformedExit: junk.code,
-      missingExit: missing.code,
-    });
-  });
-
-  test("translates a real 1.4 golden against a real map and names what was lost", async ({ e2e }) => {
-    const mapId = await realMap(e2e);
-    const out = join(e2e.runsRoot, "interop-import", "imported.template.json");
-    await mkdir(join(e2e.runsRoot, "interop-import"), { recursive: true });
-
-    const imported = await runCli(["import", CONFORMANCE_XOSC, "--map", mapId, "--out", out]);
-    // Storyboard semantics are not translatable, so a *successful* translation
-    // still reports findings. Exit 2 here means "read me", not "failed".
-    expect(imported.code).toBe(2);
-    const summary = payload<ImportSummary>(imported);
-    expect(summary.standard).toBe("ASAM OpenSCENARIO 1.4");
-    expect(summary.map).toMatchObject({ status: "resolved", selectedMapVersionId: mapId });
-    expect(summary.stats.actors).toBeGreaterThan(0);
-    // Every actor lands as a map-pinned role; none are silently dropped.
-    expect(summary.stats.rolesTranslated).toBe(summary.stats.actors);
-    // Loss is declared rather than absorbed.
-    expect(summary.capabilities.unsupported).toBeGreaterThan(0);
-    expect(summary.lossy.length).toBeGreaterThan(0);
-    expect(summary.out).toBe(resolve(out));
-
-    const draft = JSON.parse(await readFile(out, "utf8")) as {
-      scenarioVersion: number;
-      anchor: { pin: { mapId: string } };
-      roles: { kind: string }[];
-      extensions: { openScenarioImport: { source: { sha256: string } } };
-    };
-    expect(draft.scenarioVersion).toBe(2);
-    expect(draft.anchor.pin.mapId).toBe(mapId);
-    expect(draft.roles.every((role) => role.kind === "scene_absolute")).toBe(true);
-    // The draft carries the provenance of the document it came from.
-    expect(draft.extensions.openScenarioImport.source.sha256).toMatch(/^[0-9a-f]{64}$/);
-
-    // The draft must be a first-class citizen of the pipeline it feeds.
-    const revalidated = await runCli(["template", "validate", out], { expectExit: 0 });
-    expect(payload<{ ok: boolean }>(revalidated).ok).toBe(true);
-
-    await writeEvidence(e2e, "interop-import-translation", {
-      outcome: "verified",
-      mapId,
-      source: CONFORMANCE_XOSC,
-      sourceSha256: draft.extensions.openScenarioImport.source.sha256,
-      capabilities: summary.capabilities,
-      lossy: summary.lossy,
-    });
-  });
-});
 
 test.describe("OpenSCENARIO export — four distinct claims", () => {
   test("keeps native XML 1.4, esmini compatibility and DSL 2.2 separately labelled", async ({ e2e }) => {
@@ -446,7 +359,7 @@ test.describe("OpenSCENARIO external execution — pinned runner and quantitativ
     // 20 ms step, trajectory filtering disabled, collision detection on.
     // Loaded dynamically so that an unbuilt workspace surfaces as the
     // prerequisite outcome asserted above rather than a module-load crash
-    // that would also take down the export and import flows in this file.
+    // that would also take down the export flows in this file.
     const esmini: typeof Esmini = await import("../../packages/openscenario/dist/esmini/index.js");
     const traceDiff: typeof TraceDiff = await import("../../packages/openscenario/dist/trace-diff/index.js");
     const args = [...esmini.buildLocalEsminiArguments(scenarioPath, outputDir, ["csv", "log"])];

@@ -14,10 +14,6 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./import": {
-        "types": "./dist/import.d.ts",
-        "default": "./dist/import.js"
-      },
       "./export": {
         "types": "./dist/export/index.d.ts",
         "default": "./dist/export/index.js"
@@ -59,11 +55,6 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./import": {
-      "development": "./src/import.ts",
-      "types": "./dist/import.d.ts",
-      "default": "./dist/import.js"
     },
     "./export": {
       "development": "./src/export/index.ts",
@@ -107,16 +98,14 @@
     "schema"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/import.ts src/export/index.ts src/export/types.ts src/export/xml-1.4.ts src/node/index.ts src/execution-plan.ts src/esmini/index.ts src/trace-diff/index.ts --format esm --dts --sourcemap --clean --out-dir dist",
+    "build": "tsup src/index.ts src/export/index.ts src/export/types.ts src/export/xml-1.4.ts src/node/index.ts src/execution-plan.ts src/esmini/index.ts src/trace-diff/index.ts --format esm --dts --sourcemap --clean --out-dir dist",
     "prepack": "pnpm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@simforge-oss/engine": "workspace:*",
-    "@simforge-oss/native-runtime": "workspace:*",
-    "@simforge-oss/scenario": "workspace:*",
-    "fast-xml-parser": "^5.5.6"
+    "@simforge-oss/native-runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

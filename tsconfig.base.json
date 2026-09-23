@@ -37,7 +37,6 @@
       "@simforge-oss/openscenario/export": ["./packages/openscenario/src/export/index.ts"],
       "@simforge-oss/openscenario/export/types": ["./packages/openscenario/src/export/types.ts"],
       "@simforge-oss/openscenario/export/xml-1.4": ["./packages/openscenario/src/export/xml-1.4.ts"],
-      "@simforge-oss/openscenario/import": ["./packages/openscenario/src/import.ts"],
       "@simforge-oss/openscenario/node": ["./packages/openscenario/src/node/index.ts"],
       "@simforge-oss/openscenario/trace-diff": ["./packages/openscenario/src/trace-diff/index.ts"],
       "@simforge-oss/playback": ["./packages/playback/src/index.ts"],

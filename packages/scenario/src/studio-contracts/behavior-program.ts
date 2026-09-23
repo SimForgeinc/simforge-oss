@@ -646,8 +646,9 @@ export type BehaviorAction = z.infer<typeof BehaviorActionSchema>;
  *
  * OpenSCENARIO reads the same maneuver differently: a `SpeedAction` COMPLETES
  * when the vehicle reaches the target, and esmini ends the event there, so an
- * event chained after it runs. `on: "target_speed"` carries that reading, and
- * only the .xosc importer sets it — see `xosc-import/index.ts`, loss 7.
+ * event chained after it runs. `on: "target_speed"` carries that reading. Only
+ * the retired .xosc importer ever set it; it stays in the schema so documents
+ * that importer produced still parse.
  */
 export const BEHAVIOR_CLIP_END_ON_TARGET_SPEED = "target_speed";
 

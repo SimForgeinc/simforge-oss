@@ -1,0 +1,106 @@
+{
+  "id": "trigger-after-end",
+  "feature": "StoryboardElementStateCondition completeState + delay (sequencing)",
+  "osc": [
+    "StoryboardElementStateCondition.completeState",
+    "Condition.delay"
+  ],
+  "description": "A: 20->10 m/s linear 2 s at t=1. B starts 1 s after A completes: 10->15 m/s linear 2 s.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "a",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    },
+    {
+      "id": "b",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 15
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "after",
+        "interactionId": "a",
+        "event": "end",
+        "delayS": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "StoryboardElementStateCondition (class reference)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)",
+      "7.6.3 Condition delay",
+      "8.4.2 Execution of an event"
+    ],
+    "derivation": "A reaches 10 m/s at t=3 -> completeState at 3.0. B: condition \"A completeState\" with delay 1 s -> true at 4.0. B ramps 10->15 over [4,6].",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "linear",
+            "durationS": 2
+          },
+          {
+            "t0": 4,
+            "to": 15,
+            "shape": "linear",
+            "durationS": 2
+          }
+        ]
+      }
+    },
+    "events": {
+      "a": {
+        "start": 1.0,
+        "end": 3.0
+      },
+      "b": {
+        "start": 4.0,
+        "end": 6.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-11"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

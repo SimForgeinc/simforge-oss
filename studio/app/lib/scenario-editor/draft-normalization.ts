@@ -283,7 +283,7 @@ function asValidatedArray<T>(
  * The load path validates the CURRENT actor shape and nothing older: an actor
  * record without a `behavior` program is not upgraded, it is reported as
  * unloadable exactly like an actor whose fields fail the schema. Constructors
- * (the editor's placement tools, the generators, the .xosc importer) author the
+ * (the editor's placement tools, the generators) author the
  * program before a draft is ever persisted, so a stored actor without one is a
  * record this build does not read.
  *
