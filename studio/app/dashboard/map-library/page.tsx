@@ -1,14 +1,10 @@
-import { notFound } from "next/navigation";
-import { requireAppContext } from "@/app/lib/db/app-context";
-import { MapLibrarySurface } from "@/app/host";
+import { redirect } from "next/navigation";
 
 /**
- * The map library installs map closures on this installation's disk. A cloud
- * host streams every map from object storage and has no disk to install them
- * on, so the route does not exist there.
+ * Map Downloads (the map library, "Map availability") is no longer a page: it
+ * is a view of the app switcher, like Render Settings. Links and bookmarks to
+ * the old route open that view.
  */
-export default async function MapLibraryPage() {
-  if (MapLibrarySurface === null) notFound();
-  await requireAppContext("/dashboard/map-library");
-  return <MapLibrarySurface />;
+export default function MapLibraryPage(): never {
+  redirect("/dashboard/apps?view=map-downloads");
 }

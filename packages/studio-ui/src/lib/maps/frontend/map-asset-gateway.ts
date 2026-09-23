@@ -57,25 +57,47 @@ const DOWNLOAD_URL_TTL_MS = 50 * 60 * 1000;
 const MAX_DOWNLOAD_URLS = 4_096;
 
 /**
- * Default ceiling on cached map bytes.
+ * Default ceiling on cached map bytes: 32 GiB.
  *
- * Sized against the measured cold transfer of a large map's visible closure
- * (Yale at the high preset is 816 MB): four of those fit, so moving between a
- * handful of maps stays warm, while the number stays well inside the quota a
- * mainstream browser grants an origin. The gateway lowers it further whenever
- * the origin's real quota is smaller.
+ * High enough that a person can download every published map at the default
+ * render profile (Low · no foliage is tens to hundreds of MB per map; the
+ * whole dev catalog at Medium is well under this), while the quota clamp
+ * below still keeps the cache to a share of what the browser actually grants
+ * the origin. Chrome and Edge grant an origin up to ~60% of the disk; Firefox
+ * grants ~10 GB best-effort, or 50% of the disk once persistent storage is
+ * granted, which is why the download flow asks for persistence on the user's
+ * explicit "Download" and re-reads the quota afterwards.
  */
-export const MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES = 4 * 1024 ** 3;
+export const MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES = 32 * 1024 ** 3;
 
 /** Never take more than this share of the origin's quota, whatever the budget says. */
-const MAX_QUOTA_SHARE = 0.5;
+export const MAP_ASSET_CACHE_MAX_QUOTA_SHARE = 0.5;
+
+/**
+ * The ceiling that is actually enforced: the configured budget, clamped to
+ * {@link MAP_ASSET_CACHE_MAX_QUOTA_SHARE} of the origin quota when the browser
+ * reports one. Pure so the rule can be tested without a browser.
+ */
+export function effectiveMapCacheCeiling(configuredBytes: number, quotaBytes: number | null | undefined): number {
+  const configured = Math.max(0, Math.floor(configuredBytes));
+  if (!quotaBytes || !Number.isFinite(quotaBytes) || quotaBytes <= 0) return configured;
+  return Math.min(configured, Math.floor(quotaBytes * MAP_ASSET_CACHE_MAX_QUOTA_SHARE));
+}
+
+/** The largest ceiling a person may choose: the quota share, or null when the quota is unknown. */
+export function maxSelectableMapCacheCeiling(quotaBytes: number | null | undefined): number | null {
+  if (!quotaBytes || !Number.isFinite(quotaBytes) || quotaBytes <= 0) return null;
+  return Math.floor(quotaBytes * MAP_ASSET_CACHE_MAX_QUOTA_SHARE);
+}
 
 export type MapAssetCacheStatus = AssetCacheUsage & {
   /** Whether the origin already holds persistent storage. Never requested here. */
   persistent: boolean;
-  /** `navigator.storage.estimate()`, for diagnostics only. */
+  /** `navigator.storage.estimate()`: the origin's whole quota and usage. */
   quotaBytes: number | null;
   originUsageBytes: number | null;
+  /** The budget the person (or the default) asked for, before the quota clamp. */
+  configuredBudgetBytes: number;
 };
 
 export type MapAssetEnsureOptions = {
@@ -236,6 +258,7 @@ export class MapAssetGateway {
   #aliasWriteScheduled = false;
   #configuredBudgetBytes: number;
   #quotaProbe: Promise<void> | null = null;
+  #lastQuotaBytes: number | null = null;
   #lastWriteFailure: string | null = null;
   #installedOn: { fetch: typeof fetch } | null = null;
   #downloadUrlResolver: MapAssetDownloadUrlResolver | null = null;
@@ -265,14 +288,53 @@ export class MapAssetGateway {
     return this.#cache.budgetBytes;
   }
 
+  /** The budget asked for, before the quota clamp. */
+  get configuredBudgetBytes(): number {
+    return this.#configuredBudgetBytes;
+  }
+
   /**
-   * Override the ceiling. Used by a preferences surface, and by tests that
-   * need eviction to happen at a size they can write.
+   * Override the ceiling. Used by the cache size control, and by tests that
+   * need eviction to happen at a size they can write. The quota clamp still
+   * applies: the enforced ceiling is {@link effectiveMapCacheCeiling}.
    */
   setBudgetBytes(budgetBytes: number): void {
     this.#configuredBudgetBytes = Math.max(0, budgetBytes);
-    this.#cache.setBudgetBytes(this.#configuredBudgetBytes);
+    this.#cache.setBudgetBytes(effectiveMapCacheCeiling(this.#configuredBudgetBytes, this.#lastQuotaBytes));
     this.#notifyChanged();
+  }
+
+  /**
+   * Re-read the origin quota and re-derive the ceiling from the configured
+   * budget. Called after persistent storage is granted, which can raise the
+   * quota (Firefox moves from its best-effort group limit to half the disk).
+   */
+  async refreshQuota(): Promise<void> {
+    this.#quotaProbe = null;
+    await this.#probeQuota();
+    this.#notifyChanged();
+  }
+
+  /**
+   * Forget specific content: a per-map delete. Digests shared with a map the
+   * caller keeps must not be passed; the cache has no idea which map owns what.
+   */
+  async deleteDigests(digests: readonly string[]): Promise<number> {
+    const freed = await this.#cache.delete(digests);
+    this.#notifyChanged();
+    return freed;
+  }
+
+  /**
+   * Whether the byte index holds `digest` (no Cache Storage round trip). With
+   * `url`, a held digest also teaches that path its identity, so a loader
+   * asking for the same bytes under another map's path is answered from the
+   * cache instead of transferring them again.
+   */
+  holdsDigest(digest: string, url?: string): boolean {
+    const held = SHA256.test(digest) && this.#cache.entryBytes(digest) !== null;
+    if (held && url) this.#rememberAlias(this.#absoluteUrl(url), digest);
+    return held;
   }
 
   /** Subscribe to usage changes so a budget readout follows a download live. */
@@ -575,7 +637,10 @@ export class MapAssetGateway {
     const storage = this.#options.storageManager;
     if (!storage?.persist) return false;
     if (await storage.persisted?.().catch(() => false)) return true;
-    return storage.persist().catch(() => false);
+    const granted = await storage.persist().catch(() => false);
+    // A grant can raise the quota; the ceiling follows it.
+    if (granted) await this.refreshQuota();
+    return granted;
   }
 
   /** Explicit user action: discard every cached map byte. */
@@ -607,6 +672,7 @@ export class MapAssetGateway {
       persistent: await storage?.persisted?.().catch(() => false) ?? false,
       quotaBytes: estimate?.quota ?? null,
       originUsageBytes: estimate?.usage ?? null,
+      configuredBudgetBytes: this.#configuredBudgetBytes,
     };
   }
 
@@ -640,20 +706,21 @@ export class MapAssetGateway {
   }
 
   /**
-   * Lower the budget to the origin's real quota share.
+   * Derive the enforced ceiling from the configured budget and the origin's
+   * real quota share.
    *
-   * `estimate()` is advisory and can change (other origins, disk pressure), so
-   * this only ever tightens the ceiling — raising it back is the browser's
-   * `QuotaExceededError` path, which the bounded cache already handles by
-   * shrinking.
+   * `estimate()` is advisory and can change (other origins, disk pressure, a
+   * persistence grant), so the ceiling is re-derived from the configured
+   * budget each time rather than only ever tightened; the bounded cache's
+   * `QuotaExceededError` path still shrinks it if the browser disagrees.
    */
   async #probeQuota(): Promise<void> {
     this.#quotaProbe ??= (async () => {
       const estimate = await this.#options.storageManager?.estimate?.().catch(() => undefined);
       const quota = estimate?.quota;
       if (!quota) return;
-      const ceiling = Math.floor(quota * MAX_QUOTA_SHARE);
-      if (ceiling < this.#cache.budgetBytes) this.#cache.setBudgetBytes(ceiling);
+      this.#lastQuotaBytes = quota;
+      this.#cache.setBudgetBytes(effectiveMapCacheCeiling(this.#configuredBudgetBytes, quota));
     })();
     return this.#quotaProbe;
   }

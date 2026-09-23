@@ -1592,6 +1592,80 @@ export async function listScenarioBrowserCacheInventory(
   return { releaseKey, maps: [...maps.values()] };
 }
 
+/**
+ * Relative-path prefixes of the texture members a browser profile never
+ * fetches by path: `images/` holds the full-resolution source textures every
+ * published texture tier replaces, and `3d/variants/objects/` holds the
+ * encoded images of all four tiers at once. A download planner learns the one
+ * tier it needs from that tier's index (which carries each object's digest
+ * and size), so listing these rows is pure cost: they are 99% of a closure's
+ * rows (270k of 273k on dev) and made the complete inventory a seven-minute
+ * request.
+ */
+export const BROWSER_DOWNLOAD_EXCLUDED_PREFIXES = ["images/", "3d/variants/objects/"] as const;
+
+/**
+ * One map's browser closure without the per-tier texture objects: what a
+ * profile-aware download plan starts from. `null` when the map has no
+ * available verified browser asset set, which the caller must report rather
+ * than skip.
+ */
+export async function listScenarioBrowserDownloadInventory(
+  _context: AppContext,
+  mapVersionId: string,
+): Promise<ScenarioBrowserCacheMap | null> {
+  type Row = {
+    closure_sha256: string;
+    relative_path: string;
+    sha256: string;
+    byte_length: number | string;
+    media_type: string;
+    required: boolean;
+  };
+  const rows: Row[] = [];
+  let afterRelativePath = "";
+  const pageSize = 250;
+  while (true) {
+    // Same 1 MB Data API bound as the full inventory; one map's non-texture
+    // members are a few hundred rows, so this is one or two pages.
+    const page = await queryRows<Row>(
+      `SELECT bs.closure_sha256, bm.relative_path, bb.sha256, bb.byte_length,
+         bb.media_type, bm.required
+       FROM simforge.map_versions mv
+       JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+         AND bs.workspace_id = mv.workspace_id AND bs.map_version_id = mv.id
+         AND bs.asset_set_state = 'available'
+       JOIN simforge.browser_asset_members bm ON bm.asset_set_id = bs.id
+       JOIN simforge.browser_asset_blobs bb ON bb.id = bm.blob_id
+         AND bb.verification_state = 'verified'
+       WHERE mv.retired_at IS NULL
+         AND mv.id = :map_version_id
+         AND bm.relative_path NOT LIKE 'images/%'
+         AND bm.relative_path NOT LIKE '3d/variants/objects/%'
+         AND bm.relative_path > :after_relative_path
+       ORDER BY bm.relative_path
+       LIMIT ${pageSize}`,
+      { map_version_id: mapVersionId, after_relative_path: afterRelativePath },
+    );
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    afterRelativePath = page.at(-1)!.relative_path;
+  }
+  const first = rows[0];
+  if (!first) return null;
+  return {
+    mapVersionId,
+    closureSha256: first.closure_sha256,
+    assets: rows.map((row) => ({
+      relativePath: row.relative_path,
+      sha256: row.sha256,
+      byteLength: Number(row.byte_length),
+      mediaType: row.media_type,
+      required: row.required,
+    })),
+  };
+}
+
 type MapDescriptorRow = {
   id: string; source_map_asset_id: string; label: string; locality: string | null;
   browser_closure_sha256: string;

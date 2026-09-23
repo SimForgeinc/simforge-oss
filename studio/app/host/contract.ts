@@ -35,6 +35,16 @@ export type HostSurface<P = object> = ComponentType<P> | null;
 export type RenderSettingsProps = { onDone: () => void };
 export type RenderSettingsSurfaceType = ComponentType<RenderSettingsProps>;
 
+/**
+ * Map Downloads is shown inline in the app switcher too, and it is the view a
+ * person's first sign-in opens on. Both hosts have it with different subjects:
+ * a local installation installs map closures on its own disk (the map
+ * library), a cloud host downloads maps into this browser's map cache at the
+ * chosen render setting. `firstRun` says the switcher opened it unasked.
+ */
+export type MapDownloadsProps = { onDone: () => void; firstRun: boolean };
+export type MapDownloadsSurfaceType = ComponentType<MapDownloadsProps>;
+
 /** The map-gallery panel that reports and installs a map's local closures. */
 export type MapInstallPanelProps = {
   map: LocalMapDescriptor;
