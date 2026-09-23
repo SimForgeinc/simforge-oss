@@ -138,7 +138,7 @@ describe('remote world source', () => {
 });
 
 describe('truth viewer bridge', () => {
-  it('interpolates at render rate, lifts through the ground index, publishes the drawn pose, and stops after dispose', () => {
+  it('interpolates at render rate, lifts a body without engine contact through the ground index, publishes the drawn pose, and stops after dispose', () => {
     const controls = { applyView: vi.fn(), setEnabled: vi.fn() };
     const viewer = {
       scene: { add: vi.fn() },
@@ -156,8 +156,9 @@ describe('truth viewer bridge', () => {
       now: () => wallMs,
       clock: { gainPerS: 0 },
     });
-    bridge.apply(frame(1, 0, 0));
-    bridge.apply(frame(2, 0.05, 10));
+    // A world without a ground surface: no engine contact on the frames.
+    bridge.apply(frame(1, 0, 0, 'ego', null));
+    bridge.apply(frame(2, 0.05, 10, 'ego', null));
     wallMs = 25;
     viewer.onFrame?.(0.025);
 
@@ -172,7 +173,7 @@ describe('truth viewer bridge', () => {
 
     const writes = viewerMocks.batches.length;
     bridge.dispose();
-    bridge.apply(frame(3, 0.1, 20));
+    bridge.apply(frame(3, 0.1, 20, 'ego', null));
     viewer.onFrame?.(0.05);
     expect(viewerMocks.batches).toHaveLength(writes);
   });
@@ -202,7 +203,7 @@ describe('truth viewer bridge', () => {
     viewer.onFrame?.(0.05);
 
     const drawn = bridge.rendered('ego-2');
-    expect(drawn).toEqual(expect.objectContaining({ x: 70, z: 0 }));
+    expect(drawn).toEqual(expect.objectContaining({ x: 70, y: 3, z: 0 }));
     expect(bridge.rendered('ego')).toBeNull();
     expect(viewerMocks.batches.at(-1)!.actors.map((actor) => actor.id)).toEqual(['ego-2']);
 
@@ -220,7 +221,8 @@ describe('truth viewer bridge', () => {
   });
 });
 
-function frame(tick: number, timeSec: number, x: number, id = 'ego'): TruthFrame {
+/** A step whose body the engine grounds at `contactZ`; `null` is a world without a ground surface. */
+function frame(tick: number, timeSec: number, x: number, id = 'ego', contactZ: number | null = 3): TruthFrame {
   return {
     tick,
     timeSec,
@@ -238,6 +240,12 @@ function frame(tick: number, timeSec: number, x: number, id = 'ego'): TruthFrame
       }],
     },
     signals: [],
-    actors: [{ id, class: 'car', dims: { l: 4.5, w: 1.9, h: 1.5 }, accel: { ax: 0, ay: 0 } }],
+    actors: [{
+      id,
+      class: 'car',
+      dims: { l: 4.5, w: 1.9, h: 1.5 },
+      accel: { ax: 0, ay: 0 },
+      ...(contactZ === null ? {} : { contact: { z: contactZ, pitchRad: 0, rollRad: 0, wheelDropM: [0, 0, 0, 0] } }),
+    }],
   };
 }
