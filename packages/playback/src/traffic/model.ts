@@ -158,8 +158,10 @@ export const DEFAULT_TRAFFIC_SOURCE_PRESET = 'city' as const;
  * (or City sim) on a document whose effective density is `off` would run a
  * traffic engine with nothing to generate (SUMO refuses it outright), so the
  * choice also sets {@link DEFAULT_TRAFFIC_SOURCE_PRESET}, keeping the seed.
- * A document that already has a density keeps its pinned profile; a malformed
- * one is left for validation to report rather than silently replaced.
+ * Choosing SUMO also records a vehicles-only profile
+ * ({@link profileForTrafficSource}). A document that already has a density
+ * the source can generate keeps its pinned profile; a malformed one is left
+ * for validation to report rather than silently replaced.
  */
 export function ambientTrafficSourceSelection(
   document: {
@@ -175,7 +177,42 @@ export function ambientTrafficSourceSelection(
   const current = stored.kind === 'valid'
     ? stored.profile
     : ambientProfileMissingDefault(document) === 'off' ? offAmbientTrafficProfile() : defaultAmbientTrafficProfile();
-  if (current.preset !== 'off') return entries;
-  entries[PROFILE_EXTENSION_KEY] = profileForPreset(DEFAULT_TRAFFIC_SOURCE_PRESET, current);
+  const chosen = current.preset === 'off' ? profileForPreset(DEFAULT_TRAFFIC_SOURCE_PRESET, current) : current;
+  const forSource = profileForTrafficSource(provider, chosen);
+  // Only write when the profile changes: a document that already has a
+  // density the source can generate keeps its pinned profile byte-for-byte.
+  if (forSource !== current) entries[PROFILE_EXTENSION_KEY] = forSource;
   return entries;
+}
+
+/**
+ * Shown wherever SUMO is the traffic source: SUMO demand is vehicles on
+ * passenger routes, so its profiles record no pedestrian or cyclist share.
+ */
+export const SUMO_VEHICLES_ONLY_NOTE = 'SUMO generates vehicles only: pedestrian and cyclist shares are set to 0.';
+
+/**
+ * The profile a traffic source runs as written. SUMO generates vehicles only,
+ * so choosing SUMO (or a density while SUMO is the source) records a profile
+ * with `pedestrianShare` and `cyclistShare` 0 in the document, explicitly,
+ * instead of the engine dropping them at simulation time. Every other
+ * source (and an `off` profile, or one already vehicles-only) is returned
+ * unchanged, as the same object.
+ */
+export function profileForTrafficSource(
+  provider: AmbientTrafficProviderId,
+  profile: ResolvedAmbientTrafficProfile,
+): ResolvedAmbientTrafficProfile {
+  if (provider !== 'sumo' || profile.preset === 'off') return profile;
+  if (profile.pedestrianShare === 0 && profile.cyclistShare === 0) return profile;
+  return resolveAmbientTrafficProfile({ ...profile, pedestrianShare: 0, cyclistShare: 0 });
+}
+
+/** {@link profileForPreset} for the document's traffic source ({@link profileForTrafficSource}). */
+export function profileForSourcePreset(
+  provider: AmbientTrafficProviderId,
+  preset: AmbientTrafficPreset,
+  current: AmbientTrafficProfile = defaultAmbientTrafficProfile(),
+): ResolvedAmbientTrafficProfile {
+  return profileForTrafficSource(provider, profileForPreset(preset, current));
 }

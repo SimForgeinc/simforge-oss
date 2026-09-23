@@ -8,6 +8,8 @@ import {
   ambientTrafficProviderFromExtensions,
   ambientTrafficSourceSelection,
   profileForPreset,
+  profileForSourcePreset,
+  SUMO_VEHICLES_ONLY_NOTE,
   type AmbientTrafficProviderId,
   type SumoTrafficStatus,
 } from "@simforge-oss/playback/traffic";
@@ -129,7 +131,7 @@ export function AddTrafficPanel({
                 label={choice.label}
                 onChoose={() => document.setAmbientTrafficExtension(
                   AMBIENT_TRAFFIC_EXTENSION_KEY,
-                  profileForPreset(choice.value, profile),
+                  profileForSourcePreset(provider, choice.value, profile),
                 )}
                 testId={`traffic-density-${choice.value}`}
               />
@@ -137,6 +139,12 @@ export function AddTrafficPanel({
           })}
         </PanelTileGrid>
       </PanelSection>
+
+      {provider === "sumo" ? (
+        <p style={styles.note} data-testid="add-traffic-sumo-vehicles-only">
+          {SUMO_VEHICLES_ONLY_NOTE}
+        </p>
+      ) : null}
 
       {profile.preset === "custom" ? (
         <p style={styles.note} data-testid="add-traffic-custom-note">
@@ -205,7 +213,7 @@ export function trafficSearchResults(
       active: profile.preset === choice.value,
       apply: () => document.setAmbientTrafficExtension(
         AMBIENT_TRAFFIC_EXTENSION_KEY,
-        profileForPreset(choice.value, profile),
+        profileForSourcePreset(provider, choice.value, profile),
       ),
     });
   }

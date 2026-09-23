@@ -19,6 +19,8 @@ import {
   ambientPromotionCapability,
   ambientSignalCycleSettingsFromExtensions,
   ambientTrafficSourceSelection,
+  profileForSourcePreset,
+  profileForTrafficSource,
 } from './model';
 
 describe('ambient traffic preference', () => {
@@ -148,11 +150,18 @@ describe('choosing a traffic source', () => {
   const PROFILE = 'studio.ambientTraffic.profile.v1';
   const pinned = { simulation: { seed: 'doc-seed', dtS: 0.02 } };
 
-  it('gives SUMO on a new (pinned, profile-less) document the City density staging QA ran', () => {
+  it('gives SUMO on a new (pinned, profile-less) document the City density staging QA ran, vehicles only', () => {
     const entries = ambientTrafficSourceSelection({ ...pinned, extensions: {} }, 'sumo');
     expect(entries[PROVIDER]).toBe('sumo');
+    // The legacy implicit default (City, seed `ambient-1`) with the road-user
+    // shares SUMO cannot generate recorded as 0 in the document.
+    expect(entries[PROFILE]).toEqual({ ...defaultAmbientTrafficProfile(), pedestrianShare: 0, cyclistShare: 0 });
+    expect(entries[PROFILE]).toMatchObject({ preset: 'city', seed: 'ambient-1', pedestrianShare: 0, cyclistShare: 0 });
+  });
+
+  it('gives native traffic on a new document the full City population', () => {
+    const entries = ambientTrafficSourceSelection({ ...pinned, extensions: {} }, 'native');
     expect(entries[PROFILE]).toEqual(profileForPreset('city', offAmbientTrafficProfile()));
-    // Exactly the legacy implicit default: City, seed `ambient-1`.
     expect(entries[PROFILE]).toEqual(defaultAmbientTrafficProfile());
   });
 
@@ -164,11 +173,22 @@ describe('choosing a traffic source', () => {
     expect(entries[PROFILE]).toMatchObject({ preset: 'city', seed: 'my-seed' });
   });
 
-  it('never changes a document that already has a density', () => {
+  it('never changes a density the chosen source can generate', () => {
     const light = { version: 1, preset: 'light', seed: 'kept' };
-    expect(ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: light } }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+    expect(ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: light } }, 'native')).toEqual({ [PROVIDER]: 'native' });
     // A pre-pinning document without a profile already runs City traffic.
-    expect(ambientTrafficSourceSelection({ extensions: {} }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+    expect(ambientTrafficSourceSelection({ extensions: {} }, 'native')).toEqual({ [PROVIDER]: 'native' });
+    const vehiclesOnly = { ...light, pedestrianShare: 0, cyclistShare: 0 };
+    expect(ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: vehiclesOnly } }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+  });
+
+  it('records a vehicles-only profile when SUMO replaces a density that asks for road users', () => {
+    // Light carries 4% cyclists; City 6% pedestrians / 2% cyclists.
+    const light = { version: 1, preset: 'light', seed: 'kept' };
+    const entries = ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: light } }, 'sumo');
+    expect(entries[PROFILE]).toMatchObject({ preset: 'light', seed: 'kept', pedestrianShare: 0, cyclistShare: 0 });
+    const legacy = ambientTrafficSourceSelection({ extensions: {} }, 'sumo');
+    expect(legacy[PROFILE]).toMatchObject({ preset: 'city', seed: 'ambient-1', pedestrianShare: 0, cyclistShare: 0 });
   });
 
   it('leaves a malformed profile for validation to report', () => {
@@ -177,5 +197,27 @@ describe('choosing a traffic source', () => {
 
   it('switching traffic off only changes the source', () => {
     expect(ambientTrafficSourceSelection({ ...pinned, extensions: {} }, 'off')).toEqual({ [PROVIDER]: 'off' });
+  });
+});
+
+describe('SUMO generates vehicles only', () => {
+  it('records zero road-user shares for every preset chosen under SUMO, and nothing else changes', () => {
+    for (const preset of ['light', 'moderate', 'city', 'heavy'] as const) {
+      const full = profileForPreset(preset, { version: 1, preset: 'custom', seed: 'seed-7' });
+      const sumo = profileForSourcePreset('sumo', preset, { version: 1, preset: 'custom', seed: 'seed-7' });
+      expect(sumo).toEqual({ ...full, pedestrianShare: 0, cyclistShare: 0 });
+      expect(profileForSourcePreset('native', preset, { version: 1, preset: 'custom', seed: 'seed-7' })).toEqual(full);
+    }
+  });
+
+  it('keeps a custom profile hand-tuned under SUMO vehicles-only and leaves off, native and already-clean profiles untouched', () => {
+    const custom = profileForPreset('custom', { ...defaultAmbientTrafficProfile(), preset: 'custom', cyclistShare: 0.3 });
+    expect(profileForSourcePreset('sumo', 'custom', custom)).toMatchObject({ preset: 'custom', cyclistShare: 0, pedestrianShare: 0 });
+    const off = offAmbientTrafficProfile();
+    expect(profileForTrafficSource('sumo', off)).toBe(off);
+    const city = defaultAmbientTrafficProfile();
+    expect(profileForTrafficSource('native', city)).toBe(city);
+    const clean = profileForTrafficSource('sumo', city);
+    expect(profileForTrafficSource('sumo', clean)).toBe(clean);
   });
 });

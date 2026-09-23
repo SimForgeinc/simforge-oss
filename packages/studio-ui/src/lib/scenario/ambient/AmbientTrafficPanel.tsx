@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import type { AmbientTrafficProvenance, ResolvedAmbientTrafficProfile } from '@simforge-oss/engine';
-import { ambientPromotionCapability, nextAmbientSeed, profileForPreset, type AmbientTrafficPreset } from '@simforge-oss/playback/traffic';
+import { ambientPromotionCapability, nextAmbientSeed, profileForSourcePreset, profileForTrafficSource, SUMO_VEHICLES_ONLY_NOTE, type AmbientTrafficPreset } from '@simforge-oss/playback/traffic';
 import type { AmbientRobustnessSummary } from '../playback/scenario-worker';
 import type { AmbientTrafficProviderId, SumoTrafficStatus } from '@simforge-oss/playback/traffic';
 
@@ -95,6 +95,19 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
           <strong>Ambient traffic off</strong>
           <div>No background vehicles or traffic engine are running.</div>
         </div> : null}
+        {provider === 'sumo' ? <div style={styles.status} role="status" data-testid="sumo-vehicles-only">
+          {SUMO_VEHICLES_ONLY_NOTE}
+          {profile.preset !== 'off' && (profile.pedestrianShare > 0 || profile.cyclistShare > 0) ? <div style={styles.error} role="alert" data-testid="sumo-road-user-share-conflict">
+            This scenario asks for {Math.round(profile.pedestrianShare * 100)}% pedestrians and {Math.round(profile.cyclistShare * 100)}% cyclists, which SUMO cannot generate: the server simulation refuses it.
+            <button
+              type="button"
+              style={styles.regenerate}
+              onClick={() => onChange(profileForTrafficSource('sumo', profile))}
+              disabled={busy}
+              data-testid="sumo-use-vehicles-only"
+            >Use vehicles only</button>
+          </div> : null}
+        </div> : null}
         {provider === 'sumo' && sumoStatus ? <div style={sumoStatus.phase === 'fallback' ? styles.error : styles.status} data-testid="sumo-traffic-status">
           <strong>{sumoStatus.phase === 'fallback' ? 'SUMO preview unavailable' : `SUMO preview ${sumoStatus.phase}`}</strong>
           {sumoStatus.reason ? ` · ${sumoStatus.reason}` : null}
@@ -139,7 +152,7 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
           Density preset
           <select
             value={profile.preset}
-            onChange={(event) => onChange(profileForPreset(event.target.value as AmbientTrafficPreset, profile))}
+            onChange={(event) => onChange(profileForSourcePreset(provider, event.target.value as AmbientTrafficPreset, profile))}
             style={styles.select}
             data-testid="ambient-traffic-preset"
             disabled={busy || engineOff}
@@ -218,7 +231,7 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
             min={0} max={Math.max(0, 1 - profile.pedestrianShare)} step={0.01}
             display={`${Math.round(profile.cyclistShare * 100)}%`}
             testId="ambient-traffic-cyclist-share"
-            disabled={busy || engineOff}
+            disabled={busy || engineOff || provider === 'sumo'}
             onChange={(cyclistShare) => updateCustom({ cyclistShare })}
           />
           <Range
@@ -227,7 +240,7 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
             min={0} max={Math.max(0, 1 - profile.cyclistShare)} step={0.01}
             display={`${Math.round(profile.pedestrianShare * 100)}%`}
             testId="ambient-traffic-pedestrian-share"
-            disabled={busy || engineOff}
+            disabled={busy || engineOff || provider === 'sumo'}
             onChange={(pedestrianShare) => updateCustom({ pedestrianShare })}
           />
         </div> : null}
@@ -279,7 +292,7 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
           type="button"
           style={styles.action}
           disabled={busy || engineOff}
-          onClick={() => onChange(defaultAmbientProfileForReset(profile))}
+          onClick={() => onChange(defaultAmbientProfileForReset(provider, profile))}
           data-testid="ambient-traffic-reset"
         >Reset to City</button>
       </div> : null}
@@ -346,8 +359,8 @@ export function AmbientTrafficPopover({ onClose, ...panelProps }: AmbientTraffic
   </div>;
 }
 
-function defaultAmbientProfileForReset(profile: ResolvedAmbientTrafficProfile): ResolvedAmbientTrafficProfile {
-  return profileForPreset('city', { ...profile, seed: 'ambient-1' });
+function defaultAmbientProfileForReset(provider: AmbientTrafficProviderId, profile: ResolvedAmbientTrafficProfile): ResolvedAmbientTrafficProfile {
+  return profileForSourcePreset(provider, 'city', { ...profile, seed: 'ambient-1' });
 }
 
 function Range({ label, value, min, max, step, display, testId, disabled, onChange }: {
