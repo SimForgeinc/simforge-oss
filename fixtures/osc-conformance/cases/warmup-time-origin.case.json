@@ -1,0 +1,74 @@
+{
+  "id": "warmup-time-origin",
+  "feature": "SimulationTime origin with a warm-up prologue",
+  "osc": [
+    "SimulationTimeCondition",
+    "StopTrigger"
+  ],
+  "description": "warmupSeconds=2: an `at 1 s` trigger means SimulationTime 3 s in the exported file.",
+  "clipSeconds": 6,
+  "warmupSeconds": 2,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "cubic",
+        "constraint": "time",
+        "value": 3
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SimulationTimeCondition (class reference)",
+      "8.5 Init section execution"
+    ],
+    "derivation": "Clip time t = SimulationTime - 2. At clip t=0 ego has driven 40 m (x=90). Cubic 20->10 over clip [1,4].",
+    "actors": {
+      "ego": {
+        "x0": 90,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1.0,
+            "to": 10,
+            "shape": "cubic",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-13"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

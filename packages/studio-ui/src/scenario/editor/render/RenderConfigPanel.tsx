@@ -118,9 +118,11 @@ const ENGINE_OPTIONS: {
 
 /**
  * The host's truthful answer for one engine card. esmini runs on the CPU job lane and is not a
- * registered renderer. Every other engine is either not offered by this host at all (no
- * capability key: submission would be rejected), offered without healthy capacity right now, or
- * ready.
+ * registered renderer: it is a validation run (`openscenario_validate`), so it is offered only
+ * when the host lists that job family in `jobs.families`. A host that has no executor for that
+ * lane (SimCloud, today) leaves the family out and the card is not a choice. Every other engine
+ * is either not offered by this host at all (no capability key: submission would be rejected),
+ * offered without healthy capacity right now, or ready.
  *
  * A LOCAL host runs the native renderer from a binary it installed on its own machine, so it
  * additionally reports whether that runtime is present and the card says when it is not. A cloud
@@ -128,12 +130,16 @@ const ENGINE_OPTIONS: {
  * engine has is whether a worker is serving it, and "not installed" would be a claim about a
  * machine that is not in this deployment.
  */
-function engineAvailability(
+export function engineAvailability(
   engine: RenderBackend,
   capabilities: StudioHostCapabilities | null,
 ): { offered: boolean; badge: string | null; reason: string | null } {
-  if (engine === "esmini") return { offered: true, badge: null, reason: null };
   if (!capabilities) return { offered: false, badge: "Checking host", reason: null };
+  if (engine === "esmini") {
+    return capabilities.jobs.families.includes("openscenario_validate")
+      ? { offered: true, badge: null, reason: null }
+      : { offered: false, badge: "Not offered", reason: `${capabilities.host.label} does not run esmini validation.` };
+  }
   const worker = capabilities.execution.renderWorkers[engine];
   if (!worker) {
     if (engine === "carla") {
@@ -469,15 +475,13 @@ export function RenderConfigPanel({
    * host would reject as an invalid render job. Missing capacity is different — a durable job may
    * queue until a worker appears — and is shown, not gated.
    */
-  const hostBlock = backend === "esmini"
-    ? null
-    : hostCapabilitiesState.status === "loading"
-      ? "Checking which render engines this host accepts…"
-      : hostCapabilitiesState.status === "error"
-        ? `Could not read this host's render capabilities: ${hostCapabilitiesState.error.message}`
-        : engineAvailabilityState.offered
-          ? null
-          : engineAvailabilityState.reason;
+  const hostBlock = hostCapabilitiesState.status === "loading"
+    ? "Checking which render engines this host accepts…"
+    : hostCapabilitiesState.status === "error"
+      ? `Could not read this host's render capabilities: ${hostCapabilitiesState.error.message}`
+      : engineAvailabilityState.offered
+        ? null
+        : engineAvailabilityState.reason;
 
   const submitDisabled = stage != null || issues.length > 0 || hostBlock !== null;
 

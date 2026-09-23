@@ -140,7 +140,7 @@ const BUNDLED_CATALOG = [
     actorClass: 'motorcycle',
     description:
       'Standard motorcycle with a helmeted rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.',
-    dims: { l: 2.1, w: 0.75, h: 1.23 },
+    dims: { l: 2.1, w: 0.75, h: 1.51 },
     tags: ['occlusion:low', 'mobile', 'vru', 'parkable', 'roadway'],
     defaultParams: { color: '#25282c' },
     model: CARLA_VEHICLE_MODELS['vehicle.motorcycle'],
@@ -152,7 +152,7 @@ const BUNDLED_CATALOG = [
     actorClass: 'bicycle',
     description:
       'Bicycle with a seated rider. The reference vulnerable road user for bike-lane, dooring and right-hook conflicts.',
-    dims: { l: 1.75, w: 0.5, h: 1.71 },
+    dims: { l: 1.75, w: 0.62, h: 1.76 },
     tags: ['occlusion:low', 'mobile', 'vru', 'roadway'],
     defaultParams: { color: '#2f4f74' },
     model: CARLA_VEHICLE_MODELS['vehicle.bicycle'],

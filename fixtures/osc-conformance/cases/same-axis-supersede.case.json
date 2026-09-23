@@ -1,0 +1,102 @@
+{
+  "id": "same-axis-supersede",
+  "feature": "A newer SpeedAction overrides a running one",
+  "osc": [
+    "SpeedAction",
+    "Event.priority=override"
+  ],
+  "description": "A: 20->10 m/s linear 4 s at t=1. B: to 25 m/s linear 2 s at t=2.",
+  "clipSeconds": 6,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "a",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 4
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    },
+    {
+      "id": "b",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 25
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 2
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "7.5.1 Conflicting actions (same domain: newer action overrides)",
+      "8.4.2.2 Event priority (override/skip/parallel)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)"
+    ],
+    "derivation": "At t=2 A has reached 17.5 m/s; B overrides it (same domain) and A moves to completeState via stopTransition. B ramps 17.5->25 over [2,4].",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "linear",
+            "durationS": 4
+          },
+          {
+            "t0": 2,
+            "to": 25,
+            "shape": "linear",
+            "durationS": 2
+          }
+        ]
+      }
+    },
+    "events": {
+      "a": {
+        "start": 1.0,
+        "end": 2.0
+      },
+      "b": {
+        "start": 2.0,
+        "end": 4.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

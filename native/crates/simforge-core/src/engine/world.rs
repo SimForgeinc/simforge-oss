@@ -137,6 +137,10 @@ pub struct RunOptions {
     /// Retain per-tick tracks/metrics so `build_trace` is available. Forced
     /// off in `Live` mode.
     pub capture_trace: bool,
+    /// The map ground surface. With it the engine grounds every body each
+    /// tick (z, pitch, roll in the trace, v5); without it the trace has no
+    /// vertical channels and nothing downstream may invent them.
+    pub ground: Option<super::contact::SharedGround>,
 }
 
 impl RunOptions {
@@ -150,6 +154,7 @@ impl RunOptions {
             ambient_reactivity: AmbientReactivity::Scripted,
             mode: SessionMode::Clip,
             capture_trace: true,
+            ground: None,
         }
     }
 }
@@ -211,6 +216,10 @@ pub struct ActorSnapshot {
     /// own (static actors and props).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub telemetry: Option<VehicleTelemetry>,
+    /// Ground contact (z, pitch, roll) when the simulation runs on a ground
+    /// surface and the actor is present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact: Option<crate::trace::ContactFrame>,
 }
 
 /// Running episode minima for one monitored pair.
@@ -350,6 +359,8 @@ pub struct Simulation {
     /// The one motion backend. Every non-static actor is a body in it.
     pub(super) physics: DynamicV1Backend,
     pub(super) telemetry: Vec<Option<PhysicsTelemetrySample>>,
+    /// Ground contact per actor (registration order); unused without a ground.
+    pub(super) contact: Vec<super::contact::ContactState>,
     pub(super) arrival: Vec<ArrivalSolution>,
     /// Live-mode actors added after construction, in registration order.
     pub(super) spawned: Vec<SimActor>,
@@ -571,7 +582,7 @@ impl Simulation {
             .filter(|a| !a.is_static && a.kind != ActorKind::StaticObject)
             .map(|a| a.id.as_str())
             .collect();
-        let recorder = TraceRecorder::new(
+        let mut recorder = TraceRecorder::new(
             input.actors.iter().map(|a| a.id.as_str()),
             signals.ids(),
             &physics_actor_ids,
@@ -586,6 +597,9 @@ impl Simulation {
                 0
             },
         );
+        if options.ground.is_some() {
+            recorder = recorder.with_contact();
+        }
         let mut sim = Simulation {
             graph: graph.clone(),
             options,
@@ -621,6 +635,7 @@ impl Simulation {
             physics_config,
             physics,
             telemetry: Vec::new(),
+            contact: Vec::new(),
             arrival,
             spawned: Vec::new(),
             perception: None,
@@ -761,6 +776,7 @@ impl Simulation {
         }
         self.initial_route_ref.push(route_ref);
         self.telemetry.push(None);
+        self.contact.push(super::contact::ContactState::default());
         self.collision_snapshots.push(CollisionSnapshot::default());
         self.attached.push(self.attached_props_for(&rt.id));
         self.occluder_keys.add(&rt, &self.input.occlusion_pairs);
@@ -947,6 +963,7 @@ impl Simulation {
             position: pose_point,
             heading_rad: spawn_heading,
             present: spec.present_at_start,
+            pending_present: None,
             retired: false,
             long_cmd: None,
             lat_cmd: None,
@@ -1140,6 +1157,8 @@ impl Simulation {
             s: a.route_s,
             lane: a.route.pose_at(a.route_s).lane,
             telemetry: self.vehicle_telemetry(index),
+            contact: (self.options.ground.is_some() && a.present)
+                .then(|| self.contact[index.index()].frame),
         }
     }
 
@@ -1493,6 +1512,7 @@ impl Simulation {
                 self.observe_perception(t);
             }
             if t >= 0.0 {
+                self.evaluate_longitudinal_completions(t);
                 self.evaluate_window_ends(t);
                 self.evaluate_triggers(t);
                 self.evaluate_until(t);
@@ -1502,6 +1522,9 @@ impl Simulation {
                 if self.actors[index].pending_motion_direction.is_some() {
                     self.engage_pending_gear(ActorIndex(index as u32), t)?;
                 }
+            }
+            if self.options.ground.is_some() {
+                self.update_contacts()?;
             }
             if self.capture && (t >= 0.0 || self.options.include_warmup_trace) {
                 self.record_tracks(t)?;

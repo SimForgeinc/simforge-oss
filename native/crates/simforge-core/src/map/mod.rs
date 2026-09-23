@@ -16,6 +16,7 @@
 //! - [`TimedRoute`] is the authored schedule of a `timedPolyline` actor: the
 //!   speed profile the force-based backend drives the drawn route at.
 
+pub mod ground;
 pub mod lane_graph;
 pub mod route;
 pub mod timed;

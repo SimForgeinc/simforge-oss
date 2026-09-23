@@ -12,9 +12,9 @@ use simforge_compiler::ambient::{
     AmbientTrafficOptions, AmbientTrafficProfile,
 };
 use simforge_compiler::anchor::lift::{
-    LiftOrigin, PortableLiftIssue, PortableLiftOptions, PortableLiftResult,
-    PortableSourceSignature,
+    LiftOrigin, PortableLiftIssue, PortableLiftOptions, PortableLiftResult, PortableSourceSignature,
 };
+use simforge_compiler::map_signals::SignalMapView;
 use simforge_compiler::map_signals::{
     build_map_control_plan, build_site_signal_plan, parse_map_signal_catalog,
     resolve_site_signal_program, MapSignalCatalog, SiteSignalRef,
@@ -27,7 +27,6 @@ use simforge_compiler::signal_plan::{
     expand_map_signal_movements, select_signal_plan_reference, CompileMapSignalPlansOptions,
     SignalControlIndex, SignalReferenceSelection,
 };
-use simforge_compiler::map_signals::SignalMapView;
 use simforge_compiler::sites::{match_on_map, SiteMatchOptions};
 use simforge_compiler::situation::{
     apply_situation_transaction, compare_situation, compile_situation, parse_situation,
@@ -55,7 +54,9 @@ impl From<CompileError> for BindingError {
 }
 pub fn parse_signal_catalog_json(xodr: &str, geojson_json: &str) -> Result<String> {
     let geojson = json_arg("signals geojson", geojson_json)?;
-    Ok(serde_json::to_string(&parse_map_signal_catalog(xodr, &geojson))?)
+    Ok(serde_json::to_string(&parse_map_signal_catalog(
+        xodr, &geojson,
+    ))?)
 }
 
 fn json_arg<T: serde::de::DeserializeOwned>(what: &str, text: &str) -> Result<T> {
@@ -67,12 +68,68 @@ fn json_arg<T: serde::de::DeserializeOwned>(what: &str, text: &str) -> Result<T>
 pub struct MapAsset {
     bundle: MapBundle,
     graph: Graph,
+    /// OpenDRIVE text, kept for the ground deck hint.
+    xodr: Option<std::sync::Arc<String>>,
 }
 
 impl MapAsset {
     /// Load an installed map directory from the immutable corpus layout.
+    /// A map directory that carries `derived/ground/ground-mesh.bin` is
+    /// loaded with its ground surface attached (engine 0.11 contact).
     pub fn load(dir: &Path) -> Result<Self> {
-        Self::from_bundle(MapBundle::load(dir)?)
+        let mut asset = Self::from_bundle(MapBundle::load(dir)?)?;
+        let xodr = dir.join(simforge_compiler::bundle::XODR_FILE);
+        if xodr.is_file() {
+            let text = std::fs::read_to_string(&xodr)
+                .map_err(|e| BindingError::argument(format!("{}: {e}", xodr.display())))?;
+            asset.xodr = Some(std::sync::Arc::new(text));
+        }
+        let ground = dir.join(simforge_core::map::ground::GROUND_MESH_MEMBER);
+        if ground.is_file() {
+            let bytes = std::fs::read(&ground)
+                .map_err(|e| BindingError::argument(format!("{}: {e}", ground.display())))?;
+            asset.attach_ground(&bytes)?;
+        }
+        Ok(asset)
+    }
+
+    /// Attach the map's ground surface (`derived/ground/ground-mesh.bin`):
+    /// every world built from this map afterwards grounds its bodies on it
+    /// (trace v5 contact). Returns the surface digest. The OpenDRIVE of the
+    /// bundle, when present, supplies spawn deck hints.
+    pub fn attach_ground(&mut self, ground_mesh: &[u8]) -> Result<String> {
+        let ground = simforge_core::engine::GroundContext::from_bytes(
+            ground_mesh,
+            self.xodr
+                .as_ref()
+                .map(|xodr| (xodr.as_bytes(), self.bundle.topology())),
+        )
+        .map_err(|e| BindingError::argument(format!("ground mesh: {e}")))?;
+        let digest = ground.digest().to_owned();
+        self.graph.set_ground(std::sync::Arc::new(ground));
+        Ok(digest)
+    }
+
+    /// Digest of the attached ground surface, if any.
+    pub fn ground_digest(&self) -> Option<&str> {
+        self.graph.ground_digest()
+    }
+
+    /// `simforge.map-closure/v1` identity of everything a simulation reads
+    /// from this map. With a ground surface attached (engine 0.11 contact)
+    /// the ground digest is part of it, so a simulation key never aliases a
+    /// grounded and an ungrounded world.
+    pub fn closure_digest(&self) -> String {
+        let base = self.bundle.closure_digest();
+        match self.ground_digest() {
+            None => base.to_owned(),
+            Some(ground) => simforge_core::hash::content_hash_of(&serde_json::json!({
+                "schema": "simforge.map-closure-ground/v1",
+                "closureDigest": base,
+                "groundDigest": ground,
+            }))
+            .expect("plain strings"),
+        }
     }
 
     /// Bundle a bare topology sidecar (plain or gzip) under `map_id`.
@@ -131,6 +188,7 @@ impl MapAsset {
             };
             (colliders, diagnostics)
         });
+        let xodr = s.xodr.clone().map(std::sync::Arc::new);
         let bundle = MapBundle::from_sources(MapBundleSources {
             map_id: s.map_id,
             topology: Some(TopologyIndex::decode(topology)?),
@@ -141,7 +199,9 @@ impl MapAsset {
             signals_geojson: s.signals_geojson,
             static_colliders,
         })?;
-        Self::from_bundle(bundle)
+        let mut asset = Self::from_bundle(bundle)?;
+        asset.xodr = xodr;
+        Ok(asset)
     }
 
     fn from_bundle(bundle: MapBundle) -> Result<Self> {
@@ -151,7 +211,11 @@ impl MapAsset {
             bundle.static_colliders().to_vec(),
             digest,
         );
-        Ok(Self { bundle, graph })
+        Ok(Self {
+            bundle,
+            graph,
+            xodr: None,
+        })
     }
 
     pub fn map_id(&self) -> &str {
@@ -205,69 +269,164 @@ impl MapAsset {
     /// Build map controls from an explicitly supplied catalog, preserving authored catalog overrides.
     pub fn control_plan_json_with_catalog(&self, catalog_json: &str) -> Result<String> {
         let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
-        let view = SignalMapView { index: self.bundle.index(), graph: self.bundle.graph(), topology: self.bundle.topology(), signal_catalog: &catalog };
+        let view = SignalMapView {
+            index: self.bundle.index(),
+            graph: self.bundle.graph(),
+            topology: self.bundle.topology(),
+            signal_catalog: &catalog,
+        };
         Ok(serde_json::to_string(&build_map_control_plan(&view))?)
     }
 
     pub fn signal_control_index_json_with_catalog(&self, catalog_json: &str) -> Result<String> {
         let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
-        let view = SignalMapView { index: self.bundle.index(), graph: self.bundle.graph(), topology: self.bundle.topology(), signal_catalog: &catalog };
+        let view = SignalMapView {
+            index: self.bundle.index(),
+            graph: self.bundle.graph(),
+            topology: self.bundle.topology(),
+            signal_catalog: &catalog,
+        };
         let plan = build_map_control_plan(&view);
-        let heads = catalog.heads.iter().map(|head| head.id.clone()).collect::<Vec<_>>();
-        Ok(serde_json::to_string(&build_signal_control_index(&plan.signal_programs, &heads))?)
+        let heads = catalog
+            .heads
+            .iter()
+            .map(|head| head.id.clone())
+            .collect::<Vec<_>>();
+        Ok(serde_json::to_string(&build_signal_control_index(
+            &plan.signal_programs,
+            &heads,
+        ))?)
     }
-    pub fn signal_control_index_json_with_programs(&self, programs_json: &str, catalog_json: &str) -> Result<String> {
-        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
+    pub fn signal_control_index_json_with_programs(
+        &self,
+        programs_json: &str,
+        catalog_json: &str,
+    ) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> =
+            json_arg("signal programs", programs_json)?;
         let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
-        let heads = catalog.heads.iter().map(|head| head.id.clone()).collect::<Vec<_>>();
-        Ok(serde_json::to_string(&build_signal_control_index(&programs, &heads))?)
+        let heads = catalog
+            .heads
+            .iter()
+            .map(|head| head.id.clone())
+            .collect::<Vec<_>>();
+        Ok(serde_json::to_string(&build_signal_control_index(
+            &programs, &heads,
+        ))?)
     }
 
-    pub fn expand_map_signal_movements_json(&self, programs_json: &str, plans_json: &str) -> Result<String> {
-        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
-        let plans: Vec<simforge_compiler::template::MapSignalPlan> = json_arg("map signal plans", plans_json)?;
-        Ok(serde_json::to_string(&expand_map_signal_movements(&programs, &plans)?)?)
+    pub fn expand_map_signal_movements_json(
+        &self,
+        programs_json: &str,
+        plans_json: &str,
+    ) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> =
+            json_arg("signal programs", programs_json)?;
+        let plans: Vec<simforge_compiler::template::MapSignalPlan> =
+            json_arg("map signal plans", plans_json)?;
+        Ok(serde_json::to_string(&expand_map_signal_movements(
+            &programs, &plans,
+        )?)?)
     }
 
     pub fn parse_signal_catalog_json(&self, xodr: &str, geojson_json: &str) -> Result<String> {
         let geojson = json_arg("signals geojson", geojson_json)?;
-        Ok(serde_json::to_string(&parse_map_signal_catalog(xodr, &geojson))?)
+        Ok(serde_json::to_string(&parse_map_signal_catalog(
+            xodr, &geojson,
+        ))?)
     }
 
-    pub fn compile_signal_plans_json(&self, programs_json: &str, plans_json: &str, options_json: &str, catalog_json: &str) -> Result<String> {
-        let programs: Vec<simforge_core::types::SignalProgram> = json_arg("signal programs", programs_json)?;
-        let plans: Vec<simforge_compiler::template::MapSignalPlan> = json_arg("map signal plans", plans_json)?;
+    pub fn compile_signal_plans_json(
+        &self,
+        programs_json: &str,
+        plans_json: &str,
+        options_json: &str,
+        catalog_json: &str,
+    ) -> Result<String> {
+        let programs: Vec<simforge_core::types::SignalProgram> =
+            json_arg("signal programs", programs_json)?;
+        let plans: Vec<simforge_compiler::template::MapSignalPlan> =
+            json_arg("map signal plans", plans_json)?;
         let options: serde_json::Value = json_arg("compile options", options_json)?;
-        let map_id: String = serde_json::from_value(options.get("mapId").cloned().ok_or_else(|| BindingError::argument("compile options: mapId missing".to_owned()))?)?;
-        let clip_seconds: f64 = serde_json::from_value(options.get("clipSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: clipSeconds missing".to_owned()))?)?;
-        let warmup_seconds: f64 = serde_json::from_value(options.get("warmupSeconds").cloned().ok_or_else(|| BindingError::argument("compile options: warmupSeconds missing".to_owned()))?)?;
-        let world_signal_set_ids: Vec<String> = options.get("worldSignalSetIds").and_then(|value| serde_json::from_value(value.clone()).ok()).unwrap_or_default();
-        let world_routes: Option<std::collections::BTreeMap<String, simforge_compiler::signal_plan::WorldRouteBinding>> =
-            options.get("worldRoutes").and_then(|value| serde_json::from_value(value.clone()).ok());
+        let map_id: String =
+            serde_json::from_value(options.get("mapId").cloned().ok_or_else(|| {
+                BindingError::argument("compile options: mapId missing".to_owned())
+            })?)?;
+        let clip_seconds: f64 =
+            serde_json::from_value(options.get("clipSeconds").cloned().ok_or_else(|| {
+                BindingError::argument("compile options: clipSeconds missing".to_owned())
+            })?)?;
+        let warmup_seconds: f64 =
+            serde_json::from_value(options.get("warmupSeconds").cloned().ok_or_else(|| {
+                BindingError::argument("compile options: warmupSeconds missing".to_owned())
+            })?)?;
+        let world_signal_set_ids: Vec<String> = options
+            .get("worldSignalSetIds")
+            .and_then(|value| serde_json::from_value(value.clone()).ok())
+            .unwrap_or_default();
+        let world_routes: Option<
+            std::collections::BTreeMap<String, simforge_compiler::signal_plan::WorldRouteBinding>,
+        > = options
+            .get("worldRoutes")
+            .and_then(|value| serde_json::from_value(value.clone()).ok());
         let catalog: MapSignalCatalog = json_arg("signal catalog", catalog_json)?;
-        let compiled = compile_map_signal_plans(&programs, &plans, &CompileMapSignalPlansOptions {
-            map_id: &map_id, clip_seconds, warmup_seconds, signal_catalog: &catalog, world_signal_set_ids: &world_signal_set_ids,
-            world_routes: world_routes.as_ref(),
-        })?;
+        let compiled = compile_map_signal_plans(
+            &programs,
+            &plans,
+            &CompileMapSignalPlansOptions {
+                map_id: &map_id,
+                clip_seconds,
+                warmup_seconds,
+                signal_catalog: &catalog,
+                world_signal_set_ids: &world_signal_set_ids,
+                world_routes: world_routes.as_ref(),
+            },
+        )?;
         Ok(serde_json::to_string(&compiled)?)
     }
 
-    pub fn select_signal_reference_json(&self, index_json: &str, reference_json: &str) -> Result<Option<String>> {
+    pub fn select_signal_reference_json(
+        &self,
+        index_json: &str,
+        reference_json: &str,
+    ) -> Result<Option<String>> {
         let index: SignalControlIndex = json_arg("signal control index", index_json)?;
-        let reference: simforge_compiler::template::MapSignalHeadRef = json_arg("signal reference", reference_json)?;
+        let reference: simforge_compiler::template::MapSignalHeadRef =
+            json_arg("signal reference", reference_json)?;
         Ok(select_signal_plan_reference(&index, &reference)
             .map(|selection| serde_json::to_string(&selection))
             .transpose()?)
     }
 
-    pub fn evaluate_signal_reference_json(&self, index_json: &str, selection_json: &str, options_json: &str) -> Result<String> {
+    pub fn evaluate_signal_reference_json(
+        &self,
+        index_json: &str,
+        selection_json: &str,
+        options_json: &str,
+    ) -> Result<String> {
         let index: SignalControlIndex = json_arg("signal control index", index_json)?;
         let selection: SignalReferenceSelection = json_arg("signal selection", selection_json)?;
         let options: serde_json::Value = json_arg("signal evaluation", options_json)?;
-        let time_seconds = options.get("timeSeconds").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        let reference_phase = options.get("referencePhase").and_then(|v| v.as_str()).ok_or_else(|| BindingError::argument("signal evaluation: referencePhase missing".to_owned()))?;
-        let reference_phase = serde_json::from_value(serde_json::Value::String(reference_phase.to_owned())).map_err(|e| BindingError::argument(format!("signal evaluation: {e}")))?;
-        let evaluation = evaluate_signal_reference_phase(&index, &selection, time_seconds, reference_phase, &Default::default());
+        let time_seconds = options
+            .get("timeSeconds")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let reference_phase = options
+            .get("referencePhase")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                BindingError::argument("signal evaluation: referencePhase missing".to_owned())
+            })?;
+        let reference_phase =
+            serde_json::from_value(serde_json::Value::String(reference_phase.to_owned()))
+                .map_err(|e| BindingError::argument(format!("signal evaluation: {e}")))?;
+        let evaluation = evaluate_signal_reference_phase(
+            &index,
+            &selection,
+            time_seconds,
+            reference_phase,
+            &Default::default(),
+        );
         Ok(serde_json::to_string(&evaluation)?)
     }
     pub fn static_collider_diagnostics_json(&self) -> Result<String> {
@@ -868,14 +1027,18 @@ pub fn apply_situation_transaction_json(
 /// on role actors, then baked parked cars). `template_json` is the document.
 pub fn studio_concrete_input(scenario: &Scenario, template_json: &str) -> Result<Scenario> {
     let template: serde_json::Value = json_arg("scenario template", template_json)?;
-    let refined = simforge_compiler::studio_refinements::studio_concrete_input(scenario.input().clone(), &template)?;
+    let refined = simforge_compiler::studio_refinements::studio_concrete_input(
+        scenario.input().clone(),
+        &template,
+    )?;
     Ok(Scenario::from_input(refined))
 }
 
 /// The refinements every executor applies to the input it runs (stable
 /// high-speed world routes, cruise restoration after bounded speed actions).
 pub fn execution_refinements(scenario: &Scenario) -> Result<Scenario> {
-    let refined = simforge_compiler::studio_refinements::execution_refinements(scenario.input().clone())?;
+    let refined =
+        simforge_compiler::studio_refinements::execution_refinements(scenario.input().clone())?;
     Ok(Scenario::from_input(refined))
 }
 
@@ -897,14 +1060,15 @@ pub fn build_ambient_turn_verdicts_json(asset: &MapAsset) -> Result<String> {
     simforge_compiler::ambient_turns::compute_all_turn_verdicts(graph);
     let table = simforge_compiler::ambient_turns::turn_verdicts_json(graph);
     let mut value: serde_json::Value = serde_json::from_str(&table)?;
-    value["closureDigest"] = serde_json::Value::String(asset.bundle().closure_digest().to_owned());
+    value["closureDigest"] = serde_json::Value::String(asset.closure_digest());
     Ok(simforge_core::hash::canonical_json(&value)?)
 }
 
 /// Seed the process memo from a persisted verdict table; returns the count.
 /// Refuses a table from another `ENGINE_SEM_VER`.
 pub fn load_ambient_turn_verdicts(json: &str) -> Result<usize> {
-    simforge_compiler::ambient_turns::load_turn_verdicts_json(json).map_err(crate::error::BindingError::argument)
+    simforge_compiler::ambient_turns::load_turn_verdicts_json(json)
+        .map_err(crate::error::BindingError::argument)
 }
 
 /// Materialise an ambient-traffic profile onto `scenario` over `graph`.

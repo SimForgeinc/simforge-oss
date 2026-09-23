@@ -367,7 +367,7 @@
     "dims": {
       "l": 2.1,
       "w": 0.75,
-      "h": 1.23
+      "h": 1.51
     },
     "tags": [
       "occlusion:low",
@@ -585,8 +585,8 @@
     "description": "Bicycle with a seated rider. The reference vulnerable road user for bike-lane, dooring and right-hook conflicts.",
     "dims": {
       "l": 1.75,
-      "w": 0.5,
-      "h": 1.71
+      "w": 0.62,
+      "h": 1.76
     },
     "tags": [
       "occlusion:low",
@@ -4186,7 +4186,7 @@
     "dims": {
       "l": 2.1,
       "w": 0.75,
-      "h": 1.23
+      "h": 1.51
     },
     "tags": [
       "occlusion:low",
@@ -4208,8 +4208,8 @@
     "description": "Bicycle with a seated rider. The reference vulnerable road user for bike-lane, dooring and right-hook conflicts.",
     "dims": {
       "l": 1.75,
-      "w": 0.5,
-      "h": 1.71
+      "w": 0.62,
+      "h": 1.76
     },
     "tags": [
       "occlusion:low",

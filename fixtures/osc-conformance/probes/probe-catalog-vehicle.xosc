@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="3" date="2026-09-22T00:00:00" description="catalog vehicle" author="SimForge OSC conformance"/>
+  <CatalogLocations><VehicleCatalog><Directory path="catalogs"/></VehicleCatalog></CatalogLocations>
+  <RoadNetwork><LogicFile filepath="osc-conformance-straight.xodr"/></RoadNetwork>
+  <Entities>
+    <ScenarioObject name="ego"><CatalogReference catalogName="ConformanceVehicles" entryName="car"/></ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init><Actions>
+      <Private entityRef="ego">
+        <PrivateAction><TeleportAction><Position><WorldPosition x="50" y="-5.25" z="0" h="0"/></Position></TeleportAction></PrivateAction>
+        <PrivateAction><LongitudinalAction><SpeedAction><SpeedActionDynamics dynamicsShape="step" dynamicsDimension="time" value="0"/><SpeedActionTarget><AbsoluteTargetSpeed value="20"/></SpeedActionTarget></SpeedAction></LongitudinalAction></PrivateAction>
+      </Private>
+    </Actions></Init>
+    <Story name="story">
+      <Act name="act">
+        <ManeuverGroup name="idle" maximumExecutionCount="1"><Actors selectTriggeringEntities="false"/></ManeuverGroup>
+        <StartTrigger><ConditionGroup><Condition name="act_start" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="0" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>
+      </Act>
+    </Story>
+    <StopTrigger><ConditionGroup><Condition name="end" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="6" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StopTrigger>
+  </Storyboard>
+</OpenSCENARIO>

@@ -9,7 +9,6 @@ import {
   Gauge,
   MousePointer2,
   Play,
-  Route,
   SlidersHorizontal,
   Sparkles,
   Timer,
@@ -411,12 +410,6 @@ export function EditorTutorialGuide({
                             title="Scenario JSON"
                           >
                             Restores a SimForge scenario document, then asks you to confirm the target map when needed.
-                          </ImportCard>
-                          <ImportCard
-                            icon={<Route aria-hidden="true" className={stylex.props(styles.size4).className} />}
-                            title="OpenSCENARIO file"
-                          >
-                            Opens ASAM OpenSCENARIO, analyzes its map references, and reports anything that needs resolution before import.
                           </ImportCard>
                         </div>
                       </div>

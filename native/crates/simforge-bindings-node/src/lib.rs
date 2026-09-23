@@ -473,7 +473,7 @@ impl JsMapBundle {
     /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
     #[napi(getter)]
     pub fn closure_digest(&self) -> String {
-        self.inner.bundle().closure_digest().to_owned()
+        self.inner.closure_digest()
     }
     #[napi(getter)]
     pub fn graph(&self) -> JsLaneGraph {
@@ -487,6 +487,16 @@ impl JsMapBundle {
         Ok(Self {
             inner: MapAsset::from_sources(&sources_json, &topology).js()?,
         })
+    }
+    /// Attach the map's ground surface (`derived/ground/ground-mesh.bin`);
+    /// returns its digest. Worlds built afterwards ground every body on it.
+    #[napi]
+    pub fn attach_ground(&mut self, ground_mesh: Uint8Array) -> Result<String> {
+        self.inner.attach_ground(&ground_mesh).js()
+    }
+    #[napi(getter)]
+    pub fn ground_digest(&self) -> Option<String> {
+        self.inner.ground_digest().map(str::to_owned)
     }
     /// `{signalPrograms, roadControls}` bound from the map's signal catalog.
     #[napi]
@@ -1602,7 +1612,8 @@ pub struct JsTrace {
 
 #[napi]
 impl JsTrace {
-    /// Parse plain or gzip current-format trace JSON; older formats are rejected.
+    /// Parse plain or gzip trace JSON of any released format; older formats
+    /// are upgraded in memory (see `upgradeJson`), unknown ones rejected.
     #[napi(factory)]
     pub fn parse(data: Uint8Array) -> Result<Self> {
         Ok(Self {
@@ -1612,6 +1623,12 @@ impl JsTrace {
     #[napi]
     pub fn digest(&self) -> Result<String> {
         self.inner.digest().js()
+    }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `null` for a current-format trace.
+    #[napi]
+    pub fn upgrade_json(&self) -> Result<Option<String>> {
+        self.inner.upgrade_json().js()
     }
     #[napi]
     pub fn to_json(&self) -> Result<String> {

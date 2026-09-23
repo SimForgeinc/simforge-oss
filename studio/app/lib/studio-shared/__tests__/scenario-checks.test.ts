@@ -4,7 +4,6 @@ import {
   compareRuns,
   parityToChecks,
   runKinematicChecks,
-  runOscRoundTripChecks,
   summarizeChecks,
   tracksFromEsminiTrajectories,
   tracksFromCarlaTimeline,
@@ -69,66 +68,6 @@ describe("runKinematicChecks", () => {
     const checks = runKinematicChecks([{ actorId: "ped", kind: "walker", samples }]);
     const speed = checks.find((c) => c.id === "kinematic.walker_speed");
     expect(speed?.status).toBe("fail");
-  });
-});
-
-describe("runOscRoundTripChecks", () => {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<OpenSCENARIO>
-  <FileHeader revMajor="1" revMinor="0" date="2026-07-23T00:00:00Z" description="t" author="test"/>
-  <RoadNetwork><LogicFile filepath="Town03.xodr"/></RoadNetwork>
-  <Entities><ScenarioObject name="veh"><Vehicle name="vehicle.tesla.model3" vehicleCategory="car"/></ScenarioObject></Entities>
-  <Storyboard>
-    <Init><Actions><Private entityRef="veh">
-      <PrivateAction><TeleportAction><Position><WorldPosition x="0" y="0" z="0" h="0" p="0" r="0"/></Position></TeleportAction></PrivateAction>
-      <PrivateAction><LongitudinalAction><SpeedAction>
-        <SpeedActionDynamics dynamicsShape="step" value="0" dynamicsDimension="time"/>
-        <SpeedActionTarget><AbsoluteTargetSpeed value="8.333333"/></SpeedActionTarget>
-      </SpeedAction></LongitudinalAction></PrivateAction>
-    </Private></Actions></Init>
-    <Story name="S"><Act name="A">
-      <ManeuverGroup name="veh_group" maximumExecutionCount="1">
-        <Actors selectTriggeringEntities="false"><EntityRef entityRef="veh"/></Actors>
-        <Maneuver name="m"><Event name="e" priority="overwrite"><Action name="a"><PrivateAction><RoutingAction><FollowTrajectoryAction>
-          <Trajectory name="t" closed="false"><ParameterDeclarations/><Shape><Polyline>
-            <Vertex time="0"><Position><WorldPosition x="0" y="0" z="0" h="0"/></Position></Vertex>
-            <Vertex time="0"><Position><WorldPosition x="30" y="0" z="0" h="0"/></Position></Vertex>
-          </Polyline></Shape></Trajectory>
-          <TimeReference><None/></TimeReference>
-          <TrajectoryFollowingMode followingMode="position"/>
-        </FollowTrajectoryAction></RoutingAction></PrivateAction></Action></Event></Maneuver>
-      </ManeuverGroup>
-    </Act></Story>
-  </Storyboard>
-</OpenSCENARIO>`;
-
-  it("passes a faithful round-trip", () => {
-    const checks = runOscRoundTripChecks(
-      [
-        {
-          id: "veh",
-          placement_mode: "path",
-          spawn_point: { x: 0, y: 0 },
-          spawn_yaw: 0,
-          speed_kph: 30,
-          path_placement: [],
-          destination_point: { x: 30, y: 0 },
-        },
-      ],
-      xml,
-    );
-    expect(checks.find((c) => c.id === "osc.placement_supported")?.status).toBe("pass");
-    expect(checks.find((c) => c.id === "osc.round_trip")?.status).toBe("pass");
-  });
-
-  it("fails an unsupported placement mode without a round-trip", () => {
-    const checks = runOscRoundTripChecks(
-      [{ id: "veh", placement_mode: "road", spawn_point: { x: 0, y: 0 } }],
-      xml,
-    );
-    expect(checks.find((c) => c.id === "osc.placement_supported")?.status).toBe("fail");
-    // No round_trip check emitted for an unsupported actor.
-    expect(checks.some((c) => c.id === "osc.round_trip")).toBe(false);
   });
 });
 

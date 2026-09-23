@@ -1,0 +1,46 @@
+{
+  "id": "default-controller-keeps-initial-speed",
+  "feature": "Default longitudinal strategy keeps the current speed",
+  "osc": [
+    "default controller",
+    "SpeedAction (Init)"
+  ],
+  "description": "A car starts at 10 m/s with no cruise override on a 130 km/h road.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 10,
+      "cruise": "omit"
+    }
+  ],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "7.4.1.1 Control strategy (default strategies: keep lane, keep current speed)",
+      "8.5 Init section execution"
+    ],
+    "derivation": "Only an Init SpeedAction is given, so the default strategy keeps 10 m/s: x=50+10t.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 10
+      }
+    },
+    "decisions": [
+      "D-14"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-09",
+    "esmini": "not-run",
+    "exportIssueCodes": [
+      "unsupported_cruise_controller"
+    ],
+    "note": "Decision D-14: SimForge's default free-flow target is the lane limit (product behaviour); the OSC default keeps the current speed. The actions export refuses an omitted cruise target (P-7)."
+  }
+}

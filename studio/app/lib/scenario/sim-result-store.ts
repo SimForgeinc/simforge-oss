@@ -22,6 +22,8 @@ import {
   type SimulationCompletionRecord,
   type SimulationMapClosure,
   type SimulationTimeline,
+  SIMULATION_MAP_MEMBERS,
+  simulationMemberSqlPredicate,
 } from "@simforge-oss/compiler/node";
 import type {
   ScenarioSimulationResultDto,
@@ -320,7 +322,7 @@ export function simulationObjectKeys(workspaceId: string, completion: Pick<Simul
  */
 export async function buildSimulationTimeline(
   simulation: AuthoritativeSimulation,
-  closure: Pick<SimulationMapClosure, "xodr" | "topology">,
+  closure: Pick<SimulationMapClosure, "xodr" | "topology" | "ground">,
 ): Promise<SimulationTimeline> {
   try {
     const { buildRenderTimeline } = await import("@simforge-oss/render/timeline");
@@ -328,6 +330,7 @@ export async function buildSimulationTimeline(
       trace: simulation.trace,
       xodr: closure.xodr,
       topology: closure.topology,
+      ground: closure.ground,
       catalogDigest: null,
     });
   } catch (error) {
@@ -724,14 +727,8 @@ export async function resolveSimulation(
 
 // ── CPU runner lane (/api/simforge/internal/sim-jobs) ─────────────────────────
 
-const MAP_MEMBER_PATHS = [
-  "3d/manifest.json",
-  "topology-index.json.gz",
-  "derived/topology-derived.json.gz",
-  "derived/locations.json.gz",
-  "map.xodr",
-  "signals.geojson.gz",
-] as const;
+/** The runner's presigned members: the simulation members plus the manifests that locate the collider derivative. */
+const MAP_MEMBER_PATHS = ["3d/manifest.json", ...SIMULATION_MAP_MEMBERS.exact] as const;
 
 /**
  * Claim the oldest claimable request for a CPU runner. The payload carries the
@@ -806,7 +803,7 @@ async function presignedMapMembers(mapVersionId: string, includeSumo: boolean) {
       WHERE mv.id = :map_version_id
         AND (bm.relative_path IN (${MAP_MEMBER_PATHS.map((_, index) => `:p${index}`).join(", ")})
              OR bm.relative_path = '3d/variants/manifest.json'
-             OR bm.relative_path LIKE '3d/variants/static-colliders%'
+             OR ${simulationMemberSqlPredicate("bm.relative_path")}
              OR (:include_sumo AND bm.relative_path LIKE 'derived/sumo/%'))`,
     { map_version_id: mapVersionId, include_sumo: includeSumo, ...Object.fromEntries(MAP_MEMBER_PATHS.map((path, index) => [`p${index}`, path])) },
   );

@@ -16,17 +16,17 @@
       }
     },
     {
-      "id": "rfs-uturn-truck",
+      "id": "rfs-uturn-van",
       "tier": "ci",
       "map": "richmond-field-station",
       "covers": [
         "u-turn",
-        "truck-turn-geometry",
+        "long-vehicle-turn-geometry",
         "eased-stop-at-route-end"
       ],
       "source": {
         "kind": "input",
-        "path": "fixtures/golden-traces/inputs/rfs-uturn-truck.input.json"
+        "path": "fixtures/golden-traces/inputs/rfs-uturn-van.input.json"
       }
     },
     {
