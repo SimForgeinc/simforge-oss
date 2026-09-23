@@ -1,23 +1,20 @@
 name: native-golden
 
-# WSB6 — native renderer determinism + perf regression gate.
+# WSB6: native renderer determinism gate.
 #
-# Runs on the RTX 5080 box via a self-hosted runner (label `gpu-rtx5080`):
-# A100/datacenter raster is unrepresentative and Chrome RGB is provably not
-# goldenable (docs/determinism-claim.md), so this suite is Bevy/wgpu
-# sensor-profile only, golden-hashed per GPU fingerprint.
+# Goldens render on Mesa lavapipe, the adapter of record (the CPU Vulkan
+# driver): NVIDIA drivers are not run-to-run byte-stable for this renderer
+# (1 LSB in a few pixels between identical runs), lavapipe is, and pass
+# hashes are compared exactly. The table is keyed by lavapipe build + CPU
+# model (qualification/golden-harness/lib/fingerprint.mjs), so the job runs on
+# the host the goldens were recorded on (the 5080 box's CPU); no GPU is used.
 #
-# Runner registration (one-time, on the 5080 host):
-#   1. GitHub repo → Settings → Actions → Runners → New self-hosted runner
-#   2. Label it: gpu-rtx5080, Linux, X64
-#   3. Keep the default work dir on the local SSD (the corpus + target/ are large)
-#   4. Ensure nvidia-smi is on PATH and Vulkan loader (vulkaninfo) works for the
-#      runner user; the runner must NOT run under root-less sandboxing that
-#      blocks /dev/dri or /dev/nvidia*
+# Runner (one-time, on that host): a self-hosted runner labelled
+# gpu-rtx5080, Linux, X64, with mesa-vulkan-drivers and vulkan-tools
+# installed and the map corpora at the repo variables below.
 #
-# Until the runner is registered this workflow shows as "queued" forever;
-# the exact same steps run locally via qualification/golden-harness/ci-local.sh
-# (execution log committed at qualification/golden-harness/evidence/).
+# Until the runner is registered this workflow shows as "queued"; the same
+# steps run locally via qualification/golden-harness/ci-local.sh.
 
 on:
   push:
@@ -25,31 +22,28 @@ on:
     paths:
       - 'renderer/**'
       - 'qualification/golden-harness/**'
-      - 'scripts/renderer-spike/**'
       - '.github/workflows/native-golden.yml'
   pull_request:
     paths:
       - 'renderer/**'
       - 'qualification/golden-harness/**'
-      - 'scripts/renderer-spike/**'
   workflow_dispatch: {}
 
 concurrency:
-  # The 5080 is a single shared raster GPU — serialize golden runs.
-  group: native-golden-gpu
+  # One golden host: serialize runs.
+  group: native-golden
   cancel-in-progress: false
 
 jobs:
   golden-suite:
     runs-on: [self-hosted, Linux, X64, gpu-rtx5080]
-    timeout-minutes: 60
+    # Lavapipe renders on the CPU: the five scenes verify in about 40 min.
+    timeout-minutes: 120
     env:
-      # Decoded sensor corpus root (WSB1). Falls back to the repo's spike
-      # corpus when the SCEN_SENSOR_CORPUS checkout is absent.
-      SCEN_SENSOR_CORPUS: ${{ vars.SCEN_SENSOR_CORPUS }}
-      # Wait up to 5 min for a quiet GPU before gating (co-tenant jobs make
-      # frame times ~5x worse and can destabilize evidence); exit 6 if still busy.
-      GOLDEN_GPU_WAIT: '300'
+      # Map corpus roots (each holds the map's master.gltf).
+      SIMFORGE_CORPUS_RICHMOND: ${{ vars.SIMFORGE_CORPUS_RICHMOND }}
+      SIMFORGE_CORPUS_YALE: ${{ vars.SIMFORGE_CORPUS_YALE }}
+      SIMFORGE_SKY_ASSETS: ${{ vars.SIMFORGE_SKY_ASSETS }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,18 +58,21 @@ jobs:
             renderer/target
           key: native-golden-${{ runner.os }}-${{ hashFiles('renderer/Cargo.lock') }}
 
+      - name: Check the adapter of record (lavapipe)
+        run: VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json vulkaninfo --summary | grep -q llvmpipe
+
       - name: Build native renderer
-        working-directory: native
-        run: cargo build --release -p render-core --bin native-render
+        run: cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
 
-      - name: Check corpus availability
+      - name: Install JS dependencies and the timeline wasm (the parity gate runs the CLI from source)
         run: |
-          if [ -z "$SCEN_SENSOR_CORPUS" ] && [ ! -d scripts/renderer-spike/corpus ]; then
-            echo "::error::No corpus found: set repo variable SCEN_SENSOR_CORPUS or commit-check out the spike corpus"; exit 1
-          fi
-          echo "corpus root: ${SCEN_SENSOR_CORPUS:-scripts/renderer-spike/corpus}"
+          pnpm install --frozen-lockfile
+          pnpm --filter @simforge-oss/native-runtime build:wasm
 
-      - name: Verify goldens (hash drift + frame-time budget)
+      - name: Plan (scene definitions, jobs, corpus availability)
+        run: node qualification/golden-harness/golden.mjs plan all
+
+      - name: Verify goldens (exact pass hashes, ID pass, timeline parity)
         run: node qualification/golden-harness/golden.mjs verify all
 
       - name: Upload verify artifacts (manifests + frames, always)

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Local stand-in for the native-golden GitHub Actions workflow (WSB6).
-# Runs the exact same steps the self-hosted 5080 runner will execute:
+# Goldens render on Mesa lavapipe (the adapter of record; needs
+# mesa-vulkan-drivers + vulkan-tools), so any x86-64 Linux host with the
+# recorded CPU model reproduces them. Steps:
 #   1. build the native renderer (`simforge-render`, release)
 #   2. plan: every scene's job builds and its corpus resolves (no render)
 #   3. verify goldens (hash drift + >10% frame-time budget gate)

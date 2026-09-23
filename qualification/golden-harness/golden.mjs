@@ -4,14 +4,20 @@
  *
  * Drives `simforge-render job --job job.json` (schema
  * `simforge.render-job/v2`: the render service's own request path, pinned
- * capture clock) to record and verify golden pass hashes per GPU
- * fingerprint, with a frame-time regression budget. Evidence manifests extend
+ * capture clock) to record and verify golden pass hashes per adapter
+ * fingerprint. The adapter of record is Mesa lavapipe (the CPU Vulkan
+ * driver), not a GPU: NVIDIA drivers are not run-to-run byte-stable for this
+ * renderer (1 LSB in a few pixels between identical runs), lavapipe is, and
+ * hashes are compared exactly, never with a tolerance. The frame-time budget
+ * gate runs only when GOLDEN_FRAME_BUDGET is set (a CPU rasterizer's times
+ * measure the host, not the renderer; GPU performance is gated by
+ * scripts/bench). Evidence manifests extend
  * `simforge-oss.render-determinism-manifest.v1`; the additions are documented in
  * docs/engineering/native-golden-ci.md.
  *
  * Commands:
  *   node qualification/golden-harness/golden.mjs record  <scene>   run twice, require byte-stable, write golden
- *   node qualification/golden-harness/golden.mjs verify  <scene>   one run, compare hashes + frame-time budget
+ *   node qualification/golden-harness/golden.mjs verify  <scene>   one run, compare hashes (+ frame time with GOLDEN_FRAME_BUDGET)
  *   node qualification/golden-harness/golden.mjs verify  all       verify every scene in scenes/
  *   node qualification/golden-harness/golden.mjs plan    <scene|all> [--allow-missing-corpus]
  *        write each scene's job file and print the invocation; no GPU, no render
@@ -22,7 +28,7 @@
  *
  * Exit codes: 0 ok · 2 pass-hash drift · 3 frame-time budget exceeded ·
  * 4 nondeterministic on record (two runs differ) · 5 no golden for this GPU ·
- * 6 GPU busy (co-tenant load; infra, not drift) · 7 vacuous ID pass (it
+ * 7 vacuous ID pass (it
  * encodes too few instances: a golden of a blank pass proves nothing) ·
  * 8 observed actor transforms fail parity with the render timeline ·
  * 1 usage/environment error.
@@ -64,7 +70,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { collectNativeHardware } from './lib/fingerprint.mjs';
+import { collectNativeHardware, lavapipeEnv } from './lib/fingerprint.mjs';
 import { idPassStats } from './lib/png.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -115,31 +121,6 @@ function applyOverrides(scene, overrides) {
       : raw;
   }
   return clone;
-}
-
-/**
- * Co-tenant guard: the 5080 is shared (other lanes render/train on it).
- * Heavy concurrent GPU state has been observed to both inflate frame times
- * (~5x) and rarely destabilize the lit RGB path, so gates run only on a
- * reasonably quiet GPU. Exit 6 = infra condition, not hash drift.
- * GOLDEN_GPU_WAIT: seconds to wait for a quiet window (default 0 = immediate).
- */
-async function requireQuietGpu() {
-  const waitSecs = Number(process.env.GOLDEN_GPU_WAIT ?? 0);
-  const deadline = Date.now() + waitSecs * 1000;
-  for (;;) {
-    const out = spawnSync('nvidia-smi', ['--query-gpu=memory.used,memory.total,utilization.gpu', '--format=csv,noheader,nounits'], { encoding: 'utf8' }).stdout ?? '';
-    const [usedMiB, totalMiB, utilPct] = out.trim().split(',').map((v) => Number(v.trim()));
-    const maxMemFrac = Number(process.env.GOLDEN_GPU_MAX_MEM_FRAC ?? 0.5);
-    const maxUtil = Number(process.env.GOLDEN_GPU_MAX_UTIL ?? 50);
-    const busy = usedMiB > maxMemFrac * totalMiB || utilPct > maxUtil;
-    if (!busy) return;
-    if (Date.now() >= deadline) {
-      fail(6, `GPU busy (mem ${usedMiB}/${totalMiB} MiB, util ${utilPct}%) — golden runs need a quiet GPU; set GOLDEN_GPU_WAIT or free the GPU`);
-    }
-    console.log(`[golden-harness] GPU busy (mem ${usedMiB} MiB, util ${utilPct}%) — waiting for quiet window...`);
-    await new Promise((r) => setTimeout(r, 15_000));
-  }
 }
 
 function resolvePaths(scene, { allowMissing = false } = {}) {
@@ -326,12 +307,13 @@ function checkIdPasses(outDir, scene) {
 /** Exit 8 unless the renderer's observed transforms match the timeline sampler. */
 function checkParity(outDir, scene) {
   if (!scene.parity) return undefined;
-  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
+  // The CLI from source (the checkout the goldens run in; no build step).
+  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node --conditions=development --import tsx ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
   const observed = path.join(outDir, scene.parity.observed ?? 'observed-frames.jsonl');
   if (!fs.existsSync(observed)) {
     throw new GateFailure(1, `parity: the job wrote no ${path.basename(observed)} (job \`observe\` must write the observed actor transforms of every tick)`);
   }
-  const r = spawnSync(cmd[0], [...cmd.slice(1), path.join(repoRoot, scene.parity.timeline), observed, '--profile', scene.parity.profile ?? 'bevy'], { encoding: 'utf8' });
+  const r = spawnSync(cmd[0], [...cmd.slice(1), path.join(repoRoot, scene.parity.timeline), observed, '--profile', scene.parity.profile ?? 'bevy'], { encoding: 'utf8', cwd: repoRoot });
   let report;
   try { report = JSON.parse(r.stdout); } catch { throw new GateFailure(1, `parity command failed (${r.status}): ${r.stderr?.slice(-800)}`); }
   const summary = {
@@ -351,9 +333,11 @@ function checkParity(outDir, scene) {
  */
 function runRenderer(binPath, invocation, label) {
   console.log(`[golden-harness] render ${label}: ${path.basename(binPath)} ${invocation.args.join(' ')}`);
-  // GOLDEN_RENDER_TIMEOUT_S: a software adapter (lavapipe) smoke run needs longer than a GPU.
-  const timeoutMs = Number(process.env.GOLDEN_RENDER_TIMEOUT_S ?? 600) * 1000;
-  const r = spawnSync(binPath, invocation.args, { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
+  // Lavapipe renders on the CPU: a 120-tick scene takes minutes, not seconds.
+  const timeoutMs = Number(process.env.GOLDEN_RENDER_TIMEOUT_S ?? 3600) * 1000;
+  const r = spawnSync(binPath, invocation.args, {
+    encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, env: { ...process.env, ...lavapipeEnv() },
+  });
   if (r.status !== 0) {
     fail(1, `renderer exited ${r.status}\nstdout tail:\n${(r.stdout ?? '').slice(-2000)}\nstderr tail:\n${(r.stderr ?? '').slice(-2000)}`);
   }
@@ -453,10 +437,9 @@ async function cmdRecord(args) {
   const { glbs, corpusRoot } = resolvePaths(scene);
   const binPath = resolveBinary(args);
 
-  await requireQuietGpu();
   console.log('[golden-harness] collecting hardware fingerprint...');
   const hardware = await collectNativeHardware();
-  console.log(`[golden-harness] gpuFingerprint=${hardware.gpuFingerprint} gpu=${hardware.host.gpus[0].name} driver=${hardware.host.gpus[0].driverVersion}`);
+  console.log(`[golden-harness] gpuFingerprint=${hardware.gpuFingerprint} adapter=${hardware.host.adapter.deviceName} driver=${hardware.host.adapter.driverInfo} cpu=${hardware.host.cpuModel}`);
 
   const corpusChecksums = glbs.map((g) => ({
     path: path.basename(g),
@@ -516,7 +499,7 @@ async function cmdRecord(args) {
     verdict: {
       byteStable: true,
       driftedPasses: [],
-      scope: 'render-job pass hashes (pinned capture clock), single GPU/driver/wgpu backend — cross-hardware reproducibility NOT claimed (docs/determinism-claim.md)',
+      scope: 'render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)',
     },
   };
   const gp = goldenPath(hardware, sceneId);
@@ -533,7 +516,7 @@ async function cmdRecord(args) {
   fs.writeFileSync(gp, JSON.stringify(golden, null, 2));
   writeManifest(golden, path.join(artifacts, 'manifest.json'));
   console.log(`[golden-harness] RECORDED golden for ${sceneId} @ ${hardware.gpuFingerprint}`);
-  if (golden.timings) console.log(`  baseline avg_frame_ms=${golden.timings.avgFrameMs.toFixed(3)} p50=${golden.timings.p50FrameMs.toFixed(3)} (budget: verify fails above ${(golden.timings.avgFrameMs * 1.10).toFixed(3)})`);
+  if (golden.timings) console.log(`  baseline avg_frame_ms=${golden.timings.avgFrameMs.toFixed(3)} p50=${golden.timings.p50FrameMs.toFixed(3)} (lavapipe; informational unless GOLDEN_FRAME_BUDGET is set)`);
   else console.log('  (no timing instrumentation — frame-time gate disabled for this scene)');
   for (const [k, v] of Object.entries(golden.passHashes)) console.log(`  ${k.padEnd(7)} ${v.sha256.slice(0, 16)}…  ${v.bytes}B`);
 }
@@ -564,7 +547,6 @@ async function verifyOne(args, sceneId) {
   const { glbs, corpusRoot } = resolvePaths(scene);
   const binPath = resolveBinary(args);
 
-  await requireQuietGpu();
   const hardware = await collectNativeHardware();
   const gp = goldenPath(hardware, sceneId);
   if (!fs.existsSync(gp)) {
@@ -587,9 +569,10 @@ async function verifyOne(args, sceneId) {
     .filter(([k, v]) => !(observed[k]?.sha256 === v.sha256))
     .map(([k]) => k);
 
-  // Gate 2: frame-time budget (>10% avg-frame regression vs recorded baseline).
-  // One-tick jobs have no timed ticks and skip this gate.
-  const budgetFactor = Number(process.env.GOLDEN_FRAME_BUDGET ?? 1.10);
+  // Gate 2 (opt-in): frame-time budget vs the recorded baseline, only when
+  // GOLDEN_FRAME_BUDGET is set (e.g. 1.10). On lavapipe the times measure
+  // the CPU host; one-tick jobs have no timed ticks.
+  const budgetFactor = process.env.GOLDEN_FRAME_BUDGET ? Number(process.env.GOLDEN_FRAME_BUDGET) : null;
   const baseline = golden.timings?.avgFrameMs;
   const regressionPct = timings && baseline ? ((timings.avg_frame_ms - baseline) / baseline) * 100 : null;
 
@@ -611,7 +594,7 @@ async function verifyOne(args, sceneId) {
     verdict: {
       byteStable: drifted.length === 0,
       driftedPasses: drifted,
-      frameTimeBudgetExceeded: regressionPct > (budgetFactor - 1) * 100,
+      frameTimeBudgetExceeded: budgetFactor !== null && regressionPct !== null && regressionPct > (budgetFactor - 1) * 100,
       scope: golden.verdict.scope,
     },
   };
@@ -624,16 +607,17 @@ async function verifyOne(args, sceneId) {
     console.log(`  ${ok ? 'MATCH' : 'DRIFT'}  ${k.padEnd(7)} ${v.sha256.slice(0, 16)}…${exp && !ok ? ` (golden ${exp.sha256.slice(0, 16)}…)` : ''}`);
   }
   if (regressionPct !== null) {
-    console.log(`  frame-time: ${timings.avg_frame_ms.toFixed(3)} ms vs baseline ${baseline.toFixed(3)} ms → ${regressionPct >= 0 ? '+' : ''}${regressionPct.toFixed(1)}% (budget +${((budgetFactor - 1) * 100).toFixed(0)}%)`);
+    const budget = budgetFactor === null ? 'not gated' : `budget +${((budgetFactor - 1) * 100).toFixed(0)}%`;
+    console.log(`  frame-time: ${timings.avg_frame_ms.toFixed(3)} ms vs baseline ${baseline.toFixed(3)} ms → ${regressionPct >= 0 ? '+' : ''}${regressionPct.toFixed(1)}% (${budget})`);
   } else {
-    console.log('  frame-time gate: skipped (no timing instrumentation)');
+    console.log('  frame-time: no timed ticks');
   }
 
   if (drifted.length > 0) {
     console.error(`[golden-harness] FAIL(${sceneId}): pass-hash drift in: ${drifted.join(', ')}`);
     throw new GateFailure(2, 'pass-hash drift');
   }
-  if (regressionPct !== null && regressionPct > (budgetFactor - 1) * 100) {
+  if (manifest.verdict.frameTimeBudgetExceeded) {
     console.error(`[golden-harness] FAIL(${sceneId}): frame-time regression ${regressionPct.toFixed(1)}% exceeds budget`);
     throw new GateFailure(3, 'frame-time budget exceeded');
   }

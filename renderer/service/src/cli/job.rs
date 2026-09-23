@@ -552,7 +552,10 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
     let mut lidars = job.rig.lidars;
     let mut radars = job.rig.radars;
     if let Some(pronto) = &job.rig.pronto {
-        let (c, l, r) = pronto_rig(pronto)?;
+        // The radar fan needs at least 64 rays per rendered tick.
+        let tick_hz = frames.first().and_then(|frame| frame["tickHz"].as_f64())
+            .context("rig.pronto needs a sceneState whose frames carry tickHz (the radar budget is per tick)")?;
+        let (c, l, r) = pronto_rig(pronto, tick_hz)?;
         cameras.extend(c);
         lidars.extend(l);
         radars.extend(r);
@@ -579,7 +582,7 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
 /// `render-qualification-program/v1` document) as attached service sensors,
 /// plus the trailing chase camera. Sheet mounts are longitudinal/lateral-
 /// right/up millimetres from the pod datum; see the qualification program.
-fn pronto_rig(rig: &ProntoRig) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<serde_json::Value>)> {
+fn pronto_rig(rig: &ProntoRig, tick_hz: f64) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<serde_json::Value>)> {
     const POD_FRONT_DATUM_M: f64 = 0.85;
     const POD_PLATE_HEIGHT_M: f64 = 1.78;
     let doc: serde_json::Value = serde_json::from_slice(&std::fs::read(&rig.program)?)?;
@@ -614,7 +617,11 @@ fn pronto_rig(rig: &ProntoRig) -> Result<(Vec<serde_json::Value>, Vec<serde_json
                 "verticalFovDeg": s["verticalFovDeg"].as_f64().context("lidar verticalFovDeg")?, "rangeM": 200.0,
             })),
             Some("radar") => radars.push(serde_json::json!({
-                "sensorId": id, "attach": attach(s, false), "pointsPerSecond": 1_500,
+                // The sheet's 1500 points/s is below the fan model's 64 rays
+                // per tick at the rig's tick rate; the rig declares the
+                // model's minimum explicitly (what the retired capture binary
+                // rendered by silently raising its budget).
+                "sensorId": id, "attach": attach(s, false), "pointsPerSecond": (64.0 * tick_hz).ceil().max(1_500.0) as u32,
                 "horizontalFovDeg": s["horizontalFovDeg"].as_f64().context("radar horizontalFovDeg")?,
                 "verticalFovDeg": s["verticalFovDeg"].as_f64().unwrap_or(30.0), // fallback-ok: the program's radar default elevation span
                 "rangeM": 100.0,

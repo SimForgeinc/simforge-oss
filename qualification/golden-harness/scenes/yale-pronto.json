@@ -1,14 +1,10 @@
 {
   "sceneId": "yale-pronto",
   "mapId": "yale-street",
-  "description": "Pronto port-E rig (qualification/render-qualification-program.v1.json: 8 cameras x RGB/depth/instance-ID/semantic, 6 lidars, 4 radars, plus the trailing chase camera) mounted on the ego of a one-tick scene state over the WSB1 decoded corpus tiles, through `simforge-render job` rig.pronto. The scene state (fixtures/yale-pronto.scene-state.json) is run/evidence/scene-state.v1.json as a service stream: schema id simforge.scene-state.v1, spawn records, and the retired capture binary's class-default cuboid extents as dims; its generic catalog ids render as class cuboids (allowPrimitiveActors, as the retired capture binary drew them). Not ported: the retired capture binary's IMU/GNSS samples (--xodr georeference); the job has no IMU/GNSS output. No frame-time gate (one tick).",
-  "corpusRootEnv": "SCEN_SENSOR_CORPUS_WSB1",
+  "description": "Pronto port-E rig (qualification/render-qualification-program.v1.json: 8 cameras x RGB/depth/instance-ID/semantic, 6 lidars, 4 radars, plus the trailing chase camera) mounted on the ego of a one-tick scene state over the yale-street master (the WSB1 decoded tiles it used are gone; same map world frame), through `simforge-render job` rig.pronto. The scene state (fixtures/yale-pronto.scene-state.json) is run/evidence/scene-state.v1.json as a service stream: schema id simforge.scene-state.v1, spawn records, and the retired capture binary's class-default cuboid extents as dims; its generic catalog ids render as class cuboids (allowPrimitiveActors, as the retired capture binary drew them). Not ported: the retired capture binary's IMU/GNSS samples (--xodr georeference); the job has no IMU/GNSS output. No frame-time gate (one tick).",
+  "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
-    "tile_2_4.lod0.glb",
-    "tile_2_5.lod0.glb",
-    "tile_2_6.lod0.glb",
-    "tile_3_5.lod0.glb",
-    "road.glb"
+    "master.gltf"
   ],
   "sceneState": {
     "stream": "qualification/golden-harness/fixtures/yale-pronto.scene-state.json"

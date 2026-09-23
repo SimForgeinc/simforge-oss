@@ -1,9 +1,30 @@
 # Native golden store + regression gate (WSB6)
 
-Status: implemented 2026-08-22. Enforces the byte-exactness policy measured and
-documented in `determinism-claim.md` (WSB4): Bevy/wgpu sensor-profile
-passes are byte-stable on one pinned GPU; Chrome RGB is provably not
-goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
+Status: implemented 2026-08-22. Since 2026-09-23 the goldens are recorded and
+verified on **Mesa lavapipe** (the CPU Vulkan driver), the adapter of record.
+Pass hashes are compared exactly, never with a tolerance. Chrome RGB is
+provably not goldenable (0/8 and 5/6 frames byte-equal) and is excluded from
+this suite.
+
+Why lavapipe:
+- With every draw order made a function of the scene, two identical runs on an
+  RTX 3080 still differed by 1 LSB in a few pixels (2 px in 1 of 64 RGB
+  frames, Belmont 8 cameras). That is driver-level, not ours.
+- The fixes for draw order (vendored bevy_render: sorted phases tie-break by
+  entity, entity-ordered bins; CPU-ordered ID-pass draws) made the ID pass
+  identical between runs on the 3080.
+- Lavapipe renders byte-identical runs (richmond-06, 120 ticks, twice).
+
+The NVIDIA residual, measured on an RTX 3080 (driver 595.91), Belmont 8 cameras × 24 ticks. Each row is two identical runs:
+
+| Configuration | RGB frames that differ between runs |
+|---|---|
+| showcase preset | 7 / 216 |
+| SSR off | 6 / 216 |
+| SSAO and contact shadows off | 2 / 216 |
+| SSAO, contact shadows, SSR, bloom and AA all off | 8 / 216 |
+
+Differences are at most 1 LSB in a handful of pixels. They survive with every screen-space effect off and every draw order fixed, while the same code on lavapipe is byte-identical. What remains on the GPU is forward shading, shadow rasterization and the atmosphere/sky compute passes. The residual is treated as driver-level floating-point nondeterminism and is not chased further; goldens stay on lavapipe.
 
 ## Components
 
@@ -13,7 +34,7 @@ goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
 | `qualification/golden-harness/scenes/*.json` | scene definitions (corpus files + renderer args + expected passes) |
 | `qualification/golden-harness/goldens/<gpuFingerprint>/<scene>.json` | the golden store (committed) |
 | `qualification/golden-harness/ci-local.sh` | local execution of the exact CI steps |
-| `.github/workflows/native-golden.yml` | self-hosted 5080 runner workflow |
+| `.github/workflows/native-golden.yml` | self-hosted runner workflow (lavapipe; the recorded CPU model) |
 
 Renderer binary resolution order: `--bin` flag → `scene.binary` →
 `renderer/target/release/simforge-render` (the one renderer binary,
@@ -22,22 +43,23 @@ Renderer binary resolution order: `--bin` flag → `scene.binary` →
 camera per `cameras`, `ticks`, `passes`) and rendered with
 `simforge-render job --job <file>`; the hashed passes are the
 `<sensor>/<tick>.rgb.png` / `.id.png` / `.depth.f32.bin` artifacts listed with
-their sha256 in the job's `results.json`. Every capture is a single GPU
+their sha256 in the job's `results.json`. The harness runs the job with
+`VK_ICD_FILENAMES=<lvp_icd.json>` and `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+Every capture is a single
 submission with its copies ordered after the camera passes, so consecutive
 frames never carry the previous frame's pixels. The former `native-render`
 spike CLI (AgX output, unordered readback) is removed; goldens recorded
 against it are retired and must be re-recorded (see `goldens/README.md`).
 
-## GPU fingerprint policy
+## Adapter fingerprint policy
 
-`gpuFingerprint` = first 16 hex of `sha256(canonical_json({gpus:[{name,
-driverVersion, vbiosVersion, pciBusId}], kernel, arch}))`, with GPU facts from
-the **same nvidia-smi query** as WSB4's
-`qualification/render-determinism/gpu-fingerprint.mjs`
-so fingerprint facts are comparable across Chrome evidence manifests and native goldens.
-Rationale: same-device wgpu is empirically bitwise-stable; cross-driver/
-cross-vendor equality is NOT claimed → goldens are keyed per fingerprint, never
-universal. A new GPU/driver means: `record` on that host first, then verify.
+`gpuFingerprint` = first 16 hex of `sha256(json({adapter: {deviceName,
+driverInfo}, cpuModel, arch}))`. `deviceName` and `driverInfo` come from
+`vulkaninfo --summary` on the lavapipe ICD (for example `llvmpipe (LLVM 20.1.2,
+256 bits)`, `Mesa 25.2.8 (LLVM 20.1.2)`). The CPU model is included because
+llvmpipe's generated code depends on the CPU's features. A new Mesa, LLVM or
+CPU model means: `record` on that host first, then verify
+(`qualification/golden-harness/lib/fingerprint.mjs`).
 
 ## Golden store layout
 
@@ -101,21 +123,17 @@ re-record.
 
 | Exit | Meaning |
 |---|---|
-| 0 | all passes match golden, frame-time within budget |
+| 0 | all passes match golden (and frame time within budget when `GOLDEN_FRAME_BUDGET` is set) |
 | 2 | pass-hash drift on any non-diagnostic pass |
-| 3 | avg frame time regressed >10% vs recorded baseline (`GOLDEN_FRAME_BUDGET` overrides factor) |
+| 3 | avg frame time regressed beyond `GOLDEN_FRAME_BUDGET` (e.g. 1.10) vs the recorded baseline; opt-in, since lavapipe times measure the CPU host (GPU performance is gated by `scripts/bench`) |
 | 4 | record-mode nondeterminism: two runs disagreed — no golden written |
-| 5 | no golden exists for this GPU fingerprint — record first |
+| 5 | no golden exists for this adapter fingerprint — record first |
 | 1 | environment/usage error (missing binary/corpus) |
-| 6 | GPU busy — co-tenant load makes timings/hash evidence unreliable (`GOLDEN_GPU_WAIT` seconds to wait for a quiet window); CI sets it to 300 |
 | 7 | vacuous ID pass — an ID pass encodes fewer than `idPass.minInstances` distinct ids or covers less than `idPass.minCoverage` of the frame (checked on record and verify) |
 | 8 | observed actor transforms fail parity with the render timeline (`parity` scenes; Bevy profile 1e-3 m / 0.05°) |
 
 Record runs the scene twice and refuses to write a golden unless the two runs
-agree byte-for-byte (the determinism evidence itself). Record/verify only run
-on a quiet GPU (see exit 6): co-tenant load was measured to inflate frame
-times ~5x (4 ms → 19 ms) and occasionally destabilize the lit RGB path. Verify runs once and
-applies both gates. Frame-time uses the renderer-reported steady-state
+agree byte-for-byte (the determinism evidence itself). Verify runs once. Frame-time uses the renderer-reported steady-state
 `avg_frame_ms` over ≥30 measured frames after warmup.
 
 ## Measured findings baked into this gate (2026-08-22)

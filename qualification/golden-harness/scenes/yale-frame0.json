@@ -1,13 +1,10 @@
 {
   "sceneId": "yale-frame0",
   "mapId": "yale-street",
-  "description": "Spike corpus yale-street tiles 2_4/2_5/2_6/3_5 (lod0) + road layer at the W0 baseline-midblock frame-0 POV (scripts/renderer-spike/FINDINGS.md): one explicit service camera, static scene, training preset. Ticks 0..9 render; the last one is hashed.",
+  "description": "Yale-street master (the same map world frame the retired spike tiles 2_4/2_5/2_6/3_5 + road layer came from) at the W0 baseline-midblock frame-0 POV (scripts/renderer-spike/FINDINGS.md): one explicit service camera, static scene, training preset. Ticks 0..9 render; the last one is hashed.",
+  "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
-    "tile_2_4.glb",
-    "tile_2_5.glb",
-    "tile_2_6.glb",
-    "tile_3_5.glb",
-    "road.glb"
+    "master.gltf"
   ],
   "job": {
     "scene": {
