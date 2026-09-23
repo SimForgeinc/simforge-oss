@@ -48,7 +48,7 @@ packages/engine/src/__tests__/storyboard-protocol.test.ts   protocol/property te
 
 1. **Ours vs spec (primary).**
    - **Engine cases** (`kind: engine`, 36) are authored in `SimScenarioInput`, the vocabulary our semantics live in. The engine runs at dt = 0.02 s. Each actor's pose and speed series, and each interaction's start and end, are compared to the oracle.
-   - **Probes** (`kind: xosc`, 11) cover what we cannot express: priority skip/parallel/override, maximumExecutionCount, falling edges, condition delay, parameters, LanePosition, catalogs, 1.0 files, and the WorldPosition frame. They check the live importer's disposition: translated actors, required diagnostics, error code, and scene poses. That is how we prove the loss is loud.
+   - **Probes** (`kind: xosc`, 12) cover what we cannot express: priority skip/parallel/override, maximumExecutionCount, falling edges, condition delay, parameters, LanePosition, catalogs, 1.0 files, a linear lane change, and the WorldPosition frame. They check the live importer's disposition: translated actors, required diagnostics, error code, and scene poses. That is how we prove the loss is loud.
    - This check needs no simulator. It runs in vitest on every CI run.
 2. **esmini vs spec (evidence).**
    - For engine cases, esmini runs our actions export of the case. For probes, it runs the probe.
@@ -76,7 +76,7 @@ SIMFORGE_ESMINI_BIN=/path/to/esmini pnpm osc-conformance:verify -- --case trigge
 pnpm osc-conformance:update-xosc
 ```
 
-The whole suite takes about 5 s (47 cases, 83 esmini runs).
+The whole suite takes about 5 s (48 cases, 84 esmini runs).
 
 ### Adding a case
 
@@ -148,7 +148,7 @@ These are the places where ASAM 1.4.0 is silent, ambiguous or self-contradictory
 | D-15 | maximumExecutionCount > 1 with a level trigger | The event re-runs on subsequent checks until the count is used up. | §8.4.2.1; re-arm timing is unspecified. | 3 executions, as specified |
 | D-16 | Priority `skip` | Follows §8.4.2.2: a skipped trigger consumes an execution, so with count 1 the event never runs. | Self-contradictory in 1.4.0: §8.4.2.2 vs the §7.3.2 "does not leave standbyState" text vs the `Priority` class ("not run while another is running"). | Keeps it in standby and runs it later |
 | D-17 | Speed vs lateral motion | Speed is the length of the velocity vector, so a lane change reduces longitudinal progress. | §7.4.1.1 ("length of the vehicle's speed vector"). | Same |
-| D-18 | Linear lane-change shape | Lateral offset is linear in time (heading steps at both ends). | `DynamicsShape.linear` | Disagrees: S-curve |
+| D-18 | Linear lane-change shape | Lateral offset is linear in time (heading steps at both ends). | `DynamicsShape.linear` | Same (`probe-lane-change-linear`) |
 | D-19 | Rotation order (h, p, r) | Intrinsic z-y′-x″ (ISO 8855 / OpenDRIVE). Our exports carry p = r = 0 except in trajectory replay with a render timeline. | §6.3 says "extrinsic Z, Y, X"; `Orientation` omits it. | – |
 | D-20 | Version intake | Read 1.0–1.4, including every deprecated construct listed in §5 / the XSD. Validate against the file's own version (checker rule `xml.valid_schema`). | §5 Backward compatibility. | Reads 1.0–1.3; aborts on 1.4 `<Interpolation/>` |
 
@@ -165,7 +165,7 @@ These are the places where ASAM 1.4.0 is silent, ambiguous or self-contradictory
 | F-05 | Medium | Speed tracking. Profiles with a discontinuous or large acceleration demand are followed by a controller that *overshoots*. Linear 20→10 m/s at 4 m/s² undershoots to 8.1 m/s (2.2 m/s below target); a 2 s cubic undershoots by 3.2 m/s. Gentle and 3 s cubic/sinusoidal profiles track within 0.01 m/s. The `stop` target ignores the prescribed shape. | `speed-linear-*`, `same-axis-supersede`, `trigger-standstill` | proposal |
 | F-06 | Medium | `step` dynamics (speed, lane offset) are silently executed as fast physical transitions: a 10 m/s step becomes a 10.9 m position error. No warning. | `speed-step`, `lane-offset-step` | proposal (warn or reject) |
 | F-07 | Medium | Distance-dimension transitions last D/v₀. That matches neither reading (D-02 or esmini's): the transition finishes after about 0.75·D metres. | `speed-linear-distance` | proposal |
-| F-08 | Medium | The lane-change `shape` is ignored: execution is always a minimum-jerk quintic, 0.3–0.66 m off the spec. The duration is silently stretched to class lateral limits (linear 3 s became 4 s), with only a trace event. | `lane-change-*` | proposal |
+| F-08 | Medium | The lane-change `shape` is ignored: execution is always a minimum-jerk quintic, 0.3–0.66 m off the spec. The duration is silently stretched to class lateral limits (the linear case completes at 5 s instead of 4 s), with only a trace event. The actions export silently rewrites every lane change to `cubic` with the engine's effective duration, so the authored shape is lost from the file too. | `lane-change-*`, `probe-lane-change-linear` | proposal |
 | F-09 | High (semantic claim) | The default controller is reactive: collision avoidance, yielding, obeying signals, and cruising at the lane limit when `cruiseSpeedMps` is omitted (10 m/s becomes 36 m/s, 90.8 m off). OSC keeps lane and speed. The actions exporter's portability check is **inverted**: it accepts the reactive defaults and rejects `collisionAvoidance=false`, which is the OSC behaviour. | `default-controller-*`, `collision-condition-no-avoidance-rules` | proposal |
 | F-10 | High (export) | Actions-profile storyboard mapping bugs, all fixed: (a) `conditionEdge="rising"` for level `when` (never fires if already true; AND of rising edges effectively never fires); (b) one Maneuver with `overwrite` stopped cross-axis events (speed frozen at 22.5 m/s when a light switched on); (c) `after start` exported as `completeState` (2 s late); (d) conditions not gated during the warm-up; (e) deprecated `overwrite` in both profiles. | `trigger-edge-true-at-start`, `condition-group-and`, `parallel-axes-speed-and-light`, `trigger-after-start`, export tests | fixed |
 | F-11 | High (claim) | The live import keeps only Init entities, poses and speeds. All storyboard semantics are dropped under one generic `storyboard_semantics_not_translated` diagnostic. It is a *placement* import, not scenario import. | all `probe-*` with events | documented; see recommendation |
@@ -176,7 +176,7 @@ These are the places where ASAM 1.4.0 is silent, ambiguous or self-contradictory
 | F-16 | Low | Exported vehicle geometry: `FrontAxle.positionX = 0.58·l` lies beyond the front bumper. Import ignores `BoundingBox.Center`, so a third-party file using the §6.3.4 rear-axle reference imports about 1.4 m back. | review, ASAM checkers | proposal |
 | F-17 | Medium (process) | Nothing verified OSC semantics before this suite. `ESMINI_OBSERVABLE_EVENT_KINDS = []`, so no trigger timing was ever compared. The e2e interop test accepts either verdict. The SimCloud esmini lane is not served in hosted envs. The certification page claims "ASAM OpenSCENARIO XML: Available today". | code review | documented |
 | F-18 | Low | Version intake: a file with `revMajor≠1` is still translated, with only a diagnostic. The 1.3 esmini "lowering" is a regex over the 1.4 text. | review | proposal |
-| F-19 | Info (esmini) | esmini 3.6.0 defects the suite found: TTC is true on its first check; RelativeTargetSpeed that references the acting entity runs away; a linear lane change is executed as an S-curve; `skip` defers rather than consumes the execution (D-16); it aborts on the 1.4 `<Interpolation/>`. | `trigger-ttc`, `speed-relative-*`, `lane-change-linear-time`, `probe-priority-skip` | documented |
+| F-19 | Info (esmini) | esmini 3.6.0 defects the suite found: TTC is true on its first check; RelativeTargetSpeed that references the acting entity runs away; `skip` defers rather than consumes the execution (D-16); it aborts on the 1.4 `<Interpolation/>`; its speed-over-distance reading differs (D-02). | `trigger-ttc`, `speed-relative-*`, `probe-priority-skip`, `speed-linear-distance` | documented |
 | F-20 | Info | Same-tick order is interaction-id order: the engine sorts interactions by id. It also changes the input hash relative to a TS-parsed input, so the trajectory exporter must be given the engine's executed input. The production compiler does this. | round-trip harness | documented |
 
 ## Static validation (ASAM tooling)

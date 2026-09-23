@@ -132,7 +132,8 @@ function lateralAt(segments: readonly LateralSegment[], y0: number, t: number): 
     const tau = (t - segment.t0) / segment.durationS;
     y = from + (segment.toY - from) * shapeProgress(segment.shape, tau);
     const h = 1e-4;
-    dy = segment.shape === 'step' || tau >= 1
+    // At the trigger tick the sample is pre-action (D-01): no lateral velocity yet.
+    dy = segment.shape === 'step' || tau >= 1 || tau <= 0
       ? 0
       : ((segment.toY - from) * (shapeProgress(segment.shape, tau + h / segment.durationS) - shapeProgress(segment.shape, tau))) / h;
   }
