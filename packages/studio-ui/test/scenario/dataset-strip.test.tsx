@@ -56,6 +56,7 @@ function renderStrip(
   render(
     <DatasetStrip
       datasets={[dataset("a")]}
+      cloudHome={{ state: "signed-out" }}
       loading={false}
       creating={false}
       busyDatasetId={null}
@@ -69,6 +70,11 @@ function renderStrip(
 
 function icon(name: string) {
   return screen.getByRole("button", { name }) as HTMLButtonElement;
+}
+
+/** Loading placeholders in the local section (section headings are presentation rows too). */
+function placeholders() {
+  return [...screen.getByRole("list").querySelectorAll('li[role="presentation"][aria-hidden="true"]')];
 }
 
 afterEach(cleanup);
@@ -99,7 +105,7 @@ describe("DatasetStrip", () => {
       datasets: [dataset("a", { name: "Cut-in" }), dataset("b", { name: "Jaywalking" })],
       activeDatasetId: "b",
     });
-    expect(screen.getByRole("navigation", { name: "Datasets" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Datasets by home" })).toBeTruthy();
     expect(icon("Cut-in").getAttribute("aria-current")).toBeNull();
     expect(icon("Jaywalking").getAttribute("aria-current")).toBe("true");
   });
@@ -147,6 +153,7 @@ describe("DatasetStrip", () => {
     const { unmount } = render(
       <DatasetStrip
         datasets={[]}
+        cloudHome={{ state: "signed-out" }}
         loading
         creating={false}
         busyDatasetId={null}
@@ -157,10 +164,11 @@ describe("DatasetStrip", () => {
         onDeleteDataset={vi.fn()}
       />,
     );
-    expect(screen.getByRole("list").querySelectorAll("li").length).toBe(3);
+    expect(placeholders().length).toBe(3);
     unmount();
     renderStrip({ datasets: [] });
-    expect(screen.getByRole("list").querySelectorAll("li").length).toBe(0);
+    expect(placeholders().length).toBe(0);
+    expect(screen.queryAllByTestId("scenario-dataset-icon")).toEqual([]);
     // The way in is still there.
     expect(icon("New dataset")).toBeTruthy();
   });
