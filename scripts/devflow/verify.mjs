@@ -152,6 +152,7 @@ if (args.plan) {
   for (const c of plan.cargo) console.log(`  ${c.crates ? "RUN " : "skip"}  rust:${c.ws.name}  ${c.scope ?? c.skip ?? c.error}`);
   console.log(`  ${plan.js?.filters ? "RUN " : "skip"}  js  ${plan.js?.scope ?? plan.js?.skip ?? plan.js?.error ?? "no turbo in layout"}`);
   console.log(`  ${plan.golden ? "RUN " : "skip"}  golden`);
+  for (const step of layout.full) console.log(`  ${args.full ? "RUN " : "skip"}  ${step.name}  (--full only)`);
   console.log(`PLAN ok time=${seconds(Date.now() - started)}`);
   process.exit(0);
 }
