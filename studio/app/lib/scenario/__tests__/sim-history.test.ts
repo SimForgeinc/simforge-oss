@@ -25,7 +25,7 @@ import { migrate } from "../../../../scripts/migrate";
 import { GalleryCatalogResolutionError, requireGalleryCatalogEntries, resolveGalleryCatalogIds } from "../../asset-gallery/store";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "../../auth/session";
 import type { AppContext } from "../../db/app-context";
-import { execute, queryOne, queryRows, shutdownDatabase } from "../../db/data-api";
+import { execute, queryOne, queryRows, shutdownDatabase, withTransaction } from "../../db/data-api";
 import { createScenarioDocument, createScenarioRevision } from "../document-store";
 import { resolveDocumentSimulation } from "../document-simulation";
 import {
@@ -416,7 +416,7 @@ test("a draft simulates on its pinned map version, superseded or retired; a chan
   await setMembers("usbas_pin", SIMULATION_MEMBERS);
 });
 
-test("deleting a workspace cascades through its history rows", async () => {
+test("purging a workspace cascades through its history rows", async () => {
   const ws = "ws_history_cascade";
   await execute(`INSERT INTO public.ba_organization (id, name, slug) VALUES ('org_history_cascade', 'c', 'c') ON CONFLICT (id) DO NOTHING`);
   await execute(
@@ -438,7 +438,12 @@ test("deleting a workspace cascades through its history rows", async () => {
   assert.equal(revision.kind, "created");
   const before = await queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM simforge.revision_simulations WHERE workspace_id = :ws`, { ws });
   assert.equal(Number(before?.n), 1);
-  await execute(`DELETE FROM public.workspaces WHERE id = :ws`, { ws });
+  // Only the audited purge may hard-delete a workspace with results (20260923090000); its cascade
+  // must pass the history's append-only trigger.
+  await withTransaction(async (tx) => {
+    await tx.execute(`SELECT set_config('simforge.workspace_purge', :ws, true)`, { ws });
+    await tx.execute(`DELETE FROM public.workspaces WHERE id = :ws`, { ws });
+  });
   const afterDelete = await queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM simforge.revision_simulations WHERE workspace_id = :ws`, { ws });
   assert.equal(Number(afterDelete?.n), 0);
 });
