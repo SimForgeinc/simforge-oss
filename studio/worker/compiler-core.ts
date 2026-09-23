@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 import type { DerivedTopology, LocationCatalog } from "@simforge-oss/maps";
 import {
@@ -40,7 +43,37 @@ export type CompileResult = ExecutionPackage & { artifacts: CompilerArtifact[] }
 
 type LoadedMapClosure = { bundle: MapBundle; xodr: string; artifactDigests: Readonly<Record<string, string>> };
 
-async function download(url: string, expectedSize: number, expectedSha256: string, signal: AbortSignal, headers?: Record<string, string>): Promise<Uint8Array> {
+/**
+ * Map artifacts are immutable and named by digest, but every compile job
+ * downloaded its closure again (2.5 MB on Richmond, 64 MB / ~10 s on San
+ * Ramon's XODR). They are kept on local disk by sha256 and re-verified on
+ * read. SIMFORGE_COMPILER_CACHE_DIR=off disables the cache.
+ */
+function mapArtifactCacheDir(): string | null {
+  const configured = process.env.SIMFORGE_COMPILER_CACHE_DIR?.trim();
+  if (configured === "off") return null;
+  return configured || join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "simforge", "map-artifacts");
+}
+
+export async function download(url: string, expectedSize: number, expectedSha256: string, signal: AbortSignal, headers?: Record<string, string>): Promise<Uint8Array> {
+  const directory = /^[a-f0-9]{64}$/.test(expectedSha256) ? mapArtifactCacheDir() : null;
+  const file = directory ? join(directory, expectedSha256.slice(0, 2), expectedSha256) : null;
+  if (file) {
+    const cached = await readFile(file).catch(() => null);
+    if (cached && cached.byteLength === expectedSize && createHash("sha256").update(cached).digest("hex") === expectedSha256) return cached;
+  }
+  const bytes = await downloadOnce(url, expectedSize, expectedSha256, signal, headers);
+  if (file) {
+    const temporary = `${file}.${process.pid}.${Date.now()}.tmp`;
+    await mkdir(dirname(file), { recursive: true })
+      .then(() => writeFile(temporary, bytes))
+      .then(() => rename(temporary, file))
+      .catch(() => rm(temporary, { force: true }));
+  }
+  return bytes;
+}
+
+async function downloadOnce(url: string, expectedSize: number, expectedSha256: string, signal: AbortSignal, headers?: Record<string, string>): Promise<Uint8Array> {
   if (expectedSize > MAX_ARTIFACT_BYTES) throw new Error("map_artifact_too_large");
   const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) });
   if (!response.ok || !response.body) throw new Error(`map_artifact_download_failed:${response.status}`);

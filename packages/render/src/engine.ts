@@ -24,6 +24,28 @@ export interface RenderExecutionContext {
   readonly workspace: string;
   readonly signal: AbortSignal;
   readonly reportProgress: (record: RenderProgressRecord) => Promise<void>;
+  /**
+   * The device the job holds (measured by the worker after taking the GPU
+   * lock, so co-tenant renders are excluded but their idle residency is not).
+   * Engines refuse fast when a scene cannot fit instead of timing out.
+   */
+  readonly gpuMemory?: { readonly totalBytes: number; readonly freeBytes: number };
+}
+
+/** Declared input metadata an engine may inspect before any bulk download. */
+export interface RenderInputDescriptor {
+  readonly inputId: string;
+  readonly relativePath?: string;
+  readonly sha256: string;
+  readonly sizeBytes: number;
+}
+
+export interface RenderInputSelectionContext {
+  readonly intent: RenderIntentV1;
+  readonly inputs: readonly RenderInputDescriptor[];
+  /** Fetches (through the worker cache) and returns one small input's bytes. */
+  readonly read: (inputId: string) => Promise<Buffer>;
+  readonly signal: AbortSignal;
 }
 
 /**
@@ -34,6 +56,20 @@ export interface RenderEngineAdapter {
   readonly capabilities: EngineCapabilityDeclaration;
   execute(context: RenderExecutionContext): Promise<RenderArtifactManifest>;
   close?(): Promise<void>;
+  /**
+   * The claimed inputs this intent actually renders from. The worker fetches
+   * only these and `execute` receives only these; claimed inputs outside the
+   * set stay declared (the intent hash still binds them) but are never
+   * downloaded. Omitted: every claimed input is delivered.
+   */
+  selectInputs?(context: RenderInputSelectionContext): Promise<ReadonlySet<string>>;
+  /**
+   * `cache`: `execute` reads inputs in place from the worker's read-only,
+   * content-addressed cache (no per-job copy). `workspace` (default): each
+   * input is linked or copied under the job workspace, for engines that hand
+   * the workspace to another container or process.
+   */
+  readonly inputPlacement?: 'workspace' | 'cache';
 }
 
 export type RenderEngineAdapterModule = {

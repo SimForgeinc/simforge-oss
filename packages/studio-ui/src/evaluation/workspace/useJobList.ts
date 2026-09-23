@@ -13,13 +13,15 @@
  * refresh per submission rather than a request every four seconds forever.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
 import type { ComputeJob, EvaluationGateway } from "@simforge-oss/evaluation/client";
 import { ComputeApiError } from "@simforge-oss/evaluation/client";
 import { jobStatusPresentation } from "../presentation";
 
 export const JOB_POLL_INTERVAL_MS = 4000;
+/** Nothing live: a slow heartbeat still picks up jobs submitted elsewhere. */
+export const JOB_IDLE_POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 25;
 
 export type JobList = {
@@ -45,6 +47,10 @@ export function useJobList(
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  // A deployment with no compute service answers 503 `no_service_configured`
+  // on every poll; stop asking until the user retries or submits.
+  const [unconfigured, setUnconfigured] = useState(false);
+  useEffect(() => setUnconfigured(false), [refreshToken, retryKey]);
 
   const refresh = useCallback(
     async (signal: AbortSignal) => {
@@ -55,6 +61,7 @@ export function useJobList(
         setError(null);
       } catch (cause) {
         if (signal.aborted) return;
+        if (cause instanceof ComputeApiError && cause.code === "no_service_configured") setUnconfigured(true);
         setError(
           cause instanceof ComputeApiError ? cause.message : "The job list could not be loaded.",
         );
@@ -64,7 +71,12 @@ export function useJobList(
   );
 
   const anyLive = jobs?.some((job) => jobStatusPresentation(job.status).live) ?? true;
-  useVisiblePolling(refresh, JOB_POLL_INTERVAL_MS, true, `${anyLive}:${String(refreshToken)}:${retryKey}`);
+  useVisiblePolling(
+    refresh,
+    anyLive ? JOB_POLL_INTERVAL_MS : JOB_IDLE_POLL_INTERVAL_MS,
+    !unconfigured,
+    `${anyLive}:${String(refreshToken)}:${retryKey}`,
+  );
 
   const loadMore = useCallback(async () => {
     if (!nextCursor) return;

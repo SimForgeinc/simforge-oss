@@ -1,4 +1,5 @@
 export * from './artifacts.js';
+export * from './blob-cache.js';
 export * from './builtin-engines.js';
 export * from './cancellation.js';
 export * from './capabilities.js';

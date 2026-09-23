@@ -1,4 +1,5 @@
 import type { AppContext } from "@/app/lib/db/app-context";
+import { activeNativeGpuCapacities, knownNativeSceneDemand, NATIVE_GPU_HEADROOM_BYTES, NativeSceneMemoryError } from "./workers-prewarm-store";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
@@ -226,6 +227,7 @@ function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
   nativeAssets: readonly NativeAsset[],
+  fleetGpuBytes?: number,
 ): ScenarioRenderIntent {
   const content = typeof lineage.canonical_content === "string"
     ? JSON.parse(lineage.canonical_content) as Record<string, unknown>
@@ -284,8 +286,9 @@ function buildIntent(
     sensorHosts,
     renderSpec: input.renderSpec,
     ...(input.engine === "native" ? {
-      renderTextures: input.renderProfile === "ml" ? "bc7-512" : "uastc-full",
-      nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? 16 * 1024 ** 3,
+      renderTextures: nativeRenderTextureTier(input.renderProfile, input.renderSpec.sources),
+      // The fleet's real device size when known (largest active native worker), not an assumed 16 GiB.
+      nativeVramCapacityBytes: input.nativeVramBudgetBytes ?? fleetGpuBytes ?? 16 * 1024 ** 3,
       ...(input.nativeVramBudgetBytes === undefined ? {} : { nativeVramBudgetBytes: input.nativeVramBudgetBytes }),
     } : {}),
     assets: [
@@ -305,6 +308,29 @@ function buildIntent(
     ],
     seed: renderSeed(content, lineage.scenario_sha256),
   });
+}
+
+/**
+ * The native texture tier a render intent pins. `ml` renders always use the
+ * 512 px BC7 variants. Otherwise the policy (`SIMFORGE_NATIVE_TEXTURE_TIER_POLICY`)
+ * decides: `profile` (default, the historical behaviour) always renders full
+ * UASTC; `resolution` uses the 512 px variants when every camera is below
+ * `SIMFORGE_NATIVE_FULL_TEXTURE_MIN_HEIGHT` (default 720) rows, where full-size
+ * textures cannot resolve anyway and cost ~5x the download and VRAM.
+ * A quality tradeoff: the user decides before `resolution` becomes default.
+ */
+export function nativeRenderTextureTier(
+  renderProfile: string | undefined,
+  sources: readonly { modality: string; attributes: unknown }[],
+  env: NodeJS.ProcessEnv = process.env,
+): "uastc-full" | "bc7-512" {
+  if (renderProfile === "ml") return "bc7-512";
+  if (env.SIMFORGE_NATIVE_TEXTURE_TIER_POLICY?.trim() !== "resolution") return "uastc-full";
+  const minHeight = Number(env.SIMFORGE_NATIVE_FULL_TEXTURE_MIN_HEIGHT ?? 720);
+  const heights = sources
+    .filter((source) => source.modality === "rgb")
+    .map((source) => Number((source.attributes as { height?: number }).height ?? Infinity));
+  return heights.length > 0 && heights.every((height) => height < minHeight) ? "bc7-512" : "uastc-full";
 }
 
 export async function createRenderIntentJob(
@@ -339,7 +365,7 @@ export async function createRenderIntentJob(
       if (existing.revision_id !== input.revisionId
         || existing.execution_package_id !== input.executionPackageId
         || existing.renderer_engine !== input.engine
-        || (input.engine === "native" && existing.render_textures !== (input.renderProfile === "ml" ? "bc7-512" : "uastc-full"))
+        || (input.engine === "native" && existing.render_textures !== nativeRenderTextureTier(input.renderProfile, renderSpec.sources))
         || (input.engine === "native" && (existing.native_vram_budget === null ? undefined : Number(existing.native_vram_budget)) !== input.nativeVramBudgetBytes)
         || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)) {
         throw new Error("uniscenario_render_intent_idempotency_conflict");
@@ -396,7 +422,21 @@ export async function createRenderIntentJob(
     );
     if (!lineage) return null;
     let nativeAssets: NativeAsset[] = [];
+    let fleetGpuBytes: number | undefined;
     if (input.engine === "native") {
+      const fleet = await activeNativeGpuCapacities(tx);
+      fleetGpuBytes = fleet.length > 0 ? Math.max(...fleet) : undefined;
+      // Refuse at submission, with advice, when warm workers have measured
+      // this map at this tier and no native worker's GPU can hold it; the
+      // alternative was a lease, minutes of scene loading and a timeout.
+      const renderTextures = nativeRenderTextureTier(input.renderProfile, renderSpec.sources);
+      const sceneBytes = await knownNativeSceneDemand(lineage.map_revision_id, renderTextures, tx);
+      if (sceneBytes !== null) {
+        const needed = sceneBytes + resources.estimatedGpuBytes;
+        if (fleet.length > 0 && fleet.every((bytes) => needed > bytes - NATIVE_GPU_HEADROOM_BYTES)) {
+          throw new NativeSceneMemoryError(needed, Math.max(...fleet), renderTextures);
+        }
+      }
       const nativeMembers = await tx.queryRows<NativeMapMemberRow>(
         `SELECT m.relative_path, b.sha256, b.byte_length, s.object_count
            FROM simforge.map_versions mv
@@ -447,7 +487,7 @@ export async function createRenderIntentJob(
     const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
       ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
       : [];
-    const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets]);
+    const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets], fleetGpuBytes);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({
       schema: "uniscenario.render-control-lineage/v1",

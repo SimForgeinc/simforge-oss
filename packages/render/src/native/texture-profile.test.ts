@@ -73,3 +73,71 @@ it.each(['hardlink', 'cross-filesystem'])('reuses the %s cache across simultaneo
   expect(JSON.parse(await fs.readFile(results[0]!.masterPath,'utf8')).buffers[0].uri).toBe('geometry.bin');
   expect(await fs.readFile(path.join(path.dirname(results[0]!.masterPath),'geometry.bin'))).toEqual(Buffer.alloc(16));
 });
+
+it('selects exactly one tier before any texture is downloaded, and stages from only those members', async () => {
+  const value = await fixture();
+  const inputs = [...value.closure.members.values()];
+  const byId = new Map(inputs.map((input) => [input.inputId, input]));
+  const reads: string[] = [];
+  const context = (renderTextures: 'uastc-full' | 'bc7-512') => ({
+    intent: { renderTextures } as never,
+    inputs: inputs.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, relativePath, sha256, sizeBytes })),
+    read: async (inputId: string) => { reads.push(byId.get(inputId)!.relativePath!); return fs.readFile(byId.get(inputId)!.path); },
+    signal: new AbortController().signal,
+  });
+  const { selectNativeRenderInputs } = await import('./engine.js');
+  vi.spyOn(await import('@simforge-oss/scenario'), 'parseRenderIntent').mockImplementation((intent) => intent as never);
+  const paths = async (tier: 'uastc-full' | 'bc7-512') => [...await selectNativeRenderInputs(context(tier))].map((id) => byId.get(id)!.relativePath).sort();
+  expect(await paths('uastc-full')).toEqual(['geometry.bin', 'images/full.ktx2', 'master.gltf']);
+  expect(reads).toEqual(['master.gltf']);
+  expect(await paths('bc7-512')).toEqual(['3d/manifest.json', '3d/variants/bc7.json', '3d/variants/manifest.json', '3d/variants/objects/bc7.ktx2', 'geometry.bin', 'master.gltf']);
+  expect(reads).not.toContain('images/full.ktx2');
+
+  // Staging succeeds from the selected members alone.
+  const selected = new Set(await selectNativeRenderInputs(context('uastc-full')));
+  const staged = await stageNativeTextureProfile({
+    ...value,
+    closure: collectNativeMapMembers(inputs.filter((input) => selected.has(input.inputId))),
+    renderTextures: 'uastc-full', framePixels: 640 * 480, capacityBytes: 16 * 1024 ** 3,
+  });
+  expect(staged.textureBytes).toBe(1024 ** 2);
+});
+
+it('does not re-hash a staged member that is already a link to the verified blob', async () => {
+  const value = await fixture();
+  await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
+  const hash = await import('../hash.js');
+  const spy = vi.spyOn(hash, 'hashFile');
+  await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
+  expect(spy).not.toHaveBeenCalled();
+});
+
+it('measures per-tier scene memory from KTX2 headers, matching what staging admits', async () => {
+  const value = await fixture();
+  const { measureNativeTextureDemand } = await import('./texture-profile.js');
+  const members = value.closure.members;
+  const master = JSON.parse(await fs.readFile(members.get('master.gltf')!.path, 'utf8'));
+  const source = {
+    sha256: (uri: string) => members.get(uri)?.sha256,
+    readText: (uri: string) => fs.readFile(members.get(uri)!.path, 'utf8'),
+    path: (uri: string) => members.get(uri)!.path,
+  };
+  const full = await measureNativeTextureDemand(master, 'uastc-full', source);
+  const ml = await measureNativeTextureDemand(master, 'bc7-512', source);
+  expect(full.textureBytes).toBe(1024 ** 2);
+  expect(ml.textureBytes).toBe(512 ** 2);
+  const staged = await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(full.sceneBytes).toBe(staged.estimatedBytes);
+});
+
+it('refuses fast, with advice, when the device cannot hold the scene', async () => {
+  const { NativeGpuMemoryError, nativeStartupTimeoutMs } = await import('./texture-profile.js');
+  const error = new NativeGpuMemoryError(7 * 1024 ** 3, { totalBytes: 10 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }, 'uastc-full');
+  expect(error.message).toMatch(/needs about 7.0 GB and this worker has 3.0 GB free of 10.0 GB/);
+  expect(error.message).toMatch(/ML quality/);
+  expect(error.retryable).toBe(true);
+  expect(new NativeGpuMemoryError(12 * 1024 ** 3, { totalBytes: 10 * 1024 ** 3, freeBytes: 9 * 1024 ** 3 }, 'uastc-full').retryable).toBe(false);
+  expect(nativeStartupTimeoutMs({ textureBytes: 0, geometryBytes: 0 })).toBe(300_000);
+  expect(nativeStartupTimeoutMs({ textureBytes: 5.48e9, geometryBytes: 143e6 })).toBeGreaterThan(600_000);
+  expect(nativeStartupTimeoutMs({ textureBytes: 1e12, geometryBytes: 1e12 })).toBe(1_800_000);
+});

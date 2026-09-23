@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import type { RenderSensorSourceHost } from '@simforge-oss/scenario';
 import { getEntry, isCatalogId } from '@simforge-oss/asset-catalog/metadata';
 
+import { markBlobVerified, verifyCachedBlob } from '../blob-cache.js';
 import type { NativeActorAppearance } from './lowering.js';
 
 /**
@@ -50,12 +51,27 @@ export interface NativeActorAssetsInput {
   readonly downloadUrl: string;
 }
 
+/**
+ * The origin root. The published layout is `<origin>/actor-assets/closures/<digest>.json`
+ * and `<origin>/actor-assets/blobs/sha256/<aa>/<sha256>`. Operators have configured
+ * the base both as the origin and as `<origin>/actor-assets`, so a trailing
+ * `/actor-assets` is folded away: either spelling reaches the same objects.
+ * A `file://` base is a packaged closure directory holding `blobs/` directly.
+ */
 export function actorAssetsBaseUrl(configured?: string): string {
-  return (configured ?? process.env.SIMFORGE_ACTOR_ASSETS_BASE_URL ?? DEFAULT_ACTOR_ASSETS_BASE_URL).replace(/\/+$/u, '');
+  const base = (configured ?? process.env.SIMFORGE_ACTOR_ASSETS_BASE_URL ?? DEFAULT_ACTOR_ASSETS_BASE_URL).replace(/\/+$/u, '');
+  return base.startsWith('file://') ? base : base.replace(/\/actor-assets$/u, '');
 }
 
 export function actorAssetsClosureUrl(digest: string, baseUrl?: string): string {
   return `${actorAssetsBaseUrl(baseUrl)}/actor-assets/closures/${digest}.json`;
+}
+
+/** Where a closure member's bytes are served; see {@link actorAssetsBaseUrl}. */
+export function actorAssetBlobUrl(sha256: string, baseUrl?: string): string {
+  const base = actorAssetsBaseUrl(baseUrl);
+  const prefix = base.startsWith('file://') ? base : `${base}/actor-assets`;
+  return `${prefix}/blobs/sha256/${sha256.slice(0, 2)}/${sha256}`;
 }
 
 /**
@@ -70,6 +86,18 @@ export function nativeActorAssetsInput(options: { readonly baseUrl?: string } = 
     sizeBytes: PINNED_ACTOR_ASSETS_SIZE_BYTES,
     downloadUrl: actorAssetsClosureUrl(PINNED_ACTOR_ASSETS_DIGEST, options.baseUrl),
   };
+}
+
+/**
+ * The writable, persistent actor blob cache: `SIMFORGE_ACTOR_ASSETS_CACHE_DIR`,
+ * else `<SIMFORGE_CACHE_DIR>/actor-assets` (the worker's cache mount), else
+ * `fallback`.
+ */
+export function nativeActorAssetsCacheDir(fallback: string, env: NodeJS.ProcessEnv = process.env): string {
+  const explicit = env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR?.trim();
+  if (explicit) return explicit;
+  const cache = env.SIMFORGE_CACHE_DIR?.trim();
+  return cache ? path.join(cache, 'actor-assets') : fallback;
 }
 
 export interface ActorClosureMember { readonly sha256: string; readonly bytes: number }
@@ -231,7 +259,7 @@ function blobPath(cacheRoot: string, member: ActorClosureMember): string {
 async function downloadBlob(baseUrl: string, member: ActorClosureMember, destination: string): Promise<void> {
   await fs.mkdir(path.dirname(destination), { recursive: true });
   const temporary = `${destination}.${process.pid}.${Date.now()}.tmp`;
-  const url = `${baseUrl}/blobs/sha256/${member.sha256.slice(0, 2)}/${member.sha256}`;
+  const url = actorAssetBlobUrl(member.sha256, baseUrl);
   if (url.startsWith('file://')) {
     await fs.copyFile(new URL(url), temporary);
   } else {
@@ -244,6 +272,7 @@ async function downloadBlob(baseUrl: string, member: ActorClosureMember, destina
     await fs.rm(temporary, { force: true });
     throw new Error(`actor asset blob digest mismatch: expected ${member.sha256}/${member.bytes}, got ${actual.sha256}/${actual.bytes}`);
   }
+  await markBlobVerified(temporary, member.sha256);
   await fs.rename(temporary, destination);
 }
 
@@ -252,16 +281,17 @@ const inflight = new Map<string, Promise<void>>();
 
 /**
  * Proves the cached blob is the member's bytes, downloading it when absent
- * or corrupt. Every job re-hashes: the cache is an optimisation, never an
- * authority.
+ * or corrupt. A blob is hashed when it is written; later jobs prove it is
+ * unmodified with its verification stamp (`SIMFORGE_CACHE_VERIFY=full`
+ * re-hashes every job). The cache is an optimisation, never an authority:
+ * a blob that fails verification is replaced from the origin.
  */
 function verifiedBlob(baseUrl: string, member: ActorClosureMember, destination: string): Promise<void> {
   const pending = inflight.get(destination);
   if (pending) return pending;
   const work = (async () => {
     if (existsSync(destination)) {
-      const existing = await hashFile(destination);
-      if (existing.bytes === member.bytes && existing.sha256 === member.sha256) return;
+      if (await verifyCachedBlob(destination, member.sha256, member.bytes)) return;
       await fs.rm(destination, { force: true });
     }
     await downloadBlob(baseUrl, member, destination);
@@ -289,6 +319,42 @@ export interface EnsureActorAssetsOptions {
   readonly destination: string;
   readonly baseUrl?: string;
   readonly cacheDir?: string;
+  /**
+   * When set, the closure tree is laid out once per closure digest under
+   * `<treeRoot>/<digest>` (hard links into the blob cache, so it costs no
+   * bytes) and shared read-only by every later job, instead of a per-job
+   * copy under `destination`. Must be on the same filesystem as the cache
+   * for the links to be free.
+   */
+  readonly treeRoot?: string;
+}
+
+const TREE_COMPLETE_MARKER = '.simforge-closure-complete';
+
+/** A tree member is valid when it is the verified blob itself (same inode) or carries its own stamp. */
+async function treeMemberValid(treeFile: string, blobFile: string, member: ActorClosureMember): Promise<boolean> {
+  const [tree, blob] = await Promise.all([fs.stat(treeFile).catch(() => null), fs.stat(blobFile).catch(() => null)]);
+  if (!tree?.isFile() || tree.size !== member.bytes) return false;
+  if (blob && blob.ino === tree.ino && blob.dev === tree.dev) return true;
+  return verifyCachedBlob(treeFile, member.sha256, member.bytes);
+}
+
+async function reuseSharedTree(directory: string, cacheRoot: string, closure: ActorAssetsClosure): Promise<boolean> {
+  if (!existsSync(path.join(directory, TREE_COMPLETE_MARKER))) return false;
+  const entries = [...closure.members];
+  let cursor = 0;
+  let valid = true;
+  await Promise.all(Array.from({ length: Math.min(16, entries.length) }, async () => {
+    while (valid && cursor < entries.length) {
+      const [memberPath, member] = entries[cursor++]!;
+      if (!await treeMemberValid(path.join(directory, ...safeMemberPath(memberPath)), blobPath(cacheRoot, member), member)) valid = false;
+    }
+  }));
+  if (valid) {
+    const now = new Date();
+    await fs.utimes(directory, now, now).catch(() => undefined);
+  }
+  return valid;
 }
 
 /**
@@ -306,25 +372,71 @@ export async function ensureActorAssets(options: EnsureActorAssetsOptions): Prom
 
   const entries = [...closure.members];
   let cursor = 0;
-  await Promise.all(Array.from({ length: Math.min(4, entries.length) }, async () => {
+  await Promise.all(Array.from({ length: Math.min(8, entries.length) }, async () => {
     while (cursor < entries.length) {
       const [, member] = entries[cursor++]!;
       await verifiedBlob(baseUrl, member, blobPath(cacheRoot, member));
     }
   }));
 
-  const temporary = `${options.destination}.${process.pid}.${Date.now()}.tmp`;
-  await fs.rm(temporary, { recursive: true, force: true });
-  for (const [memberPath, member] of entries) {
-    await linkOrCopy(blobPath(cacheRoot, member), path.join(temporary, ...safeMemberPath(memberPath)));
+  const sharedTree = options.treeRoot ? path.join(options.treeRoot, closure.digest) : null;
+  let directory = options.destination;
+  if (sharedTree && await reuseSharedTree(sharedTree, cacheRoot, closure)) {
+    directory = sharedTree;
+  } else {
+    const target = sharedTree ?? options.destination;
+    const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
+    await fs.rm(temporary, { recursive: true, force: true });
+    for (const [memberPath, member] of entries) {
+      await linkOrCopy(blobPath(cacheRoot, member), path.join(temporary, ...safeMemberPath(memberPath)));
+    }
+    if (sharedTree) await fs.writeFile(path.join(temporary, TREE_COMPLETE_MARKER), `${closure.digest}\n`);
+    await fs.rm(target, { recursive: true, force: true });
+    try {
+      await fs.rename(temporary, target);
+    } catch (error) {
+      // A co-located worker published the same tree first; ours is redundant.
+      const code = (error as NodeJS.ErrnoException).code;
+      if (!sharedTree || (code !== 'ENOTEMPTY' && code !== 'EEXIST')) throw error;
+      await fs.rm(temporary, { recursive: true, force: true });
+      if (!await reuseSharedTree(sharedTree, cacheRoot, closure)) throw error;
+    }
+    directory = target;
   }
-  await fs.rm(options.destination, { recursive: true, force: true });
-  await fs.rename(temporary, options.destination);
 
   const catalogMember = closure.members.get(NATIVE_ACTOR_ASSETS_CATALOG_PATH)!;
-  const catalogBytes = await fs.readFile(path.join(options.destination, NATIVE_ACTOR_ASSETS_CATALOG_PATH));
+  const catalogBytes = await fs.readFile(path.join(directory, NATIVE_ACTOR_ASSETS_CATALOG_PATH));
   if (sha256(catalogBytes) !== catalogMember.sha256) {
     throw new Error(`materialized ${NATIVE_ACTOR_ASSETS_CATALOG_PATH} does not match closure ${closure.digest}`);
   }
-  return { ...closure, directory: options.destination, models: parseActorClosureCatalog(catalogBytes, closure.members) };
+  return { ...closure, directory, models: parseActorClosureCatalog(catalogBytes, closure.members) };
 }
+
+/**
+ * Downloads (and verifies) every member blob of the closure into the cache
+ * without laying out a tree: the worker's background prewarm.
+ */
+export async function prewarmActorAssets(options: {
+  readonly closureBytes: Uint8Array;
+  readonly declared: { readonly sha256: string; readonly sizeBytes: number };
+  readonly baseUrl?: string;
+  readonly cacheDir: string;
+  readonly concurrency?: number;
+  readonly onBlob?: (member: ActorClosureMember) => void;
+}): Promise<{ members: number; bytes: number }> {
+  const closure = parseActorAssetsClosure(options.closureBytes, options.declared);
+  const baseUrl = actorAssetsBaseUrl(options.baseUrl);
+  const entries = [...closure.members.values()];
+  let cursor = 0;
+  let bytes = 0;
+  await Promise.all(Array.from({ length: Math.min(options.concurrency ?? 2, entries.length) }, async () => {
+    while (cursor < entries.length) {
+      const member = entries[cursor++]!;
+      await verifiedBlob(baseUrl, member, blobPath(options.cacheDir, member));
+      bytes += member.bytes;
+      options.onBlob?.(member);
+    }
+  }));
+  return { members: entries.length, bytes };
+}
+

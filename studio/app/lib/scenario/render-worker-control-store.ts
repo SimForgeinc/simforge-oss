@@ -202,6 +202,7 @@ export async function registerRenderWorkerV2(input: {
     },
   );
   if (!rows[0]) throw new Error("worker_registration_not_approved");
+  await releaseOrphanedWorkerLeasesV2(input.workerId);
   return {
     schema: CONTROL_SCHEMA,
     type: "worker.registered" as const,
@@ -210,16 +211,18 @@ export async function registerRenderWorkerV2(input: {
   };
 }
 
-type Candidate = {
+export type Candidate = {
   id: string;
   renderer_engine: "browser" | "carla" | "native";
   /** Only the intent's render spec: screening never reads its asset closure. */
   render_spec: unknown;
   intent_sha256: string;
   resource_request: unknown;
+  map_version_id?: string | null;
+  render_textures?: string | null;
 };
 
-type WorkerRow = {
+export type WorkerRow = {
   id: string;
   registration_id: string;
   worker_version: string;
@@ -230,6 +233,10 @@ type WorkerRow = {
   base_image_platform_digest: string | null;
   gpu_memory_mib: number;
   hardware_profile: string;
+  /** `batch-v1` when the worker signs lease inputs lazily (label `inputUrls`). */
+  input_urls?: string | null;
+  /** Per-map, per-tier scene memory this worker measured from its cache (`cacheStatus.demand`). */
+  cache_demand?: string | unknown[] | null;
 };
 
 function parseObject(value: string | Record<string, unknown>) {
@@ -295,7 +302,7 @@ export async function readRenderIntentText(
   return text;
 }
 
-function workerCanRun(worker: WorkerRow, candidate: Candidate) {
+export function workerCanRun(worker: WorkerRow, candidate: Candidate) {
   const capability = ScenarioRendererCapabilitySchema.safeParse(parseObject(worker.capabilities));
   const specValue = typeof candidate.render_spec === "string"
     ? JSON.parse(candidate.render_spec) as unknown
@@ -310,6 +317,18 @@ function workerCanRun(worker: WorkerRow, candidate: Candidate) {
     typeof resources.estimatedGpuBytes !== "number"
     || resources.estimatedGpuBytes > (Number(worker.gpu_memory_mib) - 1024) * 1024 * 1024
   ) return false;
+  // Map textures dominate a native job's device memory. When this worker has
+  // measured the job's map at its tier, leave a job it cannot hold to a larger
+  // worker instead of leasing it into a scene-load failure.
+  if (candidate.renderer_engine === "native" && candidate.map_version_id && candidate.render_textures) {
+    const measured = (typeof worker.cache_demand === "string" ? JSON.parse(worker.cache_demand) as unknown[] : worker.cache_demand ?? [])
+      .find((entry) => {
+        const demand = entry as { mapVersionId?: unknown; renderTextures?: unknown };
+        return demand.mapVersionId === candidate.map_version_id && demand.renderTextures === candidate.render_textures;
+      }) as { sceneBytes?: unknown } | undefined;
+    if (typeof measured?.sceneBytes === "number"
+      && measured.sceneBytes + resources.estimatedGpuBytes > (Number(worker.gpu_memory_mib) - 1024) * 1024 * 1024) return false;
+  }
   const physicalSensors = new Set(sources.map((source) => `${source.actorId}\0${source.sensorId}`));
   if (physicalSensors.size > capability.data.limits.maxSimultaneousSensors) return false;
   if (physicalSensors.size === FULL_SENSOR_RIG_SOURCES
@@ -341,6 +360,8 @@ type Claimed = {
   intentSha256: string;
   executionPackageControlSha256: string;
   inputs: ClaimedInput[];
+  /** The worker signs stored inputs on demand (cache misses only): send no per-input URL. */
+  lazyInputUrls: boolean;
 };
 
 type StoredInput = {
@@ -361,18 +382,20 @@ type ClaimedInput = StoredInput | {
   url: string;
 };
 
-async function reapExpiredRenderIntentLeasesV2() {
-  const expired = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
-    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
-       FROM simforge.worker_leases
-      WHERE lease_state = 'active' AND expires_at <= NOW()
-      ORDER BY expires_at LIMIT 100`,
-  );
-  for (const item of expired) {
+/**
+ * Ends active leases and puts their jobs back in the queue (or fails them
+ * when their attempts are spent). `force` ends leases that have not expired
+ * yet: used when the holder is known to be gone.
+ */
+async function releaseRenderLeasesV2(
+  items: readonly { lease_id: string; attempt_id: string; job_id: string }[],
+  force: boolean,
+) {
+  for (const item of items) {
     await withTransaction(async (tx) => {
       const released = await tx.queryOne<{ id: string }>(
         `UPDATE simforge.worker_leases SET lease_state = 'expired', released_at = NOW()
-          WHERE id = :lease_id AND lease_state = 'active' AND expires_at <= NOW()
+          WHERE id = :lease_id AND lease_state = 'active' ${force ? "" : "AND expires_at <= NOW()"}
           RETURNING id`,
         { lease_id: item.lease_id },
       );
@@ -407,6 +430,37 @@ async function reapExpiredRenderIntentLeasesV2() {
   }
 }
 
+async function reapExpiredRenderIntentLeasesV2() {
+  const expired = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
+    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
+       FROM simforge.worker_leases
+      WHERE lease_state = 'active' AND expires_at <= NOW()
+      ORDER BY expires_at LIMIT 100`,
+  );
+  await releaseRenderLeasesV2(expired, false);
+}
+
+/**
+ * A worker runs one job at a time and registers only when its process
+ * starts, so any lease still active for its node at registration belongs to
+ * a process that is gone (crash, restart, redeploy). Release those at once
+ * so the job is retried now instead of after the lease runs out (up to
+ * LEASE_SECONDS later).
+ */
+export async function releaseOrphanedWorkerLeasesV2(workerNodeId: string) {
+  const orphaned = await queryRows<{ lease_id: string; attempt_id: string; job_id: string }>(
+    `SELECT id AS lease_id, render_attempt_id AS attempt_id, render_job_id AS job_id
+       FROM simforge.worker_leases
+      WHERE worker_node_id = :worker_node_id AND lease_state = 'active'`,
+    { worker_node_id: workerNodeId },
+  );
+  await releaseRenderLeasesV2(orphaned, true);
+  if (orphaned.length > 0) {
+    console.error(JSON.stringify({ event: "render_worker_orphaned_leases_released", workerNodeId, jobIds: orphaned.map((item) => item.job_id) }));
+  }
+  return orphaned.length;
+}
+
 export async function claimRenderJobV2(registrationId: string, workerNodeId: string): Promise<Claimed | null> {
   await reapExpiredRenderIntentLeasesV2();
   // An authenticated poll is liveness evidence even when the queue is empty
@@ -433,7 +487,9 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
   // to 32 map closures in one response, which exceeds the Data API's 1 MB cap
   // as soon as two large-map native jobs are queued.
   const candidates = await queryRows<Candidate>(
-    `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request
+    `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request,
+            render_intent->'scenarioRevision'->'map'->>'revisionId' AS map_version_id,
+            render_intent->>'renderTextures' AS render_textures
        FROM simforge.render_jobs
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
@@ -447,7 +503,9 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                 metadata->>'baseImageDigest' AS base_image_digest,
                 (metadata->>'gpuMemoryMiB')::integer AS gpu_memory_mib,
                 metadata->>'baseImagePlatformDigest' AS base_image_platform_digest,
-                capabilities::text AS capabilities
+                capabilities::text AS capabilities,
+                metadata->'labels'->>'inputUrls' AS input_urls,
+                metadata->'cacheStatus'->'demand' AS cache_demand
            FROM simforge.worker_nodes
           WHERE registration_id = :registration_id AND id = :worker_node_id AND environment = :environment
             AND registration_state = 'active'
@@ -677,6 +735,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         intentSha256: row.intent_sha256,
         executionPackageControlSha256: row.execution_package_control_sha256,
         inputs,
+        lazyInputUrls: worker.input_urls === "batch-v1",
       };
     }).catch((error: unknown): null => {
       // One job that cannot be leased (an incomplete map closure, a digest
@@ -715,12 +774,16 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
     intent: claimed.intent,
     intentSha256: claimed.intentSha256,
     executionPackageControlSha256: claimed.executionPackageControlSha256,
+    // A `batch-v1` worker gets identities only for stored inputs and signs
+    // just its cache misses (`input-urls`): a large native map would
+    // otherwise put thousands of signed URLs, each with a refresh block
+    // repeating the worker's bearer token, into one ~12 MB claim.
     inputs: await Promise.all(claimed.inputs.map(async (input) => ({
       inputId: input.inputId,
       ...(input.relativePath === undefined ? {} : { relativePath: input.relativePath }),
       sha256: input.sha256,
       sizeBytes: Number(input.sizeBytes),
-      download: {
+      ...(claimed.lazyInputUrls && !("url" in input) ? {} : { download: {
         url: "url" in input ? input.url : await getPresignedGetUrl(input.key, input.bucket, LEASE_SECONDS),
         headers: {},
         ...("url" in input ? {} : {
@@ -735,7 +798,7 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
             },
           } } : {}),
         }),
-      },
+      } }),
     }))),
   };
 }
@@ -841,6 +904,62 @@ export async function refreshRenderInputV2(input: {
   if (!object) return null;
   const url = await getPresignedGetUrl(object.storage_key, object.storage_bucket, LEASE_SECONDS);
   return { url, headers: {}, expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString() };
+}
+
+/**
+ * Batch download URLs for a live lease's inputs (`render-jobs/{jobId}/input-urls`).
+ * Each id is authorized exactly like a single-input refresh: it must be a
+ * package input or an asset the leased intent declares, and the object is
+ * found by the declared digest and size. Unknown ids are omitted.
+ */
+export async function signRenderInputsV2(input: {
+  jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; inputIds: readonly string[];
+}) {
+  const lease = await activeLease(input.leaseId, input.fenceToken, input.workerNodeId, input.jobId);
+  if (!lease || lease.cancel_requested_at) return null;
+  const intent = parseRenderIntent(lease.render_intent);
+  const declared = new Map(intent.assets.map((asset) => [asset.assetId, asset]));
+  const expiresAt = new Date(Date.now() + LEASE_SECONDS * 1000).toISOString();
+  const downloads: Record<string, { url: string; headers: Record<string, string>; expiresAt?: string }> = {};
+  const byDigest = new Map<string, string[]>();
+  for (const inputId of new Set(input.inputIds)) {
+    if (inputId === NATIVE_ACTOR_ASSETS_INPUT_ID) {
+      downloads[inputId] = { url: nativeActorAssetsInput().downloadUrl, headers: {} };
+      continue;
+    }
+    const asset = declared.get(inputId);
+    if (asset) {
+      const key = `${asset.sha256}:${asset.sizeBytes}`;
+      byDigest.set(key, [...(byDigest.get(key) ?? []), inputId]);
+      continue;
+    }
+    // Package inputs (scenario, and CARLA's map/catalog/package) resolve through the single-input path.
+    const single = await refreshRenderInputV2({ ...input, inputId });
+    if (single) downloads[inputId] = single;
+  }
+  if (byDigest.size > 0) {
+    const digests = [...new Set([...byDigest.keys()].map((key) => key.split(":")[0]!))];
+    const rows = await queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
+      `SELECT sha256, byte_length, storage_bucket, storage_key FROM simforge.native_map_asset_blobs
+        WHERE sha256 = ANY(string_to_array(:digests, ',')) AND verification_state = 'verified'
+       UNION ALL
+       SELECT sha256, byte_length, storage_bucket, storage_key FROM simforge.artifacts
+        WHERE sha256 = ANY(string_to_array(:digests, ','))`,
+      { digests: digests.join(",") },
+    );
+    const objects = new Map<string, { storage_bucket: string; storage_key: string }>();
+    for (const row of rows) {
+      const key = `${row.sha256}:${Number(row.byte_length)}`;
+      if (!objects.has(key)) objects.set(key, row);
+    }
+    await Promise.all([...byDigest].map(async ([key, inputIds]) => {
+      const object = objects.get(key);
+      if (!object) return;
+      const url = await getPresignedGetUrl(object.storage_key, object.storage_bucket, LEASE_SECONDS);
+      for (const inputId of inputIds) downloads[inputId] = { url, headers: {}, expiresAt };
+    }));
+  }
+  return { schema: CONTROL_SCHEMA, type: "lease.input-urls" as const, downloads };
 }
 
 export async function heartbeatRenderLeaseV2(input: {
