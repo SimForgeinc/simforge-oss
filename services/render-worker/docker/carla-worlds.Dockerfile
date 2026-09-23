@@ -7,14 +7,25 @@
 # The world pack is a tar of CarlaUnreal/Content paths, extracted read-only from
 # a cook image built by the SAME engine binary (the build refuses otherwise):
 # the worlds' packages plus their transitive /Game dependencies that the base
-# lacks. It never replaces a file the base already ships, so the base's worlds
-# render exactly as before. The pack is fetched by URL on the builder and
-# checked against its sha256; it is never part of the local build context.
+# lacks. It never replaces a content file the base already ships.
+#
+# It DOES replace CarlaUnreal/AssetRegistry.bin with the cook image's registry
+# (CARLA_ASSET_REGISTRY_URL/SHA256). A cooked UE build resolves packages
+# through that registry: without it the added worlds are listed but
+# load_world silently opens the default world (Town10HD_Opt) instead. The
+# cook's registry was checked to expose the identical blueprint library as the
+# base's (171 blueprints incl. vehicle.kia.carnival and all walkers) and to load
+# the base worlds; the runtime's digest binding would refuse any world that
+# silently fell back, but the build should not ship one that does.
+#
+# Both inputs are fetched by URL on the builder and checked against their
+# sha256; neither is part of the local build context.
 #
 #   depot build -f services/render-worker/docker/carla-worlds.Dockerfile \
 #     --build-context carla-exec=adapters/carla-exec \
 #     --build-arg CARLA_WORKER_IMAGE=<registry>/<repo>@sha256:<approved worker> \
 #     --build-arg CARLA_WORLD_PACK_URL=<https url> --build-arg CARLA_WORLD_PACK_SHA256=<sha256> \
+#     --build-arg CARLA_ASSET_REGISTRY_URL=<https url> --build-arg CARLA_ASSET_REGISTRY_SHA256=<sha256> \
 #     --build-arg CARLA_WORLDS="Saratoga_School_Area San_Ramon_Phase_1_P1 San_Ramon_Phase_1_P2" \
 #     --build-arg CARLA_ENGINE_BINARY_SHA256=<sha256 of CarlaUnreal-Linux-Shipping in the cook image> \
 #     --build-arg SOURCE_REVISION=<40-hex> --build-arg IMAGE_VERSION=<version> \
@@ -24,9 +35,13 @@ ARG CARLA_WORKER_IMAGE
 FROM busybox:1.36.1 AS world-pack
 ARG CARLA_WORLD_PACK_URL
 ARG CARLA_WORLD_PACK_SHA256
+ARG CARLA_ASSET_REGISTRY_URL
+ARG CARLA_ASSET_REGISTRY_SHA256
 ADD --checksum=sha256:${CARLA_WORLD_PACK_SHA256} ${CARLA_WORLD_PACK_URL} /pack.tar
+ADD --checksum=sha256:${CARLA_ASSET_REGISTRY_SHA256} ${CARLA_ASSET_REGISTRY_URL} /AssetRegistry.bin
 RUN mkdir /out && tar -xf /pack.tar -C /out && rm /pack.tar \
- && test -d /out/CarlaUnreal/Content
+ && test -d /out/CarlaUnreal/Content && test ! -e /out/CarlaUnreal/AssetRegistry.bin \
+ && mv /AssetRegistry.bin /out/CarlaUnreal/AssetRegistry.bin
 
 FROM python:3.12.10-slim-bookworm AS python-build
 WORKDIR /src
@@ -41,6 +56,7 @@ ARG CARLA_WORLDS
 ARG CARLA_WORLD_PACK_SHA256
 ARG CARLA_ENGINE_BINARY_SHA256
 ARG CARLA_WORLD_PACK_ORIGIN
+ARG CARLA_ASSET_REGISTRY_SHA256
 USER root
 # The pack's worlds were cooked by one engine build; loose cooked packages are
 # only valid for that build. Refuse to stack them on any other binary.
@@ -63,5 +79,6 @@ LABEL org.opencontainers.image.version="$IMAGE_VERSION" \
       io.simforge.carla.worlds.added="$CARLA_WORLDS" \
       io.simforge.carla.world-pack.sha256="$CARLA_WORLD_PACK_SHA256" \
       io.simforge.carla.world-pack.origin="$CARLA_WORLD_PACK_ORIGIN" \
+      io.simforge.carla.asset-registry.sha256="$CARLA_ASSET_REGISTRY_SHA256" \
       io.simforge.carla.engine-binary.sha256="$CARLA_ENGINE_BINARY_SHA256"
 USER carla
