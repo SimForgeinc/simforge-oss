@@ -1680,13 +1680,15 @@ async function readActiveEditorAssetReleaseCacheKey() {
   return row?.release_cache_key ?? "no-active-editor-asset-release";
 }
 
-async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
-  "use cache";
-  cacheLife("days");
-  cacheTag("scenario:maps:global");
-
-  return queryRows<MapDescriptorRow>(
-    `WITH ranked_map_versions AS (
+/**
+ * The descriptor query. `newest` is the editor catalog: the newest unretired publication of each
+ * source map. `exact` is one named version whatever became of it since (superseded or retired): a
+ * document pinned to it still opens and simulates on exactly that version.
+ */
+function mapDescriptorSql(mode: "newest" | "exact"): string {
+  const versionFilter = mode === "newest" ? "mv.retired_at IS NULL" : "mv.id = :map_version_id";
+  const rankFilter = mode === "newest" ? "source_publication_rank = 1" : "TRUE";
+  return `WITH ranked_map_versions AS (
      SELECT mv.id, mv.source_map_asset_id, mv.label, mv.locality, mv.topology_artifact_url,
        mv.xodr_artifact_id, mv.xodr_sha256, mv.coordinate_system_id, mv.coordinate_system_sha256,
        bs.closure_sha256 AS browser_closure_sha256,
@@ -1741,7 +1743,7 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        AND lanes_member.relative_path = 'lane-polygons.geojson.gz' AND lanes_member.required = TRUE
      JOIN simforge.browser_asset_blobs lanes_blob ON lanes_blob.id = lanes_member.blob_id
        AND lanes_blob.verification_state = 'verified'
-     WHERE mv.retired_at IS NULL
+     WHERE ${versionFilter}
        AND NULLIF(BTRIM(mv.source_map_asset_id), '') IS NOT NULL
      )
      SELECT id, source_map_asset_id, label, locality, topology_artifact_url,
@@ -1751,10 +1753,16 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        lane_polygons_sha256, sumo_network_sha256, sumo_status,
        ambient_turn_verdicts_sha256, ambient_turn_verdicts
      FROM ranked_map_versions
-     WHERE source_publication_rank = 1
-     ORDER BY label, id`,
-    {},
-  );
+     WHERE ${rankFilter}
+     ORDER BY label, id`;
+}
+
+async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
+  "use cache";
+  cacheLife("days");
+  cacheTag("scenario:maps:global");
+
+  return queryRows<MapDescriptorRow>(mapDescriptorSql("newest"), {});
 }
 
 /** Thumbnail bindings are mutable presentation state and deliberately stay outside the immutable
@@ -1783,7 +1791,23 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
   const thumbnailMapVersionIds = new Set(
     (await readAvailableThumbnailMapVersionIds()).map((row) => row.id),
   );
-  return rows.map((row): ScenarioMapDescriptorDto => {
+  return rows.map((row) => mapDescriptorDto(row, thumbnailMapVersionIds));
+}
+
+/**
+ * The descriptor of exactly `mapVersionId`, superseded or retired: what a document pinned to it
+ * opens and simulates on. Null when the version has no available browser closure.
+ */
+export async function readPinnedScenarioMapDescriptor(mapVersionId: string): Promise<ScenarioMapDescriptorDto | null> {
+  const row = await queryOne<MapDescriptorRow>(mapDescriptorSql("exact"), { map_version_id: mapVersionId });
+  if (!row) return null;
+  const thumbnailMapVersionIds = new Set(
+    (await readAvailableThumbnailMapVersionIds()).map((thumbnail) => thumbnail.id),
+  );
+  return mapDescriptorDto(row, thumbnailMapVersionIds);
+}
+
+function mapDescriptorDto(row: MapDescriptorRow, thumbnailMapVersionIds: ReadonlySet<string>): ScenarioMapDescriptorDto {
     if (row.xodr_sha256 !== row.browser_xodr_sha256) {
       throw new Error(`Map ${row.id} publishes XODR bytes that do not match its immutable map version`);
     }
@@ -1829,5 +1853,4 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
     xodr: { artifactId: row.xodr_artifact_id, sha256: row.xodr_sha256 },
     coordinateSystem: { id: row.coordinate_system_id, sha256: row.coordinate_system_sha256 },
   };
-  });
 }

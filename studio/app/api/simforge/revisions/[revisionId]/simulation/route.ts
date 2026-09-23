@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GalleryCatalogResolutionError } from "@/app/lib/asset-gallery/store";
 import { readJson, requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 import { resimulateRevision, revisionMotion, RevisionReplayError, SimulationFailedError } from "@/app/lib/scenario/sim-result-store";
 import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
@@ -43,6 +44,9 @@ export async function POST(request: Request, route: Context) {
     const done = result.status.state === "succeeded" || result.status.state === "failed";
     return NextResponse.json(result, { status: done ? 200 : 202, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
   } catch (error) {
+    if (error instanceof GalleryCatalogResolutionError) {
+      return NextResponse.json({ error: error.code, message: error.message, missing: error.missing }, { status: 422, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+    }
     if (error instanceof RevisionReplayError) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: error.status, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
     }

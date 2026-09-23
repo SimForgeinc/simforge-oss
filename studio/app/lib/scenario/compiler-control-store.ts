@@ -3,7 +3,7 @@ import {
   collectGalleryCatalogIds,
   galleryCatalogEntry,
 } from "@simforge-oss/studio-ui/lib/asset-gallery/catalog-entry";
-import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
+import { GalleryCatalogResolutionError, requireGalleryCatalogEntries } from "@/app/lib/asset-gallery/store";
 import { queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getMapArtifactDownloadUrl, getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
@@ -398,7 +398,20 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
   }
   const kinds = ["map-xodr", "map-topology", "map-derived-topology", "map-locations", "map-signals", "asset-catalog"] as const;
   const canonicalContent = parseJsonObject(claimed.canonical_content);
-  const gallery = await resolveGalleryCatalogIds(collectGalleryCatalogIds(canonicalContent));
+  // Exact gallery versions; a missing one fails the export loudly instead of compiling without it.
+  let catalogEntries;
+  try {
+    catalogEntries = await requireGalleryCatalogEntries(collectGalleryCatalogIds(canonicalContent));
+  } catch (error) {
+    if (!(error instanceof GalleryCatalogResolutionError)) throw error;
+    await failCompilerExport(claimed.export_id, {
+      attemptId,
+      fenceToken,
+      code: error.code,
+      detail: { missing: [...error.missing] },
+    });
+    throw error;
+  }
   return {
     contract: "uniscenario.compiler-claim/v1" as const,
     exportId: claimed.export_id,
@@ -412,7 +425,7 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
       canonicalContent,
       mapVersionId: claimed.map_version_id,
     },
-    catalogEntries: gallery.entries.map(galleryCatalogEntry),
+    catalogEntries: catalogEntries.map(galleryCatalogEntry),
     // The export is a derived view of this trace: the compiler replays it and
     // never resolves, materializes or simulates the scenario again.
     simulation: claimed.sim_key && claimed.sim_bucket && claimed.sim_trace_key && claimed.sim_resolution_key
