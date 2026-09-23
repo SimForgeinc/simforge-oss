@@ -41,9 +41,7 @@ import {
   type MapBundle,
 } from '@simforge-oss/compiler/node';
 import {
-  withBoundedSpeedCruiseRestoration,
   withEditablePhysicsDefault,
-  withStableHighSpeedWorldRoutes,
 } from '@simforge-oss/playback';
 
 export const GOLDEN_ROOT = path.join(REPO_ROOT, 'fixtures', 'golden-traces');
@@ -205,7 +203,7 @@ export async function resolveCaseInput(testCase: GoldenCase, bundle: MapBundle):
   const populated = JSON.parse(generated.scenario.toJson()) as SimScenarioInput;
   const actors = populated.actors.filter((actor) => actor.id !== 'ambient-world-seed');
   const input = { ...populated, actors: actors.length > 0 ? actors : populated.actors };
-  return withBoundedSpeedCruiseRestoration(withStableHighSpeedWorldRoutes(input));
+  return JSON.parse(engine().executionRefinements(input).toJson()) as SimScenarioInput;
 }
 
 /** Run one case: resolve, simulate on the native addon, digest. */

@@ -15,12 +15,9 @@ import {
   matchSitesWith,
   resolveSiteWith,
   type MatchedSite,
-  withParkedCarActors,
-  withStudioBodyColorTags,
   type MapBundleArtifacts,
   type MapControlPlan,
 } from '@simforge-oss/compiler';
-import { parkedCarsFromExtensions } from '../parking/extension';
 import {
   contentHash,
   pruneDanglingAfterInteractions,
@@ -52,9 +49,7 @@ import {
   runtimeDigest,
   scenarioInstanceEnvelope,
   selectPlayableSite,
-  withBoundedSpeedCruiseRestoration,
   withEditablePhysicsDefault,
-  withStableHighSpeedWorldRoutes,
   type MapRuntimeIdentity,
   type PlayableSiteSelection,
   type StaticColliderDiagnostics,
@@ -331,9 +326,10 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
   if (template.roles.length === 0 && !request.baseInstance) {
     // Parked cars belong here too, so they do not blink out of the preview the
     // moment the last authored actor is deleted.
-    const base = withParkedCarActors(
+    const base = studioConcreteInput(
+      engine,
       withMapControls(withEditablePhysicsDefault(createEmptyAmbientInput(request.map.sourceMapId)), mapControls),
-      parkedCarsFromExtensions(template.extensions).baked,
+      template,
     );
     const populated = applyRequestedAmbientPopulation(engine, base, graph, request);
     // The core schema requires one actor. Keep a remote, non-render-authoritative
@@ -374,7 +370,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
     // means the user requested a regenerated editable simulation: deterministically
     // migrate an unpinned legacy input to the current dynamic authoring default.
     const repaired = pruneDanglingAfterInteractions(request.baseInstance.input.interactions);
-    const editableInput = withParkedCarActors(withStudioBodyColorTags(withMapControls(withEditablePhysicsDefault({
+    const editableInput = studioConcreteInput(engine, withMapControls(withEditablePhysicsDefault({
       ...request.baseInstance.input,
       // Parked cars are regenerated from the document like ambient traffic is,
       // so a stale bake never outlives the extension that produced it.
@@ -382,7 +378,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
         (actor) => !isAmbientSimActor(actor) && !isParkedSimActor(actor),
       ),
       interactions: repaired.interactions,
-    }), mapControls), template), parkedCarsFromExtensions(template.extensions).baked);
+    }), mapControls), template);
     const generated = applyRequestedAmbientPopulation(engine, editableInput, graph, request);
     const ambient = repaired.removed.length === 0 ? generated : {
       ...generated,
@@ -422,10 +418,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       const errors = product.manifest.issues.filter((issue) => issue.severity === 'error');
       throw new Error(`Scenario is not feasible: ${errors.map((issue) => issue.reason).join(' · ')}`);
     }
-    const controlledInput = withParkedCarActors(
-      withStudioBodyColorTags(withMapControls(product.input, mapControls), template),
-      parkedCarsFromExtensions(template.extensions).baked,
-    );
+    const controlledInput = studioConcreteInput(engine, withMapControls(product.input, mapControls), template);
     const ambient = applyRequestedAmbientPopulation(engine, controlledInput, graph, request);
     if (request.operation === 'robustness') return robustnessResponse(engine, request, controlledInput, graph);
     const result = simulateForRequest(engine, ambient.input, graph, request.operation, request);
@@ -485,7 +478,9 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       playable(compileTemplateWith(engine.module, template, bundle, candidate, { drawIndex: -1 })));
   }
   const { site, product } = selected;
-  const controlledInput = withStudioBodyColorTags(withMapControls(product.input, mapControls), template);
+  // Portable documents take the authored paint only; baked parked cars belong
+  // to a map-bound document's own map.
+  const controlledInput = studioConcreteInput(engine, withMapControls(product.input, mapControls), { roles: template.roles });
   const ambient = applyRequestedAmbientPopulation(engine, controlledInput, graph, request);
   if (request.operation === 'robustness') return robustnessResponse(engine, request, controlledInput, graph);
   const result = simulateForRequest(engine, ambient.input, graph, request.operation, request);
@@ -679,8 +674,7 @@ function simulateForRequest(
   request: ScenarioWorkerRequest,
 ): SimResult & { traceSha256?: string } {
   postPrepareProgress(request, 'simulation');
-  input = withStableHighSpeedWorldRoutes(input);
-  input = withBoundedSpeedCruiseRestoration(input);
+  input = nativeInput(engine.executionRefinements(input));
   if (operation !== 'materialize') {
     const result = runCanonicalPreview(engine, input, graph);
     // The local preview's identity: the same native digest the authority
@@ -722,6 +716,21 @@ function postPrepareProgress(
 /** Closure digest of each map runtime's graph, for the turn-verdict cache. */
 const closureDigestByGraph = new WeakMap<LaneGraph, string>();
 
+/** A native scenario handle as the plain input the worker passes around; the handle is released. */
+function nativeInput(handle: { toJson(): string; free?(): void }): SimScenarioInput {
+  const json = handle.toJson();
+  handle.free?.();
+  return JSON.parse(json) as SimScenarioInput;
+}
+
+/**
+ * The document's Studio content (paint tags on role actors, then baked parked
+ * cars): the same native implementation the host and the compiler apply.
+ */
+function studioConcreteInput(engine: EngineRuntime, input: SimScenarioInput, template: unknown): SimScenarioInput {
+  return nativeInput(engine.studioConcreteInput(input, template));
+}
+
 function applyRequestedAmbientPopulation(
   engine: EngineRuntime,
   base: SimScenarioInput,
@@ -740,7 +749,7 @@ function isAmbientSimActor(actor: { readonly id: string; readonly tags: readonly
     || actor.tags.some((tag) => tag === 'ambient' || tag.startsWith('ambient:'));
 }
 
-/** Baked parked cars carry the `parked:` id prefix `withParkedCarActors` writes. */
+/** Baked parked cars carry the `parked:` id prefix (native `studioConcreteInput`). */
 function isParkedSimActor(actor: { readonly id: string }): boolean {
   return actor.id.startsWith('parked:');
 }

@@ -403,6 +403,9 @@ export declare function engineSemVer(): string
 
 export declare function engineVersion(): string
 
+/** The refinements every executor applies to the input it runs (stable high-speed world routes, cruise restoration). */
+export declare function executionRefinements(input: ScenarioInput): ScenarioInput
+
 /** Resolve one site: `siteId = null` picks the top-ranked site. */
 export declare function findSite(templateJson: string, bundle: MapBundle, siteId?: string | undefined | null): Site
 
@@ -488,6 +491,9 @@ export interface StepResult {
   /** JSON `{events, minima, causal}`. */
   infoJson: string
 }
+
+/** The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars. */
+export declare function studioConcreteInput(input: ScenarioInput, templateJson: string): ScenarioInput
 
 /** `{templateId, paramsVersion}`: the replay-key identity of a template. */
 export declare function templateIdentityJson(templateJson: string): string
