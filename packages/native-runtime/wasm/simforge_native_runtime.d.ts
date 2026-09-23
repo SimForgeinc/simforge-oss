@@ -233,6 +233,13 @@ export class RenderTimeline {
      */
     compareObservedJson(observed_jsonl: string, profile: string): string;
     /**
+     * The render contact gate against the map's ground surface
+     * (`derived/ground/ground-mesh.bin`): JSON `simforge.render-contact-gate/v1`
+     * report; `pass` is false when any supported contact is off the surface
+     * by more than `toleranceM`.
+     */
+    contactGateJson(ground_mesh: Uint8Array, tolerance_m: number): string;
+    /**
      * Parse and validate timeline JSON (UTF-8 bytes; gzip accepted).
      */
     static fromBytes(bytes: Uint8Array): RenderTimeline;
@@ -908,6 +915,7 @@ export interface InitOutput {
     readonly rendertimeline_catalogDigest: (a: number) => [number, number];
     readonly rendertimeline_clipEndS: (a: number) => number;
     readonly rendertimeline_compareObservedJson: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly rendertimeline_contactGateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly rendertimeline_contactOrigin: (a: number) => [number, number];
     readonly rendertimeline_fromBytes: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_headerJson: (a: number) => [number, number, number, number];

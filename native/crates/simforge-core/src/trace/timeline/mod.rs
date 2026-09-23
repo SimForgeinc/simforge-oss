@@ -17,6 +17,7 @@
 //!
 //! Contract: `docs/engineering/render-timeline.md`.
 
+pub mod contact_gate;
 pub mod height;
 pub mod parity;
 pub mod sampler;

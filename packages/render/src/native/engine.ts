@@ -23,7 +23,7 @@ import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { lowerTimelineToNative } from './timeline-lowering.js';
-import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
+import { RENDER_TIMELINE_INPUT_ID, checkTimelineContact, compareObserved, openRenderTimeline, type ContactGateReport, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
@@ -35,6 +35,9 @@ import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from '
 import { resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+
+/** The map ground surface member (`derived/ground`, docs/engineering/ground-height.md). */
+const GROUND_MESH_MEMBER = 'derived/ground/ground-mesh.bin';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 /** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
@@ -302,6 +305,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       let lowering: NativeSceneLowering;
       let timelineSha256: string | undefined;
       let timelineBytes: Uint8Array | undefined;
+      let contactGate: ContactGateReport | undefined;
       const applyAttitude = options.applyAttitude !== false;
       if (timelineInput) {
         timelineBytes = await fs.readFile(timelineInput.path);
@@ -311,6 +315,23 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         }
         lowering = timelineLowering;
         timelineSha256 = timelineLowering.timelineSha256;
+        // Contact gate: every wheel the renderer will draw stands on the
+        // rendered ground within 3 cm (docs/engineering/ground-height.md).
+        const groundMember = closure.members.get(GROUND_MESH_MEMBER);
+        if (groundMember) {
+          const opened = await openRenderTimeline(timelineBytes);
+          try {
+            contactGate = checkTimelineContact(opened, new Uint8Array(await fs.readFile(groundMember.path)));
+          } finally {
+            opened.free();
+          }
+          if (!contactGate.pass) {
+            const worst = contactGate.failures[0];
+            throw new Error(`render_contact_gate_failed: ${contactGate.failureCount} wheel contact(s) off the rendered ground by more than ${contactGate.toleranceM} m; worst ${worst?.actorId} tick ${worst?.tick} ${worst?.contact} gap ${worst?.gapM.toFixed(3)} m`);
+          }
+        } else {
+          warnings.push({ code: 'render_contact_gate_unavailable', message: `the map closure carries no ${GROUND_MESH_MEMBER}; wheel contact was not checked (a map version published before its ground derivative)` });
+        }
       } else {
         const xosc = await fs.readFile(xoscInput.path);
         lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
@@ -332,6 +353,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         loweringSha256: lowering.sha256,
         sceneSource: lowering.source,
         ...(timelineSha256 ? { timelineSha256 } : {}),
+        ...(contactGate ? { contactGate: { pass: contactGate.pass, checked: contactGate.checked, maxAbsGapM: contactGate.maxAbsGapM, unsupported: contactGate.unsupported, groundSha256: contactGate.groundSha256 } } : {}),
         mapId: lowering.mapId,
         fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frames: lowering.states,
