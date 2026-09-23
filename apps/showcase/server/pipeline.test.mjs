@@ -203,7 +203,7 @@ if (command === 'sites' && sub === 'match') {
  * Stand-in for \`@simforge-oss/trace-render\`, the 2D tier's renderer: the
  * artifacts it writes (an mp4 and \`manifest.json\` with per-frame \`t\`/\`png\`)
  * are what the pipeline normalizes. The renderer's own output is covered by
- * packages/trace-render's tests.
+ * tools/trace-render's tests.
  */
 const FAKE_TRACE_RENDER = `#!/usr/bin/env node
 import { mkdir, writeFile } from 'node:fs/promises';
