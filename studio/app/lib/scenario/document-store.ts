@@ -1602,7 +1602,31 @@ type MapDescriptorRow = {
   signals_sha256: string; lane_polygons_sha256: string;
   sumo_network_sha256: string | null;
   sumo_status: { state?: unknown; reason?: unknown } | string | null;
+  ambient_turn_verdicts_sha256: string | null;
+  ambient_turn_verdicts: Record<string, unknown> | string | null;
 };
+
+/**
+ * The published ambient turn-verdict table of one map revision, when its
+ * closure carries the member and the reconciler recorded what it was built
+ * for (`descriptor.ambientTurnVerdicts`). Hosts load it only when both match
+ * their own engine and simulation closure.
+ */
+function mapAmbientTurnVerdicts(
+  memberSha256: string | null,
+  recorded: MapDescriptorRow["ambient_turn_verdicts"],
+): { engineSemVer: string; closureDigest: string; sha256: string } | null {
+  if (!memberSha256) return null;
+  let status = recorded;
+  if (typeof status === "string") {
+    try { status = JSON.parse(status) as Record<string, unknown>; } catch { status = null; }
+  }
+  if (!status || status["state"] !== "ready" || status["sha256"] !== memberSha256) return null;
+  const { engineSemVer, closureDigest } = status;
+  return typeof engineSemVer === "string" && typeof closureDigest === "string"
+    ? { engineSemVer, closureDigest, sha256: memberSha256 }
+    : null;
+}
 
 /**
  * What the editor shows about SUMO for one map revision. A bound network is
@@ -1674,6 +1698,13 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        lanes_blob.sha256 AS lane_polygons_sha256,
        mv.sumo_network_sha256,
        mv.descriptor->'sumo' AS sumo_status,
+       (SELECT verdicts_blob.sha256
+          FROM simforge.browser_asset_members verdicts_member
+          JOIN simforge.browser_asset_blobs verdicts_blob ON verdicts_blob.id = verdicts_member.blob_id
+           AND verdicts_blob.verification_state = 'verified'
+         WHERE verdicts_member.asset_set_id = bs.id
+           AND verdicts_member.relative_path = 'derived/ambient/turn-verdicts.json.gz') AS ambient_turn_verdicts_sha256,
+       mv.descriptor->'ambientTurnVerdicts' AS ambient_turn_verdicts,
        ROW_NUMBER() OVER (
          PARTITION BY mv.source_map_asset_id
          ORDER BY mv.created_at DESC, mv.id DESC
@@ -1717,7 +1748,8 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        xodr_artifact_id, xodr_sha256, coordinate_system_id, coordinate_system_sha256,
        browser_closure_sha256, browser_xodr_sha256, topology_sha256,
        derived_topology_sha256, locations_sha256, signals_sha256,
-       lane_polygons_sha256, sumo_network_sha256, sumo_status
+       lane_polygons_sha256, sumo_network_sha256, sumo_status,
+       ambient_turn_verdicts_sha256, ambient_turn_verdicts
      FROM ranked_map_versions
      WHERE source_publication_rank = 1
      ORDER BY label, id`,
@@ -1774,6 +1806,7 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
     },
     sumoNetworkSha256: row.sumo_network_sha256,
     sumoStatus: mapSumoStatus(row.sumo_network_sha256, row.sumo_status),
+    ambientTurnVerdicts: mapAmbientTurnVerdicts(row.ambient_turn_verdicts_sha256, row.ambient_turn_verdicts),
     // Existing aliases remain on the same browser route. Unlike presigned
     // artifact URLs, these cannot expire while a page is open.
     // Named from `MAP_GRAPH_SIDECARS`, which is also what decides these five

@@ -365,5 +365,5 @@ export type {
 } from './native-module.js';
 
 /* ------------------------------------------------------ host-neutral façade */
-export { EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
-export type { EngineBuildInfo, EngineVersionInfo, LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';
+export { ambientTurnVerdictCount, EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
+export type { AmbientTurnVerdictTable, EngineBuildInfo, EngineVersionInfo, LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';

@@ -68,6 +68,8 @@ export interface ScenarioWorkerMap {
   locations: string;
   xodr: string;
   signals: string;
+  /** The closure's published ambient turn-verdict table (optional; loaded only when built for this engine and closure). */
+  ambientTurnVerdicts?: string;
   /** Published digests of the served bytes, so the page cache admits each file under its exact identity. */
   digests?: {
     readonly topology: string;
@@ -532,6 +534,7 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
         locations: map.locations,
         xodr: map.xodr,
         signals: map.signals,
+        ...(map.ambientTurnVerdicts ? { ambientTurnVerdicts: map.ambientTurnVerdicts } : {}),
       },
       digests: map.digests,
     });
