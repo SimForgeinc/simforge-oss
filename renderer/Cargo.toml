@@ -17,7 +17,10 @@ edition = "2021"
 # - bevy_pbr: a view's generated environment probe (the atmosphere's
 #   per-camera IBL) is downsampled/filtered in that view's schedule right
 #   after it is written, not one frame late (vendor/bevy_pbr-view-probe.patch;
-#   removes the only previous-pose dependence of a pinned capture).
+#   removes the only previous-pose dependence of a pinned capture); and the
+#   shared atmosphere buffer is written when several views carry an
+#   atmosphere (upstream wrote it only for exactly one, so a rig that had
+#   two cameras from the first frame failed validation in SSR).
 # - bevy_render: command encoders are finished in parallel at submission, in
 #   recording order (vendor/bevy_render.patch; output-identical, it only
 #   moves wgpu-core's per-encoder HAL recording off the render thread);

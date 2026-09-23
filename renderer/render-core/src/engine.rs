@@ -1996,8 +1996,16 @@ struct GroupEntities {
 }
 
 /// First render layer handed to a camera host actor. Layer 0 is the shared
-/// scene, layer 1 the instance-ID clones.
+/// scene, layer 1 the instance-ID clones. Host layers come in pairs: the
+/// host's RGB visuals on an even layer `2 + 2k`, its instance-ID clones on
+/// `3 + 2k` (see [`id_host_layer`]), so a mounted camera's ID pass drops
+/// its host exactly where its RGB pass does.
 const FIRST_HOST_LAYER: usize = 2;
+
+/// The instance-ID layer paired with a host's RGB layer.
+fn id_host_layer(rgb_layer: usize) -> usize {
+    rgb_layer + 1
+}
 
 /// Layers every light must cover: the shared scene plus every host actor's
 /// private layer, so a host still casts shadows into views that exclude
@@ -4006,6 +4014,7 @@ impl SceneApp {
                 continue;
             }
             let layer = (FIRST_HOST_LAYER..)
+                .step_by(2)
                 .find(|candidate| !self.host_layers.values().any(|used| used == candidate))
                 .expect("unbounded layer range");
             self.host_layers.insert(actor.clone(), layer);
@@ -4015,21 +4024,25 @@ impl SceneApp {
                 .chain(self.host_layers.values().copied())
                 .collect::<Vec<_>>(),
         );
-        let views: Vec<(Entity, RenderLayers)> = self
-            .groups
-            .iter()
-            .map(|g| {
-                let layers: Vec<usize> = std::iter::once(0)
-                    .chain(
-                        self.host_layers
-                            .iter()
-                            .filter(|(actor, _)| Some(actor.as_str()) != g.host.as_deref())
-                            .map(|(_, layer)| *layer),
-                    )
-                    .collect();
-                (g.rgb_entity, RenderLayers::from_layers(&layers))
-            })
-            .collect();
+        // Each view sees every host layer but its own host's: the RGB camera
+        // on layer 0 plus the other hosts' RGB layers, the ID camera on
+        // layer 1 plus the other hosts' ID layers. Labels therefore match
+        // the pixels: a mounted camera neither renders nor labels its host.
+        let mut views: Vec<(Entity, RenderLayers)> = Vec::new();
+        for g in &self.groups {
+            let others: Vec<usize> = self
+                .host_layers
+                .iter()
+                .filter(|(actor, _)| Some(actor.as_str()) != g.host.as_deref())
+                .map(|(_, layer)| *layer)
+                .collect();
+            let rgb: Vec<usize> = std::iter::once(0).chain(others.iter().copied()).collect();
+            views.push((g.rgb_entity, RenderLayers::from_layers(&rgb)));
+            if let Some(id_entity) = g.id_entity {
+                let id: Vec<usize> = std::iter::once(1).chain(others.iter().map(|l| id_host_layer(*l))).collect();
+                views.push((id_entity, RenderLayers::from_layers(&id)));
+            }
+        }
         let actor_ids: Vec<String> = self.actors.keys().cloned().collect();
         let world = self.app.world_mut();
         world.insert_resource(HostLayerUnion(union));
@@ -4042,27 +4055,33 @@ impl SceneApp {
     }
 
     /// Put one actor's RGB visuals (fallback cuboid and every mesh under
-    /// its catalog model) on its host layer, or back on layer 0.
+    /// its catalog model) on its host layer, or back on layer 0, and its
+    /// instance-ID clones on the paired ID layer, or back on layer 1.
     fn apply_actor_layers(&mut self, actor_id: &str) {
         let Some((cuboid, _)) = self.actors.get(actor_id).copied() else {
             return;
         };
-        let layer = self.host_layers.get(actor_id).copied().unwrap_or(0);
+        let host = self.host_layers.get(actor_id).copied();
+        let layer = host.unwrap_or(0);
+        let id_layer = host.map(id_host_layer).unwrap_or(1);
         let model = self.actor_models.get(actor_id).map(|(entity, _, _)| *entity);
+        let cuboid_clone = self.actor_id_clones.get(actor_id).copied();
         let world = self.app.world_mut();
-        let mut targets = vec![cuboid];
+        let mut targets = vec![(cuboid, layer)];
+        targets.extend(cuboid_clone.map(|clone| (clone, id_layer)));
         if let Some(root) = model {
             let mut stack = vec![root];
             while let Some(entity) = stack.pop() {
                 if let Some(children) = world.get::<Children>(entity) {
                     stack.extend(children.iter());
                 }
-                if world.get::<Mesh3d>(entity).is_some() && world.get::<IdClone>(entity).is_none() {
-                    targets.push(entity);
+                if world.get::<Mesh3d>(entity).is_some() {
+                    let is_clone = world.get::<IdClone>(entity).is_some();
+                    targets.push((entity, if is_clone { id_layer } else { layer }));
                 }
             }
         }
-        for entity in targets {
+        for (entity, layer) in targets {
             if let Ok(mut entity) = world.get_entity_mut(entity) {
                 entity.insert(RenderLayers::layer(layer));
             }
@@ -7313,6 +7332,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn capture_returns_the_submission_it_names_and_follows_camera_lifecycle() {
         let mut app = sedan_scene();
+        // Frames are compared across ticks, so time must not move the sky.
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
         app.add_camera(test_camera("cam", 96, 64));
         app.wait_until_ready().unwrap();
         app.warmup(3);
@@ -7600,6 +7621,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn mounted_camera_excludes_only_its_own_host() {
         let mut app = sedan_scene();
+        // Frames are compared across ticks, so time must not move the sky.
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
         app.add_camera(test_camera("mounted", 96, 64));
         app.add_camera(test_camera("spectator", 96, 64));
         app.wait_until_ready().unwrap();
@@ -7616,8 +7639,12 @@ mod tests {
         let hosted = &frame.passes["mounted:rgb"].bytes;
         let spectator = &frame.passes["spectator:rgb"].bytes;
         assert_ne!(hosted, spectator, "the mounted view must not render its host");
-        // The instance-ID proxy of the host stays in the mounted view.
-        assert_eq!(frame.passes["mounted:id"].bytes, frame.passes["spectator:id"].bytes);
+        // The ID pass drops the host exactly where the RGB pass does, so
+        // labels match pixels.
+        assert_ne!(
+            frame.passes["mounted:id"].bytes, frame.passes["spectator:id"].bytes,
+            "the mounted view must not label its host"
+        );
 
         app.set_camera_host("mounted", None).unwrap();
         let unmounted = app.render_once(2).unwrap();
@@ -7627,6 +7654,11 @@ mod tests {
             "unmounting restores the host for that view"
         );
         assert_eq!(unmounted.passes["spectator:rgb"].bytes, *spectator);
+        assert_eq!(
+            unmounted.passes["mounted:id"].bytes,
+            unmounted.passes["spectator:id"].bytes,
+            "unmounting restores the host's labels for that view"
+        );
         std::mem::forget(app);
     }
 }

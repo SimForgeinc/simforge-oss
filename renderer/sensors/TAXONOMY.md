@@ -3,6 +3,17 @@
 WSB3 reference for the semantic-class pass, instance-ID pass, lidar
 intensity proxy, and frame conventions. Code: `renderer/sensors/src/taxonomy.rs`.
 
+> **Camera `semantic` pass of `simforge-render` (service, `job`) uses the
+> CARLA layout, not this table.** The service derives it from the instance-ID
+> pass (`service/src/carla.rs::semantic_from_ids`): CARLA semantic class ids
+> (0 unlabeled, 1 building, 2 fence, 4 pedestrian, 5 pole, 7 road,
+> 9 vegetation, 10 vehicle, 12 traffic sign, 18 traffic light; the
+> `classes` module there) in byte 2 of each pixel,
+> alpha 255. CARLA reads its buffers as BGRA, so byte 2 is CARLA's red; in the
+> RGBA PNG a job writes (`<tick>.semantic.png`) it is the **blue** channel
+> (PIL `img[..., 2]`). A mounted camera neither renders nor labels its host
+> vehicle. The table below is the lidar/sensor taxonomy.
+
 ## Semantic classes (closed set)
 
 Carried in the BLUE channel of the shared aux (instance-ID) render — one

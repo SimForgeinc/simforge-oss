@@ -815,10 +815,22 @@ pub struct AtmosphereBuffer {
 pub(crate) fn write_atmosphere_buffer(
     device: Res<RenderDevice>,
     queue: Res<RenderQueue>,
-    atmosphere_entity: Query<&GpuAtmosphere, With<Camera3d>>,
+    atmosphere_entity: Query<(Entity, &GpuAtmosphere), With<Camera3d>>,
     mut atmosphere_buffer: ResMut<AtmosphereBuffer>,
 ) {
-    let Ok(atmosphere) = atmosphere_entity.single() else {
+    // SIMFORGE PATCH (multi-view atmosphere): upstream wrote the buffer only
+    // when exactly one camera carried an atmosphere (`single()`). With two or
+    // more atmosphere views from the first frame on, the buffer was never
+    // written, so the mesh-view bind group dropped its atmosphere entries
+    // while every pipeline keyed on `ExtractedAtmosphere` (SSR, PBR) still
+    // expected them: a wgpu validation error. The buffer holds the planet,
+    // not the view, so any view's copy is the same; take the lowest entity
+    // for a deterministic pick.
+    let Some(atmosphere) = atmosphere_entity
+        .iter()
+        .min_by_key(|(entity, _)| *entity)
+        .map(|(_, atmosphere)| atmosphere)
+    else {
         return;
     };
 
