@@ -456,7 +456,7 @@ fn ray_tri(origin: Vec3, dir: Vec3, tri: &Tri) -> Option<Hit> {
 /// the original world-space vertices and arithmetic, including world normals.
 #[derive(Debug, Clone, Default)]
 pub struct InstancedScene {
-    meshes: Vec<RaycastScene>,
+    meshes: Vec<std::sync::Arc<RaycastScene>>,
     instances: Vec<MeshInstance>,
     nodes: Vec<Node>,
 }
@@ -469,6 +469,46 @@ struct MeshInstance {
     min: Vec3,
     max: Vec3,
     instance_id: u32,
+    /// Insertion order: the last tie-break when several instances share an
+    /// instance id (every mesh node of one actor model does), so exact
+    /// depth ties never depend on traversal order.
+    order: u32,
+}
+
+/// A prebuilt bottom-level mesh tree in its own (model-local) space, shared
+/// by reference between instance scenes. Built once per mesh asset and
+/// reused every tick: a per-tick [`InstancedScene`] over cached `Blas`es only
+/// rebuilds the instance (top-level) tree, never the triangles.
+#[derive(Debug, Clone)]
+pub struct Blas(std::sync::Arc<RaycastScene>);
+
+impl Blas {
+    /// Build a mesh tree from model-local triangles. The triangles'
+    /// `instance_id` is ignored: hits report the instance's id.
+    pub fn build(tris: impl IntoIterator<Item = Tri>) -> Self {
+        let mut mesh = RaycastScene::new();
+        for tri in tris {
+            mesh.push_tri(tri);
+        }
+        mesh.build();
+        // Roundoff allowance is a property of the bounds, not work to repeat
+        // for every node visited by every beam.
+        for node in &mut mesh.nodes {
+            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(1e-3);
+            node.min -= slack;
+            node.max += slack;
+        }
+        Self(std::sync::Arc::new(mesh))
+    }
+
+    pub fn tri_count(&self) -> usize {
+        self.0.tri_count()
+    }
+
+    /// Whether two handles share one built tree (cache tests).
+    pub fn ptr_eq(&self, other: &Blas) -> bool {
+        std::sync::Arc::ptr_eq(&self.0, &other.0)
+    }
 }
 
 impl InstancedScene {
@@ -499,26 +539,28 @@ impl InstancedScene {
             .min_by(|a, b| a.1.total_cmp(&b.1)).map(|(tri, _)| tri)
     }
 
-    pub fn add_mesh(&mut self, mut mesh: RaycastScene) -> usize {
-        mesh.build();
-        // Roundoff allowance is a property of the bounds, not work to repeat
-        // for every node visited by every beam.
-        for node in &mut mesh.nodes {
-            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(1e-3);
-            node.min -= slack;
-            node.max += slack;
-        }
+    pub fn add_mesh(&mut self, mesh: RaycastScene) -> usize {
+        self.add_blas(&Blas::build(mesh.tris))
+    }
+
+    /// Reference a prebuilt mesh tree (no triangle work).
+    pub fn add_blas(&mut self, blas: &Blas) -> usize {
         let index = self.meshes.len();
-        self.meshes.push(mesh);
+        self.meshes.push(blas.0.clone());
         index
     }
 
     pub fn add_instance(&mut self, mesh: usize, world: Mat4, instance_id: u32) {
         let Some(root) = self.meshes[mesh].nodes.first() else { return };
         let (min, max) = transformed_bounds(root.min, root.max, world);
+        let order = self.instances.len() as u32;
         self.instances.push(MeshInstance {
-            mesh, world, inverse: world.inverse(), min, max, instance_id,
+            mesh, world, inverse: world.inverse(), min, max, instance_id, order,
         });
+    }
+
+    pub fn instance_count(&self) -> usize {
+        self.instances.len()
     }
 
     pub fn tri_count(&self) -> usize {
@@ -526,7 +568,7 @@ impl InstancedScene {
     }
 
     pub fn unique_tri_count(&self) -> usize {
-        self.meshes.iter().map(RaycastScene::tri_count).sum()
+        self.meshes.iter().map(|mesh| mesh.tri_count()).sum()
     }
 
     pub fn build(&mut self) {
@@ -557,6 +599,7 @@ impl InstancedScene {
         slice.select_nth_unstable_by(mid as usize, |a, b| {
             (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis]))
                 .then(a.instance_id.cmp(&b.instance_id))
+                .then(a.order.cmp(&b.order))
         });
         self.nodes.push(Node { min, max, left_first: 0, count: 0, right: 0 });
         let left = self.subdivide(first, mid);
@@ -617,8 +660,9 @@ impl InstancedScene {
                             // A nearest-first walk must not make exact depth
                             // ties depend on visitation order.
                             let wins_tie = distance == best_t && best.is_some_and(|(old_instance, old_tri)| {
-                                (instance.instance_id, triangle_index)
-                                    < (self.instances[old_instance].instance_id, old_tri)
+                                let old = &self.instances[old_instance];
+                                (instance.instance_id, triangle_index, instance.order)
+                                    < (old.instance_id, old_tri, old.order)
                             });
                             if distance < best_t || wins_tie {
                                 best_t = distance;
@@ -849,5 +893,144 @@ mod parallel_build_tests {
             let b = serial.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
             assert_eq!(a, b);
         }
+    }
+}
+
+#[cfg(test)]
+mod shared_blas_tests {
+    use super::*;
+    use bevy::math::Quat;
+
+    /// A closed, non-convex "car": a lower body box and a narrower cabin,
+    /// so a beam over the hood misses where the bounding cuboid would hit.
+    fn car_mesh() -> Vec<Tri> {
+        fn cuboid(min: Vec3, max: Vec3, out: &mut Vec<Tri>) {
+            let p = |x: f32, y: f32, z: f32| Vec3::new(x, y, z);
+            let c = [
+                p(min.x, min.y, min.z), p(max.x, min.y, min.z), p(max.x, max.y, min.z), p(min.x, max.y, min.z),
+                p(min.x, min.y, max.z), p(max.x, min.y, max.z), p(max.x, max.y, max.z), p(min.x, max.y, max.z),
+            ];
+            for [a, b, d] in [
+                [0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1],
+                [3, 2, 6], [3, 6, 7], [0, 3, 7], [0, 7, 4], [1, 5, 6], [1, 6, 2],
+            ] {
+                out.push(Tri { a: c[a], b: c[b], c: c[d], instance_id: 0 });
+            }
+        }
+        let mut tris = Vec::new();
+        cuboid(Vec3::new(-2.25, 0.3, -0.9), Vec3::new(2.25, 0.9, 0.9), &mut tris);
+        cuboid(Vec3::new(-1.2, 0.9, -0.8), Vec3::new(0.8, 1.5, 0.8), &mut tris);
+        tris
+    }
+
+    fn poses() -> Vec<(Mat4, u32)> {
+        (0..12)
+            .map(|k| {
+                let k = k as f32;
+                let world = Mat4::from_rotation_translation(
+                    Quat::from_rotation_y(0.37 * k),
+                    Vec3::new(9.0 * (k % 4.0) - 12.0, 0.013 * k, 8.5 * (k / 4.0).floor() - 8.0),
+                );
+                (world, 100 + k as u32)
+            })
+            .collect()
+    }
+
+    fn rays() -> Vec<(Vec3, Vec3)> {
+        let origin = Vec3::new(0.3, 1.9, 0.2);
+        let mut out = Vec::new();
+        for ch in 0..32 {
+            let elevation = (-25.0 + 30.0 * ch as f32 / 31.0_f32).to_radians();
+            for step in 0..720 {
+                let azimuth = (step as f32 / 720.0) * std::f32::consts::TAU;
+                out.push((origin, Vec3::new(elevation.cos() * azimuth.cos(), elevation.sin(), elevation.cos() * azimuth.sin())));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn instanced_shared_blas_hits_exactly_like_world_space_triangles() {
+        let blas = Blas::build(car_mesh());
+        let mut instanced = InstancedScene::new();
+        let slot = instanced.add_blas(&blas);
+        let mut flat = RaycastScene::new();
+        for (world, id) in poses() {
+            instanced.add_instance(slot, world, id);
+            for tri in car_mesh() {
+                flat.push_tri(Tri {
+                    a: world.transform_point3(tri.a),
+                    b: world.transform_point3(tri.b),
+                    c: world.transform_point3(tri.c),
+                    instance_id: id,
+                });
+            }
+        }
+        instanced.build();
+        flat.build();
+        let mut hits = 0;
+        for (origin, dir) in rays() {
+            let a = instanced.cast(origin, dir, 120.0).map(|h| (h.distance.to_bits(), h.instance_id, h.normal.to_array().map(f32::to_bits)));
+            let b = flat.cast(origin, dir, 120.0).map(|h| (h.distance.to_bits(), h.instance_id, h.normal.to_array().map(f32::to_bits)));
+            assert_eq!(a, b, "ray {origin:?} {dir:?}");
+            hits += usize::from(a.is_some());
+        }
+        assert!(hits > 500, "the fixture must actually hit the cars ({hits})");
+    }
+
+    #[test]
+    fn per_tick_instance_scenes_share_one_blas() {
+        let blas = Blas::build(car_mesh());
+        let mut first = InstancedScene::new();
+        let a = first.add_blas(&blas);
+        first.add_instance(a, Mat4::IDENTITY, 7);
+        first.build();
+        let mut second = InstancedScene::new();
+        let b = second.add_blas(&blas);
+        second.add_instance(b, Mat4::from_translation(Vec3::new(3.0, 0.0, 0.0)), 7);
+        second.build();
+        assert!(first.meshes[0].as_ref() as *const RaycastScene == second.meshes[0].as_ref() as *const RaycastScene);
+        assert_eq!(first.unique_tri_count(), 24);
+        // The moved instance is hit at the moved position.
+        let down = Vec3::NEG_Y;
+        assert!(first.cast(Vec3::new(0.0, 5.0, 0.0), down, 10.0).is_some());
+        let moved = second.cast(Vec3::new(3.0, 5.0, 0.0), down, 10.0).unwrap();
+        assert!((moved.point.y - 1.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn mesh_geometry_is_not_its_bounding_box() {
+        // Over the hood (x = 1.8, below the cabin roof line) a beam reaches
+        // the hood at y = 0.9; the old cuboid proxy reported the box top.
+        let blas = Blas::build(car_mesh());
+        let mut scene = InstancedScene::new();
+        let slot = scene.add_blas(&blas);
+        scene.add_instance(slot, Mat4::IDENTITY, 1);
+        scene.build();
+        let hit = scene.cast(Vec3::new(1.8, 5.0, 0.0), Vec3::NEG_Y, 10.0).unwrap();
+        assert!((hit.point.y - 0.9).abs() < 1e-5, "hood hit at {}", hit.point.y);
+        // A horizontal beam at cabin height in front of the cabin misses the
+        // car entirely: a 4.5 x 1.5 box would have stopped it.
+        assert!(scene.cast(Vec3::new(10.0, 1.2, 0.0), Vec3::NEG_X, 7.5).is_none());
+    }
+
+    #[test]
+    fn equal_instance_ids_break_depth_ties_by_insertion_order() {
+        // Two coincident instances of one actor (e.g. duplicated mesh nodes):
+        // the winner must not depend on which the traversal reaches first.
+        let blas = Blas::build(car_mesh());
+        let mut runs = Vec::new();
+        for _ in 0..3 {
+            let mut scene = InstancedScene::new();
+            let slot = scene.add_blas(&blas);
+            for _ in 0..5 {
+                scene.add_instance(slot, Mat4::IDENTITY, 9);
+            }
+            scene.build();
+            runs.push(rays().into_iter().map(|(o, d)| scene.cast(o + Vec3::new(0.0, 0.0, 6.0), d, 50.0)
+                .map(|h| (h.distance.to_bits(), h.normal.to_array().map(f32::to_bits)))).collect::<Vec<_>>());
+        }
+        assert_eq!(runs[0], runs[1]);
+        assert_eq!(runs[1], runs[2]);
     }
 }
