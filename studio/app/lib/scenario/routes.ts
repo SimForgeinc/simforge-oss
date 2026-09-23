@@ -1,3 +1,5 @@
+import { publicEnv } from "@/app/lib/public-env";
+
 type ScenarioLinkInput = {
   scenarioId: string;
   datasetId?: string | null;
@@ -12,7 +14,7 @@ function cleanParam(value?: string | null): string | null {
 
 function configuredDashboardOrigin(): string {
   const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ??
+    publicEnv("NEXT_PUBLIC_APP_URL")?.trim() ??
     process.env.BETTER_AUTH_URL?.trim() ??
     "";
   if (!origin) return "";

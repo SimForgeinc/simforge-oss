@@ -2,6 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./layout.stylex";
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Barlow, Chakra_Petch } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "sonner";
 // StyleX first, Tailwind second: both emit single-class selectors, so this
 // order is what lets a Tailwind class from an unmigrated caller still override
@@ -97,6 +98,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${display.variable} ${body.variable} ${heavy.variable}`}>
       <body {...stylex.props(styles.body)}>
+        {/* Public settings of the environment serving this build (app/lib/public-env.ts). */}
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
         {children}
         <Toaster theme="dark" richColors position="bottom-right" />
       </body>

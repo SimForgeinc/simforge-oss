@@ -1,3 +1,5 @@
+import { publicEnv } from '@/app/lib/public-env';
+
 export type CameraFeedState = 'live' | 'replay' | 'starting' | 'unavailable';
 
 export interface CameraFeeds {
@@ -237,7 +239,7 @@ function sameStates(left: Readonly<Record<string, CameraFeedState>>, right: Read
 /** Accepts Drive's twin values: ws(s) URL, `1`/`true`, or a port on the page host. */
 function resolveCameraFeedUrl(raw: string): string {
   if (typeof window === 'undefined') return raw;
-  const selected = raw || new URLSearchParams(window.location.search).get('twin') || process.env.NEXT_PUBLIC_DRIVE_TWIN_URL || '1';
+  const selected = raw || new URLSearchParams(window.location.search).get('twin') || publicEnv('NEXT_PUBLIC_DRIVE_TWIN_URL') || '1';
   if (/^wss?:\/\//.test(selected)) {
     const url = new URL(selected);
     if (url.pathname === '/' || url.pathname === '') url.pathname = '/camera-feeds';

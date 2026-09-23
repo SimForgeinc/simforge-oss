@@ -21,6 +21,7 @@ import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/auth
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
 import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { publicEnv } from "@/app/lib/public-env";
 
 const CityViewDynamic = dynamic(
   () => import("@simforge-oss/viewer/react").then((module) => module.CityView),
@@ -76,9 +77,10 @@ export function DigitalTwinViewerPanel({
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
   const quality = useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE;
-  const rendererMode = process.env.NEXT_PUBLIC_RENDERER_MODE === "native"
+  const configuredRendererMode = publicEnv("NEXT_PUBLIC_RENDERER_MODE");
+  const rendererMode = configuredRendererMode === "native"
     ? "native"
-    : process.env.NEXT_PUBLIC_RENDERER_MODE === "auto"
+    : configuredRendererMode === "auto"
       ? "auto"
       : "web";
   const nativeViewport = useMemo<NativeViewportPort | undefined>(() => {

@@ -1,4 +1,5 @@
 import type { MapAsset } from "@simforge-oss/studio-shared";
+import { publicEnv } from "@/app/lib/public-env";
 
 /**
  * SimScene CDN serving per-map satellite ortho tile pyramids (CloudFront in
@@ -6,8 +7,9 @@ import type { MapAsset } from "@simforge-oss/studio-shared";
  * standard XYZ / Web-Mercator WebP. Missing tiles return 403 (not 404) under
  * OAC, which MapLibre treats the same as an empty tile.
  */
-export const SIMSCENE_TILES_BASE_URL =
-  process.env.NEXT_PUBLIC_SIMSCENE_TILES_BASE_URL ?? "https://dwcye2facbmg3.cloudfront.net";
+export function simsceneTilesBaseUrl(): string {
+  return publicEnv("NEXT_PUBLIC_SIMSCENE_TILES_BASE_URL") ?? "https://dwcye2facbmg3.cloudfront.net";
+}
 
 /** Pyramids exist for z14-22 only (z22 ≈ 2.4 cm/px; native imagery ≈ z19-20). */
 export const SATELLITE_MIN_ZOOM = 14;
@@ -47,7 +49,7 @@ export function satelliteImageryLayersForAsset(
     .filter((t) => t.tileset_id && t.layer_id)
     .map((t, index) => ({
       id: `${SATELLITE_SOURCE_ID}-${index}`,
-      tiles: `${SIMSCENE_TILES_BASE_URL}/tilesets/${t.tileset_id}/${t.layer_id}/{z}/{x}/{y}.webp`,
+      tiles: `${simsceneTilesBaseUrl()}/tilesets/${t.tileset_id}/${t.layer_id}/{z}/{x}/{y}.webp`,
       bounds,
     }));
 }
