@@ -16,7 +16,7 @@ use crate::actor_lights::{
     PROJECTED_HEADLIGHT_LIMIT,
 };
 use crate::catalog::{actor_body_color, actor_dims, actor_parts, ActorPartKind};
-use crate::engine::GroundField;
+use crate::engine::{ground_mesh_height, GroundField};
 use crate::motion_vector::{decode_rg16f, MotionVectorMaterial, MotionVectorPlugin};
 use crate::readback::{
     self, Copiers, GlobalFrame, MainReceiver, PassCopier, SentPass,
@@ -106,6 +106,11 @@ pub struct PlaybackArgs {
     /// elevation; this is how playback replays them exactly.
     #[arg(long, default_value_t = false)]
     pub authored_height: bool,
+    /// The map's `derived/ground/ground-mesh.bin`: terrain-following heights
+    /// come from it (the simulator's surface) instead of the legacy field
+    /// built from the rendered meshes.
+    #[arg(long)]
+    pub ground_mesh: Option<std::path::PathBuf>,
     /// `static` fixes the camera at the initial chase pose; `follow` tracks ego.
     #[arg(long, default_value = "follow")]
     pub camera: String,
@@ -349,16 +354,28 @@ struct Readiness {
     idle_frames: u32,
     capture_ready_frame: Option<u64>,
     terrain: GroundField,
+    /// Decoded `--ground-mesh`; when set, `terrain` is never built.
+    ground_surface: Option<std::sync::Arc<simforge_core::map::ground::GroundSurface>>,
 }
 
 impl Readiness {
+    /// Terrain-following height. Off the map (or between stacked decks with
+    /// no authored height) is fatal: scen-play never invents a height.
     fn ground_y(&self, pb: &Playback, position: [f64; 3]) -> f32 {
         if pb.args.authored_height {
             return position[1] as f32;
         }
-        pb.args.ground_y.unwrap_or_else(|| {
-            self.terrain.sample(position[0] as f32, position[2] as f32)
-        })
+        if let Some(y) = pb.args.ground_y {
+            return y;
+        }
+        let (x, z) = (position[0] as f32, position[2] as f32);
+        let height = match &self.ground_surface {
+            Some(surface) => ground_mesh_height(surface, x, z),
+            None => self.terrain.sample_covered(x, z).ok_or_else(|| format!(
+                "[native_ground_height_unavailable] x={x:.2} z={z:.2} has no map ground within 20 m"
+            )),
+        };
+        height.unwrap_or_else(|error| panic!("scen-play: {error}"))
     }
 }
 
@@ -1328,7 +1345,20 @@ fn poll_capture_ready(
     readiness.idle_frames = if pending.is_idle() { readiness.idle_frames + 1 } else { 0 };
     if readiness.idle_frames >= GPU_IDLE_FRAMES {
         if pb.args.ground_y.is_none() {
-            readiness.terrain = GroundField::from_meshes(&meshes, map_meshes.iter(), 2.0);
+            match &pb.args.ground_mesh {
+                Some(path) => {
+                    let bytes = std::fs::read(path)
+                        .unwrap_or_else(|error| panic!("scen-play: [native_ground_mesh_unreadable] {}: {error}", path.display()));
+                    let surface = simforge_core::map::ground::GroundSurface::decode(&bytes)
+                        .unwrap_or_else(|error| panic!("scen-play: [native_ground_mesh_invalid] {}: {error}", path.display()));
+                    eprintln!("ground-source: ground-mesh {}", surface.digest());
+                    readiness.ground_surface = Some(std::sync::Arc::new(surface));
+                }
+                None => {
+                    eprintln!("ground-source: legacy-mesh-field (no --ground-mesh)");
+                    readiness.terrain = GroundField::from_meshes(&meshes, map_meshes.iter(), 2.0);
+                }
+            }
         }
         readiness.capture_ready_frame = Some(frame.0 + u64::from(pb.args.warmup));
     }

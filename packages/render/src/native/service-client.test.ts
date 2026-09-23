@@ -156,6 +156,31 @@ describe('NativeServiceClient', () => {
     await client.close();
   });
 
+  it('reports the placement height source and refuses an unknown one', async () => {
+    const sha256 = 'a'.repeat(64);
+    service = await fakeService((request) => request.op === 'hello' ? { ...hello, capabilities: ['ground_mesh'], ground: { source: 'ground-mesh', sha256 } } : {});
+    let client = await NativeServiceClient.connect(service.endpoint);
+    expect(client.ground).toEqual({ source: 'ground-mesh', sha256 });
+    await client.close();
+    await service.stop();
+
+    service = await fakeService((request) => request.op === 'hello' ? { ...hello, ground: { source: 'legacy-mesh-field' } } : {});
+    client = await NativeServiceClient.connect(service.endpoint);
+    expect(client.ground).toEqual({ source: 'legacy-mesh-field' });
+    await client.close();
+    await service.stop();
+
+    // A service that predates the report says nothing; the engine refuses it.
+    service = await fakeService((request) => request.op === 'hello' ? hello : {});
+    client = await NativeServiceClient.connect(service.endpoint);
+    expect(client.ground).toBeNull();
+    await client.close();
+    await service.stop();
+
+    service = await fakeService((request) => request.op === 'hello' ? { ...hello, ground: { source: 'xodr' } } : {});
+    await expect(NativeServiceClient.connect(service.endpoint)).rejects.toThrow(/unknown ground source/);
+  });
+
   it('verifies every shared-memory payload against the CRC32 the service published', async () => {
     const directory = await fs.mkdtemp(path.join(tmpdir(), 'sf-shm-test-'));
     const shm = path.join(directory, 'ring');
