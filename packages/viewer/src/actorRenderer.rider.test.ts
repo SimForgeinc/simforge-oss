@@ -68,11 +68,16 @@ function riddenGltf(options: { rider?: boolean } = {}): { scene: Group; animatio
   bike.add(crank);
   scene.add(bike);
   if (options.rider !== false) {
+    // As GLTFLoader builds a multi-primitive node: the extras sit on a Group,
+    // the primitives are untagged child meshes.
+    const node = new Group();
+    node.name = 'rider_mesh';
+    node.userData.semanticClass = 'rider';
+    node.position.set(0, 0.85, 5);
     const rider = new Mesh(new BoxGeometry(0.5, 1.7, 0.5), new MeshStandardMaterial({ name: 'rider_top' }));
-    rider.name = 'rider_mesh';
-    rider.userData.semanticClass = 'rider';
-    rider.position.set(0, 0.85, 5);
-    scene.add(rider);
+    rider.name = 'rider_mesh_1';
+    node.add(rider);
+    scene.add(node);
   }
   return {
     scene,
@@ -190,7 +195,7 @@ describe('ridden two-wheelers', () => {
     const authored = idForVariant(0);
     const painted = idForVariant(1);
     renderer.sync([actor({ id: authored, odometerM: 0 }), actor({ id: painted, x: 5, odometerM: 0 })]);
-    const colourOf = (id: string) => ((find(renderer, id, 'rider_mesh') as Mesh).material as MeshStandardMaterial).color;
+    const colourOf = (id: string) => ((find(renderer, id, 'rider_mesh_1') as Mesh).material as MeshStandardMaterial).color;
     expect(colourOf(painted).toArray()).toEqual([...RED]);
     expect(colourOf(authored).toArray()).toEqual([1, 1, 1]);
     renderer.dispose();
