@@ -1,6 +1,9 @@
 import {
+  AMBIENT_TRAFFIC_EXTENSION_KEY as PROFILE_EXTENSION_KEY,
   AmbientTrafficProfileError,
+  ambientProfileMissingDefault,
   ambientTrafficProfileForDocument,
+  validateAmbientTrafficProfileExtension,
   contentHash,
   defaultAmbientTrafficProfile,
   offAmbientTrafficProfile,
@@ -21,6 +24,7 @@ export {
   defaultAmbientTrafficProfile,
 } from '@simforge-oss/engine';
 export type { AmbientProfileMissingDefault } from '@simforge-oss/engine';
+import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY, type AmbientTrafficProviderId } from './provider';
 
 /**
  * The profile an editor panel DISPLAYS for a document. A malformed stored
@@ -140,3 +144,38 @@ export function ambientPromotionCapability(routeLaneRsls: readonly string[]): Am
   };
 }
 
+
+/**
+ * The density a traffic source starts with when the document has none: the
+ * City preset with the legacy seed (`ambient-1`), i.e. exactly the implicit
+ * default every document ran before ambient traffic defaulted to off (and the
+ * profile staging QA exercised SUMO with).
+ */
+export const DEFAULT_TRAFFIC_SOURCE_PRESET = 'city' as const;
+
+/**
+ * The extension writes for an author choosing a traffic source. Choosing SUMO
+ * (or City sim) on a document whose effective density is `off` would run a
+ * traffic engine with nothing to generate (SUMO refuses it outright), so the
+ * choice also sets {@link DEFAULT_TRAFFIC_SOURCE_PRESET}, keeping the seed.
+ * A document that already has a density keeps its pinned profile; a malformed
+ * one is left for validation to report rather than silently replaced.
+ */
+export function ambientTrafficSourceSelection(
+  document: {
+    readonly simulation?: unknown;
+    readonly extensions?: Readonly<Record<string, unknown>> | undefined;
+  },
+  provider: AmbientTrafficProviderId,
+): Record<string, unknown> {
+  const entries: Record<string, unknown> = { [AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: provider };
+  if (provider === 'off') return entries;
+  const stored = validateAmbientTrafficProfileExtension(document.extensions);
+  if (stored.kind === 'invalid') return entries;
+  const current = stored.kind === 'valid'
+    ? stored.profile
+    : ambientProfileMissingDefault(document) === 'off' ? offAmbientTrafficProfile() : defaultAmbientTrafficProfile();
+  if (current.preset !== 'off') return entries;
+  entries[PROFILE_EXTENSION_KEY] = profileForPreset(DEFAULT_TRAFFIC_SOURCE_PRESET, current);
+  return entries;
+}

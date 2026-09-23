@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSumoAuthoredOccupancies,
   buildSumoRoadOccupancyIndex,
+  sumoAuthoredOccupancySourcesAt,
   type SumoAuthoredOccupancySource,
 } from './authored-occupancy.js';
 import { sumoNetworkToScene, sumoSceneToNetwork } from './sumo.js';
@@ -81,5 +82,23 @@ describe('shared SUMO authored occupancy', () => {
     const restored = sumoNetworkToScene(sumoSceneToNetwork(scene, TRANSFORM), TRANSFORM);
     expect(restored.x).toBeCloseTo(scene.x, 9);
     expect(restored.z).toBeCloseTo(scene.z, 9);
+  });
+});
+
+describe('sampled SUMO occupancy sources', () => {
+  it('never hands the blank world clock body to SUMO', () => {
+    const track = (x: number) => ({
+      x: [x], z: [0], headingRad: [0], speedMps: [0], lateralOffsetM: [0], laneRsl: [null], s: [0], present: [1],
+    });
+    const trace = {
+      header: {
+        actorMetadata: {
+          'ambient-world-seed': { kind: 'static_object', dims: { l: 1, w: 1, h: 1 }, static: true, tags: ['ambient:internal-clock'] },
+          ego: { kind: 'car', dims: { l: 4.6, w: 1.9, h: 1.5 }, static: false, tags: ['catalog:vehicle.sedan'] },
+        },
+      },
+      ticks: { t: [0], actors: { 'ambient-world-seed': track(0), ego: track(50) } },
+    } as unknown as Parameters<typeof sumoAuthoredOccupancySourcesAt>[0];
+    expect(sumoAuthoredOccupancySourcesAt(trace, 0).map((item) => item.id)).toEqual(['ego']);
   });
 });
