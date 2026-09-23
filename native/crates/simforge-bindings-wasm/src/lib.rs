@@ -1649,3 +1649,278 @@ impl WasmPolicySession {
         Ok(Float64Array::from(&self.env.ego_pose().js()?[..]))
     }
 }
+
+/* ------------------------------------------------------- render timeline */
+
+use simforge_core::trace::timeline::{self as render_timeline, sampler as timeline_sampler};
+
+fn timeline_err(e: impl std::fmt::Display) -> JsValue {
+    let error = js_sys::Error::new(&e.to_string());
+    error.set_name("SimForgeTimelineError");
+    error.into()
+}
+
+/// `simforge.render-timeline.v1` — the render contract, sampled through the
+/// same Rust function as Bevy (native) and CARLA (Python), so poses are
+/// bit-identical across consumers.
+#[wasm_bindgen(js_name = RenderTimeline)]
+pub struct WasmRenderTimeline {
+    inner: render_timeline::RenderTimeline,
+}
+
+#[wasm_bindgen(js_class = RenderTimeline)]
+impl WasmRenderTimeline {
+    /// Parse and validate timeline JSON (UTF-8 bytes; gzip accepted).
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<WasmRenderTimeline, JsValue> {
+        render_timeline::RenderTimeline::from_json_slice(bytes)
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Build a timeline from a trace (JSON bytes, gzip ok) and the map's
+    /// `.xodr` + topology sidecar bytes.
+    #[wasm_bindgen(js_name = build)]
+    pub fn build(
+        trace: &[u8],
+        xodr: &[u8],
+        topology: &[u8],
+        catalog_digest: Option<String>,
+    ) -> Result<WasmRenderTimeline, JsValue> {
+        let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
+        let trace =
+            simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        let height =
+            render_timeline::HeightField::from_xodr(xodr, topology).map_err(timeline_err)?;
+        render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Same as `build` on a constant surface (maps without elevation, tests).
+    #[wasm_bindgen(js_name = buildFlat)]
+    pub fn build_flat(
+        trace: &[u8],
+        z: f64,
+        catalog_digest: Option<String>,
+    ) -> Result<WasmRenderTimeline, JsValue> {
+        let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
+        let trace =
+            simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        let height = render_timeline::HeightField::flat(z);
+        render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Same as `build` on a synthetic plane `z = z0 + gx*x + gy*y` (tests).
+    #[wasm_bindgen(js_name = buildPlane)]
+    pub fn build_plane(
+        trace: &[u8],
+        z0: f64,
+        gx: f64,
+        gy: f64,
+        catalog_digest: Option<String>,
+    ) -> Result<WasmRenderTimeline, JsValue> {
+        let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
+        let trace =
+            simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        let height = render_timeline::HeightField::plane(z0, gx, gy);
+        render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    #[wasm_bindgen(js_name = toJson)]
+    pub fn to_json(&self) -> Result<String, JsValue> {
+        self.inner.to_json().map_err(timeline_err)
+    }
+
+    /// `canonicalJson(timeline)`: the bytes whose sha256 is `sha256`.
+    #[wasm_bindgen(js_name = toCanonicalJson)]
+    pub fn to_canonical_json(&self) -> Result<String, JsValue> {
+        self.inner.to_canonical_json().map_err(timeline_err)
+    }
+
+    #[wasm_bindgen(getter, js_name = heightFieldDigest)]
+    pub fn height_field_digest(&self) -> String {
+        self.inner.identity.height_field_digest.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = catalogDigest)]
+    pub fn catalog_digest(&self) -> Option<String> {
+        self.inner.identity.catalog_digest.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = samplerVersion)]
+    pub fn sampler_version(&self) -> String {
+        self.inner.identity.sampler_version.clone()
+    }
+
+    /// `timelineSha256`.
+    #[wasm_bindgen(getter)]
+    pub fn sha256(&self) -> Result<String, JsValue> {
+        self.inner.sha256().map_err(timeline_err)
+    }
+    /// `timelineKey = H(traceSha256, heightFieldDigest, catalogDigest, samplerVersion)`.
+    #[wasm_bindgen(getter)]
+    pub fn key(&self) -> String {
+        self.inner.identity.timeline_key.clone()
+    }
+    #[wasm_bindgen(getter, js_name = traceSha256)]
+    pub fn trace_sha256(&self) -> String {
+        self.inner.identity.trace_sha256.clone()
+    }
+    #[wasm_bindgen(getter, js_name = tickCount)]
+    pub fn tick_count(&self) -> u32 {
+        self.inner.tick_count
+    }
+    #[wasm_bindgen(getter, js_name = clipEndS)]
+    pub fn clip_end_s(&self) -> f64 {
+        self.inner.time.clip_end_s
+    }
+    #[wasm_bindgen(getter, js_name = warmupS)]
+    pub fn warmup_s(&self) -> f64 {
+        self.inner.time.warmup_s
+    }
+    /// Clip-relative tick times.
+    #[wasm_bindgen(getter)]
+    pub fn times(&self) -> Float64Array {
+        Float64Array::from(&self.inner.t[..])
+    }
+    #[wasm_bindgen(getter, js_name = actorIds)]
+    pub fn actor_ids(&self) -> Vec<String> {
+        self.inner.actors.iter().map(|a| a.id.clone()).collect()
+    }
+
+    /// `pose(actorId, t)` in the flat 20-float encoding (exact f64 bits):
+    /// `[present, x, y, z, heading, pitch, roll, speed, vx, vy, vz, ax, ay, az,
+    /// roadPitch, roadRoll, bodyPitch, bodyRoll, wheelSteer|NaN, wheelSpin|NaN]`.
+    #[wasm_bindgen(js_name = poseArray)]
+    pub fn pose_array(&self, actor_id: &str, t: f64) -> Result<Float64Array, JsValue> {
+        let p = timeline_sampler::pose(&self.inner, actor_id, t).map_err(timeline_err)?;
+        Ok(Float64Array::from(&p.to_array()[..]))
+    }
+
+    /// Every actor at `t`, in `actorIds` order, `actorIds.length × 20` floats.
+    #[wasm_bindgen(js_name = posesArray)]
+    pub fn poses_array(&self, t: f64) -> Result<Float64Array, JsValue> {
+        let poses = timeline_sampler::poses(&self.inner, t).map_err(timeline_err)?;
+        let mut out = Vec::with_capacity(poses.len() * timeline_sampler::POSE_ARRAY_LEN);
+        for (_, p) in poses {
+            out.extend_from_slice(&p.to_array());
+        }
+        Ok(Float64Array::from(&out[..]))
+    }
+
+    /// Scene-yup (Bevy / scene-state.v1) projection of every actor at each of
+    /// `times`: `times.length × actorIds.length × 12` floats
+    /// `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed]` with
+    /// `position = [x, z, -y]`, the quaternion from `sampler::scene_yup`
+    /// (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
+    #[wasm_bindgen(js_name = sceneFramesArray)]
+    pub fn scene_frames_array(
+        &self,
+        times: &[f64],
+        yaw_only: bool,
+    ) -> Result<Float64Array, JsValue> {
+        let mut out = Vec::with_capacity(times.len() * self.inner.actors.len() * 12);
+        for t in times {
+            for (_, p) in timeline_sampler::poses(&self.inner, *t).map_err(timeline_err)? {
+                let (pos, q) = timeline_sampler::scene_yup(&p, yaw_only);
+                out.extend_from_slice(&[
+                    if p.present { 1.0 } else { 0.0 },
+                    pos[0],
+                    pos[1],
+                    pos[2],
+                    q[0],
+                    q[1],
+                    q[2],
+                    q[3],
+                    p.velocity[0],
+                    p.velocity[2],
+                    -p.velocity[1],
+                    p.speed_mps,
+                ]);
+            }
+        }
+        Ok(Float64Array::from(&out[..]))
+    }
+
+    /// A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+    /// scene-state projection of the timeline for whole-document consumers.
+    #[wasm_bindgen(js_name = sceneStateJson)]
+    pub fn scene_state_json(&self, times: &[f64], yaw_only: bool) -> Result<String, JsValue> {
+        let doc = timeline_sampler::scene_state_document(&self.inner, times, yaw_only)
+            .map_err(timeline_err)?;
+        serde_json_string(&doc)
+    }
+
+    /// Static actor descriptions (`id, kind, catalogId, actorClass, dims,
+    /// color, static, origin, lifecycle`) as JSON, in `actorIds` order.
+    #[wasm_bindgen(js_name = actorsJson)]
+    pub fn actors_json(&self) -> Result<String, JsValue> {
+        let actors: Vec<render_timeline::TimelineActorDesc<'_>> = self
+            .inner
+            .actors
+            .iter()
+            .map(render_timeline::TimelineActorDesc::of)
+            .collect();
+        serde_json_string(&actors)
+    }
+
+    /// Identity, time origin, environment and height source as JSON (the
+    /// document without per-tick channels).
+    #[wasm_bindgen(js_name = headerJson)]
+    pub fn header_json(&self) -> Result<String, JsValue> {
+        serde_json_string(&render_timeline::TimelineHeader::of(&self.inner))
+    }
+
+    /// `pose(actorId, t)` as JSON (camelCase contract field names).
+    #[wasm_bindgen(js_name = poseJson)]
+    pub fn pose_json(&self, actor_id: &str, t: f64) -> Result<String, JsValue> {
+        let p = timeline_sampler::pose(&self.inner, actor_id, t).map_err(timeline_err)?;
+        serde_json_string(&p)
+    }
+
+    /// `{signalId: indication}` held at `t`, as JSON.
+    #[wasm_bindgen(js_name = signalsAtJson)]
+    pub fn signals_at_json(&self, t: f64) -> Result<String, JsValue> {
+        let s = timeline_sampler::signals_at(&self.inner, t).map_err(timeline_err)?;
+        serde_json_string(&s)
+    }
+
+    /// Grade observed per-frame transforms (JSONL) against the sampler.
+    /// `profile` is `"bevy"`, `"carla"` or a profile JSON object; returns the
+    /// `simforge.render-parity/v1` report as JSON.
+    #[wasm_bindgen(js_name = compareObservedJson)]
+    pub fn compare_observed_json(
+        &self,
+        observed_jsonl: &str,
+        profile: &str,
+    ) -> Result<String, JsValue> {
+        let profile = match render_timeline::parity::ParityProfile::named(profile) {
+            Some(p) => p,
+            None => {
+                render_timeline::parity::ParityProfile::from_json(profile).map_err(timeline_err)?
+            }
+        };
+        let report =
+            render_timeline::parity::compare_observed_jsonl(&self.inner, observed_jsonl, &profile)
+                .map_err(timeline_err)?;
+        serde_json_string(&report)
+    }
+
+    /// Resolved light states at `t`, as JSON.
+    #[wasm_bindgen(js_name = lightsAtJson)]
+    pub fn lights_at_json(&self, actor_id: &str, t: f64) -> Result<String, JsValue> {
+        let l = timeline_sampler::lights_at(&self.inner, actor_id, t).map_err(timeline_err)?;
+        serde_json_string(&l)
+    }
+}
+
+fn serde_json_string<T: render_timeline::JsonDocument + ?Sized>(
+    value: &T,
+) -> Result<String, JsValue> {
+    render_timeline::to_json_string(value).map_err(timeline_err)
+}

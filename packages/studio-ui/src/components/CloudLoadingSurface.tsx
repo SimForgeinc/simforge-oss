@@ -6,6 +6,7 @@ import { SkyCloudBackdrop } from "./SkyCloudBackdrop";
 import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./CloudLoadingSurface.stylex";
 import { useCloudLoadingSource, type CloudLoadingKind, type CloudLoadingSource } from "./cloud-loading-context";
+import { textLayout, typography } from "../stylex/recipes.stylex";
 
 /** One labelled figure on the telemetry plate, e.g. `{ label: "Speed", value: "4.8 MB/s" }`. */
 export type CloudLoadingMetric = { label: string; value: string };
@@ -80,7 +81,7 @@ export function CloudLoadingSurface({ scope, kind = "route", priority, title, de
     {scope !== "pane" ? <SkyCloudBackdrop animated={backdropAnimated} assetBase={backdropAssetBase} className={backdropClassName} /> : null}
     <div {...mergeStyleProps(stylex.props(styles.wrap, scope === "pane" && styles.paneWrap), contentWrapClassName)}><div {...mergeStyleProps(stylex.props(scope === "pane" ? styles.paneContent : styles.fullContent), contentClassName)} data-testid={contentTestId}>
       <div {...stylex.props(styles.row)}><div {...stylex.props(styles.icon)}>{icon ?? <LoaderCircle aria-hidden="true" {...stylex.props(styles.spin)} />}</div><div {...stylex.props(styles.body)}><h2 {...stylex.props(styles.title, scope === "pane" ? styles.titlePane : styles.titleFull)}>{title}</h2>{detail ? <p {...stylex.props(styles.detail)}>{detail}</p> : null}{telemetry ? <CloudLoadingTelemetryPanel telemetry={telemetry} testId={telemetryTestId} /> : null}{diagnostics != null ? <div {...stylex.props(styles.diagnostics)}>{diagnostics}</div> : null}</div></div>
-      {hasProgress ? <div {...stylex.props(styles.progressWrap)}><div aria-label={`${title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={normalizedProgress ?? undefined} {...stylex.props(styles.progressTrack)} role="progressbar">{normalizedProgress == null ? <div {...stylex.props(styles.shimmer)} /> : <div {...stylex.props(styles.progressFill)} style={{ width: `${normalizedProgress}%` }} />}</div><div {...stylex.props(styles.progressMeta)}><span>{progressValueLabel ?? (normalizedProgress == null ? "Working" : `${normalizedProgress}%`)}</span></div></div> : null}
+      {hasProgress ? <div {...stylex.props(styles.progressWrap)}><div aria-label={`${title} progress`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={normalizedProgress ?? undefined} {...stylex.props(styles.progressTrack)} role="progressbar">{normalizedProgress == null ? <div {...stylex.props(styles.shimmer)} /> : <div {...stylex.props(styles.progressFill)} style={{ width: `${normalizedProgress}%` }} />}</div><div {...stylex.props([typography.caps, styles.progressMeta])}><span>{progressValueLabel ?? (normalizedProgress == null ? "Working" : `${normalizedProgress}%`)}</span></div></div> : null}
       {children}
     </div></div>
   </div>;
@@ -90,9 +91,9 @@ function CloudLoadingTelemetryPanel({ telemetry, testId }: { telemetry: CloudLoa
   const headline = telemetry.total ? `${telemetry.transferred} of ${telemetry.total} downloaded` : `${telemetry.transferred} downloaded`;
   return <div {...stylex.props(styles.telemetry, telemetry.stalled && styles.telemetryStalled)} data-testid={testId}>
     <div {...stylex.props(styles.telemRow)}><span>{headline}</span>{telemetry.speed ? <span>{telemetry.speed}</span> : null}</div>
-    {telemetry.metrics && telemetry.metrics.length > 0 ? <dl {...stylex.props(styles.telemGrid)}>{telemetry.metrics.map((metric) => <div key={metric.label} {...stylex.props(styles.telemMetric)}><dt {...stylex.props(styles.telemLabel)}>{metric.label}</dt><dd {...stylex.props(styles.telemValue)}>{metric.value}</dd></div>)}</dl> : null}
-    {telemetry.eta ? <p {...stylex.props(styles.telemText)}>{telemetry.eta} remaining</p> : null}
-    {telemetry.stalled ? <p {...stylex.props(styles.telemWarn)}>No data received for {telemetry.stalledFor ?? "several seconds"}</p> : null}
+    {telemetry.metrics && telemetry.metrics.length > 0 ? <dl {...stylex.props(styles.telemGrid)}>{telemetry.metrics.map((metric) => <div key={metric.label} {...stylex.props(styles.telemMetric)}><dt {...stylex.props([typography.eyebrow, styles.telemLabel])}>{metric.label}</dt><dd {...stylex.props([textLayout.truncate, styles.telemValue])}>{metric.value}</dd></div>)}</dl> : null}
+    {telemetry.eta ? <p {...stylex.props([typography.caps, styles.telemText])}>{telemetry.eta} remaining</p> : null}
+    {telemetry.stalled ? <p {...stylex.props([typography.caps, styles.telemWarn])}>No data received for {telemetry.stalledFor ?? "several seconds"}</p> : null}
   </div>;
 }
 function normalizeProgress(progress: number | null | undefined) { if (progress == null || !Number.isFinite(progress)) return null; return Math.max(0, Math.min(100, Math.round(progress))); }

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   column: {
@@ -15,20 +15,20 @@ export const styles = stylex.create({
   header: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
-    borderBottomWidth: "1px",
+    gap: space.s1_5,
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.lineStrong,
-    paddingInline: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.md,
+    borderColor: colors.hairlineStrong,
+    paddingInline: space.s3,
+    paddingTop: space.s3,
+    paddingBottom: space.s2,
   },
   titleRow: {
     display: "flex",
     minWidth: 0,
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   /** The dataset name is itself the menu trigger, as a Slack channel name is. */
   titleButton: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     minWidth: 0,
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
     padding: 0,
     borderWidth: 0,
     backgroundColor: "transparent",
@@ -50,9 +50,6 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   title: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontDisplay,
     fontSize: text.sizeBase,
     lineHeight: text.lineTight,
@@ -69,20 +66,16 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: 0,
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   headerAdd: {
-    width: "1.75rem",
-    height: "1.75rem",
     flexShrink: 0,
-    backgroundColor: { default: "transparent", ":hover": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.text },
   },
   description: {
     margin: 0,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgb(255 255 255 / 0.65)",
+    lineHeight: text.lineXs,
+    color: colors.inkSecondary,
     display: "-webkit-box",
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: 2,
@@ -90,13 +83,13 @@ export const styles = stylex.create({
   },
   descriptionEmpty: {
     fontStyle: "italic",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   toolbar: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
-    marginTop: space.xs,
+    gap: space.s1_5,
+    marginTop: space.s1,
   },
   searchField: {
     position: "relative",
@@ -106,31 +99,27 @@ export const styles = stylex.create({
   searchIcon: {
     pointerEvents: "none",
     position: "absolute",
-    left: space.md,
+    left: space.s2,
     top: "50%",
     width: "0.75rem",
     height: "0.75rem",
     transform: "translateY(-50%)",
-    color: "rgb(255 255 255 / 0.55)",
+    color: colors.inkMuted,
   },
   searchInput: {
     height: "2rem",
     width: "100%",
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: { default: "hsl(var(--border) / 0.8)", ":focus-visible": "hsl(var(--primary) / 0.7)" },
+    borderColor: { default: colors.hairline, ":focus-visible": colors.accentLine },
     backgroundColor: "hsl(var(--background) / 0.5)",
     paddingLeft: "1.625rem",
-    paddingRight: space.md,
+    paddingRight: space.s2,
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
-    color: { default: colors.text, "::placeholder": "rgb(255 255 255 / 0.5)" },
+    color: { default: colors.text, "::placeholder": colors.inkMuted },
     outline: { default: "none", ":focus-visible": "2px solid transparent" },
-  },
-  tagsIcon: {
-    width: "0.875rem",
-    height: "0.875rem",
   },
   plusIcon: {
     width: "0.875rem",
@@ -138,30 +127,25 @@ export const styles = stylex.create({
   },
   /** Errors and notices, between the header and the list. */
   messages: {
-    borderBottomWidth: "1px",
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderColor: colors.border,
-    paddingInline: space.lg,
-    paddingBlock: space.md,
+    borderColor: colors.hairline,
+    paddingInline: space.s3,
+    paddingBlock: space.s2,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   messageRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   messageText: {
     minWidth: 0,
     flex: "1 1 0%",
   },
   status: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.mutedForeground,
   },
   body: {
@@ -170,8 +154,8 @@ export const styles = stylex.create({
     overflow: "hidden",
   },
   emptyState: {
-    paddingInline: space.lg,
-    paddingBlock: space.xxl,
+    paddingInline: space.s3,
+    paddingBlock: space.s6,
     borderStyle: "none",
     backgroundColor: "transparent",
   },
@@ -180,28 +164,18 @@ export const styles = stylex.create({
    * above it, that reads as one more entry rather than as a toolbar button.
    */
   footerAdd: {
-    height: "2.5rem",
     width: "100%",
     flexShrink: 0,
     justifyContent: "flex-start",
-    gap: space.md,
-    borderWidth: 0,
-    borderTopWidth: "1px",
-    borderStyle: "solid",
-    borderColor: colors.lineStrong,
-    backgroundColor: { default: "transparent", ":hover": colors.glass },
-    paddingInline: space.lg,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: text.weightMedium,
-    color: { default: "rgb(255 255 255 / 0.7)", ":hover": colors.text },
+    gap: space.s2,
+    paddingInline: space.s3,
   },
   footerAddIcon: {
     display: "grid",
     placeItems: "center",
     width: "1.25rem",
     height: "1.25rem",
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   importScenarioJSONFileInput: {
     display: "none",

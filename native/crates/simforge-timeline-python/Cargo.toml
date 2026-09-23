@@ -1,0 +1,29 @@
+[package]
+name = "simforge-timeline-python"
+description = "PyO3 extension module `simforge_oss_timeline._native`: the shared render-timeline sampler (pose(timeline, actorId, t)) and timeline builder for Python renderers such as the CARLA adapter."
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+publish = false
+
+# Its own workspace: this wheel crate is excluded from `native/` so the
+# native runtime's lockfile never carries PyO3 twice.
+[workspace]
+
+[lib]
+name = "simforge_oss_timeline_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+simforge-core = { path = "../simforge-core" }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+pyo3 = { version = "0.27", features = ["abi3-py310"] }
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+codegen-units = 1
+lto = "fat"

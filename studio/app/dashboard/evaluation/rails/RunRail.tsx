@@ -28,6 +28,7 @@ import { PaneErrorState } from "@simforge-oss/studio-ui/components/state-frames"
 import { ListSkeleton } from "@simforge-oss/studio-ui/components/ListSkeleton";
 import { StatusBadge } from "../shared";
 import { styles } from "./rails.stylex";
+import { typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Two letters for the model, so a row is recognisable before it is read. */
 function modelGlyph(family: string) {
@@ -71,7 +72,7 @@ export function RunRail({
       selected: job.id === selectedRunId,
       onSelect: () => onSelectRun(job.id),
       leading: (
-        <span {...stylex.props(styles.glyph)} aria-hidden="true">
+        <span {...stylex.props([typography.eyebrow, styles.glyph])} aria-hidden="true">
           {modelGlyph(job.model.family)}
           <Camera {...stylex.props(styles.glyphIcon)} />
         </span>
@@ -103,7 +104,7 @@ export function RunRail({
         selected: run.id === selectedLocalRunId,
         onSelect: () => onSelectLocalRun(run.id),
         leading: (
-          <span {...stylex.props(styles.glyph)} aria-hidden="true">
+          <span {...stylex.props([typography.eyebrow, styles.glyph])} aria-hidden="true">
             <Laptop />
           </span>
         ),

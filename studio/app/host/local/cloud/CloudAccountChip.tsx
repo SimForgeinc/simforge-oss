@@ -23,6 +23,7 @@ import type { XStyle } from "@simforge-oss/studio-ui/components/stylex";
 import { card, chip, lamp } from "@/app/components/host-status-cards.stylex";
 import { CloudAccountPanel } from "./CloudAccountPanel";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { focus, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const CLOUD_STATE_LABELS: Record<StudioCloudStatus["state"], string> = {
   disconnected: "Signed out",
@@ -67,7 +68,7 @@ export function CloudAccountChip({ onNavigate }: { onNavigate?: () => void }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          {...stylex.props(chip.root, chip.trigger)}
+          {...stylex.props(chip.root, [motionRecipe.colors, [focus.ringInset, chip.trigger]])}
           aria-label={`SimCloud: ${summary}. Open account menu`}
           data-testid="cloud-account-chip"
           data-cloud-state={state ?? "loading"}
@@ -75,8 +76,8 @@ export function CloudAccountChip({ onNavigate }: { onNavigate?: () => void }) {
         >
           <span aria-hidden="true" {...stylex.props(lamp.base, stateLampStyle(state))} />
           <span {...stylex.props(chip.body)}>
-            <span {...stylex.props(chip.eyebrow)}>SimCloud</span>
-            <span {...stylex.props(card.truncate, chip.summary)} title={summary}>
+            <span {...stylex.props([typography.tag, chip.eyebrow])}>SimCloud</span>
+            <span {...stylex.props(textLayout.truncate, chip.summary)} title={summary}>
               {summary}
             </span>
           </span>

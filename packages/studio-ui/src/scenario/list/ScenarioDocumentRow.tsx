@@ -47,6 +47,7 @@ import { ScenarioRating } from "./ScenarioRating";
 import { useScenarioOpenScenarioExport } from "./useScenarioOpenScenarioExport";
 import { useStudioHost } from "../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
+import { textLayout, typography } from "../../stylex/recipes.stylex";
 
 export const SCENARIO_TAG_DRAG_MIME = "application/x-simforge-scenario-tag-id";
 
@@ -609,7 +610,7 @@ export function ScenarioDocumentRow({
         {!advancedMode && isVariation ? (
           <span
             data-scenario-variation-tag=""
-            {...stylex.props(styles.variation)}
+            {...stylex.props([typography.tag, styles.variation])}
           >
             Variation
           </span>
@@ -633,7 +634,7 @@ export function ScenarioDocumentRow({
             {tagDropTarget ? (
               <span
                 data-scenario-tag-drop-prompt=""
-                {...stylex.props(styles.letGoToApplyTag)}
+                {...stylex.props([typography.tag, styles.letGoToApplyTag])}
               >
                 Let go to apply tag
               </span>
@@ -641,7 +642,7 @@ export function ScenarioDocumentRow({
             {document.tags.map((tag) => (
               <span
                 key={tag.id}
-                {...stylex.props(styles.spanMetaUppercase)}
+                {...stylex.props([typography.tag, styles.spanMetaUppercase])}
                 style={tagChipStyle(tag.color)}
               >
                 {tag.label}
@@ -652,7 +653,7 @@ export function ScenarioDocumentRow({
               <span
                 key={`content-${tag}`}
                 title="Authored in the scenario content — not editable here"
-                {...stylex.props(styles.authoredInTheScenarioContent)}
+                {...stylex.props([typography.tag, styles.authoredInTheScenarioContent])}
               >
                 {tag}
               </span>
@@ -660,14 +661,14 @@ export function ScenarioDocumentRow({
           </div>
         ) : null}
         {advancedMode && (lastEditorName || editedLabel) ? (
-          <div {...stylex.props(styles.divFlexMetaMicro)}>
+          <div {...stylex.props([typography.eyebrow, styles.divFlexMetaMicro])}>
             {lastEditorName ? (
-              <div {...stylex.props(styles.divTruncate)} data-scenario-last-edited-by="">
+              <div {...stylex.props(textLayout.truncate)} data-scenario-last-edited-by="">
                 {`Last edited by: ${lastEditorName}`}
               </div>
             ) : null}
             {editedLabel ? (
-              <div {...stylex.props(styles.divTruncate2)} data-scenario-edited-at="">
+              <div {...stylex.props(textLayout.truncate)} data-scenario-edited-at="">
                 {`Edited: ${editedLabel}`}
               </div>
             ) : null}

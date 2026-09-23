@@ -1,40 +1,31 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   hashingStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    fontSize: "10px",
+    gap: space.s1,
+    fontSize: text.sizeMicro,
     color: colors.mutedForeground,
   },
   loadingIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
   },
   uploadingStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    fontSize: "10px",
-    color: "#60a5fa",
+    gap: space.s1,
+    fontSize: text.sizeMicro,
+    color: colors.info,
   },
   successStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    fontSize: "10px",
-    color: "#34d399",
+    gap: space.s1,
+    fontSize: text.sizeMicro,
+    color: colors.positive,
   },
   statusIcon: {
     width: "0.75rem",
@@ -43,8 +34,8 @@ export const styles = stylex.create({
   errorStatus: {
     display: "inline-flex",
     alignItems: "center",
-    gap: space.xs,
-    fontSize: "10px",
+    gap: space.s1,
+    fontSize: text.sizeMicro,
     color: colors.danger,
   },
 });

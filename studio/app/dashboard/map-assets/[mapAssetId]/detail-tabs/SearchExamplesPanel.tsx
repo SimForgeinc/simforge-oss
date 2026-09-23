@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SearchExamplesPanel.stylex";
 
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchExamplesPanelProps {
   /** Submit a query — usually the page's `onSubmitSearch`. Available-tier
@@ -22,11 +23,11 @@ export function SearchExamplesPanel({ onRunExample }: SearchExamplesPanelProps) 
       {SEARCH_EXAMPLE_GROUPS.map((group) => (
         <section key={group.id} {...stylex.props(styles.exampleGroup)}>
           <header {...stylex.props(styles.groupHeader)}>
-            <h3 {...stylex.props(styles.groupTitle)}>
+            <h3 {...stylex.props([typography.caps, styles.groupTitle])}>
               {group.title}
             </h3>
             {group.tier === "coming_soon" ? (
-              <span {...stylex.props(styles.comingSoonBadge)}>
+              <span {...stylex.props([typography.tag, styles.comingSoonBadge])}>
                 Coming soon
               </span>
             ) : null}
@@ -54,7 +55,7 @@ function Chip({ example, onRun }: ChipProps) {
       type="button"
       disabled={!isAvailable}
       onClick={() => isAvailable && onRun(example.query)}
-      {...stylex.props(styles.examplePill, isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable)}
+      {...stylex.props([motionRecipe.colors, styles.examplePill], isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable)}
       title={isAvailable ? `Run search: ${example.query}` : "Coming in the next release"}
     >
       {example.label}

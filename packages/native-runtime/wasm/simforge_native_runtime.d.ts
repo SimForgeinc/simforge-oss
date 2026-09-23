@@ -174,6 +174,110 @@ export class PolicyStepResult {
 }
 
 /**
+ * `simforge.render-timeline.v1` — the render contract, sampled through the
+ * same Rust function as Bevy (native) and CARLA (Python), so poses are
+ * bit-identical across consumers.
+ */
+export class RenderTimeline {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * Static actor descriptions (`id, kind, catalogId, actorClass, dims,
+     * color, static, origin, lifecycle`) as JSON, in `actorIds` order.
+     */
+    actorsJson(): string;
+    /**
+     * Same as `build` on a constant surface (maps without elevation, tests).
+     */
+    static buildFlat(trace: Uint8Array, z: number, catalog_digest?: string | null): RenderTimeline;
+    /**
+     * Same as `build` on a synthetic plane `z = z0 + gx*x + gy*y` (tests).
+     */
+    static buildPlane(trace: Uint8Array, z0: number, gx: number, gy: number, catalog_digest?: string | null): RenderTimeline;
+    /**
+     * Build a timeline from a trace (JSON bytes, gzip ok) and the map's
+     * `.xodr` + topology sidecar bytes.
+     */
+    static build(trace: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null): RenderTimeline;
+    /**
+     * Grade observed per-frame transforms (JSONL) against the sampler.
+     * `profile` is `"bevy"`, `"carla"` or a profile JSON object; returns the
+     * `simforge.render-parity/v1` report as JSON.
+     */
+    compareObservedJson(observed_jsonl: string, profile: string): string;
+    /**
+     * Parse and validate timeline JSON (UTF-8 bytes; gzip accepted).
+     */
+    static fromBytes(bytes: Uint8Array): RenderTimeline;
+    /**
+     * Identity, time origin, environment and height source as JSON (the
+     * document without per-tick channels).
+     */
+    headerJson(): string;
+    /**
+     * Resolved light states at `t`, as JSON.
+     */
+    lightsAtJson(actor_id: string, t: number): string;
+    /**
+     * `pose(actorId, t)` in the flat 20-float encoding (exact f64 bits):
+     * `[present, x, y, z, heading, pitch, roll, speed, vx, vy, vz, ax, ay, az,
+     * roadPitch, roadRoll, bodyPitch, bodyRoll, wheelSteer|NaN, wheelSpin|NaN]`.
+     */
+    poseArray(actor_id: string, t: number): Float64Array;
+    /**
+     * `pose(actorId, t)` as JSON (camelCase contract field names).
+     */
+    poseJson(actor_id: string, t: number): string;
+    /**
+     * Every actor at `t`, in `actorIds` order, `actorIds.length × 20` floats.
+     */
+    posesArray(t: number): Float64Array;
+    /**
+     * Scene-yup (Bevy / scene-state.v1) projection of every actor at each of
+     * `times`: `times.length × actorIds.length × 12` floats
+     * `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed]` with
+     * `position = [x, z, -y]`, the quaternion from `sampler::scene_yup`
+     * (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
+     */
+    sceneFramesArray(times: Float64Array, yaw_only: boolean): Float64Array;
+    /**
+     * A `simforge.scene-state.v1` document sampled at `times` (JSON): the
+     * scene-state projection of the timeline for whole-document consumers.
+     */
+    sceneStateJson(times: Float64Array, yaw_only: boolean): string;
+    /**
+     * `{signalId: indication}` held at `t`, as JSON.
+     */
+    signalsAtJson(t: number): string;
+    /**
+     * `canonicalJson(timeline)`: the bytes whose sha256 is `sha256`.
+     */
+    toCanonicalJson(): string;
+    toJson(): string;
+    readonly actorIds: string[];
+    readonly catalogDigest: string | undefined;
+    readonly clipEndS: number;
+    readonly heightFieldDigest: string;
+    /**
+     * `timelineKey = H(traceSha256, heightFieldDigest, catalogDigest, samplerVersion)`.
+     */
+    readonly key: string;
+    readonly samplerVersion: string;
+    /**
+     * `timelineSha256`.
+     */
+    readonly sha256: string;
+    readonly tickCount: number;
+    /**
+     * Clip-relative tick times.
+     */
+    readonly times: Float64Array;
+    readonly traceSha256: string;
+    readonly warmupS: number;
+}
+
+/**
  * A resolved route: engine-frame geometry plus its persisted snapshot.
  */
 export class Route {
@@ -567,6 +671,7 @@ export interface InitOutput {
     readonly __wbg_mapbundle_free: (a: number, b: number) => void;
     readonly __wbg_policysession_free: (a: number, b: number) => void;
     readonly __wbg_policystepresult_free: (a: number, b: number) => void;
+    readonly __wbg_rendertimeline_free: (a: number, b: number) => void;
     readonly __wbg_route_free: (a: number, b: number) => void;
     readonly __wbg_scenarioinput_free: (a: number, b: number) => void;
     readonly __wbg_sessionbatch_free: (a: number, b: number) => void;
@@ -699,6 +804,33 @@ export interface InitOutput {
     readonly policysession_reset: (a: number, b: any) => [number, number, number];
     readonly policysession_restore: (a: number, b: number, c: number) => [number, number, number];
     readonly rehearseSituation: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly rendertimeline_actorIds: (a: number) => [number, number];
+    readonly rendertimeline_actorsJson: (a: number) => [number, number, number, number];
+    readonly rendertimeline_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
+    readonly rendertimeline_buildFlat: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly rendertimeline_buildPlane: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
+    readonly rendertimeline_catalogDigest: (a: number) => [number, number];
+    readonly rendertimeline_clipEndS: (a: number) => number;
+    readonly rendertimeline_compareObservedJson: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly rendertimeline_fromBytes: (a: number, b: number) => [number, number, number];
+    readonly rendertimeline_headerJson: (a: number) => [number, number, number, number];
+    readonly rendertimeline_heightFieldDigest: (a: number) => [number, number];
+    readonly rendertimeline_key: (a: number) => [number, number];
+    readonly rendertimeline_lightsAtJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly rendertimeline_poseArray: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly rendertimeline_poseJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly rendertimeline_posesArray: (a: number, b: number) => [number, number, number];
+    readonly rendertimeline_samplerVersion: (a: number) => [number, number];
+    readonly rendertimeline_sceneFramesArray: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly rendertimeline_sceneStateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly rendertimeline_sha256: (a: number) => [number, number, number, number];
+    readonly rendertimeline_signalsAtJson: (a: number, b: number) => [number, number, number, number];
+    readonly rendertimeline_tickCount: (a: number) => number;
+    readonly rendertimeline_times: (a: number) => any;
+    readonly rendertimeline_toCanonicalJson: (a: number) => [number, number, number, number];
+    readonly rendertimeline_toJson: (a: number) => [number, number, number, number];
+    readonly rendertimeline_traceSha256: (a: number) => [number, number];
+    readonly rendertimeline_warmupS: (a: number) => number;
     readonly replayWorldLog: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly route_laneRsls: (a: number) => [number, number];
     readonly route_lengthM: (a: number) => number;

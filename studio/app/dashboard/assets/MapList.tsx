@@ -8,6 +8,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import type { ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
 import { maps as styles } from "./asset-surfaces.stylex";
+import { hairline, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Published map versions, for the Maps section of the asset library.
@@ -67,7 +68,7 @@ export function MapList({
           <p {...stylex.props(styles.emptyHint)}>
             Upload an OpenDRIVE file and one GLB per layer — a file named <code>road.glb</code> is required — and the server builds the rest.
           </p>
-          <Button type="button" onClick={onUpload} xstyle={styles.upload}>Upload a map</Button>
+          <Button variant="accent" type="button" onClick={onUpload} xstyle={styles.upload}>Upload a map</Button>
         </div>
       </div>
     );
@@ -75,7 +76,7 @@ export function MapList({
   return (
     <div {...stylex.props(styles.grid)}>
       {maps.map((map) => (
-        <article key={map.mapVersionId} {...stylex.props(styles.card)}>
+        <article key={map.mapVersionId} {...stylex.props([hairline.all, styles.card])}>
           <div {...stylex.props(styles.well)}>
             {map.thumbnailUrl ? (
               <Image src={map.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 25vw, 20vw" unoptimized {...stylex.props(styles.thumbnail)} />
@@ -84,12 +85,12 @@ export function MapList({
             )}
           </div>
           <div {...stylex.props(styles.body)}>
-            <h2 {...stylex.props(styles.name)} title={map.label}>{map.label}</h2>
+            <h2 {...stylex.props([textLayout.truncate, styles.name])} title={map.label}>{map.label}</h2>
             <div {...stylex.props(styles.locality)}>
               <MapPin {...stylex.props(styles.pin)} aria-hidden="true" />
-              <span {...stylex.props(styles.localityText)}>{map.locality ?? "Locality not recorded"}</span>
+              <span {...stylex.props(textLayout.truncate)}>{map.locality ?? "Locality not recorded"}</span>
             </div>
-            <p {...stylex.props(styles.id)} title={map.mapVersionId}>{map.mapVersionId}</p>
+            <p {...stylex.props([textLayout.truncate, styles.id])} title={map.mapVersionId}>{map.mapVersionId}</p>
             <Button asChild size="sm" variant="outline" xstyle={styles.author}>
               <Link href="/dashboard/scenario" aria-label={`Author a scenario on ${map.label}`}>
                 <SquarePen aria-hidden="true" /> Author a scenario

@@ -1,18 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "../../../stylex/tokens.stylex";
-
-// `animate-spin`.
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, layout, motion, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex items-start gap-2
   flexStartGap2: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -23,26 +17,21 @@ export const styles = stylex.create({
   flexCenterGap15: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // text-micro font-bold uppercase tracking-meta opacity-70
   capsMicroBold: {
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     opacity: "0.7",
   },
   // border border-border/70 bg-muted/40 px-1 text-micro font-bold tabular-nums
   microBoldBordered: {
-    borderWidth: "1px",
-    borderColor: "hsl(var(--border) / 0.7)",
-    backgroundColor: "hsl(var(--muted) / 0.4)",
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     fontWeight: text.weightBold,
     fontVariantNumeric: "tabular-nums",
   },
@@ -50,33 +39,30 @@ export const styles = stylex.create({
   metaMediumPushRight: {
     marginLeft: "auto",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     fontVariantNumeric: "tabular-nums",
     opacity: "0.8",
   },
   // mt-0.5 text-sm font-medium leading-snug
   smMediumSnug: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeSm,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     fontWeight: text.weightMedium,
   },
   // mt-0.5 text-xs leading-snug opacity-70
   xsSnug: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: "1.375",
+    lineHeight: text.lineSnug,
     opacity: "0.7",
   },
   // mt-2 h-7 px-2.5 text-xs
   xs: {
-    marginTop: space.md,
-    height: "1.75rem",
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    marginTop: space.s2,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
   },
   // size-3.5
   size35: {
@@ -86,9 +72,9 @@ export const styles = stylex.create({
   // absolute inset-x-0 bottom-0 h-0.5 bg-muted
   abs: {
     position: "absolute",
-    left: space.none,
-    right: space.none,
-    bottom: space.none,
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: "0.125rem",
     backgroundColor: colors.muted,
   },
@@ -99,11 +85,11 @@ export const styles = stylex.create({
     backgroundColor: colors.primary,
     transitionProperty: {
       default: "width",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "300ms",
-    animationDuration: "300ms",
+    transitionDuration: motion.durSlow,
+    animationDuration: motion.durSlow,
   },
   /*
    * The card's two icon controls. `-mt-1` pulls them level with the heading's
@@ -120,26 +106,13 @@ export const styles = stylex.create({
     flexShrink: "0",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: "1px",
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
     backgroundColor: {
-      default: "hsl(var(--muted) / 0.4)",
-      ":hover": "hsl(var(--accent))",
+      default: colors.fillSubtle,
+      ":hover": colors.hoverWash,
     },
     color: "currentColor",
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible":
-        "0 0 0 1px hsl(var(--background)), 0 0 0 3px hsl(var(--ring))",
-    },
   },
   // -mr-1
   iconButtonEdge: {
@@ -149,35 +122,35 @@ export const styles = stylex.create({
   // pointer-events-auto border px-3 py-2 shadow-lg backdrop-blur-md
   card: {
     pointerEvents: "auto",
-    borderWidth: "1px",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.md,
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    backdropFilter: "blur(12px)",
+    borderWidth: stroke.hairline,
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
+    boxShadow: shadows.elevationLg,
+    backdropFilter: motion.blurGlass,
   },
   // border-destructive/50 bg-destructive/20 text-foreground
   cardError: {
-    borderColor: "hsl(var(--destructive) / 0.5)",
-    backgroundColor: "hsl(var(--destructive) / 0.2)",
+    borderColor: colors.critical,
+    backgroundColor: colors.criticalWash,
     color: colors.text,
   },
   // border-amber-400/40 bg-amber-500/15 text-foreground
   cardWarning: {
-    borderColor: "rgb(251 191 36 / 0.4)",
-    backgroundColor: "rgb(245 158 11 / 0.15)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
     color: colors.text,
   },
   // border-emerald-400/40 bg-emerald-500/15 text-foreground
   cardSuccess: {
-    borderColor: "rgb(52 211 153 / 0.4)",
-    backgroundColor: "rgb(16 185 129 / 0.15)",
+    borderColor: colors.positive,
+    backgroundColor: colors.positiveWash,
     color: colors.text,
   },
   // border-border/70 bg-background/95 text-foreground
   cardNeutral: {
-    borderColor: "hsl(var(--border) / 0.7)",
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.95)",
     color: colors.text,
   },
@@ -186,11 +159,11 @@ export const styles = stylex.create({
   cardWithProgress: {
     position: "relative",
     overflow: "hidden",
-    paddingBottom: "0.625rem",
+    paddingBottom: space.s2_5,
   },
   // mt-0.5 size-4 shrink-0
   icon: {
-    marginTop: "0.125rem",
+    marginTop: space.s0_5,
     width: "1rem",
     height: "1rem",
     flexShrink: 0,
@@ -199,10 +172,6 @@ export const styles = stylex.create({
   // reduced-motion guard here and neither does this, so the spinner behaves
   // exactly as it did.
   iconSpinning: {
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
     color: colors.primary,
   },
 });

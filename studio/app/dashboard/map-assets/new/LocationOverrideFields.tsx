@@ -26,29 +26,26 @@ export function LocationOverrideFields({
       <div {...stylex.props(styles.locationFieldsGrid)}>
         <div>
           <label {...stylex.props(styles.locationFieldLabel)}>City</label>
-          <Input
+          <Input size="md" variant="plate"
             value={city}
             onChange={(e) => onCityChange(e.target.value)}
             placeholder="e.g. San Jose"
-            xstyle={styles.locationFieldInput}
           />
         </div>
         <div>
           <label {...stylex.props(styles.locationFieldLabel)}>State / Region</label>
-          <Input
+          <Input size="md" variant="plate"
             value={state}
             onChange={(e) => onStateChange(e.target.value)}
             placeholder="e.g. California"
-            xstyle={styles.locationFieldInput}
           />
         </div>
         <div>
           <label {...stylex.props(styles.locationFieldLabel)}>Country</label>
-          <Input
+          <Input size="md" variant="plate"
             value={country}
             onChange={(e) => onCountryChange(e.target.value)}
             placeholder="e.g. United States"
-            xstyle={styles.locationFieldInput}
           />
         </div>
       </div>

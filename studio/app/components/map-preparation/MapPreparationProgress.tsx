@@ -7,6 +7,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { setup } from "../setup-preparation.stylex";
 import { PROGRESS_VAR, preparation } from "./map-preparation.stylex";
 import type { MapPreparationPhase, MapPreparationRow } from "./useMapPreparation";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * One row per map being prepared, with the two actions a failed row offers.
@@ -54,7 +55,7 @@ export function MapPreparationProgress({
           return (
             <li
               key={map.mapVersionId}
-              {...stylex.props(preparation.row)}
+              {...stylex.props([hairline.all, preparation.row])}
               data-testid="map-preparation-row"
               data-map-version-id={map.mapVersionId}
               data-state={map.state}
@@ -64,14 +65,14 @@ export function MapPreparationProgress({
                   {map.state === "ready" ? (
                     <Check {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : map.state === "installing" ? (
-                    <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" />
+                    <LoaderCircle {...stylex.props(setup.iconSmall, motionRecipe.spin)} aria-hidden="true" />
                   ) : map.state === "error" ? (
                     <CircleAlert {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : map.state === "skipped" ? (
                     <SkipForward {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : null}
                 </span>
-                <span {...stylex.props(preparation.rowLabel)}>{map.label}</span>
+                <span {...stylex.props([textLayout.truncate, preparation.rowLabel])}>{map.label}</span>
                 <span {...stylex.props(preparation.rowBytes)}>
                   {map.state === "installing" || map.state === "ready"
                     ? `${formatBytes(map.completedBytes)}${map.bytes > 0 ? ` / ${formatBytes(map.bytes)}` : ""}`

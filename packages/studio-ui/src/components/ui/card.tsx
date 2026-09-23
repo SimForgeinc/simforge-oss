@@ -3,12 +3,13 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./card.stylex";
+import { hairline, motionRecipe } from "../../stylex/recipes.stylex";
 
 type CardStyle = stylex.StyleXStyles;
 type CardProps = React.HTMLAttributes<HTMLDivElement> & { xstyle?: CardStyle };
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
-  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.card, xstyle), className, style)} />
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props([motionRecipe.colors, [hairline.all, styles.card]], xstyle), className, style)} />
 ));
 Card.displayName = "Card";
 

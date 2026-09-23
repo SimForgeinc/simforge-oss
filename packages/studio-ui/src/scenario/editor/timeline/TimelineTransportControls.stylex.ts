@@ -21,27 +21,13 @@ export const styles = stylex.create({
   },
   // size-6 rounded-none border-0 bg-transparent p-0 text-white shadow-none hover:bg-transparent enabled:hover:text-[#E8E044] disabled:text-white/25
   whitePad0: {
-    width: "1.5rem",
-    height: "1.5rem",
-    borderRadius: "0",
-    borderWidth: "0px",
-    backgroundColor: {
-      default: "transparent",
-      ":hover": "transparent",
-    },
-    padding: space.none,
-    color: {
-      default: "rgb(255 255 255 / 1)",
-      ":enabled:hover": colors.accent,
-      ":disabled": "rgb(255 255 255 / 0.25)",
-    },
-    boxShadow: "none",
+    padding: 0,
   },
   // flex items-center gap-1 text-white
   flexCenterWhite: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
-    color: "rgb(255 255 255 / 1)",
+    gap: space.s1,
+    color: colors.ink,
   },
 });

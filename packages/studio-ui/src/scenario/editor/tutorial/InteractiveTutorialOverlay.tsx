@@ -19,6 +19,7 @@ import {
 } from "./interactive-tutorial-programs";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractiveTutorialOverlay.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -210,7 +211,7 @@ export function InteractiveTutorialOverlay({
       >
         <div {...stylex.props(styles.flexStartGap3)}>
           <div {...stylex.props(styles.fillNarrowable)}>
-            <p {...stylex.props(styles.capsMonoBold)}>
+            <p {...stylex.props([typography.tag, styles.capsMonoBold])}>
               {step.eyebrow} · Step {index + 1} of {steps.length}
             </p>
             <h2 {...stylex.props(styles.semiboldBase)} id="interactive-tutorial-title">
@@ -219,7 +220,7 @@ export function InteractiveTutorialOverlay({
           </div>
           <button
             aria-label="Exit interactive tutorial"
-            {...stylex.props(styles.gridCenteredTight)}
+            {...stylex.props([focus.ring, styles.gridCenteredTight])}
             onClick={onClose}
             type="button"
           >
@@ -236,7 +237,7 @@ export function InteractiveTutorialOverlay({
           <strong {...stylex.props(styles.xsMedium)}>{step.prompt}</strong>
         </div>
         {step.action === "finish" ? (
-          <Button xstyle={styles.wide} onClick={finish} size="sm" type="button">
+          <Button xstyle={styles.wide} onClick={finish} size="md" type="button">
             Continue authoring
           </Button>
         ) : (

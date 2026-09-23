@@ -5,12 +5,9 @@
  * and inside the account sheet.
  */
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layout, motion, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
-const AMBER_400_30 = "rgba(251, 191, 36, 0.3)";
-const AMBER_400_10 = "rgba(251, 191, 36, 0.1)";
-const AMBER_300_90 = "rgba(252, 211, 77, 0.9)";
 /** `animate-spin`: one revolution per second on the pending-request loader. */
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
@@ -18,38 +15,35 @@ export const form = stylex.create({
   root: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
+    gap: space.s3,
     width: "100%",
     maxWidth: "26rem",
   },
   heading: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   intro: {
     fontSize: text.sizeSm,
-    lineHeight: "1.5rem",
+    lineHeight: text.lineBase,
     color: colors.mutedForeground,
   },
   field: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   label: {
     fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: 700,
+    fontSize: text.sizeTag,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   input: {
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderColor: colors.lineStrong,
-    color: colors.text,
   },
   // A six-digit code: monospaced, spaced, and only as wide as it needs to be.
   code: {
@@ -62,30 +56,20 @@ export const form = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   between: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   submit: {
-    height: "2.5rem",
-    gap: space.md,
-    borderRadius: radii.full,
-    backgroundColor: { default: colors.accent, ":hover": colors.accentHover },
-    color: colors.accentText,
-    opacity: { default: null, ":disabled": 0.6 },
+    gap: space.s2,
   },
   secondary: {
-    height: "2.5rem",
-    gap: space.md,
-    borderRadius: radii.full,
-    borderColor: colors.lineStrong,
-    backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
-    color: colors.text,
+    gap: space.s2,
   },
   // An inline text action ("Create account", "Forgot password?").
   link: {
@@ -93,7 +77,7 @@ export const form = stylex.create({
     borderWidth: 0,
     backgroundColor: "transparent",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: { default: colors.mutedForeground, ":hover": colors.text },
     textDecorationLine: { default: "none", ":hover": "underline" },
     cursor: { default: "pointer", ":disabled": "not-allowed" },
@@ -102,10 +86,10 @@ export const form = stylex.create({
   divider: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: 700,
+    fontSize: text.sizeTag,
+    fontWeight: text.weightBold,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
@@ -113,26 +97,26 @@ export const form = stylex.create({
   dividerLine: {
     flex: 1,
     height: "1px",
-    backgroundColor: colors.line,
+    backgroundColor: colors.hairline,
   },
   providers: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   error: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   success: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    color: AMBER_300_90,
+    lineHeight: text.lineSm,
+    color: colors.warning,
   },
   note: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   icon: {
@@ -140,9 +124,9 @@ export const form = stylex.create({
     height: "1rem",
   },
   spin: {
-    animationName: { default: spin, "@media (prefers-reduced-motion: reduce)": "none" },
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
+    animationName: { default: spin, [layout.reducedMotion]: "none" },
+    animationDuration: motion.durSpin,
+    animationTimingFunction: motion.easeLinear,
     animationIterationCount: "infinite",
   },
 });
@@ -152,27 +136,26 @@ export const banner = stylex.create({
   root: {
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
-    marginTop: "0.75rem",
-    borderWidth: 1,
+    gap: space.s2,
+    marginTop: space.s3,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: AMBER_400_30,
-    borderRadius: radii.xl,
-    backgroundColor: AMBER_400_10,
-    padding: space.xl,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningWash,
+    padding: space.s4,
   },
   title: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    fontWeight: 600,
+    lineHeight: text.lineSm,
+    fontWeight: text.weightSemibold,
     color: colors.text,
   },
   detail: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
 });

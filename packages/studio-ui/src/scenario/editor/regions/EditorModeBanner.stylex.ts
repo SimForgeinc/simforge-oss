@@ -7,43 +7,23 @@ export const styles = stylex.create({
     marginLeft: "auto",
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex items-center rounded-md bg-black/15 p-0.5
   flexCenterPad05: {
     display: "flex",
     alignItems: "center",
-    borderRadius: "0",
     backgroundColor: "rgb(0 0 0 / 0.15)",
-    padding: space.xxs,
+    padding: space.s0_5,
   },
   // size-3.5
   size35: {
     width: "0.875rem",
     height: "0.875rem",
   },
-  // text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground
-  textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground: {
-    color: {
-      default: colors.primaryForeground,
-      ":hover": colors.primaryForeground,
-    },
-    backgroundColor: {
-      default: null,
-      ":hover": "hsl(var(--primary-foreground) / 0.1)",
-    },
-  },
   // ml-auto text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground
   pushRight: {
     marginLeft: "auto",
-    color: {
-      default: colors.primaryForeground,
-      ":hover": colors.primaryForeground,
-    },
-    backgroundColor: {
-      default: null,
-      ":hover": "hsl(var(--primary-foreground) / 0.1)",
-    },
   },
 
   // flex min-h-11 shrink-0 items-center px-5 py-2 text-sm font-semibold
@@ -52,12 +32,12 @@ export const styles = stylex.create({
     minHeight: "2.75rem",
     flexShrink: 0,
     alignItems: "center",
-    paddingLeft: "1.25rem",
-    paddingRight: "1.25rem",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    paddingLeft: space.s5,
+    paddingRight: space.s5,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
   },
   // bg-amber-400 text-black
@@ -74,7 +54,7 @@ export const styles = stylex.create({
   // it is one of the animation utilities styles.css keeps behind a
   // reduced-motion guard.
   pulseDot: {
-    marginRight: space.md,
+    marginRight: space.s2,
     width: "0.5rem",
     height: "0.5rem",
   },
@@ -90,9 +70,9 @@ export const styles = stylex.create({
   routeToolActive: {
     backgroundColor: {
       default: "rgb(0 0 0 / 1)",
-      ":hover": "rgb(0 0 0 / 0.85)",
+      ":hover": colors.scrimHeavy,
     },
-    color: "rgb(255 255 255 / 1)",
+    color: colors.ink,
   },
   // text-primary-foreground hover:bg-primary-foreground/10 — deliberately does
   // not pin the hover colour, so the ghost button's own `hover:text-*` keeps

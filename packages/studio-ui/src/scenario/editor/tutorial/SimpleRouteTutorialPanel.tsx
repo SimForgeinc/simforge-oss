@@ -3,6 +3,7 @@
 import { Clock3, MapPin, Pause, Route, X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SimpleRouteTutorialPanel.stylex";
+import { focus, motionRecipe, typography } from "../../../stylex/recipes.stylex";
 
 export function SimpleRouteTutorialPanel({
   onClose,
@@ -28,7 +29,7 @@ export function SimpleRouteTutorialPanel({
             <Route aria-hidden="true" className={stylex.props(styles.size5).className} />
           </span>
           <div {...stylex.props(styles.fillNarrowable)}>
-            <p {...stylex.props(styles.capsMonoBold)}>
+            <p {...stylex.props([typography.eyebrow, styles.capsMonoBold])}>
               Simple route
             </p>
             <h2 {...stylex.props(styles.lgSemibold)} id="simple-route-tutorial-title">
@@ -37,7 +38,7 @@ export function SimpleRouteTutorialPanel({
           </div>
           <button
             aria-label="Close route tutorial"
-            {...stylex.props(styles.flexCenterMid2)}
+            {...stylex.props([focus.ring, motionRecipe.colors, styles.flexCenterMid2])}
             onClick={onClose}
             type="button"
           >
@@ -72,12 +73,12 @@ export function SimpleRouteTutorialPanel({
         </div>
 
         <div {...stylex.props(styles.flexCenterBetween)}>
-          <p {...stylex.props(styles.capsMono)}>
+          <p {...stylex.props([typography.tag, styles.capsMono])}>
             Click map to place · Enter to finish
           </p>
           <button
             autoFocus
-            {...stylex.props(styles.tightCapsXs)}
+            {...stylex.props([motionRecipe.colors, [typography.caps, focus.ring, styles.tightCapsXs]])}
             onClick={onStart}
             type="button"
           >

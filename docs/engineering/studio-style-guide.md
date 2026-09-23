@@ -66,7 +66,7 @@ import it relatively; from `studio/app` import
 | `colors` | theme bridges (`bg`, `card`, `text`, `mutedForeground`, `border`), the plate (`panel*`), the ladders below, accent, status | the ladder step for the role, never an alpha |
 | `text` | faces, sizes, line heights, weights, tracking | a `type` recipe first; these for one-off layout of text |
 | `space` | `s0_5` … `s12`, the 0.25rem grid (`s3` = 0.75rem), plus shell widths | every gap, padding and margin |
-| `layout` | gutters, measures, breakpoints (`bpSm`, `bpMd`, `bpLg`, `bpXl`, `bp2xl`), `reducedMotion` | computed keys: `{ default: x, [layout.bpSm]: y }` |
+| `layout` | gutters, measures, breakpoints (`bpSm`, `bpMd`, `bpLg`, `bpXl`, `bp2xl`), `reducedMotion` | computed keys: `{ default: x, [layout.bpSm]: y }` (see Breakpoints below) |
 | `stroke` | `hairline` (1px), `thick` (2px) | border and rule widths |
 | `shadows` | focus rings, the few elevations | the `focus` recipe; elevation only for things that float |
 | `layers` | the global stacking bands | every `zIndex` |
@@ -89,6 +89,78 @@ The colour ladders, strongest step first:
 Names marked `@deprecated` in the token file still compile; do not add new
 uses.
 
+### Breakpoints
+
+A property that changes at **one** breakpoint uses the token:
+`{ default: "column", [layout.bpSm]: "row" }`. A property that changes at
+**several** writes the queries as literals,
+`{ default: 1, "@media (min-width: 640px)": 2, "@media (min-width: 1024px)": 3 }`:
+StyleX rewrites overlapping literal `min-width` queries into non-overlapping
+ranges at compile time, which it cannot do through a const, and without the
+ranges the wider query only wins by stylesheet order. The lint and the
+ratchet allow literals in exactly that case. Namespace-level (contextual)
+media keys are also literal; prefer nesting the query inside each property.
+
+## Recipes
+
+`packages/studio-ui/src/stylex/recipes.stylex.ts` (from `studio/app`:
+`@simforge-oss/studio-ui/stylex/recipes.stylex`). Each is a few declarations
+of look, built only from tokens, composed first in `stylex.props`.
+
+| Recipe | Keys | Use for |
+| --- | --- | --- |
+| `focus` | `ring`, `ringInset`, `outline`, `within` | every focusable element that is not a primitive; exactly one. The ring is 2px of accent everywhere |
+| `motionRecipe` | `colors`, `opacity`, `transform`, `spin`, `pulse`, `fadeIn`, `sweep` | every transition or animation; all stop under reduced motion |
+| `hairline` | `all`, `top`, `bottom`, `start`, `end`; modifiers `subtle`, `strong`, `hover` | every border and divider |
+| `surface` | `plate`, `raised`, `card`, `glass`, `chip`, `scrim` | what a region is made of |
+| `interactive` | `base`, `hoverFill`, `hoverInk`, `selected` | clickable rows, tiles and items that are not a `Button` |
+| `typography` | `eyebrow`, `tag`, `caps`, `meta`, `label`, `body`, `bodySm`, `title`, `heading`, `numeric` | every piece of text: pick the role. Uppercase text is always one of `eyebrow` (10px meta face), `tag` (9px, dense rows) or `caps` (12px body face, controls) |
+| `control` | `xs`, `sm`, `md`, `lg`, `iconXs` … `iconLg` | the height/padding/size of a custom control, so it lines up with the primitives |
+| `a11y` | `srOnly` | text for assistive technology only |
+| `textLayout` | `truncate`, `clamp2` | text that must not overflow |
+
+A recipe earns its place by being used in unrelated places. A look that only
+one family needs belongs in that family's style module.
+
+## Primitives
+
+Reach for these before writing styles. Their look is set by props; `xstyle`
+is typed `PlacementStyle` (or `ControlPlacementStyle` for controls) so a
+caller can place one but not reskin it.
+
+| Primitive | Import | Props for the look |
+| --- | --- | --- |
+| `Button` | `components/ui/button` | `variant`: `default`/`accent` (solid accent: the one primary action), `outline`/`plate` (hairline plate), `secondary` (filled), `ghost`, `quiet`, `accentOutline` (belongs to the current item), `destructive`, `link`; `size`: `xs` 1.5rem, `sm` 1.75rem, `md`/default 2rem, `lg` 2.5rem, `xl` 3rem, `iconXs`/`iconSm`/`iconMd`/`icon` |
+| `IconButton` | `components/ui/icon-button` | `label` (required), `variant`: `ghost`, `plate`, `accent`; `size`; `active` |
+| `Input`, `Textarea` | `components/ui/input` | `size`: `xs`, `sm`, `md` (default, 2rem), `lg`; one look (a faint plate whose hairline turns accent on focus) |
+| `Chip`, `ChipButton` | `components/ui/chip` | `tone`, `size`, `leading`; `selected` on the button |
+| `Dialog` + parts | `components/ui/dialog` | `DialogContent size`: `sm`, `md`, `lg`, `xl`; `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, `DialogFooter`, `DialogClose` |
+| `Spinner` | `components/ui/spinner` | `size`, `tone` (`accent`, `ink`, `muted`, `onAccent`), `label` |
+| `Progress` | `components/ui/progress` | `value`, `indeterminate`, `tone`, `size` |
+| `Dot` | `components/ui/dot` | `tone`, `size`, `pulse`, `label` |
+| `MetaLabel` | `components/stylex` | `tone`, `as` |
+| `PageShell` | `components/ui/page-shell` | `title`, `eyebrow`, `description`, `actions`, `fill` |
+| `Card`, `Tabs`, `Sheet`, `DropdownMenu`, `Tooltip`, `Switch`, `Table`, `Badge`, `EmptyState`, `Skeleton`, `SelectMenu` | `components/ui/*` | see each file |
+
+`tone` is the shared status axis: `neutral`, `muted`, `accent`, `positive`,
+`warning`, `critical`. Add a tone mapping to a primitive rather than passing
+a colour.
+
+## The template
+
+Start a component from
+[`packages/studio-ui/src/components/template/TemplatePanel.tsx`](../../packages/studio-ui/src/components/template/TemplatePanel.tsx)
+and its
+[`TemplatePanel.stylex.ts`](../../packages/studio-ui/src/components/template/TemplatePanel.stylex.ts).
+It is compiled, typechecked, linted and tested with the package, and shows
+every rule above in about a hundred lines: primitives with props, recipes for
+the rest, a layout-only style module with no literals, the composition order,
+a `PlacementStyle` `xstyle`, a tone lookup, and a child reacting to its row's
+hover through a marker.
+
+In `studio/app`, the same shapes apply; import the recipes, tokens and
+primitives by their `@simforge-oss/studio-ui/…` subpaths.
+
 ## The look
 
 Studio is a dark, square, hairline-ruled instrument. The app switcher is the
@@ -102,6 +174,10 @@ reference surface.
   action, a focus ring), at most about 5% of any surface.
 - **Type:** the body face for content, the meta face uppercase and tracked out
   for labels, counters and status.
+- **Controls:** one height scale (1.5, 1.75, 2, 2.5, 3rem) shared by buttons,
+  fields, icon buttons and chips; 2rem is the default, so a row of mixed
+  controls lines up without anyone setting a height.
+- **Focus:** one ring, 2px of accent, on every focusable element.
 
 ## Checks
 

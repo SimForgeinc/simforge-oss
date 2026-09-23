@@ -1,6 +1,6 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
+import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@simforge-oss/studio-ui/components/ui/dialog";
 import { LoaderCircle, Sparkles, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
@@ -24,6 +24,7 @@ import type { GalleryActorClass, GalleryAssetSummary } from "@simforge-oss/studi
 import type { GalleryGenerationSummary } from "@/app/lib/asset-gallery/generation-contracts";
 import { dialog } from "./asset-dialogs.stylex";
 import type { PreparedReferenceImage } from "./asset-generation-images";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type UploadTarget = { url: string; headers: Record<string, string> };
 type CreateGenerationResponse = {
@@ -252,23 +253,23 @@ export function AssetGenerateDialog({
             : null;
 
   return (
-    <Dialog.Root open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay {...stylex.props(dialog.overlay)} />
-        <Dialog.Content {...stylex.props(dialog.content)}>
-          <Dialog.Title {...stylex.props(dialog.title)}><Sparkles {...stylex.props(dialog.iconAccent)} />Generate 3D asset</Dialog.Title>
-          <Dialog.Description {...stylex.props(dialog.description)}>Turn photographs of one object into a textured, gallery-ready 3D model. Generation usually takes about 90 seconds.</Dialog.Description>
-          <Dialog.Close asChild><button type="button" aria-label="Close generation dialog" {...stylex.props(dialog.close)}><X {...stylex.props(dialog.iconSm)} /></button></Dialog.Close>
+    <Dialog open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
+        <DialogContent size="lg" closeLabel="Close generation dialog">
+          <DialogHeader>
+          <DialogTitle><Sparkles {...stylex.props(dialog.iconAccent)} />Generate 3D asset</DialogTitle>
+          <DialogDescription>Turn photographs of one object into a textured, gallery-ready 3D model. Generation usually takes about 90 seconds.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
 
           {active ? (
             <div {...stylex.props(dialog.panel)}>
-              <div {...stylex.props(dialog.card)}>
+              <div {...stylex.props([hairline.all, dialog.card])}>
                 {active.previewUrl ? (
                   /* Runtime provider previews are not known to Next's remote image allowlist. */
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={active.previewUrl} alt={`Generated preview of ${active.title}`} {...stylex.props(dialog.preview)} />
+                  <img src={active.previewUrl} alt={`Generated preview of ${active.title}`} {...stylex.props([hairline.all, dialog.preview])} />
                 ) : (
-                  <div {...stylex.props(dialog.generatePreviewLoading)}><LoaderCircle {...stylex.props(dialog.previewSpinner, dialog.progressPulse)} />Building preview…</div>
+                  <div {...stylex.props(dialog.generatePreviewLoading)}><LoaderCircle {...stylex.props(dialog.previewSpinner, motionRecipe.spin)} />Building preview…</div>
                 )}
                 <div {...stylex.props(dialog.padOnly)}><p {...stylex.props(dialog.titleText)}>{active.title}</p><p {...stylex.props(dialog.mutedTextMt1)}>{active.imageCount} reference {active.imageCount === 1 ? "photo" : "photos"}</p></div>
               </div>
@@ -276,7 +277,7 @@ export function AssetGenerateDialog({
               {status ? (
                 <div aria-live="polite">
                   <div {...stylex.props(dialog.progressText)}><span>{status}</span><span>{generationProgress}%</span></div>
-                  <div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar, active.state === "importing" ? dialog.progressPulse : null)} style={{ width: `${generationProgress}%` }} /></div>
+                  <div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar, active.state === "importing" ? motionRecipe.spin : null)} style={{ width: `${generationProgress}%` }} /></div>
                   {active.state === "generating" || active.state === "importing" ? <p {...stylex.props(dialog.hintMt2)}>You can close this dialog. Work continues in the background.</p> : null}
                 </div>
               ) : null}
@@ -292,7 +293,7 @@ export function AssetGenerateDialog({
               <div {...stylex.props(dialog.actionsRow)}>
                 {active.state === "ready" && !publishedAsset ? <Button type="button" variant="outline" onClick={() => void loadPublishedAsset(active)}>Load published asset</Button> : null}
                 {isGalleryGenerationTerminal(active.state) ? <Button type="button" variant="outline" onClick={() => { setActive(null); setPublishedAsset(null); setError(null); }}>Generate another</Button> : null}
-                <Dialog.Close asChild><Button type="button">{isGalleryGenerationTerminal(active.state) ? "Done" : "Close"}</Button></Dialog.Close>
+                <DialogClose asChild><Button type="button">{isGalleryGenerationTerminal(active.state) ? "Done" : "Close"}</Button></DialogClose>
               </div>
             </div>
           ) : (
@@ -317,12 +318,12 @@ export function AssetGenerateDialog({
               <div {...stylex.props(dialog.footer)}>
                 {submitting ? <div aria-live="polite"><div {...stylex.props(dialog.progressText)}><span>{status}</span><span>{uploadProgress}%</span></div><div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar)} style={{ width: `${uploadProgress}%` }} /></div></div> : null}
                 {error ? <p role="alert" {...stylex.props(dialog.errorText)}>{error}</p> : null}
-                <div {...stylex.props(dialog.actionsRow)}><Dialog.Close asChild><Button type="button" variant="ghost">Cancel</Button></Dialog.Close><Button type="submit" form={formId} disabled={images.length === 0 || !title.trim() || preparing || submitting}><Upload />{submitting ? "Starting…" : "Generate asset"}</Button></div>
+                <div {...stylex.props(dialog.actionsRow)}><DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose><Button type="submit" form={formId} disabled={images.length === 0 || !title.trim() || preparing || submitting}><Upload />{submitting ? "Starting…" : "Generate asset"}</Button></div>
               </div>
             </>
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogBody>
+        </DialogContent>
+    </Dialog>
   );
 }

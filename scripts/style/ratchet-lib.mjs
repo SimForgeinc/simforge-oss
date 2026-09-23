@@ -12,7 +12,10 @@
  * `transparent`, `inherit`, `currentColor`, `100%`, ...). A value read through
  * a local `const` counts as the literal it holds; a value read from a token or
  * recipe module does not. A `@media (min-width…)` condition written as a
- * string, directly or through a local const, counts once per use.
+ * string, directly or through a local const, counts once per use when it is
+ * the only width query of its property: several on one property must stay
+ * literal (StyleX turns those into non-overlapping ranges only when it can
+ * read them), and so must a namespace-level (contextual) query.
  *
  * Dependency-free apart from `typescript`, which the repository root already
  * installs, so it runs before any package is built.
@@ -26,6 +29,12 @@ const ts = require("typescript");
 
 /** Trees that hold Studio styling, relative to the repository root. */
 export const STYLE_ROOTS = ["packages/studio-ui/src", "studio/app"];
+
+/**
+ * The token and recipe modules define the values everything else refers to,
+ * so they are where literals belong; they are not budgeted.
+ */
+export const FOUNDATION = /^packages\/studio-ui\/src\/stylex\//;
 
 /** Modules whose exports are design tokens or recipes: references to them are not literals. */
 export const TOKEN_MODULE = /(?:^|\/)(?:tokens|motion|recipes|drive)\.stylex(?:\.ts)?$|\/stylex\/(?:tokens|recipes|motion)(?:\.stylex)?$|studio-ui\/stylex\//;
@@ -202,8 +211,14 @@ export function analyzeSource(fileName, source) {
   };
   const line = (node) => sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
 
+  const isWidthQuery = (member) => {
+    if (!ts.isPropertyAssignment(member)) return false;
+    const key = keyText(member.name);
+    return MEDIA_LITERAL.test(key.text) && (key.computed === null || key.computed.kind === "literal");
+  };
   function visitStyle(object, property, depth) {
     if (depth > 8) return;
+    const widthQueries = object.properties.filter(isWidthQuery).length;
     for (const member of object.properties) {
       if (ts.isSpreadAssignment(member)) {
         const target = member.expression;
@@ -215,7 +230,7 @@ export function analyzeSource(fileName, source) {
       }
       if (!ts.isPropertyAssignment(member)) continue;
       const key = keyText(member.name);
-      if (MEDIA_LITERAL.test(key.text) && (key.computed === null || key.computed.kind === "literal")) {
+      if (isWidthQuery(member) && property !== null && widthQueries === 1) {
         result.media += 1;
         result.literalValues.push({ line: line(member), category: "media", value: key.text });
       }
@@ -284,6 +299,7 @@ export function analyzeSource(fileName, source) {
 export function analyzeRepository(repoRoot, roots = STYLE_ROOTS) {
   const files = [];
   for (const file of listStyleSources(repoRoot, roots)) {
+    if (FOUNDATION.test(file)) continue;
     const analysis = analyzeSource(file, readFileSync(join(repoRoot, file), "utf8"));
     if (analysis) files.push(analysis);
   }

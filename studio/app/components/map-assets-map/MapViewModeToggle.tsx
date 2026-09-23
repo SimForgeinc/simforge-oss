@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Video } from "lucide-react";
+import { Spinner } from "@simforge-oss/studio-ui/components/ui/spinner";
 import { styles } from "./map-canvas.stylex";
 import {
   useMapViewModeStore,
@@ -120,11 +121,7 @@ export function MapViewModeToggle({
           >
             {option.label}
             {isPending ? (
-              <span
-                aria-hidden
-                data-testid="map-view-mode-loading"
-                {...stylex.props(styles.spinner)}
-              />
+              <Spinner size="xxs" tone={isActive ? "onAccent" : "accent"} label={null} data-testid="map-view-mode-loading" />
             ) : null}
           </button>
         );

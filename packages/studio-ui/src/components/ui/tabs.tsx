@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { mergeStyleProps } from "../stylex/surface";
 import { styles } from "./tabs.stylex";
+import { focus } from "../../stylex/recipes.stylex";
 
 const Tabs = TabsPrimitive.Root;
 
@@ -52,7 +53,7 @@ const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> & { xstyle?: TabsStyle }
 >(({ className, xstyle, ...props }, ref) => (
-  <TabsPrimitive.Content ref={ref} {...mergeStyleProps(stylex.props(styles.content, xstyle), className)} {...props} />
+  <TabsPrimitive.Content ref={ref} {...mergeStyleProps(stylex.props([focus.ring, styles.content], xstyle), className)} {...props} />
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
 

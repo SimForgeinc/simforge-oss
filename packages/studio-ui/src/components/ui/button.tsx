@@ -2,6 +2,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import * as stylex from "@stylexjs/stylex";
 
+import { focus, motionRecipe } from "../../stylex/recipes.stylex";
 import { mergeStyleProps } from "../stylex/surface";
 import {
   button as buttonBase,
@@ -10,8 +11,18 @@ import {
 } from "./controls.stylex";
 
 type ButtonStyle = stylex.StyleXStyles;
-type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-type ButtonSize = "default" | "sm" | "lg" | "icon";
+export type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link"
+  | "accent"
+  | "plate"
+  | "accentOutline"
+  | "quiet";
+export type ButtonSize = "default" | "xs" | "sm" | "md" | "lg" | "xl" | "icon" | "iconXs" | "iconSm" | "iconMd";
 
 /**
  * These descendant selectors remain a deliberately tiny Tailwind bridge:
@@ -37,6 +48,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, xstyle, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const styleProps = stylex.props(
+      focus.ring,
+      motionRecipe.colors,
       buttonBase.base,
       variant == null ? (variant === null ? null : buttonVariantStyles.default) : buttonVariantStyles[variant],
       size == null ? (size === null ? null : buttonSizes.default) : buttonSizes[size],

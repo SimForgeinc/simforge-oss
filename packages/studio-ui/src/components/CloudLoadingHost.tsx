@@ -381,7 +381,7 @@ function stalledLoadingSource(source: CloudLoadingSource, waited: WaitEvidence |
     priority: 100,
     icon: <CircleAlert aria-hidden="true" {...stylex.props(styles.alertIcon)} />,
     actions: (
-      <Button
+      <Button size="lg" variant="accent"
         xstyle={styles.reload}
         onClick={() => window.location.reload()}
       >

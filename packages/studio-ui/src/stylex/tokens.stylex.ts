@@ -457,11 +457,15 @@ export const stroke = stylex.defineVars({
  * shadow; use the `focus` recipe rather than these directly.
  */
 export const shadows = stylex.defineVars({
-  ring: "0 0 0 2px hsl(var(--ring))",
-  ringInset: "inset 0 0 0 2px hsl(var(--ring))",
-  ringOffset: "0 0 0 1px hsl(var(--card)), 0 0 0 3px hsl(var(--ring))",
+  /** The focus ring: 2px of brand accent, the one ring every control shows. */
+  ring: "0 0 0 2px #E8E044",
+  ringInset: "inset 0 0 0 2px #E8E044",
+  /** @deprecated Use `ring`: it is the accent ring. */
   ringAccent: "0 0 0 2px #E8E044",
+  /** @deprecated Use `ringInset`. */
   ringAccentInset: "inset 0 0 0 2px #E8E044",
+  /** @deprecated Use `ring`. */
+  ringOffset: "0 0 0 2px #E8E044",
   elevationSm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
   elevationLg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
   elevationXl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",

@@ -1,37 +1,32 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // px-1 py-6 text-center text-xs text-muted-foreground
   xsMutedCenterText: {
-    paddingLeft: space.xs,
-    paddingRight: space.xs,
-    paddingTop: space.xxl,
-    paddingBottom: space.xxl,
+    paddingLeft: space.s1,
+    paddingRight: space.s1,
+    paddingTop: space.s6,
+    paddingBottom: space.s6,
     textAlign: "center",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // flex flex-col gap-4
   flexColGap4: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xl,
+    gap: space.s4,
   },
   // flex flex-col gap-1
   flexColGap1: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // text-micro font-semibold uppercase tracking-meta text-muted-foreground
   capsMicroMuted: {
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
   /*
@@ -41,24 +36,24 @@ export const styles = stylex.create({
    */
   // render-glass border
   borderedDivided: {
-    borderWidth: "1px",
-    backgroundColor: colors.glass,
-    borderColor: "rgb(255 255 255 / 10%)",
+    borderWidth: stroke.hairline,
+    backgroundColor: colors.fillSubtle,
+    borderColor: colors.hairline,
   },
   // (was the list's render-divide divide-y)
   rowDivided: {
-    borderTopWidth: "1px",
-    borderTopColor: "rgb(255 255 255 / 10%)",
+    borderTopWidth: stroke.hairline,
+    borderTopColor: colors.hairline,
   },
   // flex items-center gap-3 px-2.5 py-2
   flexCenterGap3: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
-    paddingLeft: "0.625rem",
-    paddingRight: "0.625rem",
-    paddingTop: space.md,
-    paddingBottom: space.md,
+    gap: space.s3,
+    paddingLeft: space.s2_5,
+    paddingRight: space.s2_5,
+    paddingTop: space.s2,
+    paddingBottom: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -69,26 +64,19 @@ export const styles = stylex.create({
   xsInkMedium: {
     overflowWrap: "anywhere",
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightMedium,
     color: colors.text,
   },
   // truncate text-micro text-muted-foreground
   microMutedTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
   // shrink-0 text-micro uppercase tracking-meta text-destructive
   tightCapsMicro: {
     flexShrink: "0",
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.danger,
   },
   // flex shrink-0 items-center gap-1
@@ -96,7 +84,7 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: "0",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   // size-3.5
   size35: {
@@ -121,9 +109,5 @@ export const styles = stylex.create({
   // shrink-0 text-micro uppercase tracking-meta
   availabilityNote: {
     flexShrink: 0,
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 });

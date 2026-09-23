@@ -8,6 +8,7 @@ import type {
   ScenarioDocumentSummaryDto,
 } from "../../lib/scenario/contracts";
 import { cn } from "../../lib/utils";
+import { textLayout, typography } from "../../stylex/recipes.stylex";
 
 type ReadinessSummary = ScenarioDatasetReadinessDto["summary"];
 
@@ -23,7 +24,7 @@ function CoverageBar({
   const ratio = total > 0 ? Math.min(1, covered / total) : 0;
   return (
     <div>
-      <div {...stylex.props(styles.divFlexMetaMicro)}>
+      <div {...stylex.props([typography.eyebrow, styles.divFlexMetaMicro])}>
         <span {...stylex.props(styles.span)}>{label}</span>
         <span {...stylex.props(styles.span2)}>
           {covered} / {total}
@@ -98,10 +99,10 @@ export function ScenarioDatasetStatusPanel({
       data-testid="scenario-dataset-status"
     >
       <div>
-        <p {...stylex.props(styles.datasetStatus)}>
+        <p {...stylex.props([typography.eyebrow, styles.datasetStatus])}>
           Dataset status
         </p>
-        <p {...stylex.props(styles.pTruncateSmSemibold)}>{datasetName ?? "Dataset"}</p>
+        <p {...stylex.props([textLayout.truncate, styles.pTruncateSmSemibold])}>{datasetName ?? "Dataset"}</p>
       </div>
       <div {...stylex.props(styles.div2)}>
         <CoverageBar label="Rendered" covered={readiness?.rendered ?? 0} total={total} />
@@ -109,7 +110,7 @@ export function ScenarioDatasetStatusPanel({
         <CoverageBar label="VLM" covered={readiness?.vlmed ?? 0} total={total} />
       </div>
       <div>
-        <p {...stylex.props(styles.contributors)}>
+        <p {...stylex.props([typography.eyebrow, styles.contributors])}>
           Contributors
         </p>
         {contributors.length === 0 ? (
@@ -121,8 +122,8 @@ export function ScenarioDatasetStatusPanel({
                 key={contributor.name}
                 {...stylex.props(styles.liFlexXs)}
               >
-                <span {...stylex.props(styles.spanTruncate)}>{contributor.name}</span>
-                <span {...stylex.props(styles.spanMetaMicroUppercase)}>
+                <span {...stylex.props([textLayout.truncate, styles.spanTruncate])}>{contributor.name}</span>
+                <span {...stylex.props([typography.eyebrow, styles.spanMetaMicroUppercase])}>
                   {contributor.authored} authored
                   {contributor.edited > 0 ? ` · ${contributor.edited} edited` : ""}
                 </span>

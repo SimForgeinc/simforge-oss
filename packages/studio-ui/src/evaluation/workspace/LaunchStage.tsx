@@ -16,6 +16,7 @@ import { EvaluationLauncher, type LocalRunLauncher } from "../components/Evaluat
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { jobStatusPresentation } from "../presentation";
 import { styles } from "./LaunchStage.stylex";
+import { typography } from "../../stylex/recipes.stylex";
 
 export function LaunchStage({
   gateway,
@@ -61,7 +62,7 @@ export function LaunchStage({
 
       {filmstrip.length > 0 ? (
         <div {...stylex.props(styles.recent)}>
-          <h2 {...stylex.props(styles.recentLabel)}>Recent results</h2>
+          <h2 {...stylex.props([typography.eyebrow, styles.recentLabel])}>Recent results</h2>
           <ul {...stylex.props(styles.filmstrip)}>
             {filmstrip.map((job) => (
               <li key={job.id}>

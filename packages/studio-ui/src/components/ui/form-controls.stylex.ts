@@ -1,39 +1,51 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "../../stylex/tokens.stylex";
+import { colors, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
-const RING_OFFSET = "var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)";
-const RING = "var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)";
-const SHADOW = "var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)";
-
+/**
+ * Text fields. One look: a faint plate with a hairline edge that turns
+ * accent on focus (the field's focus is its border, not a ring around it).
+ */
 const common = {
   display: "flex",
   width: "100%",
-  borderRadius: "0.375rem",
-  borderWidth: 1,
+  borderWidth: stroke.hairline,
   borderStyle: "solid",
-  borderColor: "hsl(var(--input))",
-  backgroundColor: colors.bg,
-  paddingInline: "0.75rem",
-  paddingBlock: "0.5rem",
+  borderColor: { default: colors.hairline, ":hover": colors.hairlineStrong, ":focus-visible": colors.accentLine },
+  backgroundColor: colors.fillSubtle,
+  color: colors.ink,
+  paddingInline: space.s3,
+  paddingBlock: space.s2,
+  fontFamily: text.fontBody,
   fontSize: text.sizeSm,
-  lineHeight: "1.25rem",
-  "--tw-ring-offset-color": colors.bg,
-  "--tw-ring-offset-width": { default: null, ":focus-visible": "2px" },
-  "--tw-ring-color": { default: null, ":focus-visible": colors.ring },
-  "--tw-ring-offset-shadow": { default: null, ":focus-visible": RING_OFFSET },
-  "--tw-ring-shadow": { default: null, ":focus-visible": RING },
-  boxShadow: { default: null, ":focus-visible": SHADOW },
+  lineHeight: text.lineSm,
+  // Focus is the accent border. The transparent outline is what forced-colours
+  // mode repaints, so high-contrast users still see where focus is.
+  outlineWidth: { default: null, ":focus-visible": stroke.thick },
   outlineStyle: { default: null, ":focus-visible": "solid" },
-  outlineWidth: { default: null, ":focus-visible": "2px" },
   outlineColor: { default: null, ":focus-visible": "transparent" },
-  outlineOffset: { default: null, ":focus-visible": "2px" },
-  "::placeholder": { color: colors.mutedForeground },
+  transitionProperty: "border-color",
+  transitionDuration: motion.durStandard,
+  "::placeholder": { color: colors.inkFaint },
   ":disabled": { cursor: "not-allowed", opacity: 0.5 },
-};
+} as const;
 
 export const input = stylex.create({
-  base: { ...common, height: "2.5rem" },
-  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeSm, lineHeight: "1.25rem", fontWeight: 500, color: colors.text } },
+  base: { ...common, height: "2rem", paddingBlock: 0, fontSize: text.sizeXs },
+  file: { "::file-selector-button": { borderWidth: 0, backgroundColor: "transparent", fontSize: text.sizeXs, lineHeight: text.lineXs, fontWeight: text.weightMedium, color: colors.ink } },
 });
 
 export const textarea = stylex.create({ base: { ...common, minHeight: "5rem" } });
+
+/** Heights on the shared control scale; `md` is the default `Input`. */
+export const inputSizes = stylex.create({
+  xs: { height: "1.5rem", paddingInline: space.s2, fontSize: text.sizeXs },
+  sm: { height: "1.75rem", paddingInline: space.s2, fontSize: text.sizeXs },
+  md: { height: "2rem" },
+  lg: { height: "2.5rem", fontSize: text.sizeSm },
+});
+
+/** `plate` is the default look; the name stays so callers can be explicit. */
+export const inputVariants = stylex.create({
+  default: {},
+  plate: {},
+});

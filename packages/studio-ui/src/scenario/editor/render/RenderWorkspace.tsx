@@ -23,6 +23,7 @@ import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderWorkspace.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -362,8 +363,8 @@ export function RenderWorkspace({
           pane. Each view owns its own back affordance, so this bar never carries one. */}
       <div {...stylex.props(styles.flexCenterTight)}>
         <div {...stylex.props(styles.fillNarrowable)}>
-          <h2 {...stylex.props(styles.smInkSemibold)}>Renders</h2>
-          <p {...stylex.props(styles.capsMicroMuted)}>
+          <h2 {...stylex.props([textLayout.truncate, styles.smInkSemibold])}>Renders</h2>
+          <p {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.capsMicroMuted]])}>
             {documentTitle ?? "This scenario"} · {summary}
           </p>
         </div>
@@ -447,7 +448,7 @@ export function RenderWorkspace({
                   <button
                     aria-pressed={filter === tag}
                     className={stylex.props(
-                      filter === tag ? styles.filterTabActive : styles.filterTab,
+                      filter === tag ? [focus.ring, [typography.eyebrow, styles.filterTabActive]] : [focus.ring, [typography.eyebrow, styles.filterTab]],
                       motionStyles.editorMotion,
                     ).className}
                     key={tag}
@@ -481,7 +482,7 @@ export function RenderWorkspace({
                   key={item.id}
                 >
                   <EyeOff aria-hidden="true" className={stylex.props(styles.tightMuted).className} />
-                  <span {...stylex.props(styles.fillMicroMuted)}>
+                  <span {...stylex.props([textLayout.truncate, styles.fillMicroMuted])}>
                     Hid {renderJobLabel(item).toLowerCase()} from {formatTimestamp(item.createdAt)}
                   </span>
                   <Button onClick={() => void unhide(item)} size="sm" variant="outline">

@@ -9,6 +9,7 @@ import type {
   MapStats,
 } from "@simforge-oss/studio-shared";
 import { Route, Gauge, PersonStanding, Bike, SquareParking, GitFork, ArrowUpDown, ChevronRight, ChevronsUpDown, Database } from "lucide-react";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function fmt(n: number | undefined): string {
   if (n == null) return "—";
@@ -42,7 +43,7 @@ function CollapsibleSection({
         aria-expanded={open}
       >
         <ChevronRight
-          {...stylex.props(styles.chevronMutedShrink, open && styles.rotate90)}
+          {...stylex.props([motionRecipe.transform, styles.chevronMutedShrink], open && styles.rotate90)}
         />
         <Icon {...stylex.props(styles.sectionIcon)} />
         <span {...stylex.props(styles.sectionLabel)}>{label}</span>
@@ -156,7 +157,7 @@ export function MapStatsDisplay({
         <button
           type="button"
           onClick={toggleAll}
-          {...stylex.props(styles.expandAllButton)}
+          {...stylex.props([motionRecipe.colors, styles.expandAllButton])}
         >
           <ChevronsUpDown {...stylex.props(styles.expandCollapseIcon)} />
           {allExpanded ? "Collapse all" : "Expand all"}
@@ -176,7 +177,7 @@ export function MapStatsDisplay({
                   {rn.speed_limits_mph.map((s) => (
                     <span
                       key={s}
-                      {...stylex.props(styles.speedLimitValue)}
+                      {...stylex.props([hairline.all, styles.speedLimitValue])}
                     >
                       {s}
                     </span>

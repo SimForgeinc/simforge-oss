@@ -11,6 +11,7 @@ import { EditorDetailsPanel } from "./EditorDetailsPanel";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionActionPopover.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /** Full v2 action editor in the shared right-side details surface. */
 export function InteractionActionPopover({
@@ -69,7 +70,7 @@ export function InteractionActionPopover({
         testId="scenario-custom-route-panel"
       >
         <button
-          className={stylex.props(styles.flexCenterMid, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.flexCenterMid], motionStyles.editorMotion).className}
           data-testid={`interaction-custom-route-configure-${interaction.id}`}
           onClick={() => {
             onConfigureCustomRoute?.(interaction.id);
@@ -92,10 +93,10 @@ export function InteractionActionPopover({
       preview={(
         <div {...stylex.props(styles.flexColCenter)}>
           <Workflow aria-hidden="true" className={stylex.props(styles.size9Text).className} />
-          <span {...stylex.props(styles.caps)}>
+          <span {...stylex.props([typography.tag, styles.caps])}>
             Editing interaction
           </span>
-          <strong {...stylex.props(styles.xsWhiteMedium2)}>{name}</strong>
+          <strong {...stylex.props([textLayout.truncate, styles.xsWhiteMedium2])}>{name}</strong>
         </div>
       )}
       testId="scenario-interaction-popover"
@@ -106,7 +107,7 @@ export function InteractionActionPopover({
         data-interaction-id={interaction.id}
         data-testid={`interaction-overlay-editor-${interaction.id}`}
       >
-        <p {...stylex.props(styles.capsBreakAll)}>
+        <p {...stylex.props([typography.eyebrow, styles.capsBreakAll])}>
           {interaction.actor} · {interaction.verb}
         </p>
         <div {...stylex.props(styles.gridCols1Gap3)}>
@@ -143,7 +144,7 @@ export function InteractionActionPopover({
           ) : null}
         </div>
         <button
-          className={stylex.props(styles.flexCenterMid2, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.flexCenterMid2], motionStyles.editorMotion).className}
           data-testid={`interaction-overlay-delete-${interaction.id}`}
           type="button"
           onClick={deleteInteraction}

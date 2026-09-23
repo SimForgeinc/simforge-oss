@@ -14,6 +14,7 @@ import type { BrowserRecordingDetailDto } from "../../../lib/scenario/recording-
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./BrowserRecordingDetails.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -96,7 +97,7 @@ export function BrowserRecordingDetails({
         </Button>
         <div {...stylex.props(styles.fillNarrowable)}>
           <h3 {...stylex.props(styles.smSemibold)}>Three.js recording</h3>
-          <p {...stylex.props(styles.monoMicroMuted)}>{recordingId}</p>
+          <p {...stylex.props([textLayout.truncate, styles.monoMicroMuted])}>{recordingId}</p>
         </div>
         {detail ? <RecordingStatus status={detail.status} /> : null}
       </div>
@@ -126,7 +127,7 @@ export function BrowserRecordingDetails({
               {cameraVideos.length > 0 ? (
                 <section {...stylex.props(styles.mt3)} aria-labelledby="camera-views-heading">
                   <div {...stylex.props(styles.flexBetweenBaseline)}>
-                    <h4 {...stylex.props(styles.capsXsSemibold)} id="camera-views-heading">
+                    <h4 {...stylex.props(typography.caps)} id="camera-views-heading">
                       Camera views
                     </h4>
                     <span {...stylex.props(styles.monoMicroMuted2)}>
@@ -157,7 +158,7 @@ export function BrowserRecordingDetails({
           {activeSensorVideos.length > 0 ? (
             <section {...stylex.props(styles.mt4)} aria-labelledby="active-sensor-videos-heading">
               <div {...stylex.props(styles.flexBetweenBaseline)}>
-                <h4 {...stylex.props(styles.capsXsSemibold)} id="active-sensor-videos-heading">
+                <h4 {...stylex.props(typography.caps)} id="active-sensor-videos-heading">
                   LiDAR and radar views
                 </h4>
                 <span {...stylex.props(styles.monoMicroMuted2)}>
@@ -175,7 +176,7 @@ export function BrowserRecordingDetails({
                       preload="metadata"
                       src={artifact.downloadUrl ?? undefined}
                     />
-                    <figcaption {...stylex.props(styles.monoMicroMuted3)}>
+                    <figcaption {...stylex.props([textLayout.truncate, styles.monoMicroMuted3])}>
                       {artifact.sensor?.sensorId} · {artifact.sensor?.modality}
                     </figcaption>
                   </figure>
@@ -198,14 +199,14 @@ export function BrowserRecordingDetails({
             </div>
           ) : null}
           <section {...stylex.props(styles.mt4)} aria-labelledby="browser-recording-files-heading">
-            <h4 {...stylex.props(styles.capsXsSemibold)} id="browser-recording-files-heading">Files</h4>
+            <h4 {...stylex.props(typography.caps)} id="browser-recording-files-heading">Files</h4>
             {detail.artifacts.length === 0 ? (
               <p {...stylex.props(styles.xsMuted)}>Files appear after encoding and checksum verification.</p>
             ) : (
               <ul {...stylex.props(styles.listMt2)}>
                 {detail.artifacts.map((artifact, index) => (
                   <li {...stylex.props(styles.flexCenterXs, index > 0 && styles.rowStackedXs)} key={artifact.artifactId}>
-                    <span {...stylex.props(styles.fillTruncateNarrowable)}>
+                    <span {...stylex.props([textLayout.truncate, styles.fillTruncateNarrowable])}>
                       {formatPhase(artifact.role)}
                       {artifact.sensor
                         ? ` · ${artifact.sensor.actorId}/${artifact.sensor.sensorId}/${artifact.sensor.modality}`
@@ -213,7 +214,7 @@ export function BrowserRecordingDetails({
                       {" · "}{formatBytes(artifact.sizeBytes)}
                     </span>
                     {artifact.downloadUrl ? (
-                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className={stylex.props(styles.gridCenteredBordered, motionStyles.editorMotion).className} download href={artifact.downloadUrl}>
+                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className={stylex.props([focus.ring, styles.gridCenteredBordered], motionStyles.editorMotion).className} download href={artifact.downloadUrl}>
                         <Download aria-hidden="true" className={stylex.props(styles.size35).className} />
                       </a>
                     ) : <span {...stylex.props(styles.microMuted)}>{artifact.state}</span>}
@@ -229,11 +230,11 @@ export function BrowserRecordingDetails({
 }
 
 function RecordingStatus({ status }: { status: BrowserRecordingDetailDto["status"] }) {
-  return <span {...stylex.props(styles.capsMicroMuted)}>{status}</span>;
+  return <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>{status}</span>;
 }
 
 function DetailValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.detailValueMono : styles.detailValue)}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? [textLayout.truncate, styles.detailValueMono] : [textLayout.truncate, styles.detailValue])}>{value}</dd></div>;
 }
 
 function formatPhase(value: string) {

@@ -5,6 +5,7 @@ import { styles } from "./MapMediaPanel.stylex";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type Props = {
   proxyUrl: string;
@@ -95,7 +96,7 @@ export function MapMediaPanel({
   return (
     <div
       ref={panelRef}
-      {...stylex.props(styles.mediaPanel)}
+      {...stylex.props([hairline.all, styles.mediaPanel])}
       style={{ width }}
     >
       {/* Resize handle — top-left corner; drag toward the map center to grow. */}
@@ -104,17 +105,17 @@ export function MapMediaPanel({
         {...stylex.props(styles.resizeHandle)}
         title="Drag to resize"
       >
-        <div {...stylex.props(styles.resizeGrip)} />
+        <div {...stylex.props([motionRecipe.colors, styles.resizeGrip])} />
       </div>
 
       {/* Slim header */}
       <div {...stylex.props(styles.header)}>
-        <span {...stylex.props(styles.title)}>
+        <span {...stylex.props([textLayout.truncate, styles.title])}>
           {label ? `${assetName} — ${label}` : `${assetName} — fly-by video`}
         </span>
         <Button
           variant="ghost"
-          size="icon"
+          size="iconXs"
           xstyle={styles.closeButton}
           onClick={onClose}
           aria-label="Close video panel"

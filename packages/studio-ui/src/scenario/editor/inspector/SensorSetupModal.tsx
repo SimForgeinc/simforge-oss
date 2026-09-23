@@ -40,6 +40,7 @@ import {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SensorSetupModal.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { a11y, focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The sensor workbench.
@@ -119,7 +120,7 @@ export function SensorSetupModal({
     >
       <button
         aria-label="Close sensor setup"
-        {...stylex.props(styles.absInset0)}
+        {...stylex.props([focus.ring, styles.absInset0])}
         onClick={onClose}
         type="button"
       />
@@ -127,7 +128,7 @@ export function SensorSetupModal({
         <header {...stylex.props(styles.relFlexBetween)}>
           <span aria-hidden {...stylex.props(styles.abs)} />
           <div {...stylex.props(styles.narrowable)}>
-            <p {...stylex.props(styles.capsMonoMicro)}>Sensors</p>
+            <p {...stylex.props([typography.eyebrow, styles.capsMonoMicro])}>Sensors</p>
             <h2 {...stylex.props(styles.lgInkExtrabold)}>
               {label}
             </h2>
@@ -139,7 +140,7 @@ export function SensorSetupModal({
           </div>
           <button
             aria-label="Close sensor setup"
-            {...stylex.props(styles.gridCenteredTight)}
+            {...stylex.props([focus.ring, styles.gridCenteredTight])}
             onClick={onClose}
             type="button"
           >
@@ -150,7 +151,7 @@ export function SensorSetupModal({
         <div {...stylex.props(styles.gridFillClip)}>
           <div {...stylex.props(styles.ruleBScrollYShrinkable)}>
             <section aria-labelledby="sensor-rig-heading" {...stylex.props(styles.stackSm)}>
-              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-rig-heading">
+              <h3 {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])} id="sensor-rig-heading">
                 Production rigs
               </h3>
               {EDITOR_SENSOR_RIGS.map((preset) => {
@@ -160,7 +161,7 @@ export function SensorSetupModal({
                   <button
                     aria-label={`Fit ${preset.name}`}
                     aria-pressed={applied}
-                    className={stylex.props(applied ? styles.flexCenterBordered : styles.flexCenterBordered2, motionStyles.editorMotion).className}
+                    className={stylex.props(applied ? [focus.ring, styles.flexCenterBordered] : [focus.ring, styles.flexCenterBordered2], motionStyles.editorMotion).className}
                     key={preset.id}
                     onClick={() => {
                       setError(null);
@@ -187,13 +188,13 @@ export function SensorSetupModal({
                     type="button"
                   >
                     <span {...stylex.props(styles.fillNarrowable)}>
-                      <span {...stylex.props(styles.blockXsInk)}>{preset.name}</span>
-                      <span {...stylex.props(styles.blockMicroMuted)}>
+                      <span {...stylex.props([textLayout.truncate, styles.blockXsInk])}>{preset.name}</span>
+                      <span {...stylex.props([textLayout.truncate, styles.blockMicroMuted])}>
                         {sensorCountSummary(presetCounts)}
                       </span>
                     </span>
                     {applied ? (
-                      <span {...stylex.props(styles.tightCapsMono)}>
+                      <span {...stylex.props([typography.eyebrow, styles.tightCapsMono])}>
                         Fitted
                       </span>
                     ) : null}
@@ -203,7 +204,7 @@ export function SensorSetupModal({
             </section>
 
             <section aria-labelledby="sensor-add-heading" {...stylex.props(styles.stackSm, styles.stackedXl)}>
-              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-add-heading">
+              <h3 {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])} id="sensor-add-heading">
                 Add one sensor
               </h3>
               <div {...stylex.props(styles.gridCols3Gap15)}>
@@ -222,7 +223,7 @@ export function SensorSetupModal({
             </section>
 
             <section aria-labelledby="sensor-list-heading" {...stylex.props(styles.stackSm, styles.stackedXl)}>
-              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-list-heading">
+              <h3 {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])} id="sensor-list-heading">
                 Fitted{counts.total ? ` · ${counts.total}` : ""}
               </h3>
               {sensors.length === 0 ? (
@@ -295,7 +296,7 @@ function AddButton({
   return (
     <button
       aria-label={`Add ${label}`}
-      className={stylex.props(styles.flexColCenter, motionStyles.editorMotion).className}
+      className={stylex.props([focus.ring, styles.flexColCenter], motionStyles.editorMotion).className}
       disabled={disabled}
       onClick={onClick}
       title={title}
@@ -332,12 +333,12 @@ function SensorListRow({
     >
       <button
         aria-label={`Configure ${name}`}
-        {...stylex.props(styles.fillNarrowableLeftText)}
+        {...stylex.props([focus.ringInset, styles.fillNarrowableLeftText])}
         onClick={onSelect}
         type="button"
       >
-        <span {...stylex.props(styles.blockXsInk2)}>{name}</span>
-        <span {...stylex.props(styles.blockMonoMicro)}>
+        <span {...stylex.props([textLayout.truncate, styles.blockXsInk2])}>{name}</span>
+        <span {...stylex.props([textLayout.truncate, styles.blockMonoMicro])}>
           {modalityLabel(sensor.type)} · {Math.round(aperture.horizontalFovDeg)}° · {Math.round(aperture.farM)} m
         </span>
       </button>
@@ -348,7 +349,7 @@ function SensorListRow({
       />
       <button
         aria-label={`Remove ${name} (${sensor.id})`}
-        className={stylex.props(styles.muted, motionStyles.editorMotion).className}
+        className={stylex.props([focus.ring, styles.muted], motionStyles.editorMotion).className}
         onClick={() => editorDocument.removeActorSensor(roleId, sensor.id)}
         title={`Remove ${name}`}
         type="button"
@@ -379,8 +380,8 @@ function SensorEditor({
   return (
     <div {...stylex.props(styles.mt4StackXl)}>
       <label {...stylex.props(styles.block)}>
-        <span {...stylex.props(styles.capsMonoMicro2)}>Name</span>
-        <Input
+        <span {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])}>Name</span>
+        <Input size="md" variant="plate"
           aria-label={`Name for ${modalityLabel(sensor.type)} ${sensor.id}`}
           xstyle={styles.xs}
           onChange={(event) => {
@@ -442,7 +443,7 @@ function SensorEditor({
       />
 
       <div>
-        <span {...stylex.props(styles.capsMonoMicro2)}>Range</span>
+        <span {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])}>Range</span>
         <div {...stylex.props(styles.gridCols2Gap2)}>
           <NumberBox
             label={`Near range in metres for ${name}`}
@@ -466,7 +467,7 @@ function SensorEditor({
       <div {...stylex.props(styles.ruleT)}>
         <button
           aria-expanded={showNumbers}
-          className={stylex.props(styles.capsMonoMicro3, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, [typography.eyebrow, styles.capsMonoMicro3]], motionStyles.editorMotion).className}
           onClick={() => setShowNumbers((open) => !open)}
           type="button"
         >
@@ -545,7 +546,7 @@ function ChipGroup({
   return (
     <div>
       <span {...stylex.props(styles.flexBetweenBaseline)}>
-        <span {...stylex.props(styles.capsMonoMicro2)}>{label}</span>
+        <span {...stylex.props([typography.eyebrow, styles.capsMonoMicro2])}>{label}</span>
         {note ? <span {...stylex.props(styles.monoMicroMuted)}>{note}</span> : null}
       </span>
       <div aria-label={label} {...stylex.props(styles.flexWrapGap1)} role="group">
@@ -554,7 +555,7 @@ function ChipGroup({
           return (
             <button
               aria-pressed={selected}
-              className={stylex.props(selected ? styles.microAccentBordered : styles.microMutedBordered, motionStyles.editorMotion).className}
+              className={stylex.props(selected ? [focus.ring, styles.microAccentBordered] : [focus.ring, styles.microMutedBordered], motionStyles.editorMotion).className}
               key={option.id}
               onClick={() => onSelect(option.id)}
               type="button"
@@ -585,9 +586,9 @@ function NumberBox({
 }) {
   return (
     <label {...stylex.props(styles.block)}>
-      <span {...stylex.props(styles.srOnly)}>{label}</span>
+      <span {...stylex.props(a11y.srOnly)}>{label}</span>
       <span {...stylex.props(styles.relBlock)}>
-        <Input
+        <Input size="md" variant="plate"
           aria-label={label}
           xstyle={styles.xs2}
           min={min}

@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../../lib/utils";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioEditorChrome.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 
 export type ScenarioEditorStatusTone =
   | "neutral"
@@ -47,15 +48,15 @@ export function ScenarioEditorChromeHeader({
       {leading ? <div {...stylex.props(styles.tight)}>{leading}</div> : null}
       <div {...stylex.props(styles.fillNarrowable)}>
         <div {...stylex.props(styles.flexCenterNarrowable)}>
-          <h1 {...stylex.props(styles.smSemiboldTruncate)}>{title}</h1>
+          <h1 {...stylex.props([textLayout.truncate, styles.smSemiboldTruncate])}>{title}</h1>
           {badge ? (
-            <span {...stylex.props(styles.tightCapsMeta)}>
+            <span {...stylex.props([typography.eyebrow, styles.tightCapsMeta])}>
               {badge}
             </span>
           ) : null}
         </div>
         {subtitle ? (
-          <p {...stylex.props(styles.capsMetaMicro)}>
+          <p {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.capsMetaMicro]])}>
             {subtitle}
           </p>
         ) : null}
@@ -63,7 +64,7 @@ export function ScenarioEditorChromeHeader({
       {status ? (
         <div
           aria-live="polite"
-          {...stylex.props(styles.hiddenCenterTight)}
+          {...stylex.props([typography.eyebrow, styles.hiddenCenterTight])}
           data-editor-header-status={statusTone}
         >
           <span
@@ -87,7 +88,7 @@ export function ScenarioEditorReadout({
   return (
     <div
       {...props}
-      className={cn(stylex.props(styles.capsMetaMicro2).className, className)}
+      className={cn(stylex.props([typography.eyebrow, styles.capsMetaMicro2]).className, className)}
     >
       {children}
     </div>

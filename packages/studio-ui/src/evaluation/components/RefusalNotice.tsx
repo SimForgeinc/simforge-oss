@@ -5,6 +5,7 @@ import * as stylex from "@stylexjs/stylex";
 import { PaneErrorState } from "../../components/state-frames";
 import { DRIVING_REQUIREMENT_LABELS, type DrivingInputRequirement } from "../input-kinds";
 import { styles as s } from "./evaluation-components.stylex";
+import { hairline } from "../../stylex/recipes.stylex";
 
 
 export function RefusalNotice({
@@ -27,7 +28,7 @@ export function RefusalNotice({
           {action}
   </>;
   return <div data-testid="refusal-notice">
-    {tone === "info" ? <section {...stylex.props(s.border, s.p4, s.info, xstyle)}>
+    {tone === "info" ? <section {...stylex.props(hairline.all, s.p4, s.info, xstyle)}>
       <h2 {...stylex.props(s.textSm, s.fontSemibold)}>{title}</h2>
       {description}
     </section> : <PaneErrorState xstyle={xstyle} title={title} description={description} />}

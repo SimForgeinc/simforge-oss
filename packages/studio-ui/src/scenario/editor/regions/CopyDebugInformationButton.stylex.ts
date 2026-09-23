@@ -1,12 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space } from "../../../stylex/tokens.stylex";
+import { colors, motion, shadows, space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // size-4 text-emerald-400
   size4TextEmerald400: {
     width: "1rem",
     height: "1rem",
-    color: "rgb(52 211 153 / 1)",
+    color: colors.positive,
   },
   // size-4
   size4: {
@@ -16,14 +16,13 @@ export const styles = stylex.create({
   // h-8 gap-2 rounded-none border border-border bg-card/90 px-3 shadow-sm backdrop-blur
   borderedGlassyGap2: {
     height: "2rem",
-    gap: space.md,
-    borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: colors.border,
+    gap: space.s2,
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
     backgroundColor: "hsl(var(--card) / 0.9)",
-    paddingLeft: space.lg,
-    paddingRight: space.lg,
-    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    backdropFilter: "blur(8px)",
+    paddingLeft: space.s3,
+    paddingRight: space.s3,
+    boxShadow: shadows.elevationSm,
+    backdropFilter: motion.blurMd,
   },
 });

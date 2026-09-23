@@ -4,6 +4,7 @@ import { styles } from "./ArtifactsSection.stylex";
 
 import { ChevronRight, Download, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -42,11 +43,11 @@ export function ArtifactsSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        {...stylex.props(styles.artifactsToggle)}
+        {...stylex.props([motionRecipe.colors, [typography.caps, styles.artifactsToggle]])}
         aria-expanded={open}
       >
         <ChevronRight
-          {...stylex.props(styles.chevron, open && styles.rotate90)}
+          {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
         />
         Artifacts ({visibleArtifacts.length})
       </button>
@@ -59,10 +60,10 @@ export function ArtifactsSection({
               return (
                 <li
                   key={`${artifact.uri}-${index}`}
-                  {...stylex.props(styles.artifactItem)}
+                  {...stylex.props([hairline.all, styles.artifactItem])}
                 >
                   <div {...stylex.props(styles.artifactInfo)}>
-                    <span {...stylex.props(styles.artifactTitle)}>
+                    <span {...stylex.props([textLayout.truncate, styles.artifactTitle])}>
                       <span {...stylex.props(styles.artifactType)}>{artifact.artifact_type}</span>
                       {artifact.label ? ` — ${artifact.label}` : ""}
                     </span>
@@ -79,7 +80,7 @@ export function ArtifactsSection({
                         title="Play video"
                         aria-label={`Play ${artifact.label ?? artifact.artifact_type}`}
                         onClick={() => onViewArtifact?.({ proxyUrl, label: artifact.label })}
-                        {...stylex.props(styles.artifactAction)}
+                        {...stylex.props([motionRecipe.colors, styles.artifactAction])}
                       >
                         <Play {...stylex.props(styles.artifactActionIcon)} />
                       </button>
@@ -90,7 +91,7 @@ export function ArtifactsSection({
                         download={filename}
                         title={`Download ${filename}`}
                         aria-label={`Download ${filename}`}
-                        {...stylex.props(styles.artifactAction)}
+                        {...stylex.props([motionRecipe.colors, styles.artifactAction])}
                       >
                         <Download {...stylex.props(styles.artifactActionIcon)} />
                       </a>
@@ -102,7 +103,7 @@ export function ArtifactsSection({
                         rel="noopener noreferrer"
                         title={`Open ${filename} in a new tab`}
                         aria-label={`Open ${filename} in a new tab`}
-                        {...stylex.props(styles.artifactAction)}
+                        {...stylex.props([motionRecipe.colors, styles.artifactAction])}
                       >
                         <Download {...stylex.props(styles.artifactActionIcon)} />
                       </a>

@@ -56,11 +56,11 @@ export function CloudBrowserHop({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
         nothing here reloads.
       </p>
       <div {...stylex.props(form.row)}>
-        <Button xstyle={form.submit} disabled type="button">
+        <Button size="lg" variant="accent" xstyle={form.submit} disabled type="button">
           <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" />
           Waiting for the browser
         </Button>
-        <Button xstyle={form.secondary} onClick={() => void disconnect()} type="button" variant="outline">
+        <Button size="lg" xstyle={form.secondary} onClick={() => void disconnect()} type="button" variant="outline">
           Cancel
         </Button>
       </div>
@@ -74,7 +74,7 @@ function SignedIn({ status, xstyle }: { status: StudioCloudStatus; xstyle?: styl
       <CloudVerifyEmailBanner status={status} />
       <CloudSignOutAction
         before={
-          <Button asChild xstyle={form.secondary} variant="outline">
+          <Button size="lg" asChild xstyle={form.secondary} variant="outline">
             <Link href="/dashboard/simcloud">
               <UserCog {...stylex.props(form.icon)} aria-hidden="true" />
               Manage account
@@ -116,7 +116,7 @@ export function CloudVerifyEmailBanner({ status }: { status: StudioCloudStatus }
       </p>
       <div {...stylex.props(form.row)}>
         <label {...stylex.props(form.label)} htmlFor={codeId}>Code</label>
-        <Input
+        <Input variant="plate"
           id={codeId}
           xstyle={[form.input, form.code]}
           autoComplete="one-time-code"
@@ -127,7 +127,7 @@ export function CloudVerifyEmailBanner({ status }: { status: StudioCloudStatus }
           value={code}
           onChange={(event) => setCode(event.currentTarget.value.replace(/\D/g, ""))}
         />
-        <Button xstyle={form.submit} disabled={loading || code.length !== 6} type="submit">
+        <Button size="lg" variant="accent" xstyle={form.submit} disabled={loading || code.length !== 6} type="submit">
           Verify
         </Button>
         <button
@@ -181,7 +181,7 @@ export function CloudSignOutAction({ before }: { before?: ReactNode }) {
             <LogOut {...stylex.props(action.icon)} aria-hidden="true" />
             Sign out
           </Button>
-          <Button autoFocus xstyle={action.outline} onClick={() => setConfirming(false)} type="button" variant="outline">
+          <Button size="lg" autoFocus xstyle={action.outline} onClick={() => setConfirming(false)} type="button" variant="outline">
             Stay signed in
           </Button>
         </div>
@@ -192,7 +192,7 @@ export function CloudSignOutAction({ before }: { before?: ReactNode }) {
   return (
     <div {...stylex.props(form.row)}>
       {before}
-      <Button
+      <Button size="lg"
         xstyle={form.secondary}
         data-testid="cloud-sign-out"
         disabled={loading}
@@ -286,13 +286,13 @@ export function CloudSignInForm({ status, onSignedIn, xstyle }: {
       {mode === "sign-up" ? (
         <div {...stylex.props(form.field)}>
           <label {...stylex.props(form.label)} htmlFor={`${id}-name`}>Name</label>
-          <Input id={`${id}-name`} xstyle={form.input} autoComplete="name" maxLength={120} required value={name} onChange={(event) => setName(event.currentTarget.value)} />
+          <Input variant="plate" id={`${id}-name`} xstyle={form.input} autoComplete="name" maxLength={120} required value={name} onChange={(event) => setName(event.currentTarget.value)} />
         </div>
       ) : null}
 
       <div {...stylex.props(form.field)}>
         <label {...stylex.props(form.label)} htmlFor={`${id}-email`}>Email</label>
-        <Input
+        <Input variant="plate"
           id={`${id}-email`}
           xstyle={form.input}
           type="email"
@@ -309,7 +309,7 @@ export function CloudSignInForm({ status, onSignedIn, xstyle }: {
       {mode === "reset" ? (
         <div {...stylex.props(form.field)}>
           <label {...stylex.props(form.label)} htmlFor={`${id}-code`}>Code</label>
-          <Input
+          <Input variant="plate"
             id={`${id}-code`}
             xstyle={[form.input, form.code]}
             autoComplete="one-time-code"
@@ -335,7 +335,7 @@ export function CloudSignInForm({ status, onSignedIn, xstyle }: {
               </button>
             ) : null}
           </div>
-          <Input
+          <Input variant="plate"
             id={`${id}-password`}
             xstyle={form.input}
             type="password"
@@ -353,7 +353,7 @@ export function CloudSignInForm({ status, onSignedIn, xstyle }: {
       {cloud.error ? <p {...stylex.props(form.error)} role="alert">{cloud.error}</p> : null}
 
       <div {...stylex.props(form.between)}>
-        <Button xstyle={form.submit} data-testid="cloud-account-submit" disabled={busy} type="submit">
+        <Button size="lg" variant="accent" xstyle={form.submit} data-testid="cloud-account-submit" disabled={busy} type="submit">
           {busy ? <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> : null}
           {mode === "sign-up" ? "Create account" : mode === "forgot" ? "Send code" : mode === "reset" ? "Set new password" : "Sign in"}
         </Button>
@@ -377,7 +377,7 @@ export function CloudSignInForm({ status, onSignedIn, xstyle }: {
           </div>
           <div {...stylex.props(form.providers)}>
             {status.providers.map((provider) => (
-              <Button
+              <Button size="lg"
                 key={provider}
                 xstyle={form.secondary}
                 disabled={busy}

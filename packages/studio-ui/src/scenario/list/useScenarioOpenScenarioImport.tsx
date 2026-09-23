@@ -9,6 +9,7 @@ import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { list } from "../scenario-controls.stylex";
 import type { ScenarioMapOption } from "./document-map-groups";
+import { hairline } from "../../stylex/recipes.stylex";
 
 type Diagnostic = {
   code: string;
@@ -119,7 +120,7 @@ export function useScenarioOpenScenarioImport({
   const dialog = open ? (
     <div {...stylex.props(styles.divFixedFlex)}>
       <button type="button" aria-label="Close OpenSCENARIO dialog" {...stylex.props(styles.closeOpenSCENARIODialogButton)} onClick={close} />
-      <div {...stylex.props(styles.xoscImportDialog)} role="dialog" aria-modal="true" aria-labelledby="xosc-import-title" data-testid="xosc-import-dialog">
+      <div {...stylex.props([hairline.all, styles.xoscImportDialog])} role="dialog" aria-modal="true" aria-labelledby="xosc-import-title" data-testid="xosc-import-dialog">
         <div>
           <h2 id="xosc-import-title" {...stylex.props(styles.xoscImportTitle)}>Open OpenSCENARIO as reference</h2>
           <p {...stylex.props(styles.createANewScenarioFromThePar)}>
@@ -144,7 +145,7 @@ export function useScenarioOpenScenarioImport({
 
         {result ? (
           <div {...stylex.props(styles.xoscImportReport)} data-testid="xosc-import-report">
-            <div {...stylex.props(styles.divGridSm)}>
+            <div {...stylex.props([hairline.all, styles.divGridSm])}>
               <div><span {...stylex.props(styles.format)}>Format:</span> {result.analysis.standard}</div>
               <div><span {...stylex.props(styles.size)}>Size:</span> {result.analysis.source.byteLength.toLocaleString()} bytes</div>
               <div {...stylex.props(styles.div)}><span {...stylex.props(styles.sha256)}>SHA-256:</span> {result.analysis.source.sha256}</div>
@@ -173,7 +174,7 @@ export function useScenarioOpenScenarioImport({
               {result.resolution.status === "conflict" ? <p {...stylex.props(styles.theFileContainsContradictory)}>The file contains contradictory strong map identity. Correct the file before importing.</p> : null}
             </div>
 
-            <div {...stylex.props(styles.xoscConversionSummary)} data-testid="xosc-conversion-summary">
+            <div {...stylex.props([hairline.all, styles.xoscConversionSummary])} data-testid="xosc-conversion-summary">
               <h3 {...stylex.props(styles.whatWillBeConverted)}>What will be converted</h3>
               <ul {...stylex.props(styles.ulXs)}>
                 <li>{result.analysis.capabilities.supported} {result.analysis.capabilities.supported === 1 ? "part" : "parts"} will carry over.</li>
@@ -198,7 +199,7 @@ export function useScenarioOpenScenarioImport({
               <summary {...stylex.props(styles.technicalConversionDetails)}>Technical conversion details</summary>
               <ul {...stylex.props(styles.openscenarioImportDiagnostic)} aria-label="OpenSCENARIO import diagnostics">
                 {result.analysis.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.code}-${index}`} {...stylex.props(styles.liXs)}>
+                  <li key={`${diagnostic.code}-${index}`} {...stylex.props([hairline.all, styles.liXs])}>
                     <div {...stylex.props(styles.divMono)}>{diagnostic.disposition.toUpperCase()} · {diagnostic.path} · {diagnostic.code}</div>
                     <div {...stylex.props(styles.div3)}>{diagnostic.message}</div>
                   </li>

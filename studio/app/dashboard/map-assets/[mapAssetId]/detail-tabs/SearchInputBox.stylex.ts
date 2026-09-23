@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, layers, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   searchContainer: {
@@ -17,13 +17,8 @@ export const styles = stylex.create({
     color: colors.mutedForeground,
   },
   searchInput: {
-    height: "2.5rem",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.3)",
     paddingLeft: "2.25rem",
     paddingRight: "2.25rem",
-    fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
   },
   clearButton: {
     position: "absolute",
@@ -32,9 +27,6 @@ export const styles = stylex.create({
     zIndex: layers.raised,
     transform: "translateY(-50%)",
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
   },
   clearIcon: {
     width: "0.875rem",
@@ -45,28 +37,22 @@ export const styles = stylex.create({
     left: "0",
     right: "0",
     top: "100%",
-    zIndex: 20,
-    marginTop: space.xs,
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: colors.border,
+    zIndex: layers.float,
+    marginTop: space.s1,
     backgroundColor: colors.popover,
-    padding: space.xs,
+    padding: space.s1,
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
   },
   suggestion: {
     display: "flex",
     width: "100%",
     alignItems: "center",
-    paddingInline: space.md,
-    paddingBlock: space.sm,
+    paddingInline: space.s2,
+    paddingBlock: space.s1_5,
     textAlign: "left",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.text,
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
     backgroundColor: { default: null, ":hover": "hsl(var(--secondary) / 0.4)" },
   },
   suggestionHighlighted: {

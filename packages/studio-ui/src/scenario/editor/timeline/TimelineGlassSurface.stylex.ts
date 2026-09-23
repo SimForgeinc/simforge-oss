@@ -1,20 +1,19 @@
 import * as stylex from "@stylexjs/stylex";
-import { space, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, motion, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]
   absClipInert: {
     pointerEvents: "none",
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.base,
     overflow: "hidden",
-    borderRadius: "inherit",
   },
   // absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.025] to-sky-400/[0.1]
   absInset0: {
     position: "absolute",
-    inset: space.none,
+    inset: 0,
     backgroundImage: "linear-gradient(to bottom right, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.025), rgb(56 189 248 / 0.1))",
   },
   // absolute -left-16 -top-24 h-52 w-52 rounded-full bg-[#E8E044]/12 blur-3xl
@@ -24,8 +23,7 @@ export const styles = stylex.create({
     top: "-6rem",
     height: "13rem",
     width: "13rem",
-    borderRadius: "0",
-    filter: "blur(64px)",
+    filter: motion.blurLg,
   },
   // absolute -bottom-28 right-[-3rem] h-56 w-56 rounded-full bg-sky-400/15 blur-3xl
   absRound2: {
@@ -34,16 +32,15 @@ export const styles = stylex.create({
     right: "-3rem",
     height: "14rem",
     width: "14rem",
-    borderRadius: "0",
-    backgroundColor: "rgb(56 189 248 / 0.15)",
-    filter: "blur(64px)",
+    backgroundColor: colors.infoWash,
+    filter: motion.blurLg,
   },
   // absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent
   abs: {
     position: "absolute",
     left: "1.25rem",
     right: "1.25rem",
-    top: space.none,
+    top: 0,
     height: "1px",
     backgroundImage: "linear-gradient(to right, transparent, rgb(255 255 255 / 0.6), transparent)",
   },
@@ -62,9 +59,8 @@ export const styles = stylex.create({
     position: "relative",
     isolation: "isolate",
     overflow: "hidden",
-    borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: "rgb(255 255 255 / 0.25)",
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairlineStrong,
     backgroundColor: "rgb(0 0 0 / 0.15)",
     boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 80px -24px rgba(0,0,0,0.85)",
     backdropFilter: "blur(72px) contrast(1.05) saturate(1.85)",
@@ -72,6 +68,6 @@ export const styles = stylex.create({
   // bg-[#E8E044]/12 — the accent bloom, previously the one Tailwind holdout
   // beside its already-migrated sky-blue twin `absRound2`.
   absRoundAccent: {
-    backgroundColor: "rgb(232 224 68 / 0.12)",
+    backgroundColor: colors.accentWash,
   },
 });

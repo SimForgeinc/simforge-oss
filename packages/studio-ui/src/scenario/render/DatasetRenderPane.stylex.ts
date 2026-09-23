@@ -1,12 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, space, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // render-view-enter absolute inset-0 z-20 flex min-h-0 flex-col text-foreground
   scenarioDatasetRenderPane: {
     position: "absolute",
     inset: "0",
-    zIndex: 20,
+    zIndex: layers.float,
     display: "flex",
     minHeight: 0,
     flexDirection: "column",
@@ -19,22 +19,22 @@ export const styles = stylex.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.lg,
-    padding: space.xxl,
+    gap: space.s3,
+    padding: space.s6,
     textAlign: "center",
   },
   // max-w-md text-sm text-destructive
   pSm: {
     maxWidth: "28rem",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.danger,
   },
   // flex items-center gap-2
   divFlex2: {
     display: "flex",
     alignItems: "center",
-    gap: space.md,
+    gap: space.s2,
   },
   // size-3.5
   tryAgainRefreshCw: {

@@ -11,6 +11,7 @@ import type {
   ScenarioDocumentSummaryDto,
 } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +21,7 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { EmptyState } from "../../components/ui/empty-state";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
-import { chip, control, menu } from "../scenario-controls.stylex";
+import { menu } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
@@ -47,6 +48,7 @@ import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
 import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
 import { isDatasetEditable } from "../rail/DatasetStrip";
+import { textLayout, typography } from "../../stylex/recipes.stylex";
 
 /** Readiness refresh cadence while a render is in flight, matching v1. */
 const READINESS_POLL_MS = 5_000;
@@ -383,7 +385,7 @@ export function ScenarioDatasetDetailClient({
                 {...stylex.props(styles.titleButton)}
                 aria-label={`${dataset.name} dataset menu`}
               >
-                <h2 {...stylex.props(styles.title)}>{dataset.name}</h2>
+                <h2 {...stylex.props([textLayout.truncate, styles.title])}>{dataset.name}</h2>
                 <ChevronDown {...stylex.props(styles.titleChevron)} aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
@@ -410,18 +412,15 @@ export function ScenarioDatasetDetailClient({
             </DropdownMenuContent>
           </DropdownMenu>
           <div {...stylex.props(styles.headerActions)}>
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              xstyle={[chip.base, control.iconSm, searchOpen ? chip.on : chip.off]}
-              aria-pressed={searchOpen}
-              aria-label={searchOpen ? "Hide scenario search" : "Search scenarios"}
-              title={searchOpen ? "Hide scenario search" : "Search scenarios"}
+            <IconButton
+              label={searchOpen ? "Hide scenario search" : "Search scenarios"}
+              variant="plate"
+              size="md"
+              active={searchOpen}
               onClick={toggleSearch}
             >
-              <Search {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
-            </Button>
+              <Search />
+            </IconButton>
             <ScenarioTagFilterDropdown
               tags={tagManager.tags}
               creatorOptions={creatorOptions}
@@ -430,24 +429,21 @@ export function ScenarioDatasetDetailClient({
               onSelectTagFilter={tagManager.selectTagFilter}
               onSelectCreatorFilter={tagManager.selectCreatorFilter}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              xstyle={[chip.base, control.iconSm, tagEditorOpen ? chip.on : chip.off]}
-              aria-pressed={tagEditorOpen}
-              aria-label={tagEditorOpen ? "Close tag editor" : "Edit tags"}
-              title={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+            <IconButton
+              label={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+              variant="plate"
+              size="md"
+              active={tagEditorOpen}
               onClick={toggleTagEditor}
             >
-              <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
-            </Button>
+              <Tags />
+            </IconButton>
             {datasetEditable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
-                    size="icon"
+                    size="iconSm"
                     variant="ghost"
                     xstyle={styles.headerAdd}
                     aria-label="Add scenario"
@@ -517,7 +513,7 @@ export function ScenarioDatasetDetailClient({
           ) : null}
           {notice ? (
             <p
-              {...stylex.props(styles.status)}
+              {...stylex.props([typography.eyebrow, styles.status])}
               role="status"
             >
               {notice}
@@ -630,9 +626,9 @@ export function ScenarioDatasetDetailClient({
       {datasetEditable ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
+            <Button size="lg"
               type="button"
-              variant="ghost"
+              variant="outline"
               xstyle={styles.footerAdd}
               disabled={addBusy}
               data-testid="scenario-add-scenario-row"

@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex min-h-0 flex-1 flex-col
@@ -14,30 +14,18 @@ export const styles = stylex.create({
     display: "flex",
     flexShrink: "0",
     alignItems: "flex-end",
-    gap: space.md,
-    borderBottomWidth: "1px",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
-    paddingBottom: space.lg,
-    paddingTop: space.xs,
-    borderColor: "rgb(255 255 255 / 10%)",
+    gap: space.s2,
+    borderBottomWidth: stroke.hairline,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
+    paddingBottom: space.s3,
+    paddingTop: space.s1,
+    borderColor: colors.hairline,
   },
   // min-w-0 flex-1
   fillNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-  },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: space.none,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
   },
   // relative block
   relBlock: {
@@ -57,32 +45,21 @@ export const styles = stylex.create({
   },
   // h-9 pl-8 text-xs
   xs: {
-    height: "2.25rem",
-    paddingLeft: space.xxxl,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    paddingLeft: space.s8,
   },
   // min-h-0 flex-1 overflow-y-auto px-4 py-3
   fillScrollYShrinkable: {
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
-    paddingTop: space.lg,
-    paddingBottom: space.lg,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
+    paddingTop: space.s3,
+    paddingBottom: space.s3,
   },
   // min-h-64
   minH64: {
     minHeight: "16rem",
-  },
-
-  // text-micro uppercase tracking-meta
-  fieldMetaLabel: {
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
   },
 
   // w-40

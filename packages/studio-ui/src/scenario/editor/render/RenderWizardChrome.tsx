@@ -7,6 +7,7 @@ import { cn } from "../../../lib/utils";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderWizardChrome.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The chrome every step of the new-render flow shares.
@@ -44,7 +45,7 @@ export function RenderWizardStepRail({
             <button
               aria-current={state === "active" ? "step" : undefined}
               className={stylex.props(
-                styles.inlineFlexCenterCaps2,
+                [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps2]],
                 motionStyles.editorMotion,
                 state === "active"
                   ? styles.stepActive
@@ -135,7 +136,7 @@ export function RenderWizardFooter({
       <div {...stylex.props(styles.flexCenterTight)}>
         {onBack ? (
           <button
-            className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps]], motionStyles.editorMotion).className}
             data-testid="render-wizard-back"
             onClick={onBack}
             type="button"
@@ -146,7 +147,7 @@ export function RenderWizardFooter({
         ) : null}
         {primary ?? (onNext ? (
           <button
-            className={stylex.props(nextDisabled ? styles.inlineFlexCenterCaps3 : styles.inlineFlexCenterCaps4, motionStyles.editorMotion).className}
+            className={stylex.props(nextDisabled ? [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps3]] : [focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps4]], motionStyles.editorMotion).className}
             data-testid="render-wizard-next"
             disabled={nextDisabled}
             onClick={onNext}
@@ -192,7 +193,7 @@ export function RenderOptionCard({
     <button
       aria-checked={selection === "single" ? selected : undefined}
       aria-pressed={selection === "multi" ? selected : undefined}
-      className={stylex.props(styles.flexColStart, selected ? styles.borderPrimaryBgPrimary10 : styles.renderGlassHoverBorderPrimary40, disabled && styles.cursorNotAllowedOpacity50, motionStyles.editorMotion).className}
+      className={stylex.props([focus.ring, styles.flexColStart], selected ? styles.borderPrimaryBgPrimary10 : styles.renderGlassHoverBorderPrimary40, disabled && styles.cursorNotAllowedOpacity50, motionStyles.editorMotion).className}
       data-selected={selected}
       data-testid={testId}
       disabled={disabled}
@@ -207,7 +208,7 @@ export function RenderOptionCard({
             className={stylex.props(selected ? styles.tightAccent : styles.tightMuted).className}
           />
         ) : null}
-        <span {...stylex.props(styles.fillXsInk)}>{label}</span>
+        <span {...stylex.props([textLayout.truncate, styles.fillXsInk])}>{label}</span>
         {badge}
       </span>
       {hint ? (

@@ -1,36 +1,32 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   card: {
-    borderRadius: "0.375rem",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    color: "hsl(var(--card-foreground))",
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    backgroundColor: colors.fillFaint,
+    color: colors.ink,
   },
   header: {
     display: "grid",
     gridAutoRows: "min-content",
     gridTemplateColumns: "1fr auto",
     alignItems: "start",
-    columnGap: "0.75rem",
-    rowGap: "0.375rem",
-    padding: "1.25rem",
+    columnGap: space.s3,
+    rowGap: space.s1_5,
+    padding: space.s5,
   },
   title: {
     gridColumnStart: 1,
-    fontSize: "15px",
-    fontWeight: 600,
-    lineHeight: "1.375",
-    letterSpacing: "-0.025em",
+    margin: 0,
+    fontFamily: text.fontDisplay,
+    fontSize: text.sizeBase,
+    fontWeight: text.weightSemibold,
+    lineHeight: text.lineBase,
+    letterSpacing: text.trackingTight,
+    color: colors.ink,
   },
-  description: { gridColumnStart: 1, fontSize: text.sizeSm, lineHeight: "1.25rem", color: colors.mutedForeground },
+  description: { gridColumnStart: 1, fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.inkMuted },
   action: { gridColumnStart: 2, gridRow: "span 2 / span 2", gridRowStart: 1, alignSelf: "start", justifySelf: "end" },
-  content: { paddingInline: "1.25rem", paddingBottom: "0.75rem" },
-  footer: { display: "flex", alignItems: "center", borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: colors.border, padding: "1rem", paddingInline: "1.25rem" },
+  content: { paddingInline: space.s5, paddingBottom: space.s3 },
+  footer: { display: "flex", alignItems: "center", borderTopWidth: stroke.hairline, borderTopStyle: "solid", borderTopColor: colors.hairline, padding: space.s4, paddingInline: space.s5 },
 });

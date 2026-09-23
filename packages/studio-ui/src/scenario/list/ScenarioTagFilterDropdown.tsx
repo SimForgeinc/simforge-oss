@@ -4,7 +4,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioTagFilterDropdown.stylex";
 import { Filter } from "lucide-react";
 import type { ScenarioTagDto } from "../../lib/scenario/contracts";
-import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
-import { chip, control, menu } from "../scenario-controls.stylex";
+import { menu } from "../scenario-controls.stylex";
+import { hairline, textLayout, typography } from "../../stylex/recipes.stylex";
 
 export type ScenarioCreatorFilterOption = {
   value: string;
@@ -46,16 +47,9 @@ export function ScenarioTagFilterDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          xstyle={[chip.base, control.iconSm, hasActiveFilter ? chip.on : chip.off]}
-          aria-label="Filter scenarios"
-          title="Filter scenarios"
-        >
-          <Filter {...stylex.props(styles.filterFilter)} aria-hidden="true" />
-        </Button>
+        <IconButton label="Filter scenarios" variant="plate" size="md" active={hasActiveFilter}>
+          <Filter />
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" xstyle={menu.width220}>
         <DropdownMenuItem
@@ -64,7 +58,7 @@ export function ScenarioTagFilterDropdown({
             onSelectTagFilter(null);
             onSelectCreatorFilter(null);
           }}
-          xstyle={[menu.metaItem, showingAll ? menu.selected : null]}
+          xstyle={[typography.eyebrow, showingAll ? menu.selected : null]}
         >
           <span
             className={cn(
@@ -76,7 +70,7 @@ export function ScenarioTagFilterDropdown({
           All scenarios
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel xstyle={menu.metaLabel}>
+        <DropdownMenuLabel xstyle={[typography.eyebrow, menu.metaLabel]}>
           Created by
         </DropdownMenuLabel>
         {creatorOptions.length === 0 ? (
@@ -91,7 +85,7 @@ export function ScenarioTagFilterDropdown({
                 onSelectTagFilter(null);
               }}
               xstyle={[
-                menu.metaItemTight,
+                typography.eyebrow,
                 selectedCreatorFilter === creator.value ? menu.selected : null,
               ]}
             >
@@ -102,13 +96,13 @@ export function ScenarioTagFilterDropdown({
                 )}
                 aria-hidden="true"
               />
-              <span {...stylex.props(styles.spanTruncate)}>{creator.label}</span>
+              <span {...stylex.props([textLayout.truncate, styles.spanTruncate])}>{creator.label}</span>
               <span {...stylex.props(styles.spanMicro)}>{creator.count}</span>
             </DropdownMenuItem>
           ))
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuLabel xstyle={menu.metaLabel}>
+        <DropdownMenuLabel xstyle={[typography.eyebrow, menu.metaLabel]}>
           Tags
         </DropdownMenuLabel>
         {tags.length === 0 ? (
@@ -122,18 +116,18 @@ export function ScenarioTagFilterDropdown({
                 onSelectTagFilter(tag.id);
                 onSelectCreatorFilter(null);
               }}
-              xstyle={[menu.metaItem, selectedTagFilter === tag.id ? menu.selected : null]}
+              xstyle={[typography.eyebrow, selectedTagFilter === tag.id ? menu.selected : null]}
             >
               {/*
                 A tag's colour is operator-chosen data, so it arrives as an inline style rather than
                 as a class. The border is a token so an unset colour still reads as a swatch.
               */}
               <span
-                {...stylex.props(styles.spanIcon)}
+                {...stylex.props([hairline.all, styles.spanIcon])}
                 style={tag.color ? { backgroundColor: tag.color } : undefined}
                 aria-hidden="true"
               />
-              <span {...stylex.props(styles.spanTruncate2)}>{tag.label}</span>
+              <span {...stylex.props([textLayout.truncate, styles.spanTruncate2])}>{tag.label}</span>
               <span {...stylex.props(styles.spanMicro2)}>{tag.documentCount}</span>
             </DropdownMenuItem>
           ))

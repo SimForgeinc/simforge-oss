@@ -3,6 +3,7 @@ import { styles } from "./MapAssetDangerZone.stylex";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { a11y, hairline, motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type MapAssetDangerZoneProps = {
   dangerOpen: boolean;
@@ -41,11 +42,11 @@ export function MapAssetDangerZone({
         {...stylex.props(styles.dangerToggle)}
       >
         <AlertTriangle {...stylex.props(styles.dangerIcon)} aria-hidden />
-        <h3 {...stylex.props(styles.dangerHeading)}>
+        <h3 {...stylex.props([typography.caps, styles.dangerHeading])}>
           Delete map
         </h3>
         <ChevronDown
-          {...stylex.props(styles.dangerChevron, dangerOpen ? styles.dangerChevronOpen : null)}
+          {...stylex.props([motionRecipe.transform, styles.dangerChevron], dangerOpen ? styles.dangerChevronOpen : null)}
         />
       </button>
       {dangerOpen && (
@@ -65,13 +66,13 @@ export function MapAssetDangerZone({
               <p {...stylex.props(styles.emailConfirmationInstruction)}>
                 Type your signed-in email address below to confirm (case does not matter):
               </p>
-              <p {...stylex.props(styles.sessionEmailDisplay)}>
+              <p {...stylex.props([hairline.all, styles.sessionEmailDisplay])}>
                 {sessionEmail}
               </p>
-              <label htmlFor="delete-confirm-email" {...stylex.props(styles.emailConfirmationLabel)}>
+              <label htmlFor="delete-confirm-email" {...stylex.props(a11y.srOnly)}>
                 Type your email to confirm deletion
               </label>
-              <Input
+              <Input size="md" variant="plate"
                 id="delete-confirm-email"
                 value={deleteConfirmEmail}
                 onChange={(e) => onDeleteConfirmEmailChange(e.target.value)}

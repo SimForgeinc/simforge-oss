@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { colors, layout, motion } from "../../../stylex/tokens.stylex";
 
 /* ─────────────────────────────────────────────────────────────
  * Add-actor panel motion
@@ -47,10 +48,10 @@ export const styles = stylex.create({
   panelEnter: {
     animationName: {
       default: panelIn,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "240ms",
-    animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    animationDuration: motion.durSlow,
+    animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
     willChange: "transform, opacity",
   },
@@ -58,20 +59,20 @@ export const styles = stylex.create({
   chipEnter: {
     animationName: {
       default: chipIn,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "200ms",
-    animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    animationDuration: motion.durBase,
+    animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
   },
 
   railTooltip: {
     animationName: {
       default: tooltipIn,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "130ms",
-    animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    animationDuration: motion.durFast,
+    animationTimingFunction: motion.easeExpressive,
     animationFillMode: "backwards",
   },
 
@@ -88,30 +89,30 @@ export const styles = stylex.create({
   toolIcon: {
     transform: {
       default: toolIconVars.transform,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transitionProperty: {
       default: "transform",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    transitionDuration: "200ms",
-    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    transitionDuration: motion.durBase,
+    transitionTimingFunction: motion.easeExpressive,
   },
 
   panelClose: {
     transition: {
       default: "transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease, color 140ms ease",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transform: {
       default: null,
       ":hover": {
         default: "rotate(90deg)",
-        "@media (prefers-reduced-motion: reduce)": "none",
+        [layout.reducedMotion]: "none",
       },
     },
-    backgroundColor: { default: null, ":hover": "rgba(255, 255, 255, 0.1)" },
-    color: { default: null, ":hover": "#fff" },
+    backgroundColor: { default: null, ":hover": colors.fillStrong },
+    color: { default: null, ":hover": colors.ink },
   },
 
   /*
@@ -121,7 +122,6 @@ export const styles = stylex.create({
    * focus, which is also the only time it means anything.
    */
   panelResize: {
-    outline: { default: null, ":focus-visible": "none" },
     "::after": {
       content: '""',
       position: "absolute",
@@ -132,7 +132,7 @@ export const styles = stylex.create({
       transform: "translateY(-50%)",
       borderRadius: "2px",
       backgroundColor: {
-        default: "rgba(232, 224, 68, 0)",
+        default: colors.accentWash,
         ":hover": "rgba(232, 224, 68, 0.72)",
         ":focus-visible": "rgba(232, 224, 68, 0.72)",
       },

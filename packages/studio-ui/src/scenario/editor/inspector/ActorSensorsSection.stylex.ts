@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // flex items-baseline justify-between gap-2
@@ -7,60 +7,54 @@ export const styles = stylex.create({
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-[9px] uppercase tracking-[0.12em] text-white/40
   caps: {
-    fontSize: "9px",
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaTight,
-    color: "rgb(255 255 255 / 0.4)",
+    color: colors.inkMuted,
   },
   // font-mono text-[9px] text-white/45
   mono: {
     fontFamily: text.fontMono,
-    fontSize: "9px",
-    color: "rgb(255 255 255 / 0.45)",
+    fontSize: text.sizeTag,
+    color: colors.inkMuted,
   },
   // text-[9px] leading-3 text-white/35
   textLeading3TextWhite35: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "0.75rem",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   // text-[9px] leading-3 text-white/45
   textLeading3TextWhite45: {
-    fontSize: "9px",
+    fontSize: text.sizeTag,
     lineHeight: "0.75rem",
-    color: "rgb(255 255 255 / 0.45)",
+    color: colors.inkMuted,
   },
   // mt-0.5 block text-white/30
   block: {
-    marginTop: space.xxs,
+    marginTop: space.s0_5,
     display: "block",
-    color: "rgb(255 255 255 / 0.3)",
+    color: colors.inkFaint,
   },
   // flex items-center gap-1.5
   flexCenterGap15: {
     display: "flex",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // min-w-0 flex-1 truncate text-[10px] text-white/70
   fillTruncateNarrowable: {
     minWidth: "0px",
     flex: "1 1 0%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: "10px",
-    color: "rgb(255 255 255 / 0.7)",
+    fontSize: text.sizeMicro,
+    color: colors.inkSecondary,
   },
   // ml-1 text-[8px] text-white/30
   ml1TextTextWhite30: {
-    marginLeft: space.xs,
-    fontSize: "8px",
-    color: "rgb(255 255 255 / 0.3)",
+    marginLeft: space.s1,
+    fontSize: text.sizeNano,
+    color: colors.inkFaint,
   },
   // scale-75
   scale75: {
@@ -71,7 +65,7 @@ export const styles = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     minWidth: 0,
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // motionStyles.editorMotion + flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/12 bg-white/[0.035] px-2 py-1.5 text-[9px] font-semibold text-white/70 hover:border-[#E8E044]/45 hover:bg-[#E8E044]/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
   flexCenterMid: {
@@ -80,38 +74,25 @@ export const styles = stylex.create({
     minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xs,
-    borderRadius: "0",
-    borderWidth: "1px",
+    gap: space.s1,
+    borderWidth: stroke.hairline,
     backgroundColor: {
-      default: "rgb(255 255 255 / 0.035)",
-      ":hover": "rgb(232 224 68 / 0.08)",
+      default: colors.fillSubtle,
+      ":hover": colors.accentWash,
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
-    fontSize: "9px",
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
+    fontSize: text.sizeTag,
     fontWeight: text.weightSemibold,
     color: {
-      default: "rgb(255 255 255 / 0.7)",
-      ":hover": "rgb(255 255 255 / 1)",
-    },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
+      default: colors.inkSecondary,
+      ":hover": colors.ink,
     },
     borderColor: {
-      default: "rgb(255 255 255 / 0.12)",
-      ":hover": "rgb(232 224 68 / 0.45)",
+      default: colors.hairlineStrong,
+      ":hover": colors.accentLineSubtle,
     },
   },
   // size-3
@@ -125,33 +106,20 @@ export const styles = stylex.create({
     minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    gap: space.xs,
-    borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: "rgb(232 224 68 / 0.35)",
+    gap: space.s1,
+    borderWidth: stroke.hairline,
+    borderColor: colors.accentLineSubtle,
     backgroundColor: {
-      default: "rgb(232 224 68 / 0.1)",
-      ":hover": "rgb(232 224 68 / 0.2)",
+      default: colors.accentWash,
+      ":hover": colors.accentWash,
     },
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
-    fontSize: "9px",
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
+    fontSize: text.sizeTag,
     fontWeight: text.weightSemibold,
     color: colors.accent,
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 2px rgb(232 224 68 / 1)",
-    },
   },
   /*
    * The section's old `space-y-1.5`. `space-y` is a `> * + *` sibling rule,
@@ -162,6 +130,6 @@ export const styles = stylex.create({
   stackSm: {
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
 });

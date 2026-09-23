@@ -20,6 +20,7 @@ import {
   type DatasetExportRecipeId,
 } from "@/app/lib/studio-shared/dataset-export-recipes";
 import type { ExportFormat } from "@/app/lib/studio-shared/dataset";
+import { hairline, motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type ExportJob = {
   id: string;
@@ -383,13 +384,13 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   );
 
   return (
-    <section {...stylex.props(styles.panel)}>
+    <section {...stylex.props([hairline.all, styles.panel])}>
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.minWidth)}>
           <div {...stylex.props(styles.flexWrapGap)}>
             <PackageCheck {...stylex.props(styles.iconYellow)} />
-            <h3 {...stylex.props(styles.eyebrow)}>Export bundle</h3>
-            {latestJob ? <span {...stylex.props(styles.status, exportStatusStyle(latestJob.status))}>{exportStatusLabel(latestJob.status, latestJob.phase)}</span> : null}
+            <h3 {...stylex.props([typography.eyebrow, styles.eyebrow])}>Export bundle</h3>
+            {latestJob ? <span {...stylex.props([typography.eyebrow, styles.status], exportStatusStyle(latestJob.status))}>{exportStatusLabel(latestJob.status, latestJob.phase)}</span> : null}
           </div>
           <p {...stylex.props(styles.description)}>
             Create a downloadable package from the current dataset artifacts.
@@ -398,12 +399,12 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
           </p>
         </div>
         <div {...stylex.props(styles.actions)}>
-          <button type="button" onClick={refreshExports} aria-busy={refreshing} disabled={refreshing || state === "loading"} {...stylex.props(styles.button)}>
-            <RefreshCw {...stylex.props(styles.iconSmall, (refreshing || state === "loading") && styles.iconSpin)} /> Refresh
+          <button type="button" onClick={refreshExports} aria-busy={refreshing} disabled={refreshing || state === "loading"} {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, styles.button])}>
+            <RefreshCw {...stylex.props(styles.iconSmall, (refreshing || state === "loading") && motionRecipe.spin)} /> Refresh
           </button>
           {latestJob ? (
-            <button type="button" onClick={() => void handleDownload(latestJob)} disabled={!latestReady || downloadingId === latestJob.id} {...stylex.props(styles.button, styles.primaryButton)}>
-              {downloadingId === latestJob.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />}
+            <button type="button" onClick={() => void handleDownload(latestJob)} disabled={!latestReady || downloadingId === latestJob.id} {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, styles.button], styles.primaryButton)}>
+              {downloadingId === latestJob.id ? <LoaderCircle {...stylex.props(styles.iconSmall, motionRecipe.spin)} /> : <Download {...stylex.props(styles.iconSmall)} />}
               Download latest
             </button>
           ) : null}
@@ -417,8 +418,8 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
               return (
                 <button key={recipe.id} type="button" onClick={() => setSelectedRecipe(recipe.id)} {...stylex.props(styles.recipeCard, active && styles.recipeActive)}>
                   <div {...stylex.props(styles.recipeTop)}>
-                    <span {...stylex.props(styles.monoLabel)}>{recipe.format.replaceAll("_", " ")}</span>
-                    <span aria-hidden="true" {...stylex.props(styles.marker, active && styles.markerActive)} />
+                    <span {...stylex.props(typography.eyebrow)}>{recipe.format.replaceAll("_", " ")}</span>
+                    <span aria-hidden="true" {...stylex.props([hairline.all, hairline.strong, styles.marker], active && styles.markerActive)} />
                   </div>
                   <div {...stylex.props(styles.recipeTitle)}>{recipe.label}</div>
                   <p {...stylex.props(styles.recipeDescription)}>{recipe.description}</p>
@@ -427,16 +428,16 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
             })}
           </div>
           <div {...stylex.props(styles.queueRow)}>
-            <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props(styles.button, styles.queueButton)}>
-              {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, styles.iconSpin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
+            <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, styles.button], styles.queueButton)}>
+              {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, motionRecipe.spin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
               Queue export
             </button>
-            <div {...stylex.props(styles.subtleMono)}>{selected.label} · {selected.format.replaceAll("_", " ")}</div>
+            <div {...stylex.props([typography.eyebrow, styles.subtleMono])}>{selected.label} · {selected.format.replaceAll("_", " ")}</div>
           </div>
         </div>
         <aside {...stylex.props(styles.jobs)}>
           <div {...stylex.props(styles.jobsHeader)}>
-            <span {...stylex.props(styles.monoLabel, styles.mutedColor)}>Export jobs</span>
+            <span {...stylex.props(typography.eyebrow, styles.mutedColor)}>Export jobs</span>
             <span {...stylex.props(styles.count)}>{jobs.length}</span>
           </div>
           {error && jobs.length > 0 ? <PaneErrorState title="Could not refresh exports" description={error} onRetry={refreshExports} /> : null}
@@ -454,16 +455,16 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
                   <li key={job.id} {...stylex.props(styles.job)}>
                     <div {...stylex.props(styles.jobTop)}>
                       <div {...stylex.props(styles.minWidth)}>
-                        <div {...stylex.props(styles.truncate)}>{recipeLabel(job.recipe, job.format)}</div>
-                        <div {...stylex.props(styles.jobMeta)}>{shortId(job.id, 12)} · {formatJobTime(job.createdAt)}</div>
+                        <div {...stylex.props([textLayout.truncate, styles.truncate])}>{recipeLabel(job.recipe, job.format)}</div>
+                        <div {...stylex.props([typography.eyebrow, styles.jobMeta])}>{shortId(job.id, 12)} · {formatJobTime(job.createdAt)}</div>
                       </div>
-                      <span {...stylex.props(styles.statusSmall, exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
+                      <span {...stylex.props([typography.tag, styles.statusSmall], exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
                     </div>
                     {job.errorMessage ? <div {...stylex.props(styles.jobError)}>{job.errorMessage}</div> : null}
                     <div {...stylex.props(styles.jobBottom)}>
-                      <span {...stylex.props(styles.snapshotMono)}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
-                      <button type="button" onClick={() => void handleDownload(job)} disabled={!downloadable || downloadingId === job.id} {...stylex.props(styles.downloadButton)}>
-                        {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
+                      <span {...stylex.props([typography.eyebrow, styles.snapshotMono])}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
+                      <button type="button" onClick={() => void handleDownload(job)} disabled={!downloadable || downloadingId === job.id} {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, styles.downloadButton])}>
+                        {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, motionRecipe.spin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
                       </button>
                     </div>
                   </li>

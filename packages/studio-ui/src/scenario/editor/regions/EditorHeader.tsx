@@ -104,9 +104,9 @@ export function EditorHeader({
               aria-label="Exit editor"
               xstyle={styles.borderedGap15}
               onClick={onExit}
-              size="sm"
+              size="md"
               type="button"
-              variant="ghost"
+              variant="outline"
             >
               <ArrowLeft aria-hidden="true" className={stylex.props(styles.size35).className} />
               <span>Exit editor</span>
@@ -136,10 +136,10 @@ export function EditorHeader({
                 data-testid="editor-add-reasoning-trace"
                 disabled={!sensorSubjectId || reasoningTraceEnabled}
                 onClick={() => document?.setPresentationExtension("studio.presentation.reasoningTraceLane", true)}
-                size="sm"
+                size="md"
                 title={!sensorSubjectId ? "Add a camera to a vehicle first" : reasoningTraceEnabled ? "Reasoning trace row already added" : "Add one reasoning trace row"}
                 type="button"
-                variant="outline"
+                variant="accentOutline"
               >
                 <BrainCircuit aria-hidden="true" className={stylex.props(styles.size4).className} />
                 <span>Add reasoning trace</span>

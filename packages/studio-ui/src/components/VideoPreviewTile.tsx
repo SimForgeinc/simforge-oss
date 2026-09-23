@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./VideoPreviewTile.stylex";
 import { useVideoGroupContext } from "./VideoGroupPlayer";
+import { textLayout, typography } from "../stylex/recipes.stylex";
 
 export function VideoPreviewTile({
   label,
@@ -183,8 +184,8 @@ export function VideoPreviewTile({
 
       <div {...stylex.props(styles.overlay)}>
         <div {...stylex.props(styles.labelWrap)}>
-          {eyebrow ? <div {...stylex.props(styles.eyebrow)}>{eyebrow}</div> : null}
-          <div {...stylex.props(styles.label)}>{label}</div>
+          {eyebrow ? <div {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.eyebrow]])}>{eyebrow}</div> : null}
+          <div {...stylex.props([textLayout.truncate, styles.label])}>{label}</div>
         </div>
         {badge ? <div {...stylex.props(styles.badge)}>{badge}</div> : null}
       </div>
@@ -215,7 +216,7 @@ export function VideoPreviewTile({
       )}
 
       {!showVideo ? (
-        <div {...stylex.props(styles.empty)}>
+        <div {...stylex.props([typography.eyebrow, styles.empty])}>
           {hasError ? "Video unavailable" : emptyLabel}
         </div>
       ) : null}

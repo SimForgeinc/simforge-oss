@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, stroke, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 const SM = "@media (min-width: 640px)";
 
@@ -12,33 +12,33 @@ const SM = "@media (min-width: 640px)";
  * conflict against the primitive's own atoms by declaration order.
  */
 export const carla = stylex.create({
-  section: { display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: "1rem", minHeight: 0, minWidth: 0, overflow: "hidden" },
-  tools: { display: "flex", flexDirection: "column", gap: "0.5rem", [SM]: { flexDirection: "row" } },
+  section: { display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: space.s4, minHeight: 0, minWidth: 0, overflow: "hidden" },
+  tools: { display: "flex", flexDirection: "column", gap: space.s2, [SM]: { flexDirection: "row" } },
   searchWrap: { position: "relative", minWidth: 0, flex: 1 },
-  searchIcon: { pointerEvents: "none", position: "absolute", left: "0.75rem", top: "50%", width: "1rem", height: "1rem", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)" },
-  searchInput: { borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.035)", paddingLeft: "2.25rem" },
+  searchIcon: { pointerEvents: "none", position: "absolute", left: "0.75rem", top: "50%", width: "1rem", height: "1rem", transform: "translateY(-50%)", color: colors.inkFaint },
+  searchInput: { paddingLeft: "2.25rem" },
   // `width` is one merge key, so the sm step has to restate the trigger's own
   // `100%`: baseline was `w-full` with `sm:w-56` layered on top of it.
   select: { width: { default: "100%", [SM]: "14rem" } },
-  tableWrap: { minHeight: 0, overflow: "auto", overscrollBehavior: "contain", borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.02)" },
-  table: { minWidth: "1050px", fontSize: text.sizeXs, lineHeight: "1rem" },
-  header: { backgroundColor: "rgba(255,255,255,0.035)" },
+  tableWrap: { minHeight: 0, overflow: "auto", overscrollBehavior: "contain", backgroundColor: colors.fillFaint },
+  table: { minWidth: "1050px", fontSize: text.sizeXs, lineHeight: text.lineXs },
+  header: { backgroundColor: colors.fillSubtle },
   // A conditional `backgroundColor` replaces the primitive's whole
   // `backgroundColor` — its `[data-state=selected]` value included. That is
   // correct here: this catalog has no row selection, so the only background
   // the primitive ever painted on these rows is the hover one being restated.
-  headerRow: { borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: { default: null, ":hover": "transparent" } },
-  head: { height: "2.5rem", color: "rgba(255,255,255,0.4)" },
-  row: { borderBottomColor: "rgba(255,255,255,0.06)", backgroundColor: { default: null, ":hover": "rgba(255,255,255,0.025)" } },
-  cell: { paddingBlock: "0.625rem" },
-  cellMuted: { color: "rgba(255,255,255,0.55)" },
+  headerRow: { borderBottomColor: colors.hairline, backgroundColor: { default: null, ":hover": "transparent" } },
+  head: { height: "2.5rem", color: colors.inkMuted },
+  row: { borderBottomColor: colors.hairlineSubtle, backgroundColor: { default: null, ":hover": colors.fillFaint } },
+  cell: { paddingBlock: space.s2_5 },
+  cellMuted: { color: colors.inkMuted },
   cellCapitalize: { textTransform: "capitalize" },
   cellNumeric: { fontVariantNumeric: "tabular-nums" },
   blueprintCell: { maxWidth: "24rem" },
-  label: { fontWeight: text.weightMedium, color: "rgba(255,255,255,0.85)" },
-  catalogId: { marginTop: "0.125rem", fontFamily: text.fontMono, fontSize: "10px", color: "rgba(255,255,255,0.35)" },
-  blueprintId: { fontFamily: text.fontMono, fontSize: "11px", color: "rgba(255,255,255,0.65)" },
-  reason: { color: "rgba(255,255,255,0.45)" },
-  empty: { borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,0.06)", paddingInline: "1rem", paddingBlock: "3rem", textAlign: "center", fontSize: text.sizeSm, lineHeight: "1.25rem", color: "rgba(255,255,255,0.4)" },
-  count: { fontSize: text.sizeXs, lineHeight: "1rem", fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.35)" },
+  label: { fontWeight: text.weightMedium, color: colors.ink },
+  catalogId: { marginTop: space.s0_5, fontFamily: text.fontMono, fontSize: text.sizeMicro, color: colors.inkFaint },
+  blueprintId: { fontFamily: text.fontMono, fontSize: text.sizeMeta, color: colors.inkSecondary },
+  reason: { color: colors.inkMuted },
+  empty: { borderTopWidth: stroke.hairline, borderTopStyle: "solid", borderTopColor: colors.hairlineSubtle, paddingInline: space.s4, paddingBlock: space.s12, textAlign: "center", fontSize: text.sizeSm, lineHeight: text.lineSm, color: colors.inkMuted },
+  count: { fontSize: text.sizeXs, lineHeight: text.lineXs, fontVariantNumeric: "tabular-nums", color: colors.inkFaint },
 });
