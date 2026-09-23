@@ -72,7 +72,8 @@ const args = parseArgs(process.argv.slice(2));
 const here = repoRoot();
 // The primary checkout owns the worktree list; envs hang off it whichever worktree we run in.
 const primary = dirname(resolve(here, sh("git", ["rev-parse", "--git-common-dir"], { cwd: here })));
-const layout = await loadLayout(here);
+// `--list` works from any checkout: envs are machine-wide state.
+const layout = args.mode === "list" ? await loadLayout(here).catch(() => ({ name: "?", env: null })) : await loadLayout(here);
 const cfg = layout.env;
 if (!cfg && args.mode !== "list") {
   console.error(`agent:env: ${layout.name} has no env section in devflow.config.mjs`);
