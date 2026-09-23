@@ -113,15 +113,21 @@ export function buildSumoAuthoredOccupancies(
   });
 }
 
+/** Tag of the blank world's static clock actor (`ambient-world-seed`). */
+const INTERNAL_CLOCK_TAG = 'ambient:internal-clock';
+
 /** Sample actors and fixed props from the canonical scene trace. */
 export function sumoAuthoredOccupancySourcesAt(
   trace: SceneTrace,
   t: number,
 ): readonly SumoAuthoredOccupancySource[] {
   const sampleIndex = nearestIndex(trace.ticks.t, t);
-  const actors = Object.entries(trace.ticks.actors).map(([id, track]) => {
+  const actors = Object.entries(trace.ticks.actors).flatMap(([id, track]) => {
     const metadata = trace.header.actorMetadata?.[id];
-    return {
+    // A blank world's internal clock body is not a road user; the editor
+    // never hands it to SUMO either.
+    if (metadata?.tags.includes(INTERNAL_CLOCK_TAG)) return [];
+    return [{
       id,
       kind: metadata?.kind ?? 'vehicle',
       x: track.x[sampleIndex]!,
@@ -132,7 +138,7 @@ export function sumoAuthoredOccupancySourcesAt(
       widthM: metadata?.dims.w ?? 1.9,
       static: metadata?.static ?? false,
       present: track.present[sampleIndex] === 1,
-    } satisfies SumoAuthoredOccupancySource;
+    } satisfies SumoAuthoredOccupancySource];
   });
   const props = Object.values(trace.header.propMetadata ?? {}).map(propSource);
   return [...actors, ...props];
