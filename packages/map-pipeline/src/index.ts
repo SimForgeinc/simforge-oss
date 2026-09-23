@@ -92,6 +92,8 @@ export interface RunMapPipelineOptions {
   /** Web tier cell size in metres (default 100). */
   cellSize?: number;
   ktx2?: Ktx2Options;
+  /** Free-space floor for the texture-tier derivatives (default 25 GB, sized for a full map). */
+  minFreeDiskBytes?: number;
   /** `master.gltf` files of other maps consulted as terrain-texture donors. */
   donorLibrary?: readonly string[];
   /** Build only the master (no web tier). */
@@ -184,6 +186,8 @@ export interface DeriveClosuresOptions {
   cellSize?: number;
   /** KTX-Software installation used for offline native tier transcoding. */
   ktxBinDir?: string;
+  /** See `RunMapPipelineOptions.minFreeDiskBytes`. */
+  minFreeDiskBytes?: number;
   /** See `RunMapPipelineOptions.ambientTurnVerdicts`. */
   ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
   /** See `RunMapPipelineOptions.texturesFullBc7`. */
@@ -431,7 +435,8 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await mkdir(path.join(contentDir, '3d', 'runtime'), { recursive: true });
     await cp(decoderJs, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.js'));
     await cp(decoderWasm, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.wasm'));
-    await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}) });
+    await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}),
+      ...(options.minFreeDiskBytes === undefined ? {} : { minFreeBytes: options.minFreeDiskBytes }) });
     // One read per few megabytes instead of one per member: the browser's
     // per-tier packs (streaming order, ingest albedo classification).
     await buildBrowserPacks({ sourceRoot: contentDir });
@@ -567,7 +572,8 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
     ...(options.ambientTurnVerdicts ? { ambientTurnVerdicts: options.ambientTurnVerdicts } : {}),
     ...(options.cellSize ? { cellSize: options.cellSize } : {}),
     ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}),
-    ...(options.texturesFullBc7 !== undefined ? { texturesFullBc7: options.texturesFullBc7 } : {}) });
+    ...(options.texturesFullBc7 !== undefined ? { texturesFullBc7: options.texturesFullBc7 } : {}),
+    ...(options.minFreeDiskBytes === undefined ? {} : { minFreeDiskBytes: options.minFreeDiskBytes }) });
 }
 
 /** The web tier for a master stage - whether just built or materialized from a registry. */

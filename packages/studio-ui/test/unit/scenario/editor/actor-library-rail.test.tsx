@@ -585,13 +585,17 @@ describe("ActorLibraryRail", () => {
   it("edits weather and traffic from the same rail, without a placement controller", () => {
     const setEnvironment = vi.fn();
     const setAmbientTrafficExtension = vi.fn();
+    const setAmbientTrafficExtensions = vi.fn();
     const editorDocument = {
       data: {
         environment: { weather: "clear", timeOfDay: "noon", surfacePatches: [] },
         extensions: {},
+        // A current (pinned) document: no profile means no traffic.
+        simulation: { seed: "doc", dtS: 0.02 },
       },
       setEnvironment,
       setAmbientTrafficExtension,
+      setAmbientTrafficExtensions,
     };
     render(
       <ActorLibraryRail
@@ -619,11 +623,13 @@ describe("ActorLibraryRail", () => {
 
     fireEvent.click(screen.getByTestId("tool-traffic"));
     expect(screen.getByRole("dialog", { name: "Add traffic" })).not.toBeNull();
-    fireEvent.click(screen.getByTestId("traffic-source-native"));
-    expect(setAmbientTrafficExtension).toHaveBeenCalledWith(
-      "studio.ambientTraffic.provider.v1",
-      "native",
-    );
+    expect(screen.getByTestId("traffic-density-off").getAttribute("data-active")).toBe("true");
+    // Choosing a source on a document without a density also picks City, in one edit.
+    fireEvent.click(screen.getByTestId("traffic-source-sumo"));
+    expect(setAmbientTrafficExtensions).toHaveBeenCalledWith({
+      "studio.ambientTraffic.provider.v1": "sumo",
+      "studio.ambientTraffic.profile.v1": expect.objectContaining({ preset: "city", seed: "ambient-1" }),
+    });
     fireEvent.click(screen.getByTestId("traffic-density-heavy"));
     expect(setAmbientTrafficExtension).toHaveBeenLastCalledWith(
       "studio.ambientTraffic.profile.v1",

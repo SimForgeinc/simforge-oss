@@ -31,21 +31,23 @@ const REMOVED_PATHS = [
   'packages/examiner',
 ];
 
+// Asset generation (studio/app/lib/meshy, asset-gallery/generation-*, the
+// generations routes) was product-only when this list was written (46f0ffb1).
+// It returned in be94c0ab as a local bring-your-own-key feature (the Meshy key
+// lives in the OS vault via ai-providers/settings.ts) and has been maintained
+// in Studio since, so it is no longer listed here.
 const PRODUCT_ONLY_PATHS = [
   'studio/app/api/billing',
-  'studio/app/api/asset-gallery/generations',
   'studio/app/components/WorkspaceSwitcher.tsx',
   'studio/app/lib/admin',
   'studio/app/lib/auth/capabilities.ts',
-  'studio/app/lib/asset-gallery/generation-contracts.ts',
-  'studio/app/lib/asset-gallery/generation-runner.ts',
-  'studio/app/lib/asset-gallery/generation-storage.ts',
-  'studio/app/lib/asset-gallery/generation-store.ts',
   'studio/app/lib/db/workspace-audit-log-store.ts',
   'studio/app/lib/db/workspace-store.ts',
   'studio/app/lib/experimental-features.ts',
-  'studio/app/lib/meshy',
 ];
+
+/** Where a registered stack package may live: one directory under one of these. */
+const STACK_PACKAGE_ROOTS = ['packages', 'services'];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -79,14 +81,19 @@ export function verifyRepositoryNaming(root) {
     .filter((entry) => entry.isDirectory() && existsSync(join(root, 'packages', entry.name, 'package.json')))
     .map((entry) => entry.name)
     .sort();
-  const expectedPackages = stackPackages.map((item) => item.path.replace(/^packages\//u, '')).sort();
+  // packages/ holds only stack packages; services/ may also hold other
+  // workspaces (e.g. campaign runners), so only packages/ is compared exactly.
+  const expectedPackages = stackPackages
+    .filter((item) => item.path.startsWith('packages/'))
+    .map((item) => item.path.replace(/^packages\//u, ''))
+    .sort();
   if (JSON.stringify(actualPackages) !== JSON.stringify(expectedPackages)) {
     errors.push(`packages/ must contain exactly the registered stack packages: ${expectedPackages.join(', ')}`);
   }
   for (const item of stackPackages) {
-    const name = item.path.replace(/^packages\//u, '');
-    if (!item.path.startsWith('packages/') || name.includes('/')) {
-      errors.push(`${item.name} must live directly under packages/; found ${item.path}`);
+    const [root, name, ...rest] = String(item.path).split('/');
+    if (!STACK_PACKAGE_ROOTS.includes(root) || !name || rest.length > 0) {
+      errors.push(`${item.name} must live directly under ${STACK_PACKAGE_ROOTS.map((dir) => `${dir}/`).join(' or ')}; found ${item.path}`);
       continue;
     }
     if (item.name !== `@simforge-oss/${name}`) errors.push(`${item.path} must be registered as @simforge-oss/${name}`);

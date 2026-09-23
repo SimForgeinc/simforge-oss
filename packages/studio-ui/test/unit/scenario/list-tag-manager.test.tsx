@@ -276,7 +276,19 @@ describe("useScenarioTagManager", () => {
           /documents\/uscn_1\/rating/,
           (init) => {
             putBody = init?.body ? JSON.parse(String(init.body)) : { method: "DELETE" };
+            // The route answers a PUT with the stored rating and the new aggregate.
             return jsonResponse({
+              rating: {
+                documentId: "uscn_1",
+                revisionId: "usrv_9",
+                renderJobId: null,
+                raterUserId: "user_1",
+                score: 4,
+                comment: null,
+                reviewedVia: "browser",
+                createdAt: "2026-08-01T00:00:00.000Z",
+                updatedAt: "2026-08-01T00:00:00.000Z",
+              },
               aggregate: {
                 documentId: "uscn_1",
                 ratingCount: 1,

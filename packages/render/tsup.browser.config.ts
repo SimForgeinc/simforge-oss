@@ -26,6 +26,11 @@ export default defineConfig({
     'zod',
   ],
   external: ['zlib'],
+  // Bundle workspace packages from source (their `development` export), so
+  // the harness builds without a dist/ of every package it inlines.
+  esbuildOptions(options) {
+    options.conditions = ['development', ...(options.conditions ?? [])];
+  },
   clean: false,
   outDir: 'dist',
 });

@@ -88,44 +88,6 @@ export const styles = stylex.create({
     fontSize: text.sizeMeta,
     scrollbarWidth: "thin",
   },
-  // absolute inset-0 z-50 grid place-items-center bg-black/70 px-5 text-center backdrop-blur-md
-  absGridCentered2: {
-    position: "absolute",
-    inset: 0,
-    zIndex: "50",
-    display: "grid",
-    placeItems: "center",
-    backgroundColor: colors.scrimHeavy,
-    paddingLeft: space.s5,
-    paddingRight: space.s5,
-    textAlign: "center",
-    backdropFilter: motion.blurGlass,
-  },
-  // flex flex-col items-center gap-2
-  flexColCenter: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: space.s2,
-  },
-  // size-5 fill-[#E8E044] text-[#E8E044]
-  size5FillText: {
-    width: "1.25rem",
-    height: "1.25rem",
-    fill: colors.accent,
-    color: colors.accent,
-  },
-  // text-xs leading-snug text-white
-  xsWhiteSnug: {
-    fontSize: text.sizeXs,
-    lineHeight: text.lineSnug,
-    color: colors.ink,
-  },
-  // text-[10px] text-white/55
-  textTextWhite55: {
-    fontSize: text.sizeMicro,
-    color: colors.inkMuted,
-  },
 
   // grid place-items-center bg-black/15
   preview: {

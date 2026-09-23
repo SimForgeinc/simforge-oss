@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { GET, PUT } from "../app/api/local-objects/[bucket]/[...key]/route";
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import { getPresignedGetUrl, getPresignedPutUrl } from "../app/lib/s3/s3-presign";
+import { hostUrl } from "./host-url";
 
 const bytes = Buffer.from("simforge-local-object-roundtrip\n");
 const sha256 = createHash("sha256").update(bytes).digest("hex");
@@ -12,14 +13,14 @@ const context = {
 // Grants are signed root-relative; `new Request` needs an authority, and any
 // authority works because the signature deliberately does not cover it.
 const origin = "http://local-object-smoke.invalid";
-const putUrl = new URL(await getPresignedPutUrl(key, "text/plain", LOCAL_ARTIFACT_BUCKET, 60, sha256), origin);
+const putUrl = hostUrl(origin, await getPresignedPutUrl(key, "text/plain", LOCAL_ARTIFACT_BUCKET, 60, sha256));
 const putResponse = await PUT(new Request(putUrl, {
   method: "PUT",
   body: bytes,
   headers: { "content-type": "text/plain", "content-length": String(bytes.byteLength) },
 }), context);
 if (!putResponse.ok) throw new Error(`PUT failed: ${putResponse.status}`);
-const getUrl = new URL(await getPresignedGetUrl(key, LOCAL_ARTIFACT_BUCKET), origin);
+const getUrl = hostUrl(origin, await getPresignedGetUrl(key, LOCAL_ARTIFACT_BUCKET));
 const getResponse = await GET(new Request(getUrl), context);
 const received = new Uint8Array(await getResponse.arrayBuffer());
 const receivedSha256 = createHash("sha256").update(received).digest("hex");

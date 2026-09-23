@@ -1,34 +1,18 @@
 "use client";
 
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Square, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorDetailsPanel.stylex";
 import { focus } from "../../../stylex/recipes.stylex";
-
-const EditorConfigurationBlockedContext = createContext(false);
-
-export function EditorConfigurationBlockProvider({
-  blocked,
-  children,
-}: {
-  blocked: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <EditorConfigurationBlockedContext.Provider value={blocked}>
-      {children}
-    </EditorConfigurationBlockedContext.Provider>
-  );
-}
+import { useEditorPlayerMode } from "../player/player-mode";
+import { playerChrome } from "../player/player-mode.stylex";
 
 /** Shared right-side details surface for every selectable editor entity. */
 export function EditorDetailsPanel({
@@ -64,16 +48,20 @@ export function EditorDetailsPanel({
   testId: string;
 }) {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  const configurationBlocked = useContext(EditorConfigurationBlockedContext);
+  // While the simulation player owns the viewport the panel steps aside rather
+  // than unmounting, so it comes back with its scroll and open sections intact.
+  const hiddenByPlayer = useEditorPlayerMode();
 
   useEffect(() => setPortalRoot(
     window.document.querySelector<HTMLElement>("[data-editor-stage]") ?? window.document.body,
   ), []);
 
   useEffect(() => {
+    // A panel nobody can see answers no keys: Escape belongs to the player, and
+    // Delete must never remove the actor behind a hidden panel.
+    if (hiddenByPlayer) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (configurationBlocked) return;
         event.preventDefault();
         onClose();
         return;
@@ -91,10 +79,14 @@ export function EditorDetailsPanel({
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [configurationBlocked, onClose, onDelete]);
+  }, [hiddenByPlayer, onClose, onDelete]);
 
   if (!portalRoot) return null;
-  const panelStyles = stylex.props(styles.fixedFlexCol, styles.frame(height ?? "auto", maxHeight));
+  const panelStyles = stylex.props(
+    styles.fixedFlexCol,
+    styles.frame(height ?? "auto", maxHeight),
+    hiddenByPlayer && playerChrome.hidden,
+  );
 
   return createPortal(
     <aside
@@ -106,7 +98,9 @@ export function EditorDetailsPanel({
       data-testid={testId}
       id={id}
       role="dialog"
-      aria-disabled={configurationBlocked}
+      aria-hidden={hiddenByPlayer || undefined}
+      data-player-hidden={hiddenByPlayer ? "" : undefined}
+      inert={hiddenByPlayer || undefined}
     >
       <header {...stylex.props(styles.relTightRuleB)}>
         <div {...stylex.props(styles.preview, previewXstyle ?? styles.previewDefault)}>
@@ -127,21 +121,6 @@ export function EditorDetailsPanel({
       <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {children}
       </div>
-      {configurationBlocked ? (
-        <div
-          {...stylex.props(styles.absGridCentered2)}
-          data-testid="editor-details-simulation-blocker"
-          role="status"
-        >
-          <div {...stylex.props(styles.flexColCenter)}>
-            <Square aria-hidden="true" className={stylex.props(styles.size5FillText).className} />
-            <strong {...stylex.props(styles.xsWhiteSnug)}>
-              Cancel simulation first to configure
-            </strong>
-            <span {...stylex.props(styles.textTextWhite55)}>Press Esc to cancel simulation.</span>
-          </div>
-        </div>
-      ) : null}
     </aside>,
     portalRoot,
   );
