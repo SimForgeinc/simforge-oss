@@ -20,6 +20,7 @@ export * from './off-network.js';
 export * from './studio/body-color.js';
 export * from './studio/parked-cars.js';
 export * from './template-axis-clamp.js';
+export * from './empty-scenario.js';
 export { lowerSensor } from './perception.js';
 export { MapBundle } from './types.js';
 export type { InstalledMapBundle, MapBundleArtifacts } from './types.js';

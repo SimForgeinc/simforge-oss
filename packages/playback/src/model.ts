@@ -12,6 +12,8 @@ import {
   type StaticProp,
   type AmbientTrafficProvenance,
   type ControlIndication,
+  type TraceActorMetadata,
+  type TraceActorOrigin,
 } from '@simforge-oss/engine';
 import {
   getEntry,
@@ -58,6 +60,60 @@ export function resolvePlaybackCatalogId(
   };
 }
 
+/**
+ * The trace's origin rule for one actor: explicit `origin` first; otherwise
+ * tags `sumo`/`sumo:*` → `sumo`, tags `ambient`/`ambient:*` or membership in
+ * `header.ambientActorIds` → `native-ambient`, else `authored`. The same rule
+ * the engine and the render timeline apply to traces written before origins.
+ */
+export function traceActorOrigin(
+  trace: { readonly header: { readonly actorMetadata?: Readonly<Record<string, Pick<TraceActorMetadata, 'tags' | 'origin'>>>; readonly ambientActorIds?: readonly string[] } },
+  actorId: string,
+): TraceActorOrigin {
+  const metadata = trace.header.actorMetadata?.[actorId];
+  if (metadata?.origin) return metadata.origin;
+  const tags = metadata?.tags ?? [];
+  if (tags.some((tag) => tag === 'sumo' || tag.startsWith('sumo:'))) return 'sumo';
+  if (tags.some((tag) => tag === 'ambient' || tag.startsWith('ambient:'))) return 'native-ambient';
+  if (trace.header.ambientActorIds?.includes(actorId)) return 'native-ambient';
+  return 'authored';
+}
+
+/** A bundle actor's origin, deriving it from its tags when the bundle predates origins. */
+export function playbackActorOrigin(actor: Pick<PlaybackActor, 'id' | 'tags' | 'origin'>): TraceActorOrigin {
+  if (actor.origin) return actor.origin;
+  if (actor.tags.some((tag) => tag === 'sumo' || tag.startsWith('sumo:'))) return 'sumo';
+  if (actor.id.startsWith('ambient-') || actor.id.startsWith('ambient:')
+      || actor.tags.some((tag) => tag === 'ambient' || tag.startsWith('ambient:'))) {
+    return 'native-ambient';
+  }
+  return 'authored';
+}
+
+/** Background traffic (native ambient or SUMO): replayed, labelled as traffic, never authored or edited. */
+export function isTrafficPlaybackActor(actor: Pick<PlaybackActor, 'id' | 'tags' | 'origin'>): boolean {
+  return playbackActorOrigin(actor) !== 'authored';
+}
+
+/**
+ * Actors that exist only in the trace. Worker SUMO traffic is baked into the
+ * authoritative trace and never appears in the scenario input, so the
+ * authored-identity checks exclude it; anything else missing from the input
+ * is still an identity error.
+ */
+export function traceOnlyTrafficActorIds(input: Pick<SimScenarioInput, 'actors'>, trace: SimTrace): string[] {
+  const inputIds = new Set(input.actors.map((actor) => actor.id));
+  const ids = new Set([...(Array.isArray(trace.header.actorIds) ? trace.header.actorIds : []), ...Object.keys(trace.ticks.actors ?? {})]);
+  return [...ids]
+    .filter((id) => typeof id === 'string' && !inputIds.has(id))
+    .filter((id) => trace.header.actorMetadata?.[id] !== undefined)
+    .filter((id) => {
+      const origin = traceActorOrigin(trace, id);
+      return origin === 'sumo' || origin === 'native-ambient';
+    })
+    .sort();
+}
+
 export interface PlaybackSource {
   readonly instanceName: string;
   readonly traceName: string;
@@ -80,6 +136,13 @@ export interface ConcreteInstance {
 
 export interface PlaybackActor {
   readonly id: string;
+  /**
+   * Who authored the body (the trace's `origin`). Absent on bundles built
+   * before origins were carried: treat it as {@link playbackActorOrigin} does.
+   * `sumo` actors exist only in the authoritative trace, never in the
+   * scenario input; they are replayed from it and are never editable.
+   */
+  readonly origin?: TraceActorOrigin;
   /** Original OpenSCENARIO entity identity, when playback came from XOSC evidence. */
   readonly entityName?: string;
   readonly kind: SimActor['kind'];
@@ -323,6 +386,7 @@ export function parsePlaybackPair(
   }
 
   const trace = validateTrace(traceValue, source.traceName, issues);
+  let trafficIds: string[] = [];
   if (trace) {
     if (trace.header.inputHash !== recomputedHash) {
       issues.push(
@@ -352,7 +416,8 @@ export function parsePlaybackPair(
         `${source.traceName}: header.operationalConditions does not exactly match instance input.operationalConditions`,
       );
     }
-    validateActorIdentity(input, manifest, trace, source, issues);
+    trafficIds = traceOnlyTrafficActorIds(input, trace);
+    validateActorIdentity(input, manifest, trace, source, issues, trafficIds);
     validateCatalogSlotIdentity(
       raw['catalogSlot'],
       trace.header.catalogSlot,
@@ -364,10 +429,14 @@ export function parsePlaybackPair(
     );
     validatePropIdentity(input, trace, source, issues);
     validateTracks(input, trace, source.traceName, issues);
+    validateTrafficTracks(trafficIds, trace, source.traceName, issues);
     validateSignalTracks(input, trace, source.traceName, issues);
   }
 
-  const actors = mapPlaybackActors(input.actors, source.instanceName, issues);
+  const actors = [
+    ...mapPlaybackActors(input.actors, source.instanceName, issues, trace),
+    ...(trace ? mapTrafficActors(trafficIds, trace, source.traceName, issues) : []),
+  ];
   const props = mapPlaybackProps(input.props, source.instanceName, issues);
   const signals = mapPlaybackSignals(input, source.instanceName, issues);
   if (issues.length > 0 || !trace) throw new PlaybackLoadError('Scenario/trace identity validation failed', issues);
@@ -590,19 +659,26 @@ function validateActorIdentity(
   trace: SimTrace,
   source: PlaybackSource,
   issues: string[],
+  trafficIds: readonly string[] = [],
 ): void {
+  const traffic = new Set(trafficIds);
+  const authored = (ids: string[]) => ids.filter((id) => !traffic.has(id));
   const inputIds = sortedIds(input.actors.map((actor) => actor.id), `${source.instanceName}: input actor ids`, issues);
   const manifestActors = manifest['actors'];
   const manifestIds = Array.isArray(manifestActors)
     ? sortedIds(manifestActors.map((actor) => objectOf(actor)?.['id']), `${source.instanceName}: manifest actor ids`, issues)
     : (issues.push(`${source.instanceName}: manifest.actors must be an array`), []);
-  const headerIds = sortedIds(trace.header.actorIds, `${source.traceName}: header actor ids`, issues);
-  const trackIds = Object.keys(trace.ticks.actors).sort();
+  const headerIds = authored(sortedIds(trace.header.actorIds, `${source.traceName}: header actor ids`, issues));
+  const trackIds = authored(Object.keys(trace.ticks.actors).sort());
+  for (const id of trafficIds) {
+    if (!trace.header.actorIds.includes(id)) issues.push(`${source.traceName}: traffic actor ${id} is missing from header.actorIds`);
+    if (!trace.ticks.actors[id]) issues.push(`${source.traceName}: ticks.actors.${id} is missing`);
+  }
   compareIds(inputIds, manifestIds, 'instance input', 'manifest', issues);
   compareIds(inputIds, headerIds, 'instance input', 'trace header', issues);
   compareIds(inputIds, trackIds, 'instance input', 'trace tracks', issues);
   if (trace.header.actorMetadata) {
-    const metadataIds = Object.keys(trace.header.actorMetadata).sort();
+    const metadataIds = authored(Object.keys(trace.header.actorMetadata).sort());
     compareIds(inputIds, metadataIds, 'instance input', 'trace actor metadata', issues);
     for (const actor of input.actors) {
       const metadata = trace.header.actorMetadata[actor.id];
@@ -638,36 +714,7 @@ function validateTracks(
       issues.push(`${name}: ticks.actors.${actor.id} is missing`);
       continue;
     }
-    for (const channel of TRACE_CHANNELS) {
-      const values = track[channel];
-      if (!Array.isArray(values) || values.length !== count) {
-        issues.push(
-          `${name}: ticks.actors.${actor.id}.${channel} length ${Array.isArray(values) ? values.length : 'missing'} does not match ticks.t length ${count}`,
-        );
-        continue;
-      }
-      if (channel !== 'laneRsl' && values.some((value) => !Number.isFinite(value))) {
-        issues.push(`${name}: ticks.actors.${actor.id}.${channel} contains a non-finite value`);
-      }
-    }
-    const lateralOffset = track['lateralOffsetM'];
-    if (!Array.isArray(lateralOffset) || lateralOffset.length !== count) {
-      issues.push(
-        `${name}: ticks.actors.${actor.id}.lateralOffsetM length ${Array.isArray(lateralOffset) ? lateralOffset.length : 'missing'} does not match ticks.t length ${count}`,
-      );
-    } else if (lateralOffset.some((value) => !Number.isFinite(value))) {
-      issues.push(`${name}: ticks.actors.${actor.id}.lateralOffsetM contains a non-finite value`);
-    }
-    const motionDirection = track['motionDirection'];
-    if (motionDirection !== undefined) {
-      if (!Array.isArray(motionDirection) || motionDirection.length !== count) {
-        issues.push(
-          `${name}: ticks.actors.${actor.id}.motionDirection length ${Array.isArray(motionDirection) ? motionDirection.length : 'invalid'} does not match ticks.t length ${count}`,
-        );
-      } else if (motionDirection.some((value) => value !== -1 && value !== 1)) {
-        issues.push(`${name}: ticks.actors.${actor.id}.motionDirection must contain only -1 or 1`);
-      }
-    }
+    validateTrackChannels(actor.id, track, count, name, issues);
     if (actor.static) {
       for (const channel of STATIC_CHANNELS) {
         const values = track[channel];
@@ -691,10 +738,65 @@ function validateTracks(
   }
 }
 
+/** Every per-tick channel of one actor track has the clip's length and finite values. */
+function validateTrackChannels(
+  actorId: string,
+  track: Record<string, unknown>,
+  count: number,
+  name: string,
+  issues: string[],
+): void {
+  for (const channel of TRACE_CHANNELS) {
+    const values = track[channel];
+    if (!Array.isArray(values) || values.length !== count) {
+      issues.push(
+        `${name}: ticks.actors.${actorId}.${channel} length ${Array.isArray(values) ? values.length : 'missing'} does not match ticks.t length ${count}`,
+      );
+      continue;
+    }
+    if (channel !== 'laneRsl' && values.some((value) => !Number.isFinite(value))) {
+      issues.push(`${name}: ticks.actors.${actorId}.${channel} contains a non-finite value`);
+    }
+  }
+  const lateralOffset = track['lateralOffsetM'];
+  if (!Array.isArray(lateralOffset) || lateralOffset.length !== count) {
+    issues.push(
+      `${name}: ticks.actors.${actorId}.lateralOffsetM length ${Array.isArray(lateralOffset) ? lateralOffset.length : 'missing'} does not match ticks.t length ${count}`,
+    );
+  } else if (lateralOffset.some((value) => !Number.isFinite(value))) {
+    issues.push(`${name}: ticks.actors.${actorId}.lateralOffsetM contains a non-finite value`);
+  }
+  const motionDirection = track['motionDirection'];
+  if (motionDirection !== undefined) {
+    if (!Array.isArray(motionDirection) || motionDirection.length !== count) {
+      issues.push(
+        `${name}: ticks.actors.${actorId}.motionDirection length ${Array.isArray(motionDirection) ? motionDirection.length : 'invalid'} does not match ticks.t length ${count}`,
+      );
+    } else if (motionDirection.some((value) => value !== -1 && value !== 1)) {
+      issues.push(`${name}: ticks.actors.${actorId}.motionDirection must contain only -1 or 1`);
+    }
+  }
+}
+
+/** Trace-only traffic tracks carry the same channels as authored ones. */
+function validateTrafficTracks(
+  trafficIds: readonly string[],
+  trace: SimTrace,
+  name: string,
+  issues: string[],
+): void {
+  const count = trace.ticks.t.length;
+  for (const id of trafficIds) {
+    const track = trace.ticks.actors[id] as unknown as Record<string, unknown> | undefined;
+    if (track) validateTrackChannels(id, track, count, name, issues);
+  }
+}
+
 function mapPlaybackActors(
   inputActors: readonly SimActor[],
   name: string,
   issues: string[],
+  trace: SimTrace | null = null,
 ): PlaybackActor[] {
   const actors: PlaybackActor[] = [];
   for (const actor of inputActors) {
@@ -719,8 +821,12 @@ function mapPlaybackActors(
       issues.push(`${name}: actor ${actor.id} requests unknown Studio catalog model ${display(explicit)}`);
       continue;
     }
+    const origin = trace
+      ? traceActorOrigin(trace, actor.id)
+      : playbackActorOrigin({ id: actor.id, tags: actor.tags });
     actors.push({
       id: actor.id,
+      origin,
       kind: actor.kind,
       static: actor.static,
       tags: [...actor.tags],
@@ -732,6 +838,54 @@ function mapPlaybackActors(
         x: actor.initial.pose.x,
         z: actor.initial.pose.z,
         headingRad: actor.initial.pose.headingRad,
+      },
+    });
+  }
+  return actors;
+}
+
+/**
+ * Render identity of trace-only traffic, read from the trace's own actor
+ * metadata: its kind and dimensions, and its `catalog:*` tag when the trace
+ * carries a vehicle class. The trace is authoritative; nothing is invented.
+ */
+function mapTrafficActors(
+  trafficIds: readonly string[],
+  trace: SimTrace,
+  name: string,
+  issues: string[],
+): PlaybackActor[] {
+  const actors: PlaybackActor[] = [];
+  for (const id of trafficIds) {
+    const metadata = trace.header.actorMetadata?.[id];
+    const track = trace.ticks.actors[id];
+    if (!metadata || !track) continue;
+    const catalogTags = metadata.tags.filter((tag) => tag.startsWith('catalog:'));
+    if (catalogTags.length > 1) {
+      issues.push(`${name}: traffic actor ${id} has multiple catalog:* tags (${catalogTags.join(', ')})`);
+      continue;
+    }
+    const explicit = catalogTags[0]?.slice('catalog:'.length);
+    const visual = resolvePlaybackCatalogId(metadata.kind, explicit);
+    if (!visual) {
+      issues.push(`${name}: traffic actor ${id} requests unknown Studio catalog model ${display(explicit)}`);
+      continue;
+    }
+    const first = Math.max(0, track.present.findIndex((present) => Number(present) !== 0));
+    actors.push({
+      id,
+      origin: traceActorOrigin(trace, id),
+      kind: metadata.kind,
+      static: metadata.static,
+      tags: [...metadata.tags],
+      catalogId: visual.catalogId,
+      modelBasis: visual.modelBasis,
+      dims: { l: metadata.dims.l, w: metadata.dims.w, h: metadata.dims.h },
+      initial: {
+        x: Number(track.x[first] ?? 0),
+        // Raw trace tracks are OpenDRIVE-local (y = -z).
+        z: -Number(track.y[first] ?? 0),
+        headingRad: Number(track.headingRad[first] ?? 0),
       },
     });
   }

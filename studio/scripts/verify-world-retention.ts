@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { verifyWorldNavigation } from './verify-world-navigation';
 import type {} from '../../packages/viewer/src/viewer-diagnostics';
+import { hostUrl } from './host-url';
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 const root = args.get('root'), mapId = args.get('map'), otherId = args.get('other-map'), output = args.get('out');
 const port = Number(args.get('port'));
@@ -26,7 +27,7 @@ const out = resolve(output);
 assert(!out.startsWith(`${resolve(root)}/`), 'write borrowed-fixture evidence outside its root');
 await mkdir(out, { recursive: true });
 const api = async <T>(path: string, body?: unknown): Promise<T> => {
-  const response = await fetch(new URL(path, base), { method: body === undefined ? 'GET' : 'POST',
+  const response = await fetch(hostUrl(base, path), { method: body === undefined ? 'GET' : 'POST',
     headers: { authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);

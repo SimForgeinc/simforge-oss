@@ -4,9 +4,9 @@ import { Ban, Building2, Car, Gauge, Network, Truck } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
-  AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
   ambientTrafficProfileForEditor,
   ambientTrafficProviderFromExtensions,
+  ambientTrafficSourceSelection,
   profileForPreset,
   type AmbientTrafficProviderId,
   type SumoTrafficStatus,
@@ -91,15 +91,16 @@ export function AddTrafficPanel({
             return (
               <PanelTile
                 active={provider === choice.value}
-                detail={choice.value === "sumo" && provider === "sumo" ? `preview ${phase}` : choice.detail}
+                detail={provider === choice.value && choice.value !== "off"
+                  ? sourceDetail(choice.value, profile.preset, phase)
+                  : choice.detail}
                 disabled={blocked}
                 icon={<Icon aria-hidden="true" size={22} strokeWidth={1.6} />}
                 index={index}
                 key={choice.value}
                 label={choice.label}
-                onChoose={() => document.setAmbientTrafficExtension(
-                  AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-                  choice.value,
+                onChoose={() => document.setAmbientTrafficExtensions(
+                  ambientTrafficSourceSelection(document.data, choice.value),
                 )}
                 testId={`traffic-source-${choice.value}`}
                 title={blocked
@@ -153,6 +154,12 @@ export function AddTrafficPanel({
   );
 }
 
+/** The active source tile names its density, so SUMO never reads as on while generating nothing. */
+function sourceDetail(provider: AmbientTrafficProviderId, preset: string, phase: string): string {
+  const density = DENSITY_CHOICES.find((choice) => choice.value === preset)?.label ?? "Custom";
+  return provider === "sumo" ? `${density} · preview ${phase}` : `${density} density`;
+}
+
 const styles: Record<string, CSSProperties> = {
   unavailable: { padding: "10px 0", color: "#8d97a5", fontSize: 10, lineHeight: 1.5 },
   note: { margin: "0 0 14px", padding: "7px 9px", borderLeft: "2px solid rgba(232,224,68,.5)", color: "#9aa2ad", fontSize: 9, lineHeight: 1.4 },
@@ -179,9 +186,8 @@ export function trafficSearchResults(
       group: "Traffic",
       icon: <Icon aria-hidden="true" size={22} strokeWidth={1.6} />,
       active: provider === choice.value,
-      apply: () => document.setAmbientTrafficExtension(
-        AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-        choice.value,
+      apply: () => document.setAmbientTrafficExtensions(
+        ambientTrafficSourceSelection(document.data, choice.value),
       ),
     });
   }
