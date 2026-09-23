@@ -1,4 +1,7 @@
 import { queryRows } from "@/app/lib/db/data-api";
+import {
+  BROWSER_DERIVATIVE_MEMBERS_JOIN_SQL, boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, type MapDerivativeMemberRow,
+} from "@/app/lib/scenario/map-derivatives";
 
 /**
  * Verified metadata of the maps this installation may serve: every immutable
@@ -62,6 +65,7 @@ type MemberRow = {
 
 type MapRow = {
   id: string;
+  derivatives?: unknown;
   provenance_kind: string | null;
   provenance_origin: string | null;
   provenance_visibility: string | null;
@@ -101,7 +105,8 @@ async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
        mv.descriptor->'provenance'->>'origin' AS provenance_origin,
        mv.descriptor->'provenance'->>'visibility' AS provenance_visibility,
        mv.descriptor->>'registryReleaseDigest' AS registry_release_digest,
-       ns.canonical_digest
+       ns.canonical_digest,
+       ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives
      FROM simforge.map_versions mv
      LEFT JOIN simforge.native_map_asset_sets ns ON ns.id = mv.native_map_asset_set_id
        AND ns.workspace_id = mv.workspace_id AND ns.asset_set_state = 'available'
@@ -130,15 +135,51 @@ async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
     { map_version_id: mapVersionId },
   )]);
   const downloaded = map.provenance_kind === CLOUD_DOWNLOAD_PROVENANCE;
+  const browser = memberMap(browserRows);
+  // Browser derivatives a backfill bound to this version (browser texture
+  // tiers and packs, map-derivatives.ts) are served beside the closure; the
+  // closure's own members always win.
+  for (const [path, member] of await boundBrowserDerivativeMembers(mapVersionId, map.derivatives)) {
+    if (!browser.has(path)) browser.set(path, member);
+  }
   return {
     mapVersionId,
     access: downloaded ? (map.provenance_visibility === "public" ? "public" : "cloud") : "local",
     origin: downloaded ? map.provenance_origin : null,
     registryReleaseDigest: map.registry_release_digest,
     canonicalDigest: map.canonical_digest,
-    browser: memberMap(browserRows),
+    browser,
     semantic: memberMap(nativeRows),
   };
+}
+
+/**
+ * Members of a version's bound browser derivative sets, proven complete.
+ * An incomplete or malformed binding serves nothing and says so (the viewer
+ * then reports its tier/pack as missing).
+ */
+async function boundBrowserDerivativeMembers(mapVersionId: string, descriptor: unknown): Promise<Map<string, RegistryMember>> {
+  let bindings;
+  try {
+    bindings = boundMapDerivatives(descriptor, "browser");
+  } catch (error) {
+    console.error(JSON.stringify({ event: "map.browser_derivative_invalid", mapVersionId, error: error instanceof Error ? error.message : String(error) }));
+    return new Map();
+  }
+  if (bindings.length === 0) return new Map();
+  const rows = await queryRows<MapDerivativeMemberRow & MemberRow>(
+    `SELECT ds.id AS set_id, dm.relative_path, db.sha256, db.byte_length, db.media_type, db.storage_bucket, db.storage_key
+     FROM simforge.map_versions mv ${BROWSER_DERIVATIVE_MEMBERS_JOIN_SQL}
+     WHERE mv.id = :map_version_id`,
+    { map_version_id: mapVersionId },
+  );
+  try {
+    derivativeMembers(bindings, rows);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "map.browser_derivative_incomplete", mapVersionId, error: error instanceof Error ? error.message : String(error) }));
+    return new Map();
+  }
+  return memberMap(rows);
 }
 
 /**

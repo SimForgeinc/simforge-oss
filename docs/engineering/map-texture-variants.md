@@ -108,7 +108,44 @@ content-addressed chunks of about 16 MB:
   by member. This is logged as `[map-pack]` and reported in
   `getStats().loadDiagnostics.mapPack`.
 
-Build them with the web stage (`webStage` runs `buildBrowserPacks` after the
-tiers) or, for an installed map, with
-`pnpm maps:browser-packs -- --map <id> --source-root <map root> --output-root <overlay>`.
 Rebuilds are byte-identical.
+
+### Where they are built
+
+- **Ingest.** The web stage cooks every texture product in one stage,
+  `cookMapTextures` (`packages/map-pipeline/src/index.ts`): the browser tiers,
+  then the browser packs, then (for the native closure) `textures-full-bc7`.
+  Every map the pipeline builds therefore carries all eight browser tiers and
+  their packs.
+- **Installed map.**
+  `pnpm maps:browser-packs -- --map <id> --source-root <map root> --output-root <overlay>`.
+- **Published map versions** (`derived/browser-variants`,
+  `simforge.map-browser-variants.v1`, `packages/map-pipeline/src/browser-variants.ts`).
+  A published closure is immutable, and its `3d/variants/manifest.json` is a
+  simulation member, so a backfill runs the same builders into an overlay:
+  - The new files keep their natural paths.
+  - The complete envelope (the closure's own entries plus the added tiers and
+    `browser-pack:*` entries) goes to `derived/browser-variants/manifest.json`,
+    with `buildKey`, `revision` and `added`.
+  - The build key covers every input member digest (`3d/**` except
+    `3d/runtime/`, and `images/*.ktx2`) plus the builder fingerprint.
+  - SimCloud `reconcile-map-derivatives.ts --derivative browser-variants`
+    publishes it as a derivative set in the browser asset tables
+    (`browser_asset_sets`, contract `simforge.map-derivative-set.v1`) and binds
+    it through `descriptor.browserVariants`, the same way as the native
+    derivatives. The members it publishes are the envelope, the tier indexes,
+    the pack indexes and the pack chunks. The tiers' individual
+    `3d/variants/objects/*.ktx2` are left out (`--with-tier-objects` adds
+    them), because every added tier has its pack and a packed tier reads
+    nothing outside it.
+  - The map registry (`loadRegisteredMap`) serves the bound members beside the
+    closure; the closure's own member wins on any shared path. An incomplete
+    or malformed binding serves none of its members and is logged
+    (`map.browser_derivative_incomplete` / `map.browser_derivative_invalid`). The viewer then reads the closure's
+    own envelope and reports the missing tier and pack in
+    `loadDiagnostics.mapPack`.
+  - Closures that already carry packs are `not-applicable`. Nothing a
+    simulation reads is replaced.
+  - Coarse vegetation cells (`tiles/veg_*.lod<k>.glb`, built by the web stage
+    from `derived/geometry-lod`) change `3d/manifest.json`, so they reach
+    newly built maps only. They are not backfilled.

@@ -29,6 +29,7 @@ import {
   workerPrewarmFeatures,
 } from "../workers-prewarm-store";
 import { CONTROL_FEATURE_PREWARM_DERIVATIVES, PrewarmManifestResponseSchema } from "@simforge-oss/render";
+import { getRegisteredMap, invalidateRegisteredMap } from "../../cloud/map-registry";
 
 process.env[LOCAL_HOST_TOKEN_ENV] = "test-local-host-token";
 
@@ -380,6 +381,39 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [lodBinSha, lodManifestSha])).downloads).sort(), [lodManifestSha, lodBinSha].sort());
   await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'geometryLod' WHERE id = 'usmapv_prewarm'`);
   assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [lodBinSha])).downloads), [], "an unbound derivative is not signed");
+
+  // A browser derivative (tiers + packs, map-derivatives.ts) extends the
+  // registry's browser member map, so the map asset gateway serves it; the
+  // closure's own members win, and an incomplete set serves nothing.
+  const envelopeSha = DIGEST("a").replace(/^a/, "b"), packSha = DIGEST("c").replace(/^c/, "d");
+  for (const [id, sha, bytes] of [["usblob_env", envelopeSha, 700], ["usblob_pack", packSha, 16_000_000]] as const) {
+    await execute(
+      `INSERT INTO simforge.browser_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state)
+       VALUES (:id, 'local-artifacts', :key, :sha256, :bytes, 'application/octet-stream', 'verified')`,
+      { id, key: `blobs/sha256/${sha.slice(0, 2)}/${sha}`, sha256: sha, bytes },
+    );
+  }
+  await execute(
+    `INSERT INTO simforge.browser_asset_sets (id, workspace_id, map_version_id, contract_version, closure_sha256, object_count, byte_length, asset_set_state)
+     VALUES ('usbset_variants', :workspace_id, 'usmapv_prewarm', 'simforge.map-derivative-set.v1', :closure, 2, 16000700, 'available')`,
+    { workspace_id: LOCAL_WORKSPACE_ID, closure: DIGEST("e") },
+  );
+  for (const [path, blob] of [["derived/browser-variants/manifest.json", "usblob_env"], ["3d/packs/objects/x.bin", "usblob_pack"]] as const) {
+    await execute(`INSERT INTO simforge.browser_asset_members (asset_set_id, relative_path, blob_id, role) VALUES ('usbset_variants', :path, :blob, 'texture')`, { path, blob });
+  }
+  const browserBinding = (objectCount: number) => JSON.stringify({ state: "ready", schema: "simforge.map-browser-variants.v1", buildKey: DIGEST("4"), manifestSha256: envelopeSha, assetSetId: "usbset_variants", objectCount });
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('browserVariants', CAST(:binding AS jsonb)) WHERE id = 'usmapv_prewarm'`, { binding: browserBinding(2) });
+  invalidateRegisteredMap("usmapv_prewarm");
+  const registered = await getRegisteredMap("usmapv_prewarm");
+  assert.equal(registered?.browser.get("derived/browser-variants/manifest.json")?.sha256, envelopeSha);
+  assert.equal(registered?.browser.get("3d/packs/objects/x.bin")?.byteLength, 16_000_000);
+  // Browser derivatives never reach the native lease or prewarm digest.
+  assert.equal((await listPrewarmSets(new Set([CONTROL_FEATURE_PREWARM_DERIVATIVES]))).sets[0]!.derivativesSha256, undefined);
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('browserVariants', CAST(:binding AS jsonb)) WHERE id = 'usmapv_prewarm'`, { binding: browserBinding(3) });
+  invalidateRegisteredMap("usmapv_prewarm");
+  assert.equal((await getRegisteredMap("usmapv_prewarm"))?.browser.has("3d/packs/objects/x.bin"), false, "an incomplete browser derivative is not served");
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'browserVariants' WHERE id = 'usmapv_prewarm'`);
+  invalidateRegisteredMap("usmapv_prewarm");
 
   // Only digests of that published set are signed.
   const signed = await signPrewarmBlobs("usnset_prewarm", [DIGEST("a"), DIGEST("e"), "not-a-digest"]);

@@ -29,6 +29,8 @@ export {
   TEXTURES_FULL_BC7_DIR, TEXTURES_FULL_BC7_ID, textureVariantBuildKey, textureVariantFingerprint, textureVariantManifestSchema,
 } from './texture-variant.js';
 export type { BuildTextureVariantOptions, GpuVariantTool, TextureVariantManifest, TextureVariantResult } from './texture-variant.js';
+export { browserVariantInput, browserVariantsBuildKey, browserVariantsFingerprint, buildBrowserVariants, BROWSER_VARIANTS_DIR, BROWSER_VARIANTS_REVISION, BROWSER_VARIANTS_SCHEMA, materializeSourceRoot } from './browser-variants.js';
+export type { BrowserVariantsManifest } from './browser-variants.js';
 export { composeNativeTextureClosure } from './native-texture-closure.js';
 export * from './geometry-lod/index.js';
 export { substituteLods } from './geometry-lod/substitute.js';
@@ -185,6 +187,8 @@ export interface DeriveClosuresOptions {
   ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
   /** See `RunMapPipelineOptions.texturesFullBc7`. */
   texturesFullBc7?: false | { tool?: string };
+  /** Resolved by `deriveClosures` so the web stage's texture cooking builds the native tier too. */
+  gpuVariantTool?: Awaited<ReturnType<typeof resolveGpuVariantTool>>;
 }
 
 function registryArtifact(stage: ClosureStageResult): RegistryClosureArtifact {
@@ -371,8 +375,8 @@ export async function geometryLodStage(scene: { closureDigest: string; outputDir
  * `3d/manifest.json`), cached by its content address so an unrelated closure
  * change never re-transcodes thousands of textures.
  */
-async function texturesFullBc7Stage(contentDir: string, workDir: string, tool: Awaited<ReturnType<typeof resolveGpuVariantTool>>): Promise<string> {
-  const master = await readFile(path.join(contentDir, 'master.gltf'));
+async function texturesFullBc7Stage(masterPath: string, contentDir: string, workDir: string, tool: Awaited<ReturnType<typeof resolveGpuVariantTool>>): Promise<string> {
+  const master = await readFile(masterPath);
   const sourceManifestSha256 = (await hashFile(path.join(contentDir, '3d', 'manifest.json'))).sha256;
   const images: Record<string, string> = {};
   for (const uri of masterKtx2Images(JSON.parse(master.toString('utf8')))) images[uri] = (await hashFile(path.join(contentDir, uri))).sha256;
@@ -425,14 +429,39 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await mkdir(path.join(contentDir, '3d', 'runtime'), { recursive: true });
     await cp(decoderJs, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.js'));
     await cp(decoderWasm, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.wasm'));
-    await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}) });
-    // One read per few megabytes instead of one per member: the browser's
-    // per-tier packs (streaming order, ingest albedo classification).
-    await buildBrowserPacks({ sourceRoot: contentDir });
+    await cookMapTextures({
+      contentDir,
+      ...(options.ktxBinDir ? { ktxBinDir: options.ktxBinDir } : {}),
+      ...(options.gpuVariantTool ? { fullBc7: { masterPath: path.join(master.outputDir, 'master.gltf'), workDir: options.workDir, tool: options.gpuVariantTool } } : {}),
+    });
     const stage = await finishStage('web', outputDir, 'web', keys, { toolFingerprint, viewerOnly: master.viewerOnly });
     return { ...stage, report };
   });
   return webRuntimeStage(master, geometry, options);
+}
+
+/**
+ * The map's one texture-cooking stage. From the master's UASTC KTX2 images it
+ * produces every GPU-ready texture derivative:
+ *
+ * - browser tiers `textures-{256,512}-{uastc,bc7,astc,etc2}` (zstd, prebuilt
+ *   mips) and the per-tier browser packs, into the web closure
+ *   (`3d/variants/*`, `3d/packs/*`);
+ * - with a GPU-variant tool, the native full-resolution tier
+ *   (`derived/textures-full-bc7/*`), cached by its content address outside the
+ *   web closure and pinned into the native closure by `deriveClosures`.
+ */
+export async function cookMapTextures(input: {
+  contentDir: string;
+  ktxBinDir?: string;
+  fullBc7?: { masterPath: string; workDir: string; tool: Awaited<ReturnType<typeof resolveGpuVariantTool>> };
+}): Promise<{ texturesFullBc7Dir?: string }> {
+  await buildTextureTiers({ sourceRoot: input.contentDir, ...(input.ktxBinDir ? { ktxBin: path.join(input.ktxBinDir, 'ktx') } : {}) });
+  // One read per few megabytes instead of one per member: the browser's
+  // per-tier packs (streaming order, ingest albedo classification).
+  await buildBrowserPacks({ sourceRoot: input.contentDir });
+  if (!input.fullBc7) return {};
+  return { texturesFullBc7Dir: await texturesFullBc7Stage(input.fullBc7.masterPath, input.contentDir, input.fullBc7.workDir, input.fullBc7.tool) };
 }
 
 /** Physics derivatives depend on topology, without invalidating render-cell encoding. */
@@ -516,9 +545,9 @@ export async function runMapPipeline(options: RunMapPipelineOptions): Promise<Ma
 
 /** The web tier for a master stage - whether just built or materialized from a registry. */
 export async function deriveClosures(master: MasterStageResult, options: DeriveClosuresOptions): Promise<MapPipelineResult> {
-  const web = await webStage(master, options);
   const texturesOption = options.texturesFullBc7 ?? (process.env['SIMFORGE_MAP_TEXTURES_FULL_BC7'] === 'skip' ? false : {});
   const gpuTool = texturesOption === false ? undefined : await resolveGpuVariantTool(texturesOption.tool);
+  const web = await webStage(master, { ...options, ...(gpuTool ? { gpuVariantTool: gpuTool } : {}) });
   // Pin the same immutable derivative objects into the native closure. Do not
   // mutate the cached master or create a second producer for the native path.
   const texturesKey = gpuTool ? `\0texturesFullBc7=${textureVariantFingerprint(gpuTool)}` : '';
@@ -543,7 +572,9 @@ export async function deriveClosures(master: MasterStageResult, options: DeriveC
       }
     }
     if (gpuTool) {
-      const variant = await texturesFullBc7Stage(contentDir, options.workDir, gpuTool);
+      // Cached by content address: the web stage's cooking produced it (or a
+      // cached web stage already had), so this is a lookup.
+      const variant = await texturesFullBc7Stage(path.join(master.outputDir, 'master.gltf'), contentDir, options.workDir, gpuTool);
       await copyMembers(variant, path.join(contentDir, ...TEXTURES_FULL_BC7_DIR.split('/')), await filesUnder(variant));
     }
     return finishStage('native-textures', outputDir, 'canonical', { inputDigest, toolFingerprint, cacheKey }, { master: true, viewerOnly: master.viewerOnly });
