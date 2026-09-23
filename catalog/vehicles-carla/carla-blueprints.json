@@ -1,0 +1,156 @@
+{
+  "carlaVersion": "0.10.0",
+  "source": "Content/Carla/Config/VehicleParameters.json + blueprint VehicleMesh",
+  "models": {
+    "vehicle_ambulance_ford": {
+      "blueprintId": "vehicle.ambulance.ford",
+      "blueprintClass": "BP_Ambulance",
+      "vehicleMesh": "SK_Ambulance"
+    },
+    "vehicle_bicycle_bh_crossbike": {
+      "blueprintId": "vehicle.bh.crossbike",
+      "blueprintClass": "BP_CrossBike",
+      "vehicleMesh": "SK_CrossBike"
+    },
+    "vehicle_bicycle_bh_crossbike_rider": {
+      "blueprintId": "vehicle.bh.crossbike",
+      "blueprintClass": "BP_CrossBike",
+      "vehicleMesh": "SK_CrossBike"
+    },
+    "vehicle_bicycle_diamondback_century": {
+      "blueprintId": "vehicle.diamondback.century",
+      "blueprintClass": "BP_RoadBike",
+      "vehicleMesh": "SK_RoadBike"
+    },
+    "vehicle_bicycle_diamondback_century_rider": {
+      "blueprintId": "vehicle.diamondback.century",
+      "blueprintClass": "BP_RoadBike",
+      "vehicleMesh": "SK_RoadBike"
+    },
+    "vehicle_bicycle_gazelle_omafiets": {
+      "blueprintId": "vehicle.gazelle.omafiets",
+      "blueprintClass": "BP_LeisureBike",
+      "vehicleMesh": "SK_LeisureBike"
+    },
+    "vehicle_bicycle_gazelle_omafiets_rider": {
+      "blueprintId": "vehicle.gazelle.omafiets",
+      "blueprintClass": "BP_LeisureBike",
+      "vehicleMesh": "SK_LeisureBike"
+    },
+    "vehicle_bus_mitsubishi_fusorosa": {
+      "blueprintId": "vehicle.fuso.mitsubishi",
+      "blueprintClass": "BP_MitsubishiFusoRosa",
+      "vehicleMesh": "SK_MitsubishiFusoRosa"
+    },
+    "vehicle_coupe_audi_tt": {
+      "blueprintId": "vehicle.ue4.audi.tt",
+      "blueprintClass": "BP_AudiTT",
+      "vehicleMesh": "SK_AudiTT"
+    },
+    "vehicle_coupe_ford_mustang": {
+      "blueprintId": "vehicle.ue4.ford.mustang",
+      "blueprintClass": "BP_Mustang",
+      "vehicleMesh": "SK_Mustang"
+    },
+    "vehicle_coupe_mercedes_c_2020": {
+      "blueprintId": "vehicle.ue4.mercedes.ccc",
+      "blueprintClass": "BP_MercedesCCC",
+      "vehicleMesh": "SK_MercedesCCC"
+    },
+    "vehicle_firetruck_actros": {
+      "blueprintId": "vehicle.firetruck.actors",
+      "blueprintClass": "BP_ActrosFiretruck",
+      "vehicleMesh": "SK_ActrosFiretruck"
+    },
+    "vehicle_hatchback_mini_cooper": {
+      "blueprintId": "vehicle.mini.cooper",
+      "blueprintClass": "BP_MiniCooper",
+      "vehicleMesh": "SK_MiniCooper"
+    },
+    "vehicle_minivan_bmw_gran_tourer": {
+      "blueprintId": "vehicle.ue4.bmw.grantourer",
+      "blueprintClass": "BP_BmwGrandTourer",
+      "vehicleMesh": "SK_BMWGranTourer"
+    },
+    "vehicle_motorcycle_harley": {
+      "blueprintId": "vehicle.harley.lowrider",
+      "blueprintClass": "BP_Harley",
+      "vehicleMesh": "SK_Harley"
+    },
+    "vehicle_motorcycle_harley_rider": {
+      "blueprintId": "vehicle.harley.lowrider",
+      "blueprintClass": "BP_Harley",
+      "vehicleMesh": "SK_Harley"
+    },
+    "vehicle_motorcycle_kawasaki_ninja": {
+      "blueprintId": "vehicle.kawasaki.ninja",
+      "blueprintClass": "BP_KawasakiNinja",
+      "vehicleMesh": "SK_KawasakiNinja"
+    },
+    "vehicle_motorcycle_kawasaki_ninja_rider": {
+      "blueprintId": "vehicle.kawasaki.ninja",
+      "blueprintClass": "BP_KawasakiNinja",
+      "vehicleMesh": "SK_KawasakiNinja"
+    },
+    "vehicle_motorcycle_yamaha_yzf": {
+      "blueprintId": "vehicle.yamaha.yzf",
+      "blueprintClass": "BP_Yamaha",
+      "vehicleMesh": "SK_Yamaha"
+    },
+    "vehicle_motorcycle_yamaha_yzf_rider": {
+      "blueprintId": "vehicle.yamaha.yzf",
+      "blueprintClass": "BP_Yamaha",
+      "vehicleMesh": "SK_Yamaha"
+    },
+    "vehicle_police_dodge_charger": {
+      "blueprintId": "vehicle.dodgecop.charger",
+      "blueprintClass": "BP_DodgeChargerCop",
+      "vehicleMesh": "SK_DodgeChargerCop"
+    },
+    "vehicle_scooter_vespa": {
+      "blueprintId": "vehicle.vespa.zx125",
+      "blueprintClass": "BP_Vespa",
+      "vehicleMesh": "SK_Vespa"
+    },
+    "vehicle_scooter_vespa_rider": {
+      "blueprintId": "vehicle.vespa.zx125",
+      "blueprintClass": "BP_Vespa",
+      "vehicleMesh": "SK_Vespa"
+    },
+    "vehicle_sedan_chevrolet_impala": {
+      "blueprintId": "vehicle.ue4.chevrolet.impala",
+      "blueprintClass": "BP_ChevroletImpala",
+      "vehicleMesh": "SK_ChevroletImpala"
+    },
+    "vehicle_sedan_dodge_charger": {
+      "blueprintId": "vehicle.dodge.charger",
+      "blueprintClass": "BP_DodgeCharger",
+      "vehicleMesh": "SK_DodgeCharger"
+    },
+    "vehicle_sedan_ford_crown": {
+      "blueprintId": "vehicle.taxi.ford",
+      "blueprintClass": "BP_FordCrown02",
+      "vehicleMesh": "SK_FordCrown2024"
+    },
+    "vehicle_sedan_lincoln_mkz": {
+      "blueprintId": "vehicle.lincoln.mkz",
+      "blueprintClass": "BP_LincolnMKZ",
+      "vehicleMesh": "SK_LincolnMKZ"
+    },
+    "vehicle_suv_nissan_patrol": {
+      "blueprintId": "vehicle.nissan.patrol",
+      "blueprintClass": "BP_NissanPatrol",
+      "vehicleMesh": "SK_NissanPatrol"
+    },
+    "vehicle_truck_carlacola": {
+      "blueprintId": "vehicle.carlacola.actors",
+      "blueprintClass": "BP_CarlaCola",
+      "vehicleMesh": "SK_CarlaCola"
+    },
+    "vehicle_van_mercedes_sprinter": {
+      "blueprintId": "vehicle.sprinter.mercedes",
+      "blueprintClass": "BP_MercedesSprinter",
+      "vehicleMesh": "SK_MercedesSprinter"
+    }
+  }
+}
