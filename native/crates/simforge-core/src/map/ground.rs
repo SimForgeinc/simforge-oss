@@ -145,6 +145,7 @@ pub struct GroundSurface {
     cell_items: Vec<u32>,
     digest: String,
     bounds_mm: [i32; 4],
+    median_z_mm: i32,
 }
 
 fn read_u32(bytes: &[u8], at: usize) -> u32 {
@@ -221,6 +222,7 @@ impl GroundSurface {
             cell_items: Vec::new(),
             digest: sha256_bytes(bytes),
             bounds_mm: [0; 4],
+            median_z_mm: 0,
         };
         surface.build_grid();
         Ok(surface)
@@ -235,6 +237,10 @@ impl GroundSurface {
             max_y = max_y.max(v[1]);
         }
         self.bounds_mm = [min_x, min_y, max_x, max_y];
+        let mut z: Vec<i32> = self.vertices.iter().map(|v| v[2]).collect();
+        let middle = z.len() / 2;
+        z.select_nth_unstable(middle);
+        self.median_z_mm = z[middle];
         // Pad by the seam tolerance so a point just outside the outermost
         // triangle still finds it.
         let pad = (SEAM_TOLERANCE_M * 1000.0) as i64 + 1;
@@ -287,6 +293,12 @@ impl GroundSurface {
 
     pub fn triangle_count(&self) -> usize {
         self.triangles.len()
+    }
+
+    /// Median vertex elevation of the surface, metres: the map's reference
+    /// ground level (atmosphere anchor), never a body height.
+    pub fn median_z(&self) -> f64 {
+        self.median_z_mm as f64 / 1000.0
     }
 
     /// `[min_x, min_y, max_x, max_y]` of the surface, metres.

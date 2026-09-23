@@ -178,6 +178,8 @@ export interface SimulationMapClosure {
   readonly xodr: string;
   /** The exact `topology-index.json(.gz)` bytes the graph was built from (the timeline's height source input). */
   readonly topology: Uint8Array;
+  /** `derived/ground/ground-mesh.bin` when the version carries it: the engine grounds bodies on it and the timeline bakes from it. */
+  readonly ground: Uint8Array | null;
   readonly identity: MapClosureIdentity;
   readonly mapClosureDigest: string;
 }
@@ -254,6 +256,7 @@ function closureFromGraph(
     bundle,
     xodr: graph.xodr,
     topology,
+    ground: graph.ground,
     identity,
     mapClosureDigest: graph.closureDigest,
   };

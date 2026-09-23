@@ -32,6 +32,12 @@ export interface NativeActorState {
     readonly rotation: readonly [number, number, number, number];
   };
   readonly velocity: readonly [number, number, number];
+  /** Unwrapped wheel rotation (timeline `wheelSpinRad`); every wheeled actor on the timeline path. */
+  readonly wheelSpinRad?: number;
+  /** Four-wheelers: sprung-body attitude, applied to the model's `body` node only. */
+  readonly bodyAttitude?: { readonly pitchRad: number; readonly rollRad: number };
+  /** Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres, applied to the `wheel_*` nodes. */
+  readonly wheelDropM?: readonly [number, number, number, number];
 }
 
 export interface NativeSceneState {

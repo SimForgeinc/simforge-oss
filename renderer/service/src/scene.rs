@@ -51,6 +51,25 @@ pub struct ActorState {
     pub transform: ActorTransform,
     #[serde(default)]
     pub velocity: [f32; 3],
+    /// Unwrapped wheel rotation since spawn (timeline `wheelSpinRad`), every
+    /// wheeled actor on the timeline path: `odometerM = wheelSpinRad * 0.35`.
+    #[serde(rename = "wheelSpinRad", default)]
+    pub wheel_spin_rad: Option<f64>,
+    /// Four-wheelers: sprung-body attitude, applied to the model's `body`
+    /// node only (the transform carries road attitude, wheels stay down).
+    #[serde(rename = "bodyAttitude", default)]
+    pub body_attitude: Option<BodyAttitude>,
+    /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres.
+    #[serde(rename = "wheelDropM", default)]
+    pub wheel_drop_m: Option<[f32; 4]>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct BodyAttitude {
+    #[serde(rename = "pitchRad")]
+    pub pitch_rad: f32,
+    #[serde(rename = "rollRad")]
+    pub roll_rad: f32,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]

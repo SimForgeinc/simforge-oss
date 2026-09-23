@@ -41,13 +41,15 @@ function xodr(elevationB = 0.01, laneHeight = ''): string {
  * must be dropped) and a lamp post (unclassified, must be ignored). The
  * scene is y-up: local (x, y, z) is stored as (x, z, -y).
  */
-async function writeMaster(dir: string, z0: number, z1: number, options: { hole?: boolean } = {}): Promise<void> {
+async function writeMaster(dir: string, z0: number, z1: number, options: { hole?: boolean; halfWidth?: number } = {}): Promise<void> {
   const quad = (xs: number[], ys: number[], zs: number[]) => xs.map((x, i) => [x, zs[i]!, -ys[i]!]);
+  // Default: the 7 m lanes plus the 2.5 m overhang buffer each side.
+  const w = options.halfWidth ?? 6.5;
   const road = options.hole
-    ? [...quad([0, 40, 40, 0], [-4, -4, 4, 4], [z0, z0, z0, z0]), ...quad([60, 100, 100, 60], [-4, -4, 4, 4], [z1, z1, z1, z1])]
-    : quad([0, 100, 100, 0], [-4, -4, 4, 4], [z0, z1, z1, z0]);
-  const riser = quad([0, 100, 100, 0], [4, 4, 4, 4], [z0, z1, z1 + 0.15, z0 + 0.15]);
-  const post = quad([50, 50.2, 50.2, 50], [5, 5, 5.2, 5.2], [z0 + 5, z0 + 5, z0 + 5, z0 + 5]);
+    ? [...quad([0, 40, 40, 0], [-w, -w, w, w], [z0, z0, z0, z0]), ...quad([60, 100, 100, 60], [-w, -w, w, w], [z1, z1, z1, z1])]
+    : quad([0, 100, 100, 0], [-w, -w, w, w], [z0, z1, z1, z0]);
+  const riser = quad([0, 100, 100, 0], [w, w, w, w], [z0, z1, z1 + 0.15, z0 + 0.15]);
+  const post = quad([50, 50.2, 50.2, 50], [w + 1, w + 1, w + 1.2, w + 1.2], [z0 + 5, z0 + 5, z0 + 5, z0 + 5]);
   const meshes = [road, riser, post];
   const floats: number[] = [];
   const ints: number[] = [];
@@ -116,6 +118,7 @@ describe('ground derivative', () => {
     // Local y = +2 (north) maps to scene z = -2.
     expect(query.surfacesAt(50, 2)[0]!.z).toBeCloseTo(10.5, 9);
     expect(query.surfacesAt(50, 20)).toEqual([]);
+    expect(query.surfacesAt(50, 7)).toEqual([]);
     const bytes = encodeGroundMesh(surface);
     const decoded = decodeGroundMesh(bytes);
     expect([...decoded.vertices]).toEqual([...surface.vertices]);
@@ -139,6 +142,7 @@ describe('ground derivative', () => {
     const out = path.join(dir, 'derived', 'ground');
     const first = await buildGroundDerivative({ masterDir: dir, xodrPath: path.join(dir, 'map.xodr'), mapId: 'fixture', outputDir: out });
     expect(first.manifest.status).toBe('ok');
+    expect(first.manifest.flags).toEqual([]);
     expect(first.report.validation!.drivingCoverage).toBe(1);
     expect(first.report.validation!.dzAbsM.max).toBeLessThan(1e-3);
     const bytes = await readFile(path.join(out, 'ground-mesh.bin'));
@@ -153,11 +157,27 @@ describe('ground derivative', () => {
     await writeMaster(dir, 10, 10);
     await writeFile(path.join(dir, 'map.xodr'), xodr(0.01));
     const result = await buildGroundDerivative({ masterDir: dir, xodrPath: path.join(dir, 'map.xodr'), mapId: 'fixture', outputDir: path.join(dir, 'flagged') });
-    expect(result.manifest.status).toBe('xodr-disagrees');
+    expect(result.manifest.status).toBe('flagged');
+    expect(result.manifest.flags).toContain('xodr-disagrees');
     const road = result.report.validation!.flaggedRoads[0]!;
     expect(road.road).toBe('7');
     expect(road.worst.dzM).toBeCloseTo(1, 2);
     expect(result.manifest.warnings[0]).toMatch(/disagrees with the rendered road mesh on 1 road/);
+  });
+
+  it('flags holes within the overhang buffer beside driving lanes', async () => {
+    // Asphalt only as wide as the lanes: a truck's overhanging wheel stands
+    // on nothing (the Richmond U-turn class).
+    await writeMaster(dir, 10, 11, { halfWidth: 4 });
+    await writeFile(path.join(dir, 'map.xodr'), xodr(0.01));
+    const result = await buildGroundDerivative({ masterDir: dir, xodrPath: path.join(dir, 'map.xodr'), mapId: 'fixture', outputDir: path.join(dir, 'narrow') });
+    expect(result.manifest.status).toBe('flagged');
+    expect(result.manifest.flags).toEqual(['surface-holes']);
+    const holes = result.report.validation!.bufferHoles;
+    expect(holes.points).toBeGreaterThan(100);
+    expect(holes.clusters[0]!.roads).toEqual(['7']);
+    expect(Math.abs(holes.clusters[0]!.y)).toBeGreaterThan(4);
+    expect(result.manifest.warnings.some((w) => /hole\(s\) within 2.5 m of driving lanes/.test(w))).toBe(true);
   });
 
   it('fails the build when driving lanes have no rendered surface', async () => {

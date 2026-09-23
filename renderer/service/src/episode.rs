@@ -113,6 +113,9 @@ impl Episode {
                     color: desc.color.clone(), dims: desc.dims.map(|d| ActorDims { l: d.l as f32, w: d.w as f32, h: d.h as f32 }),
                     transform: ActorTransform { position: pose.position.map(|v| v as f32), rotation: pose.rotation.map(|v| v as f32) },
                     velocity: pose.velocity.map(|v| v as f32),
+                    wheel_spin_rad: pose.wheel_spin_rad,
+                    body_attitude: pose.body_attitude.map(|a| crate::scene::BodyAttitude { pitch_rad: a.pitch_rad as f32, roll_rad: a.roll_rad as f32 }),
+                    wheel_drop_m: pose.wheel_drop_m.map(|d| d.map(|v| v as f32)),
                 });
             }
             if !actors.iter().any(|a| a.id == ego_id && a.kind != "despawn") {

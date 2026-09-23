@@ -148,6 +148,7 @@ impl Simulation {
             seed: input.seed.clone(),
             map_id: input.map_id.clone(),
             engine_graph_digest: self.graph.topology_digest().to_owned(),
+            ground_digest: self.options.ground.as_ref().map(|g| g.digest().to_owned()),
             dt: self.dt,
             clip_seconds: input.clip_seconds,
             warmup_seconds: input.warmup_seconds,
@@ -305,6 +306,8 @@ pub struct LateralCommandState {
     pub pending: Option<PendingRetargetState>,
     pub side: Option<LaneChangeSide>,
     pub done: bool,
+    #[serde(default)]
+    pub origin_s: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -350,6 +353,8 @@ pub struct ActorState {
     pub position: Vec2,
     pub heading_rad: f64,
     pub present: bool,
+    #[serde(default)]
+    pub pending_present: Option<bool>,
     pub retired: bool,
     pub long_cmd: Option<LongitudinalCommand>,
     pub lat_cmd: Option<LateralCommandState>,
@@ -407,6 +412,13 @@ pub struct SimulationCheckpoint {
     /// Ids of live-mode spawns in registration order; their specs are part
     /// of `input.actors` and are re-registered after the document's actors.
     pub spawned_ids: Vec<String>,
+    /// Digest of the ground surface the checkpointed world stands on; a
+    /// restore must supply the same surface.
+    #[serde(default)]
+    pub ground_digest: Option<String>,
+    /// Per-actor contact state (registration order).
+    #[serde(default)]
+    pub contact: Vec<super::contact::ContactState>,
 }
 
 impl Simulation {
@@ -445,6 +457,7 @@ impl Simulation {
                 position: a.position,
                 heading_rad: a.heading_rad,
                 present: a.present,
+                pending_present: a.pending_present,
                 retired: a.retired,
                 long_cmd: a.long_cmd.clone(),
                 lat_cmd: a.lat_cmd.as_ref().map(|c| LateralCommandState {
@@ -463,6 +476,7 @@ impl Simulation {
                     }),
                     side: c.side,
                     done: c.done,
+                    origin_s: c.origin_s,
                 }),
                 until_by_axis: a
                     .until_by_axis
@@ -528,6 +542,8 @@ impl Simulation {
             doors: self.doors.clone(),
             arrival: self.arrival.clone(),
             spawned_ids: self.spawned.iter().map(|a| a.id.clone()).collect(),
+            ground_digest: self.options.ground.as_ref().map(|g| g.digest().to_owned()),
+            contact: self.contact.clone(),
         })
     }
 
@@ -545,6 +561,16 @@ impl Simulation {
                     "checkpoint graph digest {} does not match the supplied graph {}",
                     ckpt.graph_digest,
                     options.graph.topology_digest()
+                ),
+                Vec::new(),
+            ));
+        }
+        let supplied_ground = options.ground.as_ref().map(|g| g.digest().to_owned());
+        if ckpt.ground_digest != supplied_ground {
+            return Err(SimEngineError::new(
+                format!(
+                    "checkpoint ground digest {:?} does not match the supplied ground {:?}",
+                    ckpt.ground_digest, supplied_ground
                 ),
                 Vec::new(),
             ));
@@ -594,6 +620,19 @@ impl Simulation {
                 Vec::new(),
             ));
         }
+        if ckpt.ground_digest.is_some() {
+            if ckpt.contact.len() != sim.actors.len() {
+                return Err(SimEngineError::new(
+                    format!(
+                        "checkpoint carries {} contact states for {} actors",
+                        ckpt.contact.len(),
+                        sim.actors.len()
+                    ),
+                    Vec::new(),
+                ));
+            }
+            sim.contact = ckpt.contact.clone();
+        }
         sim.options.guards = ckpt.options.guards;
         sim.options.resolve_arrival = ckpt.options.resolve_arrival;
         let lane_of = |rsl: &Option<String>| rsl.as_deref().and_then(|r| graph.lane_id(r));
@@ -636,6 +675,7 @@ impl Simulation {
             a.position = state.position;
             a.heading_rad = state.heading_rad;
             a.present = state.present;
+            a.pending_present = state.pending_present;
             a.retired = state.retired;
             a.long_cmd = state.long_cmd.clone();
             a.lat_cmd = match &state.lat_cmd {
@@ -660,6 +700,7 @@ impl Simulation {
                     },
                     side: c.side,
                     done: c.done,
+                    origin_s: c.origin_s,
                 }),
             };
             a.until_by_axis.clear();

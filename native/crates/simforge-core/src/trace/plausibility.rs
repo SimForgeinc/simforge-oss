@@ -138,9 +138,16 @@ pub fn audit_motion_with(
         .map(String::as_str)
         .collect();
     let mut guard_stops: BTreeMap<&str, Vec<f64>> = BTreeMap::new();
+    let mut prescribed: BTreeMap<&str, Vec<(f64, f64)>> = BTreeMap::new();
     for event in &trace.events {
-        if let SimEvent::RoadDeparturePrevented { t, actor_id, .. } = event {
-            guard_stops.entry(actor_id.as_str()).or_default().push(*t);
+        match event {
+            SimEvent::RoadDeparturePrevented { t, actor_id, .. } => {
+                guard_stops.entry(actor_id.as_str()).or_default().push(*t);
+            }
+            SimEvent::PrescribedMotion { t, actor_id, until_t, .. } => {
+                prescribed.entry(actor_id.as_str()).or_default().push((*t, *until_t));
+            }
+            _ => {}
         }
     }
     let dt_nominal = trace.header.dt;
@@ -156,15 +163,29 @@ pub fn audit_motion_with(
         let crashed_at = trace.header.physics.crashes.get(id).map(|c| c.t);
         let is_ambient = ambient.contains(id.as_str());
         let explained = |at: f64| -> Option<String> {
-            guard_stops.get(id.as_str()).and_then(|stops| {
-                stops
-                    .iter()
-                    // The guard decides at `s`, publishes the held pose one
-                    // tick later, and the acceleration it zeroes shows up as
-                    // jerk the tick after that.
-                    .any(|&s| at >= s - 1e-9 && at <= s + 2.5 * dt_nominal)
-                    .then(|| "road_departure_prevented".to_owned())
-            })
+            guard_stops
+                .get(id.as_str())
+                .and_then(|stops| {
+                    stops
+                        .iter()
+                        // The guard decides at `s`, publishes the held pose one
+                        // tick later, and the acceleration it zeroes shows up as
+                        // jerk the tick after that.
+                        .any(|&s| at >= s - 1e-9 && at <= s + 2.5 * dt_nominal)
+                        .then(|| "road_departure_prevented".to_owned())
+                })
+                .or_else(|| {
+                    // An authored transition executes its shape exactly, steps
+                    // included; the motion it prescribes is explained by it (its
+                    // first effect shows one tick after it fires, and a jump's
+                    // jerk the tick after that).
+                    prescribed.get(id.as_str()).and_then(|windows| {
+                        windows
+                            .iter()
+                            .any(|&(from, until)| at >= from - 1e-9 && at <= until + 2.5 * dt_nominal)
+                            .then(|| "prescribed_motion".to_owned())
+                    })
+                })
         };
         let contact = |i: usize| -> bool {
             track

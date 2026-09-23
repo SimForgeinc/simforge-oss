@@ -360,12 +360,14 @@ function workerMap(map: MapEntry): ScenarioWorkerRequest['map'] {
     xodr: map.xodr,
     signals: map.signals,
     ...(map.ambientTurnVerdicts ? { ambientTurnVerdicts: map.ambientTurnVerdicts } : {}),
+    ...(map.ground && map.groundStatus ? { ground: map.ground } : {}),
     digests: {
       topology: map.artifacts.topologySha256,
       derivedTopology: map.artifacts.derivedTopologySha256,
       locations: map.artifacts.locationsSha256,
       xodr: map.artifacts.xodrSha256,
       signals: map.artifacts.signalsSha256,
+      ...(map.groundStatus ? { ground: map.groundStatus.sha256 } : {}),
     },
   };
 }

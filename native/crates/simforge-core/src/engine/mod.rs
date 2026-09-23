@@ -8,6 +8,7 @@
 //! [`Simulation::checkpoint`] / [`Simulation::restore`] for persistence.
 
 pub mod actor;
+pub mod contact;
 pub mod controllers;
 pub mod cornering;
 pub mod doors;
@@ -27,6 +28,7 @@ pub mod visibility;
 mod world;
 
 pub use actor::{ActorIndex, AxisId, InteractionIndex};
+pub use contact::{ContactGeometry, ContactState, GroundContext, SharedGround};
 pub use output::{
     ActorState, CheckpointOptions, LateralCommandState, PendingRetargetState, SimulationCheckpoint,
 };
