@@ -2586,22 +2586,16 @@ impl<'a> Materializer<'a> {
             }
             _ => 0.0,
         };
-        let window_end_s = match (&it.base.until, &it.base.trigger) {
-            (Some(t::Trigger::At { t: at }), _) => Some(eval_num(
+        // Only an explicit `until: at` bounds the clip. A `when` trigger's
+        // `byLatest` is the trigger's own deadline, resolved by the engine as
+        // `ifNever` says (fire or skip); turning it into a window end made the
+        // window gate skip before a deadline could ever fire
+        // (docs/engineering/openscenario-conformance.md F-03).
+        let window_end_s = match &it.base.until {
+            Some(t::Trigger::At { t: at }) => Some(eval_num(
                 Some(at),
                 &scope,
                 &format!("{path}.until.t"),
-                None,
-            )?),
-            (
-                _,
-                t::Trigger::When {
-                    by_latest: Some(b), ..
-                },
-            ) => Some(eval_num(
-                Some(b),
-                &scope,
-                &format!("{path}.trigger.byLatest"),
                 None,
             )?),
             _ => None,
