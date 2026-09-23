@@ -11,6 +11,7 @@ import {
   createFixedSchedules,
   hashFile,
   type RenderEngineAdapter,
+  CONTROL_FEATURES_V1,
 } from "@simforge-oss/render";
 
 import type {
@@ -77,6 +78,8 @@ export async function executeEngine(
     workspace: request.workspace,
     signal: request.signal,
     reportProgress: request.reportProgress ?? (async () => undefined),
+    // Same-version consumer: every current output field is understood.
+    controlFeatures: new Set(CONTROL_FEATURES_V1),
   }));
   stageTimingsMs.engineExecute = performance.now() - engineStarted;
   if (runtimeManifest.intentSha256 !== intentSha256) {

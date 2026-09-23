@@ -330,6 +330,7 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.equal("jobId" in lease ? lease.jobId : null, job.id);
   assert.ok("lease" in lease && lease.lease.fenceToken.length >= 32);
   assert.ok("intent" in lease && "intentSha256" in lease);
+  assert.ok(!("controlFeatures" in lease), "a worker that never declared controlFeatures gets the baseline lease shape its strict schema accepts");
   assert.equal(hashRenderIntent(lease.intent), lease.intentSha256, "the worker must accept the leased multi-camera intent digest");
   // Large-map intents exceed one Data API response, so the lease reads them in
   // slices; a slice far smaller than the intent must reassemble it exactly.

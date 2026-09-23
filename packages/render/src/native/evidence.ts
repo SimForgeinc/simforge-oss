@@ -137,11 +137,11 @@ export type NativeRunDiagnostics = z.infer<typeof NativeRunDiagnosticsSchema>;
  */
 export class NativeEvidenceSchemaError extends Error {
   readonly verificationDetails: {
-    document: 'manifest' | 'diagnostics';
+    document: string;
     issues: Array<{ path: string; code: string; message: string }>;
   };
 
-  constructor(document: 'manifest' | 'diagnostics', issues: readonly z.core.$ZodIssue[]) {
+  constructor(document: string, issues: readonly z.core.$ZodIssue[]) {
     super(`native_${document}_schema_invalid`);
     this.name = 'NativeEvidenceSchemaError';
     this.verificationDetails = {
@@ -191,7 +191,7 @@ function withoutKeys(value: unknown, path: readonly PropertyKey[], keys: readonl
  * missing field, a wrong type, a literal or protocol mismatch, a failed
  * cross-field check) still rejects, with the real issues attached.
  */
-function parseForHost<T>(schema: z.ZodType<T>, document: 'manifest' | 'diagnostics', input: unknown): HostParsedEvidence<T> {
+export function parseToleratingUnknownKeys<T>(schema: z.ZodType<T>, input: unknown, document = 'evidence'): HostParsedEvidence<T> {
   let candidate = input;
   const ignoredFields: string[] = [];
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -211,11 +211,11 @@ function parseForHost<T>(schema: z.ZodType<T>, document: 'manifest' | 'diagnosti
 }
 
 export function parseNativeRenderManifestForHost(input: unknown): HostParsedEvidence<NativeRenderManifest> {
-  return parseForHost(NativeRenderManifestSchema, 'manifest', input);
+  return parseToleratingUnknownKeys(NativeRenderManifestSchema, input, 'manifest');
 }
 
 export function parseNativeRunDiagnosticsForHost(input: unknown): HostParsedEvidence<NativeRunDiagnostics> {
-  return parseForHost(NativeRunDiagnosticsSchema, 'diagnostics', input);
+  return parseToleratingUnknownKeys(NativeRunDiagnosticsSchema, input, 'diagnostics');
 }
 
 /** A reserved upload the host already verified against object storage. */
