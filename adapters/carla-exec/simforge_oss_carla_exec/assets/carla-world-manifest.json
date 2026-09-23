@@ -2949,6 +2949,680 @@
     "name": "Yale_St_Palo_Alto_CA.xodr",
     "sha256": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae"
    }
+  },
+  {
+   "carlaWorld": "Belmont_Office_Park_Belmont_CA",
+   "derivedFrom": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 82961,
+     "mtime": "2026-09-23T00:37:04.1562436590Z",
+     "name": "CHANGES.md",
+     "sha256": "ca5bb1c825c444ce085ef45dc67b009beee989036dcf4a236803062ecf8361fd"
+    },
+    {
+     "bytes": 303590,
+     "mtime": "2026-09-23T00:37:04.2762436540Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "d790fca91ed3c7b857be3d0a06c88aa3922c167db27c6ea892cf0d171a403234"
+    },
+    {
+     "bytes": 580130,
+     "mtime": "2026-09-23T00:37:04.4002436480Z",
+     "name": "refit-report.json",
+     "sha256": "48adf51ba609a033b79ab07466587500e0549e7ae8b95f7360d4340ff900a5fa"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "915dba7bfb3e090f092e1a677a5e5d0693169f183065173b033660c806652639",
+   "glb": null,
+   "reason": "its original Belmont_Office_Park_Belmont_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 3533,
+      "laneHeight": 862,
+      "lateralProfile": 2147
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.9310263901482081,
+     "maxSurfaceChangeM": 1.0632898475284724,
+     "roadsRefit": 548
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Belmont_Office_Park_Belmont_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 8704109,
+    "mtime": "2026-09-23T00:37:04.0482436630Z",
+    "name": "Belmont_Office_Park_Belmont_CA.xodr",
+    "sha256": "234c9ffd76dff2d61c9d4324ada21e185cfd3cfb66a762727a87f89e007a9d50"
+   }
+  },
+  {
+   "carlaWorld": "Di_Rosa_SF",
+   "derivedFrom": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 63748,
+     "mtime": "2026-09-23T00:37:04.5322436430Z",
+     "name": "CHANGES.md",
+     "sha256": "3be54a101005e989056903d7c86328f68a167d8caf1b6d6ae908a3fa83c1f912"
+    },
+    {
+     "bytes": 386526,
+     "mtime": "2026-09-23T00:37:04.9002436270Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "6f9a303e12f2e0d5de114680e95a48cbf3f73cdcfd48e848e62625289d24af74"
+    },
+    {
+     "bytes": 474246,
+     "mtime": "2026-09-23T00:37:05.0362436220Z",
+     "name": "refit-report.json",
+     "sha256": "cc6c99bafc2daf77f1ed4c3cdc5943024bc00d7ed893885c00b079f283cf5d3d"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "913c3571fcd195de1cbfd60846bf4dac57271e35150b4a09960c7d7c0cfc1775",
+   "glb": null,
+   "reason": "its original Di_Rosa_SF is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2338,
+      "laneHeight": 1078,
+      "lateralProfile": 1782
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 12.241802244390655,
+     "maxSurfaceChangeM": 12.404820790411424,
+     "roadsRefit": 370
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Di_Rosa_SF",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 6367504,
+    "mtime": "2026-09-23T00:37:04.7802436320Z",
+    "name": "Di_Rosa_SF_no_barriers_26_final (2).xodr",
+    "sha256": "16815fd314b3ad95eff6183e91e4d30ef0de238dd67de69ca797987d3689bcb3"
+   }
+  },
+  {
+   "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
+   "derivedFrom": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 57258,
+     "mtime": "2026-09-23T00:37:05.1842436150Z",
+     "name": "CHANGES.md",
+     "sha256": "57bd5e6b9c9576d80fc169cfbee305ca750bbfba9a06dd18f319e529433679c3"
+    },
+    {
+     "bytes": 416214,
+     "mtime": "2026-09-23T00:37:05.5602436000Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "54c97affa2dd9e0675f076500fabde99558265048ac61e77a97ec77aecb8ec89"
+    },
+    {
+     "bytes": 395278,
+     "mtime": "2026-09-23T00:37:05.7002435940Z",
+     "name": "refit-report.json",
+     "sha256": "4cd6ff6a2bc046e12501d6ac354f8a00a2d13402105aeb1526511b1c490a3686"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "d38e965df342bdc8250b9e5f2a99cb71dbaeee025f8d1df40420ad81dff110d8",
+   "glb": null,
+   "reason": "its original El_Camino_Rd_Palo_Alto_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2226,
+      "laneHeight": 451,
+      "lateralProfile": 1750
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.6353874821649814,
+     "maxSurfaceChangeM": 0.6540997038206111,
+     "roadsRefit": 373
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/El_Camino_Rd_Palo_Alto_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 5877259,
+    "mtime": "2026-09-23T00:37:05.4282436050Z",
+    "name": "El_Camino_Rd_Palo_Alto_CA.xodr",
+    "sha256": "a4473ebb9813885308dc4181fc42bca5b16681e602391cfd4cd586bf792d11a8"
+   }
+  },
+  {
+   "carlaWorld": null,
+   "derivedFrom": "09d8e88639a31ad7752c3061cebd1756928c283c86e4446c388f1160388c4c5e",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 123553,
+     "mtime": "2026-09-23T00:37:05.8242435890Z",
+     "name": "CHANGES.md",
+     "sha256": "b224b367f9fbe8e218b13eeb96cd107499af89709aad917bea3d834084b15e72"
+    },
+    {
+     "bytes": 227168,
+     "mtime": "2026-09-23T00:37:06.3842435650Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "ea3df3bcf1a7e041f13b4e18eb7ecfc60f1ea926355ffbccfb87c1cf69a0c425"
+    },
+    {
+     "bytes": 898832,
+     "mtime": "2026-09-23T00:37:06.5202435590Z",
+     "name": "refit-report.json",
+     "sha256": "ca68b613d216565a503b36cf6738ed66a9dc2eb9253ac44b7d8dfe7ce7f873f2"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "462d495497ea12fbbf1ddf235ef589c78b8f3d4af56ce757a65989555f1958d3",
+   "glb": null,
+   "reason": "its original Garching_Phase_1_2 is no-world",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 5736,
+      "laneHeight": 1221,
+      "lateralProfile": 5692
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.8105051861426205,
+     "maxSurfaceChangeM": 0.8214703122950482,
+     "roadsRefit": 762
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Garching_Phase_1_2",
+   "status": "no-world",
+   "xodr": {
+    "bytes": 13855012,
+    "mtime": "2026-09-23T00:37:06.2842435690Z",
+    "name": "Garching_Phase_1_2.xodr",
+    "sha256": "1ca552ae728417a255f5c771fb314de928832a74de5aaf19013c223eddf23b2a"
+   }
+  },
+  {
+   "carlaWorld": "Richmond_Field_Station_Richmond_CA",
+   "derivedFrom": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 20968,
+     "mtime": "2026-09-23T00:37:06.6522435540Z",
+     "name": "CHANGES.md",
+     "sha256": "4fd55162656babf4541179477ed848bf0d68f3e2c8b44940d864949c2ba6b99a"
+    },
+    {
+     "bytes": 194205,
+     "mtime": "2026-09-23T00:37:06.8522435450Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "2c57b52ae0f978121d4a19d1571fd08017047603b2cda98ac8ae2a359f17569d"
+    },
+    {
+     "bytes": 124766,
+     "mtime": "2026-09-23T00:37:06.9842435400Z",
+     "name": "refit-report.json",
+     "sha256": "49a5c0f015588aa6f349c5b2bcb970b849554998dd68cfd957152a1995d2a628"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "abab6a910779fb8e4a8956deb1f56067c557d0a2ed68208c6bcdb8c0839a5fe7",
+   "glb": null,
+   "reason": "its original Richmond_Field_Station_Richmond_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 743,
+      "laneHeight": 23,
+      "lateralProfile": 575
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.250224674372137,
+     "maxSurfaceChangeM": 0.26175434929634456,
+     "roadsRefit": 132
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Richmond_Field_Station_Richmond_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 2167063,
+    "mtime": "2026-09-23T00:37:06.7162435510Z",
+    "name": "Richmond_Field_Station_Richmond_CA.xodr",
+    "sha256": "531c1bd6f568c56a41fd868ffe1cec0e92bc7dcda9c794c67a8f80a450186b18"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P2",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T14:07:25",
+     "sourceDate": "2026-08-28T12:42:44"
+    },
+    "roads": {
+     "paired": 914,
+     "runtime": 2398,
+     "source": 2398,
+     "unpairedSource": 1484
+    }
+   },
+   "cookedXodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb",
+   "decisionRequired": [
+    "elevation-only refit of San_Ramon_25_P2 (9098904a93bd): reference-line elevation moves up to 1.735 m (p95 0.132 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+   ],
+   "derivedFrom": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of San_Ramon_25_P2"
+   ],
+   "elevationChange": {
+    "maxM": 1.7353,
+    "p95M": 0.1316,
+    "reportMaxElevationChangeM": 1.7352357212080278,
+    "samples": 61045
+   },
+   "extraFiles": [
+    {
+     "bytes": 240460,
+     "mtime": "2026-09-23T00:37:07.1042435350Z",
+     "name": "CHANGES.md",
+     "sha256": "39245848f6ad2e69e450244000b7b1292f623fb9a9e1d23584bd92d896170745"
+    },
+    {
+     "bytes": 380845,
+     "mtime": "2026-09-23T00:37:08.4002434800Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "2a9f34a275dc78281534cb61c2f9cc10ad54b88c6e4001753e902e96bb48d55b"
+    },
+    {
+     "bytes": 1750412,
+     "mtime": "2026-09-23T00:37:08.5682434730Z",
+     "name": "refit-report.json",
+     "sha256": "c0ddab1731e13c89e721a7c83b3a9b849e244fb15c1318c6d7d5f3b502ad554b"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "4bf4b6ac9729e4179833a53ef1946caa2ce77772ec3e24a5e43db3087f58e461",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 9939,
+      "laneHeight": 2590,
+      "lateralProfile": 6462
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.7352357212080278,
+     "maxSurfaceChangeM": 0.9547881679613681,
+     "roadsRefit": 1513
+    }
+   },
+   "signalIdMap": {},
+   "simforge": {},
+   "sourceFolder": "derived/San_Ramon_25_P2",
+   "status": "needs-decision",
+   "xodr": {
+    "bytes": 40285101,
+    "mtime": "2026-09-23T00:37:08.2882434850Z",
+    "name": "San_Ramon_25_P2.xodr",
+    "sha256": "2c8fe7c18e87c88d265db4dedadc40b905b08bc7cf192fe1d4f29d9b9513c288"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P1",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T13:23:34",
+     "sourceDate": "2026-08-28T12:25:57"
+    },
+    "roads": {
+     "paired": 712,
+     "runtime": 1822,
+     "source": 1822,
+     "unpairedSource": 1110
+    }
+   },
+   "cookedXodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b",
+   "decisionRequired": [
+    "elevation-only refit of San_Ramon_Phase_1_P1 (eaeebc429898): reference-line elevation moves up to 1.318 m (p95 0.181 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+   ],
+   "derivedFrom": "eaeebc429898aca03dc8b399e23cef1d7e129784f607350ad974cf0f012ded55",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of San_Ramon_Phase_1_P1"
+   ],
+   "elevationChange": {
+    "maxM": 1.3185,
+    "p95M": 0.1814,
+    "reportMaxElevationChangeM": 1.3186793424235645,
+    "samples": 54483
+   },
+   "extraFiles": [
+    {
+     "bytes": 180965,
+     "mtime": "2026-09-23T00:37:08.7002434680Z",
+     "name": "CHANGES.md",
+     "sha256": "fb0977ea55cfff4c1668cc950d7e021b9b4d76f02ba55cb63e85cd623fafd83d"
+    },
+    {
+     "bytes": 298266,
+     "mtime": "2026-09-23T00:37:09.7002434260Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "9c0348ef509672a8932a45a472437c7b6309c5eb600e050846db55c8cd3c3faa"
+    },
+    {
+     "bytes": 1319729,
+     "mtime": "2026-09-23T00:37:09.8482434190Z",
+     "name": "refit-report.json",
+     "sha256": "175bc7bbd138edee7ac3a0311d79092247a8dfc363669ce15ceada5b296bba76"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "f29421acf7f954783b6d024ee424ff428525cd00e741187805fc554206eee399",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 8612,
+      "laneHeight": 2274,
+      "lateralProfile": 6002
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.3186793424235645,
+     "maxSurfaceChangeM": 0.95708311037572,
+     "roadsRefit": 1128
+    }
+   },
+   "signalIdMap": {},
+   "simforge": {},
+   "sourceFolder": "derived/San_Ramon_Phase_1_P1",
+   "status": "needs-decision",
+   "xodr": {
+    "bytes": 21765908,
+    "mtime": "2026-09-23T00:37:09.5922434300Z",
+    "name": "San_Ramon_P1.xodr",
+    "sha256": "bda617b839088668ff342d9439018415b4df15387ddb93647fbe0a04843ce633"
+   }
+  },
+  {
+   "carlaWorld": "San_Ramon_Phase_2",
+   "derivedFrom": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 572583,
+     "mtime": "2026-09-23T00:37:09.9762434140Z",
+     "name": "CHANGES.md",
+     "sha256": "a3378a41fa2f727a1f9627e1392472322e00633e9b1c2027fa67213a3f7e8eda"
+    },
+    {
+     "bytes": 329963,
+     "mtime": "2026-09-23T00:37:11.7322433400Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "c7dead13f6c29aaaa0a10e42beb9beeb0c6d78203967b7a88a712f16daaebbd7"
+    },
+    {
+     "bytes": 4263898,
+     "mtime": "2026-09-23T00:37:11.9682433300Z",
+     "name": "refit-report.json",
+     "sha256": "ff304c3e6ac2efde0e0c025befac5bbf263c212c3dc4f54ba79255f46790d979"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "464115753c4c3258a999d689c4ed6c01eebd2d27f2c5e99cb93fe25121dcb38d",
+   "glb": null,
+   "reason": "its original San_ramon_Phase2 is needs-decision",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 28212,
+      "laneHeight": 8761,
+      "lateralProfile": 19335
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.028661178048452,
+     "maxSurfaceChangeM": 1.0062210361276414,
+     "roadsRefit": 3492
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/San_ramon_Phase2",
+   "status": "needs-decision",
+   "xodr": {
+    "bytes": 55445719,
+    "mtime": "2026-09-23T00:37:11.5402433480Z",
+    "name": "San_Ramon_Phase_2.xodr",
+    "sha256": "c412c430531c444658b43d0a92303cfa2518536d03ee41ae7d4831869304095f"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "Saratoga_School_Area",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-11T14:08:32",
+     "sourceDate": "2026-08-28T18:37:55"
+    },
+    "roads": {
+     "paired": 77,
+     "runtime": 309,
+     "source": 309,
+     "unpairedSource": 232
+    }
+   },
+   "cookedXodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7",
+   "decisionRequired": [
+    "elevation-only refit of Saratoga_School_Area (ff368b92160b): reference-line elevation moves up to 2.929 m (p95 1.887 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+   ],
+   "derivedFrom": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of Saratoga_School_Area"
+   ],
+   "elevationChange": {
+    "maxM": 2.9288,
+    "p95M": 1.8866,
+    "reportMaxElevationChangeM": 2.9288630336391464,
+    "samples": 26203
+   },
+   "extraFiles": [
+    {
+     "bytes": 54046,
+     "mtime": "2026-09-23T00:37:12.0882433250Z",
+     "name": "CHANGES.md",
+     "sha256": "2431a8a600b8edbc3c8f684a9ba17ed0245cbff63262bd3f088984ed134655ba"
+    },
+    {
+     "bytes": 171378,
+     "mtime": "2026-09-23T00:37:12.5162433070Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "869bd2ff64aded7176acab269290e2d191d91a067eb79baae2512ddb55a99225"
+    },
+    {
+     "bytes": 395667,
+     "mtime": "2026-09-23T00:37:12.6762433010Z",
+     "name": "refit-report.json",
+     "sha256": "1ebda6417a456e58f2f64fda26a3db144228c9e78d4eb02e0f9576983bd90bc5"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "3097e80f86a339fd1718ff6d42c4bd78fc14c242d0a35b2094e8bf1acee252da",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 4253,
+      "laneHeight": 2204,
+      "lateralProfile": 2678
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 2.9288630336391464,
+     "maxSurfaceChangeM": 0.6769086467047315,
+     "roadsRefit": 233
+    }
+   },
+   "signalIdMap": {},
+   "simforge": {},
+   "sourceFolder": "derived/Saratoga_School_Area",
+   "status": "needs-decision",
+   "xodr": {
+    "bytes": 8535535,
+    "mtime": "2026-09-23T00:37:12.3842433130Z",
+    "name": "Saratoga_School_Area.xodr",
+    "sha256": "1a21e0b1813a80a68481f21e9ca44e5907c4e611824852fd1843642c18dde9fc"
+   }
+  },
+  {
+   "carlaWorld": "Yale_St_Palo_Alto_CA",
+   "derivedFrom": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 64961,
+     "mtime": "2026-09-23T00:37:12.8082432950Z",
+     "name": "CHANGES.md",
+     "sha256": "a07fe17044ec7cb4e4205eb0ee08f4fed52969bb7c7e42cdd002f3d99fafe4f5"
+    },
+    {
+     "bytes": 334609,
+     "mtime": "2026-09-23T00:37:13.1362432810Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "c27bb597512c983cf721e020ed823be51a72adb6c99f0ee79a845378c03296f8"
+    },
+    {
+     "bytes": 488327,
+     "mtime": "2026-09-23T00:37:13.2642432760Z",
+     "name": "refit-report.json",
+     "sha256": "c77c44cc9d72c1f32439636149a100946a22df85f3efc601cd24cdedf3c7c244"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "680b8e077f390e701194f4c4255586cb21de9d01a7bc7275f204eaec77d11469",
+   "glb": null,
+   "reason": "its original Yale_St_Palo_Alto_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2351,
+      "laneHeight": 957,
+      "lateralProfile": 1674
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.9764953349521761,
+     "maxSurfaceChangeM": 0.9714655895236267,
+     "roadsRefit": 375
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Yale_St_Palo_Alto_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 5399240,
+    "mtime": "2026-09-23T00:37:13.0322432860Z",
+    "name": "Yale_St_Palo_Alto_CA.xodr",
+    "sha256": "272ddeeb04e707dc7ad16ae1063b53a869a3c8b74d5d24e620f3c411cff3cfe5"
+   }
   }
  ],
  "schema": "simforge.carla-world-manifest/v1",
@@ -2961,85 +3635,107 @@
  },
  "worlds": {
   "Belmont_Office_Park_Belmont_CA": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "Belmont_Office_Park_Belmont_CA"
+    "Belmont_Office_Park_Belmont_CA",
+    "derived/Belmont_Office_Park_Belmont_CA"
    ],
    "xodrSha256": "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d"
   },
   "Di_Rosa_SF": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "Di_Rosa_SF"
+    "Di_Rosa_SF",
+    "derived/Di_Rosa_SF"
    ],
    "xodrSha256": "22b92a6aa0757d4946e4201a3c6f9dfcd595ee6286517e0a1203d301fc3be171"
   },
   "El_Camino_Rd_Palo_Alto_CA": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "El_Camino_Rd_Palo_Alto_CA"
+    "El_Camino_Rd_Palo_Alto_CA",
+    "derived/El_Camino_Rd_Palo_Alto_CA"
    ],
    "xodrSha256": "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665"
   },
   "Mine_01": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [],
    "xodrSha256": "1e165bf403293d8901f0b0842e1f227ddf64ad01ee4150fdbeb0c75523b04996"
   },
   "Munich": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [],
    "xodrSha256": "a8f627a40b91b69c10b809200ec0014a3e20ef2b3801874b567e62fdd1842740"
   },
   "Page_Mill_Rd_Palo_Alto_CA": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [],
    "xodrSha256": "6452f1cc3f7c4736ab9be6ae255bf8ec795a88c0b4a384cebff2c3f9825405af"
   },
   "Richmond_Field_Station_Richmond_CA": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "Richmond_Field_Station_Richmond_CA"
+    "Richmond_Field_Station_Richmond_CA",
+    "derived/Richmond_Field_Station_Richmond_CA"
    ],
    "xodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111"
   },
   "San_Ramon_Phase_1_P1": {
+   "boundDerived": [],
    "boundSource": "San_Ramon_Phase_1_P1",
    "matchedSources": [
-    "San_Ramon_Phase_1_P1"
+    "San_Ramon_Phase_1_P1",
+    "derived/San_Ramon_Phase_1_P1"
    ],
    "xodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b"
   },
   "San_Ramon_Phase_1_P2": {
+   "boundDerived": [],
    "boundSource": "San_Ramon_25_P2",
    "matchedSources": [
-    "San_Ramon_25_P2"
+    "San_Ramon_25_P2",
+    "derived/San_Ramon_25_P2"
    ],
    "xodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb"
   },
   "San_Ramon_Phase_2": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "San_ramon_Phase2"
+    "San_ramon_Phase2",
+    "derived/San_ramon_Phase2"
    ],
    "xodrSha256": "ae48056b9a59f45cf6fdd45a9a27ea4614c5ded861a59b3708ae437e34ea93dc"
   },
   "Saratoga_School_Area": {
+   "boundDerived": [],
    "boundSource": "Saratoga_School_Area",
    "matchedSources": [
-    "Saratoga_School_Area"
+    "Saratoga_School_Area",
+    "derived/Saratoga_School_Area"
    ],
    "xodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7"
   },
   "Town10HD_Opt": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [],
    "xodrSha256": "5d883b799f634030af92be1e9d79d107845540ba04338e8c60e095be1aef7be7"
   },
   "Yale_St_Palo_Alto_CA": {
+   "boundDerived": [],
    "boundSource": null,
    "matchedSources": [
-    "Yale_St_Palo_Alto_CA"
+    "Yale_St_Palo_Alto_CA",
+    "derived/Yale_St_Palo_Alto_CA"
    ],
    "xodrSha256": "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f"
   }

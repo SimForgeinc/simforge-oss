@@ -227,6 +227,20 @@ rulings go in `world_manifest_tools/decisions.json` (who, when, which exact
 `decisionRequired` items were accepted). Bindings approved before the manifest
 existed are kept verbatim under `legacySources`.
 
+A derived export tree (`collect-nas --derived --root .../GLB_Map_Export_corrected`)
+adds `derived/<folder>` entries. An elevation-only refit (its report names the
+original by sha256, and the XODR without elevationProfile, lateralProfile and lane
+`<height>` is byte-identical to the original's) inherits the original's world,
+runtime digest and signal maps once `decisions.json` accepts its exact decision
+item, which states the measured elevation change. Anything else is a new network.
+
+`assets/carla-actor-bindings.json` (`world_manifest_tools actor-bindings`) is the
+renderer's catalog-id -> CARLA blueprint table, generated from SimCloud's
+carla-object-catalog.json and the renderer-parity carla-substitutions.json. A
+catalog entry without its own CARLA binding resolves through it; an entry with no
+binding fails by name (carla_blueprint_unavailable) unless the intent allows the
+recorded carla-actor-body substitution. Its sha256 is in every manifest.
+
 ### What replay approximates
 
 The manifest lists these under `approximations`:

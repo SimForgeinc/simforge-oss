@@ -15,6 +15,14 @@ The status is derived, never typed:
 ``needs-recook``         the road network changed; the world must be re-cooked
 ``no-world``             no cooked world covers this source
 
+Derived exports (``nas-derived.json``, e.g. the elevation refit tree) are entries
+``derived/<folder>``: an XODR whose report names an original source by sha256 and
+whose geometry digest (the XODR with every elevationProfile, lateralProfile and lane
+``<height>`` removed) equals the original's is an ``elevation-only refit``. It binds
+the original's world, runtime digest and signal maps once ``decisions`` accepts the
+exact decision item (which states its max elevation change against the cooked
+XODR); until then it is ``needs-decision``. Anything else about it is a new source.
+
 Only ``exact`` and ``approved-equivalent`` entries are bindable.
 """
 from __future__ import annotations
@@ -101,6 +109,111 @@ def _simforge_index(envs: dict[str, dict]) -> dict[str, dict[str, Any]]:
     for per_env in out.values():
         for slot in per_env.values():
             slot["mapVersions"].sort(key=lambda v: (v.get("createdAt") or "", v["id"]))
+    return out
+
+
+_GEOMETRY_STRIP = (
+    re.compile(rb"[ \t]*<elevationProfile\b.*?</elevationProfile>[ \t]*\r?\n?", re.S),
+    re.compile(rb"[ \t]*<elevationProfile\s*/>[ \t]*\r?\n?"),
+    re.compile(rb"[ \t]*<lateralProfile\b.*?</lateralProfile>[ \t]*\r?\n?", re.S),
+    re.compile(rb"[ \t]*<lateralProfile\s*/>[ \t]*\r?\n?"),
+    re.compile(rb"[ \t]*<height\b[^>]*/>[ \t]*\r?\n?"),
+)
+
+
+def xodr_geometry_sha256(data: bytes) -> str:
+    """sha256 of the XODR without its elevation, lateral profile and lane heights."""
+    import hashlib
+    for pattern in _GEOMETRY_STRIP:
+        data = pattern.sub(b"", data)
+    return hashlib.sha256(data).hexdigest()
+
+
+def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dict],
+                     worlds: dict[str, "xodr_identity.Network"]) -> list[dict]:
+    path = inputs / "nas-derived.json"
+    if not path.exists():
+        return []
+    derived = json.loads(path.read_text())
+    by_sha = {e["xodr"]["sha256"]: e for e in entries if e.get("xodr")}
+    by_folder: dict[str, list[dict]] = {}
+    for f in derived["files"]:
+        by_folder.setdefault(f["folder"], []).append(f)
+    out = []
+    for folder, files in sorted(by_folder.items()):
+        xodrs = [f for f in files if f["name"].lower().endswith(".xodr")]
+        report_file = next((f for f in files if f["name"] == "refit-report.json"), None)
+        if len(xodrs) != 1 or report_file is None:
+            continue
+        xodr = xodrs[0]
+        key = f"derived/{folder}"
+        report = json.loads((inputs / "nas-derived" / folder / report_file["name"]).read_text())
+        original_sha = (report.get("source") or {}).get("xodrSha256")
+        original = by_sha.get(original_sha)
+        entry: dict[str, Any] = {
+            "sourceFolder": key, "derivedRoot": derived["root"], "derivedFrom": original_sha,
+            "glb": None, "xodr": {k: xodr[k] for k in ("name", "sha256", "bytes", "mtime")},
+            "extraFiles": [{k: f[k] for k in ("name", "sha256", "bytes", "mtime")} for f in files if f is not xodr],
+            "refitReport": {"schema": report.get("schema"), "structuralDiff": report.get("structuralDiff"),
+                            "totals": {k: (report.get("totals") or {}).get(k) for k in ("maxElevationChangeM", "maxSurfaceChangeM", "roadsRefit")},
+                            "tool": {k: (report.get("tool") or {}).get(k) for k in ("gitSha", "fingerprint")}},
+        }
+        if original is None:
+            entry.update(status="no-world", carlaWorld=None,
+                         reason=f"derived export names original {original_sha}, which is not a collected source")
+            out.append(entry)
+            continue
+        entry["simforge"] = {}
+        data = (inputs / "nas-derived" / folder / xodr["name"]).read_bytes()
+        original_bytes = (inputs / "nas" / original["sourceFolder"] / original["xodr"]["name"]).read_bytes()
+        same_geometry = xodr_geometry_sha256(data) == xodr_geometry_sha256(original_bytes)
+        entry["geometrySha256"] = xodr_geometry_sha256(data)
+        entry["geometryEqualsOriginal"] = same_geometry
+        if not same_geometry:
+            entry.update(status="needs-recook", carlaWorld=original.get("carlaWorld"),
+                         reason="derived export changes more than elevation; it is a new road network")
+            out.append(entry)
+            continue
+        if original["status"] not in BINDABLE:
+            entry.update(status=original["status"], carlaWorld=original.get("carlaWorld"),
+                         reason=f"its original {original['sourceFolder']} is {original['status']}")
+            out.append(entry)
+            continue
+        world = original["carlaWorld"]
+        refit, base = xodr_identity.parse(data), xodr_identity.parse(original_bytes)
+        # Same geometry and ids: the change is the reference-line elevation, road by road.
+        # The original matches the cooked XODR within 1 cm, so this is the change
+        # against the world too.
+        deltas = []
+        for rid, road in refit.roads.items():
+            other = base.roads[rid]
+            steps = max(2, int(road.length) + 1)
+            for i in range(steps):
+                s_ = road.length * i / (steps - 1)
+                deltas.append(abs(xodr_identity._eval_poly(road.elevation, s_) - xodr_identity._eval_poly(other.elevation, s_)))
+        deltas.sort()
+        dz_max = deltas[-1] if deltas else 0.0
+        dz_p95 = deltas[int(0.95 * (len(deltas) - 1))] if deltas else 0.0
+        entry["elevationChange"] = {"maxM": round(dz_max, 4), "p95M": round(dz_p95, 4), "samples": len(deltas),
+                                    "reportMaxElevationChangeM": entry["refitReport"]["totals"]["maxElevationChangeM"]}
+        comparison = xodr_identity.compare(refit, worlds[world])
+        item = (f"elevation-only refit of {original['sourceFolder']} ({original_sha[:12]}): reference-line "
+                f"elevation moves up to {dz_max:.3f} m (p95 {dz_p95:.3f} m) against the source the cooked world "
+                "was matched to; the cooked mesh is unchanged")
+        accepted = item in decisions.get(key, {}).get("acceptDecisionItems", []) or \
+            decisions.get(key, {}).get("acceptElevationRefit") is True
+        entry.update(
+            carlaWorld=world, cookedXodrSha256=original["cookedXodrSha256"],
+            status="approved-equivalent" if accepted else "needs-decision",
+            comparison={"roads": {k: comparison.roads.get(k) for k in ("source", "runtime", "paired", "unpairedSource")},
+                        "header": comparison.header},
+            differences=[f"elevation-only refit of {original['sourceFolder']}"], blocking=[],
+            decisionRequired=[] if accepted else [item],
+            signalIdMap=original.get("signalIdMap", {}) if accepted else {},
+        )
+        if accepted and original.get("unownedCookedSignalIds"):
+            entry["unownedCookedSignalIds"] = original["unownedCookedSignalIds"]
+        out.append(entry)
     return out
 
 
@@ -205,9 +318,18 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
             claimed[world] = folder
         entries.append(entry)
 
+    for world in list(cooked["worlds"]):
+        if world not in parsed_worlds and any(e.get("carlaWorld") == world and e["status"] in BINDABLE for e in entries):
+            parsed_worlds[world] = xodr_identity.parse((inputs / "cooked" / f"{world}.xodr").read_bytes())
+    for derived_entry in _derived_entries(inputs, entries, decisions, parsed_worlds):
+        simforge_slot = simforge.get(derived_entry["xodr"]["sha256"], {})
+        derived_entry["simforge"] = simforge_slot
+        entries.append(derived_entry)
     worlds = {
         w: {"xodrSha256": cooked["worlds"][w]["xodrSha256"],
             "boundSource": claimed.get(w),
+            "boundDerived": sorted(e["sourceFolder"] for e in entries
+                                   if e.get("carlaWorld") == w and e.get("derivedFrom") and e["status"] in BINDABLE),
             "matchedSources": sorted(e["sourceFolder"] for e in entries if e.get("carlaWorld") == w)}
         for w in sorted(cooked["worlds"])
     }
