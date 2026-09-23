@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { ASSET_GALLERY_HOST_ACTIONS } from "../asset-gallery-actions";
+import { ASSET_GALLERY_HOST_ACTIONS } from "@/app/lib/host/asset-gallery-actions";
 
 /**
  * The model gallery's host slot. A local installation adds nothing to the
