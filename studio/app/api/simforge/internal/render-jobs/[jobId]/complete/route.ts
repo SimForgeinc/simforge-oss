@@ -29,6 +29,9 @@ export async function POST(request: Request, route: Context) {
     const code = error instanceof Error && /^[a-z_]+$/.test(error.message)
       ? error.message
       : "artifact_verification_failed";
+    // The worker only sees the code; the cause belongs in the host log too,
+    // or a schema or storage fault is indistinguishable from a bad artifact.
+    console.error(`[render-worker] ${jobId}: completion refused (${code})`, error);
     const details = error instanceof Error
       && "verificationDetails" in error
       && typeof error.verificationDetails === "object"
