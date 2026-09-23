@@ -496,16 +496,16 @@ pub(crate) fn build_actor_sensor_scene(instances: &[ActorSensorInstance]) -> Ins
 }
 
 impl Raycast for CombinedSensorScene<'_> {
+    /// Nearest hit; an equal-distance actor hit keeps the static one. The
+    /// actor layer is searched only up to the static hit: it can only win
+    /// strictly nearer, so the result is the same as searching both to
+    /// `max_distance`, without walking actors behind a wall.
     fn cast(&self, origin: Vec3, direction: Vec3, max_distance: f32) -> Option<Hit> {
-        match (
-            self.static_scene.cast(origin, direction, max_distance),
-            self.actor_scene.cast(origin, direction, max_distance),
-        ) {
-            (Some(static_hit), Some(actor_hit)) if actor_hit.distance < static_hit.distance => {
-                Some(actor_hit)
-            }
-            (Some(static_hit), _) => Some(static_hit),
-            (None, actor_hit) => actor_hit,
+        let static_hit = self.static_scene.cast(origin, direction, max_distance);
+        let reach = static_hit.map_or(max_distance, |hit| hit.distance);
+        match self.actor_scene.cast(origin, direction, reach) {
+            Some(actor_hit) if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) => Some(actor_hit),
+            _ => static_hit,
         }
     }
 }
@@ -2840,6 +2840,54 @@ mod tests {
             SensorTriangle { a, b, c, instance_id },
             SensorTriangle { a, b: c, c: d, instance_id },
         ]
+    }
+
+    #[test]
+    fn combined_scene_prunes_actors_behind_static_hits_without_changing_results() {
+        // Static: ground at y=0 plus walls; actors: cars in front of, level
+        // with and behind the walls. The pruned cast must equal searching
+        // both layers to full range.
+        let mut map = Vec::new();
+        map.extend(quad(-60.0, -60.0, 120.0, 0.0, 1));
+        for (i, x) in [8.0f32, -14.0, 20.0].into_iter().enumerate() {
+            let id = 2 + i as u32;
+            map.push(SensorTriangle { a: [x, 0.0, -30.0], b: [x, 6.0, -30.0], c: [x, 0.0, 30.0], instance_id: id });
+            map.push(SensorTriangle { a: [x, 6.0, -30.0], b: [x, 6.0, 30.0], c: [x, 0.0, 30.0], instance_id: id });
+        }
+        let statics = build_sensor_scene(map);
+        let car = sensors::bvh::Blas::build(quad(-2.0, -1.0, 4.0, 1.4, 0).iter().map(|t| Tri {
+            a: Vec3::from_array(t.a), b: Vec3::from_array(t.b), c: Vec3::from_array(t.c), instance_id: 0,
+        }).chain([Tri { a: Vec3::new(-2.0, 0.0, 0.0), b: Vec3::new(-2.0, 1.4, 0.0), c: Vec3::new(-2.0, 0.0, 1.0), instance_id: 0 }]));
+        let instances: Vec<super::ActorSensorInstance> = [4.0f32, 8.0, 12.0, -9.0, -20.0]
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| super::ActorSensorInstance::Shared {
+                blas: car.clone(),
+                world: bevy::math::Mat4::from_translation(Vec3::new(x, 0.0, (i as f32) - 2.0)),
+                instance_id: 100 + i as u32,
+            })
+            .collect();
+        let actors = super::build_actor_sensor_scene(&instances);
+        let combined = CombinedSensorScene { static_scene: &statics, actor_scene: &actors };
+        let origin = Vec3::new(0.3, 1.1, 0.2);
+        let mut actor_hits = 0;
+        for step in 0..720 {
+            for ring in 0..8 {
+                let az = step as f32 / 720.0 * std::f32::consts::TAU;
+                let el = (-12.0 + 3.0 * ring as f32).to_radians();
+                let dir = Vec3::new(el.cos() * az.cos(), el.sin(), el.cos() * az.sin());
+                let full = match (statics.cast(origin, dir, 80.0), actors.cast(origin, dir, 80.0)) {
+                    (Some(s), Some(a)) if a.distance < s.distance => Some(a),
+                    (Some(s), _) => Some(s),
+                    (None, a) => a,
+                };
+                let pruned = sensors::bvh::Raycast::cast(&combined, origin, dir, 80.0);
+                let key = |hit: Option<sensors::bvh::Hit>| hit.map(|h| (h.distance.to_bits(), h.instance_id));
+                assert_eq!(key(pruned), key(full), "az {az} el {el}");
+                actor_hits += usize::from(full.is_some_and(|h| h.instance_id >= 100));
+            }
+        }
+        assert!(actor_hits > 50, "fixture must hit actors ({actor_hits})");
     }
 
     #[test]
