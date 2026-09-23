@@ -572,6 +572,28 @@ pub fn compile_template(
     })
 }
 
+/// Compile at a site already resolved by `findSite`, without re-matching.
+#[wasm_bindgen(js_name = compileTemplateAtSite)]
+pub fn compile_template_at_site(
+    template_json: &str,
+    bundle: &WasmMapBundle,
+    site: &WasmSite,
+    seed: JsValue,
+    options_json: Option<String>,
+) -> Result<WasmCompileResult, JsValue> {
+    let seed = seed_of(&seed)?;
+    Ok(WasmCompileResult {
+        inner: rt::compile_template_at_site(
+            template_json,
+            &bundle.inner,
+            &site.inner,
+            seed,
+            options_json.as_deref(),
+        )
+        .js()?,
+    })
+}
+
 /// Ranked `SiteMatch` JSON; `optionsJson = {minScore?, maxSites?, exactCatalogSiteResolution?}`.
 #[wasm_bindgen(js_name = matchSites)]
 pub fn match_sites(

@@ -41,6 +41,7 @@
     "test:map-cache": "tsx --test app/lib/map-cache/__tests__/service.test.ts && node --test desktop/__tests__/map-cache.test.mjs",
     "test:gallery-scope": "tsx --test app/lib/scenario/render/__tests__/gallery-scope.test.ts",
     "test:eval": "tsx --test app/lib/evaluation/__tests__/eval-api.test.ts",
+    "test:dev-emit": "node --test dev-atomic-emit.test.mjs",
     "test:host-protocol": "tsx --test worker/__tests__/host-protocol.test.ts",
     "test:worker-token": "tsx --test app/lib/scenario/__tests__/worker-token.test.ts",
     "test:native-map": "tsx --test worker/__tests__/native-map-materialization.test.ts",

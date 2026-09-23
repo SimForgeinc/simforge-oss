@@ -1020,3 +1020,46 @@ pub fn instantiate(
     let matched = crate::sites::find_site(&template, bundle, site)?;
     materialize(&template, bundle, &matched, options)
 }
+
+/// Parse and materialize at a site the caller already matched (a `find_site`
+/// or matcher result), skipping the matcher entirely. The result is the one
+/// `instantiate` gives for that site's id. The site must belong to this
+/// template on this map: its anchor, map, topology and matcher semantics must
+/// agree, and a pinned template accepts only its pinned site.
+pub fn instantiate_at_site(
+    document: &Value,
+    bundle: &MapBundle,
+    site: &MatchedSite,
+    options: &MaterializeOptions,
+) -> CompileResult<MaterializeResult> {
+    let template = crate::template::parse_template(document)?;
+    if !template.is_portable() {
+        return Err(CompileError::at(
+            "site_not_applicable",
+            "roles",
+            "a map-bound template is placed by its own scene poses, not at a matched site; compile it without a site",
+        ));
+    }
+    let anchor = crate::anchor::adapt::adapt_template(&template).anchor;
+    let pinned_elsewhere = anchor
+        .pin
+        .as_ref()
+        .is_some_and(|pin| pin.map_id != site.map_id || pin.site_id != site.site_id);
+    let mismatch = [
+        (site.map_id != bundle.map_id(), "mapId"),
+        (site.topology_digest != bundle.index().topology_digest, "topologyDigest"),
+        (site.anchor_id != anchor.id, "anchorId"),
+        (site.match_semantics_version != crate::anchor::MATCH_SEMANTICS_VERSION, "matchSemanticsVersion"),
+        (pinned_elsewhere, "anchor.pin"),
+    ]
+    .into_iter()
+    .find_map(|(differs, field)| differs.then_some(field));
+    if let Some(field) = mismatch {
+        return Err(CompileError::at(
+            "site_mismatch",
+            "site",
+            format!("site \"{}\" was not matched for this template on {} ({field} differs)", site.site_id, bundle.map_id()),
+        ));
+    }
+    materialize(&template, bundle, site, options)
+}

@@ -43,10 +43,32 @@ pub fn canonical_catalog_id(id: &str) -> &str {
     CATALOG_ALIASES.iter().find(|(alias, _)| *alias == id).map_or(id, |(_, target)| *target)
 }
 `;
+// The native compiler resolves the same CARLA objects the editor places, so a
+// document that names one compiles on every host (browser worker, server,
+// compiler service) without each caller having to pass the catalog in.
+const carlaRustOut = resolve(here, '../../../native/crates/simforge-compiler/src/carla_catalog.generated.rs');
+const rustNumber = (value: unknown) => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`CARLA catalog dimension must be positive: ${String(value)}`);
+  return Number.isInteger(n) ? `${n}.0` : String(n);
+};
+const carlaRust = `// Generated from studio/app/generated/carla-object-catalog.json by
+// packages/asset-catalog/scripts/generate-catalog.ts. Do not edit.
+use crate::catalog::{CarlaCatalogEntry, CatalogDims};
+
+pub const CARLA_OBJECT_CATALOG: &[CarlaCatalogEntry] = &[
+${carlaCatalog.objects.map((entry) => {
+  const dims = entry.dims as { l: unknown; w: unknown; h: unknown };
+  const actorClass = typeof entry.actorClass === 'string' ? `Some(${JSON.stringify(entry.actorClass)})` : 'None';
+  return `    CarlaCatalogEntry { id: ${JSON.stringify(entry.id)}, class: ${JSON.stringify(entry.class)}, actor_class: ${actorClass}, dims: CatalogDims { l: ${rustNumber(dims.l)}, w: ${rustNumber(dims.w)}, h: ${rustNumber(dims.h)} } },`;
+}).join('\n')}
+];
+`;
 const targets: Array<[path: string, content: string]> = [
   [out, `${JSON.stringify(parsed, null, 2)}\n`],
   [rustOut, rust],
   [carlaOut, carla],
+  [carlaRustOut, carlaRust],
 ];
 for (const [path, content] of targets) {
   if (process.argv.includes('--check')) {

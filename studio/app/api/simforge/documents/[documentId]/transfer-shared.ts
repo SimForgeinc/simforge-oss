@@ -2,13 +2,15 @@ import "server-only";
 
 import {
   adaptTemplateNotes,
-  compileTemplate,
+  compileTemplateAtSite,
   liftMapBoundTemplate,
   matchSites,
   materializationSemanticLosses,
+  resolveSite,
   type MapBundle,
   type MatchedSite,
   type PortableLiftIssue,
+  type ResolvedSite,
 } from "@simforge-oss/compiler/node";
 import { parseTemplate, ScenarioValidationError, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type {
@@ -26,11 +28,7 @@ import {
 } from "@/app/lib/scenario/document-store";
 import { loadCollisionDraftMap } from "@/app/lib/scenario/collision-draft-map.server";
 import type { ScenarioDocumentDto, ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
-import {
-  boundRigidPairLateralFractions,
-  chainLanePath,
-  rankCandidates,
-} from "@/app/lib/scenario/transfer-rules";
+import { chainLanePath, rankCandidates } from "@/app/lib/scenario/transfer-rules";
 import {
   buildTransferPreview,
   isRoadActorKind,
@@ -168,7 +166,7 @@ async function liftSource(
     if (!result.template || !result.sourceSiteId) return lifted;
     let template: ScenarioTemplateV2;
     try {
-      template = parseTemplate(boundRigidPairLateralFractions(result.template));
+      template = parseTemplate(result.template);
     } catch (error) {
       return { ...lifted, issues: [...issues, ...validationIssues(error)] };
     }
@@ -283,11 +281,15 @@ function vetSite(
   bundle: MapBundle,
   site: MatchedSite,
   onCompileError: (message: string) => void,
+  resolved?: ResolvedSite,
 ): VettedCandidate | Rejection {
   if (!site.degradation.intentPreserved) return "intent_relaxed";
-  let compiled: ReturnType<typeof compileTemplate>;
+  let compiled: ReturnType<typeof compileTemplateAtSite>;
   try {
-    compiled = compileTemplate(pinnedContent(portable, target, site.siteId, bundle.digest), bundle, site.siteId, { drawIndex: -1 });
+    // The saved content is pinned to the site, so resolving it scores that
+    // site alone; the compile then reuses it instead of matching again.
+    const pinned = pinnedContent(portable, target, site.siteId, bundle.digest);
+    compiled = compileTemplateAtSite(pinned, bundle, resolved ?? resolveSite(pinned, bundle, site.siteId), { drawIndex: -1 });
   } catch (error) {
     onCompileError(compileFailureMessage(error));
     return "compile_failed";
@@ -362,10 +364,16 @@ async function vettedCandidate(
   const hit = cached?.candidates.find((candidate) => candidate.siteId === siteId);
   if (cached && hit) return { candidate: hit, targetTopologyDigest: cached.targetTopologyDigest };
   const binding = await loadCollisionDraftMap(context, target.sourceMapId);
-  const match = matchSites(lifted.template, binding.bundle, { maxSites: MATCH_POOL });
-  const site = match.report.sites.find((entry) => entry.siteId === siteId);
-  if (!site) return null;
-  const candidate = vetSite(lifted.template, target, binding.bundle, site, () => {});
+  // Resolve the one named site (the matcher scores only it) rather than
+  // re-matching the whole map, which takes tens of seconds on a large one.
+  let resolved: ResolvedSite;
+  try {
+    resolved = resolveSite(pinnedContent(lifted.template, target, siteId, binding.bundle.digest), binding.bundle, siteId);
+  } catch {
+    return null;
+  }
+  if (resolved.site.degradation.verdict === "infeasible") return null;
+  const candidate = vetSite(lifted.template, target, binding.bundle, resolved.site, () => {}, resolved);
   return typeof candidate === "string" ? null : { candidate, targetTopologyDigest: binding.bundle.digest };
 }
 
@@ -389,8 +397,8 @@ async function targetCandidates(
       attempts > 0 && compileErrors.size === 1 && rejected.get("compile_failed") === attempts;
     for (const site of match.report.sites) {
       if (vetted.length >= MAX_CANDIDATES_PER_MAP || attempts >= MAX_VET_ATTEMPTS) break;
-      // Each compile re-runs the matcher natively (tens of seconds on a large
-      // map), so a map stops at its budget once it has something to offer.
+      // Each compile resolves and materializes one site; a map still stops at
+      // its budget once it has something to offer.
       if (vetted.length > 0 && performance.now() - vettingStartedAt > VET_BUDGET_MS) break;
       attempts += 1;
       const candidate = vetSite(lifted.template, target, bundle, site, (message) => compileErrors.add(message));
