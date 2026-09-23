@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { JobLeasedResponse } from '@simforge-oss/render';
 import { nativeMapMemberInputId } from '@simforge-oss/render/native';
 
-import { boundedFailureMessage, createProgressForwarder, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
+import { boundedFailureMessage, boundedProgressRecord, createProgressForwarder, failureOf, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
 
 type Input = JobLeasedResponse['inputs'][number];
 
@@ -134,5 +134,28 @@ describe('failure reporting', () => {
     expect(bounded).toContain('native render service did not become ready');
     expect(bounded).toContain('tail-marker');
     expect(bounded).not.toContain('\u001b[');
+  });
+
+  // The control plane refuses a failure whose message is empty after trim or
+  // over 2,000 characters, or whose code is over 100: the report fails and the
+  // lease is orphaned until it expires. Nothing the worker sends may exceed that.
+  it('never reports a failure the control plane would refuse', () => {
+    for (const error of [new Error(''), new Error('   \n  '), new Error('\u001b[31m\u001b[0m'), '']) {
+      const failure = failureOf(error);
+      expect(failure.message.trim().length).toBeGreaterThan(0);
+    }
+    expect(failureOf(new Error('x'.repeat(50_000))).message.length).toBeLessThanOrEqual(2000);
+    const coded = Object.assign(new Error('out of memory'), { code: `native_${'a'.repeat(120)}`, retryable: false });
+    const failure = failureOf(coded);
+    expect(failure.code.length).toBeLessThanOrEqual(100);
+    expect(failure.code).toMatch(/^render\.native_a+$/);
+  });
+
+  it('caps warning messages and cancellation reasons at the control plane limit', () => {
+    const base = { schema: 'simforge.render-progress/v1' as const, jobId: 'usrj_1', attempt: 1, sequence: 1, timestamp: new Date().toISOString() };
+    const warning = boundedProgressRecord({ ...base, event: 'warning', code: 'native_parity', message: 'w'.repeat(4096) });
+    expect(warning.event === 'warning' && warning.message.length).toBeLessThanOrEqual(2000);
+    const canceled = boundedProgressRecord({ ...base, event: 'job.canceled', reason: 'r'.repeat(4096) });
+    expect(canceled.event === 'job.canceled' && canceled.reason.length).toBeLessThanOrEqual(2000);
   });
 });
