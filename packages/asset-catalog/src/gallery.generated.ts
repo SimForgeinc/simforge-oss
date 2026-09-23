@@ -1,6 +1,6 @@
 import type { ExternalCatalogEntry } from './catalog.js';
 
-/** Generated from tools/meshy/manifest.json; rejected assets are intentionally absent. */
+/** Generated from the approved catalog-model manifest; rejected assets are intentionally absent. */
 export const GALLERY_CATALOG = [
   {
     "label": "Sedan",

@@ -163,7 +163,7 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     // on — its data folder, its credential vault, its map cache.
     href: "/dashboard/settings",
     label: "Settings",
-    description: "This computer, AI providers and storage",
+    description: "This computer, storage and account",
     icon: Settings,
     localOnly: true,
     match: (p) => p.startsWith("/dashboard/settings"),

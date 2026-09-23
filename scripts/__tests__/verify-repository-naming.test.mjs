@@ -102,3 +102,55 @@ test('rejects removed directories and package drift', () => {
     assert.throws(() => verifyRepositoryNaming(item.root), /apps\/studio must not exist/);
   } finally { item.cleanup(); }
 });
+
+// Assembled so this test file does not name the provider itself.
+const PROVIDER = ['Mes', 'hy'].join('');
+
+test('rejects the product-only generation provider anywhere, docs included', () => {
+  for (const [path, text] of [
+    ['studio/app/lib/gallery.ts', `export const client = '${PROVIDER.toLowerCase()}';\n`],
+    ['docs/product/providers.md', `Bring your own ${PROVIDER} key.\n`],
+    ['.github/workflows/ci.yml', `env:\n  ${PROVIDER.toUpperCase()}_API_KEY: x\n`],
+  ]) {
+    const item = fixture();
+    try {
+      mkdirSync(join(item.root, path, '..'), { recursive: true });
+      writeFileSync(join(item.root, path), text);
+      assert.throws(() => verifyRepositoryNaming(item.root), new RegExp(`${path.replaceAll('.', '\\.')} names ${PROVIDER}, which is product-only`));
+    } finally { item.cleanup(); }
+  }
+});
+
+test('allows the provider only in the licence and sealed provenance records', () => {
+  const item = fixture();
+  try {
+    mkdirSync(join(item.root, 'scripts', 'release'), { recursive: true });
+    writeFileSync(join(item.root, 'scripts', 'release', 'bundled-components.json'), JSON.stringify({ attributionApplied: `Model created with ${PROVIDER} - CC BY 4.0 License` }));
+    assert.equal(verifyRepositoryNaming(item.root).packageCount, PACKAGE_NAMES.length);
+  } finally { item.cleanup(); }
+});
+
+test('does not mistake a mesh Y coordinate for the provider', () => {
+  const item = fixture();
+  try {
+    writeFileSync(join(item.root, 'packages', 'cli', 'atlas.json'), JSON.stringify({ meshY: 1.25 }));
+    assert.equal(verifyRepositoryNaming(item.root).packageCount, PACKAGE_NAMES.length);
+  } finally { item.cleanup(); }
+});
+
+test('rejects the product-only asset generation surfaces', () => {
+  for (const path of [
+    'studio/app/api/asset-gallery/generations/route.ts',
+    'studio/app/lib/asset-gallery/generation-runner.ts',
+    'studio/app/lib/ai-providers/settings.ts',
+    'studio/app/dashboard/assets/AssetGenerateDialog.tsx',
+    `tools/${PROVIDER.toLowerCase()}/generate.mjs`,
+  ]) {
+    const item = fixture();
+    try {
+      mkdirSync(join(item.root, path, '..'), { recursive: true });
+      writeFileSync(join(item.root, path), 'export {};\n');
+      assert.throws(() => verifyRepositoryNaming(item.root), /is product-only and must not exist/, path);
+    } finally { item.cleanup(); }
+  }
+});

@@ -3,9 +3,9 @@
 //
 // One library, three sources, one contract for the renderer:
 //   - CARLA vehicles   (catalog/vehicles-carla)            — engine actor ids
-//   - gallery props    (packages/asset-catalog gallery)    — Meshy exports, raw
-//   - generated assets (meshy-assets.json + assets/<id>/)  — Meshy exports, raw
-// Meshy exports are ~1.9-unit center-origin cubes whatever the object is. Every
+//   - gallery props    (packages/asset-catalog gallery)    — generator exports, raw
+//   - generated assets (generated-assets.json + assets/<id>/) — generator exports, raw
+// Generator exports are ~1.9-unit center-origin cubes whatever the object is. Every
 // gallery/generated GLB the renderer sees is a NORMALIZED derivative: y-up,
 // +X-forward, ground-origin, TRUE SCALE from the declared dims (normalize-glb.mjs).
 // scen-play draws them with scaleToDims:false, so what the catalog says is what
@@ -35,14 +35,13 @@ import { fileURLToPath } from 'node:url';
 
 export const A3D = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(A3D, '..', '..');
-export const MESHY_ASSETS = process.env.SIMFORGE_MESHY_ASSETS ?? path.join(A3D, 'meshy-assets.json');
+export const GENERATED_ASSETS = process.env.SIMFORGE_GENERATED_ASSETS ?? path.join(A3D, 'generated-assets.json');
 export const MODELS_DIR = path.join(A3D, 'models');
 export const PED_MODELS = path.join(A3D, 'ped-models');
 export const ASSETS_DIR = path.join(A3D, 'assets');
 export const SCEN_PLAY = path.join(ROOT, 'renderer/target/release/scen-play');
 const GATEWAY = process.env.SIMFORGE_GATEWAY ?? 'http://127.0.0.1:4141/v1/chat/completions';
 const QA_MODEL = process.env.SIMFORGE_ASSET_QA_MODEL ?? 'openai-codex/gpt-5.6-sol';
-const MESHY_ROOT = 'https://api.meshy.ai/openapi';
 const CARLA_CATALOG = path.join(ROOT, 'catalog/vehicles-carla/catalog-models.json');
 const GALLERY_TS = path.join(ROOT, 'packages/asset-catalog/src/gallery.generated.ts');
 const GALLERY_DIR = path.join(ROOT, 'dev-assets/gallery-assets');
@@ -68,7 +67,7 @@ export const resolveEngineId = (id) => { try { return engineCatalog.resolveCatal
 
 /**
  * Derived live from the authoritative catalogs on every load — never cached —
- * so it cannot drift. Only generated entries persist (MESHY_ASSETS).
+ * so it cannot drift. Only generated entries persist (GENERATED_ASSETS).
  *
  * Three kinds of entry:
  *   engine  — actor ids from the engine catalog (roles). `render` says what
@@ -76,7 +75,7 @@ export const resolveEngineId = (id) => { try { return engineCatalog.resolveCatal
  *             or the procedural primitive. (pass b1/rr1 burned 55 iterations on
  *             CARLA blueprint ids that exist as render models but NOT as engine
  *             actor ids — those are never offered as actor ids again.)
- *   gallery / meshy — PROP models (props only), QA-gated at true scale.
+ *   catalog-gallery / generated — PROP models (props only), QA-gated at true scale.
  */
 export function loadLibrary() {
   const entries = [];
@@ -89,7 +88,7 @@ export function loadLibrary() {
     for (const g of arr) {
       gallery.push({ id: g.id, label: g.label, description: g.description, class: g.actorClass, dims: g.dims,
         glbPath: path.join('dev-assets/gallery-assets', g.model.url.replace('/gallery-assets/', '')),
-        source: 'meshy-gallery', status: qa[g.id]?.verdict ?? 'candidate', qa: qa[g.id] ?? undefined });
+        source: 'catalog-gallery', status: qa[g.id]?.verdict ?? 'candidate', qa: qa[g.id] ?? undefined });
     }
   } catch (e) { console.error('gallery seed skipped:', String(e).slice(0, 200)); }
   const galleryById = new Map(gallery.map((g) => [g.id, g]));
@@ -109,8 +108,8 @@ export function loadLibrary() {
       class: 'vehicle', glbPath: m.glbPath, source: 'carla', status: 'approved', renderOnly: true });
   }
   entries.push(...gallery);
-  if (fs.existsSync(MESHY_ASSETS)) {
-    for (const e of readJson(MESHY_ASSETS)) entries.push({ status: 'candidate', ...e });
+  if (fs.existsSync(GENERATED_ASSETS)) {
+    for (const e of readJson(GENERATED_ASSETS)) entries.push({ status: 'candidate', ...e });
   }
   return { entries };
 }
@@ -128,25 +127,25 @@ function saveGalleryQa(id, qa) {
 }
 
 /** Persist generated entries: O_EXCL lockfile + read/merge-by-id/temp/rename. */
-export function saveMeshyEntries(lib) {
-  const mine = lib.entries.filter((e) => e.source === 'meshy');
-  const lock = `${MESHY_ASSETS}.lock`;
+export function saveGeneratedEntries(lib) {
+  const mine = lib.entries.filter((e) => e.source === 'generated');
+  const lock = `${GENERATED_ASSETS}.lock`;
   const t0 = Date.now();
   for (;;) {
     try { fs.writeFileSync(lock, String(process.pid), { flag: 'wx' }); break; }
     catch {
       try { if (Date.now() - fs.statSync(lock).mtimeMs > 10_000) { fs.rmSync(lock, { force: true }); continue; } } catch { continue; }
-      if (Date.now() - t0 > 15_000) throw new Error('meshy-assets lock timeout');
+      if (Date.now() - t0 > 15_000) throw new Error('generated-assets lock timeout');
       const until = Date.now() + 50; while (Date.now() < until) { /* spin: sync context */ }
     }
   }
   try {
     const byId = new Map();
-    try { for (const e of readJson(MESHY_ASSETS)) byId.set(e.id, e); } catch { /* first write */ }
+    try { for (const e of readJson(GENERATED_ASSETS)) byId.set(e.id, e); } catch { /* first write */ }
     for (const e of mine) byId.set(e.id, e);
-    const tmp = `${MESHY_ASSETS}.${process.pid}.tmp`;
+    const tmp = `${GENERATED_ASSETS}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify([...byId.values()], null, 1));
-    fs.renameSync(tmp, MESHY_ASSETS);
+    fs.renameSync(tmp, GENERATED_ASSETS);
   } finally {
     fs.rmSync(lock, { force: true });
   }
@@ -185,7 +184,7 @@ export function normalizeGlb(file, { dims, cls, out = file, yaw = null } = {}) {
 
 /** Absolute path of the renderer-facing GLB for an entry (derived for gallery, in place for generated). */
 function rendererGlb(e) {
-  if (e.source === 'meshy-gallery') return path.join(MODELS_DIR, 'gallery', `${e.id}.glb`);
+  if (e.source === 'catalog-gallery') return path.join(MODELS_DIR, 'gallery', `${e.id}.glb`);
   return path.resolve(ROOT, e.glbPath);
 }
 
@@ -200,7 +199,7 @@ function setGalleryOverride(id, patch) {
 }
 
 /**
- * Gallery GLBs are raw Meshy exports too: derive normalized copies under
+ * Gallery GLBs are raw generator exports too: derive normalized copies under
  * models/gallery/, cached by (source sha, dims, yaw override). Generated
  * assets are normalized at generation time; `normalize` re-derives them.
  */
@@ -230,7 +229,7 @@ export function rebuildModelsDir(lib) {
   for (const e of lib.entries) {
     if (e.source === 'engine') continue; // resolved below, after every model row exists
     let glb = rendererGlb(e);
-    if (e.source === 'meshy-gallery') glb = ensureGalleryDerivative(e);
+    if (e.source === 'catalog-gallery') glb = ensureGalleryDerivative(e);
     if (!glb || !fs.existsSync(glb)) continue;
     const trueScale = e.source !== 'carla';
     const row = { model: { glbPath: glb, attribution: e.source, source: e.source }, tintable: e.source === 'carla', scaleToDims: !trueScale };
@@ -396,7 +395,7 @@ export async function judgeAssetQa(entry, views) {
 
 /** Full QA for one library entry: render -> judge -> persist status + dossier next to the asset. */
 export async function qaAsset(lib, entry) {
-  const dir = entry.source === 'meshy' ? path.join(ASSETS_DIR, entry.id, 'qa') : path.join(MODELS_DIR, 'qa', entry.id);
+  const dir = entry.source === 'generated' ? path.join(ASSETS_DIR, entry.id, 'qa') : path.join(MODELS_DIR, 'qa', entry.id);
   let result;
   try {
     let views = renderAssetQa(entry, dir);
@@ -407,7 +406,7 @@ export async function qaAsset(lib, entry) {
     if (judged.verdict === 'rejected' && r.facing_ok === false && r.reads_as_label && r.grounded && r.textured &&
         VEHICLE_CLASSES.has(entry.class)) {
       let flipped = false;
-      if (entry.source === 'meshy') {
+      if (entry.source === 'generated') {
         const modelDir = path.join(ASSETS_DIR, entry.id);
         const raw = path.join(modelDir, 'raw.glb');
         const model = path.join(modelDir, 'model.glb');
@@ -419,7 +418,7 @@ export async function qaAsset(lib, entry) {
           entry.sha256 = sha256File(model);
           flipped = true;
         } catch { /* keep the first verdict */ }
-      } else if (entry.source === 'meshy-gallery') {
+      } else if (entry.source === 'catalog-gallery') {
         let applied = 0;
         try { applied = readJson(`${rendererGlb(entry)}.src.json`).yawApplied ?? 0; } catch { /* default */ }
         setGalleryOverride(entry.id, { yaw: (applied + 180) % 360 });
@@ -440,93 +439,9 @@ export async function qaAsset(lib, entry) {
   fs.writeFileSync(path.join(dir, 'qa.json'), JSON.stringify(result, null, 2));
   entry.status = result.verdict;
   entry.qa = { at: result.at, verdict: result.verdict, reason: result.reasons?.reason ?? result.error ?? null, sheet: result.chase ?? null, sha256: result.sha256 ?? null };
-  if (entry.source === 'meshy') saveMeshyEntries(lib);
-  else if (entry.source === 'meshy-gallery') saveGalleryQa(entry.id, entry.qa);
+  if (entry.source === 'generated') saveGeneratedEntries(lib);
+  else if (entry.source === 'catalog-gallery') saveGalleryQa(entry.id, entry.qa);
   return result;
-}
-
-// ---------------------------------------------------------------------------
-// Meshy generation (search first; generate -> normalize -> register -> QA)
-// ---------------------------------------------------------------------------
-
-function meshyKey() {
-  if (process.env.MESHY_API_KEY) return process.env.MESHY_API_KEY;
-  const r = run(path.join(process.env.HOME, 'bin', 'op-michaelagents'),
-    ['item', 'get', 'Meshy', '--vault', 'MichaelAgents', '--fields', 'credential', '--reveal']);
-  const key = r.stdout.trim();
-  if (!key) throw new Error('Meshy API key unavailable (env MESHY_API_KEY or op vault)');
-  return key;
-}
-async function meshyCall(key, method, url, payload) {
-  for (let attempt = 1; ; attempt++) {
-    const res = await fetch(`${MESHY_ROOT}${url}`, { method, headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: payload ? JSON.stringify(payload) : undefined });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok) return body;
-    if (res.status === 402) throw new Error('Meshy credits exhausted');
-    if (res.status !== 429 && res.status < 500) throw new Error(`Meshy ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
-    if (attempt >= 5) throw new Error(`Meshy ${res.status} after ${attempt} attempts`);
-    await new Promise((r) => setTimeout(r, 5000 * attempt));
-  }
-}
-async function meshyPoll(key, taskId) {
-  const deadline = Date.now() + 30 * 60 * 1000;
-  while (Date.now() < deadline) {
-    const task = await meshyCall(key, 'GET', `/v2/text-to-3d/${encodeURIComponent(taskId)}`);
-    if (task.status === 'SUCCEEDED') return task;
-    if (['FAILED', 'CANCELED'].includes(task.status)) throw new Error(`Meshy task ${task.status}: ${task.task_error?.message ?? '?'}`);
-    await new Promise((r) => setTimeout(r, 15000));
-  }
-  throw new Error('Meshy task timed out (30 min)');
-}
-
-/** Generate, normalize to declared dims, register, QA. Returns the library entry (status set by QA). */
-export async function meshyGenerate(lib, req, { qa = true } = {}) {
-  if (!/^custom\.[a-z0-9][a-z0-9._-]{1,40}$/.test(String(req.assetId ?? ''))) throw new Error('assetId must match ^custom.[a-z0-9][a-z0-9._-]{1,40}$');
-  if (lib.entries.some((e) => e.id === req.assetId)) throw new Error(`asset ${req.assetId} already exists — use it or pick a new id`);
-  if (typeof req.prompt !== 'string' || req.prompt.length < 8 || req.prompt.length > 600) throw new Error('prompt must be 8-600 chars');
-  for (const k of ['l', 'w', 'h']) {
-    const v = req.dims?.[k];
-    if (!(typeof v === 'number' && v > 0.05 && v < 30)) throw new Error(`dims.${k} must be a number in (0.05, 30) meters`);
-  }
-  const key = meshyKey();
-  const finalDir = path.join(ASSETS_DIR, req.assetId);
-  const dir = finalDir + '.tmp';
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(dir, { recursive: true });
-  let refined, thumbnail = null, norm;
-  try {
-    const prev = await meshyCall(key, 'POST', '/v2/text-to-3d', { mode: 'preview', prompt: req.prompt, should_remesh: true, topology: 'triangle', target_polycount: 60000 });
-    const preview = await meshyPoll(key, prev.result);
-    const ref = await meshyCall(key, 'POST', '/v2/text-to-3d', { mode: 'refine', preview_task_id: preview.id });
-    refined = await meshyPoll(key, ref.result);
-    const glb = await fetch(refined.model_urls.glb);
-    fs.writeFileSync(path.join(dir, 'raw.glb'), Buffer.from(await glb.arrayBuffer()));
-    norm = normalizeGlb(path.join(dir, 'raw.glb'), { dims: req.dims, cls: req.class ?? 'prop', out: path.join(dir, 'model.glb') });
-    if (refined.thumbnail_url) {
-      thumbnail = path.join(dir, 'thumb.png');
-      fs.writeFileSync(thumbnail, Buffer.from(await (await fetch(refined.thumbnail_url)).arrayBuffer()));
-    }
-  } catch (e) {
-    fs.rmSync(dir, { recursive: true, force: true });
-    throw e;
-  }
-  fs.rmSync(finalDir, { recursive: true, force: true });
-  fs.renameSync(dir, finalDir);
-  const finalGlb = path.join(finalDir, 'model.glb');
-  const entry = {
-    id: req.assetId, label: req.label ?? req.assetId, description: req.prompt,
-    class: req.class ?? 'prop', dims: norm.size, declaredDims: req.dims, dimsSource: 'request',
-    glbPath: path.relative(ROOT, finalGlb),
-    thumbnail: thumbnail ? path.relative(ROOT, path.join(finalDir, 'thumb.png')) : undefined,
-    source: 'meshy', status: 'candidate', generatedAt: new Date().toISOString(), sha256: sha256File(finalGlb),
-    normalized: { scale: norm.scale, yaw: norm.yaw },
-  };
-  lib.entries.push(entry);
-  saveMeshyEntries(lib);
-  rebuildModelsDir(lib);
-  if (qa) await qaAsset(lib, entry);
-  return entry;
 }
 
 // ---------------------------------------------------------------------------
@@ -538,7 +453,7 @@ export async function meshyGenerate(lib, req, { qa = true } = {}) {
 export function normalizeGenerated(lib, onlyId = null) {
   const done = [];
   for (const e of lib.entries) {
-    if (e.source !== 'meshy' || (onlyId && e.id !== onlyId)) continue;
+    if (e.source !== 'generated' || (onlyId && e.id !== onlyId)) continue;
     const dims = e.declaredDims ?? e.dims;
     if (!dims) continue;
     const dir = path.join(ASSETS_DIR, e.id);
@@ -551,7 +466,7 @@ export function normalizeGenerated(lib, onlyId = null) {
     if (e.status === 'approved' && e.qa && e.qa.sha256 !== e.sha256) e.status = 'candidate'; // re-QA after geometry change
     done.push([e.id, norm.size]);
   }
-  saveMeshyEntries(lib);
+  saveGeneratedEntries(lib);
   return done;
 }
 
@@ -559,7 +474,7 @@ export function normalizeGenerated(lib, onlyId = null) {
 export function dedupeLibrary(lib) {
   const stem = (id) => id.replace(/^custom\./, '').replace(/[-_.]?(v\d+|final|mid|thin|runtime|solid|readable|baked|simple|realistic)(?=$|[-_.])/g, '').replace(/[-_.]+$/, '');
   const groups = new Map();
-  for (const e of lib.entries) if (e.source === 'meshy') { const k = stem(e.id); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
+  for (const e of lib.entries) if (e.source === 'generated') { const k = stem(e.id); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
   const rank = (e) => (STATUS_RANK[e.status] ?? 1) * 1e13 - Date.parse(e.generatedAt ?? 0);
   const out = [];
   for (const [k, es] of groups) {
@@ -569,7 +484,7 @@ export function dedupeLibrary(lib) {
     for (const e of es.slice(1)) { if (e.status !== 'rejected' && e.id !== keep.id) { e.supersededBy = keep.id; } }
     out.push([k, keep.id, es.slice(1).map((e) => e.id)]);
   }
-  saveMeshyEntries(lib);
+  saveGeneratedEntries(lib);
   return out;
 }
 
@@ -591,7 +506,7 @@ async function main() {
     console.log(`normalized ${done.length}: ` + done.map(([id, s]) => `${id}=${s.l}x${s.w}x${s.h}`).join(' '));
   } else if (cmd === 'qa') {
     const id = argOf('id', null);
-    const targets = lib.entries.filter((e) => (e.source === 'meshy' || (has('gallery') && e.source === 'meshy-gallery')) && !e.supersededBy &&
+    const targets = lib.entries.filter((e) => (e.source === 'generated' || (has('gallery') && e.source === 'catalog-gallery')) && !e.supersededBy &&
       (id ? e.id === id : has('all') ? true : (e.status ?? 'candidate') === 'candidate' || !e.qa));
     const conc = Number(argOf('concurrency', 3));
     let i = 0; const results = [];

@@ -560,7 +560,7 @@ for (const id of catalogIds) {
 // the legacy `pedestrian.adult_standing`/`_walking` aliases all answer
 // `models/pedestrian.adult/model.glb`. Left alone, those aliases would keep
 // the old entry's attribution and source while resolving to the new bytes —
-// CC BY 4.0 CARLA geometry credited to Meshy, which is a licence violation,
+// CC BY 4.0 CARLA geometry credited to another model's source, which is a licence violation,
 // not a cosmetic drift. They adopt the rebound entry wholesale, so every
 // member's bytes are described by exactly one provenance.
 const reboundPaths = new Map(rebound.map((id) => [catalogTable[id].model.glbPath, id]));
