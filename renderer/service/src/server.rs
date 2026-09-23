@@ -26,7 +26,7 @@ use render_core::engine::{
 };
 use render_core::profiles::RenderProfileConfig;
 use render_core::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
-use sensors::bvh::{Hit, Raycast, RaycastScene, Tri};
+use sensors::bvh::{Blas, Hit, InstancedScene, Raycast, RaycastScene, Tri};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -399,8 +399,92 @@ fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -
 }
 
 struct CombinedSensorScene<'a> {
-    static_scene: &'a RaycastScene,
-    actor_scene: &'a RaycastScene,
+    static_scene: &'a dyn Raycast,
+    actor_scene: &'a dyn Raycast,
+}
+
+/// Per-job cache of actor mesh trees, keyed by mesh asset. The strong handle
+/// keeps the asset (and therefore its id) alive for the cache's lifetime, so
+/// an id can never be reused for different geometry.
+#[derive(Default)]
+pub(crate) struct ActorBlasCache {
+    by_mesh: HashMap<bevy::asset::AssetId<bevy::prelude::Mesh>, (bevy::prelude::Handle<bevy::prelude::Mesh>, Blas)>,
+    /// Trees built (cache misses) over the cache's lifetime (diagnostics/tests).
+    pub(crate) builds: usize,
+}
+
+fn to_tri(triangle: [Vec3; 3]) -> Tri {
+    // The mesh tree's own ids are never reported: hits carry the instance's.
+    Tri { a: triangle[0], b: triangle[1], c: triangle[2], instance_id: 0 }
+}
+
+/// One actor mesh of a tick, owned so the scans can run off the main thread.
+#[derive(Clone)]
+pub(crate) enum ActorSensorInstance {
+    /// A rigid mesh: the job-cached tree of its asset at this tick's pose.
+    Shared { blas: Blas, world: bevy::math::Mat4, instance_id: u32 },
+    /// A skinned mesh posed this tick (world space; tree built with the scan).
+    Posed { triangles: Vec<[Vec3; 3]>, instance_id: u32 },
+}
+
+/// Snapshot the tick's actor meshes: exactly what the cameras draw (see
+/// `SceneApp::actor_sensor_meshes`). Rigid meshes resolve to a tree built
+/// once per job per mesh asset; nothing per tick touches their triangles.
+pub(crate) fn snapshot_actor_sensor_instances(
+    app: &mut SceneApp,
+    cache: &mut ActorBlasCache,
+) -> Result<Vec<ActorSensorInstance>, String> {
+    let meshes = app
+        .actor_sensor_meshes()
+        .map_err(|error| format!("actor sensor geometry: {error:#}"))?;
+    let mut out = Vec::with_capacity(meshes.len());
+    for mesh in meshes {
+        match mesh.geometry {
+            render_core::engine::ActorSensorGeometry::Rigid { mesh: handle, world } => {
+                let id = handle.id();
+                if !cache.by_mesh.contains_key(&id) {
+                    let triangles = app
+                        .mesh_asset_triangles(&handle, &mesh.label)
+                        .map_err(|error| format!("actor sensor geometry: {error:#}"))?;
+                    cache.by_mesh.insert(id, (handle.clone(), Blas::build(triangles.into_iter().map(to_tri))));
+                    cache.builds += 1;
+                }
+                out.push(ActorSensorInstance::Shared { blas: cache.by_mesh[&id].1.clone(), world, instance_id: mesh.instance_id });
+            }
+            render_core::engine::ActorSensorGeometry::Skinned { triangles, .. } => {
+                out.push(ActorSensorInstance::Posed { triangles, instance_id: mesh.instance_id });
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// The tick's two-level actor scene: shared mesh trees referenced by
+/// instance (only the instance tree is built here) plus posed skins.
+pub(crate) fn build_actor_sensor_scene(instances: &[ActorSensorInstance]) -> InstancedScene {
+    let mut scene = InstancedScene::new();
+    let mut slots: Vec<(Blas, usize)> = Vec::new();
+    for instance in instances {
+        match instance {
+            ActorSensorInstance::Shared { blas, world, instance_id } => {
+                let slot = match slots.iter().find(|(known, _)| known.ptr_eq(blas)) {
+                    Some((_, slot)) => *slot,
+                    None => {
+                        let slot = scene.add_blas(blas);
+                        slots.push((blas.clone(), slot));
+                        slot
+                    }
+                };
+                scene.add_instance(slot, *world, *instance_id);
+            }
+            ActorSensorInstance::Posed { triangles, instance_id } => {
+                let slot = scene.add_blas(&Blas::build(triangles.iter().copied().map(to_tri)));
+                scene.add_instance(slot, bevy::math::Mat4::IDENTITY, *instance_id);
+            }
+        }
+    }
+    scene.build();
+    scene
 }
 
 impl Raycast for CombinedSensorScene<'_> {
@@ -450,6 +534,8 @@ pub struct ServiceState {
     /// Static map BVHs, built on first lidar/radar render or episode and
     /// reused for every later tick (see [`MapSensorScenes`]).
     sensor_scenes: Option<std::sync::Arc<MapSensorScenes>>,
+    /// Actor mesh trees built once per mesh asset for this job.
+    actor_blas: ActorBlasCache,
     /// Whether caching the built scenes waits for the write (the one-shot
     /// `--build-sensor-cache` mode) or leaves it to a background thread.
     pub sync_sensor_cache_writes: bool,
@@ -491,19 +577,24 @@ pub struct SensorScenesOutcome {
 impl ServiceState {
     /// Build the map's sensor scenes if nothing has needed them yet. Logs
     /// progress: on a large map this runs for minutes inside one request.
-    fn ensure_sensor_scenes(&mut self) {
+    fn ensure_sensor_scenes(&mut self) -> Result<(), String> {
         if self.sensor_scenes.is_none() {
-            self.ensure_sensor_scenes_outcome();
+            self.ensure_sensor_scenes_outcome()?;
         }
+        Ok(())
     }
 
     /// [`Self::ensure_sensor_scenes`], reporting whether the cache served it.
-    pub fn ensure_sensor_scenes_outcome(&mut self) -> SensorScenesOutcome {
+    /// A static mesh the snapshot cannot read fails the request.
+    pub fn ensure_sensor_scenes_outcome(&mut self) -> Result<SensorScenesOutcome, String> {
         if let Some(scenes) = &self.sensor_scenes {
-            return SensorScenesOutcome { key: None, loaded: true, triangles: scenes.static_scene.triangle_count() };
+            return Ok(SensorScenesOutcome { key: None, loaded: true, triangles: scenes.static_scene.triangle_count() });
         }
         let started = std::time::Instant::now();
-        let triangles = self.app.sensor_triangles(false);
+        let triangles = self
+            .app
+            .static_sensor_triangles()
+            .map_err(|error| format!("static sensor geometry: {error:#}"))?;
         eprintln!(
             "sensor-scenes: building static + road BVHs over {} map triangles (first lidar/radar/episode request)",
             triangles.len()
@@ -521,7 +612,7 @@ impl ServiceState {
                     "sensor-scenes: loaded cached {key} in {:.1} s (triangle snapshot {snapshot_s:.1} s)",
                     started.elapsed().as_secs_f64()
                 );
-                return SensorScenesOutcome { key: Some(key.clone()), loaded: true, triangles: triangle_count };
+                return Ok(SensorScenesOutcome { key: Some(key.clone()), loaded: true, triangles: triangle_count });
             }
         }
         // A heartbeat while the BVHs build, so a watcher of the service log
@@ -572,7 +663,7 @@ impl ServiceState {
             }
         }
         self.sensor_scenes = Some(scenes);
-        SensorScenesOutcome { key: cache.map(|(_, key)| key), loaded: false, triangles: triangle_count }
+        Ok(SensorScenesOutcome { key: cache.map(|(_, key)| key), loaded: false, triangles: triangle_count })
     }
 
     /// Classes of the frozen static legend, resolved once: the legend never
@@ -647,6 +738,7 @@ impl ServiceState {
             radars: Vec::new(),
             sensor_scenes: None,
             sync_sensor_cache_writes: false,
+            actor_blas: ActorBlasCache::default(),
             static_sensor_classes: None,
             needs_settle: true,
             sensor_cache_dir: spec
@@ -949,7 +1041,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             let history_indices=match episode.warm_start() {
                 Ok(indices)=>indices,Err(error)=>return WireResponse::error(i,error),
             };
-            state.ensure_sensor_scenes();
+            if let Err(error)=state.ensure_sensor_scenes() {return WireResponse::error(i,error);}
             episode.evaluate(&|pose| on_road(&state.sensor_scenes.as_ref().expect("sensor scenes built").road,pose));
             for frame in &state.scene {
                 for actor in &frame.actors { state.app.remove_actor(&actor.id); }
@@ -988,7 +1080,9 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         }
         RequestBody::StepEpisode { action } => {
             if state.episode.is_some() {
-                state.ensure_sensor_scenes();
+                if let Err(error) = state.ensure_sensor_scenes() {
+                    return WireResponse::error(i, error);
+                }
             }
             let Some(episode) = state.episode.as_mut() else {
                 return WireResponse::error(i, "reset_episode is required before step_episode");
@@ -2122,7 +2216,7 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     let sensors_wanted = !lidar_rig.is_empty() || !radar_rig.is_empty();
     if sensors_wanted {
         let mark = std::time::Instant::now();
-        state.ensure_sensor_scenes();
+        state.ensure_sensor_scenes().map_err(|error| WireResponse::error(i, error))?;
         stages.sensor_scenes_ms = ms(mark);
     }
     let mark = std::time::Instant::now();
@@ -2316,7 +2410,8 @@ struct RadarJob {
 /// [`prepare_sensor_work`]; [`run_sensor_work`] is a pure function of it and
 /// the static map scene.
 struct SensorWork {
-    actor_triangles: Vec<SensorTriangle>,
+    /// The tick's actor meshes (see [`snapshot_actor_sensor_instances`]).
+    actors: Vec<ActorSensorInstance>,
     /// Frozen static legend classes (built once per service).
     static_classes: std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>>,
     /// The current frame's actors, resolved through the engine.
@@ -2352,7 +2447,7 @@ fn prepare_sensor_work(
     policy_host: Option<render_core::coordinates::SensorFrame>,
 ) -> Result<SensorWork, String> {
     let static_classes = state.static_sensor_classes();
-    let actor_triangles = state.app.sensor_triangles(true);
+    let actors = snapshot_actor_sensor_instances(&mut state.app, &mut state.actor_blas)?;
     let frame = state.current_tick.and_then(|index| state.scene.get(index as usize));
     let tick_hz = frame.map(|frame| frame.tick_hz).filter(|tick_hz| *tick_hz > 0.0).unwrap_or(20.0);
     let mut instance_velocities = HashMap::new();
@@ -2415,13 +2510,13 @@ fn prepare_sensor_work(
             host_velocity: mount.host_velocity,
         });
     }
-    Ok(SensorWork { actor_triangles, static_classes, actor_classes, instance_velocities, lidars, radars, sensor_to_policy })
+    Ok(SensorWork { actors, static_classes, actor_classes, instance_velocities, lidars, radars, sensor_to_policy })
 }
 
 /// Build the actor scene and run every scan of `work` (pure; any thread).
 fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResult {
     let started = std::time::Instant::now();
-    let actor_scene = build_sensor_scene(work.actor_triangles.clone());
+    let actor_scene = build_actor_sensor_scene(&work.actors);
     let actor_scene_ms = started.elapsed().as_secs_f64() * 1000.0;
     let combined_scene = CombinedSensorScene { static_scene, actor_scene: &actor_scene };
     let instance_class = |instance_id: u32| -> sensors::taxonomy::SemanticClass {
@@ -2675,9 +2770,22 @@ mod tests {
             .collect()
     }
 
+    /// An actor as the service snapshots it: a shared model-local tree
+    /// placed by a world matrix (the rigid-mesh path).
     fn sensor_work(actor_triangles: Vec<SensorTriangle>) -> super::SensorWork {
+        let origin = Vec3::from_array(actor_triangles[0].a);
+        let blas = sensors::bvh::Blas::build(actor_triangles.iter().map(|t| Tri {
+            a: Vec3::from_array(t.a) - origin,
+            b: Vec3::from_array(t.b) - origin,
+            c: Vec3::from_array(t.c) - origin,
+            instance_id: 0,
+        }));
         super::SensorWork {
-            actor_triangles,
+            actors: vec![super::ActorSensorInstance::Shared {
+                blas,
+                world: bevy::math::Mat4::from_translation(origin),
+                instance_id: actor_triangles[0].instance_id,
+            }],
             static_classes: std::sync::Arc::new(HashMap::from([(1, SemanticClass::Building)])),
             actor_classes: HashMap::from([(7, SemanticClass::Car)]),
             instance_velocities: HashMap::from([(7, Vec3::new(3.0, 0.0, 0.0))]),

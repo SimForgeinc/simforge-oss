@@ -75,7 +75,7 @@ fn main() -> Result<()> {
         let mut state = ServiceState::new(app, &spec, ring.to_string_lossy().into_owned(), shm)?;
         state.sync_sensor_cache_writes = true;
         let t1 = std::time::Instant::now();
-        let outcome = state.ensure_sensor_scenes_outcome();
+        let outcome = state.ensure_sensor_scenes_outcome().map_err(anyhow::Error::msg)?;
         let _ = std::fs::remove_file(&ring);
         println!(
             "{}",

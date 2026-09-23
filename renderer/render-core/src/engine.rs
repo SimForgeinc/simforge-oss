@@ -1655,6 +1655,177 @@ pub struct SensorTriangle {
     pub instance_id: u32,
 }
 
+/// One visible actor mesh for the ray sensors (see
+/// [`SceneApp::actor_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct ActorSensorMesh {
+    pub actor_id: String,
+    /// `<actor id>/<glTF node name>` for error messages and diagnostics.
+    pub label: String,
+    /// The actor's instance id: every mesh of one actor reports it.
+    pub instance_id: u32,
+    pub geometry: ActorSensorGeometry,
+}
+
+#[derive(Clone, Debug)]
+pub enum ActorSensorGeometry {
+    /// A rigid mesh: model-local triangles (see
+    /// [`SceneApp::mesh_asset_triangles`], cacheable per asset) placed by
+    /// the world matrix the camera draws it with this tick.
+    Rigid { mesh: Handle<Mesh>, world: Mat4 },
+    /// A skinned mesh posed this tick in world space.
+    Skinned { mesh: AssetId<Mesh>, triangles: Vec<[Vec3; 3]> },
+}
+
+/// Triangle-list triangles of a mesh in its local space. Any layout the
+/// ray sensors cannot reproduce exactly is an error naming the mesh, never
+/// a silent skip or a reinterpretation.
+pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::render::render_resource::PrimitiveTopology;
+    if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
+        bail!("mesh {label} uses {:?}; the lidar/radar scene supports triangle lists only", mesh.primitive_topology());
+    }
+    if mesh.has_morph_targets() {
+        bail!("mesh {label} has morph targets, which the lidar/radar scene cannot pose");
+    }
+    let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} has no POSITION attribute");
+    };
+    let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let vertex = |index: usize| -> Result<Vec3> {
+        vertices.get(index).map(|v| Vec3::from(*v)).ok_or_else(|| anyhow::anyhow!(
+            "mesh {label} index {index} is out of range ({} vertices)", vertices.len()
+        ))
+    };
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..vertices.len()).collect(),
+    };
+    if indices.len() % 3 != 0 {
+        bail!("mesh {label} has {} indices, not a whole number of triangles", indices.len());
+    }
+    indices
+        .chunks_exact(3)
+        .map(|tri| Ok([vertex(tri[0])?, vertex(tri[1])?, vertex(tri[2])?]))
+        .collect()
+}
+
+/// World-space triangles of a skinned mesh under `joints` (joint world
+/// matrix x inverse bindpose, as the skin extraction uploads them), blended
+/// the way `skinning.wgsl` blends: the weighted sum of joint matrices
+/// applied to the bind-pose position.
+pub fn skinned_world_triangles(mesh: &Mesh, joints: &[Mat4], label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::mesh::VertexAttributeValues;
+    let local = mesh_local_triangles(mesh, label)?;
+    let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let joint_indices: Vec<[u16; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_JOINT_INDEX) {
+        Some(VertexAttributeValues::Uint16x4(values)) => values.clone(),
+        Some(other) => bail!("skinned mesh {label} JOINTS_0 has unsupported format {:?}", bevy::mesh::VertexFormat::from(other)),
+        None => bail!("skinned mesh {label} has no JOINTS_0 attribute"),
+    };
+    let Some(VertexAttributeValues::Float32x4(weights)) = mesh.attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT) else {
+        bail!("skinned mesh {label} has no Float32x4 WEIGHTS_0 attribute");
+    };
+    if joint_indices.len() != positions.len() || weights.len() != positions.len() {
+        bail!("skinned mesh {label} joint attributes do not match its {} vertices", positions.len());
+    }
+    let mut posed = Vec::with_capacity(positions.len());
+    for ((position, index), weight) in positions.iter().zip(&joint_indices).zip(weights) {
+        let mut model = Mat4::ZERO;
+        for k in 0..4 {
+            let joint = joints.get(index[k] as usize).ok_or_else(|| anyhow::anyhow!(
+                "skinned mesh {label} references joint {} of {}", index[k], joints.len()
+            ))?;
+            model += *joint * weight[k];
+        }
+        posed.push(model.transform_point3(Vec3::from(*position)));
+    }
+    // Map each local triangle back onto posed vertices through the indices.
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..positions.len()).collect(),
+    };
+    debug_assert_eq!(indices.len(), local.len() * 3);
+    Ok(indices.chunks_exact(3).map(|tri| [posed[tri[0]], posed[tri[1]], posed[tri[2]]]).collect())
+}
+
+#[cfg(test)]
+mod sensor_mesh_tests {
+    use super::*;
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, VertexAttributeValues};
+    use bevy::render::render_resource::PrimitiveTopology;
+
+    fn quad(topology: PrimitiveTopology) -> Mesh {
+        let mut mesh = Mesh::new(topology, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
+        mesh.insert_indices(Indices::U16(vec![0, 1, 2, 0, 2, 3]));
+        mesh
+    }
+
+    #[test]
+    fn triangle_list_meshes_yield_their_triangles() {
+        let tris = mesh_local_triangles(&quad(PrimitiveTopology::TriangleList), "quad").unwrap();
+        assert_eq!(tris.len(), 2);
+        assert_eq!(tris[1], [Vec3::ZERO, Vec3::new(1.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0)]);
+    }
+
+    #[test]
+    fn unreadable_meshes_fail_instead_of_disappearing_from_lidar() {
+        let strip = mesh_local_triangles(&quad(PrimitiveTopology::TriangleStrip), "car/body").unwrap_err();
+        assert!(format!("{strip}").contains("car/body"), "{strip}");
+        let mut bad = quad(PrimitiveTopology::TriangleList);
+        bad.insert_indices(Indices::U16(vec![0, 1, 9]));
+        assert!(format!("{}", mesh_local_triangles(&bad, "car/wheel").unwrap_err()).contains("out of range"));
+        let mut partial = quad(PrimitiveTopology::TriangleList);
+        partial.insert_indices(Indices::U16(vec![0, 1]));
+        assert!(mesh_local_triangles(&partial, "x").is_err());
+        let mut no_position = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        no_position.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 3]);
+        assert!(mesh_local_triangles(&no_position, "x").is_err());
+    }
+
+    fn skinned_quad() -> Mesh {
+        let mut mesh = quad(PrimitiveTopology::TriangleList);
+        // Bottom edge on joint 0, top edge on joint 1.
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]));
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        mesh
+    }
+
+    #[test]
+    fn skinned_meshes_are_posed_by_their_joints() {
+        let mesh = skinned_quad();
+        let rest = skinned_world_triangles(&mesh, &[Mat4::IDENTITY, Mat4::IDENTITY], "ped").unwrap();
+        assert_eq!(rest, mesh_local_triangles(&mesh, "ped").unwrap());
+        // Lift joint 1 (the top edge) by 2 m and move the whole skin 5 m in x.
+        let base = Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0));
+        let posed = skinned_world_triangles(&mesh, &[base, base * Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(posed[0], [Vec3::new(5.0, 0.0, 0.0), Vec3::new(6.0, 0.0, 0.0), Vec3::new(6.0, 3.0, 0.0)]);
+        // Blended weights interpolate the joint matrices.
+        let mut blended = mesh.clone();
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 1, 0, 0]; 4]));
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[0.5f32, 0.5, 0.0, 0.0]; 4]);
+        let half = skinned_world_triangles(&blended, &[Mat4::IDENTITY, Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(half[0][0], Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn skins_that_reference_missing_joints_fail() {
+        let error = skinned_world_triangles(&skinned_quad(), &[Mat4::IDENTITY], "ped/body").unwrap_err();
+        assert!(format!("{error}").contains("joint 1 of 1"), "{error}");
+        let mut unskinned = quad(PrimitiveTopology::TriangleList);
+        unskinned.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        assert!(skinned_world_triangles(&unskinned, &[Mat4::IDENTITY], "x").is_err());
+    }
+}
+
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
@@ -3360,7 +3531,7 @@ impl SceneApp {
                 if let Some(children) = world.get::<Children>(entity) {
                     stack.extend(children.iter());
                 }
-                if world.get::<Mesh3d>(entity).is_some() {
+                if world.get::<Mesh3d>(entity).is_some() && world.get::<IdClone>(entity).is_none() {
                     targets.push(entity);
                 }
             }
@@ -3722,6 +3893,48 @@ impl SceneApp {
         if model_mesh_count == 0 {
             bail!("actor model instantiated without mesh nodes: {}", glb_path.display());
         }
+        // The instance-ID pass must draw the model the RGB camera draws, not
+        // the canonical cuboid: every model mesh gets a layer-1 child clone
+        // under the actor's ID material (skinned meshes keep their skin so
+        // the clone follows the animated pose), and the cuboid's own ID
+        // clone is hidden.
+        {
+            let clone = *self
+                .actor_id_clones
+                .get(actor_id)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no instance-ID clone"))?;
+            let world = self.app.world_mut();
+            let id_material = world
+                .get::<MeshMaterial3d<StandardMaterial>>(clone)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} instance-ID clone has no material"))?
+                .0
+                .clone();
+            let mut stack = vec![model_root];
+            let mut sources = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if let Some(mesh) = world.get::<Mesh3d>(entity) {
+                    sources.push((entity, mesh.0.clone(), world.get::<SkinnedMesh>(entity).cloned()));
+                }
+            }
+            for (entity, mesh, skin) in sources {
+                let mut cmd = world.spawn((
+                    IdClone,
+                    Name::new(format!("actor-id:{actor_id}")),
+                    Mesh3d(mesh),
+                    MeshMaterial3d(id_material.clone()),
+                    RenderLayers::layer(1),
+                    Transform::IDENTITY,
+                    ChildOf(entity),
+                ));
+                if let Some(skin) = skin {
+                    cmd.insert(skin);
+                }
+            }
+            world.entity_mut(clone).insert(Visibility::Hidden);
+        }
         self.actor_models.insert(
             actor_id.to_string(),
             (model_root, uniform_scale, model_mesh_count),
@@ -3833,11 +4046,14 @@ impl SceneApp {
         self.actors.get(actor_id).map(|(_, instance_id)| *instance_id)
     }
 
-    /// Snapshot either static map geometry or dynamic actor geometry.
+    /// Snapshot the static map geometry (every instance-ID'd mesh that is not
+    /// a dynamic actor) as world-space triangles.
     ///
-    /// Static geometry is captured once by the long-lived service; only the
-    /// small actor snapshot is rebuilt after each applied scene tick.
-    pub fn sensor_triangles(&mut self, dynamic_actors: bool) -> Vec<SensorTriangle> {
+    /// Static geometry is captured once by the long-lived service. Actor
+    /// geometry is never snapshotted as triangles: see
+    /// [`Self::actor_sensor_meshes`]. A mesh the snapshot cannot read is an
+    /// error naming it; it is never silently left out of the sensor world.
+    pub fn static_sensor_triangles(&mut self) -> Result<Vec<SensorTriangle>> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<
             (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
@@ -3846,44 +4062,128 @@ impl SceneApp {
         let meshes = world.resource::<Assets<Mesh>>();
         let mut out = Vec::new();
         for (mesh3d, transform, instance_id, name) in query.iter(world) {
-            let is_actor = name.is_some_and(|name| name.as_str().starts_with("actor:"));
-            if is_actor != dynamic_actors {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
                 continue;
             }
-            let Some(mesh) = meshes.get(&mesh3d.0) else { continue };
-            let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else { continue };
+            let label = name.map(|name| name.as_str()).unwrap_or("unnamed static mesh");
+            let mesh = meshes.get(&mesh3d.0).ok_or_else(|| anyhow::anyhow!(
+                "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                instance_id.0
+            ))?;
             let matrix = transform.to_matrix();
-            let mut push = |indices: [usize; 3]| {
-                let point = |index: usize| matrix.transform_point3(Vec3::from(vertices[index])).to_array();
+            for [a, b, c] in mesh_local_triangles(mesh, label)? {
                 out.push(SensorTriangle {
-                    a: point(indices[0]),
-                    b: point(indices[1]),
-                    c: point(indices[2]),
+                    a: matrix.transform_point3(a).to_array(),
+                    b: matrix.transform_point3(b).to_array(),
+                    c: matrix.transform_point3(c).to_array(),
                     instance_id: instance_id.0,
                 });
-            };
-            match mesh.indices() {
-                Some(bevy::mesh::Indices::U16(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                Some(bevy::mesh::Indices::U32(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                None => {
-                    for first in (0..vertices.len()).step_by(3) {
-                        if first + 2 < vertices.len() {
-                            push([first, first + 1, first + 2]);
-                        }
-                    }
-                }
             }
         }
-        out
+        Ok(out)
+    }
+
+    /// The model-local triangles of one mesh asset, for the caller's
+    /// per-mesh BLAS cache (built once per asset, not per tick).
+    pub fn mesh_asset_triangles(&self, mesh: &Handle<Mesh>, label: &str) -> Result<Vec<[Vec3; 3]>> {
+        let meshes = self.app.world().resource::<Assets<Mesh>>();
+        let data = meshes.get(mesh).ok_or_else(|| anyhow::anyhow!(
+            "actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+        ))?;
+        mesh_local_triangles(data, label)
+    }
+
+    /// Every visible actor mesh as the ray sensors must see it this tick:
+    /// exactly the geometry the RGB cameras draw. An actor with a catalog
+    /// model contributes each visible mesh node of that model (wheels and
+    /// other articulated nodes at their current world pose; skinned meshes
+    /// posed on the CPU the way the skinning shader poses them). An actor
+    /// without a model contributes the cuboid the cameras draw for it.
+    ///
+    /// Order is deterministic: actors by id, then model nodes in hierarchy
+    /// order. Reads propagated `GlobalTransform`s, so call it after the
+    /// tick's readiness/capture update (the same world the cameras drew).
+    pub fn actor_sensor_meshes(&mut self) -> Result<Vec<ActorSensorMesh>> {
+        let mut actor_ids: Vec<&String> = self.actors.keys().collect();
+        actor_ids.sort();
+        let world = self.app.world();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let bindposes = world.resource::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>();
+        let mut out = Vec::new();
+        for actor_id in actor_ids {
+            let (cuboid, instance_id) = self.actors[actor_id];
+            let mut entities = Vec::new();
+            match self.actor_models.get(actor_id) {
+                Some(&(root, _, _)) => {
+                    let mut stack = vec![root];
+                    while let Some(entity) = stack.pop() {
+                        if let Some(children) = world.get::<Children>(entity) {
+                            // Reverse so the depth-first walk visits children
+                            // in their declared order.
+                            stack.extend(children.iter().rev());
+                        }
+                        if world.get::<IdClone>(entity).is_none() && world.get::<Mesh3d>(entity).is_some() {
+                            entities.push(entity);
+                        }
+                    }
+                    if entities.is_empty() {
+                        bail!("actor {actor_id} has a catalog model with no mesh nodes for the lidar/radar scene");
+                    }
+                }
+                None => entities.push(cuboid),
+            }
+            let mut contributed = 0usize;
+            for entity in entities {
+                let visible = world
+                    .get::<InheritedVisibility>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor {actor_id} mesh {entity:?} has no visibility state"))?
+                    .get();
+                if !visible {
+                    continue;
+                }
+                let label = world
+                    .get::<Name>(entity)
+                    .map(|name| format!("{actor_id}/{}", name.as_str()))
+                    .unwrap_or_else(|| format!("{actor_id}/{entity:?}"));
+                let handle = world.get::<Mesh3d>(entity).expect("filtered on Mesh3d").0.clone();
+                let world_matrix = world
+                    .get::<GlobalTransform>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor mesh {label} has no world transform"))?
+                    .to_matrix();
+                let geometry = match world.get::<SkinnedMesh>(entity) {
+                    None => ActorSensorGeometry::Rigid { mesh: handle, world: world_matrix },
+                    Some(skin) => {
+                        let mesh = meshes.get(&handle).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+                        ))?;
+                        let inverse = bindposes.get(&skin.inverse_bindposes).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no inverse bindposes loaded"
+                        ))?;
+                        if inverse.len() < skin.joints.len() {
+                            bail!("skinned actor mesh {label} has {} joints but {} inverse bindposes", skin.joints.len(), inverse.len());
+                        }
+                        let mut joints = Vec::with_capacity(skin.joints.len());
+                        for (joint, inverse_bindpose) in skin.joints.iter().zip(inverse.iter()) {
+                            let global = world.get::<GlobalTransform>(*joint).ok_or_else(|| anyhow::anyhow!(
+                                "skinned actor mesh {label} joint {joint:?} has no world transform"
+                            ))?;
+                            // Same product the skin extraction uploads.
+                            joints.push(Mat4::from(global.affine()) * *inverse_bindpose);
+                        }
+                        ActorSensorGeometry::Skinned {
+                            mesh: handle.id(),
+                            triangles: skinned_world_triangles(mesh, &joints, &label)?,
+                        }
+                    }
+                };
+                out.push(ActorSensorMesh { actor_id: actor_id.clone(), label, instance_id, geometry });
+                contributed += 1;
+            }
+            if contributed == 0 {
+                bail!("actor {actor_id} has no visible geometry for the lidar/radar scene");
+            }
+        }
+        Ok(out)
     }
 
     /// Drop every registered camera group (respawn-on-view-change primitive:
