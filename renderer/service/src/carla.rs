@@ -104,15 +104,21 @@ pub fn static_class_of(name: &str) -> u8 {
     }
 }
 
-/// Map a dynamic-actor semantic class name (scene-state `actorClass`) to a
-/// CARLA class id. Cyclists ride bicycles; CARLA models the *bicycle* as its
-/// own class (9) but the rider as pedestrian — the legacy fusion tracks
-/// riders, so they map to pedestrian. Trucks/buses fold into vehicle exactly
-/// like the legacy `SEM_CLASSES` consumer treats them ("vehicle").
+/// Map a dynamic-actor semantic class name (scene-state `actorClass`, or
+/// `rider` for a ridden two-wheeler's rider instance) to a CARLA class id.
+///
+/// This layout is the legacy CARLA CityScapes palette (0.9.10-0.9.13), which
+/// has no rider or bicycle class: two-wheelers are `Vehicles` (10) and the
+/// person riding one is a `Pedestrian` (4), matching the legacy fusion that
+/// tracks riders as pedestrians. The rider is also its own instance in the
+/// instance pass, so rider and bike stay separable. (CARLA 0.9.14+/0.10 and
+/// Cityscapes would say rider 13 / bicycle 19 / motorcycle 18.)
+/// Trucks/buses fold into vehicle exactly like the legacy `SEM_CLASSES`
+/// consumer treats them ("vehicle").
 pub fn actor_class_of(class: &str) -> Result<u8, String> {
     match class {
-        "car" | "van" | "suv" | "pickup" | "truck" | "bus" | "motorcycle" => Ok(classes::VEHICLE),
-        "pedestrian" | "cyclist" => Ok(classes::PEDESTRIAN),
+        "car" | "van" | "suv" | "pickup" | "truck" | "bus" | "motorcycle" | "cyclist" => Ok(classes::VEHICLE),
+        "pedestrian" | "rider" => Ok(classes::PEDESTRIAN),
         // Props have no CARLA CityScapes class of their own in this subset.
         "prop" => Ok(classes::UNLABELED),
         other => Err(format!("[native_actor_class_unmapped] actor class {other:?} has no CARLA semantic class")),
@@ -224,6 +230,14 @@ mod tests {
         let out = semantic_from_ids(&data, 2, 1, 8, |id| if id == 1 { 10 } else { 0 });
         assert_eq!(out[2], 10);
         assert_eq!(out[4 + 2], 0);
+    }
+
+    #[test]
+    fn riders_are_people_and_their_two_wheelers_are_vehicles() {
+        assert_eq!(actor_class_of("rider"), Ok(classes::PEDESTRIAN));
+        assert_eq!(actor_class_of("cyclist"), Ok(classes::VEHICLE));
+        assert_eq!(actor_class_of("motorcycle"), Ok(classes::VEHICLE));
+        assert_eq!(actor_class_of("pedestrian"), Ok(classes::PEDESTRIAN));
     }
 
     #[test]
