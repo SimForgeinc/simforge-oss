@@ -388,7 +388,10 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.ok(inputs.every((input) => input.download === undefined), "a batch-v1 lease carries no signed URL or bearer token");
   assert.ok(!JSON.stringify(lease).includes("authorization"));
   // A worker that declared controlFeatures=v1 learns which newer output fields this plane accepts.
-  assert.deepEqual((lease as { controlFeatures?: string[] }).controlFeatures, ["native-evidence.scene-source", "native-evidence.parity"]);
+  assert.deepEqual((lease as { controlFeatures?: string[] }).controlFeatures, [
+    "native-evidence.scene-source", "native-evidence.parity", "native-evidence.stage-timings",
+    "native-evidence.capture-clock", "native-evidence.vram-detected",
+  ]);
 
   const urls = await signRenderInputsV2({
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken, workerNodeId: WORKER_NODE_ID,
