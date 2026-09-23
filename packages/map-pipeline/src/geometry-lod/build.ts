@@ -5,7 +5,7 @@ import { MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
 
 import { canonicalJson, sha256 } from '../closure.js';
-import { encodeKtx2, ktx2ToolFingerprint } from '../ktx2.js';
+import { decodeKtx2, encodeKtx2, ktx2ToolFingerprint } from '../ktx2.js';
 import type { Ktx2Options } from '../ktx2.js';
 import { componentCount, maxScale, meshInstances, readAccessorFloat, readIndices, readMasterGeometry } from './gltf-read.js';
 import type { GltfDocument, GltfMaterial, MasterGeometry } from './gltf-read.js';
@@ -25,7 +25,7 @@ import type { GeometryLodManifest, LodLevelEntry, LodMeshEntry, SensorPrimitiveE
  * Bump when the output for identical input changes (algorithm, defaults,
  * file layout). Part of every build key, so a bump rebuilds every map.
  */
-export const GEOMETRY_LOD_REVISION = 1;
+export const GEOMETRY_LOD_REVISION = 3;
 export const MESHOPTIMIZER_VERSION = '1.2.0';
 /** Closure directory of the derivative (next to `derived/sumo`). */
 export const GEOMETRY_LOD_DIR = 'derived/geometry-lod';
@@ -129,7 +129,7 @@ export interface GeometryLodResult {
 }
 
 /** Mesh names of vegetation (the master's own vegetation rule, plus common species). */
-const VEGETATION_NAME = /veg|tree|bush|grass|foliage|plant|leaf|leaves|shrub|hedge|ivy|maple|oak|pine|palm|cypress|eucalyptus|alnus|aporosa|birch|willow|fern|conifer/i;
+const VEGETATION_NAME = /veg|tree|bush|grass|foliage|plant|leaf|leaves|shrub|hedge|ivy|maple|oak|pine|palm|cypress|eucalyptus|euc_|alnus|alder|aporosa|birch|willow|fern|conifer|bark|twig|branch|canopy|flower/i;
 
 /** Longest edge the impostor baker samples source textures at. */
 const BAKE_TEXTURE_MAX = 1024;
@@ -224,14 +224,22 @@ export async function buildGeometryLod(options: BuildGeometryLodOptions): Promis
   const sensorPrimitives: SensorPrimitiveEntry[] = [];
   const totals = { sourceInstanced: 0, sourceUnique: 0, sensorInstanced: 0, sensorUnique: 0 };
 
+  // Impostors bake from what the renderer samples: the texture's KTX2
+  // (KHR_texture_basisu) source, decoded by the pinned KTX-Software, so the
+  // output is a function of the master closure alone (published closures
+  // carry no PNGs). A texture without a KTX2 source bakes from its PNG.
   const loadTexture = async (textureIndex: number | undefined): Promise<BakeTexture | undefined> => {
     if (textureIndex === undefined) return undefined;
     const texture = json.textures?.[textureIndex];
-    const imageIndex = texture?.source;
+    const ktx2Index = texture?.extensions?.KHR_texture_basisu?.source;
+    const imageIndex = ktx2Index ?? texture?.source;
     if (imageIndex === undefined) return undefined;
     if (!textureCache.has(imageIndex)) {
       const uri = json.images?.[imageIndex]?.uri;
-      const bytes = uri ? await readImage(uri) : undefined;
+      let bytes = uri ? await readImage(uri) : undefined;
+      if (bytes && ktx2Index !== undefined) {
+        bytes = new Uint8Array((await decodeKtx2(bytes, { ...(options.ktx2?.ktxBinDir ? { ktxBinDir: options.ktx2.ktxBinDir } : {}), minDimension: BAKE_TEXTURE_MAX })).png);
+      }
       if (!bytes) {
         textureCache.set(imageIndex, null);
       } else {
@@ -270,12 +278,17 @@ export async function buildGeometryLod(options: BuildGeometryLodOptions): Promis
     totals.sourceUnique += triangles;
     totals.sourceInstanced += triangles * use.count;
     const started = Date.now();
+    const vegetationMesh = VEGETATION_NAME.test(mesh.name ?? '');
     const prepared: PreparedPrimitive[] = mesh.primitives.map((primitive, primitiveIndex) => {
       const material = primitive.material !== undefined ? materials[primitive.material] : undefined;
       return preparePrimitive({
         data: decodePrimitive(geometry, meshIndex, primitiveIndex),
         material: primitive.material,
         alphaMasked: material?.alphaMode === 'MASK' || material?.alphaMode === 'BLEND',
+        // Card thinning and impostors are for plants: a parked car's
+        // alpha-masked interior or an iron fence has the same many-small-pieces
+        // shape and must be simplified instead.
+        vegetation: vegetationMesh || VEGETATION_NAME.test(material?.name ?? ''),
       });
     });
 
@@ -283,7 +296,7 @@ export async function buildGeometryLod(options: BuildGeometryLodOptions): Promis
     const cardLike = prepared.filter((primitive) => primitive.cards.cardLike);
     const cardTriangles = cardLike.reduce((sum, primitive) => sum + triangleCount(primitive.data), 0);
     const foliage = cardTriangles >= triangles * 0.3;
-    const vegetation = cardLike.length > 0 || VEGETATION_NAME.test(mesh.name ?? '');
+    const vegetation = cardLike.length > 0 || vegetationMesh;
 
     // Sensor geometry for every mesh.
     prepared.forEach((primitive, primitiveIndex) => {
