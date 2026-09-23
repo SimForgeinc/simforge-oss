@@ -18,6 +18,7 @@ import {
   saveAmbientTrafficProfile,
   ambientPromotionCapability,
   ambientSignalCycleSettingsFromExtensions,
+  ambientTrafficSourceSelection,
 } from './model';
 
 describe('ambient traffic preference', () => {
@@ -133,3 +134,40 @@ describe('ambient traffic preference', () => {
   });
 });
 
+
+describe('choosing a traffic source', () => {
+  const PROVIDER = 'studio.ambientTraffic.provider.v1';
+  const PROFILE = 'studio.ambientTraffic.profile.v1';
+  const pinned = { simulation: { seed: 'doc-seed', dtS: 0.02 } };
+
+  it('gives SUMO on a new (pinned, profile-less) document the City density staging QA ran', () => {
+    const entries = ambientTrafficSourceSelection({ ...pinned, extensions: {} }, 'sumo');
+    expect(entries[PROVIDER]).toBe('sumo');
+    expect(entries[PROFILE]).toEqual(profileForPreset('city', offAmbientTrafficProfile()));
+    // Exactly the legacy implicit default: City, seed `ambient-1`.
+    expect(entries[PROFILE]).toEqual(defaultAmbientTrafficProfile());
+  });
+
+  it('turns an explicit Empty density into City and keeps the seed', () => {
+    const entries = ambientTrafficSourceSelection({
+      ...pinned,
+      extensions: { [PROFILE]: { version: 1, preset: 'off', seed: 'my-seed' } },
+    }, 'native');
+    expect(entries[PROFILE]).toMatchObject({ preset: 'city', seed: 'my-seed' });
+  });
+
+  it('never changes a document that already has a density', () => {
+    const light = { version: 1, preset: 'light', seed: 'kept' };
+    expect(ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: light } }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+    // A pre-pinning document without a profile already runs City traffic.
+    expect(ambientTrafficSourceSelection({ extensions: {} }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+  });
+
+  it('leaves a malformed profile for validation to report', () => {
+    expect(ambientTrafficSourceSelection({ ...pinned, extensions: { [PROFILE]: 'broken' } }, 'sumo')).toEqual({ [PROVIDER]: 'sumo' });
+  });
+
+  it('switching traffic off only changes the source', () => {
+    expect(ambientTrafficSourceSelection({ ...pinned, extensions: {} }, 'off')).toEqual({ [PROVIDER]: 'off' });
+  });
+});

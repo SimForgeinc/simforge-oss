@@ -4,19 +4,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import {
+  DEFAULT_RENDERING_PREFERENCE,
   readRenderingPreference,
   renderingPreferenceQuality,
   saveRenderingPreference,
+  type RenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapSelectionScreen, type OnboardingMapOption } from "@simforge-oss/studio-ui/onboarding";
 import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { completeStudioSetup } from "@/app/lib/host/setup";
-import {
-  DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
-  type ScenarioAuthoringQuality,
-} from "@/app/lib/scenario/contracts";
 import { inlineSignIn } from "@/app/onboarding/onboarding-layout.stylex";
 
 const NATIVE_RENDER_PATH = "/onboarding/native-render";
@@ -56,9 +54,8 @@ export function OnboardingMapsSurface() {
   const cloud = useStudioCloudStatus();
   const [maps, setMaps] = useState<OnboardingMapOption[]>([]);
   const [selection, setSelection] = useState<string[]>([]);
-  const [quality, setQuality] = useState<ScenarioAuthoringQuality>(
-    DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
-  );
+  const [preference, setPreference] = useState<RenderingPreference>(DEFAULT_RENDERING_PREFERENCE);
+  const quality = renderingPreferenceQuality(preference);
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +70,8 @@ export function OnboardingMapsSurface() {
   const signingIn = revealSignIn && !signedIn;
   const started = preparation.phase !== "idle";
 
-  useEffect(() => setQuality(renderingPreferenceQuality(readRenderingPreference())), []);
+  // Preselect the saved choice, or the default on a fresh installation.
+  useEffect(() => setPreference(readRenderingPreference()), []);
 
   useEffect(() => {
     // A download in flight owns the list it started with.
@@ -169,11 +167,10 @@ export function OnboardingMapsSurface() {
       onDownload={() => {
         // The viewer reads the level from browser storage; save it before the
         // first map lands so a mid-download navigation already renders right.
-        const preference = readRenderingPreference();
-        saveRenderingPreference(renderingPreferenceQuality(preference) === quality ? preference : quality);
+        saveRenderingPreference(preference);
         preparation.start();
       }}
-      onQualityChange={setQuality}
+      onPreferenceChange={setPreference}
       onRetry={preparation.install}
       onSignIn={() => setRevealSignIn(true)}
       onSkip={preparation.skip}
@@ -186,7 +183,7 @@ export function OnboardingMapsSurface() {
         })
       }
       preparation={preparation}
-      quality={quality}
+      preference={preference}
       selection={selection}
       signedIn={signedIn}
       signIn={signingIn ? <CloudAccountPanel xstyle={inlineSignIn.panel} /> : undefined}
