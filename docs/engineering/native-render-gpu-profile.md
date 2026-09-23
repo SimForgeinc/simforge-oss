@@ -27,6 +27,26 @@ The output reports the service's per-stage timings. With `SIMFORGE_RENDER_DIAGNO
 
 The `trace-chrome` cargo feature writes a CPU trace of every Bevy system.
 
+## Render configuration: one surface, two presets
+
+Every look knob is one typed `RenderConfig` (`renderer/render-core/src/render_config.rs`).
+A request is a preset plus dotted overrides, and the same request shape works everywhere:
+- the CLI: `simforge-render serve|job --preset training --set shadows.mapSize=2048`;
+- the scene spec's `render: {preset, set}`;
+- the render intent's `render: {preset, set, geometryLod}` (`packages/scenario/src/render-intent.ts`);
+- sweep files.
+
+Unknown keys and invalid values are errors. `simforge-render serve --scene S --print-render-config` lists every key.
+The service reports the resolved config in its ready record and `hello`, and platform runs record it in the native manifest (`render`, behind `native-evidence.render-config`).
+
+- `showcase` (default for platform renders) and `training` differ only in quality levels. Both keep every effect: shadows, SSAO, SSR, atmosphere, sky and clouds, bloom, grading and vegetation.
+- `training` renders at the consumer's own resolution.
+- No preset renders at the maximum. `RenderConfig::reference()` is the measurement reference, and `--set` reaches any value.
+- Output encoding (`output.*`) is a consumer knob, not part of a preset's identity.
+- `geometryLod: auto` (default) draws the map's `derived/geometry-lod` derivative when the closure carries one. `off` renders full detail. Lidar and radar always trace full detail.
+
+The preset values are provisional until the perceptual sweep (FLIP/SSIM against the reference) picks the cheapest configuration at about 0.90–0.95 (showcase) and about 0.80 (training).
+
 ## Where a frame went (rc.73)
 
 - **It was geometry-bound, not pixel-bound.** Each view ran about 105 M vertex invocations per pass (depth prepass and main pass) against about 2 M fragment invocations.
