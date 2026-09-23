@@ -351,7 +351,9 @@ function checkParity(outDir, scene) {
  */
 function runRenderer(binPath, invocation, label) {
   console.log(`[golden-harness] render ${label}: ${path.basename(binPath)} ${invocation.args.join(' ')}`);
-  const r = spawnSync(binPath, invocation.args, { encoding: 'utf8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
+  // GOLDEN_RENDER_TIMEOUT_S: a software adapter (lavapipe) smoke run needs longer than a GPU.
+  const timeoutMs = Number(process.env.GOLDEN_RENDER_TIMEOUT_S ?? 600) * 1000;
+  const r = spawnSync(binPath, invocation.args, { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
   if (r.status !== 0) {
     fail(1, `renderer exited ${r.status}\nstdout tail:\n${(r.stdout ?? '').slice(-2000)}\nstderr tail:\n${(r.stderr ?? '').slice(-2000)}`);
   }

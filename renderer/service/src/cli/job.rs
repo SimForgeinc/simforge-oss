@@ -32,6 +32,7 @@ use std::time::Instant;
 
 const JOB_USAGE: &str = "simforge-render job --job JOB.json [--preset training|showcase] [--set key=value ...]\n\
     simforge-render job --scene SCENE.json --trace TRACE.json --intent INTENT.json [--glb PATH] [--models DIR] [--sources all|id,...]\n\
+        [--passes rgb,id,depth,semantic] [--out-dir DIR]\n\
     common: [--ground-mesh GROUND-MESH.bin] [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
             [--sweep ENTRIES.json] [--camera-size WxH] [--ablate a,b] [--shm-size-mb 512]\n\
     JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir, observe?}.\n\
@@ -57,6 +58,9 @@ struct Args {
     render_sets: Vec<String>,
     sweep: Option<PathBuf>,
     camera_size: Option<(u32, u32)>,
+    /// Replay form: camera passes (default `rgb`) and an artifact directory.
+    passes: Option<Vec<String>>,
+    out_dir: Option<PathBuf>,
 }
 
 fn parse_args(argv: Vec<String>) -> Result<Args> {
@@ -81,6 +85,8 @@ fn parse_args(argv: Vec<String>) -> Result<Args> {
         render_sets: Vec::new(),
         sweep: None,
         camera_size: None,
+        passes: None,
+        out_dir: None,
     };
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
@@ -110,6 +116,8 @@ fn parse_args(argv: Vec<String>) -> Result<Args> {
             // The map's ground derivative (`derived/ground/ground-mesh.bin`):
             // the scene spec's `groundMesh`, for either job form.
             "--ground-mesh" => parsed.spec_overrides.push(("groundMesh".into(), serde_json::to_string(&value()?)?)),
+            "--passes" => parsed.passes = Some(value()?.split(',').filter(|p| !p.is_empty()).map(String::from).collect()),
+            "--out-dir" => parsed.out_dir = Some(value()?.into()),
             "--preset" => parsed.preset = Some(value()?),
             "--sweep" => parsed.sweep = Some(value()?.into()),
             "--camera-size" => {
@@ -126,6 +134,9 @@ fn parse_args(argv: Vec<String>) -> Result<Args> {
         && (parsed.scene.as_os_str().is_empty() || parsed.trace.as_os_str().is_empty() || parsed.intent.as_os_str().is_empty())
     {
         bail!("--job, or --scene with --trace and --intent, is required");
+    }
+    if parsed.job.is_some() && (parsed.passes.is_some() || parsed.out_dir.is_some()) {
+        bail!("--passes and --out-dir belong to the replay form; a job file names its own passes and outDir");
     }
     Ok(parsed)
 }
@@ -387,8 +398,14 @@ fn plan_from_replay(args: &Args) -> Result<Plan> {
             })
         })
         .collect();
+    if let Some(dir) = &args.out_dir {
+        std::fs::create_dir_all(dir)?;
+    }
     Ok(Plan {
-        spec, frames, cameras, lidars, radars, passes: vec!["rgb".into()], out_dir: None, observe: false,
+        spec, frames, cameras, lidars, radars,
+        passes: args.passes.clone().unwrap_or_else(|| vec!["rgb".into()]), // fallback-ok: the replay form's documented default pass
+        out_dir: args.out_dir.clone(),
+        observe: false,
         start: args.start_set.unwrap_or(0), // fallback-ok: replay defaults, printed with the run
         ticks: args.ticks_set.unwrap_or(48), // fallback-ok: replay defaults, printed with the run
     })
