@@ -10,7 +10,9 @@ import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 
-import { buildXodrElevationResolver, createMapBundle, liftMapBoundTemplate, matchSites } from "@simforge-oss/compiler/node";
+import { buildXodrElevationResolver, createMapBundle, liftMapBoundTemplate, matchSites, resolveExecutionInput } from "@simforge-oss/compiler/node";
+import { runSimulation } from "@simforge-oss/engine/node";
+import { loadMapVersionBundle } from "../collision-draft-map.server";
 import type { TopologyIndex } from "@simforge-oss/engine";
 import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
@@ -501,6 +503,13 @@ describe("portable scenario", () => {
       assert.equal(placement.after?.elevationM, null);
       assert.ok(placement.before && placement.after);
     }
+    // The moved portable document simulates on the new version (it used to be refused as
+    // `unsupported_portable_semantics`): resolved at its pinned site, run by the engine.
+    const target = (await loadMapVersionBundle(C.id)).bundle;
+    const resolved = resolveExecutionInput(plan.content, target, "off");
+    const run = runSimulation(resolved.executedInput, { graph: target.graph });
+    assert.deepEqual([...run.trace.header.actorIds].sort(), ["ego", "lead"]);
+    assert.ok(run.trace.ticks.t.length > 100);
   });
 });
 

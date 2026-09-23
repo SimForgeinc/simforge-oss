@@ -39,7 +39,9 @@ import {
 import { readScenarioDocument, serializeTemplate, type ScenarioTemplateV2 } from '@simforge-oss/scenario';
 
 import type { MapControlPlan } from './map-signals.js';
-import { compileTemplateWith, materializationSemanticLosses, type MaterializeOptions } from './materialize.js';
+import { compileTemplateAtSiteWith, compileTemplateWith, materializationSemanticLosses, resolveSiteWith, type MaterializeOptions } from './materialize.js';
+import { adaptTemplateNotesWith, matchSitesWith } from './match.js';
+import { selectPlayableSite } from '@simforge-oss/playback';
 import { clampDeclaredAxisHolds, type AxisUntilClamp } from './template-axis-clamp.js';
 import type { MapBundle } from './types.js';
 import { buildXodrElevationResolver } from './xodr-elevation.js';
@@ -265,7 +267,7 @@ function concreteInput(
 ): ConcreteExecutionInput {
   if (isEmptyScenarioTemplate(template)) return emptyConcreteInput(template, bundle, ambientMode);
   if (template.roles.some((role) => role.kind !== 'scene_absolute')) {
-    throw new Error('unsupported_portable_semantics');
+    return portableConcreteInput(template, bundle, ambientMode, catalogEntries);
   }
   if (!template.sourceMap || template.sourceMap.mapId !== bundle.mapId) throw new Error('map_bound_source_mismatch');
   if (!template.anchor.pin || template.anchor.pin.mapId !== bundle.mapId) throw new Error('map_bound_pin_mismatch');
@@ -283,6 +285,64 @@ function concreteInput(
   const controlled = runtime.studioConcreteInput(withMapControls(product.input, bundle.controlPlan()), template);
   const ambient = runtime.materializeAmbientTraffic(controlled, bundle.graph, executionAmbientProfile(template, ambientMode));
   // The next process on this closure skips the turn probes (timing only).
+  void persistAmbientTurnVerdictsToDisk(bundle);
+  return {
+    input: JSON.parse(ambient.scenario.toJson()) as SimScenarioInput,
+    siteId: product.manifest.replayKey.siteId,
+    materialization: product.manifest,
+    ambientTraffic: ambient.provenance,
+  };
+}
+
+/**
+ * A portable document (roles relative to the scenario's site, as a transfer or a template writes
+ * them), executed exactly as the editor's scenario worker previews it
+ * (`packages/studio-ui/src/lib/scenario/playback/scenario-worker.ts`): a document pinned to a site
+ * on this map compiles at that site; an unpinned one takes the first intent-preserving site, in
+ * matcher order, that materializes feasibly without semantic loss. A construct the matcher would
+ * have to rewrite, or a pinned site that no longer resolves, is an error, never a silent re-match.
+ * Portable documents take the authored paint only; baked parked cars belong to a map-bound
+ * document's own map.
+ */
+function portableConcreteInput(
+  template: ScenarioTemplateV2,
+  bundle: MapBundle,
+  ambientMode: AmbientExecutionMode,
+  catalogEntries: MaterializeOptions['catalogEntries'],
+): ConcreteExecutionInput {
+  const runtime = engine();
+  const notes = adaptTemplateNotesWith(runtime.module, template);
+  if (notes.length > 0) {
+    throw new Error(`unsupported_portable_semantics: the matcher would rewrite ${notes.map((note) => `${note.path}: ${note.reason}`).join(' · ')}`);
+  }
+  const playable = (product: ReturnType<typeof compileTemplateWith>) => {
+    const losses = materializationSemanticLosses(product.manifest.notes);
+    if (losses.length > 0) throw new Error(`semantic_loss:${JSON.stringify(losses)}`);
+    if (!product.manifest.feasible) throw new Error(`materialization_infeasible:${JSON.stringify(product.manifest.issues)}`);
+    return product;
+  };
+  const pin = template.anchor.pin;
+  let product: ReturnType<typeof compileTemplateWith>;
+  if (pin?.siteId && pin.mapId === bundle.mapId) {
+    let resolved: ReturnType<typeof resolveSiteWith>;
+    try {
+      resolved = resolveSiteWith(runtime.module, template, bundle, pin.siteId);
+    } catch (error) {
+      throw new Error(`portable_site_unresolved: site ${pin.siteId} does not match this scenario on ${bundle.mapId} (${error instanceof Error ? error.message : String(error)})`);
+    }
+    product = selectPlayableSite([resolved.site], () =>
+      playable(compileTemplateAtSiteWith(runtime.module, template, bundle, resolved.native, { drawIndex: -1, catalogEntries }))).product;
+  } else {
+    if (pin?.mapId && pin.mapId !== bundle.mapId) throw new Error('map_bound_pin_mismatch');
+    const { report } = matchSitesWith(runtime.module, template, bundle);
+    if (!report.sites.some((candidate) => candidate.degradation.intentPreserved)) {
+      throw new Error(`portable_site_unresolved: no intent-preserving site matches this scenario on ${bundle.mapId}${report.failureSummary ? ` (${report.failureSummary})` : ''}`);
+    }
+    product = selectPlayableSite(report.sites, (candidate) =>
+      playable(compileTemplateWith(runtime.module, template, bundle, candidate, { drawIndex: -1, catalogEntries }))).product;
+  }
+  const controlled = runtime.studioConcreteInput(withMapControls(product.input, bundle.controlPlan()), { roles: template.roles });
+  const ambient = runtime.materializeAmbientTraffic(controlled, bundle.graph, executionAmbientProfile(template, ambientMode));
   void persistAmbientTurnVerdictsToDisk(bundle);
   return {
     input: JSON.parse(ambient.scenario.toJson()) as SimScenarioInput,
