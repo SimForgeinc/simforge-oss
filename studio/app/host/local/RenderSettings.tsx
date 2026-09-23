@@ -5,7 +5,7 @@ import { DatabaseZap } from "lucide-react";
 import { useState } from "react";
 import { ProfileMapPreparation } from "./ProfileMapPreparation";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { useRenderingPreference, renderingPreferenceQuality, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, useRenderingPreference, renderingPreferenceLabel, renderingPreferenceQuality, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import { RenderSelectionPanel } from "@simforge-oss/studio-ui/render-selection/RenderSelectionPanel";
@@ -21,12 +21,6 @@ import { styles } from "@/app/components/render-settings.stylex";
 type Preparation = {
   profile: RenderingPreference;
   redownload?: boolean;
-};
-
-const PROFILE_LABELS: Record<RenderingPreference, string> = {
-  "low-no-foliage": "Low · no foliage",
-  low: "Low",
-  medium: "Medium",
 };
 
 export function RenderSettings({ onDone }: { onDone: () => void }) {
@@ -81,7 +75,7 @@ export function RenderSettings({ onDone }: { onDone: () => void }) {
         />
       ) : (
         <RenderSelectionPanel
-          currentQuality={currentProfile ?? "low"}
+          currentQuality={currentProfile ?? DEFAULT_RENDERING_PREFERENCE}
           onChoose={choose}
           titleId="render-settings-title"
           descriptionId="render-settings-description"
@@ -101,7 +95,7 @@ export function RenderSettings({ onDone }: { onDone: () => void }) {
                     Re-download maps
                   </Button>
                   <p {...stylex.props(styles.current)}>
-                    Current setting: {PROFILE_LABELS[currentProfile]}
+                    Current setting: {renderingPreferenceLabel(currentProfile)}
                   </p>
                 </div>
               ) : null}
@@ -112,7 +106,7 @@ export function RenderSettings({ onDone }: { onDone: () => void }) {
 
       {pendingProfile ? (
         <ConfirmationPanel
-          title={`Switch to ${PROFILE_LABELS[pendingProfile]}?`}
+          title={`Switch to ${renderingPreferenceLabel(pendingProfile)}?`}
           detail="You can keep the shared cache and download only missing files, or delete it first for a clean download."
           busy={clearing}
           primaryLabel="Delete cache and continue"
@@ -126,7 +120,7 @@ export function RenderSettings({ onDone }: { onDone: () => void }) {
       {confirmRedownload && currentProfile ? (
         <ConfirmationPanel
           title="Delete the complete map cache?"
-          detail={`All cached map assets will be removed, then the ${PROFILE_LABELS[currentProfile]} library will be downloaded again.`}
+          detail={`All cached map assets will be removed, then the ${renderingPreferenceLabel(currentProfile)} library will be downloaded again.`}
           busy={clearing}
           primaryLabel="Delete and re-download"
           onCancel={() => setConfirmRedownload(false)}
