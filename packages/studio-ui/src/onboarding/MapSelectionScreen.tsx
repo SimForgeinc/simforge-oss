@@ -4,7 +4,8 @@ import type { CSSProperties, ReactNode } from "react";
 import { Check, CircleAlert, Download, LoaderCircle, Lock, LogIn, RotateCcw, SkipForward } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "../components/ui/button";
-import { SCENARIO_AUTHORING_QUALITY_CHOICES, type ScenarioAuthoringQuality } from "../lib/scenario/contracts";
+import { SCENARIO_AUTHORING_QUALITY_CHOICES } from "../lib/scenario/contracts";
+import { RENDERING_PREFERENCE_CHOICES, renderingPreferenceChoiceLabel, renderingPreferenceQuality, type RenderingPreference } from "../components/rendering-preference";
 import { formatBytes } from "../scenario/scene/map-load-progress";
 import { evaluateMapDownloadGuard } from "./disk-guard";
 import { MapCard, MapGrid, type MapGridMap } from "./MapGrid";
@@ -61,8 +62,8 @@ export function MapSelectionScreen({
   maps,
   selection,
   onToggle,
-  quality,
-  onQualityChange,
+  preference,
+  onPreferenceChange,
   freeBytes,
   loading,
   error,
@@ -79,8 +80,9 @@ export function MapSelectionScreen({
   maps: readonly OnboardingMapOption[];
   selection: readonly string[];
   onToggle: (mapVersionId: string) => void;
-  quality: ScenarioAuthoringQuality;
-  onQualityChange: (quality: ScenarioAuthoringQuality) => void;
+  /** The browser rendering profile; preselected with the saved choice or the default. */
+  preference: RenderingPreference;
+  onPreferenceChange: (preference: RenderingPreference) => void;
   freeBytes: number | null;
   loading: boolean;
   error: string | null;
@@ -134,7 +136,7 @@ export function MapSelectionScreen({
   // one flexible region rather than being added below it.
   const started = preparation.phase !== "idle";
   const empty = !loading && maps.length === 0;
-  const selectedChoice = SCENARIO_AUTHORING_QUALITY_CHOICES.find((choice) => choice.id === quality);
+  const selectedChoice = SCENARIO_AUTHORING_QUALITY_CHOICES.find((choice) => choice.id === renderingPreferenceQuality(preference));
 
   return (
     <section
@@ -292,28 +294,26 @@ export function MapSelectionScreen({
         <fieldset {...stylex.props(onboarding.qualityField)} disabled={downloading}>
           <legend {...stylex.props(onboarding.legend)}>Graphics level</legend>
           <div {...stylex.props(onboarding.qualitySegments)} role="radiogroup" aria-label="Graphics level">
-            {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => (
+            {RENDERING_PREFERENCE_CHOICES.map((choice) => (
               <label
                 key={choice.id}
                 {...stylex.props(
                   onboarding.qualitySegment,
-                  quality === choice.id ? onboarding.qualitySegmentSelected : onboarding.qualitySegmentIdle,
+                  preference === choice.id ? onboarding.qualitySegmentSelected : onboarding.qualitySegmentIdle,
                 )}
                 data-testid="onboarding-quality-option"
                 data-quality={choice.id}
-                data-selected={quality === choice.id || undefined}
+                data-selected={preference === choice.id || undefined}
+                title={choice.description}
               >
                 <input
-                  checked={quality === choice.id}
+                  checked={preference === choice.id}
                   {...stylex.props(onboarding.srOnly)}
                   name="onboarding-quality"
-                  onChange={() => onQualityChange(choice.id)}
+                  onChange={() => onPreferenceChange(choice.id)}
                   type="radio"
                 />
-                {choice.label}
-                {choice.recommended ? (
-                  <span {...stylex.props(onboarding.recommendedTag)}>Recommended</span>
-                ) : null}
+                {renderingPreferenceChoiceLabel(choice.id)}
               </label>
             ))}
           </div>
