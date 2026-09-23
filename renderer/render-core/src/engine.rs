@@ -5960,7 +5960,9 @@ mod tests {
         app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
         let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
         assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
-        // Before a model is attached the cuboid is what the camera draws.
+        // Before a model is attached the cuboid is what the camera draws
+        // (read after an update, like the service's post-readiness snapshot).
+        app.warmup(1);
         let cuboid = app.actor_sensor_meshes().unwrap();
         assert_eq!(cuboid.len(), 1);
         let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else { panic!("cuboid is rigid") };
