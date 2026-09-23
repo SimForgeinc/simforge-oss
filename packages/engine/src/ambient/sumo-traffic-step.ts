@@ -78,7 +78,7 @@ export async function createSumoTrafficStep(
     });
     context.onDiagnostics?.(result.diagnostics);
     return {
-      trace: mergeSumoTrafficIntoTrace(input.authoredTrace, result.artifact),
+      trace: mergeSumoTrafficIntoTrace(input.authoredTrace, result.artifact, result.vehicleClasses),
       stepKey: result.key,
       envelope: result.artifact,
       ambient: {
