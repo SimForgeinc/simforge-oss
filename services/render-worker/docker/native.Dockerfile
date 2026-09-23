@@ -7,13 +7,17 @@ RUN rustup target add wasm32-unknown-unknown \
  && corepack enable pnpm && corepack prepare pnpm@11.18.0 --activate
 COPY --from=source /package.json /pnpm-lock.yaml /pnpm-workspace.yaml /tsconfig.base.json ./
 COPY --from=source /packages ./packages
+COPY --from=source /patches ./patches
+COPY --from=source /studio/app/generated/carla-object-catalog.json ./studio/app/generated/carla-object-catalog.json
 COPY --from=source /native/Cargo.toml /native/Cargo.lock ./native/
 COPY --from=source /native/crates ./native/crates
 COPY --from=source /services/render-worker ./services/render-worker
 RUN pnpm install --frozen-lockfile --ignore-scripts \
  && pnpm --filter @simforge-oss/native-runtime rebuild wasm-pack \
- && pnpm --filter @simforge-oss/render-worker... build \
- && pnpm deploy --legacy --filter @simforge-oss/render-worker --prod /out/worker \
+ && pnpm --filter @simforge-oss/render-worker... build
+# The CLI/desktop patch (@electron/osx-sign) is outside the worker closure, so
+# the worker-only deploy must not fail on it.
+RUN pnpm deploy --config.allow-unused-patches=true --legacy --filter @simforge-oss/render-worker --prod /out/worker \
  && node services/render-worker/finalize-deploy.mjs /out/worker services/render-worker
 
 FROM rust:1.95.0-bookworm AS rust-build
@@ -47,7 +51,7 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && chown -R node:node /scratch /cache /run/simforge
 COPY --from=node-build --chown=node:node /out/worker /opt/simforge/worker
 COPY --from=rust-build /src/renderer/target/release/native-render-service /usr/local/bin/native-render-service
-COPY --from=sky-assets /sky /opt/simforge/sky
+COPY --from=sky-build /renderer/render-core/assets/sky /opt/simforge/sky
 ENV NODE_ENV=production \
     PORT=8080 \
     SIMFORGE_NATIVE_RENDER_BINARY=/usr/local/bin/native-render-service \

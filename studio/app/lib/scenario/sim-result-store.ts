@@ -74,8 +74,12 @@ import {
  * determinism violation, recorded and never allowed to replace the original.
  */
 
-/** Bump when the TypeScript half of the pipeline changes what a request resolves to. */
-export const SIMULATION_PIPELINE_REVISION = 2;
+/**
+ * Bump when the TypeScript half of the pipeline changes what a request resolves to.
+ * 3: documents with no authored actors resolve to the blank world instead of
+ * failing `unsupported_portable_semantics`, so their memoized failures re-resolve.
+ */
+export const SIMULATION_PIPELINE_REVISION = 3;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";

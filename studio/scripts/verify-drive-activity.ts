@@ -13,6 +13,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright-core';
 import { Checks } from './texture-tier-assertions';
+import { hostUrl } from './host-url';
 import type { CityViewer } from '../../packages/viewer/src/viewer';
 import type {} from '../../packages/viewer/src/viewer-diagnostics';
 import type { CityViewerStats } from '../../packages/viewer/src/types';
@@ -55,13 +56,13 @@ assert(port >= 1024 && ![5199, 5421, 5455, 8443].includes(port), 'reserved/live 
 const host = JSON.parse(await readFile(join(root, 'host.json'), 'utf8')) as { baseUrl: string; controlToken: string };
 const base = new URL(host.baseUrl);
 assert(base.hostname === '127.0.0.1' && Number(base.port) === port, 'host.json must match the explicitly authorized loopback port');
-const route = new URL(drivePath, base);
+const route = hostUrl(base, drivePath);
 assert(route.origin === base.origin && /^\/dashboard\/drive\/[^/]+$/.test(route.pathname), '--drive-path must name the real drive route');
 const out = resolve(outArg);
 assert(!out.startsWith(`${resolve(root)}/`), 'keep borrowed-fixture evidence outside its daemon root');
 await mkdir(out, { recursive: true });
 const api = async <T>(path: string, body?: unknown): Promise<T> => {
-  const response = await fetch(new URL(path, base), { method: body === undefined ? 'GET' : 'POST',
+  const response = await fetch(hostUrl(base, path), { method: body === undefined ? 'GET' : 'POST',
     headers: { authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);

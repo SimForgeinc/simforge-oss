@@ -18,10 +18,19 @@ export const styles = stylex.create({
     backgroundColor: colors.bg,
     color: colors.text,
   },
-  /** Dataset strip on the left at its fixed width; the scenario column takes the rest. */
+  /**
+   * Dataset strip on the left at its fixed width; the scenario column takes the rest.
+   *
+   * The one row is pinned to the grid's own height. Left implicit it is an `auto` track, which grows
+   * to the tallest item's content — the strip's full icon column once a workspace has more datasets
+   * than fit — and the overflow-hidden page then clips the bottom of both panes: the strip stops
+   * scrolling, the scenario list stops scrolling, and the "Add scenario" row at the column's foot is
+   * drawn below the fold where nobody can reach it.
+   */
   panelGrid: {
     display: "grid",
     gridTemplateColumns: `${space.datasetStripWidth} minmax(0, 1fr)`,
+    gridTemplateRows: "minmax(0, 1fr)",
     height: "100%",
     minHeight: 0,
     width: "100%",
