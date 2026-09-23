@@ -26,6 +26,8 @@ import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCamer
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 import { disposeAlbedoInspection, isMaskOnlyAlbedo, registerAlbedoTexture } from './albedo-color';
+import { MapPackReader, parseBrowserPackIndex } from './map-pack';
+import { Ktx2InflatePool } from './ktx2-inflate';
 import {
   collectResources,
   disposeResources,
@@ -36,6 +38,7 @@ import {
   type MapTextureSource,
   resourceDirectory,
   disposeTrackedLoader,
+  defaultKtx2TranscoderPath,
 } from './gltf';
 import { createSun } from './environment';
 import {
@@ -225,6 +228,12 @@ class ResidencyTimeoutError extends Error {
 const LOAD_UPLOAD_BUDGET_FACTOR = 8;
 const PREFETCH_MARGIN_M = 250;
 const PREFETCH_RADIUS_M = 400;
+/**
+ * Per-layer decode/upload backlog while the first view is assembling. The
+ * byte budget still admits every asset; this only stops a layer from
+ * serialising on three in-flight assets when there is no frame to protect.
+ */
+const ASSEMBLING_STREAM_BACKLOG = 16;
 
 const VEG_BAND_DISTANCES = [80, 170];
 const VEG_BAND_KEEP_ROW = [0, 2, 3];
@@ -341,6 +350,15 @@ export class CityViewer {
   private readonly textureCapabilities: CityViewerStats['loadDiagnostics']['capabilities'];
   private textureTierIndex: TextureTierIndex | null = null;
   private textureSources: ReadonlyMap<string, MapTextureSource> = new Map();
+  /**
+   * The selected tier's browser pack (`variants['browser-pack:<tier>']`), or
+   * null when the map was published without one. Its absence never changes
+   * what is drawn, only how many reads the load costs, and it is reported
+   * (console + `getStats().loadDiagnostics.mapPack`), never silent.
+   */
+  private packReader: MapPackReader | null = null;
+  private packStatus: { state: 'packed' | 'missing'; tier: string; reason: string | null } | null = null;
+  private inflatePool: Ktx2InflatePool | null = null;
   private sourceManifestSha256 = '';
   private textureBudgetRecovery: Promise<void> | null = null;
   private pendingTextureBudgetError: RequiredAssetBudgetError | null = null;
@@ -417,8 +435,9 @@ export class CityViewer {
   private weatherAppearance: CityWeatherAppearance | null = null;
   private activityHeld = false;
   private readonly variantLoads: Record<CityAssetVariantId | 'original', number> = {
-    original: 0, 'geometry-only': 0, ktx2: 0, 'textures-256-uastc': 0,
-    'textures-512-uastc': 0, 'textures-512-bc7': 0, 'textures-512-astc': 0,
+    original: 0, 'geometry-only': 0, ktx2: 0,
+    'textures-256-uastc': 0, 'textures-256-bc7': 0, 'textures-256-astc': 0, 'textures-256-etc2': 0,
+    'textures-512-uastc': 0, 'textures-512-bc7': 0, 'textures-512-astc': 0, 'textures-512-etc2': 0,
   };
   private variantFallbacks = 0;
   private assetVariantReloadGeneration = 0;
@@ -610,6 +629,9 @@ export class CityViewer {
       this.mapLoaded = true;
       this.textureLoadAbort.abort();
       disposeTrackedLoader(this.downloadTracker);
+      this.packReader?.dispose();
+      this.packReader = null;
+      this.packStatus = null;
       this.textureLoadAbort = new AbortController();
       this.effectiveTextureMaxDimension = this.options.textureMaxDimension;
       this.pendingTextureBudgetError = null;
@@ -1078,6 +1100,8 @@ export class CityViewer {
     signal: AbortSignal,
     expectedBytes?: number | null,
   ): Promise<ArrayBuffer> {
+    const pack = this.packReader;
+    if (pack?.has(url)) return pack.read(url, signal);
     const sessionId = this.downloadTracker.sessionId;
     const resolved = this.options.resolveMapAssetUrls
       ? (await this.options.resolveMapAssetUrls([url], signal)).get(url) ?? url
@@ -1142,9 +1166,12 @@ export class CityViewer {
     for (;;) {
       let id = selection.variantId as TextureVariantId;
       let reference = this.variantManifest?.variants[id];
-      if (!reference && selection.actual === 'medium' && selection.codec !== 'uastc') {
-        id = 'textures-512-uastc';
-        selection = { ...selection, codec: 'uastc', variantId: id, downgradeReason: `Published ${selection.codec} derivative unavailable; using portable UASTC` };
+      if (!reference && selection.codec !== 'uastc') {
+        // Maps published before the per-GPU tiers existed (Low had only UASTC):
+        // transcode the portable tier, and say so in the selection.
+        id = `textures-${selection.longestEdgePx ?? 512}-uastc` as TextureVariantId;
+        const reason = `Published ${selection.codec} derivative unavailable; transcoding portable UASTC`;
+        selection = { ...selection, codec: 'uastc', variantId: id, downgradeReason: [selection.downgradeReason, reason].filter(Boolean).join('; ') };
         reference = this.variantManifest?.variants[id];
       }
       if (!reference) throw new ViewerInputError(`mapTextureTier.${id}`, `expected published ${id} derivative; publish texture-tiers before loading this map`);
@@ -1211,8 +1238,56 @@ export class CityViewer {
       this.textureTierIndex = index;
       this.textureSources = sources;
       this.effectiveTextureMaxDimension = selection.longestEdgePx ?? Infinity;
+      await this.configureBrowserPack(id, reference.outputSha256, index.codec);
       return;
     }
+  }
+
+  /** Whether this map's variant manifest publishes any browser pack. */
+  private mapHasBrowserPacks(): boolean {
+    return Object.keys(this.variantManifest?.variants ?? {}).some((key) => key.startsWith('browser-pack:'));
+  }
+
+  /**
+   * Bind the selected tier's browser pack: one validated index, then members
+   * are served from a few chunk reads (see map-pack.ts). A map without a pack
+   * for this tier loads member by member and says so.
+   */
+  private async configureBrowserPack(tierId: string, tierOutputSha256: string, codec: string): Promise<void> {
+    this.packReader?.dispose();
+    this.packReader = null;
+    const key = `browser-pack:${tierId}`;
+    const reference = (this.variantManifest?.variants as Record<string, unknown> | undefined)?.[key] as
+      | { file?: string; outputSha256?: string; digest?: string; sourceManifestSha256?: string; bytes?: number }
+      | undefined;
+    if (!reference) {
+      const reason = `map publishes no ${key}; loading its members one request at a time`;
+      this.packStatus = { state: 'missing', tier: tierId, reason };
+      console.warn('[map-pack]', reason);
+      return;
+    }
+    if (typeof reference.file !== 'string' || !/^browser-pack-textures-\d+-[a-z0-9]+-[a-f0-9]{64}\.json$/.test(reference.file)
+      || reference.sourceManifestSha256 !== this.sourceManifestSha256 || reference.digest !== `sha256-${reference.outputSha256}`) {
+      throw new Error(`Browser pack reference ${key} is not bound to this source manifest`);
+    }
+    const bytes = await this.fetchBuffer(resolveUrl(this.assetBase, `variants/${reference.file}`), this.abort.signal, reference.bytes);
+    if (await sha256BytesAsync(bytes) !== reference.outputSha256) throw new Error(`Browser pack index digest mismatch: ${key}`);
+    const index = parseBrowserPackIndex(JSON.parse(new TextDecoder().decode(bytes)), {
+      tierId, tierOutputSha256, sourceManifestSha256: this.sourceManifestSha256,
+    });
+    const runtime = this.options.ktx2TranscoderPath || defaultKtx2TranscoderPath();
+    // GPU-block tiers only need their zstd supercompression removed; that runs
+    // on a worker pool. UASTC tiers still go through the Basis transcoder.
+    const decode = codec === 'uastc' ? null : (buffer: ArrayBuffer, members: readonly { path: string; offset: number; length: number }[]) => {
+      this.inflatePool ??= new Ktx2InflatePool(runtime);
+      return this.inflatePool.inflate(buffer, members);
+    };
+    const reader = new MapPackReader(index, new URL(this.assetBase, document.baseURI).href,
+      (url, chunk, signal) => this.fetchBuffer(url, signal, chunk.bytes), decode);
+    this.packReader = reader;
+    this.packStatus = { state: 'packed', tier: tierId, reason: null };
+    // Roads and the cells nearest the initial view lead the core stream.
+    reader.prefetch('core', 4);
   }
 
   /** Switch representations without changing the editor camera or geometry. */
@@ -1231,7 +1306,9 @@ export class CityViewer {
 
   /** Tier image bindings are immutable; failed texture tiers never fall back to full downloads. */
   private async parseAsset(sourceFile: string, signal: AbortSignal, sourceBytes?: number | null) {
-    const earlySource = this.options.assetVariant !== 'geometry-only'
+    // With a browser pack the GLB comes out of the pack once the tier (and its
+    // pack) is bound; fetching it early would read it a second time per member.
+    const earlySource = this.options.assetVariant !== 'geometry-only' && !this.mapHasBrowserPacks()
       ? this.fetchBuffer(resolveUrl(this.assetBase, sourceFile), signal, sourceBytes)
       : null;
     const [sourceBuffer] = await Promise.all([earlySource, this.texturePreparation]);
@@ -1245,7 +1322,7 @@ export class CityViewer {
     const selectedBytes = selected.variant === 'original'
       ? sourceBytes
       : (this.variantManifest?.variants[selected.variant] as CityAssetVariant | undefined)?.files?.[sourceFile]?.bytes ?? sourceBytes;
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources, this.packReader);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = sourceBuffer && selected.file === sourceFile
@@ -1280,7 +1357,7 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.textureSources, this.packReader);
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(fileUrl));
@@ -1379,6 +1456,7 @@ export class CityViewer {
       defs: [def],
       maxConcurrent: 1,
       memory: this.memory,
+      maxBacklog: this.streamBacklog,
       pinCoarsest: true,
       essentialCoarsest: true,
       essentialAll: true,
@@ -1444,6 +1522,7 @@ export class CityViewer {
       defs,
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
+      maxBacklog: this.streamBacklog,
       pinCoarsest: true,
       want: (def, distance) => distance <= PREFETCH_RADIUS_M
         || this.cityFrustum.intersectsBox(prefetchBoxes.get(def.id) ?? def.box),
@@ -1526,6 +1605,7 @@ export class CityViewer {
       defs,
       maxConcurrent: 2,
       memory: this.memory,
+      maxBacklog: this.streamBacklog,
       priorityBias: 1_000_000,
       pinCoarsest: false,
       // Vegetation stands down while the first view is being assembled, for
@@ -1736,6 +1816,9 @@ export class CityViewer {
    * as ImageBitmaps, and three concurrent ones are what took the tab down
    * before this existed.
    */
+  /** Upload backlog per layer: wide while the first view assembles, paced once it is interactive. */
+  private readonly streamBacklog = (): number => (this.viewResidentWaiters.length > 0 ? ASSEMBLING_STREAM_BACKLOG : 3);
+
   private readonly memory = {
     admit: (bytes: number, priority: number): boolean => {
       const budget = this.options.byteBudget;
@@ -1863,6 +1946,7 @@ export class CityViewer {
           vegetation: { resident: veg?.bytes ?? 0, pending: veg?.pendingBytes ?? 0 },
         },
         residencyDeadline: this.residencyDeadline,
+        mapPack: this.packStatus ? { ...this.packStatus, ...(this.packReader?.stats() ?? {}) } : null,
         actorModels: externalModelDiagnostics(),
       },
       usable,
@@ -2515,6 +2599,10 @@ export class CityViewer {
     this.abort.abort();
     this.textureLoadAbort.abort();
     disposeTrackedLoader(this.downloadTracker);
+    this.packReader?.dispose();
+    this.packReader = null;
+    this.inflatePool?.dispose();
+    this.inflatePool = null;
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.controls.dispose();

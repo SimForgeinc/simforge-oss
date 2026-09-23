@@ -18,6 +18,13 @@ await mkdir(basisDestination, { recursive: true });
 await Promise.all(["basis_transcoder.js", "basis_transcoder.wasm"].map((file) =>
   cp(join(basisSource, file), join(basisDestination, file)),
 ));
+// The map viewer inflates browser-pack texture chunks (zstd-supercompressed
+// BC7/ASTC/ETC2 KTX2 cooked at ingest) on a module-worker pool that imports
+// these two dependency-free modules from the same runtime directory.
+const threeLibs = join(dirname(require.resolve("three")), "../examples/jsm/libs");
+await Promise.all(["ktx-parse.module.js", "zstddec.module.js"].map((file) =>
+  cp(join(threeLibs, file), join(basisDestination, file)),
+));
 
 // MapLibre's module worker and its sibling import must remain together. Its
 // import.meta.url fallback is a build-time file URL under Next's bundler.
