@@ -14,7 +14,13 @@
 //! (`service::server::ReadyRecord`) once the endpoint accepts connections.
 //!
 //! scene.json: { glbs: [...], profile: "sensor"|"cinematic", lighting?: {...},
-//!               nearM?, farM?, warmupFrames? }
+//!               nearM?, farM?, warmupFrames?, sensorCacheDir? }
+//!
+//!   native-render-service --scene <scene.json> --build-sensor-cache
+//!
+//! loads the map, builds (or verifies) its content-addressed static sensor
+//! scenes in `sensorCacheDir`, prints one JSON line and exits: the worker's
+//! prewarm runs it so no render job pays the first-lidar BVH build.
 use anyhow::{Context, Result};
 use service::proto::NATIVE_SERVICE_PROTOCOL_VERSION;
 use service::server::{prewarm, serve, ServiceState};
@@ -28,6 +34,7 @@ fn main() -> Result<()> {
     let mut shm_size_mb = 256u64;
     let mut scene_path = None;
     let mut ready_file: Option<PathBuf> = None;
+    let mut build_sensor_cache = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--help" | "-h" => {
@@ -45,22 +52,49 @@ fn main() -> Result<()> {
                 shm_size_mb = args.next().context("--shm-size-mb requires a number")?.parse()?;
             }
             "--scene" => scene_path = Some(args.next().context("--scene requires a path")?),
+            "--build-sensor-cache" => build_sensor_cache = true,
             "--ready-file" => {
                 ready_file = Some(args.next().context("--ready-file requires a path")?.into());
             }
             other => anyhow::bail!("unknown argument {other}"),
         }
     }
+    let scene_path = scene_path.context("missing --scene")?;
+    let mut spec: service::server::SceneSpec = serde_json::from_str(
+        &std::fs::read_to_string(&scene_path).with_context(|| format!("read {scene_path}"))?,
+    )
+    .with_context(|| format!("parse {scene_path}"))?;
+    if build_sensor_cache {
+        anyhow::ensure!(spec.sensor_cache_dir.is_some(), "--build-sensor-cache needs sensorCacheDir in the scene");
+        spec.warmup_frames = 0;
+        let t0 = std::time::Instant::now();
+        let app = prewarm(&spec)?;
+        let loaded_s = t0.elapsed().as_secs_f64();
+        let ring = default_ring_path(&format!("simforge-sensor-cache.{pid}", pid = std::process::id()));
+        let shm = ShmRing::create(&ring, 1 << 20)?;
+        let mut state = ServiceState::new(app, &spec, ring.to_string_lossy().into_owned(), shm)?;
+        state.sync_sensor_cache_writes = true;
+        let t1 = std::time::Instant::now();
+        let outcome = state.ensure_sensor_scenes_outcome();
+        let _ = std::fs::remove_file(&ring);
+        println!(
+            "{}",
+            serde_json::json!({
+                "schema": "simforge.native-sensor-cache/v1",
+                "key": outcome.key,
+                "cached": outcome.loaded,
+                "triangles": outcome.triangles,
+                "sceneLoadS": loaded_s,
+                "sensorScenesS": t1.elapsed().as_secs_f64(),
+            })
+        );
+        // The Bevy app owns device threads; the process exit is the teardown.
+        std::process::exit(0);
+    }
     let socket = socket.context("missing --socket")?;
     let shm_path = shm_path.unwrap_or_else(|| {
         default_ring_path(&format!("simforge-native-render.{pid}", pid = std::process::id()))
     });
-    let scene_path = scene_path.context("missing --scene")?;
-
-    let spec: service::server::SceneSpec = serde_json::from_str(
-        &std::fs::read_to_string(&scene_path).with_context(|| format!("read {scene_path}"))?,
-    )
-    .with_context(|| format!("parse {scene_path}"))?;
     eprintln!(
         "native-render-service v{} prewarming {} tiles (profile {:?})...",
         NATIVE_SERVICE_PROTOCOL_VERSION,

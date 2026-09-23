@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Additive ops advertised in `hello.capabilities`.
-pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &["observe_actors"];
+pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &["observe_actors", "capture_clock.pinned"];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -224,6 +224,10 @@ pub enum RequestBody {
         /// submission (GPU-local copies into a leased slot; no host bytes).
         #[serde(default)]
         device_sensors: Option<Vec<String>>,
+        /// Simulation time of this bundle, seconds: the sky under a pinned
+        /// capture clock. Absent: the applied frame's `tick / tickHz`.
+        #[serde(default)]
+        sim_time_s: Option<f64>,
     },
     /// Re-light the prewarmed scene in place. The tiles and the instance-ID
     /// pass stay loaded; the lighting ladder, the cinematic stack on every
@@ -667,6 +671,8 @@ pub struct BundleStages {
     pub readback_copy_ms: f64,
     /// Host bytes read back.
     pub readback_bytes: u64,
+    /// TAA accumulation frames rendered before the capture (pinned clock).
+    pub accumulation_frames: u32,
     /// Planning (padding, depth packing, semantics) and ring publication of camera passes.
     pub publish_cameras_ms: f64,
     /// First-use build of the static map BVHs (zero on later ticks).
@@ -681,6 +687,9 @@ pub struct BundleStages {
     pub radar_ms: f64,
     /// Lidar/radar work that ran while the GPU rendered (overlap mode).
     pub sensors_overlapped: bool,
+    /// The overlapped snapshot differed from the post-capture world, so the
+    /// scans reran serially (output always matches the serial path).
+    pub sensor_resnapshots: u32,
     /// Ring publication of lidar/radar payloads and the bundle table.
     pub publish_sensors_ms: f64,
 }

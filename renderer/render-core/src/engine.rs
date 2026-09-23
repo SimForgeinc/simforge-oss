@@ -806,6 +806,91 @@ struct ReadbackTiming {
     bytes: u64,
 }
 
+/// How a capture's pixels depend on the frames rendered before it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaptureClock {
+    /// Every rendered frame advances the sky clock and the shader noise /
+    /// jitter seed, and TAA carries history across frames: a capture depends
+    /// on how many frames were drawn before it (the rc.73 behaviour, kept
+    /// byte-identical for comparison and legacy re-renders).
+    Free,
+    /// A capture is a function of the scene at its simulation time only:
+    /// the sky clock is pinned to the capture's simulation time, the shader
+    /// noise seed and TAA jitter restart at sample 0 for every capture, and
+    /// TAA (when a view uses it) resets its history and accumulates exactly
+    /// `samples` jittered frames of the static capture pose. Extra frames
+    /// (readiness, retries, relights) cannot change the result.
+    Pinned { samples: u32 },
+}
+
+impl CaptureClock {
+    /// Frames one capture renders under this clock (views with TAA).
+    pub fn samples(self) -> u32 {
+        match self {
+            CaptureClock::Free => 1,
+            CaptureClock::Pinned { samples } => samples.max(1),
+        }
+    }
+}
+
+/// The pinned shader-noise / jitter sample index, shared with the render
+/// world. `None` leaves Bevy's frame count in charge ([`CaptureClock::Free`]).
+#[derive(Resource, Clone, Default)]
+struct PinnedSample(std::sync::Arc<std::sync::Mutex<Option<u32>>>);
+
+impl PinnedSample {
+    fn get(&self) -> Option<u32> {
+        *self.0.lock().expect("pinned sample")
+    }
+    fn set(&self, value: Option<u32>) {
+        *self.0.lock().expect("pinned sample") = value;
+    }
+}
+
+/// The TAA jitter sequence Bevy uses (Halton 2,3 minus 0.5), indexed by the
+/// pinned sample instead of the frame count.
+const TAA_HALTON: [Vec2; 8] = [
+    Vec2::new(0.0, 0.0),
+    Vec2::new(0.0, -0.16666666),
+    Vec2::new(-0.25, 0.16666669),
+    Vec2::new(0.25, -0.3888889),
+    Vec2::new(-0.375, -0.055555552),
+    Vec2::new(0.125, 0.2777778),
+    Vec2::new(-0.125, -0.2777778),
+    Vec2::new(0.375, 0.055555582),
+];
+
+/// Render world: jitter every TAA view by the pinned sample (after Bevy's
+/// frame-count jitter, before the view uniforms consume it).
+fn pin_taa_jitter(pinned: Res<PinnedSample>, mut views: Query<&mut bevy::render::camera::TemporalJitter>) {
+    let Some(sample) = pinned.get() else { return };
+    let offset = TAA_HALTON[sample as usize % TAA_HALTON.len()];
+    for mut jitter in &mut views {
+        jitter.offset = offset;
+    }
+}
+
+/// Render world: the shader globals' `frame_count` seeds SSAO, SSR, shadow
+/// and specular noise. Rewrite it with the pinned sample after Bevy wrote
+/// the frame count (the later queue write wins before the frame submits).
+/// The views' own `frame_count` (mesh-change timestamps) stays real.
+fn pin_shader_noise_seed(
+    pinned: Res<PinnedSample>,
+    device: Res<RenderDevice>,
+    queue: Res<bevy::render::renderer::RenderQueue>,
+    mut globals: ResMut<bevy::render::globals::GlobalsBuffer>,
+) {
+    let Some(sample) = pinned.get() else { return };
+    use bevy::reflect::structs::GetField;
+    let uniform = globals.buffer.get_mut();
+    let Some(frame_count) = uniform.get_field_mut::<u32>("frame_count") else {
+        // A Bevy upgrade renamed the field: fail loudly, never silently unpinned.
+        panic!("GlobalsUniform has no frame_count field to pin");
+    };
+    *frame_count = sample;
+    globals.buffer.write_buffer(&device, &queue);
+}
+
 /// Where the time of the last [`SceneApp::capture`] went (diagnostics; the
 /// service reports it per bundle).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -823,6 +908,9 @@ pub struct CaptureStats {
     pub readback_copy_ms: f64,
     /// Host bytes read back by the accepted submission.
     pub readback_bytes: u64,
+    /// Extra TAA accumulation frames rendered before the capture frames
+    /// ([`CaptureClock::Pinned`] with TAA views).
+    pub accumulation_frames: u32,
 }
 
 /// Outcome of one device-sink copy for one sensor in one submission.
@@ -1745,8 +1833,14 @@ pub struct SceneApp {
     ready: bool,
     /// Timing of the last capture (see [`CaptureStats`]).
     last_capture: CaptureStats,
+    /// Phases of the last [`Self::wait_until_ready`], seconds (diagnostics).
+    ready_phases: Vec<(&'static str, f64)>,
     /// Shared with the render world's `receive_passes`.
     readback_clock: ReadbackClock,
+    /// See [`CaptureClock`]; `Free` until the host pins it.
+    capture_clock: CaptureClock,
+    /// Shared with the render world's seed/jitter overrides.
+    pinned_sample: PinnedSample,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -1946,10 +2040,19 @@ impl SceneApp {
         }
 
         let readback_clock = ReadbackClock::default();
+        let pinned_sample = PinnedSample::default();
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
         render_app
             .insert_resource(RenderSender(tx))
             .insert_resource(readback_clock.clone())
+            .insert_resource(pinned_sample.clone())
+            .add_systems(
+                Render,
+                (
+                    pin_taa_jitter.in_set(RenderSystems::Queue),
+                    pin_shader_noise_seed.in_set(RenderSystems::PrepareBindGroups),
+                ),
+            )
             .init_resource::<Staging>()
             .init_resource::<ExtractedTargets>()
             .init_resource::<ExtractedCapture>()
@@ -1998,7 +2101,10 @@ impl SceneApp {
             device_streams: HashMap::new(),
             ready: false,
             last_capture: CaptureStats::default(),
+            ready_phases: Vec::new(),
             readback_clock,
+            capture_clock: CaptureClock::Free,
+            pinned_sample,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -3781,9 +3887,13 @@ impl SceneApp {
             return Ok(self.app.world().resource::<Legend>().0.clone());
         }
         let deadline = Instant::now() + Duration::from_secs(300);
+        let started = Instant::now();
+        let mut scene_spawned_s: Option<f64> = None;
+        let mut updates = 0u32;
         let mut gpu_idle_frames = 0u32;
         loop {
             self.app.update();
+            updates += 1;
             let world = self.app.world_mut();
             let pending_loads = {
                 let mut q = world.query_filtered::<&TileLoad, Without<SceneSpawned>>();
@@ -3825,6 +3935,7 @@ impl SceneApp {
                     // stay that way for a few frames (each frame can queue
                     // new permutations).
                     if all_ready {
+                        scene_spawned_s.get_or_insert(started.elapsed().as_secs_f64());
                         if world.resource::<GpuPending>().is_idle() {
                             gpu_idle_frames += 1;
                         } else {
@@ -3845,8 +3956,18 @@ impl SceneApp {
                 );
             }
         }
+        let gpu_ready_s = started.elapsed().as_secs_f64();
         self.finalize_scene()?;
+        let finalized_s = started.elapsed().as_secs_f64();
         self.ground = GroundField::build(&mut self.app, 2.0);
+        let spawned = scene_spawned_s.unwrap_or(gpu_ready_s);
+        self.ready_phases = vec![
+            ("assetsLoadedAndSpawned", spawned),
+            ("gpuPipelinesAndMaterials", gpu_ready_s - spawned),
+            ("instanceIdPass", finalized_s - gpu_ready_s),
+            ("groundField", started.elapsed().as_secs_f64() - finalized_s),
+            ("readinessFrames", f64::from(updates)),
+        ];
         // Now that tiles are loaded, put the planet surface on the scene's
         // own ground plane. The boundary-layer fog term has a 300 m scale
         // height, so a tens-of-metres offset would be visible.
@@ -4203,7 +4324,23 @@ impl SceneApp {
         for _ in 0..3 {
             *self.readback_clock.0.lock().expect("readback clock") = ReadbackTiming::default();
             let submitted = Instant::now();
+            // Pinned clock: TAA views restart their history and accumulate
+            // `samples` jittered frames of this pose; the last one is the
+            // capture. Each attempt starts again from sample 0.
+            if let CaptureClock::Pinned { samples } = self.capture_clock {
+                let taa = self.reset_taa_history();
+                let lead = if taa { samples.max(1) - 1 } else { 0 };
+                for sample in 0..lead {
+                    self.pinned_sample.set(Some(sample));
+                    self.submit(CaptureRequest::default());
+                    stats.accumulation_frames += 1;
+                }
+                self.pinned_sample.set(Some(lead));
+            }
             let generation = self.submit(request.clone());
+            if self.capture_clock != CaptureClock::Free {
+                self.pinned_sample.set(Some(0));
+            }
             stats.attempts += 1;
             stats.submit_ms += submitted.elapsed().as_secs_f64() * 1000.0;
             {
@@ -4329,9 +4466,68 @@ impl SceneApp {
         Ok(updates)
     }
 
+    /// Phases of the scene's readiness wait, seconds (diagnostics).
+    pub fn ready_phases(&self) -> &[(&'static str, f64)] {
+        &self.ready_phases
+    }
+
     /// Timing of the last [`Self::capture`] (diagnostics).
     pub fn last_capture_stats(&self) -> CaptureStats {
         self.last_capture
+    }
+
+    /// Select how captures depend on previously rendered frames (see
+    /// [`CaptureClock`]).
+    pub fn set_capture_clock(&mut self, clock: CaptureClock) {
+        self.capture_clock = clock;
+        match clock {
+            CaptureClock::Free => {
+                self.pinned_sample.set(None);
+                if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+                    sky.pinned = None;
+                }
+            }
+            CaptureClock::Pinned { .. } => {
+                self.pinned_sample.set(Some(0));
+                let seconds = self
+                    .app
+                    .world()
+                    .get_resource::<crate::sky_pass::SkyClock>()
+                    .map_or(0.0, |sky| sky.seconds);
+                self.set_sim_time(seconds);
+            }
+        }
+    }
+
+    pub fn capture_clock(&self) -> CaptureClock {
+        self.capture_clock
+    }
+
+    /// Pin the sky (cloud drift) to simulation time `seconds` for every
+    /// frame until the next call. Only meaningful under
+    /// [`CaptureClock::Pinned`]; the free clock keeps advancing per frame.
+    pub fn set_sim_time(&mut self, seconds: f64) {
+        if self.capture_clock == CaptureClock::Free {
+            return;
+        }
+        if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+            sky.pinned = Some(seconds);
+            sky.seconds = seconds;
+        }
+    }
+
+    /// Restart every TAA view's history (pinned captures).
+    fn reset_taa_history(&mut self) -> bool {
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        let mut any = false;
+        for entity in entities {
+            if let Some(mut taa) = world.get_mut::<TemporalAntiAliasing>(entity) {
+                taa.reset = true;
+                any = true;
+            }
+        }
+        any
     }
 
     /// Return device slots filled by a submission that will not be
@@ -5145,6 +5341,60 @@ mod tests {
         assert!(app.remove_camera("cam"));
         assert!(app.capture(7, &["cam:rgb".into()]).is_err());
         assert!(app.render_once(8).unwrap().passes.is_empty());
+        std::mem::forget(app);
+    }
+
+    /// The pinned capture clock's contract: a capture is a function of the
+    /// scene and its simulation time only. Frames drawn before it (readiness,
+    /// warmup, retries, relights) must not change a single byte, for SMAA
+    /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
+    /// drift with them, which is the determinism bug the pinned clock fixes.
+    fn pinned_scene(aa: crate::profiles::AntiAlias) -> SceneApp {
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let lighting = Lighting { atmosphere: true, cloud_cover: Some(0.6), ..Lighting::default() };
+        let mut config = RenderProfileConfig::default();
+        config.cinematic.aa = aa;
+        let mut app = SceneApp::new_with_profile_config(&lighting, config).unwrap();
+        app.apply_lighting(&lighting, config).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        let mut spec = test_camera("cam", 160, 96);
+        spec.passes = PassSet { rgb: true, id: false, depth: false };
+        app.add_camera(spec, Profile::Cinematic);
+        app.wait_until_ready().unwrap();
+        app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+        app
+    }
+
+    fn capture_after(app: &mut SceneApp, extra_frames: u32, sim_time: f64) -> Vec<u8> {
+        app.warmup(extra_frames);
+        app.set_sim_time(sim_time);
+        app.capture(1, &["cam:rgb".into()]).unwrap().passes["cam:rgb"].bytes.clone()
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_frames_drawn_before_it() {
+        use crate::profiles::AntiAlias;
+        for (aa, samples) in [(AntiAlias::SmaaHigh, 1), (AntiAlias::Taa, 4)] {
+            let mut app = pinned_scene(aa);
+            app.set_capture_clock(CaptureClock::Pinned { samples });
+            let first = capture_after(&mut app, 0, 12.5);
+            let after_three = capture_after(&mut app, 3, 12.5);
+            let after_eleven = capture_after(&mut app, 11, 12.5);
+            assert!(first == after_three && first == after_eleven, "{aa:?}: pinned capture changed with the frames drawn before it");
+            let stats = app.last_capture_stats();
+            assert_eq!(stats.accumulation_frames, samples - 1, "{aa:?}");
+            // The sky is simulation time: a later time is a different sky.
+            let later = capture_after(&mut app, 0, 40.0);
+            assert!(later != first, "{aa:?}: the sky did not follow simulation time");
+            std::mem::forget(app);
+        }
+        // The rc.73 clock drifts with every drawn frame (TAA history, jitter, clouds).
+        let mut app = pinned_scene(AntiAlias::Taa);
+        let first = capture_after(&mut app, 0, 12.5);
+        let after_three = capture_after(&mut app, 3, 12.5);
+        assert!(first != after_three, "free clock unexpectedly stable");
         std::mem::forget(app);
     }
 

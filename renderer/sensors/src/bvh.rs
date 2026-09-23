@@ -9,7 +9,7 @@
 use bevy::math::{Mat4, Vec3};
 
 /// A world-space triangle with its owning instance id.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Tri {
     pub a: Vec3,
     pub b: Vec3,
@@ -43,6 +43,12 @@ pub struct RaycastScene {
 }
 
 const EPS: f32 = 1e-9;
+
+/// On-disk sensor BVH format tag; bump the last byte when the layout or the
+/// build algorithm changes (a changed build must never load an old tree).
+const BVH_FILE_MAGIC: &[u8; 8] = b"SFBVH\x00\x00\x01";
+const TRI_BYTES: usize = 40;
+const NODE_BYTES: usize = 36;
 
 /// Levels of the triangle BVH whose two subtrees build on separate threads
 /// (up to 2^PARALLEL_DEPTH concurrent builders).
@@ -205,6 +211,99 @@ impl RaycastScene {
         let mut nodes = vec![Node::PLACEHOLDER; node_count(n)];
         fill_nodes(&mut nodes, 0, &mut self.tris, 0, 0);
         self.nodes = nodes;
+    }
+
+    /// Triangles in the scene (in build order once built).
+    pub fn triangle_count(&self) -> usize {
+        self.tris.len()
+    }
+
+    /// Serialise the built scene (triangles in build order + nodes) for the
+    /// on-disk sensor-scene cache. [`Self::read_from`] restores exactly this
+    /// tree, so raycasts against it are bit-identical to the fresh build.
+    pub fn write_to(&self, out: &mut impl std::io::Write) -> std::io::Result<()> {
+        out.write_all(BVH_FILE_MAGIC)?;
+        out.write_all(&(self.tris.len() as u64).to_le_bytes())?;
+        out.write_all(&(self.nodes.len() as u64).to_le_bytes())?;
+        let mut buffer = Vec::with_capacity(1 << 20);
+        let mut flush = |buffer: &mut Vec<u8>, out: &mut dyn std::io::Write| -> std::io::Result<()> {
+            out.write_all(buffer)?;
+            buffer.clear();
+            Ok(())
+        };
+        for tri in &self.tris {
+            for v in [tri.a, tri.b, tri.c] {
+                for c in v.to_array() {
+                    buffer.extend_from_slice(&c.to_bits().to_le_bytes());
+                }
+            }
+            buffer.extend_from_slice(&tri.instance_id.to_le_bytes());
+            if buffer.len() >= 1 << 20 {
+                flush(&mut buffer, out)?;
+            }
+        }
+        for node in &self.nodes {
+            for v in [node.min, node.max] {
+                for c in v.to_array() {
+                    buffer.extend_from_slice(&c.to_bits().to_le_bytes());
+                }
+            }
+            for word in [node.left_first, node.count, node.right] {
+                buffer.extend_from_slice(&word.to_le_bytes());
+            }
+            if buffer.len() >= 1 << 20 {
+                flush(&mut buffer, out)?;
+            }
+        }
+        flush(&mut buffer, out)
+    }
+
+    /// Restore a scene written by [`Self::write_to`].
+    pub fn read_from(input: &mut impl std::io::Read) -> std::io::Result<Self> {
+        use std::io::{Error, ErrorKind};
+        let mut magic = [0u8; 8];
+        input.read_exact(&mut magic)?;
+        if &magic != BVH_FILE_MAGIC {
+            return Err(Error::new(ErrorKind::InvalidData, "not a sensor BVH file (or another format version)"));
+        }
+        let mut word = [0u8; 8];
+        input.read_exact(&mut word)?;
+        let tri_count = u64::from_le_bytes(word) as usize;
+        input.read_exact(&mut word)?;
+        let node_count = u64::from_le_bytes(word) as usize;
+        if node_count > 2 * tri_count.max(1) {
+            return Err(Error::new(ErrorKind::InvalidData, "sensor BVH node count exceeds its triangle bound"));
+        }
+        let mut bytes = vec![0u8; tri_count * TRI_BYTES];
+        input.read_exact(&mut bytes)?;
+        let f = |chunk: &[u8], index: usize| f32::from_bits(u32::from_le_bytes(chunk[index * 4..index * 4 + 4].try_into().unwrap()));
+        let u = |chunk: &[u8], index: usize| u32::from_le_bytes(chunk[index * 4..index * 4 + 4].try_into().unwrap());
+        let tris = bytes
+            .chunks_exact(TRI_BYTES)
+            .map(|c| Tri {
+                a: Vec3::new(f(c, 0), f(c, 1), f(c, 2)),
+                b: Vec3::new(f(c, 3), f(c, 4), f(c, 5)),
+                c: Vec3::new(f(c, 6), f(c, 7), f(c, 8)),
+                instance_id: u(c, 9),
+            })
+            .collect();
+        let mut bytes = vec![0u8; node_count * NODE_BYTES];
+        input.read_exact(&mut bytes)?;
+        let nodes = bytes
+            .chunks_exact(NODE_BYTES)
+            .map(|c| Node {
+                min: Vec3::new(f(c, 0), f(c, 1), f(c, 2)),
+                max: Vec3::new(f(c, 3), f(c, 4), f(c, 5)),
+                left_first: u(c, 6),
+                count: u(c, 7),
+                right: u(c, 8),
+            })
+            .collect();
+        let mut trailing = [0u8; 1];
+        if input.read(&mut trailing)? != 0 {
+            return Err(Error::new(ErrorKind::InvalidData, "sensor BVH file has trailing bytes"));
+        }
+        Ok(Self { tris, nodes })
     }
 
     /// The original single-threaded build, kept as the reference the
@@ -704,6 +803,37 @@ mod parallel_build_tests {
                 assert_eq!(parallel.nodes.len(), node_count(parallel.tris.len()));
             }
         }
+    }
+
+    #[test]
+    fn serialised_scene_restores_the_identical_tree_and_hits() {
+        for n in [0, 1, 5, 50_000] {
+            let mut built = scene(&soup(n));
+            built.build();
+            let mut bytes = Vec::new();
+            built.write_to(&mut bytes).unwrap();
+            assert_eq!(bytes.len(), 24 + built.tris.len() * TRI_BYTES + built.nodes.len() * NODE_BYTES);
+            let restored = RaycastScene::read_from(&mut bytes.as_slice()).unwrap();
+            assert!(restored.nodes == built.nodes, "n={n}");
+            assert!(restored.tris == built.tris, "n={n}");
+            for k in 0..300 {
+                let origin = Vec3::new((k * 7 % 500) as f32, 100.0, (k * 13 % 500) as f32);
+                let a = built.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+                let b = restored.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+                assert_eq!(a, b);
+            }
+        }
+        // A truncated or foreign file is rejected, never half-loaded.
+        let mut built = scene(&soup(100));
+        built.build();
+        let mut bytes = Vec::new();
+        built.write_to(&mut bytes).unwrap();
+        assert!(RaycastScene::read_from(&mut &bytes[..bytes.len() - 1]).is_err());
+        let mut extra = bytes.clone();
+        extra.push(0);
+        assert!(RaycastScene::read_from(&mut extra.as_slice()).is_err());
+        bytes[7] ^= 0xff;
+        assert!(RaycastScene::read_from(&mut bytes.as_slice()).is_err());
     }
 
     #[test]
