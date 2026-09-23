@@ -87,4 +87,13 @@ it('warms every published set once, reports readiness, and collects blobs no set
   await prewarmer.cycle(manifest, AbortSignal.timeout(10_000));
   expect(requests).toBe(4);
   expect(reports.length).toBeGreaterThan(0);
+
+  // A backfill binds a derivative to map a: same closure, new derivatives
+  // digest. The cached member list is keyed by it, so the new member is
+  // listed and fetched instead of being hidden behind the closure's cache.
+  sets[0]!.members.push(member('derived/geometry-lod/manifest.json', 'lod manifest a'));
+  const backfilled = { ...manifest, generation: sha('gen2'), sets: [{ ...sets[0]!.set, derivativesSha256: sha('lod-a') }, sets[1]!.set] };
+  await prewarmer.cycle(backfilled, AbortSignal.timeout(10_000));
+  expect(requests).toBe(5);
+  expect((await listCachedBlobs(join(root, 'cache'))).map((entry) => entry.sha256)).toContain(sha('lod manifest a'));
 });

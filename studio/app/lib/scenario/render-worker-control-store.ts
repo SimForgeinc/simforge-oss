@@ -33,7 +33,7 @@ import {
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
-import { boundGeometryLod, geometryLodExtraMembers } from "./map-geometry-lod";
+import { boundMapDerivatives, MAP_DERIVATIVE_DESCRIPTOR_SQL, mapDerivativeExtraMembers } from "./map-derivatives";
 import { expectedNativeClosure } from "./jobs/local-native-render-store";
 import {
   ScenarioRenderIntentSchema,
@@ -692,9 +692,9 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
           throw new Error("native_map_master_unavailable");
         }
-        // Descriptor-bound geometry derivatives the intent declared (an intent
-        // created before a backfill declares none and gets none).
-        renderMembers.push(...await leasedGeometryLodMembers(
+        // Descriptor-bound derivatives the intent declared (an intent created
+        // before a backfill declares none and gets none).
+        renderMembers.push(...await leasedDerivativeMembers(
           tx, row.revision_id, row.workspace_id,
           new Set(renderMembers.map((member) => member.relative_path)),
           new Set(intent.assets.map((asset) => asset.assetId)),
@@ -1674,22 +1674,21 @@ export async function renderProgressForJob(context: Pick<AppContext, "workspaceI
   );
 }
 
-/** `descriptor.geometryLod` members (map-geometry-lod.ts) a native intent declared, with their blob locations. */
-async function leasedGeometryLodMembers(
+/** Descriptor-bound derivative members (map-derivatives.ts) a native intent declared, with their blob locations. */
+async function leasedDerivativeMembers(
   tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
   revisionId: string,
   workspaceId: string,
   closurePaths: ReadonlySet<string>,
   declaredInputIds: ReadonlySet<string>,
 ) {
-  const [row] = await tx.queryRows<{ geometry_lod: unknown }>(
-    `SELECT mv.descriptor->'geometryLod' AS geometry_lod
+  const [row] = await tx.queryRows<{ derivatives: unknown }>(
+    `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives
        FROM simforge.revisions r JOIN simforge.map_versions mv ON mv.id = r.map_version_id
       WHERE r.id = :revision_id AND r.workspace_id = :workspace_id`,
     { revision_id: revisionId, workspace_id: workspaceId },
   );
-  const raw = typeof row?.geometry_lod === "string" ? JSON.parse(row.geometry_lod) : row?.geometry_lod;
-  const declared = geometryLodExtraMembers(boundGeometryLod(raw), closurePaths)
+  const declared = mapDerivativeExtraMembers(boundMapDerivatives(row?.derivatives), closurePaths)
     .filter((member) => declaredInputIds.has(`map.resource.${sha256(member.relativePath)}`));
   if (declared.length === 0) return [];
   const blobs = await tx.queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
@@ -1701,7 +1700,7 @@ async function leasedGeometryLodMembers(
   const bySha = new Map(blobs.map((blob) => [blob.sha256, blob]));
   return declared.map((member) => {
     const blob = bySha.get(member.sha256);
-    if (!blob || Number(blob.byte_length) !== member.byteLength) throw new Error("geometry_lod_member_unavailable");
+    if (!blob || Number(blob.byte_length) !== member.byteLength) throw new Error("map_derivative_member_unavailable");
     return {
       relative_path: member.relativePath,
       sha256: member.sha256,
