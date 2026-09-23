@@ -22,6 +22,7 @@ import { Button } from "../../components/ui/button";
 import { control, rail } from "../scenario-controls.stylex";
 import { documentMapLabel, documentName } from "../list/document-list-utils";
 import { focus, motionRecipe, textLayout, typography } from "../../stylex/recipes.stylex";
+import { revealInScroller } from "../../lib/reveal-in-scroller";
 
 /**
  * The in-editor scenario rail: every sibling document in the active dataset, selectable in place.
@@ -83,8 +84,9 @@ export function ScenarioScenarioRail({
 
   // Autoplay and Alt+Arrow both move the selection without the user scrolling, so the rail has to
   // follow. `nearest` rather than `center` so a manual click does not jump the list under the cursor.
+  // Only the rail's own list scrolls; `scrollIntoView` would also scroll the shell around it.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest" });
+    if (activeRef.current) revealInScroller(activeRef.current);
   }, [activeDocumentId]);
 
   return (

@@ -118,6 +118,7 @@ of look, built only from tokens, composed first in `stylex.props`.
 | `control` | `xs`, `sm`, `md`, `lg`, `iconXs` … `iconLg` | the height/padding/size of a custom control, so it lines up with the primitives |
 | `a11y` | `srOnly` | text for assistive technology only |
 | `textLayout` | `truncate`, `clamp2` | text that must not overflow |
+| `scroll` | `clip`, `y` | which boxes scroll: `clip` for every app-shell box between the viewport and a scroller (never `overflow: hidden`, which `focus()` and `scrollIntoView()` can still scroll); `y` for the scroller itself (contained overscroll, thin themed bar). Follow a selection with `revealInScroller` (`lib/reveal-in-scroller`), never `scrollIntoView` |
 
 A recipe earns its place by being used in unrelated places. A look that only
 one family needs belongs in that family's style module.
