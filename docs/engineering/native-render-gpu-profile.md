@@ -137,6 +137,27 @@ Directional shadow cascades selected LOD levels on the GPU from the wrong positi
 
 SSR reads the deferred G-buffer, but every material drew forward, so SSR contributed nothing. Belmont rain at wetness 0.85 rendered identical bytes with SSR on and off. With SSR in the look, wet road materials now draw deferred. Dry roads and every other material stay forward, so dry frames are unchanged (`a_wet_road_reflects_in_screen_space`).
 
+### Cars under trees: canopy sky occlusion (`lighting.canopySkyOcclusion`, on in both presets)
+
+On the Easterbrook chase (tick 100), a white car under dappled canopy read as sunlit. It does receive the tree shadows, but two things hid them:
+- The environment probe is an open sky. Glossy paint seen at a grazing angle reflected it at full strength under the canopy, so in HDR the body kept a median 0.71 of its unshadowed luminance.
+- The road-weighted meter lifted the shaded frame by 1.1 EV.
+
+Canopy sky occlusion is a vendored `bevy_pbr` patch. For a shaded fragment it looks up the sun's shadow map at four taps 2.5 m out, 2 m above the fragment; occluders that also cover the point 15 m up (tall buildings) are discounted. The result, weighted by sun elevation, is the overhead cover. Cover removes up to 85% of the environment specular for upward reflections and up to 60% of the environment diffuse for upward normals. It is deterministic: fixed taps, no noise.
+- Cost on the Easterbrook 1080p chase (5080): +0.1–0.25 ms per camera. Sunlit fragments skip the lookup.
+- `a_glossy_car_in_canopy_shade_darkens_like_the_road`, a car at a chase-camera angle, lavapipe: under a canopy slab 0.246 → 0.182 of the sunlit car (showcase); in a 12 m building's shadow 0.236 → 0.151. The approximation also dims sky reflections in building shade, by about a third there. A sunlit car changes by ≤ 3%.
+
+### Dash-cam calibration defaults (both presets)
+
+These are fitted against NVIDIA PhysicalAI-AV front-wide footage (393 frames) by the dash-cam calibration work:
+- metering `average`, `compensationEv` −1.1, `trim` 0.15
+- `whiteStops` 5.5, `midGrey` 0.12
+- `grading.contrast` 1.0, `postSaturation` 0.6
+- `lens.vignette` 0.3
+- `atmosphere.hazeDensity` 0.5
+
+Combined distance to real footage (real-vs-real floor 0.14, lower is closer): Belmont showcase 2.27 (AgX) → 1.18, training → 1.20; Easterbrook (held out) 1.31 / 1.29; CARLA Epic on the same shot 1.71.
+
 ### Presets vs the reference (clear Belmont, dash-cam look, tree-shadow fix)
 
 | Config | 1−FLIP | SSIM | GPU ms/frame (8 cameras) |

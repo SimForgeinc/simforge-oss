@@ -51,6 +51,8 @@ const DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT: u32                  = 1u << 
 const DIRECTIONAL_LIGHT_FLAGS_VOLUMETRIC_BIT: u32                       = 1u << 1u;
 const DIRECTIONAL_LIGHT_FLAGS_AFFECTS_LIGHTMAPPED_MESH_DIFFUSE_BIT: u32 = 1u << 2u;
 const DIRECTIONAL_LIGHT_FLAGS_CONTACT_SHADOWS_ENABLED_BIT: u32           = 1u << 3u;
+// SIMFORGE PATCH (canopy sky occlusion): see `CanopySkyOcclusion` in light.rs.
+const DIRECTIONAL_LIGHT_FLAGS_CANOPY_SKY_OCCLUSION_BIT: u32              = 1u << 4u;
 
 struct RectLight {
     color: vec4<f32>,

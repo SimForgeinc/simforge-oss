@@ -2019,6 +2019,38 @@ impl Default for HostLayerUnion {
     }
 }
 
+/// Whether directional lights carry the vendored bevy_pbr
+/// `CanopySkyOcclusion` (`RenderConfig.lighting.canopySkyOcclusion`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct CanopySkyOcclusionSetting(pub bool);
+
+impl Default for CanopySkyOcclusionSetting {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Keep every directional light's canopy sky occlusion on the configured
+/// setting. Lights are respawned by relights, so this runs every iteration.
+/// Removing the marker does not re-extract a light by itself, so the light
+/// is touched too.
+fn sync_canopy_sky_occlusion(
+    setting: Res<CanopySkyOcclusionSetting>,
+    mut lights: Query<(Entity, Has<bevy::pbr::CanopySkyOcclusion>, &mut DirectionalLight)>,
+    mut commands: Commands,
+) {
+    for (entity, has, mut light) in &mut lights {
+        if has != setting.0 {
+            if setting.0 {
+                commands.entity(entity).insert(bevy::pbr::CanopySkyOcclusion);
+            } else {
+                commands.entity(entity).remove::<bevy::pbr::CanopySkyOcclusion>();
+            }
+            light.set_changed();
+        }
+    }
+}
+
 /// Keep every light on the host-layer union. Lights are respawned by
 /// relights and night-source updates, so this runs every iteration rather
 /// than at the mutation sites.
@@ -2509,6 +2541,7 @@ impl SceneApp {
                 crate::shared_shadows::SharedShadowsPlugin,
             ))
             .init_resource::<ShadowCascadeSettings>()
+            .init_resource::<CanopySkyOcclusionSetting>()
             .add_systems(
                 PostUpdate,
                 enforce_shadow_cascades
@@ -2521,6 +2554,7 @@ impl SceneApp {
                     crate::veg::load_veg_roots,
                     crate::veg::instantiate_veg,
                     sync_light_layers,
+                    sync_canopy_sky_occlusion,
                 )
                     .chain(),
             );
@@ -2782,6 +2816,7 @@ impl SceneApp {
                 cascades: config.shadows.cascades,
                 max_distance_m: config.shadows.max_distance_m,
             };
+            *world.resource_mut::<CanopySkyOcclusionSetting>() = CanopySkyOcclusionSetting(config.lighting.canopy_sky_occlusion);
         }
         self.set_capture_clock(match config.clock.mode {
             ClockMode::Free => CaptureClock::Free,
@@ -7710,6 +7745,99 @@ mod tests {
         let (on, off) = (render(true), render(false));
         let differing = on.chunks(4).zip(off.chunks(4)).filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 2)).count();
         assert!(differing > 100, "SSR changed only {differing} pixels of a wet road");
+    }
+
+    /// A glossy car under overhead cover darkens like the road beside it.
+    /// Without canopy sky occlusion the car kept the environment probe's
+    /// open-sky reflection under a tree and read as sunlit (Easterbrook
+    /// chase, tick 100: the body kept a median 0.71 of its sunlit luminance
+    /// while the shaded road fell to about 0.1). Two catalog cars seen from
+    /// a low chase-like camera: one under a canopy-height slab (6 m), one in
+    /// sun; and, reported, a third car in the shadow of a 12 m building to
+    /// measure how much the approximation dims sky reflections there. GPU
+    /// or lavapipe. `SIMFORGE_CAR_SHADE_DUMP=dir` writes the frames.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_glossy_car_in_canopy_shade_darkens_like_the_road() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let (w, h) = (320usize, 180usize);
+        let elev: f32 = 55.0;
+        let lighting = Lighting { atmosphere: true, sun_elev_deg: elev, sun_azim_deg: 180.0, ..Default::default() };
+        let measure = |canopy: bool, preset: Preset| {
+            let mut config = RenderConfig::preset(preset);
+            config.lighting.canopy_sky_occlusion = canopy;
+            let mut app = SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+            app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+            app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: true, depth: false, hdr: true }, ..test_camera("cam", w as u32, h as u32) });
+            app.wait_until_ready().unwrap();
+            let offset = |height: f32| height / elev.to_radians().tan();
+            {
+                let world = app.app.world_mut();
+                let roots: Vec<Entity> = world.query_filtered::<Entity, With<WorldAssetRoot>>().iter(world).collect();
+                for root in roots {
+                    world.entity_mut(root).insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                }
+                let plane = world.resource_mut::<Assets<Mesh>>().add(Plane3d::default().mesh().size(400.0, 400.0));
+                let slab = world.resource_mut::<Assets<Mesh>>().add(Cuboid::new(9.0, 0.5, 9.0));
+                let building = world.resource_mut::<Assets<Mesh>>().add(Cuboid::new(12.0, 12.0, 6.0));
+                let grey = world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
+                    base_color: Color::linear_rgb(0.12, 0.12, 0.12),
+                    perceptual_roughness: 0.95,
+                    ..default()
+                });
+                world.spawn((Mesh3d(plane), MeshMaterial3d(grey.clone()), Transform::IDENTITY));
+                // Sun due south (-z): a caster at height H shades H / tan(elev) towards +z.
+                // The cars stand at z = 4: the slab centred over the canopy
+                // car's shadow, the building's sunward face 2 m behind the
+                // building car (its 12 m wall shades 8 m past it).
+                world.spawn((Mesh3d(slab), MeshMaterial3d(grey.clone()), Transform::from_xyz(-8.0, 6.0, 4.0 - offset(6.0))));
+                world.spawn((Mesh3d(building), MeshMaterial3d(grey), Transform::from_xyz(8.0, 6.0, -1.0)));
+            }
+            for (id, x) in [("canopy", -8.0f32), ("sunlit", 0.0), ("building", 8.0)] {
+                app.upsert_actor(id, "car", [x, 0.8, 4.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.8, 0.8, 0.8]);
+                app.attach_actor_asset(id, &vehicle, 1.0, None, None, 0.0).unwrap();
+                app.set_actor_asset_pose(id, [x, 0.0, 4.0], Quat::IDENTITY).unwrap();
+            }
+            // Low, behind the cars: grazing views of glossy paint.
+            app.set_pose("cam", &[0.0, 3.0, 17.0], &[0.0, 0.8, 4.0]).unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let frame = app.render_once(1).unwrap();
+            let hdr = strip_padding(&frame.passes["cam:hdr"].bytes, w, h, 8);
+            let ids = strip_padding(&frame.passes["cam:id"].bytes, w, h, 4);
+            if let Ok(dir) = std::env::var("SIMFORGE_CAR_SHADE_DUMP") {
+                let rgb = strip_padding(&frame.passes["cam:rgb"].bytes, w, h, 4);
+                image::save_buffer(format!("{dir}/canopy-{preset:?}-{canopy}.png"), &rgb, w as u32, h as u32, image::ColorType::Rgba8).unwrap();
+            }
+            let luminance = |i: usize| {
+                let c = |k: usize| half::f16::from_le_bytes([hdr[i * 8 + 2 * k], hdr[i * 8 + 2 * k + 1]]).to_f32();
+                0.2126 * c(0) + 0.7152 * c(1) + 0.0722 * c(2)
+            };
+            let id_at = |i: usize| u32::from(ids[i * 4]) | (u32::from(ids[i * 4 + 1]) << 8) | (u32::from(ids[i * 4 + 2]) << 16);
+            let mean_of = |instance: u32| {
+                let px: Vec<f32> = (0..w * h).filter(|&i| id_at(i) == instance).map(luminance).collect();
+                assert!(px.len() > 300, "only {} pixels of instance {instance}", px.len());
+                px.iter().sum::<f32>() / px.len() as f32
+            };
+            let cars = ["canopy", "sunlit", "building"].map(|id| mean_of(app.actor_instance_id(id).unwrap()));
+            std::mem::forget(app);
+            cars
+        };
+        for preset in [Preset::Showcase, Preset::Training] {
+            let off = measure(false, preset);
+            let on = measure(true, preset);
+            let ratio = |c: [f32; 3], k: usize| c[k] / c[1];
+            eprintln!(
+                "{preset:?}: canopy car / sunlit car {:.3} -> {:.3}; building-shadow car / sunlit {:.3} -> {:.3}; sunlit car {:.4} -> {:.4}",
+                ratio(off, 0), ratio(on, 0), ratio(off, 2), ratio(on, 2), off[1], on[1]
+            );
+            assert!((on[1] - off[1]).abs() <= 0.05 * off[1], "{preset:?}: a sunlit car must barely change ({} -> {})", off[1], on[1]);
+            assert!(ratio(on, 0) < 0.45, "{preset:?}: a glossy car under a canopy keeps {:.3} of its sunlit luminance", ratio(on, 0));
+            assert!(ratio(on, 0) < 0.85 * ratio(off, 0), "{preset:?}: canopy sky occlusion barely changed the canopy car ({:.3} -> {:.3})", ratio(off, 0), ratio(on, 0));
+        }
     }
 
     /// A device error stops rendering for good; the next wait must fail at

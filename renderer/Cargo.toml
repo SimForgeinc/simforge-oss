@@ -20,7 +20,10 @@ edition = "2021"
 #   removes the only previous-pose dependence of a pinned capture); and the
 #   shared atmosphere buffer is written when several views carry an
 #   atmosphere (upstream wrote it only for exactly one, so a rig that had
-#   two cameras from the first frame failed validation in SSR).
+#   two cameras from the first frame failed validation in SSR); and canopy
+#   sky occlusion (`CanopySkyOcclusion` on a directional light: fragments
+#   the shadow map shows under 2-15 m overhead cover stop reflecting the
+#   environment probe's open sky; light.rs, shadows.wgsl, pbr_functions.wgsl).
 # - bevy_render: command encoders are finished in parallel at submission, in
 #   recording order (vendor/bevy_render.patch; output-identical, it only
 #   moves wgpu-core's per-encoder HAL recording off the render thread);

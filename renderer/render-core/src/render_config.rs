@@ -332,6 +332,18 @@ pub struct CameraConfig {
     pub wdr: WdrConfig,
 }
 
+/// Lighting controls on top of the authored lighting.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LightingConfig {
+    /// Canopy sky occlusion: surfaces under overhead cover (a tree canopy,
+    /// an underpass) that the sun's shadow map shows stop reflecting the
+    /// open sky of the environment probe (vendored bevy_pbr
+    /// `CanopySkyOcclusion`). Without it a glossy car under a tree keeps
+    /// bright sky reflections and reads as sunlit.
+    pub canopy_sky_occlusion: bool,
+}
+
 /// Atmosphere controls on top of the authored weather.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -359,6 +371,7 @@ pub struct RenderConfig {
     pub grading: GradingConfig,
     pub camera: CameraConfig,
     pub atmosphere: AtmosphereConfig,
+    pub lighting: LightingConfig,
     pub lens: LensConfig,
     pub lod: LodConfig,
     pub textures: TextureConfig,
@@ -392,27 +405,34 @@ impl RenderConfig {
                 exposure: 0.0,
                 temperature: look.grading_temperature,
                 tint: look.grading_tint,
-                post_saturation: 1.0,
-                // A touch of contrast over the log curve, pivoting on mid
-                // grey (provisional until the dash-cam calibration).
-                contrast: 1.1,
+                // Calibrated against NVIDIA PhysicalAI-AV front-wide dash
+                // footage (393 frames): sim vegetation and sky chroma run
+                // 2-3x real, and the log curve needs no extra contrast.
+                post_saturation: 0.6,
+                contrast: 1.0,
             },
             camera: CameraConfig {
                 exposure: ExposureConfig {
                     mode: ExposureMode::Auto,
-                    compensation_ev: 0.0,
-                    metering: MeteringMode::Dashcam,
-                    trim: 0.05,
+                    // Dash-cam calibration: whole-frame metering 1.1 EV under
+                    // the 18% key (the road-weighted mask over-exposed shaded
+                    // streets relative to real footage).
+                    compensation_ev: -1.1,
+                    metering: MeteringMode::Average,
+                    trim: 0.15,
                 },
                 // A typical automotive camera: f/1.8, 1/32000 s .. 1/30 s (EV100 up to
                 // ~16.7, so a sunlit scene never clamps),
                 // gain up to ISO 6400.
                 sensor: SensorConfig { f_number: 1.8, min_shutter_s: 1.0 / 32000.0, max_shutter_s: 1.0 / 30.0, iso_max: 6400.0 },
-                wdr: WdrConfig { white_stops: 6.0, mid_grey: 0.2 },
+                wdr: WdrConfig { white_stops: 5.5, mid_grey: 0.12 },
             },
-            atmosphere: AtmosphereConfig { haze_density: 1.0 },
+            // Dash-cam calibration: half the weather's boundary-layer haze
+            // (clear air: 25 km) matched real footage best.
+            atmosphere: AtmosphereConfig { haze_density: 0.5 },
+            lighting: LightingConfig { canopy_sky_occlusion: true },
             lens: LensConfig {
-                vignette: look.vignette_intensity,
+                vignette: 0.3,
                 distortion: look.lens_distortion,
                 chromatic_aberration: look.chromatic_aberration,
             },
