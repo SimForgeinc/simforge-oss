@@ -31,12 +31,6 @@ jobs:
       - name: Install OpenSCENARIO schema validator
         run: sudo apt-get update && sudo apt-get install --yes libxml2-utils
       - run: pnpm install --frozen-lockfile
-      - name: Smoke Meshy generation contract
-        run: pnpm meshy:smoke
-      - name: Smoke Meshy API authentication when configured
-        env:
-          MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
-        run: pnpm meshy:smoke:live
       - run: pnpm verify:naming
       - run: pnpm verify:origins
       - run: pnpm verify:no-silent-fallbacks

@@ -33,7 +33,7 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  *
  * `4f298a9f` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
  * of its 165 catalog entries are `carla-0.10.0-ue5` (1,316.0 MiB of distinct
- * blobs), and the 35 Meshy and 62 procedural entries no CARLA model covers are
+ * blobs), and the 35 generated and 62 procedural entries no CARLA model covers are
  * carried over unchanged. It differs from its predecessor `70dde8bb` only in
  * `vehicle.bicycle` and `vehicle.motorcycle`, which are now ridden (rider
  * contract in their catalog-models.json entries). It is not on the public origin: an

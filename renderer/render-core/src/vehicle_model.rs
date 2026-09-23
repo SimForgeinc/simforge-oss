@@ -406,7 +406,7 @@ mod tests {
 
 
     #[test]
-    fn meshy_sidecar_resolves_scale_grounding_yaw_and_animation() {
+    fn generated_sidecar_resolves_scale_grounding_yaw_and_animation() {
         let root = std::env::temp_dir().join(format!("simforge-actor-catalog-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("models/vehicle.sedan/animations")).unwrap();
@@ -416,7 +416,7 @@ mod tests {
             root.join("catalog-models.json"),
             r#"{
               "vehicle.sedan": {
-                "model": {"glbPath":"models/vehicle.sedan/model.glb","source":"meshy"},
+                "model": {"glbPath":"models/vehicle.sedan/model.glb","source":"generated"},
                 "tintable":false,
                 "scaleToDims":false,
                 "uniformScale":2.5,

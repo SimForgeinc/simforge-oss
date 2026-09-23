@@ -254,7 +254,7 @@ export type ExternalModelBinding =
        */
       readonly rider?: RiderBinding;
       /**
-       * Standalone GLBs carrying deterministic named clips. Meshy animation
+       * Standalone GLBs carrying deterministic named clips. Generated animation
        * exports include the rigged scene as well as the clip, so renderers may
        * load the selected asset directly.
        */
