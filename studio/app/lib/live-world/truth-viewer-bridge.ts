@@ -14,6 +14,13 @@ import { SnapshotClock, bracketSnapshots, lerp, lerpAngle, type SnapshotClockOpt
 
 export interface TruthViewerBridgeOptions {
   layer?: string;
+  /**
+   * Whether a body the engine has no ground contact for (a world built on a
+   * map version published before its ground derivative) may stand on the
+   * rendered road under it once the viewer has indexed that road. Off, such a
+   * body stays held back in `placingActorIds`. Bodies with engine contact
+   * always stand on it.
+   */
   groundLift?: boolean;
   /**
    * The authored asset for an actor id, or null when the world did not
@@ -47,6 +54,17 @@ export interface TruthViewerBridge {
    */
   reset(): void;
   rendered(actorId: string): ActorRenderState | null;
+  /**
+   * Bodies present in the last drawn step but not drawn because no height is
+   * known for them: the frame carries no engine contact for them (a world
+   * without a ground surface) and the rendered road under them is not indexed
+   * yet (or `groundLift` is off). The scene frame's own `position[1]` is always
+   * 0, so drawing them would put them below any map that is not at sea level;
+   * hosts show them as "placing" instead, as the editor does with
+   * `PlaybackController.placingActorIds`. A body that stays here after the road
+   * has loaded is off the rendered map. Sorted; empty until a step is drawn.
+   */
+  readonly placingActorIds: readonly string[];
   /**
    * Draw one actor before the world has produced a frame: the car at its
    * authored pose while the physics world is still booting, so a drive that
@@ -89,6 +107,7 @@ export function createTruthViewerBridge(
   let followMode: 'chase' | 'dash' = 'chase';
   let disposed = false;
   let lastRendered = new Map<string, ActorRenderState>();
+  let placing: readonly string[] = [];
   let standInShown = false;
   const appearance = new Map<string, { catalogId: string; authored: boolean }>();
 
@@ -135,9 +154,11 @@ export function createTruthViewerBridge(
     const drawnPast = buffered.indexOf(from);
     if (drawnPast > 0) buffered.splice(0, drawnPast);
     const priorActors = from === to ? null : sceneActors(from);
-    const metadata = new Map(to.actors.map((actor) => [actor.id, actor]));
+    const priorMetadata = from === to ? null : truthActors(from);
+    const metadata = truthActors(to);
     const groundReady = shouldGroundLift && viewer.getGroundIndex() !== null;
     const actors: ActorRenderState[] = [];
+    const held: string[] = [];
 
     for (const current of to.scene.actors) {
       if (current.kind === 'despawn') continue;
@@ -147,7 +168,21 @@ export function createTruthViewerBridge(
       const x = prior ? lerp(prior.position[0], current.position[0], alpha) : current.position[0];
       const z = prior ? lerp(prior.position[2], current.position[2], alpha) : current.position[2];
       const headingRad = prior ? lerpAngle(prior.yawRad, current.yawRad, alpha) : current.yawRad;
-      const y = groundReady ? sampleGround(x, z) ?? current.position[1] : current.position[1];
+      // Height: the engine's ground contact is the body's height, blended like
+      // the pose. A frame without contact (a world on a map version published
+      // before its ground derivative) stands the body on the rendered road
+      // under it, as the editor does for a trace without contact; while that
+      // road is not indexed the body is held back and listed, never drawn at
+      // the scene frame's `position[1]`, which is always 0.
+      const priorContact = prior ? priorMetadata?.get(current.id)?.contact : undefined;
+      const contactY = meta.contact
+        ? priorContact ? lerp(priorContact.z, meta.contact.z, alpha) : meta.contact.z
+        : null;
+      const y = contactY ?? (groundReady ? sampleGround(x, z) : null);
+      if (y === null) {
+        held.push(current.id);
+        continue;
+      }
       const look = appearanceOf(current.id, meta.class);
       const odometerNow = odometers.get(to)?.get(current.id);
       const odometerPrior = from === to ? undefined : odometers.get(from)?.get(current.id);
@@ -178,6 +213,7 @@ export function createTruthViewerBridge(
     });
     drawnOnce = true;
     lastRendered = new Map(actors.map((actor) => [actor.id, actor]));
+    placing = held.sort();
     clearStandIn();
     if (followId) applyFollow();
   };
@@ -237,6 +273,9 @@ export function createTruthViewerBridge(
     rendered(actorId) {
       return lastRendered.get(actorId) ?? null;
     },
+    get placingActorIds() {
+      return placing;
+    },
     standIn(actor) {
       if (disposed || !actor || latest) {
         clearStandIn();
@@ -263,6 +302,7 @@ export function createTruthViewerBridge(
       failed = null;
       appearance.clear();
       lastRendered.clear();
+      placing = [];
       adapter.actors.clearLayer(layer);
     },
     setFollow(actorId, mode = 'chase') {
@@ -284,6 +324,7 @@ export function createTruthViewerBridge(
       latest = null;
       buffered.length = 0;
       lastRendered.clear();
+      placing = [];
     },
   };
 }
@@ -301,6 +342,19 @@ function sceneActors(frame: TruthFrame): Map<string, SceneActor> {
   if (!index) {
     index = new Map(frame.scene.actors.filter((actor) => actor.kind !== 'despawn').map((actor) => [actor.id, actor]));
     sceneActorIndex.set(frame, index);
+  }
+  return index;
+}
+
+type TruthActorRecord = TruthFrame['actors'][number];
+/** The same, for the per-actor records (class, dims, contact) beside the scene. */
+const truthActorIndex = new WeakMap<TruthFrame, Map<string, TruthActorRecord>>();
+
+function truthActors(frame: TruthFrame): Map<string, TruthActorRecord> {
+  let index = truthActorIndex.get(frame);
+  if (!index) {
+    index = new Map(frame.actors.map((actor) => [actor.id, actor]));
+    truthActorIndex.set(frame, index);
   }
   return index;
 }

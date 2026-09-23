@@ -28,11 +28,15 @@ interface TruthFrame {
     class: 'car' | 'truck' | 'bus' | 'motorcycle' | 'bicycle' | 'pedestrian' | 'prop';
     dims: { l: number; w: number; h: number };
     accel: { ax: number; ay: number };
+    telemetry?: VehicleTelemetry;
+    contact?: { z: number; pitchRad: number; rollRad: number; wheelDropM: [number, number, number, number] };
   }>;
 }
 ```
 
-No field is optional.
+No field is optional except the two additive per-actor records: `telemetry` (absent for bodies the motion backend does not own) and `contact`.
+
+`actors[].contact` is the engine's ground contact for the body on this tick (engine 0.11, [ground-height.md](engineering/ground-height.md)): `z` is the contact elevation at the footprint centre, the bottom of the body, in metres (XODR-local z, i.e. scene y), `pitchRad`/`rollRad` the road attitude under it and `wheelDropM` the per-wheel drop `[FL, FR, RL, RR]`. It is present exactly when the world simulates on a ground surface (a map version published with its ground derivative) and the actor is present, and absent otherwise; it is never defaulted. Because the scene frame's `groundY` is always 0, it is the only height a client may draw a body at.
 
 ### Top-level fields
 

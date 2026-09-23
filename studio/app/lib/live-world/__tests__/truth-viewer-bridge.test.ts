@@ -29,12 +29,23 @@ function headlessViewer(): CityViewer {
   return viewer as unknown as CityViewer;
 }
 
-function frame(tick: number, x: number, actorClass: 'car' | 'truck' = 'car'): TruthFrame {
+/**
+ * One step of a world on a map with a ground surface: the engine reports the
+ * body's contact height (`contactZ`), and the scene frame's `position[1]` is 0
+ * as it always is. `contactZ: null` is a world without a ground surface.
+ */
+function frame(tick: number, x: number, actorClass: 'car' | 'truck' = 'car', contactZ: number | null = 41.5): TruthFrame {
   return {
     tick,
     timeSec: tick * 0.02,
     signals: [],
-    actors: [{ id: 'ego', class: actorClass, dims: { l: 4.5, w: 1.9, h: 1.5 }, accel: { ax: 0, ay: 0 } }],
+    actors: [{
+      id: 'ego',
+      class: actorClass,
+      dims: { l: 4.5, w: 1.9, h: 1.5 },
+      accel: { ax: 0, ay: 0 },
+      ...(contactZ === null ? {} : { contact: { z: contactZ, pitchRad: 0, rollRad: 0, wheelDropM: [0, 0, 0, 0] } }),
+    }],
     scene: {
       tick,
       t: tick * 0.02,
@@ -68,7 +79,13 @@ function bridgeWithSpy(options: TruthViewerBridgeOptions = {}) {
     return call ? call[1].find((actor) => actor.id === 'ego')?.x ?? null : null;
   };
   const renderedCatalog = () => sync.mock.calls.at(-1)?.[1].find((actor) => actor.id === 'ego')?.catalogId ?? null;
-  return { bridge, sync, renderedX, renderedCatalog, viewer, wall };
+  /** Show one more displayed frame, ten seconds of wall time on. */
+  const draw = () => {
+    wall.ms += 10_000;
+    viewer.onFrame?.(0.1);
+    return sync.mock.calls.at(-1)?.[1] ?? null;
+  };
+  return { bridge, sync, renderedX, renderedCatalog, draw, viewer, wall };
 }
 
 describe('truth viewer bridge', () => {
@@ -123,6 +140,65 @@ describe('truth viewer bridge', () => {
     expect(onError.mock.calls[0]![0].message).toMatch(/does_not_exist/);
     expect(sync).not.toHaveBeenCalled();
     bridge.dispose();
+  });
+
+  it('stands every body on the engine ground contact, blended like the pose', () => {
+    const { bridge, draw } = bridgeWithSpy({ now: () => 0, clock: { gainPerS: 0 } });
+    bridge.apply(frame(0, 0, 'car', 40));
+    expect(bridge.rendered('ego')).toMatchObject({ x: 0, y: 40 });
+    bridge.apply(frame(1, 10, 'car', 42));
+    // The render clock sits between the two steps: height blends with x.
+    const drawn = draw()?.find((actor) => actor.id === 'ego');
+    expect(drawn).toBeDefined();
+    expect((drawn!.y - 40) / 2).toBeCloseTo(drawn!.x / 10, 9);
+    expect(bridge.placingActorIds).toEqual([]);
+    bridge.dispose();
+  });
+
+  it('holds back and lists a body with no known height instead of drawing it at y = 0', () => {
+    // A world without a ground surface, and a viewer whose road is not indexed yet.
+    const { bridge, sync, draw } = bridgeWithSpy();
+    bridge.apply(frame(0, 0, 'car', null));
+    expect(bridge.rendered('ego')).toBeNull();
+    expect(sync.mock.calls.at(-1)?.[1]).toEqual([]);
+    expect(bridge.placingActorIds).toEqual(['ego']);
+
+    // The engine grounds it on a later step: drawn at the contact, off the list.
+    bridge.apply(frame(1, 1, 'car', 7.5));
+    const drawn = draw()?.find((actor) => actor.id === 'ego');
+    expect(drawn?.y).toBe(7.5);
+    expect(bridge.placingActorIds).toEqual([]);
+
+    // A rebuild forgets who was waiting.
+    bridge.apply(frame(2, 2, 'car', null));
+    draw();
+    expect(bridge.placingActorIds).toEqual(['ego']);
+    bridge.reset();
+    expect(bridge.placingActorIds).toEqual([]);
+    bridge.dispose();
+  });
+
+  it('stands a body without engine contact on the rendered road only once the road is indexed', () => {
+    const viewer = headlessViewer() as unknown as { getGroundIndex: () => unknown; sampleGroundHeight: (x: number, z: number) => number | null };
+    let indexed = false;
+    viewer.getGroundIndex = () => (indexed ? { sample: () => 3.25, sampleNear: () => 3.25, bounds: () => ({ min: { x: 0, z: 0 }, max: { x: 1, z: 1 } }) } : null);
+    viewer.sampleGroundHeight = () => null;
+    const withoutLift = createTruthViewerBridge(viewer as unknown as CityViewer, { layer: 'no-lift', groundLift: false, now: () => 0 });
+    const bridge = createTruthViewerBridge(viewer as unknown as CityViewer, { layer: 'lift', now: () => 0 });
+    bridge.apply(frame(0, 0, 'car', null));
+    expect(bridge.placingActorIds).toEqual(['ego']);
+    indexed = true;
+    bridge.apply(frame(1, 1, 'car', null));
+    (viewer as unknown as CityViewer).onFrame?.(0.1);
+    expect(bridge.rendered('ego')?.y).toBe(3.25);
+    expect(bridge.placingActorIds).toEqual([]);
+
+    // Lifting off: only the engine's contact places a body.
+    withoutLift.apply(frame(0, 0, 'car', null));
+    expect(withoutLift.rendered('ego')).toBeNull();
+    expect(withoutLift.placingActorIds).toEqual(['ego']);
+    bridge.dispose();
+    withoutLift.dispose();
   });
 
   it('shows a stand-in only until the world produces its first frame', () => {

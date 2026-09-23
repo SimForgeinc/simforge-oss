@@ -39,6 +39,7 @@ use simforge_core::trace::events::SimEvent;
 use simforge_core::trace::scene_state::{
     actor_class_of, ActorClass, LiveActorSample, SceneFrame, SceneStateStream,
 };
+use simforge_core::trace::ContactFrame;
 use simforge_core::types::{
     ActorBehavior, ActorInitial, ActorKind, ActorRules, Dims, ExistState, ExistTarget, Interaction,
     LaneRef, Pose, RouteSpec, ScenePoint, SimActor, SimScenarioInput, Trigger, Verb,
@@ -272,6 +273,18 @@ pub struct TruthActor {
     /// own (static actors and props).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub telemetry: Option<VehicleTelemetry>,
+    /// The engine's ground contact for this body on this tick
+    /// (docs/engineering/ground-height.md): `z` is the contact elevation at
+    /// the footprint centre, the bottom of the body, in metres (the scene's
+    /// y); pitch/roll are the road attitude under it and `wheelDropM` the
+    /// per-wheel drop `[FL, FR, RL, RR]`. The scene frame's `position[1]` is
+    /// always 0 (scene-state.v1 is a ground-plane frame), so this is the only
+    /// height a live client may draw the body at. Present exactly when the
+    /// world simulates on a ground surface (a map version with its ground
+    /// derivative attached) and the actor is present; absent otherwise, never
+    /// a default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact: Option<ContactFrame>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -439,6 +452,10 @@ impl WorldTruthPublisher {
                     tick.id
                 ))
             })?;
+            // The scene frame carries only pose and presence; the driving
+            // telemetry and the ground contact come from the same tick's
+            // observation.
+            let observed = obs.actors.iter().find(|a| ids[a.index.index()] == tick.id);
             actors.push(TruthActor {
                 id: tick.id.clone(),
                 class: actor_class_of(*kind),
@@ -448,13 +465,8 @@ impl WorldTruthPublisher {
                     ax: tick.acceleration[0],
                     ay: -tick.acceleration[2],
                 },
-                // The scene frame carries only pose and presence; the
-                // driving telemetry comes from the same tick's observation.
-                telemetry: obs
-                    .actors
-                    .iter()
-                    .find(|a| ids[a.index.index()] == tick.id)
-                    .and_then(|a| a.telemetry),
+                telemetry: observed.and_then(|a| a.telemetry),
+                contact: observed.and_then(|a| a.contact),
             });
         }
         let frame = Arc::new(TruthFrame {
@@ -1496,6 +1508,102 @@ pub fn replay_world_session_log(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A live world on an empty topology with one static prop at the origin,
+    /// optionally simulated on a flat 100 m road surface at `z = 7.25`.
+    fn prop_world(ground: bool) -> WorldSession {
+        use simforge_core::engine::GroundContext;
+        use simforge_core::map::ground::{encode_ground_mesh, GroundSurface, SurfaceClass};
+
+        let topology = simforge_core::map::TopologyIndex::from_json_slice(
+            br#"{"mapName":"truth-contact","lanes":{},"gates":[],"junctions":{}}"#,
+        )
+        .unwrap();
+        let mut run_options = RunOptions::new(Arc::new(LaneGraph::new(topology)));
+        if ground {
+            let v = [
+                [-50_000, -50_000, 7_250],
+                [50_000, -50_000, 7_250],
+                [50_000, 50_000, 7_250],
+                [-50_000, 50_000, 7_250],
+            ];
+            let mesh = encode_ground_mesh(&v, &[[0, 1, 2], [0, 2, 3]], &[SurfaceClass::Road; 2]);
+            run_options.ground = Some(Arc::new(GroundContext::new(
+                GroundSurface::decode(&mesh).unwrap(),
+                None,
+            )));
+        }
+        let input = simforge_core::types::parse_scenario_input(
+            r#"{"mapId":"truth-contact","actors":[],"warmupSeconds":0,"clipSeconds":2}"#,
+        )
+        .unwrap();
+        let mut world = WorldSession::new(
+            input,
+            WorldSessionOptions {
+                run_options,
+                horizon_seconds: Some(2.0),
+                mode: WorldMode::Live,
+            },
+        )
+        .unwrap();
+        let spawn = WorldCommand::Spawn {
+            spawn: SpawnRequest {
+                id: Some("prop".into()),
+                kind: ActorKind::StaticObject,
+                pose: SpawnPose {
+                    x: 0.0,
+                    z: 0.0,
+                    heading_rad: Some(0.0),
+                },
+                speed_mps: None,
+                dims: None,
+                route: None,
+                cruise_speed_mps: None,
+                snap_to_lane: Some(false),
+                is_static: Some(true),
+                tags: Vec::new(),
+            },
+        };
+        assert!(world.apply_command("test", 0, &spawn).unwrap().ok);
+        world
+    }
+
+    /// A live client draws a body at the engine's contact height, and the
+    /// scene frame's `position[1]` is always 0: the truth stream must carry
+    /// the contact of every present body when the world has a ground, and
+    /// must not invent one when it has none.
+    #[test]
+    fn truth_frames_carry_the_engine_ground_contact() {
+        let mut grounded = prop_world(true);
+        let truth = grounded.subscribe_truth(None).unwrap();
+        grounded.advance(3).unwrap();
+        let mut frames = Vec::new();
+        truth.drain_into(&mut frames);
+        assert_eq!(frames.len(), 3);
+        for frame in &frames {
+            let actor = frame.actors.iter().find(|a| a.id == "prop").unwrap();
+            let contact = actor
+                .contact
+                .expect("a present body on a ground has contact");
+            assert!((contact.z - 7.25).abs() < 1e-9, "contact z {}", contact.z);
+            assert_eq!(frame.scene.actors[0].position[1], 0.0);
+            let wire = serde_json::to_value(&**frame).unwrap();
+            assert_eq!(
+                wire["actors"][0]["contact"]["z"],
+                serde_json::json!(contact.z)
+            );
+            assert!(wire["actors"][0]["contact"]["wheelDropM"].is_array());
+        }
+
+        let mut flat = prop_world(false);
+        let truth = flat.subscribe_truth(None).unwrap();
+        flat.advance(1).unwrap();
+        let mut frames = Vec::new();
+        truth.drain_into(&mut frames);
+        let wire = serde_json::to_value(&*frames[0]).unwrap();
+        assert!(frames[0].actors[0].contact.is_none());
+        assert!(wire["actors"][0].get("contact").is_none());
+    }
 
     #[test]
     fn live_spawn_checkpoint_retains_catalog_and_replay() {

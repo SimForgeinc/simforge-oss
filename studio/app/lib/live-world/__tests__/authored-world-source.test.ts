@@ -130,6 +130,27 @@ describe('authored world source', () => {
     document.dispose();
   });
 
+  it('builds the drive world on the map version\'s ground surface when it has one, as the editor does', async () => {
+    const document = await fixtureDocument();
+    // A version published before its ground derivative: nothing to attach.
+    const flat = await createAuthoredWorldSource({ document, map: TEST_MAP });
+    const flatWorker = FakeWorker.instances[0]!;
+    expect(flatWorker.sent[0]!.type === 'preload-map' && flatWorker.sent[0]!.mapSources).not.toHaveProperty('ground');
+    flat.close();
+
+    const grounded = await createAuthoredWorldSource({
+      document,
+      map: { ...TEST_MAP, ground: { sha256: 'a'.repeat(64), status: 'ok', flags: [], warnings: [] } },
+    });
+    const worker = FakeWorker.instances[1]!;
+    const root = TEST_MAP.browserAssetRootUrl.replace(/\/+$/, '');
+    for (const message of worker.sent.slice(0, 2)) {
+      expect(message).toMatchObject({ mapSources: { ground: `${root}/derived/ground/ground-mesh.bin` } });
+    }
+    grounded.close();
+    document.dispose();
+  });
+
   it('turns a worker initialization stall into a specific terminal error', async () => {
     vi.useFakeTimers();
     FakeWorker.respondToInit = false;

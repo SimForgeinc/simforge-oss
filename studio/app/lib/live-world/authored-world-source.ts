@@ -154,6 +154,11 @@ export async function createAuthoredWorldSource(opts: {
     locations: entry.locations,
     xodr: entry.xodr,
     signals: entry.signals,
+    // The map's ground surface (engine 0.11 contact), when this version was
+    // published with it: the drive's world grounds every body on it exactly
+    // as the editor's preview does, and its truth frames carry each body's
+    // contact height. A version without it simulates without contact.
+    ...(entry.ground ? { ground: entry.ground } : {}),
   };
   const worker = new Worker(new URL('../../../worker/live-world-worker.ts', import.meta.url), {
     type: 'module',
