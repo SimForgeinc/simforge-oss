@@ -289,6 +289,31 @@ describe('a declared render timeline is the render contract', () => {
   });
 });
 
+describe('the legacy OpenSCENARIO replay is explicit', () => {
+  const legacyIntent: RenderIntentV1 = { ...intent, motionSource: 'original-xosc' };
+  const legacyEvidence = () => {
+    const { manifest, diagnostics } = evidence();
+    return {
+      manifest: { ...manifest, sceneSource: 'openscenario-legacy' as const },
+      diagnostics: { ...diagnostics, sceneSource: 'openscenario-legacy' as const },
+    };
+  };
+
+  it('accepts a legacy-sourced run only when the intent asked for it', () => {
+    const { manifest, diagnostics } = legacyEvidence();
+    expect(nativeRunExpectations(legacyIntent, lease).legacyXoscReplay).toBe(true);
+    expect(nativeEvidenceFailure(reservations, manifest, diagnostics, nativeRunExpectations(legacyIntent, lease))).toBeNull();
+    expect(nativeEvidenceFailure(reservations, manifest, diagnostics, nativeRunExpectations(intent, lease)))
+      .toBe('native_diagnostics_evidence_mismatch');
+  });
+
+  it('refuses a requested legacy replay whose evidence does not record it', () => {
+    const { manifest, diagnostics } = evidence();
+    expect(nativeEvidenceFailure(reservations, manifest, diagnostics, nativeRunExpectations(legacyIntent, lease)))
+      .toBe('native_diagnostics_evidence_mismatch');
+  });
+});
+
 describe('requested sensor archives', () => {
   const lidar: RenderSourceV3 = {
     actorId: 'ego', sensorId: 'lidar', outputName: 'ego-lidar', modality: 'lidar',

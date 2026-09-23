@@ -307,6 +307,7 @@ function buildIntent(
       ...nativeAssets,
     ],
     seed: renderSeed(content, lineage.scenario_sha256),
+    ...(input.motionSource ? { motionSource: input.motionSource } : {}),
   });
 }
 
@@ -484,14 +485,18 @@ export async function createRenderIntentJob(
     }
     // The render timeline every renderer samples, bound into the intent as the
     // `render.timeline` input (its bytes are the stored canonical JSON).
-    const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
+    // The explicit legacy replay (`motionSource: "original-xosc"`) renders
+    // the revision's OpenSCENARIO motion and binds no timeline.
+    const legacyReplay = input.motionSource === "original-xosc";
+    const timelineAssets: NativeAsset[] = !legacyReplay && simulation?.timelineSha256 && simulation.timelineSizeBytes
       ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
       : [];
-    // The native engine renders from the timeline and nothing else
+    // The native engine renders from the timeline, or from the explicitly
+    // requested legacy replay, and nothing else
     // (docs/engineering/no-silent-fallbacks.md): a revision whose simulation
-    // has none is refused here (the same code the engine would fail with)
-    // instead of a worker leasing it first.
-    if (input.engine === "native" && timelineAssets.length === 0) {
+    // has no timeline is refused here (the same code the engine would fail
+    // with) instead of a worker leasing it first.
+    if (input.engine === "native" && !legacyReplay && timelineAssets.length === 0) {
       throw new Error("native_render_timeline_missing");
     }
     const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets], fleetGpuBytes);

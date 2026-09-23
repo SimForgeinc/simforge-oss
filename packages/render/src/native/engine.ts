@@ -21,9 +21,10 @@ import {
   CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
-import { parseRenderIntent, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 
-import { lowerTimelineToNative } from './timeline-lowering.js';
+import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
+import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
@@ -507,18 +508,30 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       phase('actorAssets');
       // The render contract is the render timeline: sample the authoritative
-      // trace through the shared sampler. There is no other scene source; a
-      // job without one fails instead of re-deriving poses from the xosc.
+      // trace through the shared sampler. The only other scene source is the
+      // explicitly requested legacy replay (`motionSource: 'original-xosc'`,
+      // for revisions with no stored trace), recorded as
+      // `openscenario-legacy`; it is never chosen because a timeline is absent.
       const timelineInput = context.inputs.get(RENDER_TIMELINE_INPUT_ID);
-      if (!timelineInput) {
-        throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none`);
+      const legacyReplay = intent.motionSource === LEGACY_XOSC_MOTION_SOURCE;
+      if (legacyReplay && timelineInput) {
+        throw new RenderInputError('native_motion_source_conflict', `job ${context.jobId} requests the legacy OpenSCENARIO replay but also declares ${RENDER_TIMELINE_INPUT_ID}`);
+      }
+      if (!legacyReplay && !timelineInput) {
+        throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none and does not request motionSource '${LEGACY_XOSC_MOTION_SOURCE}'`);
       }
       const applyAttitude = options.applyAttitude !== false;
-      const timelineBytes = await fs.readFile(timelineInput.path);
-      const lowering = await lowerTimelineToNative(timelineBytes, rgbSchedules, { attitude: applyAttitude });
-      const timelineSha256 = lowering.timelineSha256;
-      if (timelineSha256 !== timelineInput.sha256) {
-        throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
+      let lowering: NativeSceneLowering | NativeTimelineLowering;
+      let timelineSha256: string | undefined;
+      if (timelineInput) {
+        const timelineLowering = await lowerTimelineToNative(await fs.readFile(timelineInput.path), rgbSchedules, { attitude: applyAttitude });
+        timelineSha256 = timelineLowering.timelineSha256;
+        if (timelineSha256 !== timelineInput.sha256) {
+          throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
+        }
+        lowering = timelineLowering;
+      } else {
+        lowering = lowerOpenScenarioToNative((await fs.readFile(xoscInput.path)).toString('utf8'), xoscInput.sha256, rgbSchedules);
       }
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
       assertActorAnimationsBound(lowering.appearances, lowering.states, actorAssets);
@@ -853,9 +866,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (observedFrames.length !== lowering.states.length) {
         throw new RenderInputError('native_render_parity_unavailable', `observed actor transforms cover ${observedFrames.length} of ${lowering.states.length} ticks; parity cannot be graded`);
       }
-      let parity: ParityReport;
-      {
-        const timeline = await openRenderTimeline(timelineBytes);
+      // The explicit legacy replay has no timeline to grade against: it is
+      // recorded as scene source `openscenario-legacy` without parity.
+      let parity: ParityReport | undefined;
+      if (timelineInput) {
+        const timeline = await openRenderTimeline(await fs.readFile(timelineInput.path));
         try {
           parity = compareObserved(timeline, observedFrames.join('\n'), {
             name: 'bevy', positionToleranceM: 1e-3, angleToleranceDeg: 0.05,
@@ -878,7 +893,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       });
       const traceDigest = await hashFile(tracePath);
       phase('parityAndTrace');
-      if (!parity.pass) {
+      if (parity && !parity.pass) {
         throw new RenderInputError('native_render_parity_failed', `max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
       }
 
@@ -1010,7 +1025,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
-        ...(features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
+        ...(parity && features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
           schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
           maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
           maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,

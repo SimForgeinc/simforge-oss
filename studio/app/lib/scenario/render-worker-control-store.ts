@@ -1328,6 +1328,7 @@ async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, 
     diagnostics,
     features: leaseControlFeatures(lease.control_features),
     timelineSha256: timeline?.sha256 ?? null,
+    motionSource: intent.motionSource,
   }));
   // Read from the raw document: a manifest schema that does not know
   // `substitutions` yet would otherwise drop it as an unknown key.

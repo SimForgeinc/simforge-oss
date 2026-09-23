@@ -208,6 +208,14 @@ describe("native negotiated evidence", () => {
     expect(nativeEvidencePolicyFailure({ ...legacy, features: ALL_FEATURES, timelineSha256: null })?.code).toBe("native_scene_source_legacy");
   });
 
+  it("accepts the legacy OpenSCENARIO replay only when the intent requested it", () => {
+    const legacy = evidence({ manifest: { sceneSource: "openscenario-legacy", timelineSha256: undefined }, diagnostics: { sceneSource: "openscenario-legacy", timelineSha256: undefined, parity: undefined } });
+    expect(nativeEvidencePolicyFailure({ ...legacy, features: ALL_FEATURES, timelineSha256: null, motionSource: "original-xosc" })).toBeNull();
+    // Requested, but the run rendered from a timeline, or the intent also declares one.
+    expect(nativeEvidencePolicyFailure({ ...evidence(), features: ALL_FEATURES, timelineSha256: null, motionSource: "original-xosc" })?.code).toBe("native_scene_source_mismatch");
+    expect(nativeEvidencePolicyFailure({ ...legacy, features: ALL_FEATURES, timelineSha256: TIMELINE, motionSource: "original-xosc" })?.code).toBe("native_scene_source_mismatch");
+  });
+
   it("refuses a render from a different timeline than the intent declared", () => {
     const other = evidence({ manifest: { timelineSha256: "d".repeat(64) }, diagnostics: { timelineSha256: "d".repeat(64) } });
     expect(nativeEvidencePolicyFailure({ ...other, features: ALL_FEATURES, timelineSha256: TIMELINE })?.code).toBe("native_scene_source_mismatch");

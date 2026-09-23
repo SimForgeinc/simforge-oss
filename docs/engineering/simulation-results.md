@@ -76,6 +76,18 @@ compares its trace digest with the result's:
   `traceSha256`), shows it, flags the mismatch and records it
   (`POST /simulations/:simKey/verification`). SUMO documents preview their
   authored actors only, so they are verified against `authoredTraceSha256`.
+  While they wait, the editor draws the display-only browser SUMO preview. Once
+  verified, it swaps in the authoritative trace (keeping the playhead) and
+  replays the worker's SUMO vehicles from it. Those vehicles exist only in the
+  trace, never in the scenario input: playback identifies them by their trace
+  `origin` (`sumo`), keeps them out of the authored-actor identity checks,
+  renders them from the trace's actor metadata and shows them read-only as
+  traffic.
+
+A document with no authored actors (a map, optionally with traffic) resolves
+to the blank world both the editor and the host build from
+`emptyScenarioBaseInput` (`@simforge-oss/compiler`), so it simulates and
+verifies like any other.
 
 **Revision commit.** `POST /documents/:id/revisions {expectedVersion}`. The host
 resolves the draft's simulation (waiting up to 20 s on another executor, or

@@ -153,12 +153,6 @@
     },
     {
       "file": "packages/render/src/builtin-engines.ts",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
-      "file": "packages/render/src/builtin-engines.ts",
       "rule": "ts-nullish-literal",
       "count": 7,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
@@ -166,7 +160,7 @@
     {
       "file": "packages/render/src/native/actor-assets.ts",
       "rule": "fallback-word",
-      "count": 3,
+      "count": 2,
       "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
@@ -180,12 +174,6 @@
       "rule": "ts-promise-catch",
       "count": 2,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "packages/render/src/native/engine.ts",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
       "file": "packages/render/src/native/engine.ts",
@@ -219,21 +207,9 @@
     },
     {
       "file": "packages/render/src/native/local-runtime.ts",
-      "rule": "fallback-word",
-      "count": 2,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
-      "file": "packages/render/src/native/local-runtime.ts",
       "rule": "ts-nullish-literal",
       "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "packages/render/src/native/lowering.ts",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
       "file": "packages/render/src/native/service-client.ts",
@@ -262,7 +238,7 @@
     {
       "file": "packages/render/src/native/video-encoder.ts",
       "rule": "fallback-word",
-      "count": 4,
+      "count": 3,
       "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
@@ -276,12 +252,6 @@
       "rule": "ts-promise-catch",
       "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "packages/render/src/render-input-error.ts",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
       "file": "packages/render/src/timeline/index.ts",
@@ -344,12 +314,6 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "packages/render/src/worker-control.ts",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
       "file": "renderer/ffi/src/lib.rs",
       "rule": "rs-let-underscore",
       "count": 1,
@@ -371,12 +335,6 @@
       "file": "renderer/render-core/src/bin/sky-bench.rs",
       "rule": "rs-unwrap-or",
       "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/render-core/src/catalog.rs",
-      "rule": "fallback-word",
-      "count": 3,
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
@@ -398,12 +356,6 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "renderer/render-core/src/engine.rs",
-      "rule": "fallback-word",
-      "count": 3,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
       "file": "renderer/render-core/src/fixture.rs",
       "rule": "rs-let-underscore",
       "count": 1,
@@ -432,12 +384,6 @@
       "rule": "rs-unwrap-or",
       "count": 2,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "renderer/render-core/src/playback.rs",
-      "rule": "fallback-word",
-      "count": 2,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
       "file": "renderer/render-core/src/playback.rs",
@@ -464,15 +410,9 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "renderer/render-core/src/veg.rs",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
       "file": "renderer/render-core/src/vehicle_model.rs",
       "rule": "fallback-word",
-      "count": 7,
+      "count": 6,
       "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
@@ -530,12 +470,6 @@
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
-      "file": "renderer/sensors/src/lidar.rs",
-      "rule": "fallback-word",
-      "count": 4,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
       "file": "renderer/sensors/src/occupancy.rs",
       "rule": "fallback-word",
       "count": 1,
@@ -554,12 +488,6 @@
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
-      "file": "renderer/sensors/src/taxonomy.rs",
-      "rule": "fallback-word",
-      "count": 2,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
       "file": "renderer/sensors/src/video.rs",
       "rule": "rs-unwrap-or",
       "count": 1,
@@ -570,18 +498,6 @@
       "rule": "rs-unwrap-or",
       "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "renderer/service/src/scene.rs",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
-      "file": "renderer/service/src/server.rs",
-      "rule": "fallback-word",
-      "count": 3,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
       "file": "renderer/service/src/server.rs",

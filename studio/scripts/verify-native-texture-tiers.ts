@@ -14,6 +14,7 @@ import { authoredRenderSensors, backendModalities, buildCanonicalRenderSpec, def
 import { hostSession } from '../../packages/cli/src/commands/local';
 import { freezeScenario } from '../../packages/cli/src/commands/scenario';
 import { Checks } from './texture-tier-assertions';
+import { hostUrl } from './host-url';
 
 const args = new Map(process.argv.slice(2).map(arg => { const at = arg.indexOf('='); return [arg.slice(2, at), arg.slice(at + 1)]; }));
 const root = args.get('root');
@@ -45,7 +46,7 @@ await mkdir(out, { recursive: true });
 const session = await hostSession(root);
 const document = await session.host.projects.getDocument(args.get('scenario')!);
 const api = async <T>(path: string, body?: unknown): Promise<T> => {
-  const response = await fetch(new URL(path, base), { method: body === undefined ? 'GET' : 'POST',
+  const response = await fetch(hostUrl(base, path), { method: body === undefined ? 'GET' : 'POST',
     headers: { authorization: `Bearer ${host.controlToken}`, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body) });
   if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
@@ -131,7 +132,7 @@ for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
     const { items } = await api<{ items: Artifact[] }>(`/api/simforge/render-jobs/${encodeURIComponent(job.id)}/downloads`);
     const diagnostics = items.find(item => item.identity?.role === 'diagnostics');
     assert(diagnostics?.url, `job ${job.id} has no downloadable native diagnostics`);
-    const diagnosticResponse = await fetch(new URL(diagnostics.url, base), { headers: { authorization: `Bearer ${host.controlToken}` } });
+    const diagnosticResponse = await fetch(hostUrl(base, diagnostics.url), { headers: { authorization: `Bearer ${host.controlToken}` } });
     assert(diagnosticResponse.ok);
     const diagnostic = await diagnosticResponse.json() as { textureProfile?: ProfileEvidence };
     checks.check(`${profile}/${round}/${env} selected native representation and ${expectedMap} closure`, diagnostic.textureProfile, () => {
@@ -149,7 +150,7 @@ for (let round = 0; round < (profile === 'ml' ? 2 : 1); round++) {
     const envHashes: Record<string, string> = {};
     for (const [index, video] of videos.entries()) {
       assert(video.url);
-      const response = await fetch(new URL(video.url, base), { headers: { authorization: `Bearer ${host.controlToken}` } });
+      const response = await fetch(hostUrl(base, video.url), { headers: { authorization: `Bearer ${host.controlToken}` } });
       assert(response.ok);
       const file = join(out, `${round}-${env}-${index}.mp4`);
       await writeFile(file, new Uint8Array(await response.arrayBuffer()));
@@ -191,7 +192,7 @@ checks.finish();
   throw error;
 } finally {
   for (const id of outstanding) {
-    const cancelled = await fetch(new URL(`/api/simforge/render-jobs/${id}`, base), {
+    const cancelled = await fetch(hostUrl(base, `/api/simforge/render-jobs/${id}`), {
       method: 'DELETE', headers: { authorization: `Bearer ${host.controlToken}` },
     });
     if (!cancelled.ok && cancelled.status !== 409) console.error(`FAIL cancelling unfinished gate job ${id}: ${cancelled.status}`);
