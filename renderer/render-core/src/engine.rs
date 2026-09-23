@@ -4576,7 +4576,16 @@ impl SceneApp {
             }
             legend.push(LegendEntry { id, name });
         }
+        // Dynamic actors take ids above the static legend: before this, the
+        // first actors reused ids 1..N of static meshes, so the ID/semantic
+        // passes, lidar/radar classes and radar velocities confused an actor
+        // with a static mesh.
+        let static_max = legend.iter().map(|entry| entry.id).max().unwrap_or(0); // fallback-ok: an empty legend has no ids to stay above
         world.resource_mut::<Legend>().0 = legend;
+        if !self.actors.is_empty() {
+            bail!("actors were spawned before the static instance-ID legend was frozen");
+        }
+        self.next_instance_id = static_max;
 
         // One update so the newly spawned ID clones are extracted before the
         // first real render request.
@@ -5949,6 +5958,8 @@ mod tests {
 
         let body = [0.0, 0.8, -20.0];
         app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+        let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
+        assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
         // Before a model is attached the cuboid is what the camera draws.
         let cuboid = app.actor_sensor_meshes().unwrap();
         assert_eq!(cuboid.len(), 1);
