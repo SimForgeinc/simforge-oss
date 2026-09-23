@@ -1,0 +1,53 @@
+{
+  "id": "probe-lane-change-linear",
+  "feature": "LaneChangeAction linear / time (hand-written)",
+  "osc": [
+    "LaneChangeAction",
+    "LaneChangeActionDynamics.linear.time"
+  ],
+  "description": "Lane -2 -> -1, linear over 3 s, at t=1 s, written directly (our exporter would substitute cubic).",
+  "clipSeconds": 6,
+  "kind": "xosc",
+  "xosc": "probes/probe-lane-change-linear.xosc",
+  "oscVersion": "1.3",
+  "actors": [],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "LaneChangeAction / LaneChangeActionDynamics (class reference)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)",
+      "6.3.3 Lane coordinate system (t positive to the left)"
+    ],
+    "derivation": "Lateral position linear in time from y=-5.25 to -1.75 over [1,4]; speed vector length 20 m/s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "lateral": [
+          {
+            "t0": 1,
+            "toY": -1.75,
+            "shape": "linear",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "lc": {
+        "start": 1.0,
+        "end": 4.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-17",
+      "D-18"
+    ]
+  },
+  "expect": {
+    "ours": "not-expressible",
+    "esmini": "agrees"
+  }
+}

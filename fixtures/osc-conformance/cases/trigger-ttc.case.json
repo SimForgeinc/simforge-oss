@@ -1,0 +1,94 @@
+{
+  "id": "trigger-ttc",
+  "feature": "TimeToCollisionCondition, freespace=false",
+  "osc": [
+    "TimeToCollisionCondition",
+    "freespace=false"
+  ],
+  "description": "Ego (15 m/s) behind a car in the same lane (100 m ahead, 10 m/s). When TTC < 12.29 s ego slows to 10 m/s.",
+  "clipSeconds": 11,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 15
+    },
+    {
+      "id": "lead",
+      "lane": -2,
+      "s": 150,
+      "speedMps": 10
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "cubic",
+        "constraint": "time",
+        "value": 3
+      },
+      "trigger": {
+        "kind": "when",
+        "condition": {
+          "kind": "ttc",
+          "a": "ego",
+          "b": "lead",
+          "cmp": "lt",
+          "value": 12.29
+        },
+        "byLatest": 1000,
+        "ifNever": "fire"
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "TimeToCollisionCondition (class reference: distance / relative speed, no acceleration)",
+      "6.3.4 Vehicle coordinate system (reference point; BoundingBox.Center offset)"
+    ],
+    "derivation": "TTC = distance / relative speed, no acceleration; freespace: bounding-box gap (D-07): (100-5t-4.8)/5. < 12.29 first at t=6.76 (6.74 gives 12.30). Cubic 15->10 over [6.76, 9.76].",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 15,
+        "longitudinal": [
+          {
+            "t0": 6.76,
+            "to": 10,
+            "shape": "cubic",
+            "durationS": 3
+          }
+        ]
+      },
+      "lead": {
+        "x0": 150,
+        "y0": -5.25,
+        "v0": 10
+      }
+    },
+    "events": {
+      "change": {
+        "start": 6.76
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-06",
+      "D-07"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "disagrees",
+    "esminiNote": "esmini 3.6.0 evaluates TimeToCollisionCondition as true on its first check at t=0 (true TTC is 19 s); a level (edge none) condition exposes it, a rising edge used to mask it"
+  }
+}

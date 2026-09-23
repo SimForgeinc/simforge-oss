@@ -590,7 +590,8 @@ export type Sensor = z.infer<typeof SensorSchema>;
 
 /** Native scenario header metadata. */
 export const FileHeaderSchema = z.object({
-  revMajor: z.number().int().default(1),
+  // ASAM OpenSCENARIO XML 1.x only; another major is a different standard.
+  revMajor: z.literal(1).default(1),
   revMinor: z.number().int().default(2),
   date: z.string(),
   description: z.string(),

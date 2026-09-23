@@ -1,21 +1,20 @@
 /**
  * Dependency-free OpenSCENARIO self-check for documents emitted by SimForge.
  *
- * This is intentionally not a general OpenSCENARIO importer. It performs a
- * small well-formedness walk, records Action/Condition element names, and
- * checks those names against the ScenarioRunner 1.0 surface used by our
- * writer. Attributes and schema cardinality remain the writer's responsibility.
+ * This is intentionally not an OpenSCENARIO importer (SimForge does not import
+ * OpenSCENARIO; it only exports it). It performs a small well-formedness walk,
+ * records Action/Condition element names, and checks those names against the
+ * ScenarioRunner 1.0 surface used by our writer. Attributes and schema
+ * cardinality remain the writer's responsibility.
  *
- * ## Why this remains separate from canonical import
+ * ## Trust boundary
  *
- * Inbound third-party files are parsed and bounded by
- * `@simforge-oss/openscenario/import`. This checker has the opposite trust
- * boundary: it reads a file we DID write and asks only whether our own
+ * This checker reads a file we DID write and asks only whether our own
  * emission stayed inside the ScenarioRunner surface. It is an assertion about
- * our writer, not a defence against an attacker, and must never be used as one.
+ * our writer, not a defence against an attacker, and must never be used to
+ * read third-party files.
  *
- * The sets below intentionally name only what our writer emits, not everything
- * the canonical importer can analyze.
+ * The sets below intentionally name only what our writer emits.
  */
 
 /**

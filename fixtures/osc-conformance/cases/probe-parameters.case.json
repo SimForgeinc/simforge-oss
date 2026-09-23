@@ -1,0 +1,49 @@
+{
+  "id": "probe-parameters",
+  "feature": "ParameterDeclarations and ${} expressions",
+  "osc": [
+    "ParameterDeclaration",
+    "parameter expression"
+  ],
+  "description": "Init speed from $InitSpeed; ramp duration ${$Base * 1.5} = 3 s.",
+  "clipSeconds": 6,
+  "kind": "xosc",
+  "xosc": "probes/probe-parameters.xosc",
+  "oscVersion": "1.3",
+  "actors": [],
+  "interactions": [],
+  "oracle": {
+    "clauses": [
+      "9.1 Parameters / 9.2 Parameter expressions"
+    ],
+    "derivation": "$InitSpeed=20; ${$Base * 1.5} = 3. Ramp 20->10 over [1,4].",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 10,
+            "shape": "linear",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0,
+        "end": 4.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "not-expressible",
+    "esmini": "agrees"
+  }
+}

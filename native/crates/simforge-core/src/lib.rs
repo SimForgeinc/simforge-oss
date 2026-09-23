@@ -85,8 +85,16 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// makes generated ambient traffic feasible for its class (the generator never
 /// routes a vehicle through a turn its class cannot make, and caps its spawn
 /// speed to the corner planner's approach speed), and requires the 20 ms step
-/// (`dt` other than 0.02 is rejected).
-pub const ENGINE_SEM_VER: &str = "0.9.0";
+/// (`dt` other than 0.02 is rejected); 0.10.0 executes authored transitions as
+/// OpenSCENARIO prescribes (docs/engineering/openscenario-conformance.md):
+/// fixed-target speed interactions and lateral interactions own the kinematic
+/// state on their exact shape and duration (steps instantaneous, distance
+/// constraints by travelled distance) until they complete or a safety cap
+/// binds, speed/gap interactions complete so `after end` chains fire, a
+/// `when` trigger's `byLatest` is no longer a clip window, euclidean distance
+/// triggers use true footprint separation, `exist` and standstill take effect
+/// from the tick after their cause.
+pub const ENGINE_SEM_VER: &str = "0.10.0";
 
 /// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
 /// name in new code.
