@@ -145,7 +145,7 @@ class NativeRenderClient:
 
         The service answers the RPC, then writes the manifest frame with every
         slot's memory/ready/release descriptors as SCM_RIGHTS on this socket;
-        both are consumed here. Returns ``simforge_native.gpu.ImportedStream``.
+        both are consumed here. Returns ``simforge_render.gpu.ImportedStream``.
         """
         from .gpu import ImportedStream, receive_stream
         response = self._rpc({"i": self._next(), "op": "export_device_stream", "sensor_id": sensor_id})

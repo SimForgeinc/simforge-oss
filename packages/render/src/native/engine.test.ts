@@ -25,7 +25,7 @@ describe('native retained engine adapter', () => {
   });
 
   it('resolves the retained service binary from explicit options', () => {
-    expect(resolveBinary({ binary: '/opt/native-render-service' })).toBe('/opt/native-render-service');
+    expect(resolveBinary({ binary: '/opt/simforge-render' })).toBe('/opt/simforge-render');
   });
 
   it('removes wgpu row padding before rawvideo encoding', () => {

@@ -4,6 +4,10 @@ The interactive viewport is separate from the headless sensor `render_bundle`
 service: that subsystem has its own transport and its own frame ring, and
 nothing in this document applies to it.
 
+Process: the viewport is the `view` subcommand of the one renderer binary,
+`simforge-render view --map-root <dir> [--headless] [--embedded] ...` (this
+crate, `simforge-render-view`, is a library linked into `simforge-render`).
+
 Transport: newline-delimited JSON, host → viewport on stdin, viewport → host
 on stdout. Electron owns the child process and treats stdout events as
 authoritative. The viewport's own logs go to **stderr**; stdout carries

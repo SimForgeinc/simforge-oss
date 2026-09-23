@@ -4,7 +4,7 @@ import type { Environment } from '@simforge-oss/scenario';
 import { LIGHTING_EXTENSION_KEY, SCENE_TIME_EXTENSION_KEY, sceneClockSunAngles } from '@simforge-oss/scenario/contracts';
 
 import {
-  CINEMATIC_PROFILE_CONFIG, nativeLightingSiteFromOpenDrive, resolveNativeLighting, sceneMinutes, solarPosition, weatherPreset,
+  nativeLightingSiteFromOpenDrive, resolveNativeLighting, sceneMinutes, solarPosition, weatherPreset,
   type NativeLightingSite,
 } from './lighting.js';
 
@@ -40,7 +40,7 @@ describe('native lighting', () => {
   });
 
   it('is the lab default for a fresh scenario', () => {
-    const { lighting, profileConfig, provenance } = at({ ...BASE, extensions: { [SCENE_TIME_EXTENSION_KEY]: { minutes: 385 } } });
+    const { lighting, provenance } = at({ ...BASE, extensions: { [SCENE_TIME_EXTENSION_KEY]: { minutes: 385 } } });
     expect(lighting).toMatchObject({
       sun_elev_deg: 5.758, sun_azim_deg: 115.248, weather: 'clear', atmosphere: true,
       visibility_m: 80_000, turbidity: 2.4, cloud_cover: 0, haze: 0, wetness: 0,
@@ -52,8 +52,6 @@ describe('native lighting', () => {
       window_mode: 'synthetic_facade', cloud_quality: 'scalable', sky_display_lift: 120,
     });
     expect(provenance.site).toEqual(LAB_SITE);
-    expect(profileConfig).toBe(CINEMATIC_PROFILE_CONFIG);
-    expect(profileConfig.cinematic).toMatchObject({ aa: 'taa', toneMap: 'agx', motionShutterAngle: 0, bloomIntensity: 0.1 });
   });
 
   it('maps every drawable scenario weather onto a renderer air mass', () => {

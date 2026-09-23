@@ -12,7 +12,7 @@ import { Button } from "../../../../components/ui/button";
 import {
   contractCameraReportAsWire,
   type CreateHifiPreviewInput,
-  type HifiPreviewProfile,
+  type HifiPreviewPreset,
   type HifiPreviewRecord,
 } from "../../../../lib/hifi-preview/contracts";
 import * as stylex from "@stylexjs/stylex";
@@ -67,7 +67,7 @@ function buildRequest(
   state: EditorState | null,
   documentId: string | null,
   scenarioRevision: number | null,
-  profile: HifiPreviewProfile,
+  preset: HifiPreviewPreset,
 ): CreateHifiPreviewInput {
   const camera = contractCameraReportAsWire(cameraStateReport(viewer));
   const canvas = viewer.renderer.domElement;
@@ -103,7 +103,7 @@ function buildRequest(
     documentId,
     scenarioRevision,
     mapVersionId: map.versionId,
-    profile,
+    preset,
     // The editor authors the t=0 scene; timeline playback previews stay Three-side.
     tick: 0,
     width,
@@ -121,7 +121,7 @@ function buildRequest(
 }
 
 /**
- * On-demand high-fidelity (Bevy `native-render-service`) still of the current
+ * On-demand high-fidelity (Bevy `simforge-render serve`) still of the current
  * viewport, shown beside the live Three canvas with a provenance strip.
  * Mirrors the notification-dock slot pattern: self-contained fixed overlay,
  * non-blocking, pointer events only on its own cards.
@@ -142,7 +142,7 @@ export function HifiPreviewSlot({
   active?: boolean;
 }) {
   const [preview, setPreview] = useState<PreviewState>({ phase: "idle" });
-  const [profile, setProfile] = useState<HifiPreviewProfile>("cinematic");
+  const [preset, setPreset] = useState<HifiPreviewPreset>("showcase");
   const pollAbort = useRef<AbortController | null>(null);
 
   useEffect(() => () => pollAbort.current?.abort(), []);
@@ -154,7 +154,7 @@ export function HifiPreviewSlot({
     pollAbort.current = abort;
     setPreview({ phase: "pending", requestId: null, startedAt: Date.now() });
     try {
-      const body = buildRequest(viewer, map, state, documentId, scenarioRevision, profile);
+      const body = buildRequest(viewer, map, state, documentId, scenarioRevision, preset);
       const created = await fetch("/api/hifi-preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -195,7 +195,7 @@ export function HifiPreviewSlot({
         message: error instanceof Error ? error.message : "High-fidelity render failed.",
       });
     }
-  }, [documentId, map, profile, scenarioRevision, state, viewer]);
+  }, [documentId, map, preset, scenarioRevision, state, viewer]);
 
   const dismiss = useCallback(() => {
     pollAbort.current?.abort();
@@ -213,14 +213,14 @@ export function HifiPreviewSlot({
       <div {...stylex.props(styles.flexCenterLive)}>
         {preview.phase === "idle" || preview.phase === "failed" ? (
           <select
-            aria-label="High-fidelity render profile"
+            aria-label="High-fidelity render preset"
             {...stylex.props(styles.xsInkBordered)}
-            data-testid="hifi-preview-profile"
-            onChange={(event) => setProfile(event.target.value as HifiPreviewProfile)}
-            value={profile}
+            data-testid="hifi-preview-preset"
+            onChange={(event) => setPreset(event.target.value as HifiPreviewPreset)}
+            value={preset}
           >
-            <option value="cinematic">Cinematic</option>
-            <option value="sensor">Sensor</option>
+            <option value="showcase">Showcase</option>
+            <option value="training">Training</option>
           </select>
         ) : null}
         <Button
@@ -250,7 +250,7 @@ export function HifiPreviewSlot({
         >
           <Loader2 aria-hidden="true" className={stylex.props([motionRecipe.spin, styles.spinner2]).className} />
           <span>
-            Rendering one {profile} frame with the native renderer… the map prewarm can take a minute on
+            Rendering one {preset} frame with the native renderer… the map prewarm can take a minute on
             first use. The editor stays fully interactive.
           </span>
           <Button xstyle={styles.pushRight} onClick={dismiss} size="xs" type="button" variant="ghost">
@@ -316,7 +316,7 @@ export function HifiPreviewSlot({
             <span title="Renderer implementation">
               renderer {preview.record.provenance?.renderer ?? "bevy-native"}
             </span>
-            <span title="Render profile">profile {preview.record.provenance?.profile ?? preview.record.profile}</span>
+            <span title="Render preset">preset {preview.record.provenance?.preset ?? preview.record.preset}</span>
             <span title="Scene tick">tick {preview.record.provenance?.tick ?? preview.record.tick}</span>
             {preview.record.provenance ? (
               <>

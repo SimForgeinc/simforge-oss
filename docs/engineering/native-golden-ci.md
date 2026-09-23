@@ -16,11 +16,13 @@ goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
 | `.github/workflows/native-golden.yml` | self-hosted 5080 runner workflow |
 
 Renderer binary resolution order: `--bin` flag → `scene.binary` →
-`renderer/target/release/native-render-job` (`renderer/render-core`). Scenes
-with `rendererArgs` are turned into a `simforge.native-render-job/v1` job file
-(one sensor camera per `cameras`, `frames` scheduled captures after `warmup`
-warmup iterations); the hashed passes are the last scheduled frame's
-`rgb.png` / `id.png` / `depth.f32.bin`. Every capture is a single GPU
+`renderer/target/release/simforge-render` (the one renderer binary,
+`cargo build --release -p simforge-render`). Every scene is turned into a
+`simforge.render-job/v2` job file (scene spec, optional `sceneState`, one
+camera per `cameras`, `ticks`, `passes`) and rendered with
+`simforge-render job --job <file>`; the hashed passes are the
+`<sensor>/<tick>.rgb.png` / `.id.png` / `.depth.f32.bin` artifacts listed with
+their sha256 in the job's `results.json`. Every capture is a single GPU
 submission with its copies ordered after the camera passes, so consecutive
 frames never carry the previous frame's pixels. The former `native-render`
 spike CLI (AgX output, unordered readback) is removed; goldens recorded
@@ -59,7 +61,7 @@ compatible. Additions:
   "profile": "sensor",                    // render profile; only sensor is goldenable today
   "rendererPath": {
     "engine": "native-bevy",              // was chrome/three.js in WSB4 manifests
-    "file": "renderer/target/release/native-render",
+    "file": "renderer/target/release/simforge-render",
     "sha256": "…",                        // binary pin
     "invocation": { "args": ["…"] },
     "versions": { "bevy": "0.19.1", "wgpu": "29.0.4", "rustc": "…", "backend": "vulkan" }
@@ -139,7 +141,7 @@ applies both gates. Frame-time uses the renderer-reported steady-state
    decoded (`lib/png.mjs`) and must encode real instances (`idPass`
    thresholds, exit 7), so a hash of a blank pass can no longer be recorded
    or pass verify. `yale-frame0`'s retired spike golden fails this gate by
-   construction until it is re-recorded with `native-render-job`.
+   construction until it is re-recorded with `simforge-render job`.
 4. **Perf baselines are load-sensitive.** The recorded baseline (19.45 ms avg)
    was taken under co-tenant load; quiet-GPU steady state is ~4–5 ms (FINDINGS:
    4.33 ms). Re-record during a quiet window before trusting the +10% budget;
@@ -166,7 +168,7 @@ Invalidation triggers — any of these means the golden must be re-recorded:
 Re-record procedure:
 
 ```sh
-cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml
+cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
 SIMFORGE_SENSOR_CORPUS=<corpus-root> node qualification/golden-harness/golden.mjs record yale-frame0
 node qualification/golden-harness/golden.mjs verify all
 ```
@@ -192,9 +194,11 @@ Registration steps are documented at the top of the workflow file.
 Actor scenes replay the render contract (`docs/engineering/render-timeline.md`):
 a committed `simforge.scene-state.v1` document sampled from a render
 timeline (`fixtures/<scene>.scene-state.json.gz`, from
-`simforge render scene-state --fps 24`) is played by `scen-play
---authored-height`, so every body sits at the timeline's baked XODR height
-with its road + body attitude. Three gates per run:
+`simforge render scene-state --fps 24`) is played by `simforge-render job
+--job` (the job's `sceneState`), so every body sits at the timeline's baked
+XODR height with its road + body attitude. (These goldens were recorded with
+the former `scen-play --authored-height` binary; its binary sha is in each
+golden file.) Three gates per run:
 
 1. pass hashes (`frame60.rgb`, `frame60.id`), two-run byte stability on record;
 2. the ID pass encodes the map's and actors' instances (`idPass`, exit 7);
@@ -214,7 +218,7 @@ yale max 6.2e-5 m / 6.3e-6° heading (f32 world coordinates at ~1.8 km).
 
 ### Instance-ID assignment was not deterministic (fixed 2026-09-22)
 
-`richmond-frame0` (static `native-render-job` over the richmond master) was
+`richmond-frame0` (static job render over the richmond master) was
 not byte-stable in `id0`: 6 of 306,176 pixels carried a different instance
 id from run to run while RGB and depth were identical. It was not a depth
 tie. `SceneApp::finalize_scene` numbers every mesh by sorting on
@@ -232,10 +236,10 @@ duplicates, and unnamed meshes are named `unnamed_mesh`. Evidence on the RTX
 | before (entity-bit order) | 3 (`b82aee85…`, `713742cf…` ×4, `92d28b92…`) | 1 | 1 |
 | after | 1 (`b3feedec…`, 12/12 runs) | 1 | 1 |
 
-The same ordering now applies to `scen-play` (`playback.rs`) and the
-sensor-capture registry no longer names unnamed meshes after their entity.
+The same ordering now applies to scene-state playback (`playback.rs`, then
+the `scen-play` binary, now `simforge-render job --job` with `sceneState`).
 Instance ids of existing scenes are renumbered once by this change: goldens
 that hash an ID pass must be re-recorded (the two render-timeline goldens
-above were recorded before it; scen-play id0 is 3/3 stable after it on the
-5080). `richmond-frame0` is committed as a
+above were recorded before it; scene-state playback id0 was 3/3 stable
+after it on the 5080). `richmond-frame0` is committed as a
 scene; record its golden per GPU with a quiet window.

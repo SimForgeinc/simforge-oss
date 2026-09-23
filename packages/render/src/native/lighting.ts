@@ -12,12 +12,11 @@ import {
 import { RenderInputError } from '../render-input-error.js';
 
 /**
- * The scenario's environment as the native renderer's `Lighting` and
- * `RenderProfileConfig`.
+ * The scenario's environment as the native renderer's `Lighting` (the look
+ * itself is the render config's preset; see `nativeRenderRequest`).
  *
  * This is the Lookdev Lab's `settings.renderer_lighting` for the platform:
- * the same weather presets, the same NOAA solar model at the corpus site, the
- * same cinematic profile. A campaign render of "cloudy at 19:55" is the lab's
+ * the same weather presets, the same NOAA solar model at the corpus site. A campaign render of "cloudy at 19:55" is the lab's
  * "cloudy at 19:55". Every value the renderer would otherwise default is sent
  * explicitly, so the manifest names the look.
  *
@@ -260,34 +259,8 @@ export interface NativeLighting {
   };
 }
 
-/** `render_core::profiles::RenderProfileConfig`, wire form: the lab's cinematic defaults. */
-export const CINEMATIC_PROFILE_CONFIG = {
-  cinematic: {
-    aa: 'taa',
-    ssr: true,
-    ssao: true,
-    ssaoUltra: true,
-    chromaticAberration: 0,
-    vignetteIntensity: 0.16,
-    lensDistortion: 0.008,
-    dofEnabled: false,
-    dofApertureFStops: 8,
-    dofFocalDistanceM: 28,
-    motionShutterAngle: 0,
-    motionSamples: 8,
-    bloomIntensity: 0.1,
-    gradingExposure: 0.35,
-    gradingTemperature: 0,
-    gradingTint: 0,
-    gradingPostSaturation: 0.98,
-    gradingContrast: 1.02,
-    toneMap: 'agx',
-  },
-} as const;
-
 export interface NativeLightingResolution {
   readonly lighting: NativeLighting;
-  readonly profileConfig: typeof CINEMATIC_PROFILE_CONFIG;
   /** What the mapping decided, for the render manifest. */
   readonly provenance: {
     readonly weather: Weather;
@@ -399,7 +372,6 @@ export function resolveNativeLighting(
   };
   return {
     lighting,
-    profileConfig: CINEMATIC_PROFILE_CONFIG,
     provenance: {
       weather: environment.weather,
       preset: preset.weather,

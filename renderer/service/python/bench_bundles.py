@@ -1,6 +1,6 @@
 """F4 bench: sustained 10 Hz render_bundle bundles, render+publish+consume latency.
 
-Expects native-render-service already running. For each tick:
+Expects `simforge-render serve` already running. For each tick:
   t0 -> render_bundle RPC (render + shm publish) -> t1
      -> BundleRingReader.latest(verify=True): seqlock pointer, table CRC,
         per-frame CRC32 digest verify, zero-copy numpy views -> t2
@@ -18,7 +18,7 @@ import time
 
 import numpy as np
 
-from simforge_native import BundleRingReader, NativeRenderClient
+from simforge_render import BundleRingReader, NativeRenderClient
 
 # Poses on the yale fixture tile (demo_step_latency.py viewpoint), fanned out
 # like a roof rig: 7 headings around the ego point.

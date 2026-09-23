@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from simforge_native import BundleRingReader, TornBundleError  # noqa: E402
+from simforge_render import BundleRingReader, TornBundleError  # noqa: E402
 
 TESTDATA = pathlib.Path(__file__).resolve().parents[2] / "testdata"
 

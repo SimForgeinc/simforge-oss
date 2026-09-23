@@ -235,7 +235,7 @@ def scene_documents(scenario: dict, map_id: str, fps: int) -> tuple[list[dict], 
     # (artifacts/production-scenarios/compile-scenarios.mjs).
     playback = {"version": "simforge.scene-state.v1", "mapId": map_id, "frame": "scene-yup", "dt": 1 / fps,
                 "tickHz": fps, "tickCount": count, "weather": {"preset": weather, "fogDensity": 0,
-                "rainIntensity": 0, "wetness": 0}, "timeOfDay": minutes / 60, "profile": "cinematic",
+                "rainIntensity": 0, "wetness": 0}, "timeOfDay": minutes / 60,
                 "actors": descriptors, "frames": frames}
     return states, playback
 
@@ -525,7 +525,6 @@ def service_cameras(job: dict) -> list[dict]:
         cameras.append({
             "sensorId": sensor["id"], "width": job["width"], "height": job["height"],
             "fovDeg": sensor["camera"]["verticalFovDeg"], "eye": [0, 0, 0], "target": [1, 0, 0],
-            "profile": "cinematic" if chase else "sensor",
             "attach": {
                 "actorId": "ego",
                 "offsetM": [position["x"], position.get("z", 0), position["y"]],
@@ -656,7 +655,7 @@ def write_actor_visuals(job: dict, campaign_root: Path, out: Path) -> None:
 def render_service(args) -> None:
     client_root = Path(args.client_root)
     sys.path.insert(0, str(client_root))
-    from simforge_native.client import NativeRenderClient
+    from simforge_render.client import NativeRenderClient
 
     job_path = Path(args.job)
     job = relocated_job(load(job_path), job_path)
@@ -666,8 +665,9 @@ def render_service(args) -> None:
     campaign_root = Path(os.environ.get("SIMFORGE_BEVY_CAMPAIGN_ROOT", REMOTE_ROOT))
     vegetation, vegetation_budget = budget_vegetation(job)
     scene = {
-        "glbs": job["corpusGlbs"], "vegGlbs": vegetation, "profile": "sensor",
-        "profileConfig": {"cinematic": {"taa": True, "ssr": True, "ssao": True, "ssaoUltra": True}},
+        "glbs": job["corpusGlbs"], "vegGlbs": vegetation,
+        # The legacy profileConfig {taa, ssr, ssao, ssaoUltra} resolved to exactly the showcase preset.
+        "render": {"preset": "showcase"},
         "nearM": 0.05, "farM": 1000, "warmupFrames": 20,
         "vehicleModels": str(campaign_root / "catalog" / "vehicles-carla"),
         "pedestrianModels": str(campaign_root / "catalog" / "pedestrians-carla"),
@@ -678,14 +678,14 @@ def render_service(args) -> None:
     shm_path.unlink(missing_ok=True)
     log_stream = (out / "renderer.log").open("w")
     service = subprocess.Popen([
-        args.binary, "--scene", str(scene_path), "--socket", str(socket_path),
+        args.binary, "serve", "--scene", str(scene_path), "--socket", str(socket_path),
         "--shm", str(shm_path), "--shm-size-mb", "512",
     ], stdout=log_stream, stderr=subprocess.STDOUT, text=True)
     deadline = time.time() + 300
     while not socket_path.exists() and service.poll() is None and time.time() < deadline:
         time.sleep(0.1)
     if not socket_path.exists():
-        raise RuntimeError("native-render-service did not become ready")
+        raise RuntimeError("simforge-render serve did not become ready")
     client = NativeRenderClient(str(socket_path))
     states = load(Path(job["jobDir"]) / "scene-states.json")[:frame_count]
     response = client.load_scene_state(states)
@@ -841,8 +841,8 @@ def deploy(args) -> None:
     repo, parity = Path(args.repo), Path(args.parity)
     for host in HOSTS if not args.host else [args.host]:
         run(["ssh", f"root@{host}", f"mkdir -p {REMOTE_ROOT}/bin {REMOTE_ROOT}/corpus {REMOTE_ROOT}/catalog {REMOTE_ROOT}/jobs {REMOTE_ROOT}/outputs"])
-        run(["rsync", "-a", "--checksum", args.binary, f"root@{host}:{REMOTE_ROOT}/bin/native-render-service"])
-        run(["rsync", "-a", "--checksum", str(repo / "renderer/service/python/simforge_native") + "/", f"root@{host}:{REMOTE_ROOT}/bin/simforge_native/"])
+        run(["rsync", "-a", "--checksum", args.binary, f"root@{host}:{REMOTE_ROOT}/bin/simforge-render"])
+        run(["rsync", "-a", "--checksum", str(repo / "renderer/service/python/simforge_render") + "/", f"root@{host}:{REMOTE_ROOT}/bin/simforge_render/"])
         run(["rsync", "-a", "--checksum", str(repo / "scripts/bevy-campaign-parity.py"), f"root@{host}:{REMOTE_ROOT}/bin/bevy-campaign-parity.py"])
         run(["rsync", "-a", "--checksum", str(repo / "catalog/vehicles-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/vehicles-carla/"])
         run(["rsync", "-a", "--checksum", str(repo / "catalog/pedestrians-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/pedestrians-carla/"])
@@ -865,7 +865,7 @@ def fleet(args) -> None:
             f"SIMFORGE_BEVY_CAMPAIGN_ROOT={REMOTE_ROOT} "
             f"python3 {REMOTE_ROOT}/bin/bevy-campaign-parity.py render-shard "
             f"--shard {REMOTE_ROOT}/shard.json --jobs {REMOTE_ROOT}/jobs "
-            f"--binary {REMOTE_ROOT}/bin/native-render-service --client-root {REMOTE_ROOT}/bin "
+            f"--binary {REMOTE_ROOT}/bin/simforge-render --client-root {REMOTE_ROOT}/bin "
             f"--out {REMOTE_ROOT}/outputs"
         )
         result = subprocess.run(["ssh", f"root@{host}", remote], text=True, capture_output=True)

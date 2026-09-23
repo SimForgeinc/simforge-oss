@@ -23,7 +23,7 @@ const renderSpec = {
 };
 
 test("a native worker leaves a job whose measured map demand it cannot hold to a larger worker", async () => {
-  const engine = await loadBuiltinRenderEngine("native", { engineVersion: "3".repeat(40), binary: "/nonexistent/native-render-service" });
+  const engine = await loadBuiltinRenderEngine("native", { engineVersion: "3".repeat(40), binary: "/nonexistent/simforge-render" });
   const worker = (gpuMiB: number, demand: unknown[] | null): WorkerRow => ({
     id: "w", registration_id: "r", worker_version: "3".repeat(40), image_digest: "sha256:" + "a".repeat(64),
     renderer_engine: "native", base_image_digest: null, base_image_platform_digest: null,

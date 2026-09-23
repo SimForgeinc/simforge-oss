@@ -428,7 +428,7 @@ pub enum ResponseBody {
     /// one `SFGX` frame (`b"SFGX" ++ u32le(len) ++ manifest JSON`) carrying
     /// every slot's memory/ready/release descriptors as `SCM_RIGHTS` on the
     /// same socket; the client must consume it before its next request
-    /// (`simforge_native.gpu.receive_stream`).
+    /// (`simforge_render.gpu.receive_stream`).
     ExportDeviceStream {
         ok: bool,
         sensor_id: String,

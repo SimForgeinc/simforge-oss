@@ -19,9 +19,6 @@ import { z } from 'zod';
 /** The only scene-state document version emitted or accepted. */
 export const SCENE_STATE_VERSION = 'simforge.scene-state.v1' as const;
 
-/** Render profiles; part of the render intent (WSB4 owns `cinematic`). */
-export const renderProfileSchema = z.enum(['sensor', 'cinematic']);
-export type RenderProfile = z.infer<typeof renderProfileSchema>;
 
 export const weatherSchema = z.object({
   /** Coarse preset driving the WSB4 weather ladder. */
@@ -106,7 +103,6 @@ export const sceneStateSchema = z.object({
   weather: weatherSchema,
   /** Hour of day [0, 24); sun position/exposure derive from this. */
   timeOfDay: z.number().finite().min(0).max(24),
-  profile: renderProfileSchema.default('sensor'),
   /**
    * Road-surface elevation hint for placing actor origins when no height
    * channel exists; null when the consumer must resolve it (raycast/tiles).

@@ -5,7 +5,7 @@ service, without the socket: requests are JSON documents answered on the
 calling thread. Host frames are published into the shm ring the renderer
 was opened with and read through the same strided views as the socket
 client; device streams hand their exported memory/semaphore descriptors
-over as raw fds for `simforge_native.gpu.ImportedStream.from_handles`, so a
+over as raw fds for `simforge_render.gpu.ImportedStream.from_handles`, so a
 same-process CUDA consumer never touches host bytes.
 
 All calls on one `EmbeddedRenderer` must come from the thread that opened it.

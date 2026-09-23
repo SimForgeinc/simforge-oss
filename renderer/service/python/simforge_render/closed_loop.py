@@ -1,8 +1,12 @@
-"""Caller-clocked driving on native-render-service's existing socket/shm protocol.
+"""Caller-clocked driving on `simforge-render serve`'s existing socket/shm protocol.
 
-Run `python -m simforge_native.closed_loop --help`. Model integrations implement
-simforge_native.policy.DrivingPolicy, returning its canonical BicycleAction. No fake model,
+Run `python -m simforge_render.closed_loop --help`. Model integrations implement
+simforge_render.policy.DrivingPolicy, returning its canonical BicycleAction. No fake model,
 job queue, transport shim or policy-dependent simulation clock is involved.
+
+The render look is fixed when the service starts, not per camera: closed-loop
+training runs `simforge-render serve --scene S --socket E --preset training`
+(equivalently `render: {"preset": "training"}` in the scene spec).
 """
 from __future__ import annotations
 import argparse
@@ -149,8 +153,8 @@ def run(client: NativeRenderClient, scenario: dict, rig: dict, policy: policy_ap
 
 
 def main(argv=None):
-    parser=argparse.ArgumentParser(description='Closed-loop policy runner: existing native-render-service v5 socket + shared memory.',
-        epilog='SceneApp uses model catalogs and does not carry sensor-capture\'s qualified shared-shadow/readback-ring path. Lighting is cinematic for all policy cameras. Replay divergence is terminal, not a policy collision.')
+    parser=argparse.ArgumentParser(description='Closed-loop policy runner: existing `simforge-render serve` v5 socket + shared memory.',
+        epilog='Start the service with `simforge-render serve --scene S --socket E --preset training`: the look is one RenderConfig fixed at serve time, not a per-camera setting. SceneApp uses model catalogs. Replay divergence is terminal, not a policy collision.')
     parser.add_argument('--socket',required=True);parser.add_argument('--scenario',type=Path,required=True)
     parser.add_argument('--rig',type=Path,required=True);parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--policy',default='fixed-arc',help='fixed-arc, recorded, or module:factory returning DrivingPolicy (real model hook)')

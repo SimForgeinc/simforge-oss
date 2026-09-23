@@ -75,7 +75,7 @@ use bevy::render::renderer::{RenderDevice, RenderQueue};
 use serde::{Deserialize, Serialize};
 use wgpu::hal::api::Vulkan;
 
-/// Manifest/handle protocol version understood by `simforge_native.gpu`.
+/// Manifest/handle protocol version understood by `simforge_render.gpu`.
 pub const PROTOCOL: &str = "simforge-gpu-interop/1";
 /// Frame prefix for [`ExportedStream::send_over_unix`].
 pub const WIRE_MAGIC: &[u8; 4] = b"SFGX";
@@ -329,7 +329,7 @@ pub struct PlaneLayout {
 pub struct StreamId(pub u64);
 
 /// Manifest accompanying exported handles. Serialized as JSON for the
-/// consumer (`simforge_native.gpu.ImportedStream`).
+/// consumer (`simforge_render.gpu.ImportedStream`).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StreamManifest {
     pub protocol: String,

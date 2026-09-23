@@ -73,7 +73,7 @@ def test_resources_are_content_addressed_and_scene_spec_resolves(tmp_path):
     again = write_course_resources(w, tmp_path)
     assert again == manifest
     spec = render_scene_spec(manifest, tmp_path)
-    assert spec["glbs"] == [str(path.resolve())] and spec["profile"] == "sensor"
+    assert spec["glbs"] == [str(path.resolve())] and spec["render"] == {"preset": "training"}
     assert spec["farM"] > manifest["geometry"]["goalXM"]
 
 

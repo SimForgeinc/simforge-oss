@@ -27,7 +27,7 @@ from simforge_alpamayo.bridge import (  # noqa: E402
     profile_camera_map,
     rgba_view_to_rgb_bytes,
 )
-from simforge_native import BundleRingReader  # noqa: E402
+from simforge_render import BundleRingReader  # noqa: E402
 
 TESTDATA = REPO / "renderer" / "service" / "testdata"
 

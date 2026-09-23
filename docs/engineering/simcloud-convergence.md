@@ -71,7 +71,7 @@ The registered npm packages are:
 - `@simforge-oss/map-registry`
 
 The registered Python distributions are `simforge-oss-gym`,
-`simforge-oss-physics`, `simforge-oss-gpu`, `simforge-oss-native-renderer`,
+`simforge-oss-physics`, `simforge-oss-gpu`, `simforge-oss-render`,
 `simforge-oss-splat`, and `simforge-oss-carla-exec`.
 
 Cloud commits its lock at `vendor/simforge-oss/stack-lock.json`. The lock records

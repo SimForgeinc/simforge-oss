@@ -83,9 +83,16 @@ export const CONTROL_FEATURE_RENDER_SUBSTITUTIONS = 'render-evidence.substitutio
 export const CONTROL_FEATURE_NATIVE_ENCODER = 'native-evidence.encoder' as const;
 /** `textureProfile.capacitySource: "detected"`: the capacity is the job's measured device, not the intent's assumption. */
 export const CONTROL_FEATURE_NATIVE_VRAM_DETECTED = 'native-evidence.vram-detected' as const;
+/**
+ * `render` in the native render manifest (the request, the service's resolved
+ * `RenderConfig`, the geometry LOD mode and derivative), with `look` then
+ * carrying only lighting/metering; an older plane gets the rc.73 `look`
+ * (`profile: cinematic`, `profileConfig` = the resolved config).
+ */
+export const CONTROL_FEATURE_NATIVE_RENDER_CONFIG = 'native-evidence.render-config' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
-  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
+  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
 ] as const;
 
 export const JobInputTransferSchema = z.strictObject({

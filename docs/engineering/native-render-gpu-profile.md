@@ -8,16 +8,17 @@ The workload is job `usrj_118093d74fcc4a6896698eae`:
 
 rc.73 took 3.35 s of service time per tick.
 
-All numbers below were measured on box 3: an RTX 3080 10 GB and a Xeon E5-2670 v3 in an HP Z840, driver 595.91. The measurements used `render-bench`, which runs the service's `render_bundle` path in-process, at ticks 200–211 with 11 measured ticks per configuration.
+All numbers below were measured on box 3: an RTX 3080 10 GB and a Xeon E5-2670 v3 in an HP Z840, driver 595.91. The measurements used `render-bench` (now `simforge-render job`), which runs the service's `render_bundle` path in-process, at ticks 200–211 with 11 measured ticks per configuration.
 
 ## Tools
 
-`renderer/service/src/bin/render-bench.rs` replays a job's own `native-service-scene.json`, `trace/native-trace.json` and render intent through `service::server::dispatch`.
+`simforge-render job --scene native-service-scene.json --trace trace/native-trace.json --intent <intent>` (`renderer/service/src/cli/job.rs`) replays a job's own workspace files through `render_service::server::dispatch`.
 
 | Option | What it does |
 |---|---|
 | `--ablate` | Removes one feature: `noshadows`, `nossao`, `nossr`, `notaa`, `nobloom`, `noatmo,nosky`, `occlusion`, `hide:<mesh>` |
-| `--set k=json` | Overrides a scene-spec field |
+| `--scene-set k=json` | Overrides a scene-spec field |
+| `--set key=value` | Overrides a RenderConfig key (`--preset training\|showcase` picks the base) |
 | `--dump-dir` | Writes PNGs for image gates |
 
 The output reports the service's per-stage timings. With `SIMFORGE_RENDER_DIAGNOSTICS=1` it also reports:

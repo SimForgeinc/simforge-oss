@@ -98,12 +98,12 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 |---|---|---|---|
 | `engine.rs` `Lighting`, `night.rs` | Unknown/camelCase keys dropped; rung 4 silently became 3; fixture budget capped at 12/2; lumens, range, CCT and night lux clamped; fixture cone ignored | `deny_unknown_fields`; `validate_for_scene_app` fails `native_lighting_unsupported`; the authored cone is rendered | engine suite |
 | `service/src/server.rs` `SceneSpec.lighting` | Absent lighting meant the calibration dawn | Required | — |
-| `render-core/src/job.rs` | The job's lighting was never applied | `apply_lighting` | — |
+| `render-core/src/job.rs` (native-render-job; removed) | The job's lighting was never applied | `apply_lighting` | — |
 | `engine.rs` `update_physical_windows` | Occupancy keyed on entity bits (changed from run to run); missing material skipped | Stable order; missing material fails | — |
 | `render-core/src/veg.rs` | Bad sidecar, missing scene or prototype dropped vegetation with a log line | Readiness fails, naming it | — |
 | `engine.rs` `new_with_profile_config` | Software (CPU/virtual) adapters accepted silently | Fail `native_gpu_adapter_software` unless `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`; adapter logged | — |
-| `render-core/src/playback.rs` (scen-play) | Missing models → primitives; generic pedestrians hash-substituted; missing GLB → primitive | `--allow-primitive-actors` / `--allow-pedestrian-substitution` required (logged); missing GLB fails. Golden scenes pass the catalogs explicitly | golden harness |
-| `sensors/src/capture.rs` (sensor-capture) | Proxy actors everywhere, fixed lighting | Benign for the product: a qualification harness whose help text states it uses proxy actors. Listed in the guard baseline as a harness | — |
+| `render-core/src/playback.rs` (scen-play; removed, scene-state playback is now `simforge-render job --job`) | Missing models → primitives; generic pedestrians hash-substituted; missing GLB → primitive | `--allow-primitive-actors` / `--allow-pedestrian-substitution` required (logged); missing GLB fails. Golden scenes pass the catalogs explicitly | golden harness |
+| `sensors/src/capture.rs` (sensor-capture; removed with the binary) | Proxy actors everywhere, fixed lighting | Benign for the product: a qualification harness whose help text states it uses proxy actors. Listed in the guard baseline as a harness | — |
 
 ### TypeScript render path (native, browser, SUMO, CLI, Studio)
 

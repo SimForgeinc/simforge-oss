@@ -112,7 +112,7 @@ fn load_glb(glb: Vec<u8>) -> (App, Handle<Gltf>, Result<(), String>) {
     ))
     .init_asset::<Image>()
     // Production desktop GPUs expose BC; exercise the same UASTC -> BC7 path
-    // used by native-render-service without requiring a physical GPU.
+    // used by `simforge-render serve` without requiring a physical GPU.
     .insert_resource(CompressedImageFormatSupport(CompressedImageFormats::BC));
     app.finish();
     app.cleanup();

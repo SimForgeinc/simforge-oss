@@ -4,7 +4,7 @@
 //
 //   targetLayout('x86_64-pc-windows-msvc')
 //   -> { os: 'windows', arch: 'x86_64', exe: '.exe', runnerName: 'simforge-runner.exe',
-//        renderServiceName: 'native-render-service.exe', renderLibName: 'simforge_render.dll',
+//        renderServiceName: 'simforge-render.exe', renderLibName: 'simforge_render.dll',
 //        pythonRelative: 'Scripts/python.exe', gpuInterop: false, nodePlatform: 'win32', nodeArch: 'x64' }
 
 import { execFileSync } from 'node:child_process';
@@ -50,7 +50,8 @@ export function targetLayout(triple) {
     arch,
     exe,
     runnerName: `simforge-runner${exe}`,
-    renderServiceName: `native-render-service${exe}`,
+    /** The one renderer executable (`simforge-render serve|job|view|dev`). */
+    renderServiceName: `simforge-render${exe}`,
     renderLibName,
     /** Interpreter inside a `python -m venv` environment, relative to it. */
     pythonRelative: os === 'windows' ? 'Scripts/python.exe' : 'bin/python',

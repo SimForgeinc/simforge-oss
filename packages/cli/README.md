@@ -126,8 +126,8 @@ The command reads native map tiles from
 `~/.local/share/simforge/maps/.corpus/...`). Pull the complete map first with
 `simforge maps pull <map>@<version>`; `--native-world` accepts a prepared tile
 directory or master GLB. Build the renderer with
-`cargo build --release --manifest-path renderer/Cargo.toml --bin
-native-render-service`. Alpamayo setup requires the pinned inference checkout
+`cargo build --release --manifest-path renderer/Cargo.toml -p
+simforge-render` (the command runs `simforge-render serve`). Alpamayo setup requires the pinned inference checkout
 and model cache; run `adapters/alpamayo/scripts/setup.sh` before using the
 default auto-started model service.
 

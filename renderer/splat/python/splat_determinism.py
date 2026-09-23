@@ -4,7 +4,7 @@ import sys, json, argparse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "renderer/service/python"))
-from simforge_native import NativeRenderClient, BundleRingReader
+from simforge_render import NativeRenderClient, BundleRingReader
 from splat_client_check import scene_state, cameras_from_rig
 
 ap = argparse.ArgumentParser()

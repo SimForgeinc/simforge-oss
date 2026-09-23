@@ -10,7 +10,7 @@ import { hifiPreviewRequestId } from "../db/ids";
 import { getPresignedGetUrl } from "../s3/s3-presign";
 import type {
   CreateHifiPreviewInput,
-  HifiPreviewProfile,
+  HifiPreviewPreset,
   HifiPreviewProvenance,
   HifiPreviewRecord,
   HifiPreviewStatus,
@@ -21,7 +21,7 @@ type RequestRow = {
   workspace_id: string;
   document_id: string | null;
   map_version_id: string;
-  profile: HifiPreviewProfile;
+  preset: HifiPreviewPreset;
   tick: number;
   request_json: CreateHifiPreviewInput | string;
   status: HifiPreviewStatus;
@@ -47,7 +47,7 @@ async function recordOf(row: RequestRow): Promise<HifiPreviewRecord> {
     id: row.id,
     documentId: row.document_id,
     mapVersionId: row.map_version_id,
-    profile: row.profile,
+    preset: row.preset,
     tick: row.tick,
     status: row.status,
     errorCode: row.error_code,
@@ -70,15 +70,15 @@ export async function createHifiPreviewRequest(
   const id = hifiPreviewRequestId();
   const row = await queryOne<RequestRow>(
     `INSERT INTO simforge.hifi_preview_requests
-       (id, workspace_id, document_id, map_version_id, profile, tick, request_json)
-     VALUES (:id, :workspace_id, :document_id, :map_version_id, :profile, :tick, :request)
+       (id, workspace_id, document_id, map_version_id, preset, tick, request_json)
+     VALUES (:id, :workspace_id, :document_id, :map_version_id, :preset, :tick, :request)
      RETURNING *`,
     {
       id,
       workspace_id: context.workspaceId,
       document_id: input.documentId ?? null,
       map_version_id: input.mapVersionId,
-      profile: input.profile,
+      preset: input.preset,
       tick: input.tick,
       request: input as unknown as Record<string, unknown>,
     },

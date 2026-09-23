@@ -1,6 +1,6 @@
 """shm ring writer, byte-compatible with `renderer/service/src/shm.rs`.
 
-Layout (all little-endian; reader of record: `simforge_native/bundles.py`):
+Layout (all little-endian; reader of record: `simforge_render/bundles.py`):
   meta page 4096 B: [0..8) magic "UNISHRI1", [8..16) write_cursor_total,
                     [16..24) bundle seq (seqlock), [24..32) bundle record offset,
                     [32..40) bundle payload len, [40..48) bundle sim_tick

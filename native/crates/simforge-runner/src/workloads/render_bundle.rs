@@ -1,5 +1,5 @@
 //! `simforge.render-bundle/v1`: resident native (Bevy) sensor rendering of a
-//! scene-state stream into a sensor bundle, executed by the `simforge_native`
+//! scene-state stream into a sensor bundle, executed by the `simforge_render`
 //! provider (`renderer/service/python`) under the job protocol in
 //! [`crate::provider`]. The provider owns frame identity, passes and the
 //! GPU-interop path; the runner owns durability and artifact truth.
@@ -9,7 +9,7 @@
 //!
 //! Params (forwarded to the provider with `sceneStatePath` resolved to the
 //! materialized input):
-//! `{ scene: SceneSpec {glbs[], profile, lighting?, nearM, farM, warmupFrames},
+//! `{ scene: SceneSpec {glbs[], lighting, render?: {preset, set}, nearM, farM, warmupFrames},
 //!    rig: {cameras[], lidars?, radars?}, passes: ["rgb","id","depth","semantic"],
 //!    ticks: {start, count} | null, shmSizeBytes?, checkpointEveryTicks? }`
 //!
@@ -27,7 +27,7 @@ use crate::hash::{canonical_sha256, sha256_hex};
 use crate::provider::{self, ProviderJob};
 
 pub const WORKLOAD: &str = "simforge.render-bundle/v1";
-pub const MODULE: &str = "simforge_native";
+pub const MODULE: &str = "simforge_render";
 pub const INPUT_SCENE_STATE: &str = "scene-state";
 const PASSES: [&str; 4] = ["rgb", "id", "depth", "semantic"];
 

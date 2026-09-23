@@ -1,11 +1,11 @@
 """WSB5 demo: gym-adapter-shaped zero-copy consumption + latency numbers.
 
-Starts nothing itself; expects native-render-service already running.
+Starts nothing itself; expects `simforge-render serve` already running.
 Usage: python3 demo_step_latency.py <socket> <n_steps>
 """
 import sys, time
 import numpy as np
-from simforge_native import NativeRenderClient
+from simforge_render import NativeRenderClient
 
 socket_path = sys.argv[1]
 steps = int(sys.argv[2]) if len(sys.argv) > 2 else 200

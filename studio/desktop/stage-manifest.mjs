@@ -88,7 +88,7 @@ export function targetFor(platform = process.platform, arch = process.arch) {
  * @property {string} nativeRuntimeRoot Stage-relative root of the verified native runtime distribution.
  * @property {{ version: string; revision: string; archiveSha256: string; supportTiers: string[] }} nativeRuntime
  * @property {string} nativeRunner Stage-relative path of `simforge-runner[.exe]`.
- * @property {string} nativeRenderService Stage-relative path of `native-render-service[.exe]`.
+ * @property {string} nativeRenderService Stage-relative path of `simforge-render[.exe]` (the one renderer binary).
  * @property {string} nativeRenderLibrary Stage-relative path of the renderer FFI library.
  * @property {{ ffmpeg: string; ffprobe: string; version: string; license: string; digests?: { ffmpeg: string; ffprobe: string }; sources?: { id: string; commit: string }[]; correspondingSource?: { file: string; sha256: string; sizeBytes: number } }} tools Bundled encoder binaries, the digests of the staged bytes, and the sources they were built from.
  * @property {Record<string, Record<string, string>>} nativeBindings Per disk-loaded dependency, the stage-relative directory of each per-target binding package it resolves.

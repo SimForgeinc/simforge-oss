@@ -5,8 +5,8 @@
  * The editor POSTs the CURRENT viewport state: one simforge.scene-state.v1 tick
  * document (the render service's live-stream shape), the contract camera
  * report (`CameraStateReport` from simforge.renderer-contract/v1), the tick,
- * and a profile. The `hifi_preview` worker renders exactly one frame through
- * `native-render-service` on source-digest-matched native-ready corpus
+ * and a render preset. The `hifi_preview` worker renders exactly one frame
+ * through `simforge-render serve` on source-digest-matched native-ready corpus
  * payloads and completes the request with a PNG artifact URL plus provenance.
  *
  * The request camera is preserved verbatim in provenance. When coverage
@@ -22,8 +22,9 @@ export const HIFI_PREVIEW_REQUEST_SCHEMA = "simforge.hifi-preview-request/v1";
 export const HIFI_PREVIEW_PROVENANCE_SCHEMA = "simforge.hifi-preview-provenance/v1";
 export { RENDERER_CONTRACT_VERSION };
 
-export const HIFI_PREVIEW_PROFILES = ["cinematic", "sensor"] as const;
-export type HifiPreviewProfile = (typeof HIFI_PREVIEW_PROFILES)[number];
+/** The native render presets (`render_core::render_config::Preset`). */
+export const HIFI_PREVIEW_PRESETS = ["showcase", "training"] as const;
+export type HifiPreviewPreset = (typeof HIFI_PREVIEW_PRESETS)[number];
 
 const finite = () => z.number().finite();
 const Vec3Schema = z.tuple([finite(), finite(), finite()]);
@@ -101,7 +102,7 @@ export const CreateHifiPreviewSchema = z.object({
   documentId: z.string().trim().min(1).max(200).nullish(),
   scenarioRevision: z.number().int().nonnegative().nullable().default(null),
   mapVersionId: z.string().trim().min(1).max(200),
-  profile: z.enum(HIFI_PREVIEW_PROFILES).default("cinematic"),
+  preset: z.enum(HIFI_PREVIEW_PRESETS).default("showcase"),
   /** Editor timeline tick the snapshot represents (provenance + render tick id). */
   tick: z.number().int().nonnegative().default(0),
   /** Output frame size; the worker renders exactly this backing buffer. */
@@ -117,7 +118,7 @@ export type HifiPreviewProvenance = {
   renderer: "bevy-native";
   rendererProtocol: number;
   contractVersion: typeof RENDERER_CONTRACT_VERSION;
-  profile: HifiPreviewProfile;
+  preset: HifiPreviewPreset;
   tick: number;
   mapVersionId: string;
   mapId: string;
@@ -153,7 +154,7 @@ export type HifiPreviewRecord = {
   id: string;
   documentId: string | null;
   mapVersionId: string;
-  profile: HifiPreviewProfile;
+  preset: HifiPreviewPreset;
   tick: number;
   status: HifiPreviewStatus;
   errorCode: string | null;

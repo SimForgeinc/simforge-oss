@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "simforge-oss-native-renderer"
+name = "simforge-oss-render"
 version = "0.1.0rc67"
 description = "SimForge resident renderer client, embedded C ABI adapter, and leased CUDA output transport"
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ dev = ["pytest>=8"]
 Repository = "https://github.com/SimForgeinc/simforge-oss"
 
 [tool.hatch.build.targets.wheel]
-packages = ["simforge_native"]
+packages = ["simforge_render"]
 
 [tool.hatch.build.targets.sdist]
-include = ["pyproject.toml", "simforge_native"]
+include = ["pyproject.toml", "simforge_render"]

@@ -4,7 +4,7 @@
  *
  * Same map, same scripted camera path, both backends, one real GPU:
  *
- *   native  the shipped `simforge-native-viewport` process (Bevy/wgpu) on the
+ *   native  the shipped `simforge-render view` process (Bevy/wgpu) on the
  *           `.corpus/<map>` native closure, driven through the shipped
  *           `NativeViewportProcess` host wrapper.
  *   web     the shipped `CityViewer` (three.js) on the `map-bundles/<map>`
@@ -53,7 +53,7 @@ const cacheRoot = process.env.SIMFORGE_MAPS_CACHE_ROOT
   ?? path.join(process.env.XDG_DATA_HOME ?? path.join(homedir(), '.local/share'), 'simforge/maps');
 const outDir = path.resolve(args.get('out') ?? '/tmp/native-bench');
 const binary = process.env.SIMFORGE_NATIVE_VIEWPORT
-  ?? path.join(repoRoot, 'renderer/target/release/simforge-native-viewport');
+  ?? path.join(repoRoot, 'renderer/target/release/simforge-render');
 const chromeBinary = process.env.SIMFORGE_CHROMIUM
   ?? path.join(homedir(), '.cache/ms-playwright/chromium-1243/chrome-linux64/chrome');
 const dwellMs = Number(args.get('dwell-ms') ?? BENCH_DWELL_MS);

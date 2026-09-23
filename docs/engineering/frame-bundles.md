@@ -83,10 +83,10 @@ height` for 4-byte-per-pixel formats.
 
 ## Consumer APIs
 
-**Python (policy runner, zero-copy)** — `renderer/service/python/simforge_native`:
+**Python (policy runner, zero-copy)** — `renderer/service/python/simforge_render`:
 
 ```python
-from simforge_native import BundleRingReader, NativeRenderClient
+from simforge_render import BundleRingReader, NativeRenderClient
 
 # Pull mode (separate process, shm only):
 reader = BundleRingReader("/dev/shm/<ring>")
@@ -115,7 +115,7 @@ client.close_device_stream("front")
 Device streams copy the camera's rendered planes GPU-locally into a leased
 exportable slot of the same submission; the slot's ready signal is bound
 to that submission. This is a GPU-local copy, not a copy-free alias of the
-render target. Lifetimes (`simforge_native.gpu`):
+render target. Lifetimes (`simforge_render.gpu`):
 
 - `lease.plane(name).as_torch()` registers torch's *current* stream on the
   renderer's device (ready wait, and that stream joins the release); any
@@ -157,13 +157,13 @@ checked against it, and any mismatch or absence fails `SceneApp` construction
 (service prewarm, `EmbeddedRenderer(...)`, job) instead of falling back to
 another directory or rendering a starless sky.
 
-**Runner workload `simforge.render-bundle/v1`** — `python -m simforge_native
+**Runner workload `simforge.render-bundle/v1`** — `python -m simforge_render
 job --params P --out-dir D [--resume C]` renders a scene-state stream through
 `EmbeddedRenderer` following the provider job protocol (JSONL `progress` /
 `checkpoint` / `done{artifacts}` on stdout, `error` on stderr, exit
 0/1/2/130). Outputs: `frames/<sensorId>/<pass>/tick-<06d>.{png,bin,ply,csv}`,
 `bundles.jsonl` (per-tick `FrameIdentity` + records), `results.json`,
-`checkpoint/checkpoint-<n>.json`. `python -m simforge_native capabilities`
+`checkpoint/checkpoint-<n>.json`. `python -m simforge_render capabilities`
 prints protocol, passes, the resolved library (path, sha256) and whether it
 was built with `gpu-interop` (`simforge_render_gpu_interop()`).
 
@@ -180,7 +180,7 @@ const bundle = reader.latestNew();   // null until a NEW sim_tick appears
 Every payload is copied and digest-verified at read time; `TornBundleError`
 means the writer lapped mid-read — retry on the next poll.
 
-**Rust (in-repo)** — `service::shm::{read_bundle_pointer, decode_bundle,
+**Rust (in-repo)** — `render_service::shm::{read_bundle_pointer, decode_bundle,
 read_record_header}` mirror the same protocol for tests and future native
 consumers.
 
@@ -193,7 +193,7 @@ the `render_bundle` response frames (`digest` hex, `byteOffset = offset+128`).
 
 ## Tests & bench
 
-- Rust: `cargo test -p service shm::` — bundle roundtrip, torn-table CRC,
+- Rust: `cargo test -p simforge-render shm::` — bundle roundtrip, torn-table CRC,
   seqlock pointer + digest validation, wraparound expiry, no-straddle.
 - Python: `python3 -m pytest tests/test_bundles.py` (from
   `renderer/service/python`) against `renderer/service/testdata/

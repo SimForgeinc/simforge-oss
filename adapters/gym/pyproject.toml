@@ -28,9 +28,9 @@ articulated = ["simforge-oss-physics==0.1.0rc67"]
 articulated-warp = ["simforge-oss-physics[warp]==0.1.0rc67"]
 # Sensor tensors from the in-process NuRec renderer (renderer/splat/python, CUDA only, source install).
 nurec = ["simforge-oss-splat==0.1.0rc67"]
-# Resident Bevy sensors in-process: the simforge_native provider (renderer/service/python); libsimforge_render
+# Resident Bevy sensors in-process: the simforge_render provider (renderer/service/python); libsimforge_render
 # ships in the native runtime bundle. torch only for the device path.
-bevy = ["simforge-oss-native-renderer==0.1.0rc67"]
+bevy = ["simforge-oss-render==0.1.0rc67"]
 
 [project.scripts]
 simforge-oss-policy-runner = "simforge_oss_gym.tools.policy_runner:main"
@@ -61,7 +61,7 @@ include = [
 simforge-oss-gpu = { path = "../gpu" }
 simforge-oss-physics = { path = "../physics" }
 simforge-oss-splat = { path = "../../renderer/splat/python" }
-simforge-oss-native-renderer = { path = "../../renderer/service/python" }
+simforge-oss-render = { path = "../../renderer/service/python" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

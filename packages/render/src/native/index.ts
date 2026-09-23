@@ -3,7 +3,7 @@ export type { NativeRenderEngineOptions } from './engine.js';
 export { ShmBundleReader, TornBundleError, crc32 } from './shm-bundles.js';
 export type { ShmBundle, ShmBundleEntry } from './shm-bundles.js';
 export {
-  CINEMATIC_PROFILE_CONFIG, DEFAULT_DAY_OF_YEAR, PRESET_MINUTES, WEATHER_PRESETS,
+  DEFAULT_DAY_OF_YEAR, PRESET_MINUTES, WEATHER_PRESETS,
   resolveNativeLighting, sceneMinutes, solarPosition, weatherPreset,
 } from './lighting.js';
 export type { NativeLighting, NativeLightingResolution, NativeWeather, WeatherPreset } from './lighting.js';
@@ -32,7 +32,10 @@ export {
 export type {
   HostParsedEvidence, NativeEvidenceFailure, TolerantParseIssue, TolerantParseSchema, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
-export { NATIVE_DEFAULT_ANTI_ALIAS, NATIVE_DEFAULT_TAA_SAMPLES, nativeCaptureSettings } from './engine.js';
+export { NATIVE_DEFAULT_PRESET, nativeCaptureEvidence, nativeRenderRequest } from './engine.js';
+export type { NativeRenderRequest } from './engine.js';
+export { NATIVE_GEOMETRY_LOD_DIRECTORY, NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod } from './geometry-lod.js';
+export type { NativeGeometryLodMode, NativeGeometryLodPlan } from './geometry-lod.js';
 export { DEFAULT_NVENC_MAX_SESSIONS, NVENC_EQUIVALENT_CQ, VideoEncoder, assignVideoCodecs, nvencAvailable } from './video-encoder.js';
 export type { NativeVideoCodec, NativeVideoEncoderPreference } from './video-encoder.js';
 export { NATIVE_STAGE_TIMINGS_V1_SCHEMA, NativeStageTimingsSchema, StageSamples, splitServiceStages, summarizeStage } from './stage-timings.js';
@@ -44,7 +47,7 @@ export type {
 export { startNativeRenderService } from './service-process.js';
 export type { NativeServiceOptions, NativeServiceSession } from './service-process.js';
 export {
-  NATIVE_RENDER_SERVICE_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalNativeRender,
+  SIMFORGE_RENDER_BINARY_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalNativeRender,
   resolveActorAssets, resolveEncoder, resolveNativeRenderService, resolveProbe,
 } from './local-runtime.js';
 export type {

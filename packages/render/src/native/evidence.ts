@@ -52,12 +52,33 @@ const NativeRunLineageSchema = z.strictObject({
 export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
   schema: z.literal(NATIVE_RENDER_MANIFEST_V1_SCHEMA),
   look: z.strictObject({
-    profile: z.literal('cinematic'),
+    /** rc.73 form, written only for a plane without `native-evidence.render-config`. */
+    profile: z.literal('cinematic').optional(),
     lighting: z.record(z.string(), z.unknown()),
-    profileConfig: z.record(z.string(), z.unknown()),
+    /** rc.73 form (then the resolved render config); see `render`. */
+    profileConfig: z.record(z.string(), z.unknown()).optional(),
     autoMeter: z.boolean(),
     provenance: z.record(z.string(), z.unknown()),
   }),
+  /**
+   * The render configuration; gated by `native-evidence.render-config`.
+   * `request` is what the job asked for (preset + overrides), `config` the
+   * `RenderConfig` the service resolved and rendered with, `geometryLod`
+   * whether the map's LOD derivative was drawn (`manifestSha256` null: the
+   * mode was `off` or the map carries none).
+   */
+  render: z.strictObject({
+    request: z.strictObject({
+      preset: z.enum(['training', 'showcase']),
+      set: z.record(z.string(), z.unknown()),
+    }),
+    config: z.record(z.string(), z.unknown()),
+    geometryLod: z.strictObject({
+      mode: z.enum(['auto', 'off']),
+      manifestSha256: Sha256Schema.nullable(),
+      buildKey: Sha256Schema.nullable(),
+    }),
+  }).optional(),
   /**
    * How captured pixels relate to time; gated by `native-evidence.capture-clock`.
    * `simulation-time`: each frame is a function of its scene and simulation

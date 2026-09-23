@@ -36,7 +36,7 @@ target (`.exe`, `libsimforge_render.so` / `libsimforge_render.dylib` /
 
 ```
 <install-root>/runtimes/<version>-<revision12>-<runnerSha12>/   one immutable installed runtime
-    bin/simforge-runner[.exe]  bin/native-render-service[.exe]  bin/runtime-manifest.json
+    bin/simforge-runner[.exe]  bin/simforge-render[.exe]  bin/runtime-manifest.json
     lib/<render library>       share/licenses/  share/sky/ (SOURCES.json + NASA-derived plates)
     wheels/*.whl  venv/        provider bundles only (--providers): wheels + venv built in place
 <install-root>/bin lib share wheels venv   links (junctions on Windows) into the active generation
@@ -110,8 +110,11 @@ gh release edit native-runtime-<version>-<revision12> --draft=false --repo SimFo
 Until the draft is published and the pin from that run is committed, the
 pinned URL answers 404 and every install falls back to the source build.
 
-`build-runner.mjs` builds the runner and (unless `--no-sky`) the render
-service + library — `--features gpu-interop` only for Linux targets, where the
+`build-runner.mjs` builds the runner and (unless `--no-sky`) the renderer:
+the one executable `simforge-render` (`cargo build -p simforge-render`;
+subcommands `serve` for the render service, `job` for offline jobs,
+`view` for the editor viewport, `dev` for internal tools) plus the
+`simforge_render` shared library (`-p simforge-render-ffi`) — `--features gpu-interop` only for Linux targets, where the
 opaque-fd Vulkan→CUDA bridge exists — and, only with `--providers`, the
 provider wheels; the CPU/compiler/Bevy baseline needs no Python, CUDA or
 research environment. It writes the manifest with
@@ -284,7 +287,7 @@ announced checkpoint into its atomic store, and pins the provider's
 `capabilities` report hash (dependency-only `--no-probe` form, except NuRec which must probe) in the execution identity so a solver,
 kernel or renderer upgrade is a new identity. Providers: `simforge_oss_physics`
 (`adapters/physics`), `simforge_oss_gpu` (`adapters/gpu`), `simforge_oss_gym`
-(`adapters/gym`, PyO3 native runtime), `simforge_native`
+(`adapters/gym`, PyO3 native runtime), `simforge_render`
 (`renderer/service/python`); `simforge_splat` (`renderer/splat/python`, NuRec; admission refuses when its
 `capabilities` reports `available: false`).
 

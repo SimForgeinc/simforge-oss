@@ -7,7 +7,7 @@
 //           macOS ~/Library/Application Support/simforge/native-runtime,
 //           Windows %LOCALAPPDATA%\simforge\native-runtime)
 //   ROOT/runtimes/<generation>/        one immutable installed runtime:
-//     bin/{simforge-runner[.exe], native-render-service[.exe], runtime-manifest.json}
+//     bin/{simforge-runner[.exe], simforge-render[.exe], runtime-manifest.json}
 //     lib/<render library>  share/**  wheels/*.whl (provider bundles only)
 //     venv/                            provider environment built in place from wheels/
 //   ROOT/bin ROOT/lib ROOT/share ROOT/wheels ROOT/venv
@@ -20,7 +20,7 @@
 //             python on Windows); only consulted when the archive carries wheels.
 //   --extras  optional provider extras (default none): articulated-warp
 //             (simforge-oss-physics[warp]), gpu-torch (simforge-oss-gpu[torch]),
-//             renderer-torch (simforge-oss-native-renderer[torch]).
+//             renderer-torch (simforge-oss-render[torch]).
 //
 // Guarantees:
 // - The archive is verified (SHA256SUMS, manifest closure, binary digest) and
@@ -53,7 +53,7 @@ import { extractRuntimeArchive, verifyRuntimeStage } from './runtime-archive.mjs
 import { childEnv, defaultRuntimeRoot, targetLayout } from './target-layout.mjs';
 
 const PARTS = ['bin', 'lib', 'share', 'wheels', 'venv'];
-const EXTRAS = { 'simforge-oss-physics': ['articulated-warp', 'warp'], 'simforge-oss-gpu': ['gpu-torch', 'torch'], 'simforge-oss-native-renderer': ['renderer-torch', 'torch'] };
+const EXTRAS = { 'simforge-oss-physics': ['articulated-warp', 'warp'], 'simforge-oss-gpu': ['gpu-torch', 'torch'], 'simforge-oss-render': ['renderer-torch', 'torch'] };
 
 function fail(reason, code = 'runner.install_failed') {
   process.stderr.write(`${JSON.stringify({ code, reason })}\n`);

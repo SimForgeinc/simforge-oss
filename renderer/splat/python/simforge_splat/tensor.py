@@ -7,7 +7,7 @@ consumer opens a *stream*: a bounded pool of `slots`, each a set of preallocated
 (GPU-local quantize/resample/copy - the same `backend.pack_*` ops the host path uses, so the
 bytes are identical to what the shm ring would carry) and returns a `TensorFrame` of leases.
 
-Ownership and synchronization contract (shared with `simforge_native.gpu`)
+Ownership and synchronization contract (shared with `simforge_render.gpu`)
 --------------------------------------------------------------------------
 * Producer side: the render and the pack run on the caller's current CUDA stream (the tracer's
   kernels are stream-ordered with torch like the rest of the pipeline; the host path relies on

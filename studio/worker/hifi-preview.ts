@@ -1,7 +1,7 @@
 /**
  * The `hifi_preview` job family: leases queued `simforge.hifi_preview_requests`
- * and renders exactly ONE frame per request through `native-render-service`
- * (renderer/service — Bevy) on the registered, byte-verified native closure
+ * and renders exactly ONE frame per request through `simforge-render serve`
+ * (renderer/service, Bevy) on the registered, byte-verified native closure
  * of the request's immutable map version:
  *
  *   lease -> materialize the authorized semantic profile -> verify registered
@@ -166,7 +166,7 @@ export async function executeHifiPreview(
   if (binary.state === "missing") {
     throw new HifiPreviewFailure(
       "renderer_unavailable",
-      `native-render-service is not installed (looked in ${binary.searched.join(", ")})`,
+      `simforge-render is not installed (looked in ${binary.searched.join(", ")})`,
     );
   }
 
@@ -218,7 +218,7 @@ export async function executeHifiPreview(
     }
     await writeFile(sceneSpecPath, JSON.stringify({
       glbs: [nativeMap.masterPath],
-      profile: request.profile,
+      render: { preset: request.preset },
       nearM: Math.min(Math.max(request.camera.intrinsics.near, 0.05), 10),
       farM: Math.min(Math.max(request.camera.intrinsics.far, 200), 4000),
       warmupFrames: 10,
@@ -315,7 +315,7 @@ export async function executeHifiPreview(
       renderer: "bevy-native",
       rendererProtocol: session.protocol,
       contractVersion: RENDERER_CONTRACT_VERSION,
-      profile: request.profile,
+      preset: request.preset,
       tick: request.tick,
       mapVersionId: request.mapVersionId,
       mapId: request.scene.mapId,
@@ -363,7 +363,7 @@ export async function executeHifiPreview(
 /* ---------------------------------------------------------- schedulers */
 
 async function runOne(lease: LeasedHifiPreview, signal: AbortSignal): Promise<void> {
-  log("request.started", { requestId: lease.requestId, mapVersionId: lease.request.mapVersionId, profile: lease.request.profile });
+  log("request.started", { requestId: lease.requestId, mapVersionId: lease.request.mapVersionId, preset: lease.request.preset });
   try {
     const result = await executeHifiPreview(lease, signal);
     await completeHifiPreview(lease, result);

@@ -13,10 +13,10 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates ffmpeg libasound2t64 libudev1 libvulkan1 libx11-6 libxkbcommon0 python3 python3-numpy vulkan-tools \
  && rm -rf /var/lib/apt/lists/*
 
-COPY renderer/target/release/native-render-service /usr/local/bin/native-render-service
-COPY renderer/service/python/simforge_native /opt/simforge/simforge_native
+COPY renderer/target/release/simforge-render /usr/local/bin/simforge-render
+COPY renderer/service/python/simforge_render /opt/simforge/simforge_render
 COPY scripts/bevy-campaign-parity.py /usr/local/bin/bevy-campaign-parity
 
-RUN chmod 0755 /usr/local/bin/native-render-service /usr/local/bin/bevy-campaign-parity
+RUN chmod 0755 /usr/local/bin/simforge-render /usr/local/bin/bevy-campaign-parity
 WORKDIR /work
 ENTRYPOINT ["/usr/local/bin/bevy-campaign-parity"]

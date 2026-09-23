@@ -484,7 +484,7 @@ async function nativeProfile(mapVersionId, authorization) {
 function launchNativeViewport(mapRoot, geometry) {
   if (nativeViewport?.running) return nativeViewport;
   const executable = process.env.SIMFORGE_NATIVE_VIEWPORT;
-  if (!executable) throw new Error("Native viewport requires SIMFORGE_NATIVE_VIEWPORT.");
+  if (!executable) throw new Error("Native viewport requires SIMFORGE_NATIVE_VIEWPORT (the simforge-render binary).");
   nativeViewport = new NativeViewportProcess({ executable, mapRoot, embedded: true, geometry });
   nativeViewport.onEvent((event) => {
     for (const listener of nativeViewportListeners) listener(event);

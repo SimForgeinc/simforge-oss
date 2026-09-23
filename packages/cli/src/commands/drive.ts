@@ -268,12 +268,12 @@ export async function drive(options: DriveOptions): Promise<number> {
   const scenePath = path.join(temp, 'scene.json');
   const videoPath = path.join(outputDir, 'alpamayo-drive.mp4');
   const telemetryPath = path.join(outputDir, 'alpamayo-drive.json');
-  await fs.writeFile(scenePath, JSON.stringify({ glbs: world, profile: 'sensor', warmupFrames: 20, nearM: 0.5, farM: 900 }));
-  const renderBinary = options.renderBinary ?? process.env['SIMFORGE_NATIVE_RENDER_BINARY'] ?? path.join(root, 'renderer/target/release/native-render-service'); const modelScript = path.join(root, 'adapters/alpamayo/scripts/run_server.sh'); let renderer: ChildProcess | undefined; let modelServer: ChildProcess | undefined; let native: NativeServiceClient | undefined; let model: AlpamayoClient | undefined; let encoder: DriveEncoder | undefined;
+  await fs.writeFile(scenePath, JSON.stringify({ glbs: world, render: { preset: 'training' }, warmupFrames: 20, nearM: 0.5, farM: 900 }));
+  const renderBinary = options.renderBinary ?? process.env['SIMFORGE_NATIVE_RENDER_BINARY'] ?? path.join(root, 'renderer/target/release/simforge-render'); const modelScript = path.join(root, 'adapters/alpamayo/scripts/run_server.sh'); let renderer: ChildProcess | undefined; let modelServer: ChildProcess | undefined; let native: NativeServiceClient | undefined; let model: AlpamayoClient | undefined; let encoder: DriveEncoder | undefined;
   const telemetry: DriveTelemetry = { schema: 'simforge.alpamayo-drive.v1', mapId, world, cameraProfile: options.cameraProfile, policy: 'alpamayo-1.5', seed: options.seed, durationS: options.duration, steps: 0, renderedFrames: 0, model: {}, records: [] };
   try {
     if (!options.noStartRenderer) {
-      renderer = spawn(renderBinary, ['--scene', scenePath, '--socket', renderSocket, '--shm', shmPath, '--shm-size-mb', '512'], { stdio: ['ignore', 'ignore', 'pipe'] });
+      renderer = spawn(renderBinary, ['serve', '--scene', scenePath, '--socket', renderSocket, '--shm', shmPath, '--shm-size-mb', '512'], { stdio: ['ignore', 'ignore', 'pipe'] });
       await waitForSocket(renderSocket, renderer);
     }
     native = await NativeServiceClient.connect(renderSocket);

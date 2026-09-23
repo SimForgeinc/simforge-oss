@@ -241,6 +241,12 @@ export async function stageNativeTextureProfile(input: {
   budgetBytes?: number;
   capacityBytes?: number;
   cacheDirectory?: string;
+  /**
+   * Further closure members the render reads, staged beside the master at
+   * their map-relative paths (the geometry LOD derivative); part of the
+   * staged tree's identity.
+   */
+  extraMembers?: readonly string[];
 }) {
   const capacityBytes = input.budgetBytes ?? input.capacityBytes;
   if (!Number.isSafeInteger(capacityBytes) || capacityBytes! <= 0) throw new Error('native_vram_capacity_missing');
@@ -253,6 +259,12 @@ export async function stageNativeTextureProfile(input: {
     readText: (uri) => fs.readFile(input.closure.members.get(uri)!.path, 'utf8'),
   });
   const selected = new Map<string, RenderInputFile>([...plan.members].map((uri) => [uri, input.closure.members.get(uri)!]));
+  for (const uri of input.extraMembers ?? []) { // fallback-ok: no extra members requested
+    assertSafeNativeMapMemberPath(uri);
+    const member = input.closure.members.get(uri);
+    if (!member) throw new Error(`native_render_member_missing: ${uri}`);
+    selected.set(uri, member);
+  }
   const variantDigest = plan.variantDigest;
   const identity = createHash('sha256').update(JSON.stringify([masterInput.sha256, input.renderTextures, variantDigest, [...selected].map(([uri, member]) => [uri, member.sha256])])).digest('hex');
   // Default beside the worker's blob cache (SIMFORGE_CACHE_DIR) so the staged

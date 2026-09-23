@@ -28,7 +28,8 @@ of scope for this contract version.
 
 ### Native playback readiness
 
-`scen-play` loads the complete native `master.gltf` from an OSS map pull,
+`simforge-render job --job` (a `simforge.render-job/v2` job with a
+`sceneState`) loads the complete native `master.gltf` from an OSS map pull,
 including its external textures. Playback waits for recursive asset
 dependencies and for the shared GPU-readiness barrier (material bindings
 and compiled pipelines) before counting warmup frames or capturing tick 0.
@@ -36,7 +37,7 @@ Missing or failed map dependencies are fatal; partial maps are not successful
 captures. Large masters may require a higher process file-descriptor limit
 (for example, `ulimit -n 65535`) while loading their texture closure.
 
-`native-render-service` becomes ready as soon as the map is prewarmed. The
+`simforge-render serve` becomes ready as soon as the map is prewarmed. The
 CPU raycast scenes that lidar, radar and episode road checks need (a BVH
 over every map triangle, plus a road-only BVH) are built on the first
 request that needs them, never at startup. They are built in parallel, and

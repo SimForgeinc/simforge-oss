@@ -365,7 +365,7 @@ fn quat_mul(a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
 /// drops pitch/roll), velocity = speed × heading, acceleration from the
 /// sampler, explicit spawn/update/despawn from presence. `dt` is the mean
 /// frame spacing. This is the scene-state projection of the render
-/// contract for consumers that read whole documents (scen-play, goldens).
+/// contract for consumers that read whole documents (render jobs, goldens).
 pub fn scene_state_document(
     timeline: &RenderTimeline,
     times: &[f64],

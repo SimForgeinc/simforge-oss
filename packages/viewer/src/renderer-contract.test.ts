@@ -196,7 +196,6 @@ function authoredSceneState(): SceneState {
     tickCount: 3,
     weather: { preset: 'clear', fogDensity: 0, rainIntensity: 0, wetness: 0 },
     timeOfDay: 21.5,
-    profile: 'sensor',
     groundY: 0,
     actors: [
       { id: 'ego', catalogId: 'vehicle.sedan', actorClass: 'car', dims: dims('vehicle.sedan') },

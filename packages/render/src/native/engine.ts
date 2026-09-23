@@ -17,11 +17,11 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE,
-  CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
-import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type RenderPreset, type RenderRequest, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
@@ -39,6 +39,7 @@ import { resolveActorAssets, resolveEncoder, resolveNativeRenderService, type Lo
 import { nativeLightingSiteFromOpenDrive, resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+import { NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod, type NativeGeometryLodMode } from './geometry-lod.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 import {
   DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
@@ -55,7 +56,7 @@ export const NATIVE_BUNDLE_LOOKAHEAD = 2;
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
-  /** Path to the retained native-render-service binary. */
+  /** Path to the `simforge-render` binary (default: the installed native runtime's). */
   readonly binary?: string;
   readonly ffmpegBinary?: string;
   readonly engineVersion?: string;
@@ -86,15 +87,11 @@ export interface NativeRenderEngineOptions {
   /** NVENC sessions one job may open (default 6; the rest use libx264). */
   readonly nvencMaxSessions?: number;
   /**
-   * `pinned` (default): one capture per frame, each a function of its scene
-   * and simulation time. `free`: the rc.73 update-count semantics, kept for
-   * byte-identical comparison. `SIMFORGE_NATIVE_CAPTURE_CLOCK` overrides.
+   * This worker's default render configuration (preset, `RenderConfig`
+   * overrides, geometry LOD mode). The intent's own `render` wins: its
+   * preset and geometry LOD mode replace these, its overrides apply on top.
    */
-  readonly captureClock?: 'pinned' | 'free';
-  /** Cinematic anti-aliasing (`smaa-high`, `taa`, ...); default `NATIVE_DEFAULT_ANTI_ALIAS`. */
-  readonly antiAlias?: string;
-  /** Jittered samples a pinned TAA capture accumulates (default 4; ignored for other AA). */
-  readonly taaSamples?: number;
+  readonly render?: RenderRequest;
   /** Bundle requests queued behind the one being answered (default 2; 0 disables pipelining). */
   readonly bundleLookahead?: number;
 }
@@ -129,23 +126,53 @@ export function nativeTextureEvidence<T extends { capacityBytes: number; capacit
   return vram.intentCapacity === undefined ? staged : { ...staged, capacityBytes: vram.intentCapacity, capacitySource: 'assumed' };
 }
 
-/** Anti-aliasing of the pinned (default) capture clock. */
-export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-ultra';
-export const NATIVE_DEFAULT_TAA_SAMPLES = 4;
-const ANTI_ALIAS_MODES = new Set(['none', 'fxaa', 'smaa-low', 'smaa-medium', 'smaa-high', 'smaa-ultra', 'taa']);
+/** The preset a render without one uses: platform renders are delivery video. */
+export const NATIVE_DEFAULT_PRESET: RenderPreset = 'showcase';
 
-/** The capture semantics a render asks for (engine options, then the worker environment). */
-export function nativeCaptureSettings(options: NativeRenderEngineOptions, env: NodeJS.ProcessEnv = process.env): {
-  clock: 'pinned' | 'free'; antiAlias: string; samplesPerFrame: number;
+/** The render request a job resolves to, and its geometry LOD mode. */
+export interface NativeRenderRequest {
+  /** The scene spec's `render` (`render_core::render_config::RenderRequest`). */
+  readonly request: { readonly preset: RenderPreset; readonly set: Readonly<Record<string, unknown>> };
+  readonly geometryLod: NativeGeometryLodMode;
+}
+
+/**
+ * The job's render configuration: the intent's `render`, over the worker's
+ * default (`options.render`), over `showcase` with geometry LOD `auto`. The
+ * staged texture tier is part of it (`textures.tier`), so the service
+ * refuses a config that names another tier.
+ */
+export function nativeRenderRequest(intent: RenderIntentV1, options: NativeRenderEngineOptions): NativeRenderRequest {
+  // fallback-ok: documented defaults (intent `render` absent = showcase, LOD auto); the resolved request is recorded in the manifest
+  const worker = options.render ?? {};
+  const job = intent.render ?? {}; // fallback-ok: see above
+  const set: Record<string, unknown> = { ...worker.set, ...job.set };
+  if (intent.renderTextures) {
+    if (set['textures.tier'] !== undefined && set['textures.tier'] !== intent.renderTextures) {
+      throw new RenderInputError('native_render_config_invalid', `render.set textures.tier ${String(set['textures.tier'])} but the intent stages ${intent.renderTextures}`);
+    }
+    set['textures.tier'] = intent.renderTextures;
+  }
+  return {
+    request: { preset: job.preset ?? worker.preset ?? NATIVE_DEFAULT_PRESET, set },
+    geometryLod: job.geometryLod ?? worker.geometryLod ?? 'auto', // fallback-ok: documented default mode, recorded in the manifest
+  };
+}
+
+/** How captured pixels relate to time, from the service's resolved render config (manifest `capture`). */
+export function nativeCaptureEvidence(renderConfig: Readonly<Record<string, unknown>>): {
+  clock: 'simulation-time' | 'update-count'; antiAlias: string; samplesPerFrame: number;
 } {
-  const clock = options.captureClock ?? (env.SIMFORGE_NATIVE_CAPTURE_CLOCK as 'pinned' | 'free' | undefined) ?? 'pinned';
-  if (clock !== 'pinned' && clock !== 'free') throw new Error(`native_capture_clock_invalid: ${String(clock)} (pinned | free)`);
-  // The free clock is the rc.73 look, byte for byte: its TAA and nothing else.
-  const antiAlias = clock === 'free' ? 'taa' : options.antiAlias ?? env.SIMFORGE_NATIVE_ANTI_ALIAS ?? NATIVE_DEFAULT_ANTI_ALIAS;
-  if (!ANTI_ALIAS_MODES.has(antiAlias)) throw new Error(`native_anti_alias_invalid: ${antiAlias}`);
-  const taaSamples = options.taaSamples ?? (env.SIMFORGE_NATIVE_TAA_SAMPLES ? Number(env.SIMFORGE_NATIVE_TAA_SAMPLES) : NATIVE_DEFAULT_TAA_SAMPLES);
-  if (!Number.isInteger(taaSamples) || taaSamples < 1 || taaSamples > 16) throw new Error(`native_taa_samples_invalid: ${taaSamples}`);
-  return { clock, antiAlias, samplesPerFrame: clock === 'pinned' && antiAlias === 'taa' ? taaSamples : 1 };
+  const aa = renderConfig.aa as { mode?: unknown; taaSamples?: unknown } | undefined;
+  const clock = (renderConfig.clock as { mode?: unknown } | undefined)?.mode;
+  if (typeof aa?.mode !== 'string' || typeof aa.taaSamples !== 'number' || (clock !== 'pinned' && clock !== 'free')) {
+    throw new Error(`native_render_config_unreadable: the service reported no aa.mode/aa.taaSamples/clock.mode (${JSON.stringify(renderConfig).slice(0, 200)})`);
+  }
+  return {
+    clock: clock === 'pinned' ? 'simulation-time' : 'update-count',
+    antiAlias: aa.mode,
+    samplesPerFrame: clock === 'pinned' && aa.mode === 'taa' ? aa.taaSamples : 1,
+  };
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -180,9 +207,11 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
 /**
  * The claimed inputs a native render reads: every non-map input, the map
  * master, and exactly the members of the intent's texture tier (see
- * `planNativeTextureMembers`). A closure carries both tiers plus sources the
- * renderer never opens (OpenDRIVE, GeoJSON, reports), so a full-tier render
- * skips the 512 px variants and a `bc7-512` render skips the full images.
+ * `planNativeTextureMembers`), plus the geometry LOD derivative unless the
+ * job turns it off (`planNativeGeometryLod`). A closure carries both tiers
+ * plus sources the renderer never opens (OpenDRIVE, GeoJSON, reports), so a
+ * full-tier render skips the 512 px variants and a `bc7-512` render skips
+ * the full images.
  */
 export async function selectNativeRenderInputs(context: RenderInputSelectionContext): Promise<ReadonlySet<string>> {
   const intent = parseRenderIntent(context.intent);
@@ -192,11 +221,15 @@ export async function selectNativeRenderInputs(context: RenderInputSelectionCont
   if (!intent.renderTextures) return new Set(context.inputs.map((input) => input.inputId));
   selected.add(NATIVE_MAP_MASTER_INPUT_ID);
   const master = JSON.parse((await context.read(NATIVE_MAP_MASTER_INPUT_ID)).toString('utf8')) as Parameters<typeof planNativeTextureMembers>[0];
-  const plan = await planNativeTextureMembers(master, intent.renderTextures, {
-    sha256: (uri) => byPath.get(uri)?.sha256,
-    readText: async (uri) => (await context.read(nativeMapMemberInputId(uri))).toString('utf8'),
-  });
+  const memberSource = {
+    sha256: (uri: string) => byPath.get(uri)?.sha256,
+    readText: async (uri: string) => (await context.read(nativeMapMemberInputId(uri))).toString('utf8'),
+  };
+  const plan = await planNativeTextureMembers(master, intent.renderTextures, memberSource);
   for (const uri of plan.members) selected.add(nativeMapMemberInputId(uri));
+  // fallback-ok: the documented default mode; the worker re-plans with the same mode and records it
+  const lod = await planNativeGeometryLod(intent.render?.geometryLod ?? 'auto', memberSource);
+  if (lod) for (const uri of lod.members) selected.add(nativeMapMemberInputId(uri));
   return selected;
 }
 
@@ -214,6 +247,37 @@ export function gatedSceneSourceEvidence(
 ): { sceneSource?: 'render-timeline' | 'openscenario-legacy'; timelineSha256?: string } {
   if (!features.has(CONTROL_FEATURE_NATIVE_SCENE_SOURCE)) return {};
   return { sceneSource, ...(timelineSha256 ? { timelineSha256 } : {}) };
+}
+
+/**
+ * `look` and `render` for the native manifest. A plane that lists
+ * `native-evidence.render-config` reads the render config from `render`; an
+ * older plane requires the rc.73 look keys (`profile: cinematic`,
+ * `profileConfig`), which then carry the same resolved config.
+ */
+export function gatedRenderEvidence(
+  features: ReadonlySet<string>,
+  look: { readonly lighting: object; readonly autoMeter: boolean; readonly provenance: object },
+  renderRequest: NativeRenderRequest,
+  renderConfig: Readonly<Record<string, unknown>>,
+  geometryLod: { readonly manifestSha256: string; readonly buildKey: string } | undefined,
+) {
+  const base = { lighting: { ...look.lighting }, autoMeter: look.autoMeter, provenance: { ...look.provenance } };
+  if (!features.has(CONTROL_FEATURE_NATIVE_RENDER_CONFIG)) {
+    return { look: { profile: 'cinematic' as const, ...base, profileConfig: { ...renderConfig } } };
+  }
+  return {
+    look: base,
+    render: {
+      request: { preset: renderRequest.request.preset, set: { ...renderRequest.request.set } },
+      config: { ...renderConfig },
+      geometryLod: {
+        mode: renderRequest.geometryLod,
+        manifestSha256: geometryLod ? geometryLod.manifestSha256 : null,
+        buildKey: geometryLod ? geometryLod.buildKey : null,
+      },
+    },
+  };
 }
 
 export function resolveBinary(options: NativeRenderEngineOptions): string {
@@ -452,6 +516,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // device this job holds is measured by the worker. Check against the
       // smaller of the two.
       const vram = nativeVramCapacity(intent.nativeVramCapacityBytes, context.gpuMemory?.totalBytes);
+      const renderRequest = nativeRenderRequest(intent, options);
+      const geometryLod = await planNativeGeometryLod(renderRequest.geometryLod, {
+        sha256: (uri) => closure.members.get(uri)?.sha256,
+        readText: (uri) => fs.readFile(closure.members.get(uri)!.path, 'utf8'),
+      });
       const textureProfile = await stageNativeTextureProfile({
         closure,
         renderTextures: intent.renderTextures,
@@ -459,6 +528,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         capacityBytes: vram.capacityBytes,
         framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
         cacheDirectory: options.nativeCacheDirectory,
+        extraMembers: geometryLod?.members,
       });
       // Fail in seconds, not after a startup timeout, when the device the job
       // holds cannot take the scene at this tier (textures + geometry + frame
@@ -564,7 +634,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // the Lookdev Lab's cinematic look: same weather presets, same solar
       // model, same profile. The service meters the sky through each
       // frame's camera on top (`autoMeter`).
-      const capture = nativeCaptureSettings(options);
       // The sun is placed at the map's own site: its OpenDRIVE geoReference.
       const mapSha256 = intent.scenarioRevision.map.sha256;
       const xodrInput = [...context.inputs.values()].find((input) => input.sha256 === mapSha256);
@@ -576,23 +645,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         site,
         cloudFixedStepS: 1 / Math.max(1, ...rgbSchedules.map((schedule) => schedule.framesPerSecond)),
       });
-      const look = {
-        ...resolvedLook,
-        profileConfig: { ...resolvedLook.profileConfig, cinematic: { ...resolvedLook.profileConfig.cinematic, aa: capture.antiAlias } },
-      };
+      const look = resolvedLook;
       await writeJson(scenePath, {
         glbs: [masterPath],
-        profile: 'cinematic',
         lighting: look.lighting,
-        profileConfig: look.profileConfig,
         autoMeter: options.autoMeter ?? true,
         nearM: clipPlanes.nearM,
         farM: clipPlanes.farM,
         warmupFrames: 20,
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
-        captureClock: capture.clock,
-        taaSamples: capture.samplesPerFrame,
+        render: renderRequest.request,
+        textureTier: intent.renderTextures,
+        ...(geometryLod ? { geometryLod: path.join(path.dirname(masterPath), NATIVE_GEOMETRY_LOD_MANIFEST) } : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.
@@ -618,13 +683,14 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       }
       phase('serviceStart');
       const { client } = session;
-      // A service that predates the pinned clock would render update-count
-      // frames whatever the scene spec asked for: refuse instead.
-      if (capture.clock === 'pinned' && !client.supports('capture_clock.pinned')) {
+      // The look is the service's resolved render config: record exactly
+      // what it renders with, not what was asked for.
+      if (!client.supports('render_config')) {
         await session.close();
-        throw new RenderInputError('native_capture_clock_unsupported', 'the render service does not pin the capture clock; the pinned (simulation-time) capture this job asks for cannot run on it');
+        throw new RenderInputError('native_render_config_unsupported', 'the render service predates the render config; it cannot render the preset this job asks for');
       }
-      const captureClock = capture.clock;
+      const renderConfig = session.renderConfig;
+      const capture = nativeCaptureEvidence(renderConfig);
 
       const encoders = new Map<string, Encoder>();
       const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
@@ -959,18 +1025,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...sceneSourceEvidence,
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
-        ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture: {
-          clock: captureClock === 'pinned' ? 'simulation-time' as const : 'update-count' as const,
-          antiAlias: capture.antiAlias,
-          samplesPerFrame: captureClock === 'pinned' ? capture.samplesPerFrame : 1,
-        } } : {}),
-        look: {
-          profile: 'cinematic',
-          lighting: look.lighting,
-          profileConfig: look.profileConfig,
-          autoMeter: options.autoMeter ?? true,
-          provenance: look.provenance,
-        },
+        ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture } : {}),
+        ...gatedRenderEvidence(features, {
+          lighting: look.lighting, autoMeter: options.autoMeter ?? true, provenance: look.provenance,
+        }, renderRequest, renderConfig, geometryLod),
         ...(features.has(CONTROL_FEATURE_NATIVE_ENCODER) ? { encoder: {
           ...encoderIdentity,
           videos: [...encoders.values()]

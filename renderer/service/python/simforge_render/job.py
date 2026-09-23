@@ -1,4 +1,4 @@
-"""``python -m simforge_native job``: the runner-facing workload
+"""``python -m simforge_render job``: the runner-facing workload
 ``simforge.render-bundle/v1`` over the in-process renderer.
 
 Protocol (agreed with the native runner owner; mirrors
@@ -6,7 +6,7 @@ Protocol (agreed with the native runner owner; mirrors
 
 - ``--params p.json``::
 
-      {"scene": <SceneSpec document or path>,          # glbs[abs], profile, lighting?, nearM, farM, warmupFrames
+      {"scene": <SceneSpec document or path>,          # glbs[abs], lighting, render?{preset,set}, nearM, farM, warmupFrames
        "sceneStatePath": "<scene-state.v1 doc or array>",
        "rig": {"cameras": [camera docs], "lidars"?: [...], "radars"?: [...]},
        "passes": ["rgb", "id", "depth", "semantic"],   # default ["rgb"]
@@ -31,6 +31,7 @@ import ctypes
 import hashlib
 import json
 import os
+import signal
 import struct
 import sys
 import tempfile
@@ -296,7 +297,7 @@ def capabilities() -> dict[str, Any]:
 
 def main(argv: list[str]) -> int:
     if not argv:
-        sys.stderr.write("usage: python -m simforge_native job --params P --out-dir D [--resume C] | capabilities\n")
+        sys.stderr.write("usage: python -m simforge_render job --params P --out-dir D [--resume C] | capabilities\n")
         return 1
     if argv[0] == "capabilities":
         sys.stdout.write(json.dumps(capabilities(), sort_keys=True) + "\n")
@@ -304,7 +305,7 @@ def main(argv: list[str]) -> int:
     if argv[0] == "job":
         args = dict(zip(argv[1::2], argv[2::2]))
         if set(args) - {"--params", "--out-dir", "--resume"} or "--params" not in args or "--out-dir" not in args:
-            sys.stderr.write("usage: python -m simforge_native job --params P --out-dir D [--resume C]\n")
+            sys.stderr.write("usage: python -m simforge_render job --params P --out-dir D [--resume C]\n")
             return 1
         return run_job(args["--params"], args["--out-dir"], args.get("--resume"))
     sys.stderr.write(f"unknown command {argv[0]!r}\n")
