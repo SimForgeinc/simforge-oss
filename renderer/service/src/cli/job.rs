@@ -34,7 +34,7 @@ const JOB_USAGE: &str = "simforge-render job --job JOB.json [--preset training|s
     simforge-render job --scene SCENE.json --trace TRACE.json --intent INTENT.json [--glb PATH] [--models DIR] [--sources all|id,...]\n\
     common: [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
             [--sweep ENTRIES.json] [--camera-size WxH] [--ablate a,b] [--shm-size-mb 512]\n\
-    JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir}.\n\
+    JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir, observe?}.\n\
     Artifacts: <outDir>/<sensor>/<tick:08>.<pass>.png|.f32.bin|.ply|.csv plus <outDir>/results.json.";
 
 struct Args {
@@ -385,7 +385,7 @@ fn plan_from_replay(args: &Args) -> Result<Plan> {
         })
         .collect();
     Ok(Plan {
-        spec, frames, cameras, lidars, radars, passes: vec!["rgb".into()], out_dir: None,
+        spec, frames, cameras, lidars, radars, passes: vec!["rgb".into()], out_dir: None, observe: false,
         start: args.start_set.unwrap_or(0), // fallback-ok: replay defaults, printed with the run
         ticks: args.ticks_set.unwrap_or(48), // fallback-ok: replay defaults, printed with the run
     })
@@ -445,16 +445,22 @@ fn write_artifact(
 struct JobSpec {
     schema: String,
     scene: serde_json::Value,
-    /// Scene-state document (`{frames: [...]}` or a bare frame array),
+    /// Scene-state stream: per-tick scene-state.v1 documents (the
+    /// `load_scene_state` shape), as a bare array or `{frames: [...]}`,
     /// `.json` or `.json.gz`; absent for a static scene.
     #[serde(default)]
     scene_state: Option<PathBuf>,
     rig: JobRig,
     #[serde(default)]
     ticks: JobTicks,
-    /// Camera passes (`rgb`, `depth`, `instance`, `semantic`); required.
+    /// Camera passes (`rgb`, `id`, `depth`, `semantic`); required.
     passes: Vec<String>,
     out_dir: PathBuf,
+    /// Record every rendered tick's observed actor transforms (what the
+    /// renderer drew) to `<outDir>/observed-frames.jsonl`, for the timeline
+    /// parity gate. Needs a scene state.
+    #[serde(default)]
+    observe: bool,
 }
 
 #[derive(serde::Deserialize, Default)]
@@ -532,6 +538,7 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
         radars.extend(r);
     }
     anyhow::ensure!(!(cameras.is_empty() && lidars.is_empty() && radars.is_empty()), "job rig has no sensors");
+    anyhow::ensure!(!job.observe || !frames.is_empty(), "job `observe` needs a sceneState: a static scene has no actors to observe");
     std::fs::create_dir_all(&job.out_dir)?;
     Ok(Plan {
         spec,
@@ -541,6 +548,7 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
         radars,
         passes: job.passes,
         out_dir: Some(job.out_dir),
+        observe: job.observe,
         // The job's range, unless the command line names one.
         start: args.start_set.unwrap_or(job.ticks.start.unwrap_or(0)), // fallback-ok: a job without ticks.start starts at tick 0 by the v2 schema
         ticks: args.ticks_set.unwrap_or(job.ticks.count.unwrap_or(1)), // fallback-ok: a job without ticks.count renders one tick by the v2 schema
@@ -615,6 +623,8 @@ struct Plan {
     passes: Vec<String>,
     /// Write every artifact of every tick here (plus `results.json`).
     out_dir: Option<PathBuf>,
+    /// Write `<out_dir>/observed-frames.jsonl` (job files only).
+    observe: bool,
     start: usize,
     ticks: usize,
 }
@@ -625,7 +635,7 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         Some(job) => plan_from_job(job, &args)?,
         None => plan_from_replay(&args)?,
     };
-    let Plan { mut spec, frames, cameras, lidars, radars, passes, out_dir, start, ticks } = plan;
+    let Plan { mut spec, frames, cameras, lidars, radars, passes, out_dir, observe, start, ticks } = plan;
     crate::server::apply_render_cli(&mut spec, args.preset.clone(), &args.render_sets)?;
     let (resolved, _) = spec.render_config()?;
     eprintln!("simforge-render job: render config {}", serde_json::to_string(&resolved)?);
@@ -680,6 +690,12 @@ pub fn run(argv: Vec<String>) -> Result<()> {
     }
 
     let end = (start + ticks).min(tick_count);
+    if let (true, Some(dir)) = (observe, &out_dir) {
+        match std::fs::remove_file(dir.join("observed-frames.jsonl")) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
+            _ => {}
+        }
+    }
     let mut artifacts: Vec<serde_json::Value> = Vec::new();
     let mut tick_ms = Vec::new();
     let mut server_ms = Vec::new();
@@ -696,6 +712,9 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         if !frames.is_empty() {
             body["tick_index"] = serde_json::json!(tick);
         }
+        if observe {
+            body["observe"] = serde_json::json!(true);
+        }
         if n == 0 {
             if !lidars.is_empty() { body["lidars"] = serde_json::json!(lidars); }
             if !radars.is_empty() { body["radars"] = serde_json::json!(radars); }
@@ -704,13 +723,27 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         let started = Instant::now();
         let response = dispatch(&mut state, request(body)?);
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
-        let ResponseBody::RenderBundle { frames: records, server_ms: reported, stages: tick_stages, .. } = response.body else {
+        let ResponseBody::RenderBundle { frames: records, server_ms: reported, stages: tick_stages, observed_actors, .. } = response.body else {
             if let ResponseBody::Error { error, .. } = response.body { bail!("tick {tick}: {error}"); }
             bail!("tick {tick}: unexpected response");
         };
         if let Some(dir) = &out_dir {
             for record in &records {
                 artifacts.push(write_artifact(&state, record, dir, tick)?);
+            }
+            if observe {
+                let actors = observed_actors.with_context(|| format!("tick {tick}: the service answered `observe` without observed actors"))?;
+                let frame = &frames[tick];
+                // The frame's own simulation time, else its tick over its rate.
+                let time = match (frame["t"].as_f64(), frame["tickHz"].as_f64()) {
+                    (Some(t), _) => t,
+                    (None, Some(hz)) if hz > 0.0 => tick as f64 / hz,
+                    _ => bail!("tick {tick}: the scene-state frame has neither `t` nor a positive `tickHz`"),
+                };
+                use std::io::Write;
+                let mut line = serde_json::to_vec(&serde_json::json!({"tick": tick, "time": time, "actors": actors}))?;
+                line.push(b'\n');
+                std::fs::OpenOptions::new().create(true).append(true).open(dir.join("observed-frames.jsonl"))?.write_all(&line)?;
             }
         }
         for record in &records {

@@ -1940,6 +1940,11 @@ pub fn id_pass_camera() -> impl Bundle {
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
+/// The first GPU device error the renderer hit, if any (see
+/// [`SceneApp::ensure_rendering`]). Rendering has stopped once it is set.
+#[derive(Resource, Default)]
+struct RenderFailure(Option<String>);
+
 struct GroupEntities {
     spec: CameraSpec,
     rgb_entity: Entity,
@@ -2384,6 +2389,15 @@ impl SceneApp {
         // creation; `gpu_interop` owns that configuration (Linux only).
         #[cfg(feature = "gpu-interop")]
         app.insert_resource(crate::gpu_interop::raw_vulkan_init_settings());
+        // A device error (out of memory, device lost, validation) stops
+        // rendering for good: record it so every wait fails at once with the
+        // cause instead of timing out on frames that never come.
+        app.init_resource::<RenderFailure>()
+            .insert_resource(bevy::render::error_handler::RenderErrorHandler(|error, main_world, _| {
+                let cause = format!("{:?} {}", error.ty, error.description).trim_end().to_string();
+                main_world.resource_mut::<RenderFailure>().0.get_or_insert(cause);
+                bevy::render::error_handler::RenderErrorPolicy::StopRendering
+            }));
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(Legend::default())
@@ -4857,6 +4871,16 @@ impl SceneApp {
 
     /// Wait for the current capture cameras' GPU permutations, not the prewarm rig.
     /// Returns the number of frames it rendered to get there.
+    /// Fails once the GPU device reported an error (out of memory, device
+    /// lost, validation): the renderer then produces no further frames, so
+    /// every wait and capture reports the cause instead of timing out.
+    pub fn ensure_rendering(&self) -> Result<()> {
+        match &self.app.world().resource::<RenderFailure>().0 {
+            None => Ok(()),
+            Some(cause) => bail!("[native_render_device_error] the GPU device failed ({cause}); rendering has stopped"),
+        }
+    }
+
     pub fn wait_for_capture_ready(&mut self) -> Result<u32> {
         let deadline = Instant::now() + Duration::from_secs(300);
         let mut last_sample = self.app.world().resource::<GpuPending>().samples();
@@ -4864,6 +4888,7 @@ impl SceneApp {
         let mut updates = 0u32;
         loop {
             self.app.update();
+            self.ensure_rendering()?;
             updates += 1;
             while self.receiver.try_recv().is_ok() {}
             let pending = self.app.world().resource::<GpuPending>();
@@ -4898,6 +4923,7 @@ impl SceneApp {
         let mut gpu_idle_frames = 0u32;
         loop {
             self.app.update();
+            self.ensure_rendering()?;
             updates += 1;
             let world = self.app.world_mut();
             if let Some(errors) = world.get_resource::<crate::veg::VegErrors>() {
@@ -5411,6 +5437,7 @@ impl SceneApp {
             self.pinned_sample.set(Some(lead));
         }
         let generation = self.submit(CaptureRequest { keys: keys.to_vec(), slot, deferred: true, ..Default::default() });
+        self.ensure_rendering()?;
         if self.capture_clock != CaptureClock::Free {
             self.pinned_sample.set(Some(0));
         }
@@ -5484,6 +5511,7 @@ impl SceneApp {
             if map.done.load(std::sync::atomic::Ordering::Acquire) >= map.expected {
                 break;
             }
+            self.ensure_rendering()?;
             if Instant::now() > deadline {
                 bail!("capture readback of generation {generation} did not complete within 120 s");
             }
@@ -5573,6 +5601,7 @@ impl SceneApp {
                 self.pinned_sample.set(Some(lead));
             }
             let generation = self.submit(request.clone());
+            self.ensure_rendering()?;
             if self.capture_clock != CaptureClock::Free {
                 self.pinned_sample.set(Some(0));
             }
@@ -5694,6 +5723,7 @@ impl SceneApp {
                 );
             }
             self.submit(CaptureRequest::default());
+            self.ensure_rendering()?;
             updates += 1;
             idle = if self.app.world().resource::<GpuPending>().is_idle() { idle + 1 } else { 0 };
         }
@@ -7078,6 +7108,37 @@ mod tests {
     /// drawn before it must not leak in. It did through the atmosphere's
     /// per-view environment probe, filtered one frame late (fixed in the
     /// vendored bevy_pbr, `downsampling_current_view`).
+    /// A device error stops rendering for good; the next wait must fail at
+    /// once with the cause, not time out (an out-of-memory device used to
+    /// spin in `wait_until_ready` for its full 300 s). GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_device_error_fails_the_next_wait_with_its_cause() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
+        app.add_camera(test_camera("cam", 64, 64));
+        app.wait_until_ready().unwrap();
+        let device = app.app.world().resource::<RenderDevice>().clone();
+        // A zero-sized texture is a validation error, reported uncaptured.
+        let _invalid = device.wgpu_device().create_texture(&bevy::render::render_resource::TextureDescriptor {
+            label: Some("invalid"),
+            size: bevy::render::render_resource::Extent3d { width: 0, height: 0, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: bevy::render::render_resource::TextureDimension::D2,
+            format: TextureFormat::Rgba8Unorm,
+            usage: TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let started = Instant::now();
+        let error = app.wait_for_capture_ready().expect_err("rendering stopped");
+        assert!(error.to_string().contains("[native_render_device_error]"), "{error}");
+        assert!(started.elapsed() < Duration::from_secs(30), "failed at once, not at the deadline");
+        assert!(app.render_once(1).is_err(), "every later capture fails too");
+        std::mem::forget(app);
+    }
+
     #[test]
     #[ignore = "focused GPU integration test"]
     fn pinned_capture_does_not_depend_on_the_previous_pose() {
