@@ -197,6 +197,8 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         entry["blocking"] = comparison.blocking
         entry["decisionRequired"] = comparison.decision_required
         entry["signalIdMap"] = comparison.signal_id_map if status in BINDABLE else {}
+        if status in BINDABLE and comparison.signals.get("nonPhysicalGateRuntimeIds"):
+            entry["unownedCookedSignalIds"] = comparison.signals["nonPhysicalGateRuntimeIds"]
         if status in BINDABLE:
             if world in claimed:
                 raise ValueError(f"world {world} is bound by both {claimed[world]} and {folder}")

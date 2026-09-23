@@ -59,6 +59,17 @@ class Signal:
     orientation: str
     dynamic: bool
     z_offset: float
+    name: str = ""
+    height: float = 0.0
+    width: float = 0.0
+
+    @property
+    def non_physical_gate(self) -> bool:
+        """SimForge's map pipeline rule (packages/map-pipeline xodr-semantics
+        `non-physical-dynamic-gate`): a dynamic 1000001/1000011 record with no
+        name and no size is a RoadRunner routing gate, never a driven head."""
+        return (self.dynamic and self.type in ("1000001", "1000011") and not self.name.strip()
+                and not self.height > 0 and not self.width > 0)
 
 
 @dataclass
@@ -122,7 +133,8 @@ def parse(data: bytes) -> Network:
             signals[sig.get("id")] = Signal(
                 sig.get("id"), rid, _f(sig.get("s")), _f(sig.get("t")), sig.get("type", ""),
                 sig.get("subtype", ""), sig.get("orientation", ""), sig.get("dynamic") == "yes",
-                _f(sig.get("zOffset")),
+                _f(sig.get("zOffset")), sig.get("name", "") or "",
+                _f(sig.get("height")), _f(sig.get("width")),
             )
         for obj in road.findall("objects/object"):
             objects[(obj.get("type", ""), obj.get("name", ""))] += 1
@@ -565,6 +577,13 @@ def compare(source: Network, runtime: Network) -> Comparison:
         "onlySource": sum((mapped_controllers - runtime_controllers).values()),
         "onlyRuntime": sum((runtime_controllers - mapped_controllers).values()),
     }
+    # Non-physical gates (RoadRunner routing records) are never driven by a
+    # SimForge scenario, but CARLA spawns a light actor for every controlled
+    # one. They are the world's approved unowned heads (forced Red, frozen,
+    # recorded), derived here from the source, never listed by hand.
+    result.signals["nonPhysicalGateRuntimeIds"] = sorted(
+        signal_map[sid] for sid, sig in source.signals.items() if sig.non_physical_gate and sid in signal_map
+    )
     # CARLA spawns a traffic-light actor only for a head some controller
     # drives. A dynamic head no controller owns has no actor to bind, so a
     # plan that drives it fails loudly in bind_signals; record which ones.

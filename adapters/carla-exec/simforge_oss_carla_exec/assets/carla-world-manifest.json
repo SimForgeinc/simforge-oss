@@ -179,6 +179,7 @@
      "unpairedSource": 507
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 11,
      "renumbered": 11,
      "runtime": 77,
@@ -350,6 +351,9 @@
      "unpairedSource": 344
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "1596"
+     ],
      "paired": 88,
      "renumbered": 88,
      "runtime": 488,
@@ -689,6 +693,7 @@
      "unpairedSource": 446
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 12,
      "renumbered": 12,
      "runtime": 88,
@@ -1030,6 +1035,7 @@
      "unpairedSource": 128
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 13,
      "renumbered": 13,
      "runtime": 47,
@@ -1216,6 +1222,27 @@
      "unpairedSource": 0
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "20712",
+      "20713",
+      "20714",
+      "20715",
+      "20716",
+      "20717",
+      "20718",
+      "20719",
+      "20720",
+      "20721",
+      "20722",
+      "20723",
+      "20724",
+      "20725",
+      "20726",
+      "20727",
+      "20728",
+      "20729",
+      "20730"
+     ],
      "paired": 425,
      "renumbered": 425,
      "runtime": 425,
@@ -1438,6 +1465,27 @@
    },
    "sourceFolder": "San_Ramon_25_P2",
    "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "20712",
+    "20713",
+    "20714",
+    "20715",
+    "20716",
+    "20717",
+    "20718",
+    "20719",
+    "20720",
+    "20721",
+    "20722",
+    "20723",
+    "20724",
+    "20725",
+    "20726",
+    "20727",
+    "20728",
+    "20729",
+    "20730"
+   ],
    "worldMatch": {
     "candidates": [
      {
@@ -1510,6 +1558,32 @@
      "unpairedSource": 0
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "6018",
+      "6019",
+      "6020",
+      "6021",
+      "6022",
+      "6023",
+      "6024",
+      "6025",
+      "6026",
+      "6027",
+      "6028",
+      "6029",
+      "6030",
+      "6031",
+      "6032",
+      "6033",
+      "6034",
+      "6035",
+      "6036",
+      "6037",
+      "6038",
+      "6039",
+      "6040",
+      "6041"
+     ],
      "paired": 248,
      "renumbered": 248,
      "runtime": 248,
@@ -1759,6 +1833,32 @@
    },
    "sourceFolder": "San_Ramon_Phase_1_P1",
    "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "6018",
+    "6019",
+    "6020",
+    "6021",
+    "6022",
+    "6023",
+    "6024",
+    "6025",
+    "6026",
+    "6027",
+    "6028",
+    "6029",
+    "6030",
+    "6031",
+    "6032",
+    "6033",
+    "6034",
+    "6035",
+    "6036",
+    "6037",
+    "6038",
+    "6039",
+    "6040",
+    "6041"
+   ],
    "worldMatch": {
     "candidates": [
      {
@@ -1831,6 +1931,7 @@
      "unpairedSource": 0
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 0,
      "renumbered": 0,
      "runtime": 762,
@@ -2466,6 +2567,7 @@
      "unpairedSource": 0
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 44,
      "renumbered": 44,
      "runtime": 54,
@@ -2633,6 +2735,7 @@
      "unpairedSource": 391
     },
     "signals": {
+     "nonPhysicalGateRuntimeIds": [],
      "paired": 25,
      "renumbered": 25,
      "runtime": 126,
